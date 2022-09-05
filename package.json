@@ -1,0 +1,28 @@
+{
+  "name": "@lightningjs/renderer",
+  "version": "1.0.0",
+  "description": "WebGL Renderer",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lightningDriePuntNul/renderer.git"
+  },
+  "keywords": [
+    "WebGL",
+    "JS",
+    "WPE"
+  ],
+  "author": "Erik Haandrikman",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ightningDriePuntNul/renderer/issues"
+  },
+  "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
+  "devDependencies": {
+    "typescript": "^4.8.2"
+  }
+}
