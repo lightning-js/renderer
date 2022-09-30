@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "WebGL Renderer",
   "main": "build/index.js",
+  "exports": {
+    "./application": "./build/renderer/src/core/application.js",
+    "./node": "./build/renderer/src/core/node.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
