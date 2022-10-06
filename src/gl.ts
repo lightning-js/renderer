@@ -8,12 +8,9 @@ let gl = null;
 let app = null;
 const nodes = new Map();
 
-globalThis.THREAD_ID = "GL";
-
-self.addEventListener('message', ({ data }) => {
-    const { event } = data
+self.addEventListener('message', ({ data:{event, payload} }) => {
     if (event === "canvas") {
-        canvas = data.offscreenCanvas
+        canvas = payload.offscreenCanvas
         gl = createWebGLContext(canvas);
         app = application({
             w: 1920, h: 1080, context: gl
