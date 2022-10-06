@@ -121,19 +121,13 @@ export const getSystem = () => {
 /**
  * Platform render loop initiator
  */
-export const startLoop = () => {
-
-    setInterval(()=>{
-        emit('frameStart');
-        drawFrame();
-    }, 1/60 * 1000)
-   
+export const startLoop = () => {   
     const loop = () => {
         emit('frameStart');
         drawFrame();
-        // requestAnimationFrame(loop);
+        requestAnimationFrame(loop);
     };
-    // requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
 };
 
 export const uploadImage = (src, hasAlphaChannel) => {
