@@ -40,7 +40,7 @@ class Node {
         private _src: any;
         private _imageBitmap: any;
     
-    constructor(config) {
+    constructor(config = {x:0,y:0, w:0,h:0, color:0xffffffff, events:[], boltId:0, src:null}) {
         this._localMatrix  = mat4.create();
         this._worldMatrix  = mat4.create();
         this._x = config.x;
@@ -148,7 +148,7 @@ class Node {
     set imageBitmap(source) {
         this._imageBitmap = source;
         getTexture({
-            type: 'imageBitmap', id: `ib_${this._boltId}`, src: source
+            type: 'imageBitmap', id: `id_${this._boltId}`, src: source
         }).then((texture) => {
             this._texture = texture;
         })
