@@ -47,7 +47,7 @@ class Node {
         this._y = config.y;
         this._w = config.w;
         this._h = config.h;
-        this._color = normalizeARGB(config.color) ||  0xffffffff;
+        this.color = config.color ||  0xffffffff;
 
         this._events = config.events;
         this._id = ++nodeId;
@@ -201,6 +201,7 @@ class Node {
     }
 
     set color(v) {
+        v = 0xffffffff + v + 1,
         this._color = normalizeARGB(v);
     }
 
