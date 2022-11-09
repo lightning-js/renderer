@@ -2,8 +2,8 @@
   "name": "@lightningjs/renderer",
   "version": "1.0.0",
   "description": "WebGL Renderer",
-  "main": "build/index.js",
   "exports": {
+    ".": "./build/renderer/index.js",
     "./application": "./build/renderer/src/core/application.js",
     "./node": "./build/renderer/src/core/node.js"
   },

@@ -36,11 +36,11 @@ class Node {
         private _matrixDirty: any = false;
         private _events: any;
         private _id: any;
-        private _boltId: any;
+        private _elementId: any;
         private _src: any;
         private _imageBitmap: any;
     
-    constructor(config = {x:0,y:0, w:0,h:0, color:0xffffffff, events:[], boltId:0, src:null}) {
+    constructor(config = {x:0,y:0, w:0,h:0, color:0xffffffff, events:[], elementId:0, src:null}) {
         this._localMatrix  = mat4.create();
         this._worldMatrix  = mat4.create();
         this._x = config.x;
@@ -51,7 +51,7 @@ class Node {
 
         this._events = config.events;
         this._id = ++nodeId;
-        this._boltId = config.boltId;
+        this._elementId = config.elementId;
 
         if (config.src) {
             this.src = config.src;
@@ -148,7 +148,7 @@ class Node {
     set imageBitmap(source) {
         this._imageBitmap = source;
         getTexture({
-            type: 'imageBitmap', id: `id_${this._boltId}`, src: source
+            type: 'imageBitmap', id: `id_${this._elementId}`, src: source
         }).then((texture) => {
             this._texture = texture;
         })
@@ -221,9 +221,14 @@ class Node {
         return this._id;
     }
 
-    get boltId() {
-        return this._boltId;
+    get elementId() {
+        return this._elementId;
     }
+
+    set elementId(v) {
+        console.log('ben je gek ofzo?', v)
+    }
+
 
     get texture() {
         return this._texture;

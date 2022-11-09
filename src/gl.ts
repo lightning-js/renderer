@@ -20,10 +20,10 @@ self.addEventListener('message', ({ data:{event, payload} }) => {
 
 threadx.listen('main.bolt',(data)=>{
     data.forEach((el)=>{
-        const { w, h, x, y, color, boltId, parentId } = el;
+        const { w, h, x, y, color, elementId, parentId } = el;
         const root = app.root;
         const node = createNode({
-            w, h, x, y, color: 0xFFFFFFFF + color + 1, boltId
+            w, h, x, y, color: 0xFFFFFFFF + color + 1, elementId
         })
         if(nodes.has(parentId)){
             node.parent = nodes.get(parentId);
@@ -31,7 +31,7 @@ threadx.listen('main.bolt',(data)=>{
             node.parent = root;
         }  
         // look up
-        nodes.set(boltId, node);
+        nodes.set(elementId, node);
     })        
     
 })
