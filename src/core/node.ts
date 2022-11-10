@@ -136,6 +136,14 @@ class Node {
         return this._children;
     }
 
+    set alpha(v){
+        this._localAlpha = v/100; 
+    }
+
+    get alpha(){
+        return this._localAlpha;
+    }
+ 
     set src(imageSource) {
         this._src = imageSource;
         getTexture({

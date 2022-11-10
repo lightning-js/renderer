@@ -22,6 +22,7 @@ export default ({vs, fs, id='lightning-shader'}) => {
                 const textureAttributeLocation = gl.getAttribLocation(program, 'a_textureCoordinate');
                 const textureIndexAttributeLocation = gl.getAttribLocation(program, 'a_textureIndex');
 
+
                 gl.enableVertexAttribArray(positionAttributeLocation);
                 gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, stride, 0);
 
@@ -33,8 +34,9 @@ export default ({vs, fs, id='lightning-shader'}) => {
 
                 gl.enableVertexAttribArray(textureIndexAttributeLocation);
                 gl.vertexAttribPointer(textureIndexAttributeLocation, 1, gl.FLOAT, false, stride, 8 * Float32Array.BYTES_PER_ELEMENT);
+
             },
-            enableUniforms(){
+            enableUniforms(){ 
                 const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
                 gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
             },

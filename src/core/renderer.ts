@@ -45,7 +45,7 @@ export const render = (root) => {
 
         activeProgram.enableAttributes();
         activeProgram.enableUniforms();
-    }
+    } 
 
     // bind multiple samplers if needed
     if (textures.length > 1) {
@@ -57,7 +57,7 @@ export const render = (root) => {
         gl.ARRAY_BUFFER, new Float32Array(buffer), gl.STATIC_DRAW
     );
 
-    // execute draw 7 attribs x bytes per element
+    // execute draw 9 attribs x bytes per element
     gl.drawElements(gl.TRIANGLES, 6 * (buffer.length / 36), gl.UNSIGNED_SHORT, 0);
 };
 
@@ -66,12 +66,14 @@ export const render = (root) => {
  * @param node
  * @param buffer
  * @param textures
- * @return {*}
+ * @return {*} 
  */
 const createBuffer = (node, buffer, textures) => {
-    const {w, h, color, texture, id} = node;
+    const {w, h, color, texture, id, alpha} = node;
     const [x, y, z] = node.getTranslate();
     let textureUnit = 0;
+  
+    color[3] = parseFloat(alpha);
 
     if (!textures.length) {
         textures.push(texture);
@@ -83,16 +85,17 @@ const createBuffer = (node, buffer, textures) => {
         }
     }
     const x1 = x;
-    const x2 = x + w;
+    const x2 = x + w; 
     const y1 = y;
     const y2 = y + h;
-
+    
     buffer.push(
         x1, y1, ...color, 0, 0, textureUnit,
-        x2, y1, ...color, 1, 0, textureUnit,
-        x1, y2, ...color, 0, 1, textureUnit,
-        x2, y2, ...color, 1, 1, textureUnit
+        x2, y1, ...color,  1, 0, textureUnit,
+        x1, y2, ...color,  0, 1, textureUnit,
+        x2, y2, ...color,  1, 1, textureUnit
     );
+
 
     if (node.children.length) {
         for (let i = 0; i < node.children.length; i++) {
@@ -145,15 +148,14 @@ const initPrograms = () => {
     programs.set('default',
         createProgram({vs: defaultVert, fs: defaultFrag})
     );
-
     programs.set('batched',
         createProgram({
-            vs: batchedVert, fs: batchedFrag(
-               Math.floor(glParam('MAX_VERTEX_TEXTURE_IMAGE_UNITS') / 2 )
+            vs: batchedVert, fs: batchedFrag( 
+               glParam('MAX_VERTEX_TEXTURE_IMAGE_UNITS')  
             )
-        })
+        })  
     );
-};
+}; 
 
 
 export const hasUpdates = () => {
