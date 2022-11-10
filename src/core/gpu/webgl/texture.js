@@ -17,7 +17,7 @@ export const createImageTexture = (gl, image, options = {}) => {
 
     options.format = gl.RGBA;
     options.type = gl.UNSIGNED_BYTE;
-
+    
     uploadTextureData(gl, image, options);
 
     return texture;
@@ -32,5 +32,5 @@ export const createWhitePixelTexture = (gl) => {
     const pixelData = new Uint8Array([255, 255, 255, 255]);
     return createImageTexture(gl, pixelData, {
         w: 1, h: 1
-    });
+    }); 
 };

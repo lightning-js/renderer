@@ -30,8 +30,7 @@ export const getTexture = (options) => {
     const gl = getGlContext();
 
     return new Promise((resolve, reject) => {
-        if (!hasTexture(id)) {
-            console.log("NEW:", id)            
+        if (!hasTexture(id)) {        
             // store empty placeholder while loading
             setTexture(source, null);
             if (type === "image") {

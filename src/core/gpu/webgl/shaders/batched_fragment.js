@@ -5,7 +5,7 @@ export default (textureUnits) =>{
         precision highp float;
         # else 
         precision mediump float;
-        # endif
+        # endif 
         
         uniform vec2 u_resolution; 
         uniform sampler2D u_image;
@@ -20,13 +20,13 @@ export default (textureUnits) =>{
             if(idx == 0){
                 color = texture2D(textures[0], uv);
             }`;
-            for(let i = 1; i < textureUnits; i++){
+            for(let i = 1; i < textureUnits; i++){ 
                 source += `
                     else if (idx == ${i}){ 
-                        color = texture2D(textures[${i}], uv);
+                        color = texture2D(textures[${i}], uv); 
                     }`
             }
-        source += `
+        source += ` 
             return color;
         }        
         void main(){ 
