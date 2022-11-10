@@ -31,9 +31,9 @@ export const getTexture = (options) => {
 
     return new Promise((resolve, reject) => {
         if (!hasTexture(id)) {
+            console.log("NEW:", id)            
             // store empty placeholder while loading
             setTexture(source, null);
-
             if (type === "image") {
                 // let platform upload image
                 uploadImage(source, true).then(({image}) => {

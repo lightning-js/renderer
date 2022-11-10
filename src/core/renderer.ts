@@ -7,7 +7,6 @@ let vertexBuffer = null;
 
 const programs = new Map();
 let activeProgram = null;
-
 export const createRenderer = (glContext, clearColor = 0xff000000, bufferMemory) => {
     // normalized rgb components
     const color = normalizeARGB(clearColor);
@@ -19,7 +18,7 @@ export const createRenderer = (glContext, clearColor = 0xff000000, bufferMemory)
     initPrograms();
 
     // setup positions buffer
-    vertexBuffer = gl.createBuffer();
+    vertexBuffer = gl.createBuffer(); 
 
     // allocate memory chunk
     createIndices(bufferMemory);
@@ -48,7 +47,7 @@ export const render = (root) => {
     } 
 
     // bind multiple samplers if needed
-    if (textures.length > 1) {
+    if (textures.length) {
         bindTextureArray(textures);
     }
 
@@ -68,6 +67,7 @@ export const render = (root) => {
  * @param textures
  * @return {*} 
  */
+
 const createBuffer = (node, buffer, textures) => {
     const {w, h, color, texture, id, alpha} = node;
     const [x, y, z] = node.getTranslate();
@@ -129,7 +129,7 @@ const createIndices = (size) => {
 };
 
 const bindTextureArray = (textures) => {
-    const len = textures.length;
+    const len = textures.length; 
     for (let i = 0; i < len; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
         gl.bindTexture(gl.TEXTURE_2D, textures[i]);

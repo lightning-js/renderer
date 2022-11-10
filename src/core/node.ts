@@ -156,8 +156,9 @@ class Node {
     set imageBitmap(source) {
         this._imageBitmap = source;
         getTexture({
-            type: 'imageBitmap', id: `id_${this._elementId}`, src: source
-        }).then((texture) => {
+            type: 'imageBitmap', id: `id_${this._elementId}_${~~(Math.random()*200)+1}`, src: source
+        }).then((texture) => { 
+            console.log("DONE:", source)
             this._texture = texture;
         })
     }
