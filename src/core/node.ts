@@ -16,6 +16,7 @@ const rnd = Math.random;
  */
 
 let nodeId = 0;
+let nodes = new Map();
 
 class Node {
         private _localMatrix;
@@ -59,6 +60,8 @@ class Node {
             this.rect = true;
         }
         this.updateTranslate();
+        nodes.set(config.elementId, this);
+
     }
 
     get parent() {
@@ -129,6 +132,12 @@ class Node {
         return mat4.getTranslation(
             vec3.create(), this._worldMatrix
         );
+    }
+
+    find(elementId){
+        if(nodes.has(elementId)){
+            return nodes.get(elementId)
+        }
     }
 
 
@@ -236,7 +245,6 @@ class Node {
     set elementId(v) {
         // 
     }
-
 
     get texture() {
         return this._texture;

@@ -1,5 +1,5 @@
 import threadx from "../../threadx/build/index.js"
-console.log("??")
+
 threadx.register('animation', [{
     name: 'progress',
     array: 'int32',

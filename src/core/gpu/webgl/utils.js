@@ -8,7 +8,6 @@ export const createShader = (gl, type, source) => {
     if (success) {
         return shader;
     }
-
-    console.error('unable to compile shader: ', source);
+    
     gl.deleteShader(shader);
 };

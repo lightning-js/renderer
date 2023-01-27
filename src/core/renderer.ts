@@ -1,12 +1,17 @@
-import {createProgram, defaultVert, defaultFrag, batchedVert, batchedFrag} from "./gpu/webgl/index.js";
-import {normalizeARGB} from "./utils.js";
-import {glParam} from "./platform.js";
+import { createProgram, defaultVert, defaultFrag, batchedVert, batchedFrag } from "./gpu/webgl/index.js";
+import { normalizeARGB } from "./utils.js";
+import { glParam } from "./platform.js";
 
 let gl = null;
 let vertexBuffer = null;
 
 const programs = new Map();
 let activeProgram = null;
+
+let typedArray = null;
+let initData = null;
+
+
 export const createRenderer = (glContext, clearColor = 0xff000000, bufferMemory) => {
     // normalized rgb components
     const color = normalizeARGB(clearColor);
@@ -18,22 +23,30 @@ export const createRenderer = (glContext, clearColor = 0xff000000, bufferMemory)
     initPrograms();
 
     // setup positions buffer
-    vertexBuffer = gl.createBuffer(); 
+    vertexBuffer = gl.createBuffer();
 
-    // allocate memory chunk
+    // allocate memory chunk 
     createIndices(bufferMemory);
 
     // bind new positionBuffer
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 };
 
-export const update = (root) => {
+export const setUpdate = (buffer, data) => {
+    typedArray = buffer; 
+    initData = data; 
+}
 
+export const update = (root) => {
+    const el = root.find(initData.boltId);
+    if(el){
+        el.y = typedArray[7] 
+    }
 };
 
 export const render = (root) => {
     // fill vbo
-    const {buffer, textures} = createBuffer(root, [], []);
+    const { buffer, textures } = createBuffer(root, [], []);
 
     // use default shader
     if (!activeProgram) {
@@ -44,7 +57,7 @@ export const render = (root) => {
 
         activeProgram.enableAttributes();
         activeProgram.enableUniforms();
-    } 
+    }
 
     // bind multiple samplers if needed
     if (textures.length) {
@@ -69,10 +82,10 @@ export const render = (root) => {
  */
 
 const createBuffer = (node, buffer, textures) => {
-    const {w, h, color, texture, id, alpha} = node;
+    const { w, h, color, texture, id, alpha } = node;
     const [x, y, z] = node.getTranslate();
     let textureUnit = 0;
-  
+
     color[3] = parseFloat(alpha);
 
     if (!textures.length) {
@@ -85,24 +98,23 @@ const createBuffer = (node, buffer, textures) => {
         }
     }
     const x1 = x;
-    const x2 = x + w; 
+    const x2 = x + w;
     const y1 = y;
     const y2 = y + h;
-    
+
     buffer.push(
         x1, y1, ...color, 0, 0, textureUnit,
-        x2, y1, ...color,  1, 0, textureUnit,
-        x1, y2, ...color,  0, 1, textureUnit,
-        x2, y2, ...color,  1, 1, textureUnit
+        x2, y1, ...color, 1, 0, textureUnit,
+        x1, y2, ...color, 0, 1, textureUnit,
+        x2, y2, ...color, 1, 1, textureUnit
     );
-
 
     if (node.children.length) {
         for (let i = 0; i < node.children.length; i++) {
             createBuffer(node.children[i], buffer, textures);
         }
     }
-    return {buffer, textures};
+    return { buffer, textures };
 };
 
 /**
@@ -129,7 +141,7 @@ const createIndices = (size) => {
 };
 
 const bindTextureArray = (textures) => {
-    const len = textures.length; 
+    const len = textures.length;
     for (let i = 0; i < len; i++) {
         gl.activeTexture(gl.TEXTURE0 + i);
         gl.bindTexture(gl.TEXTURE_2D, textures[i]);
@@ -146,18 +158,18 @@ const bindTextureArray = (textures) => {
 
 const initPrograms = () => {
     programs.set('default',
-        createProgram({vs: defaultVert, fs: defaultFrag})
+        createProgram({ vs: defaultVert, fs: defaultFrag })
     );
     programs.set('batched',
         createProgram({
-            vs: batchedVert, fs: batchedFrag( 
-               glParam('MAX_VERTEX_TEXTURE_IMAGE_UNITS')  
+            vs: batchedVert, fs: batchedFrag(
+                glParam('MAX_VERTEX_TEXTURE_IMAGE_UNITS')
             )
-        })  
+        })
     );
-}; 
+};
 
 
 export const hasUpdates = () => {
-    return true;
+    return !!initData;
 };

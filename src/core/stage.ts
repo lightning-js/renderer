@@ -7,7 +7,7 @@ import {
     getTimeStamp
 } from "./platform.js";
 
-import {createRenderer, update, render, hasUpdates} from "./renderer.js";
+import {createRenderer, update, render, hasUpdates, setUpdate} from "./renderer.js";
 
 let gl = null;
 let renderer = null;
@@ -42,7 +42,7 @@ export const init = ({w, h, clearColor, context}) => {
 };
 
 /**
- * Start a new frame draw
+ * Start a new frame draw 
  */
 export const drawFrame = () => {
     lastFrameTime = currentFrameTime;
@@ -58,8 +58,12 @@ export const drawFrame = () => {
     render(rootNode);
 };
 
+export const handleDirty = (buffer, data)=>{
+    console.log("dirty")
+    setUpdate(buffer, data)
+} 
 
-export const getGlContext = () => {
+export const getGlContext = () => { 
     return gl;
 };
 
