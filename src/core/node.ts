@@ -16,7 +16,7 @@ import { normalizeARGB } from './lib/utils.js';
 let nodeId = 0;
 const nodes: Map<number, Node> = new Map();
 
-interface NodeConfig {
+export interface NodeConfig {
   x: number;
   y: number;
   w: number;
@@ -80,7 +80,7 @@ class Node {
     // detach node from current parent
     if (this.parent) {
       const idx = this.parent.children.indexOf(this);
-      if (idx) {
+      if (idx !== -1) {
         this.parent.children.splice(idx, 1);
       }
     }
@@ -282,4 +282,5 @@ export default (config: Partial<NodeConfig>) => {
   return new Node(config);
 };
 
+// Export only the type since we don't want to expose the class constructor directly (I think -Frank)
 export type { Node };

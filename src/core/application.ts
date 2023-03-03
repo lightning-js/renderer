@@ -1,4 +1,4 @@
-import stage, { type MinimalStageOptions, type StageOptions } from './stage.js';
+import stage, { type StageOptions } from './stage.js';
 import createNode, { type Node } from './node.js';
 
 export interface Application {
@@ -7,8 +7,8 @@ export interface Application {
   get root(): Node | null;
 }
 
-export default (options: MinimalStageOptions): Application => {
-  const resolvedOptions: StageOptions = {
+export default (options: StageOptions): Application => {
+  const resolvedOptions: Required<StageOptions> = {
     elementId: options.elementId ?? 1,
     w: options.w ?? 1920,
     h: options.h ?? 1080,
@@ -20,6 +20,7 @@ export default (options: MinimalStageOptions): Application => {
   // set root view
   stage.setRootNode(
     createNode({
+      elementId: resolvedOptions.elementId,
       w: resolvedOptions.w,
       h: resolvedOptions.h,
       x: 0,
