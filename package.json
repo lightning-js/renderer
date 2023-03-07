@@ -11,6 +11,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:prettier": "prettier --check \"**/*.{ts,js,cjs}\"",
+    "lint:prettier:write": "prettier --write \"**/*.{ts,js,cjs}\"",
     "build": "tsc"
   },
   "repository": {
@@ -29,6 +31,7 @@
   },
   "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
   "devDependencies": {
+    "prettier": "^2.8.4",
     "typescript": "^5.0.0-beta"
   },
   "dependencies": {
