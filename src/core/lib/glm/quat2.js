@@ -1,6 +1,6 @@
-import * as glMatrix from "./common.js";
-import * as quat from "./quat.js";
-import * as mat4 from "./mat4.js";
+import * as glMatrix from './common.js';
+import * as quat from './quat.js';
+import * as mat4 from './mat4.js';
 /**
  * Dual Quaternion<br>
  * Format: [real, dual]<br>
@@ -99,8 +99,8 @@ export function fromRotationTranslationValues(x1, y1, z1, w1, x2, y2, z2) {
   dq[2] = z1;
   dq[3] = w1;
   var ax = x2 * 0.5,
-      ay = y2 * 0.5,
-      az = z2 * 0.5;
+    ay = y2 * 0.5,
+    az = z2 * 0.5;
   dq[4] = ax * w1 + ay * z1 - az * y1;
   dq[5] = ay * w1 + az * x1 - ax * z1;
   dq[6] = az * w1 + ax * y1 - ay * x1;
@@ -119,12 +119,12 @@ export function fromRotationTranslationValues(x1, y1, z1, w1, x2, y2, z2) {
 
 export function fromRotationTranslation(out, q, t) {
   var ax = t[0] * 0.5,
-      ay = t[1] * 0.5,
-      az = t[2] * 0.5,
-      bx = q[0],
-      by = q[1],
-      bz = q[2],
-      bw = q[3];
+    ay = t[1] * 0.5,
+    az = t[2] * 0.5,
+    bx = q[0],
+    by = q[1],
+    bz = q[2],
+    bw = q[3];
   out[0] = bx;
   out[1] = by;
   out[2] = bz;
@@ -315,13 +315,13 @@ export function setDual(out, q) {
 
 export function getTranslation(out, a) {
   var ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7],
-      bx = -a[0],
-      by = -a[1],
-      bz = -a[2],
-      bw = a[3];
+    ay = a[5],
+    az = a[6],
+    aw = a[7],
+    bx = -a[0],
+    by = -a[1],
+    bz = -a[2],
+    bw = a[3];
   out[0] = (ax * bw + aw * bx + ay * bz - az * by) * 2;
   out[1] = (ay * bw + aw * by + az * bx - ax * bz) * 2;
   out[2] = (az * bw + aw * bz + ax * by - ay * bx) * 2;
@@ -338,16 +338,16 @@ export function getTranslation(out, a) {
 
 export function translate(out, a, v) {
   var ax1 = a[0],
-      ay1 = a[1],
-      az1 = a[2],
-      aw1 = a[3],
-      bx1 = v[0] * 0.5,
-      by1 = v[1] * 0.5,
-      bz1 = v[2] * 0.5,
-      ax2 = a[4],
-      ay2 = a[5],
-      az2 = a[6],
-      aw2 = a[7];
+    ay1 = a[1],
+    az1 = a[2],
+    aw1 = a[3],
+    bx1 = v[0] * 0.5,
+    by1 = v[1] * 0.5,
+    bz1 = v[2] * 0.5,
+    ax2 = a[4],
+    ay2 = a[5],
+    az2 = a[6],
+    aw2 = a[7];
   out[0] = ax1;
   out[1] = ay1;
   out[2] = az1;
@@ -369,17 +369,17 @@ export function translate(out, a, v) {
 
 export function rotateX(out, a, rad) {
   var bx = -a[0],
-      by = -a[1],
-      bz = -a[2],
-      bw = a[3],
-      ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7],
-      ax1 = ax * bw + aw * bx + ay * bz - az * by,
-      ay1 = ay * bw + aw * by + az * bx - ax * bz,
-      az1 = az * bw + aw * bz + ax * by - ay * bx,
-      aw1 = aw * bw - ax * bx - ay * by - az * bz;
+    by = -a[1],
+    bz = -a[2],
+    bw = a[3],
+    ax = a[4],
+    ay = a[5],
+    az = a[6],
+    aw = a[7],
+    ax1 = ax * bw + aw * bx + ay * bz - az * by,
+    ay1 = ay * bw + aw * by + az * bx - ax * bz,
+    az1 = az * bw + aw * bz + ax * by - ay * bx,
+    aw1 = aw * bw - ax * bx - ay * by - az * bz;
   quat.rotateX(out, a, rad);
   bx = out[0];
   by = out[1];
@@ -402,17 +402,17 @@ export function rotateX(out, a, rad) {
 
 export function rotateY(out, a, rad) {
   var bx = -a[0],
-      by = -a[1],
-      bz = -a[2],
-      bw = a[3],
-      ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7],
-      ax1 = ax * bw + aw * bx + ay * bz - az * by,
-      ay1 = ay * bw + aw * by + az * bx - ax * bz,
-      az1 = az * bw + aw * bz + ax * by - ay * bx,
-      aw1 = aw * bw - ax * bx - ay * by - az * bz;
+    by = -a[1],
+    bz = -a[2],
+    bw = a[3],
+    ax = a[4],
+    ay = a[5],
+    az = a[6],
+    aw = a[7],
+    ax1 = ax * bw + aw * bx + ay * bz - az * by,
+    ay1 = ay * bw + aw * by + az * bx - ax * bz,
+    az1 = az * bw + aw * bz + ax * by - ay * bx,
+    aw1 = aw * bw - ax * bx - ay * by - az * bz;
   quat.rotateY(out, a, rad);
   bx = out[0];
   by = out[1];
@@ -435,17 +435,17 @@ export function rotateY(out, a, rad) {
 
 export function rotateZ(out, a, rad) {
   var bx = -a[0],
-      by = -a[1],
-      bz = -a[2],
-      bw = a[3],
-      ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7],
-      ax1 = ax * bw + aw * bx + ay * bz - az * by,
-      ay1 = ay * bw + aw * by + az * bx - ax * bz,
-      az1 = az * bw + aw * bz + ax * by - ay * bx,
-      aw1 = aw * bw - ax * bx - ay * by - az * bz;
+    by = -a[1],
+    bz = -a[2],
+    bw = a[3],
+    ax = a[4],
+    ay = a[5],
+    az = a[6],
+    aw = a[7],
+    ax1 = ax * bw + aw * bx + ay * bz - az * by,
+    ay1 = ay * bw + aw * by + az * bx - ax * bz,
+    az1 = az * bw + aw * bz + ax * by - ay * bx,
+    aw1 = aw * bw - ax * bx - ay * by - az * bz;
   quat.rotateZ(out, a, rad);
   bx = out[0];
   by = out[1];
@@ -468,13 +468,13 @@ export function rotateZ(out, a, rad) {
 
 export function rotateByQuatAppend(out, a, q) {
   var qx = q[0],
-      qy = q[1],
-      qz = q[2],
-      qw = q[3],
-      ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    qy = q[1],
+    qz = q[2],
+    qw = q[3],
+    ax = a[0],
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   out[0] = ax * qw + aw * qx + ay * qz - az * qy;
   out[1] = ay * qw + aw * qy + az * qx - ax * qz;
   out[2] = az * qw + aw * qz + ax * qy - ay * qx;
@@ -500,13 +500,13 @@ export function rotateByQuatAppend(out, a, q) {
 
 export function rotateByQuatPrepend(out, q, a) {
   var qx = q[0],
-      qy = q[1],
-      qz = q[2],
-      qw = q[3],
-      bx = a[0],
-      by = a[1],
-      bz = a[2],
-      bw = a[3];
+    qy = q[1],
+    qz = q[2],
+    qw = q[3],
+    bx = a[0],
+    by = a[1],
+    bz = a[2],
+    bw = a[3];
   out[0] = qx * bw + qw * bx + qy * bz - qz * by;
   out[1] = qy * bw + qw * by + qz * bx - qx * bz;
   out[2] = qz * bw + qw * bz + qx * by - qy * bx;
@@ -540,22 +540,22 @@ export function rotateAroundAxis(out, a, axis, rad) {
   var axisLength = Math.hypot(axis[0], axis[1], axis[2]);
   rad = rad * 0.5;
   var s = Math.sin(rad);
-  var bx = s * axis[0] / axisLength;
-  var by = s * axis[1] / axisLength;
-  var bz = s * axis[2] / axisLength;
+  var bx = (s * axis[0]) / axisLength;
+  var by = (s * axis[1]) / axisLength;
+  var bz = (s * axis[2]) / axisLength;
   var bw = Math.cos(rad);
   var ax1 = a[0],
-      ay1 = a[1],
-      az1 = a[2],
-      aw1 = a[3];
+    ay1 = a[1],
+    az1 = a[2],
+    aw1 = a[3];
   out[0] = ax1 * bw + aw1 * bx + ay1 * bz - az1 * by;
   out[1] = ay1 * bw + aw1 * by + az1 * bx - ax1 * bz;
   out[2] = az1 * bw + aw1 * bz + ax1 * by - ay1 * bx;
   out[3] = aw1 * bw - ax1 * bx - ay1 * by - az1 * bz;
   var ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7];
+    ay = a[5],
+    az = a[6],
+    aw = a[7];
   out[4] = ax * bw + aw * bx + ay * bz - az * by;
   out[5] = ay * bw + aw * by + az * bx - ax * bz;
   out[6] = az * bw + aw * bz + ax * by - ay * bx;
@@ -594,29 +594,61 @@ export function add(out, a, b) {
 
 export function multiply(out, a, b) {
   var ax0 = a[0],
-      ay0 = a[1],
-      az0 = a[2],
-      aw0 = a[3],
-      bx1 = b[4],
-      by1 = b[5],
-      bz1 = b[6],
-      bw1 = b[7],
-      ax1 = a[4],
-      ay1 = a[5],
-      az1 = a[6],
-      aw1 = a[7],
-      bx0 = b[0],
-      by0 = b[1],
-      bz0 = b[2],
-      bw0 = b[3];
+    ay0 = a[1],
+    az0 = a[2],
+    aw0 = a[3],
+    bx1 = b[4],
+    by1 = b[5],
+    bz1 = b[6],
+    bw1 = b[7],
+    ax1 = a[4],
+    ay1 = a[5],
+    az1 = a[6],
+    aw1 = a[7],
+    bx0 = b[0],
+    by0 = b[1],
+    bz0 = b[2],
+    bw0 = b[3];
   out[0] = ax0 * bw0 + aw0 * bx0 + ay0 * bz0 - az0 * by0;
   out[1] = ay0 * bw0 + aw0 * by0 + az0 * bx0 - ax0 * bz0;
   out[2] = az0 * bw0 + aw0 * bz0 + ax0 * by0 - ay0 * bx0;
   out[3] = aw0 * bw0 - ax0 * bx0 - ay0 * by0 - az0 * bz0;
-  out[4] = ax0 * bw1 + aw0 * bx1 + ay0 * bz1 - az0 * by1 + ax1 * bw0 + aw1 * bx0 + ay1 * bz0 - az1 * by0;
-  out[5] = ay0 * bw1 + aw0 * by1 + az0 * bx1 - ax0 * bz1 + ay1 * bw0 + aw1 * by0 + az1 * bx0 - ax1 * bz0;
-  out[6] = az0 * bw1 + aw0 * bz1 + ax0 * by1 - ay0 * bx1 + az1 * bw0 + aw1 * bz0 + ax1 * by0 - ay1 * bx0;
-  out[7] = aw0 * bw1 - ax0 * bx1 - ay0 * by1 - az0 * bz1 + aw1 * bw0 - ax1 * bx0 - ay1 * by0 - az1 * bz0;
+  out[4] =
+    ax0 * bw1 +
+    aw0 * bx1 +
+    ay0 * bz1 -
+    az0 * by1 +
+    ax1 * bw0 +
+    aw1 * bx0 +
+    ay1 * bz0 -
+    az1 * by0;
+  out[5] =
+    ay0 * bw1 +
+    aw0 * by1 +
+    az0 * bx1 -
+    ax0 * bz1 +
+    ay1 * bw0 +
+    aw1 * by0 +
+    az1 * bx0 -
+    ax1 * bz0;
+  out[6] =
+    az0 * bw1 +
+    aw0 * bz1 +
+    ax0 * by1 -
+    ay0 * bx1 +
+    az1 * bw0 +
+    aw1 * bz0 +
+    ax1 * by0 -
+    ay1 * bx0;
+  out[7] =
+    aw0 * bw1 -
+    ax0 * bx1 -
+    ay0 * by1 -
+    az0 * bz1 +
+    aw1 * bw0 -
+    ax1 * bx0 -
+    ay1 * by0 -
+    az1 * bz0;
   return out;
 }
 /**
@@ -793,7 +825,25 @@ export function normalize(out, a) {
  */
 
 export function str(a) {
-  return "quat2(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ", " + a[4] + ", " + a[5] + ", " + a[6] + ", " + a[7] + ")";
+  return (
+    'quat2(' +
+    a[0] +
+    ', ' +
+    a[1] +
+    ', ' +
+    a[2] +
+    ', ' +
+    a[3] +
+    ', ' +
+    a[4] +
+    ', ' +
+    a[5] +
+    ', ' +
+    a[6] +
+    ', ' +
+    a[7] +
+    ')'
+  );
 }
 /**
  * Returns whether or not the dual quaternions have exactly the same elements in the same position (when compared with ===)
@@ -804,7 +854,16 @@ export function str(a) {
  */
 
 export function exactEquals(a, b) {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4] && a[5] === b[5] && a[6] === b[6] && a[7] === b[7];
+  return (
+    a[0] === b[0] &&
+    a[1] === b[1] &&
+    a[2] === b[2] &&
+    a[3] === b[3] &&
+    a[4] === b[4] &&
+    a[5] === b[5] &&
+    a[6] === b[6] &&
+    a[7] === b[7]
+  );
 }
 /**
  * Returns whether or not the dual quaternions have approximately the same elements in the same position.
@@ -816,20 +875,37 @@ export function exactEquals(a, b) {
 
 export function equals(a, b) {
   var a0 = a[0],
-      a1 = a[1],
-      a2 = a[2],
-      a3 = a[3],
-      a4 = a[4],
-      a5 = a[5],
-      a6 = a[6],
-      a7 = a[7];
+    a1 = a[1],
+    a2 = a[2],
+    a3 = a[3],
+    a4 = a[4],
+    a5 = a[5],
+    a6 = a[6],
+    a7 = a[7];
   var b0 = b[0],
-      b1 = b[1],
-      b2 = b[2],
-      b3 = b[3],
-      b4 = b[4],
-      b5 = b[5],
-      b6 = b[6],
-      b7 = b[7];
-  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7));
+    b1 = b[1],
+    b2 = b[2],
+    b3 = b[3],
+    b4 = b[4],
+    b5 = b[5],
+    b6 = b[6],
+    b7 = b[7];
+  return (
+    Math.abs(a0 - b0) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
+    Math.abs(a1 - b1) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
+    Math.abs(a2 - b2) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) &&
+    Math.abs(a3 - b3) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) &&
+    Math.abs(a4 - b4) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) &&
+    Math.abs(a5 - b5) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) &&
+    Math.abs(a6 - b6) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) &&
+    Math.abs(a7 - b7) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7))
+  );
 }

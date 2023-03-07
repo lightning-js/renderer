@@ -1,4 +1,4 @@
-import * as glMatrix from "./common.js";
+import * as glMatrix from './common.js';
 /**
  * 4x4 Matrix<br>Format: column-major, when typed out it looks like row-major<br>The matrices are being post multiplied.
  * @module mat4
@@ -110,7 +110,24 @@ export function copy(out, a) {
  * @returns {mat4} A new mat4
  */
 
-export function fromValues(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
+export function fromValues(
+  m00,
+  m01,
+  m02,
+  m03,
+  m10,
+  m11,
+  m12,
+  m13,
+  m20,
+  m21,
+  m22,
+  m23,
+  m30,
+  m31,
+  m32,
+  m33,
+) {
   var out = new glMatrix.ARRAY_TYPE(16);
   out[0] = m00;
   out[1] = m01;
@@ -153,7 +170,25 @@ export function fromValues(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22
  * @returns {mat4} out
  */
 
-export function set(out, m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
+export function set(
+  out,
+  m00,
+  m01,
+  m02,
+  m03,
+  m10,
+  m11,
+  m12,
+  m13,
+  m20,
+  m21,
+  m22,
+  m23,
+  m30,
+  m31,
+  m32,
+  m33,
+) {
   out[0] = m00;
   out[1] = m01;
   out[2] = m02;
@@ -210,10 +245,10 @@ export function transpose(out, a) {
   // If we are transposing ourselves we can skip a few steps but have to cache some values
   if (out === a) {
     var a01 = a[1],
-        a02 = a[2],
-        a03 = a[3];
+      a02 = a[2],
+      a03 = a[3];
     var a12 = a[6],
-        a13 = a[7];
+      a13 = a[7];
     var a23 = a[11];
     out[1] = a[4];
     out[2] = a[8];
@@ -258,21 +293,21 @@ export function transpose(out, a) {
 
 export function invert(out, a) {
   var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3];
   var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7];
   var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11];
   var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15];
+    a31 = a[13],
+    a32 = a[14],
+    a33 = a[15];
   var b00 = a00 * a11 - a01 * a10;
   var b01 = a00 * a12 - a02 * a10;
   var b02 = a00 * a13 - a03 * a10;
@@ -286,7 +321,8 @@ export function invert(out, a) {
   var b10 = a21 * a33 - a23 * a31;
   var b11 = a22 * a33 - a23 * a32; // Calculate the determinant
 
-  var det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+  var det =
+    b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
   if (!det) {
     return null;
@@ -321,21 +357,21 @@ export function invert(out, a) {
 
 export function adjoint(out, a) {
   var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3];
   var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7];
   var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11];
   var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15];
+    a31 = a[13],
+    a32 = a[14],
+    a33 = a[15];
   var b00 = a00 * a11 - a01 * a10;
   var b01 = a00 * a12 - a02 * a10;
   var b02 = a00 * a13 - a03 * a10;
@@ -375,21 +411,21 @@ export function adjoint(out, a) {
 
 export function determinant(a) {
   var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3];
   var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7];
   var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11];
   var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15];
+    a31 = a[13],
+    a32 = a[14],
+    a33 = a[15];
   var b0 = a00 * a11 - a01 * a10;
   var b1 = a00 * a12 - a02 * a10;
   var b2 = a01 * a12 - a02 * a11;
@@ -414,26 +450,26 @@ export function determinant(a) {
 
 export function multiply(out, a, b) {
   var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3];
   var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7];
   var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11];
   var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15]; // Cache only the current line of the second matrix
+    a31 = a[13],
+    a32 = a[14],
+    a33 = a[15]; // Cache only the current line of the second matrix
 
   var b0 = b[0],
-      b1 = b[1],
-      b2 = b[2],
-      b3 = b[3];
+    b1 = b[1],
+    b2 = b[2],
+    b3 = b[3];
   out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
   out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
   out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
@@ -475,8 +511,8 @@ export function multiply(out, a, b) {
 
 export function translate(out, a, v) {
   var x = v[0],
-      y = v[1],
-      z = v[2];
+    y = v[1],
+    z = v[2];
   var a00, a01, a02, a03;
   var a10, a11, a12, a13;
   var a20, a21, a22, a23;
@@ -530,8 +566,8 @@ export function translate(out, a, v) {
 
 export function scale(out, a, v) {
   var x = v[0],
-      y = v[1],
-      z = v[2];
+    y = v[1],
+    z = v[2];
   out[0] = a[0] * x;
   out[1] = a[1] * x;
   out[2] = a[2] * x;
@@ -562,8 +598,8 @@ export function scale(out, a, v) {
 
 export function rotate(out, a, rad, axis) {
   var x = axis[0],
-      y = axis[1],
-      z = axis[2];
+    y = axis[1],
+    z = axis[2];
   var len = Math.hypot(x, y, z);
   var s, c, t;
   var a00, a01, a02, a03;
@@ -663,7 +699,6 @@ export function rotateX(out, a, rad) {
     out[15] = a[15];
   } // Perform axis-specific matrix multiplication
 
-
   out[4] = a10 * c + a20 * s;
   out[5] = a11 * c + a21 * s;
   out[6] = a12 * c + a22 * s;
@@ -707,7 +742,6 @@ export function rotateY(out, a, rad) {
     out[15] = a[15];
   } // Perform axis-specific matrix multiplication
 
-
   out[0] = a00 * c - a20 * s;
   out[1] = a01 * c - a21 * s;
   out[2] = a02 * c - a22 * s;
@@ -750,7 +784,6 @@ export function rotateZ(out, a, rad) {
     out[14] = a[14];
     out[15] = a[15];
   } // Perform axis-specific matrix multiplication
-
 
   out[0] = a00 * c + a10 * s;
   out[1] = a01 * c + a11 * s;
@@ -839,8 +872,8 @@ export function fromScaling(out, v) {
 
 export function fromRotation(out, rad, axis) {
   var x = axis[0],
-      y = axis[1],
-      z = axis[2];
+    y = axis[1],
+    z = axis[2];
   var len = Math.hypot(x, y, z);
   var s, c, t;
 
@@ -995,9 +1028,9 @@ export function fromZRotation(out, rad) {
 export function fromRotationTranslation(out, q, v) {
   // Quaternion math
   var x = q[0],
-      y = q[1],
-      z = q[2],
-      w = q[3];
+    y = q[1],
+    z = q[2],
+    w = q[3];
   var x2 = x + x;
   var y2 = y + y;
   var z2 = z + z;
@@ -1039,19 +1072,19 @@ export function fromRotationTranslation(out, q, v) {
 export function fromQuat2(out, a) {
   var translation = new glMatrix.ARRAY_TYPE(3);
   var bx = -a[0],
-      by = -a[1],
-      bz = -a[2],
-      bw = a[3],
-      ax = a[4],
-      ay = a[5],
-      az = a[6],
-      aw = a[7];
+    by = -a[1],
+    bz = -a[2],
+    bw = a[3],
+    ax = a[4],
+    ay = a[5],
+    az = a[6],
+    aw = a[7];
   var magnitude = bx * bx + by * by + bz * bz + bw * bw; //Only scale if it makes sense
 
   if (magnitude > 0) {
-    translation[0] = (ax * bw + aw * bx + ay * bz - az * by) * 2 / magnitude;
-    translation[1] = (ay * bw + aw * by + az * bx - ax * bz) * 2 / magnitude;
-    translation[2] = (az * bw + aw * bz + ax * by - ay * bx) * 2 / magnitude;
+    translation[0] = ((ax * bw + aw * bx + ay * bz - az * by) * 2) / magnitude;
+    translation[1] = ((ay * bw + aw * by + az * bx - ax * bz) * 2) / magnitude;
+    translation[2] = ((az * bw + aw * bz + ax * by - ay * bx) * 2) / magnitude;
   } else {
     translation[0] = (ax * bw + aw * bx + ay * bz - az * by) * 2;
     translation[1] = (ay * bw + aw * by + az * bx - ax * bz) * 2;
@@ -1249,9 +1282,9 @@ export function decompose(out_r, out_t, out_s, mat) {
 export function fromRotationTranslationScale(out, q, v, s) {
   // Quaternion math
   var x = q[0],
-      y = q[1],
-      z = q[2],
-      w = q[3];
+    y = q[1],
+    z = q[2],
+    w = q[3];
   var x2 = x + x;
   var y2 = y + y;
   var z2 = z + z;
@@ -1309,9 +1342,9 @@ export function fromRotationTranslationScale(out, q, v, s) {
 export function fromRotationTranslationScaleOrigin(out, q, v, s, o) {
   // Quaternion math
   var x = q[0],
-      y = q[1],
-      z = q[2],
-      w = q[3];
+    y = q[1],
+    z = q[2],
+    w = q[3];
   var x2 = x + x;
   var y2 = y + y;
   var z2 = z + z;
@@ -1368,9 +1401,9 @@ export function fromRotationTranslationScaleOrigin(out, q, v, s, o) {
 
 export function fromQuat(out, q) {
   var x = q[0],
-      y = q[1],
-      z = q[2],
-      w = q[3];
+    y = q[1],
+    z = q[2],
+    w = q[3];
   var x2 = x + x;
   var y2 = y + y;
   var z2 = z + z;
@@ -1539,10 +1572,10 @@ export function perspectiveZO(out, fovy, aspect, near, far) {
  */
 
 export function perspectiveFromFieldOfView(out, fov, near, far) {
-  var upTan = Math.tan(fov.upDegrees * Math.PI / 180.0);
-  var downTan = Math.tan(fov.downDegrees * Math.PI / 180.0);
-  var leftTan = Math.tan(fov.leftDegrees * Math.PI / 180.0);
-  var rightTan = Math.tan(fov.rightDegrees * Math.PI / 180.0);
+  var upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0);
+  var downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0);
+  var leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0);
+  var rightTan = Math.tan((fov.rightDegrees * Math.PI) / 180.0);
   var xScale = 2.0 / (leftTan + rightTan);
   var yScale = 2.0 / (upTan + downTan);
   out[0] = xScale;
@@ -1559,7 +1592,7 @@ export function perspectiveFromFieldOfView(out, fov, near, far) {
   out[11] = -1.0;
   out[12] = 0.0;
   out[13] = 0.0;
-  out[14] = far * near / (near - far);
+  out[14] = (far * near) / (near - far);
   out[15] = 0.0;
   return out;
 }
@@ -1666,7 +1699,11 @@ export function lookAt(out, eye, center, up) {
   var centery = center[1];
   var centerz = center[2];
 
-  if (Math.abs(eyex - centerx) < glMatrix.EPSILON && Math.abs(eyey - centery) < glMatrix.EPSILON && Math.abs(eyez - centerz) < glMatrix.EPSILON) {
+  if (
+    Math.abs(eyex - centerx) < glMatrix.EPSILON &&
+    Math.abs(eyey - centery) < glMatrix.EPSILON &&
+    Math.abs(eyez - centerz) < glMatrix.EPSILON
+  ) {
     return identity(out);
   }
 
@@ -1739,14 +1776,14 @@ export function lookAt(out, eye, center, up) {
 
 export function targetTo(out, eye, target, up) {
   var eyex = eye[0],
-      eyey = eye[1],
-      eyez = eye[2],
-      upx = up[0],
-      upy = up[1],
-      upz = up[2];
+    eyey = eye[1],
+    eyez = eye[2],
+    upx = up[0],
+    upy = up[1],
+    upz = up[2];
   var z0 = eyex - target[0],
-      z1 = eyey - target[1],
-      z2 = eyez - target[2];
+    z1 = eyey - target[1],
+    z2 = eyez - target[2];
   var len = z0 * z0 + z1 * z1 + z2 * z2;
 
   if (len > 0) {
@@ -1757,8 +1794,8 @@ export function targetTo(out, eye, target, up) {
   }
 
   var x0 = upy * z2 - upz * z1,
-      x1 = upz * z0 - upx * z2,
-      x2 = upx * z1 - upy * z0;
+    x1 = upz * z0 - upx * z2,
+    x2 = upx * z1 - upy * z0;
   len = x0 * x0 + x1 * x1 + x2 * x2;
 
   if (len > 0) {
@@ -1794,7 +1831,41 @@ export function targetTo(out, eye, target, up) {
  */
 
 export function str(a) {
-  return "mat4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ", " + a[4] + ", " + a[5] + ", " + a[6] + ", " + a[7] + ", " + a[8] + ", " + a[9] + ", " + a[10] + ", " + a[11] + ", " + a[12] + ", " + a[13] + ", " + a[14] + ", " + a[15] + ")";
+  return (
+    'mat4(' +
+    a[0] +
+    ', ' +
+    a[1] +
+    ', ' +
+    a[2] +
+    ', ' +
+    a[3] +
+    ', ' +
+    a[4] +
+    ', ' +
+    a[5] +
+    ', ' +
+    a[6] +
+    ', ' +
+    a[7] +
+    ', ' +
+    a[8] +
+    ', ' +
+    a[9] +
+    ', ' +
+    a[10] +
+    ', ' +
+    a[11] +
+    ', ' +
+    a[12] +
+    ', ' +
+    a[13] +
+    ', ' +
+    a[14] +
+    ', ' +
+    a[15] +
+    ')'
+  );
 }
 /**
  * Returns Frobenius norm of a mat4
@@ -1804,7 +1875,24 @@ export function str(a) {
  */
 
 export function frob(a) {
-  return Math.hypot(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
+  return Math.hypot(
+    a[0],
+    a[1],
+    a[2],
+    a[3],
+    a[4],
+    a[5],
+    a[6],
+    a[7],
+    a[8],
+    a[9],
+    a[10],
+    a[11],
+    a[12],
+    a[13],
+    a[14],
+    a[15],
+  );
 }
 /**
  * Adds two mat4's
@@ -1928,7 +2016,24 @@ export function multiplyScalarAndAdd(out, a, b, scale) {
  */
 
 export function exactEquals(a, b) {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4] && a[5] === b[5] && a[6] === b[6] && a[7] === b[7] && a[8] === b[8] && a[9] === b[9] && a[10] === b[10] && a[11] === b[11] && a[12] === b[12] && a[13] === b[13] && a[14] === b[14] && a[15] === b[15];
+  return (
+    a[0] === b[0] &&
+    a[1] === b[1] &&
+    a[2] === b[2] &&
+    a[3] === b[3] &&
+    a[4] === b[4] &&
+    a[5] === b[5] &&
+    a[6] === b[6] &&
+    a[7] === b[7] &&
+    a[8] === b[8] &&
+    a[9] === b[9] &&
+    a[10] === b[10] &&
+    a[11] === b[11] &&
+    a[12] === b[12] &&
+    a[13] === b[13] &&
+    a[14] === b[14] &&
+    a[15] === b[15]
+  );
 }
 /**
  * Returns whether or not the matrices have approximately the same elements in the same position.
@@ -1940,38 +2045,71 @@ export function exactEquals(a, b) {
 
 export function equals(a, b) {
   var a0 = a[0],
-      a1 = a[1],
-      a2 = a[2],
-      a3 = a[3];
+    a1 = a[1],
+    a2 = a[2],
+    a3 = a[3];
   var a4 = a[4],
-      a5 = a[5],
-      a6 = a[6],
-      a7 = a[7];
+    a5 = a[5],
+    a6 = a[6],
+    a7 = a[7];
   var a8 = a[8],
-      a9 = a[9],
-      a10 = a[10],
-      a11 = a[11];
+    a9 = a[9],
+    a10 = a[10],
+    a11 = a[11];
   var a12 = a[12],
-      a13 = a[13],
-      a14 = a[14],
-      a15 = a[15];
+    a13 = a[13],
+    a14 = a[14],
+    a15 = a[15];
   var b0 = b[0],
-      b1 = b[1],
-      b2 = b[2],
-      b3 = b[3];
+    b1 = b[1],
+    b2 = b[2],
+    b3 = b[3];
   var b4 = b[4],
-      b5 = b[5],
-      b6 = b[6],
-      b7 = b[7];
+    b5 = b[5],
+    b6 = b[6],
+    b7 = b[7];
   var b8 = b[8],
-      b9 = b[9],
-      b10 = b[10],
-      b11 = b[11];
+    b9 = b[9],
+    b10 = b[10],
+    b11 = b[11];
   var b12 = b[12],
-      b13 = b[13],
-      b14 = b[14],
-      b15 = b[15];
-  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b8) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a8), Math.abs(b8)) && Math.abs(a9 - b9) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a9), Math.abs(b9)) && Math.abs(a10 - b10) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a10), Math.abs(b10)) && Math.abs(a11 - b11) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a11), Math.abs(b11)) && Math.abs(a12 - b12) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a12), Math.abs(b12)) && Math.abs(a13 - b13) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a13), Math.abs(b13)) && Math.abs(a14 - b14) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a14), Math.abs(b14)) && Math.abs(a15 - b15) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a15), Math.abs(b15));
+    b13 = b[13],
+    b14 = b[14],
+    b15 = b[15];
+  return (
+    Math.abs(a0 - b0) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
+    Math.abs(a1 - b1) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
+    Math.abs(a2 - b2) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) &&
+    Math.abs(a3 - b3) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) &&
+    Math.abs(a4 - b4) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) &&
+    Math.abs(a5 - b5) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) &&
+    Math.abs(a6 - b6) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) &&
+    Math.abs(a7 - b7) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7)) &&
+    Math.abs(a8 - b8) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a8), Math.abs(b8)) &&
+    Math.abs(a9 - b9) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a9), Math.abs(b9)) &&
+    Math.abs(a10 - b10) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a10), Math.abs(b10)) &&
+    Math.abs(a11 - b11) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a11), Math.abs(b11)) &&
+    Math.abs(a12 - b12) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a12), Math.abs(b12)) &&
+    Math.abs(a13 - b13) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a13), Math.abs(b13)) &&
+    Math.abs(a14 - b14) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a14), Math.abs(b14)) &&
+    Math.abs(a15 - b15) <=
+      glMatrix.EPSILON * Math.max(1.0, Math.abs(a15), Math.abs(b15))
+  );
 }
 /**
  * Alias for {@link mat4.multiply}

@@ -26,4 +26,4 @@ export default `
         // flip y
         gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
     }
-`
+`;

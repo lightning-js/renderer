@@ -1,7 +1,7 @@
-import * as glMatrix from "./common.js";
-import * as mat3 from "./mat3.js";
-import * as vec3 from "./vec3.js";
-import * as vec4 from "./vec4.js";
+import * as glMatrix from './common.js';
+import * as mat3 from './mat3.js';
+import * as vec3 from './vec3.js';
+import * as vec4 from './vec4.js';
 /**
  * Quaternion in the format XYZW
  * @module quat
@@ -112,13 +112,13 @@ export function getAngle(a, b) {
 
 export function multiply(out, a, b) {
   var ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   var bx = b[0],
-      by = b[1],
-      bz = b[2],
-      bw = b[3];
+    by = b[1],
+    bz = b[2],
+    bw = b[3];
   out[0] = ax * bw + aw * bx + ay * bz - az * by;
   out[1] = ay * bw + aw * by + az * bx - ax * bz;
   out[2] = az * bw + aw * bz + ax * by - ay * bx;
@@ -137,11 +137,11 @@ export function multiply(out, a, b) {
 export function rotateX(out, a, rad) {
   rad *= 0.5;
   var ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   var bx = Math.sin(rad),
-      bw = Math.cos(rad);
+    bw = Math.cos(rad);
   out[0] = ax * bw + aw * bx;
   out[1] = ay * bw + az * bx;
   out[2] = az * bw - ay * bx;
@@ -160,11 +160,11 @@ export function rotateX(out, a, rad) {
 export function rotateY(out, a, rad) {
   rad *= 0.5;
   var ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   var by = Math.sin(rad),
-      bw = Math.cos(rad);
+    bw = Math.cos(rad);
   out[0] = ax * bw - az * by;
   out[1] = ay * bw + aw * by;
   out[2] = az * bw + ax * by;
@@ -183,11 +183,11 @@ export function rotateY(out, a, rad) {
 export function rotateZ(out, a, rad) {
   rad *= 0.5;
   var ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   var bz = Math.sin(rad),
-      bw = Math.cos(rad);
+    bw = Math.cos(rad);
   out[0] = ax * bw + ay * bz;
   out[1] = ay * bw - ax * bz;
   out[2] = az * bw + aw * bz;
@@ -206,8 +206,8 @@ export function rotateZ(out, a, rad) {
 
 export function calculateW(out, a) {
   var x = a[0],
-      y = a[1],
-      z = a[2];
+    y = a[1],
+    z = a[2];
   out[0] = x;
   out[1] = y;
   out[2] = z;
@@ -224,12 +224,12 @@ export function calculateW(out, a) {
 
 export function exp(out, a) {
   var x = a[0],
-      y = a[1],
-      z = a[2],
-      w = a[3];
+    y = a[1],
+    z = a[2],
+    w = a[3];
   var r = Math.sqrt(x * x + y * y + z * z);
   var et = Math.exp(w);
-  var s = r > 0 ? et * Math.sin(r) / r : 0;
+  var s = r > 0 ? (et * Math.sin(r)) / r : 0;
   out[0] = x * s;
   out[1] = y * s;
   out[2] = z * s;
@@ -246,9 +246,9 @@ export function exp(out, a) {
 
 export function ln(out, a) {
   var x = a[0],
-      y = a[1],
-      z = a[2],
-      w = a[3];
+    y = a[1],
+    z = a[2],
+    w = a[3];
   var r = Math.sqrt(x * x + y * y + z * z);
   var t = r > 0 ? Math.atan2(r, w) / r : 0;
   out[0] = x * t;
@@ -286,13 +286,13 @@ export function slerp(out, a, b, t) {
   // benchmarks:
   //    http://jsperf.com/quaternion-slerp-implementations
   var ax = a[0],
-      ay = a[1],
-      az = a[2],
-      aw = a[3];
+    ay = a[1],
+    az = a[2],
+    aw = a[3];
   var bx = b[0],
-      by = b[1],
-      bz = b[2],
-      bw = b[3];
+    by = b[1],
+    bz = b[2],
+    bw = b[3];
   var omega, cosom, sinom, scale0, scale1; // calc cosine
 
   cosom = ax * bx + ay * by + az * bz + aw * bw; // adjust signs (if necessary)
@@ -304,7 +304,6 @@ export function slerp(out, a, b, t) {
     bz = -bz;
     bw = -bw;
   } // calculate coefficients
-
 
   if (1.0 - cosom > glMatrix.EPSILON) {
     // standard case (slerp)
@@ -318,7 +317,6 @@ export function slerp(out, a, b, t) {
     scale0 = 1.0 - t;
     scale1 = t;
   } // calculate final values
-
 
   out[0] = scale0 * ax + scale1 * bx;
   out[1] = scale0 * ay + scale1 * by;
@@ -357,9 +355,9 @@ export function random(out) {
 
 export function invert(out, a) {
   var a0 = a[0],
-      a1 = a[1],
-      a2 = a[2],
-      a3 = a[3];
+    a1 = a[1],
+    a2 = a[2],
+    a3 = a[3];
   var dot = a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
   var invDot = dot ? 1.0 / dot : 0; // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
@@ -443,7 +441,10 @@ export function fromMat3(out, m) {
  */
 
 export function fromEuler(out, x, y, z) {
-  var order = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : glMatrix.ANGLE_ORDER;
+  var order =
+    arguments.length > 4 && arguments[4] !== undefined
+      ? arguments[4]
+      : glMatrix.ANGLE_ORDER;
   var halfToRad = Math.PI / 360;
   x *= halfToRad;
   z *= halfToRad;
@@ -456,42 +457,42 @@ export function fromEuler(out, x, y, z) {
   var cz = Math.cos(z);
 
   switch (order) {
-    case "xyz":
+    case 'xyz':
       out[0] = sx * cy * cz + cx * sy * sz;
       out[1] = cx * sy * cz - sx * cy * sz;
       out[2] = cx * cy * sz + sx * sy * cz;
       out[3] = cx * cy * cz - sx * sy * sz;
       break;
 
-    case "xzy":
+    case 'xzy':
       out[0] = sx * cy * cz - cx * sy * sz;
       out[1] = cx * sy * cz - sx * cy * sz;
       out[2] = cx * cy * sz + sx * sy * cz;
       out[3] = cx * cy * cz + sx * sy * sz;
       break;
 
-    case "yxz":
+    case 'yxz':
       out[0] = sx * cy * cz + cx * sy * sz;
       out[1] = cx * sy * cz - sx * cy * sz;
       out[2] = cx * cy * sz - sx * sy * cz;
       out[3] = cx * cy * cz + sx * sy * sz;
       break;
 
-    case "yzx":
+    case 'yzx':
       out[0] = sx * cy * cz + cx * sy * sz;
       out[1] = cx * sy * cz + sx * cy * sz;
       out[2] = cx * cy * sz - sx * sy * cz;
       out[3] = cx * cy * cz - sx * sy * sz;
       break;
 
-    case "zxy":
+    case 'zxy':
       out[0] = sx * cy * cz - cx * sy * sz;
       out[1] = cx * sy * cz + sx * cy * sz;
       out[2] = cx * cy * sz + sx * sy * cz;
       out[3] = cx * cy * cz - sx * sy * sz;
       break;
 
-    case "zyx":
+    case 'zyx':
       out[0] = sx * cy * cz - cx * sy * sz;
       out[1] = cx * sy * cz + sx * cy * sz;
       out[2] = cx * cy * sz - sx * sy * cz;
@@ -512,7 +513,7 @@ export function fromEuler(out, x, y, z) {
  */
 
 export function str(a) {
-  return "quat(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
+  return 'quat(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
 }
 /**
  * Creates a new quat initialized with values from an existing quaternion
@@ -681,7 +682,7 @@ export function equals(a, b) {
  * @returns {quat} out
  */
 
-export var rotationTo = function () {
+export var rotationTo = (function () {
   var tmpvec3 = vec3.create();
   var xUnitVec3 = vec3.fromValues(1, 0, 0);
   var yUnitVec3 = vec3.fromValues(0, 1, 0);
@@ -709,7 +710,7 @@ export var rotationTo = function () {
       return normalize(out, out);
     }
   };
-}();
+})();
 /**
  * Performs a spherical linear interpolation with two control points
  *
@@ -722,7 +723,7 @@ export var rotationTo = function () {
  * @returns {quat} out
  */
 
-export var sqlerp = function () {
+export var sqlerp = (function () {
   var temp1 = create();
   var temp2 = create();
   return function (out, a, b, c, d, t) {
@@ -731,7 +732,7 @@ export var sqlerp = function () {
     slerp(out, temp1, temp2, 2 * t * (1 - t));
     return out;
   };
-}();
+})();
 /**
  * Sets the specified quaternion with values corresponding to the given
  * axes. Each axis is a vec3 and is expected to be unit length and
@@ -743,7 +744,7 @@ export var sqlerp = function () {
  * @returns {quat} out
  */
 
-export var setAxes = function () {
+export var setAxes = (function () {
   var matr = mat3.create();
   return function (out, view, right, up) {
     matr[0] = right[0];
@@ -757,4 +758,4 @@ export var setAxes = function () {
     matr[8] = -view[2];
     return normalize(out, fromMat3(out, matr));
   };
-}();
+})();

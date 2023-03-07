@@ -1,5 +1,5 @@
-export default (textureUnits) =>{
-    let source = `
+export default (textureUnits) => {
+  let source = `
         #define txUnits ${textureUnits}
         # ifdef GL_FRAGMENT_PRESICISON_HIGH
         precision highp float;
@@ -20,18 +20,18 @@ export default (textureUnits) =>{
             if(idx == 0){
                 color = texture2D(textures[0], uv);
             }`;
-            for(let i = 1; i < textureUnits; i++){ 
-                source += `
+  for (let i = 1; i < textureUnits; i++) {
+    source += `
                     else if (idx == ${i}){ 
                         color = texture2D(textures[${i}], uv); 
-                    }`
-            }
-        source += ` 
+                    }`;
+  }
+  source += ` 
             return color;
         }        
         void main(){ 
             gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoordinate);
         }
-`
-    return source;
-}
+`;
+  return source;
+};

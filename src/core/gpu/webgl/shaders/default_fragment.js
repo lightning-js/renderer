@@ -14,4 +14,4 @@ export default `
     void main(){ 
         gl_FragColor = vec4(v_color) * texture2D(u_image, v_textureCoordinate);
     }
-`
+`;
