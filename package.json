@@ -11,9 +11,10 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint:prettier": "prettier --check \"**/*.{ts,js,cjs}\"",
-    "lint:prettier:write": "prettier --write \"**/*.{ts,js,cjs}\"",
-    "build": "tsc"
+    "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
+    "lint:prettier:fix": "prettier --write \"**/*.{ts,js,cjs,md}\"",
+    "build": "tsc",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -31,10 +32,15 @@
   },
   "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
   "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.0",
     "prettier": "^2.8.4",
     "typescript": "^5.0.0-beta"
   },
   "dependencies": {
     "@lightningjs/threadx": "file:../threadx"
+  },
+  "lint-staged": {
+    "*.{ts,js,cjs,md}": "prettier --write"
   }
 }
