@@ -1,7 +1,15 @@
-import * as glMatrix from './common.js';
+import {
+  EPSILON,
+  Float32ArrayLen6,
+  getMatrixArrayType,
+  NumberArrayLen6,
+} from './common.js';
+
+import { Vec2 } from './vec2.js';
+
+export type Mat2d = Float32ArrayLen6 | NumberArrayLen6;
 /**
  * 2x3 Matrix
- * @module mat2d
  * @description
  * A mat2d contains six elements defined as:
  * <pre>
@@ -24,10 +32,10 @@ import * as glMatrix from './common.js';
  * @returns {mat2d} a new 2x3 matrix
  */
 
-export function create() {
-  var out = new glMatrix.ARRAY_TYPE(6);
+export function create(): Mat2d {
+  var out = getMatrixArrayType(6) as Mat2d;
 
-  if (glMatrix.ARRAY_TYPE != Float32Array) {
+  if (!(out instanceof Float32Array)) {
     out[1] = 0;
     out[2] = 0;
     out[4] = 0;
@@ -41,12 +49,12 @@ export function create() {
 /**
  * Creates a new mat2d initialized with values from an existing matrix
  *
- * @param {ReadonlyMat2d} a matrix to clone
+ * @param {Mat2d} a matrix to clone
  * @returns {mat2d} a new 2x3 matrix
  */
 
-export function clone(a) {
-  var out = new glMatrix.ARRAY_TYPE(6);
+export function clone(a: Mat2d): Mat2d {
+  var out = getMatrixArrayType(6) as Mat2d;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -59,11 +67,11 @@ export function clone(a) {
  * Copy the values from one mat2d to another
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the source matrix
+ * @param {Mat2d} a the source matrix
  * @returns {mat2d} out
  */
 
-export function copy(out, a) {
+export function copy(out: Mat2d, a: Mat2d): Mat2d {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -79,7 +87,7 @@ export function copy(out, a) {
  * @returns {mat2d} out
  */
 
-export function identity(out) {
+export function identity(out: Mat2d): Mat2d {
   out[0] = 1;
   out[1] = 0;
   out[2] = 0;
@@ -100,8 +108,15 @@ export function identity(out) {
  * @returns {mat2d} A new mat2d
  */
 
-export function fromValues(a, b, c, d, tx, ty) {
-  var out = new glMatrix.ARRAY_TYPE(6);
+export function fromValues(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  tx: number,
+  ty: number,
+): Mat2d {
+  var out = getMatrixArrayType(6) as Mat2d;
   out[0] = a;
   out[1] = b;
   out[2] = c;
@@ -123,7 +138,15 @@ export function fromValues(a, b, c, d, tx, ty) {
  * @returns {mat2d} out
  */
 
-export function set(out, a, b, c, d, tx, ty) {
+export function set(
+  out: Mat2d,
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  tx: number,
+  ty: number,
+): Mat2d {
   out[0] = a;
   out[1] = b;
   out[2] = c;
@@ -136,11 +159,11 @@ export function set(out, a, b, c, d, tx, ty) {
  * Inverts a mat2d
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the source matrix
+ * @param {Mat2d} a the source matrix
  * @returns {mat2d} out
  */
 
-export function invert(out, a) {
+export function invert(out: Mat2d, a: Mat2d): Mat2d {
   var aa = a[0],
     ab = a[1],
     ac = a[2],
@@ -165,23 +188,23 @@ export function invert(out, a) {
 /**
  * Calculates the determinant of a mat2d
  *
- * @param {ReadonlyMat2d} a the source matrix
+ * @param {Mat2d} a the source matrix
  * @returns {Number} determinant of a
  */
 
-export function determinant(a) {
+export function determinant(a: Mat2d): number {
   return a[0] * a[3] - a[1] * a[2];
 }
 /**
  * Multiplies two mat2d's
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the first operand
- * @param {ReadonlyMat2d} b the second operand
+ * @param {Mat2d} a the first operand
+ * @param {Mat2d} b the second operand
  * @returns {mat2d} out
  */
 
-export function multiply(out, a, b) {
+export function multiply(out: Mat2d, a: Mat2d, b: Mat2d): Mat2d {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -206,12 +229,12 @@ export function multiply(out, a, b) {
  * Rotates a mat2d by the given angle
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the matrix to rotate
+ * @param {Mat2d} a the matrix to rotate
  * @param {Number} rad the angle to rotate the matrix by
  * @returns {mat2d} out
  */
 
-export function rotate(out, a, rad) {
+export function rotate(out: Mat2d, a: Mat2d, rad: number): Mat2d {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -232,12 +255,12 @@ export function rotate(out, a, rad) {
  * Scales the mat2d by the dimensions in the given vec2
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the matrix to translate
- * @param {ReadonlyVec2} v the vec2 to scale the matrix by
+ * @param {Mat2d} a the matrix to translate
+ * @param {Vec2} v the vec2 to scale the matrix by
  * @returns {mat2d} out
  **/
 
-export function scale(out, a, v) {
+export function scale(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -258,12 +281,12 @@ export function scale(out, a, v) {
  * Translates the mat2d by the dimensions in the given vec2
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the matrix to translate
- * @param {ReadonlyVec2} v the vec2 to translate the matrix by
+ * @param {Mat2d} a the matrix to translate
+ * @param {Vec2} v the vec2 to translate the matrix by
  * @returns {mat2d} out
  **/
 
-export function translate(out, a, v) {
+export function translate(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -292,7 +315,7 @@ export function translate(out, a, v) {
  * @returns {mat2d} out
  */
 
-export function fromRotation(out, rad) {
+export function fromRotation(out: Mat2d, rad: number): Mat2d {
   var s = Math.sin(rad),
     c = Math.cos(rad);
   out[0] = c;
@@ -311,11 +334,11 @@ export function fromRotation(out, rad) {
  *     mat2d.scale(dest, dest, vec);
  *
  * @param {mat2d} out mat2d receiving operation result
- * @param {ReadonlyVec2} v Scaling vector
+ * @param {Vec2} v Scaling vector
  * @returns {mat2d} out
  */
 
-export function fromScaling(out, v) {
+export function fromScaling(out: Mat2d, v: Vec2): Mat2d {
   out[0] = v[0];
   out[1] = 0;
   out[2] = 0;
@@ -332,11 +355,11 @@ export function fromScaling(out, v) {
  *     mat2d.translate(dest, dest, vec);
  *
  * @param {mat2d} out mat2d receiving operation result
- * @param {ReadonlyVec2} v Translation vector
+ * @param {Vec2} v Translation vector
  * @returns {mat2d} out
  */
 
-export function fromTranslation(out, v) {
+export function fromTranslation(out: Mat2d, v: Vec2): Mat2d {
   out[0] = 1;
   out[1] = 0;
   out[2] = 0;
@@ -348,11 +371,11 @@ export function fromTranslation(out, v) {
 /**
  * Returns a string representation of a mat2d
  *
- * @param {ReadonlyMat2d} a matrix to represent as a string
+ * @param {Mat2d} a matrix to represent as a string
  * @returns {String} string representation of the matrix
  */
 
-export function str(a) {
+export function str(a: Mat2d): string {
   return (
     'mat2d(' +
     a[0] +
@@ -372,23 +395,23 @@ export function str(a) {
 /**
  * Returns Frobenius norm of a mat2d
  *
- * @param {ReadonlyMat2d} a the matrix to calculate Frobenius norm of
+ * @param {Mat2d} a the matrix to calculate Frobenius norm of
  * @returns {Number} Frobenius norm
  */
 
-export function frob(a) {
+export function frob(a: Mat2d): number {
   return Math.hypot(a[0], a[1], a[2], a[3], a[4], a[5], 1);
 }
 /**
  * Adds two mat2d's
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the first operand
- * @param {ReadonlyMat2d} b the second operand
+ * @param {Mat2d} a the first operand
+ * @param {Mat2d} b the second operand
  * @returns {mat2d} out
  */
 
-export function add(out, a, b) {
+export function add(out: Mat2d, a: Mat2d, b: Mat2d): Mat2d {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
@@ -401,12 +424,12 @@ export function add(out, a, b) {
  * Subtracts matrix b from matrix a
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the first operand
- * @param {ReadonlyMat2d} b the second operand
+ * @param {Mat2d} a the first operand
+ * @param {Mat2d} b the second operand
  * @returns {mat2d} out
  */
 
-export function subtract(out, a, b) {
+export function subtract(out: Mat2d, a: Mat2d, b: Mat2d): Mat2d {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   out[2] = a[2] - b[2];
@@ -419,12 +442,12 @@ export function subtract(out, a, b) {
  * Multiply each element of the matrix by a scalar.
  *
  * @param {mat2d} out the receiving matrix
- * @param {ReadonlyMat2d} a the matrix to scale
+ * @param {Mat2d} a the matrix to scale
  * @param {Number} b amount to scale the matrix's elements by
  * @returns {mat2d} out
  */
 
-export function multiplyScalar(out, a, b) {
+export function multiplyScalar(out: Mat2d, a: Mat2d, b: number): Mat2d {
   out[0] = a[0] * b;
   out[1] = a[1] * b;
   out[2] = a[2] * b;
@@ -437,13 +460,18 @@ export function multiplyScalar(out, a, b) {
  * Adds two mat2d's after multiplying each element of the second operand by a scalar value.
  *
  * @param {mat2d} out the receiving vector
- * @param {ReadonlyMat2d} a the first operand
- * @param {ReadonlyMat2d} b the second operand
+ * @param {Mat2d} a the first operand
+ * @param {Mat2d} b the second operand
  * @param {Number} scale the amount to scale b's elements by before adding
  * @returns {mat2d} out
  */
 
-export function multiplyScalarAndAdd(out, a, b, scale) {
+export function multiplyScalarAndAdd(
+  out: Mat2d,
+  a: Mat2d,
+  b: Mat2d,
+  scale: number,
+): Mat2d {
   out[0] = a[0] + b[0] * scale;
   out[1] = a[1] + b[1] * scale;
   out[2] = a[2] + b[2] * scale;
@@ -455,12 +483,12 @@ export function multiplyScalarAndAdd(out, a, b, scale) {
 /**
  * Returns whether or not the matrices have exactly the same elements in the same position (when compared with ===)
  *
- * @param {ReadonlyMat2d} a The first matrix.
- * @param {ReadonlyMat2d} b The second matrix.
+ * @param {Mat2d} a The first matrix.
+ * @param {Mat2d} b The second matrix.
  * @returns {Boolean} True if the matrices are equal, false otherwise.
  */
 
-export function exactEquals(a, b) {
+export function exactEquals(a: Mat2d, b: Mat2d): boolean {
   return (
     a[0] === b[0] &&
     a[1] === b[1] &&
@@ -473,12 +501,12 @@ export function exactEquals(a, b) {
 /**
  * Returns whether or not the matrices have approximately the same elements in the same position.
  *
- * @param {ReadonlyMat2d} a The first matrix.
- * @param {ReadonlyMat2d} b The second matrix.
+ * @param {Mat2d} a The first matrix.
+ * @param {Mat2d} b The second matrix.
  * @returns {Boolean} True if the matrices are equal, false otherwise.
  */
 
-export function equals(a, b) {
+export function equals(a: Mat2d, b: Mat2d): boolean {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -492,28 +520,22 @@ export function equals(a, b) {
     b4 = b[4],
     b5 = b[5];
   return (
-    Math.abs(a0 - b0) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
-    Math.abs(a1 - b1) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
-    Math.abs(a2 - b2) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) &&
-    Math.abs(a3 - b3) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) &&
-    Math.abs(a4 - b4) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) &&
-    Math.abs(a5 - b5) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5))
+    Math.abs(a0 - b0) <= EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
+    Math.abs(a1 - b1) <= EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
+    Math.abs(a2 - b2) <= EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) &&
+    Math.abs(a3 - b3) <= EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) &&
+    Math.abs(a4 - b4) <= EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) &&
+    Math.abs(a5 - b5) <= EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5))
   );
 }
 /**
- * Alias for {@link mat2d.multiply}
+ * Alias for {@link multiply}
  * @function
  */
 
 export var mul = multiply;
 /**
- * Alias for {@link mat2d.subtract}
+ * Alias for {@link subtract}
  * @function
  */
 

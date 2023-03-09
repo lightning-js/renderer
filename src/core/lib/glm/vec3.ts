@@ -1,19 +1,25 @@
-import * as glMatrix from './common.js';
-/**
- * 3 Dimensional Vector
- * @module vec3
- */
+import {
+  EPSILON,
+  Float32ArrayLen3,
+  getMatrixArrayType,
+  NumberArrayLen3,
+  RANDOM,
+} from './common.js';
+import { Mat3 } from './mat3.js';
+import { Mat4 } from './mat4.js';
+import { Quat } from './quat.js';
 
+export type Vec3 = Float32ArrayLen3 | NumberArrayLen3;
 /**
- * Creates a new, empty vec3
+ * Creates a new, empty Vec3
  *
- * @returns {vec3} a new 3D vector
+ * @returns {Vec3} a new 3D vector
  */
 
-export function create() {
-  var out = new glMatrix.ARRAY_TYPE(3);
+export function create(): Vec3 {
+  var out = getMatrixArrayType(3) as Vec3;
 
-  if (glMatrix.ARRAY_TYPE != Float32Array) {
+  if (!(out instanceof Float32Array)) {
     out[0] = 0;
     out[1] = 0;
     out[2] = 0;
@@ -22,88 +28,89 @@ export function create() {
   return out;
 }
 /**
- * Creates a new vec3 initialized with values from an existing vector
+ * Creates a new Vec3 initialized with values from an existing vector
  *
- * @param {ReadonlyVec3} a vector to clone
- * @returns {vec3} a new 3D vector
+ * @param {Vec3} a vector to clone
+ * @returns {Vec3} a new 3D vector
  */
 
-export function clone(a) {
-  var out = new glMatrix.ARRAY_TYPE(3);
+export function clone(a: Vec3): Vec3 {
+  var out = getMatrixArrayType(3) as Vec3;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
   return out;
 }
 /**
- * Calculates the length of a vec3
+ * Calculates the length of a Vec3
  *
- * @param {ReadonlyVec3} a vector to calculate length of
+ * @param {Vec3} a vector to calculate length of
  * @returns {Number} length of a
  */
 
-export function length(a) {
+export function length(a: Vec3): number {
   var x = a[0];
   var y = a[1];
   var z = a[2];
   return Math.hypot(x, y, z);
 }
 /**
- * Creates a new vec3 initialized with the given values
+ * Creates a new Vec3 initialized with the given values
  *
  * @param {Number} x X component
  * @param {Number} y Y component
  * @param {Number} z Z component
- * @returns {vec3} a new 3D vector
+ * @returns {Vec3} a new 3D vector
  */
 
-export function fromValues(x, y, z) {
-  var out = new glMatrix.ARRAY_TYPE(3);
+export function fromValues(x: number, y: number, z: number) {
+  var out = getMatrixArrayType(3) as Vec3;
   out[0] = x;
   out[1] = y;
   out[2] = z;
   return out;
 }
+
 /**
- * Copy the values from one vec3 to another
+ * Copy the values from one Vec3 to another
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the source vector
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the source vector
+ * @returns {Vec3} out
  */
 
-export function copy(out, a) {
+export function copy(out: Vec3, a: Vec3): Vec3 {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
   return out;
 }
 /**
- * Set the components of a vec3 to the given values
+ * Set the components of a Vec3 to the given values
  *
- * @param {vec3} out the receiving vector
+ * @param {Vec3} out the receiving vector
  * @param {Number} x X component
  * @param {Number} y Y component
  * @param {Number} z Z component
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function set(out, x, y, z) {
+export function set(out: Vec3, x: number, y: number, z: number): Vec3 {
   out[0] = x;
   out[1] = y;
   out[2] = z;
   return out;
 }
 /**
- * Adds two vec3's
+ * Adds two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function add(out, a, b) {
+export function add(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
@@ -112,229 +119,229 @@ export function add(out, a, b) {
 /**
  * Subtracts vector b from vector a
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function subtract(out, a, b) {
+export function subtract(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   out[2] = a[2] - b[2];
   return out;
 }
 /**
- * Multiplies two vec3's
+ * Multiplies two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function multiply(out, a, b) {
+export function multiply(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] * b[0];
   out[1] = a[1] * b[1];
   out[2] = a[2] * b[2];
   return out;
 }
 /**
- * Divides two vec3's
+ * Divides two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function divide(out, a, b) {
+export function divide(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] / b[0];
   out[1] = a[1] / b[1];
   out[2] = a[2] / b[2];
   return out;
 }
 /**
- * Math.ceil the components of a vec3
+ * Math.ceil the components of a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to ceil
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to ceil
+ * @returns {Vec3} out
  */
 
-export function ceil(out, a) {
+export function ceil(out: Vec3, a: Vec3): Vec3 {
   out[0] = Math.ceil(a[0]);
   out[1] = Math.ceil(a[1]);
   out[2] = Math.ceil(a[2]);
   return out;
 }
 /**
- * Math.floor the components of a vec3
+ * Math.floor the components of a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to floor
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to floor
+ * @returns {Vec3} out
  */
 
-export function floor(out, a) {
+export function floor(out: Vec3, a: Vec3): Vec3 {
   out[0] = Math.floor(a[0]);
   out[1] = Math.floor(a[1]);
   out[2] = Math.floor(a[2]);
   return out;
 }
 /**
- * Returns the minimum of two vec3's
+ * Returns the minimum of two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function min(out, a, b) {
+export function min(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = Math.min(a[0], b[0]);
   out[1] = Math.min(a[1], b[1]);
   out[2] = Math.min(a[2], b[2]);
   return out;
 }
 /**
- * Returns the maximum of two vec3's
+ * Returns the maximum of two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function max(out, a, b) {
+export function max(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = Math.max(a[0], b[0]);
   out[1] = Math.max(a[1], b[1]);
   out[2] = Math.max(a[2], b[2]);
   return out;
 }
 /**
- * Math.round the components of a vec3
+ * Math.round the components of a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to round
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to round
+ * @returns {Vec3} out
  */
 
-export function round(out, a) {
+export function round(out: Vec3, a: Vec3): Vec3 {
   out[0] = Math.round(a[0]);
   out[1] = Math.round(a[1]);
   out[2] = Math.round(a[2]);
   return out;
 }
 /**
- * Scales a vec3 by a scalar number
+ * Scales a Vec3 by a scalar number
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to scale
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the vector to scale
  * @param {Number} b amount to scale the vector by
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function scale(out, a, b) {
+export function scale(out: Vec3, a: Vec3, b: number): Vec3 {
   out[0] = a[0] * b;
   out[1] = a[1] * b;
   out[2] = a[2] * b;
   return out;
 }
 /**
- * Adds two vec3's after scaling the second operand by a scalar value
+ * Adds two Vec3's after scaling the second operand by a scalar value
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @param {Number} scale the amount to scale b by before adding
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function scaleAndAdd(out, a, b, scale) {
+export function scaleAndAdd(out: Vec3, a: Vec3, b: Vec3, scale: number): Vec3 {
   out[0] = a[0] + b[0] * scale;
   out[1] = a[1] + b[1] * scale;
   out[2] = a[2] + b[2] * scale;
   return out;
 }
 /**
- * Calculates the euclidian distance between two vec3's
+ * Calculates the euclidian distance between two Vec3's
  *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @returns {Number} distance between a and b
  */
 
-export function distance(a, b) {
+export function distance(a: Vec3, b: Vec3): number {
   var x = b[0] - a[0];
   var y = b[1] - a[1];
   var z = b[2] - a[2];
   return Math.hypot(x, y, z);
 }
 /**
- * Calculates the squared euclidian distance between two vec3's
+ * Calculates the squared euclidian distance between two Vec3's
  *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @returns {Number} squared distance between a and b
  */
 
-export function squaredDistance(a, b) {
+export function squaredDistance(a: Vec3, b: Vec3): number {
   var x = b[0] - a[0];
   var y = b[1] - a[1];
   var z = b[2] - a[2];
   return x * x + y * y + z * z;
 }
 /**
- * Calculates the squared length of a vec3
+ * Calculates the squared length of a Vec3
  *
- * @param {ReadonlyVec3} a vector to calculate squared length of
+ * @param {Vec3} a vector to calculate squared length of
  * @returns {Number} squared length of a
  */
 
-export function squaredLength(a) {
+export function squaredLength(a: Vec3): number {
   var x = a[0];
   var y = a[1];
   var z = a[2];
   return x * x + y * y + z * z;
 }
 /**
- * Negates the components of a vec3
+ * Negates the components of a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to negate
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to negate
+ * @returns {Vec3} out
  */
 
-export function negate(out, a) {
+export function negate(out: Vec3, a: Vec3): Vec3 {
   out[0] = -a[0];
   out[1] = -a[1];
   out[2] = -a[2];
   return out;
 }
 /**
- * Returns the inverse of the components of a vec3
+ * Returns the inverse of the components of a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to invert
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to invert
+ * @returns {Vec3} out
  */
 
-export function inverse(out, a) {
+export function inverse(out: Vec3, a: Vec3): Vec3 {
   out[0] = 1.0 / a[0];
   out[1] = 1.0 / a[1];
   out[2] = 1.0 / a[2];
   return out;
 }
 /**
- * Normalize a vec3
+ * Normalize a Vec3
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to normalize
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a vector to normalize
+ * @returns {Vec3} out
  */
 
-export function normalize(out, a) {
+export function normalize(out: Vec3, a: Vec3): Vec3 {
   var x = a[0];
   var y = a[1];
   var z = a[2];
@@ -351,26 +358,26 @@ export function normalize(out, a) {
   return out;
 }
 /**
- * Calculates the dot product of two vec3's
+ * Calculates the dot product of two Vec3's
  *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @returns {Number} dot product of a and b
  */
 
-export function dot(a, b) {
+export function dot(a: Vec3, b: Vec3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 /**
- * Computes the cross product of two vec3's
+ * Computes the cross product of two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @returns {Vec3} out
  */
 
-export function cross(out, a, b) {
+export function cross(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   var ax = a[0],
     ay = a[1],
     az = a[2];
@@ -383,16 +390,16 @@ export function cross(out, a, b) {
   return out;
 }
 /**
- * Performs a linear interpolation between two vec3's
+ * Performs a linear interpolation between two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function lerp(out, a, b, t) {
+export function lerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
   var ax = a[0];
   var ay = a[1];
   var az = a[2];
@@ -402,16 +409,16 @@ export function lerp(out, a, b, t) {
   return out;
 }
 /**
- * Performs a spherical linear interpolation between two vec3's
+ * Performs a spherical linear interpolation between two Vec3's
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
  * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function slerp(out, a, b, t) {
+export function slerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
   var angle = Math.acos(Math.min(Math.max(dot(a, b), -1), 1));
   var sinTotal = Math.sin(angle);
   var ratioA = Math.sin((1 - t) * angle) / sinTotal;
@@ -424,16 +431,23 @@ export function slerp(out, a, b, t) {
 /**
  * Performs a hermite interpolation with two control points
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {ReadonlyVec3} c the third operand
- * @param {ReadonlyVec3} d the fourth operand
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @param {Vec3} c the third operand
+ * @param {Vec3} d the fourth operand
  * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function hermite(out, a, b, c, d, t) {
+export function hermite(
+  out: Vec3,
+  a: Vec3,
+  b: Vec3,
+  c: Vec3,
+  d: Vec3,
+  t: number,
+): Vec3 {
   var factorTimes2 = t * t;
   var factor1 = factorTimes2 * (2 * t - 3) + 1;
   var factor2 = factorTimes2 * (t - 2) + t;
@@ -447,16 +461,23 @@ export function hermite(out, a, b, c, d, t) {
 /**
  * Performs a bezier interpolation with two control points
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {ReadonlyVec3} c the third operand
- * @param {ReadonlyVec3} d the fourth operand
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the first operand
+ * @param {Vec3} b the second operand
+ * @param {Vec3} c the third operand
+ * @param {Vec3} d the fourth operand
  * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function bezier(out, a, b, c, d, t) {
+export function bezier(
+  out: Vec3,
+  a: Vec3,
+  b: Vec3,
+  c: Vec3,
+  d: Vec3,
+  t: number,
+): Vec3 {
   var inverseFactor = 1 - t;
   var inverseFactorTimesTwo = inverseFactor * inverseFactor;
   var factorTimes2 = t * t;
@@ -472,15 +493,15 @@ export function bezier(out, a, b, c, d, t) {
 /**
  * Generates a random vector with the given scale
  *
- * @param {vec3} out the receiving vector
+ * @param {Vec3} out the receiving vector
  * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function random(out, scale) {
-  scale = scale === undefined ? 1.0 : scale;
-  var r = glMatrix.RANDOM() * 2.0 * Math.PI;
-  var z = glMatrix.RANDOM() * 2.0 - 1.0;
+export function random(out: Vec3, scale?: number): Vec3 {
+  scale = scale ?? 1.0;
+  var r = RANDOM() * 2.0 * Math.PI;
+  var z = RANDOM() * 2.0 - 1.0;
   var zScale = Math.sqrt(1.0 - z * z) * scale;
   out[0] = Math.cos(r) * zScale;
   out[1] = Math.sin(r) * zScale;
@@ -488,16 +509,16 @@ export function random(out, scale) {
   return out;
 }
 /**
- * Transforms the vec3 with a mat4.
+ * Transforms the Vec3 with a mat4.
  * 4th vector component is implicitly '1'
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyMat4} m matrix to transform with
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the vector to transform
+ * @param {Mat4} m matrix to transform with
+ * @returns {Vec3} out
  */
 
-export function transformMat4(out, a, m) {
+export function transformMat4(out: Vec3, a: Vec3, m: Mat4): Vec3 {
   var x = a[0],
     y = a[1],
     z = a[2];
@@ -509,15 +530,15 @@ export function transformMat4(out, a, m) {
   return out;
 }
 /**
- * Transforms the vec3 with a mat3.
+ * Transforms the Vec3 with a mat3.
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyMat3} m the 3x3 matrix to transform with
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the vector to transform
+ * @param {Mat3} m the 3x3 matrix to transform with
+ * @returns {Vec3} out
  */
 
-export function transformMat3(out, a, m) {
+export function transformMat3(out: Vec3, a: Vec3, m: Mat3): Vec3 {
   var x = a[0],
     y = a[1],
     z = a[2];
@@ -527,17 +548,17 @@ export function transformMat3(out, a, m) {
   return out;
 }
 /**
- * Transforms the vec3 with a quat
+ * Transforms the Vec3 with a quat
  * Can also be used for dual quaternions. (Multiply it with the real part)
  *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyQuat} q quaternion to transform with
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @param {Vec3} a the vector to transform
+ * @param {Quat} q quaternion to transform with
+ * @returns {Vec3} out
  */
 
-export function transformQuat(out, a, q) {
-  // benchmarks: https://jsperf.com/quaternion-transform-vec3-implementations-fixed
+export function transformQuat(out: Vec3, a: Vec3, q: Quat): Vec3 {
+  // benchmarks: https://jsperf.com/quaternion-transform-Vec3-implementations-fixed
   var qx = q[0],
     qy = q[1],
     qz = q[2],
@@ -545,24 +566,24 @@ export function transformQuat(out, a, q) {
   var x = a[0],
     y = a[1],
     z = a[2]; // var qvec = [qx, qy, qz];
-  // var uv = vec3.cross([], qvec, a);
+  // var uv = Vec3.cross([], qvec, a);
 
   var uvx = qy * z - qz * y,
     uvy = qz * x - qx * z,
-    uvz = qx * y - qy * x; // var uuv = vec3.cross([], qvec, uv);
+    uvz = qx * y - qy * x; // var uuv = Vec3.cross([], qvec, uv);
 
   var uuvx = qy * uvz - qz * uvy,
     uuvy = qz * uvx - qx * uvz,
-    uuvz = qx * uvy - qy * uvx; // vec3.scale(uv, uv, 2 * w);
+    uuvz = qx * uvy - qy * uvx; // Vec3.scale(uv, uv, 2 * w);
 
   var w2 = qw * 2;
   uvx *= w2;
   uvy *= w2;
-  uvz *= w2; // vec3.scale(uuv, uuv, 2);
+  uvz *= w2; // Vec3.scale(uuv, uuv, 2);
 
   uuvx *= 2;
   uuvy *= 2;
-  uuvz *= 2; // return vec3.add(out, a, vec3.add(out, uv, uuv));
+  uuvz *= 2; // return Vec3.add(out, a, Vec3.add(out, uv, uuv));
 
   out[0] = x + uvx + uuvx;
   out[1] = y + uvy + uuvy;
@@ -571,14 +592,14 @@ export function transformQuat(out, a, q) {
 }
 /**
  * Rotate a 3D vector around the x-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Vec3} out The receiving Vec3
+ * @param {Vec3} a The Vec3 point to rotate
+ * @param {Vec3} b The origin of the rotation
  * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function rotateX(out, a, b, rad) {
+export function rotateX(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
   var p = [],
     r = []; //Translate point to the origin
 
@@ -597,14 +618,14 @@ export function rotateX(out, a, b, rad) {
 }
 /**
  * Rotate a 3D vector around the y-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Vec3} out The receiving Vec3
+ * @param {Vec3} a The Vec3 point to rotate
+ * @param {Vec3} b The origin of the rotation
  * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function rotateY(out, a, b, rad) {
+export function rotateY(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
   var p = [],
     r = []; //Translate point to the origin
 
@@ -623,14 +644,14 @@ export function rotateY(out, a, b, rad) {
 }
 /**
  * Rotate a 3D vector around the z-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Vec3} out The receiving Vec3
+ * @param {Vec3} a The Vec3 point to rotate
+ * @param {Vec3} b The origin of the rotation
  * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
+ * @returns {Vec3} out
  */
 
-export function rotateZ(out, a, b, rad) {
+export function rotateZ(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
   var p = [],
     r = []; //Translate point to the origin
 
@@ -649,12 +670,12 @@ export function rotateZ(out, a, b, rad) {
 }
 /**
  * Get the angle between two 3D vectors
- * @param {ReadonlyVec3} a The first operand
- * @param {ReadonlyVec3} b The second operand
+ * @param {Vec3} a The first operand
+ * @param {Vec3} b The second operand
  * @returns {Number} The angle in radians
  */
 
-export function angle(a, b) {
+export function angle(a: Vec3, b: Vec3): number {
   var ax = a[0],
     ay = a[1],
     az = a[2],
@@ -668,13 +689,13 @@ export function angle(a, b) {
   return Math.acos(Math.min(Math.max(cosine, -1), 1));
 }
 /**
- * Set the components of a vec3 to zero
+ * Set the components of a Vec3 to zero
  *
- * @param {vec3} out the receiving vector
- * @returns {vec3} out
+ * @param {Vec3} out the receiving vector
+ * @returns {Vec3} out
  */
 
-export function zero(out) {
+export function zero(out: Vec3): Vec3 {
   out[0] = 0.0;
   out[1] = 0.0;
   out[2] = 0.0;
@@ -683,33 +704,33 @@ export function zero(out) {
 /**
  * Returns a string representation of a vector
  *
- * @param {ReadonlyVec3} a vector to represent as a string
+ * @param {Vec3} a vector to represent as a string
  * @returns {String} string representation of the vector
  */
 
-export function str(a) {
-  return 'vec3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ')';
+export function str(a: Vec3): string {
+  return 'Vec3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ')';
 }
 /**
  * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
  *
- * @param {ReadonlyVec3} a The first vector.
- * @param {ReadonlyVec3} b The second vector.
+ * @param {Vec3} a The first vector.
+ * @param {Vec3} b The second vector.
  * @returns {Boolean} True if the vectors are equal, false otherwise.
  */
 
-export function exactEquals(a, b) {
+export function exactEquals(a: Vec3, b: Vec3): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 /**
  * Returns whether or not the vectors have approximately the same elements in the same position.
  *
- * @param {ReadonlyVec3} a The first vector.
- * @param {ReadonlyVec3} b The second vector.
+ * @param {Vec3} a The first vector.
+ * @param {Vec3} b The second vector.
  * @returns {Boolean} True if the vectors are equal, false otherwise.
  */
 
-export function equals(a, b) {
+export function equals(a: Vec3, b: Vec3): boolean {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2];
@@ -717,63 +738,60 @@ export function equals(a, b) {
     b1 = b[1],
     b2 = b[2];
   return (
-    Math.abs(a0 - b0) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
-    Math.abs(a1 - b1) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
-    Math.abs(a2 - b2) <=
-      glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2))
+    Math.abs(a0 - b0) <= EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
+    Math.abs(a1 - b1) <= EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) &&
+    Math.abs(a2 - b2) <= EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2))
   );
 }
 /**
- * Alias for {@link vec3.subtract}
+ * Alias for {@link subtract}
  * @function
  */
 
 export var sub = subtract;
 /**
- * Alias for {@link vec3.multiply}
+ * Alias for {@link multiply}
  * @function
  */
 
 export var mul = multiply;
 /**
- * Alias for {@link vec3.divide}
+ * Alias for {@link divide}
  * @function
  */
 
 export var div = divide;
 /**
- * Alias for {@link vec3.distance}
+ * Alias for {@link distance}
  * @function
  */
 
 export var dist = distance;
 /**
- * Alias for {@link vec3.squaredDistance}
+ * Alias for {@link squaredDistance}
  * @function
  */
 
 export var sqrDist = squaredDistance;
 /**
- * Alias for {@link vec3.length}
+ * Alias for {@link length}
  * @function
  */
 
 export var len = length;
 /**
- * Alias for {@link vec3.squaredLength}
+ * Alias for {@link squaredLength}
  * @function
  */
 
 export var sqrLen = squaredLength;
 /**
- * Perform some operation over an array of vec3s.
+ * Perform some operation over an array of Vec3s.
  *
  * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+ * @param {Number} stride Number of elements between the start of each Vec3. If 0 assumes tightly packed
  * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+ * @param {Number} count Number of Vec3s to iterate over. If 0 iterates over entire array
  * @param {Function} fn Function to call for each vector in the array
  * @param {Object} [arg] additional argument to pass to fn
  * @returns {Array} a
@@ -781,9 +799,16 @@ export var sqrLen = squaredLength;
  */
 
 export var forEach = (function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
+  var vec = [] as Vec3[];
+  return function (
+    a: Vec3[],
+    stride: number,
+    offset: number,
+    count: number,
+    fn: Function,
+    arg: number,
+  ): Vec3[] {
+    var i: number, l: number;
 
     if (!stride) {
       stride = 3;
