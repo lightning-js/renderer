@@ -2,10 +2,12 @@
   "name": "@lightningjs/renderer",
   "version": "1.0.0",
   "description": "WebGL Renderer",
+  "type": "module",
+  "main": "./build/index.js",
   "exports": {
-    ".": "./build/renderer/index.js",
-    "./application": "./build/renderer/src/core/application.js",
-    "./node": "./build/renderer/src/core/node.js"
+    ".": "./build/index.js",
+    "./application": "./build/src/core/application.js",
+    "./node": "./build/src/core/node.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -27,6 +29,9 @@
   },
   "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
   "devDependencies": {
-    "typescript": "^4.8.2"
+    "typescript": "^5.0.0-beta"
+  },
+  "dependencies": {
+    "@lightningjs/threadx": "file:../threadx"
   }
 }

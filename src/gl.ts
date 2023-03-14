@@ -1,4 +1,4 @@
-import threadx from "../../threadx/build/index.js"
+import threadx from "@lightningjs/threadx"
 import application from "./core/application.js"
 import { boltProperties as props } from "./utils.js";
 import createNode from "./core/node.js"
@@ -135,6 +135,9 @@ const loadImage = async (src) => {
         blob, {
             premultiplyAlpha: 'premultiply',
             colorSpaceConversion: 'none',
+            // @ts-expect-error
+            // Bug in TypeScript 5.0.0-beta seemingly not allowing this property to be set to 'none'
+            // https://github.com/microsoft/TypeScript/issues/53053
             imageOrientation: 'none'
         }
     )

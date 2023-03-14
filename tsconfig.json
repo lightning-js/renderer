@@ -2,10 +2,11 @@
     "compilerOptions": {
         "outDir": "build",
         "allowJs": true,
-        "target": "ES2021", 
-        "module": "ESNext",
-        "watch": true,
-        "sourceMap": true
+        "target": "ES2022",
+        "module": "ES2022",
+        "moduleResolution": "node16",
+        "sourceMap": true,
+        "declaration": true,
     },
     "include": ["./**/*"]
-} 
+}
