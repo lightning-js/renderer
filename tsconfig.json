@@ -7,6 +7,14 @@
         "moduleResolution": "node16",
         "sourceMap": true,
         "declaration": true,
+
+        // Type Checking / Syntax Rules
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "verbatimModuleSyntax": true
     },
     "include": ["./**/*"]
 }
