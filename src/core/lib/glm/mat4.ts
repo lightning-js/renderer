@@ -881,8 +881,7 @@ export function fromScaling(out: Mat4, v: Vec3): Mat4 {
  * @param {Vec3} axis the axis to rotate around
  * @returns {Mat4} out
  */
-
-export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
+export function fromRotation(out: Mat4, rad: number, axis: Vec3) : Mat4 | null {
   var x = axis[0],
     y = axis[1],
     z = axis[2];

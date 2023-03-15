@@ -613,7 +613,7 @@ export var sqrLen = squaredLength;
  */
 
 export var forEach = (function () {
-  var vec = [];
+  var vec: Vec2[] = [];
   return function (
     a: Vec2[],
     stride: number,
