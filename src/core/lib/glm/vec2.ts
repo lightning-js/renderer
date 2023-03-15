@@ -639,8 +639,8 @@ export var forEach = (function () {
     }
 
     for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
+      vec[0] = a[i]!;
+      vec[1] = a[i + 1]!;
       fn(vec, vec, arg);
       a[i] = vec[0];
       a[i + 1] = vec[1];

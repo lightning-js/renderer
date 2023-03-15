@@ -440,17 +440,29 @@ export function fromMat3(out: Quat, m: Mat3) {
     out[2] = (m[1] - m[3]) * fRoot;
   } else {
     // |w| <= 1/2
+    // Since we're doing math to calculate tuple indices we extract these
+    // types so we can easily assert to them below when needed.
+    type Mat3Index = Extract<keyof Mat3, number>;
+    type QuatIndex = Extract<keyof Quat, number>;
     var i: number = 0;
     if (m[4] > m[0]) i = 1;
-    if (m[8] > m[i * 3 + i]) i = 2;
-    var j: number = (i + 1) % 3;
-    var k: number = (i + 2) % 3;
-    fRoot = Math.sqrt(m[i * 3 + i] - m[j * 3 + j] - m[k * 3 + k] + 1.0);
-    out[i] = 0.5 * fRoot;
+    if (m[8] > m[(i * 3 + i) as Mat3Index]) i = 2;
+    var j = ((i + 1) % 3) as QuatIndex;
+    var k = ((i + 2) % 3) as QuatIndex;
+    fRoot = Math.sqrt(
+      m[(i * 3 + i) as Mat3Index] -
+        m[(j * 3 + j) as Mat3Index] -
+        m[(k * 3 + k) as Mat3Index] +
+        1.0,
+    );
+    out[i as QuatIndex] = 0.5 * fRoot;
     fRoot = 0.5 / fRoot;
-    out[3] = (m[j * 3 + k] - m[k * 3 + j]) * fRoot;
-    out[j] = (m[j * 3 + i] + m[i * 3 + j]) * fRoot;
-    out[k] = (m[k * 3 + i] + m[i * 3 + k]) * fRoot;
+    out[3] =
+      (m[(j * 3 + k) as Mat3Index] - m[(k * 3 + j) as Mat3Index]) * fRoot;
+    out[j] =
+      (m[(j * 3 + i) as Mat3Index] + m[(i * 3 + j) as Mat3Index]) * fRoot;
+    out[k] =
+      (m[(k * 3 + i) as Mat3Index] + m[(i * 3 + k) as Mat3Index]) * fRoot;
   }
 
   return out;
