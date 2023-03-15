@@ -155,7 +155,7 @@ export function transpose(out: Mat2, a: Mat2): Mat2 {
  * @returns {Mat2} out
  */
 
-export function invert(out: Mat2, a: Mat2): Mat2 {
+export function invert(out: Mat2, a: Mat2): Mat2 | null {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],

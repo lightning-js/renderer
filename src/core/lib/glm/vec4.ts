@@ -6,6 +6,7 @@ import {
   RANDOM,
 } from './common.js';
 import { Mat3 } from './mat3.js';
+import { Mat4 } from './mat4.js';
 import { Quat } from './quat.js';
 import { Quat2 } from './quat2.js';
 
@@ -490,7 +491,7 @@ export function random(out: Vec4, scale?: number): Vec4 {
  * @returns {Vec4} out
  */
 
-export function transformMat4(out: Vec4, a: Vec4, m: Mat3): Vec4 {
+export function transformMat4(out: Vec4, a: Vec4, m: Mat4): Vec4 {
   var x = a[0],
     y = a[1],
     z = a[2],

@@ -298,7 +298,7 @@ export function transpose(out: Mat4, a: Mat4): Mat4 {
  * @returns {Mat4} out
  */
 
-export function invert(out: Mat4, a: Mat4): Mat4 {
+export function invert(out: Mat4, a: Mat4): Mat4 | null {
   var a00 = a[0],
     a01 = a[1],
     a02 = a[2],
@@ -603,7 +603,12 @@ export function scale(out: Mat4, a: Mat4, v: Mat4): Mat4 {
  * @returns {Mat4} out
  */
 
-export function rotate(out: Mat4, a: Mat4, rad: number, axis: Vec3): Mat4 {
+export function rotate(
+  out: Mat4,
+  a: Mat4,
+  rad: number,
+  axis: Vec3,
+): Mat4 | null {
   var x = axis[0],
     y = axis[1],
     z = axis[2];
@@ -877,7 +882,7 @@ export function fromScaling(out: Mat4, v: Vec3): Mat4 {
  * @returns {Mat4} out
  */
 
-export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 {
+export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
   var x = axis[0],
     y = axis[1],
     z = axis[2];

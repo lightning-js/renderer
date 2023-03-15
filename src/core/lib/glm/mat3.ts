@@ -226,7 +226,7 @@ export function transpose(out: Mat3, a: Mat3): Mat3 {
  * @returns {mat3} out
  */
 
-export function invert(out: Mat3, a: Mat3): Mat3 {
+export function invert(out: Mat3, a: Mat3): Mat3 | null {
   var a00 = a[0],
     a01 = a[1],
     a02 = a[2];
@@ -576,7 +576,7 @@ export function fromQuat(out: Mat3, q: Quat): Mat3 {
  * @returns {mat3} out
  */
 
-export function normalFromMat4(out: Mat3, a: Mat4): Mat3 {
+export function normalFromMat4(out: Mat3, a: Mat4): Mat3 | null {
   var a00 = a[0],
     a01 = a[1],
     a02 = a[2],

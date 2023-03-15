@@ -10,6 +10,7 @@ import { Vec3 } from './vec3.js';
 import { Mat2d } from './mat2d.js';
 import { Mat3 } from './mat3.js';
 import { Mat4 } from './mat4.js';
+import { Mat2 } from './mat2.js';
 
 export type Vec2 = Float32ArrayLen2 | NumberArrayLen2;
 
@@ -408,7 +409,7 @@ export function random(out: Vec2, scale?: number): Vec2 {
  * @returns {Vec2} out
  */
 
-export function transformMat2(out: Vec2, a: Vec2, m: Vec2): Vec2 {
+export function transformMat2(out: Vec2, a: Vec2, m: Mat2): Vec2 {
   var x = a[0],
     y = a[1];
   out[0] = m[0] * x + m[2] * y;
@@ -612,7 +613,7 @@ export var sqrLen = squaredLength;
  */
 
 export var forEach = (function () {
-  var vec = [] as Vec2[];
+  var vec = [];
   return function (
     a: Vec2[],
     stride: number,

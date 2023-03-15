@@ -131,6 +131,7 @@ export type NumberArrayLen16 = [
   number,
   number,
   number,
+  number,
 ];
 
 export interface FOV {

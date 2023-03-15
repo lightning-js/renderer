@@ -20,7 +20,7 @@ export const norm = (argb: number): number => {
   let g = ((argb / 256) | 0) % 256;
   let b = argb % 256;
   let a = (argb / 16777216) | 0;
-  const rgba = [r / 255, g / 255, b / 255, a / 255];
+  const rgba: RGBA = [r / 255, g / 255, b / 255, a / 255];
 
   rgba[0] = Math.max(0, Math.min(255, rgba[0]));
   rgba[1] = Math.max(0, Math.min(255, rgba[1]));

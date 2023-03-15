@@ -163,7 +163,7 @@ export function set(
  * @returns {mat2d} out
  */
 
-export function invert(out: Mat2d, a: Mat2d): Mat2d {
+export function invert(out: Mat2d, a: Mat2d): Mat2d | null {
   var aa = a[0],
     ab = a[1],
     ac = a[2],
