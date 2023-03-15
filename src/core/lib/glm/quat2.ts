@@ -1,12 +1,12 @@
 import {
   EPSILON,
-  Float32ArrayLen8,
   getMatrixArrayType,
-  NumberArrayLen8,
+  type Float32ArrayLen8,
+  type NumberArrayLen8,
 } from './common.js';
-import { Mat4 } from './mat4.js';
-import { Vec3 } from './vec3.js';
-import { Quat } from './quat.js';
+import { type Mat4 } from './mat4.js';
+import { type Vec3 } from './vec3.js';
+import { type Quat } from './quat.js';
 
 import * as quat from './quat.js';
 import * as mat4 from './mat4.js';

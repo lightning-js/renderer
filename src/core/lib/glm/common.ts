@@ -8,13 +8,17 @@ type RemoveIndex<T> = {
   [K in keyof T as number extends K ? never : K]: T[K];
 };
 
+type NumberArray = {
+  [index: number]: number;
+};
+
 export type Float32ArrayLen2 = RemoveIndex<Float32Array> & {
   0: number;
   1: number;
   length: 2;
 };
 
-export type NumberArrayLen2 = [number, number];
+export type NumberArrayLen2 = NumberArray & [number, number];
 
 export type Float32ArrayLen3 = RemoveIndex<Float32Array> & {
   0: number;
@@ -23,7 +27,7 @@ export type Float32ArrayLen3 = RemoveIndex<Float32Array> & {
   length: 3;
 };
 
-export type NumberArrayLen3 = [number, number, number];
+export type NumberArrayLen3 = NumberArray & [number, number, number];
 
 export type Float32ArrayLen4 = RemoveIndex<Float32Array> & {
   0: number;
@@ -33,7 +37,7 @@ export type Float32ArrayLen4 = RemoveIndex<Float32Array> & {
   length: 4;
 };
 
-export type NumberArrayLen4 = [number, number, number, number];
+export type NumberArrayLen4 = NumberArray & [number, number, number, number];
 
 export type Float32ArrayLen6 = RemoveIndex<Float32Array> & {
   0: number;
@@ -45,7 +49,8 @@ export type Float32ArrayLen6 = RemoveIndex<Float32Array> & {
   length: 6;
 };
 
-export type NumberArrayLen6 = [number, number, number, number, number, number];
+export type NumberArrayLen6 = NumberArray &
+  [number, number, number, number, number, number];
 
 export type Float32ArrayLen8 = RemoveIndex<Float32Array> & {
   0: number;
@@ -59,16 +64,8 @@ export type Float32ArrayLen8 = RemoveIndex<Float32Array> & {
   length: 8;
 };
 
-export type NumberArrayLen8 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
+export type NumberArrayLen8 = NumberArray &
+  [number, number, number, number, number, number, number, number];
 
 export type Float32ArrayLen9 = RemoveIndex<Float32Array> & {
   0: number;
@@ -83,17 +80,8 @@ export type Float32ArrayLen9 = RemoveIndex<Float32Array> & {
   length: 9;
 };
 
-export type NumberArrayLen9 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
+export type NumberArrayLen9 = NumberArray &
+  [number, number, number, number, number, number, number, number, number];
 
 export type Float32ArrayLen16 = RemoveIndex<Float32Array> & {
   0: number;
@@ -115,24 +103,25 @@ export type Float32ArrayLen16 = RemoveIndex<Float32Array> & {
   length: 16;
 };
 
-export type NumberArrayLen16 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
+export type NumberArrayLen16 = NumberArray &
+  [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
 
 export interface FOV {
   upDegrees: number;

@@ -1,16 +1,16 @@
 import {
   EPSILON,
-  Float32ArrayLen2,
   getMatrixArrayType,
-  NumberArrayLen2,
   RANDOM,
+  type Float32ArrayLen2,
+  type NumberArrayLen2,
 } from './common.js';
 
-import { Vec3 } from './vec3.js';
-import { Mat2d } from './mat2d.js';
-import { Mat3 } from './mat3.js';
-import { Mat4 } from './mat4.js';
-import { Mat2 } from './mat2.js';
+import { type Vec3 } from './vec3.js';
+import { type Mat2d } from './mat2d.js';
+import { type Mat3 } from './mat3.js';
+import { type Mat4 } from './mat4.js';
+import { type Mat2 } from './mat2.js';
 
 export type Vec2 = Float32ArrayLen2 | NumberArrayLen2;
 

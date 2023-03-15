@@ -1,13 +1,13 @@
 import {
   EPSILON,
-  Float32ArrayLen3,
   getMatrixArrayType,
-  NumberArrayLen3,
   RANDOM,
+  type Float32ArrayLen3,
+  type NumberArrayLen3,
 } from './common.js';
-import { Mat3 } from './mat3.js';
-import { Mat4 } from './mat4.js';
-import { Quat } from './quat.js';
+import { type Mat3 } from './mat3.js';
+import { type Mat4 } from './mat4.js';
+import { type Quat } from './quat.js';
 
 export type Vec3 = Float32ArrayLen3 | NumberArrayLen3;
 /**

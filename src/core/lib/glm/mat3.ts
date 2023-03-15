@@ -1,13 +1,13 @@
 import {
   EPSILON,
-  Float32ArrayLen9,
   getMatrixArrayType,
-  NumberArrayLen9,
+  type Float32ArrayLen9,
+  type NumberArrayLen9,
 } from './common.js';
-import { Vec2 } from './vec2.js';
-import { Mat2d } from './mat2d.js';
-import { Mat4 } from './mat4.js';
-import { Quat } from './quat.js';
+import { type Vec2 } from './vec2.js';
+import { type Mat2d } from './mat2d.js';
+import { type Mat4 } from './mat4.js';
+import { type Quat } from './quat.js';
 
 export type Mat3 = Float32ArrayLen9 | NumberArrayLen9;
 

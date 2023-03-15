@@ -1,14 +1,13 @@
 import {
   EPSILON,
-  Float32ArrayLen4,
   getMatrixArrayType,
-  NumberArrayLen4,
   RANDOM,
+  type Float32ArrayLen4,
+  type NumberArrayLen4,
 } from './common.js';
-import { Mat3 } from './mat3.js';
-import { Mat4 } from './mat4.js';
-import { Quat } from './quat.js';
-import { Quat2 } from './quat2.js';
+import { type Mat4 } from './mat4.js';
+import { type Quat } from './quat.js';
+import { type Quat2 } from './quat2.js';
 
 export type Vec4 = Float32ArrayLen4 | NumberArrayLen4;
 /**

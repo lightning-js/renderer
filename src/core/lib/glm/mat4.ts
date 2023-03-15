@@ -1,14 +1,14 @@
 import {
   getMatrixArrayType,
   EPSILON,
-  FOV,
-  Float32ArrayLen16,
-  NumberArrayLen16,
+  type FOV,
+  type Float32ArrayLen16,
+  type NumberArrayLen16,
 } from './common.js';
 
-import { Vec3 } from './vec3.js';
-import { Quat } from './quat.js';
-import { Quat2 } from './quat2.js';
+import { type Vec3 } from './vec3.js';
+import { type Quat } from './quat.js';
+import { type Quat2 } from './quat2.js';
 
 export type Mat4 = Float32ArrayLen16 | NumberArrayLen16;
 /**
@@ -881,7 +881,7 @@ export function fromScaling(out: Mat4, v: Vec3): Mat4 {
  * @param {Vec3} axis the axis to rotate around
  * @returns {Mat4} out
  */
-export function fromRotation(out: Mat4, rad: number, axis: Vec3) : Mat4 | null {
+export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
   var x = axis[0],
     y = axis[1],
     z = axis[2];
