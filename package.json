@@ -35,7 +35,7 @@
     "husky": "^8.0.3",
     "lint-staged": "^13.2.0",
     "prettier": "^2.8.4",
-    "typescript": "^5.0.0-beta"
+    "typescript": "^5.0.2"
   },
   "dependencies": {
     "@lightningjs/threadx": "file:../threadx"
