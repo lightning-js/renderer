@@ -50,6 +50,10 @@
     "@lightningjs/threadx": "file:../threadx"
   },
   "lint-staged": {
-    "*.{ts,js,cjs,md}": "prettier --write"
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{js,cjs,md}": "prettier --write"
   }
 }
