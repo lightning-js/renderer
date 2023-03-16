@@ -1,8 +1,8 @@
 export const normalizeARGB = (argb) => {
-  let r = ((argb / 65536) | 0) % 256;
-  let g = ((argb / 256) | 0) % 256;
-  let b = argb % 256;
-  let a = (argb / 16777216) | 0;
+  const r = ((argb / 65536) | 0) % 256;
+  const g = ((argb / 256) | 0) % 256;
+  const b = argb % 256;
+  const a = (argb / 16777216) | 0;
   return [r / 255, g / 255, b / 255, a / 255];
 };
 

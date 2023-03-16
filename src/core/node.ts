@@ -16,7 +16,7 @@ const rnd = Math.random;
  */
 
 let nodeId = 0;
-let nodes = new Map();
+const nodes = new Map();
 
 class Node {
   private _localMatrix;
