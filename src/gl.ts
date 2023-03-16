@@ -21,25 +21,35 @@ self.addEventListener('message', ({ data: { event, payload } }) => {
 });
 
 threadx.listen('main.bolt', (data) => {
-  data.forEach((el) => {
-    const { w, h, x, y, color, elementId, parentId } = el;
-    const root = app.root;
-    const node = createNode({
-      w,
-      h,
-      x,
-      y,
-      color: 0xffffffff + color + 1,
-      elementId,
-    });
-    if (nodes.has(parentId)) {
-      node.parent = nodes.get(parentId);
-    } else {
-      node.parent = root;
-    }
-    // look up
-    nodes.set(elementId, node);
-  });
+  data.forEach(
+    (el: {
+      w: number;
+      h: number;
+      x: number;
+      y: number;
+      color: number;
+      elementId: number;
+      parentId: number;
+    }) => {
+      const { w, h, x, y, color, elementId, parentId } = el;
+      const root = app.root;
+      const node = createNode({
+        w,
+        h,
+        x,
+        y,
+        color: 0xffffffff + color + 1,
+        elementId,
+      });
+      if (nodes.has(parentId)) {
+        node.parent = nodes.get(parentId);
+      } else {
+        node.parent = root;
+      }
+      // look up
+      nodes.set(elementId, node);
+    },
+  );
 });
 
 threadx.listen('main.text', (data) => {
@@ -143,8 +153,8 @@ const loadImage = async (src) => {
   return await createImageBitmap(blob, {
     premultiplyAlpha: 'premultiply',
     colorSpaceConversion: 'none',
-    // @ts-expect-error
-    // Bug in TypeScript 5.0.0-beta seemingly not allowing this property to be set to 'none'
+    // @ts-expect-error Bug in TypeScript 5.0.0 seemingly not allowing this
+    // property to be set to 'none'
     // https://github.com/microsoft/TypeScript/issues/53053
     imageOrientation: 'none',
   });

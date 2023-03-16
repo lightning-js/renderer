@@ -25,7 +25,7 @@ export const equals = (a, b) => {
   return Math.abs(a - b) <= EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
 };
 
-export const rand = (min, max) => {
+export const rand = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
 

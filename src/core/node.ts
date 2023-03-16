@@ -23,12 +23,12 @@ class Node {
   private _worldMatrix;
   private _children: any = [];
   private _parent: any = null;
-  private _x: any;
-  private _y: any;
-  private _w: any;
-  private _h: any;
-  private _localAlpha: any = 1;
-  private _worldAlpha: any = 1;
+  private _x: number;
+  private _y: number;
+  private _w: number;
+  private _h: number;
+  private _localAlpha = 1;
+  private _worldAlpha = 1;
   private _color: any;
   private _texture: any = null;
   private _rotation: any = 0;
@@ -36,8 +36,8 @@ class Node {
   private _hasUpdates: any = false;
   private _matrixDirty: any = false;
   private _events: any;
-  private _id: any;
-  private _elementId: any;
+  private _id: number;
+  private _elementId: number;
   private _src: any;
   private _imageBitmap: any;
 
@@ -163,9 +163,14 @@ class Node {
       type: 'image',
       id: imageSource,
       src: imageSource,
-    }).then((texture) => {
-      this._texture = texture;
-    });
+    })
+      .then((texture) => {
+        this._texture = texture;
+      })
+      .catch((e) => {
+        // TOOD: Handle this error better
+        console.log(e);
+      });
   }
 
   set imageBitmap(source) {
@@ -174,18 +179,28 @@ class Node {
       type: 'imageBitmap',
       id: `id_${this._elementId}_${~~(Math.random() * 200) + 1}`,
       src: source,
-    }).then((texture) => {
-      this._texture = texture;
-    });
+    })
+      .then((texture) => {
+        this._texture = texture;
+      })
+      .catch((e) => {
+        // TOOD: Handle this error better
+        console.log(e);
+      });
   }
 
   set rect(v) {
     getTexture({
       type: 'rectangle',
       id: 'rectangle',
-    }).then((texture) => {
-      this._texture = texture;
-    });
+    })
+      .then((texture) => {
+        this._texture = texture;
+      })
+      .catch((e) => {
+        // TOOD: Handle this error better
+        console.log(e);
+      });
   }
 
   get x() {
@@ -222,12 +237,19 @@ class Node {
     this._h = v;
   }
 
-  get color() {
+  // TODO: Type number[] better
+  get color(): number[] {
     return this._color;
   }
 
-  set color(v) {
-    (v = 0xffffffff + v + 1), (this._color = normalizeARGB(v));
+  // TODO: Type number[] better
+  set color(v: number | number[]) {
+    if (typeof v === 'number') {
+      v = 0xffffffff + v + 1;
+      this._color = normalizeARGB(v);
+    } else {
+      this._color = v;
+    }
   }
 
   set rotation(v) {
@@ -262,3 +284,5 @@ class Node {
 export default (config) => {
   return new Node(config);
 };
+
+export type { Node };
