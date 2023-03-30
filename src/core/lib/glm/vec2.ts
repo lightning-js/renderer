@@ -21,7 +21,7 @@ export type Vec2 = Float32ArrayLen2 | NumberArrayLen2;
  */
 
 export function create(): Vec2 {
-  var out = getMatrixArrayType(2) as Vec2;
+  const out = getMatrixArrayType(2) as Vec2;
 
   if (!(out instanceof Float32Array)) {
     out[0] = 0;
@@ -38,7 +38,7 @@ export function create(): Vec2 {
  * @returns {Vec2} a new 2D vector
  */
 export function clone(a: Vec2): Vec2 {
-  var out = getMatrixArrayType(2) as Vec2;
+  const out = getMatrixArrayType(2) as Vec2;
   out[0] = a[0];
   out[1] = a[1];
   return out;
@@ -52,7 +52,7 @@ export function clone(a: Vec2): Vec2 {
  * @returns {Vec2} a new 2D vector
  */
 export function fromValues(x: number, y: number): Vec2 {
-  var out = getMatrixArrayType(2) as Vec2;
+  const out = getMatrixArrayType(2) as Vec2;
   out[0] = x;
   out[1] = y;
   return out;
@@ -251,7 +251,7 @@ export function scaleAndAdd(out: Vec2, a: Vec2, b: Vec2, scale: number): Vec2 {
  */
 
 export function distance(a: Vec2, b: Vec2): number {
-  var x = b[0] - a[0],
+  const x = b[0] - a[0],
     y = b[1] - a[1];
   return Math.hypot(x, y);
 }
@@ -264,7 +264,7 @@ export function distance(a: Vec2, b: Vec2): number {
  */
 
 export function squaredDistance(a: Vec2, b: Vec2): number {
-  var x = b[0] - a[0],
+  const x = b[0] - a[0],
     y = b[1] - a[1];
   return x * x + y * y;
 }
@@ -276,7 +276,7 @@ export function squaredDistance(a: Vec2, b: Vec2): number {
  */
 
 export function length(a: Vec2): number {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
   return Math.hypot(x, y);
 }
@@ -288,7 +288,7 @@ export function length(a: Vec2): number {
  */
 
 export function squaredLength(a: Vec2): number {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
   return x * x + y * y;
 }
@@ -327,9 +327,9 @@ export function inverse(out: Vec2, a: Vec2): Vec2 {
  */
 
 export function normalize(out: Vec2, a: Vec2): Vec2 {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
-  var len = x * x + y * y;
+  let len = x * x + y * y;
 
   if (len > 0) {
     //TODO: evaluate use of glm_invsqrt here?
@@ -362,7 +362,7 @@ export function dot(a: Vec2, b: Vec2): number {
  */
 
 export function cross(out: Vec3, a: Vec2, b: Vec2): Vec3 {
-  var z = a[0] * b[1] - a[1] * b[0];
+  const z = a[0] * b[1] - a[1] * b[0];
   out[0] = out[1] = 0;
   out[2] = z;
   return out;
@@ -378,7 +378,7 @@ export function cross(out: Vec3, a: Vec2, b: Vec2): Vec3 {
  */
 
 export function lerp(out: Vec2, a: Vec2, b: Vec2, t: number): Vec2 {
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1];
   out[0] = ax + t * (b[0] - ax);
   out[1] = ay + t * (b[1] - ay);
@@ -395,7 +395,7 @@ export function lerp(out: Vec2, a: Vec2, b: Vec2, t: number): Vec2 {
 
 export function random(out: Vec2, scale?: number): Vec2 {
   scale = scale ?? 1.0;
-  var r = RANDOM() * 2.0 * Math.PI;
+  const r = RANDOM() * 2.0 * Math.PI;
   out[0] = Math.cos(r) * scale;
   out[1] = Math.sin(r) * scale;
   return out;
@@ -410,7 +410,7 @@ export function random(out: Vec2, scale?: number): Vec2 {
  */
 
 export function transformMat2(out: Vec2, a: Vec2, m: Mat2): Vec2 {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
   out[0] = m[0] * x + m[2] * y;
   out[1] = m[1] * x + m[3] * y;
@@ -426,7 +426,7 @@ export function transformMat2(out: Vec2, a: Vec2, m: Mat2): Vec2 {
  */
 
 export function transformMat2d(out: Vec2, a: Vec2, m: Mat2d): Vec2 {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
   out[0] = m[0] * x + m[2] * y + m[4];
   out[1] = m[1] * x + m[3] * y + m[5];
@@ -443,7 +443,7 @@ export function transformMat2d(out: Vec2, a: Vec2, m: Mat2d): Vec2 {
  */
 
 export function transformMat3(out: Vec2, a: Vec2, m: Mat3): Vec2 {
-  var x = a[0],
+  const x = a[0],
     y = a[1];
   out[0] = m[0] * x + m[3] * y + m[6];
   out[1] = m[1] * x + m[4] * y + m[7];
@@ -461,8 +461,8 @@ export function transformMat3(out: Vec2, a: Vec2, m: Mat3): Vec2 {
  */
 
 export function transformMat4(out: Vec2, a: Vec2, m: Mat4): Vec2 {
-  var x = a[0];
-  var y = a[1];
+  const x = a[0];
+  const y = a[1];
   out[0] = m[0] * x + m[4] * y + m[12];
   out[1] = m[1] * x + m[5] * y + m[13];
   return out;
@@ -478,7 +478,7 @@ export function transformMat4(out: Vec2, a: Vec2, m: Mat4): Vec2 {
 
 export function rotate(out: Vec2, a: Vec2, b: Vec2, rad: number): Vec2 {
   //Translate point to the origin
-  var p0 = a[0] - b[0],
+  const p0 = a[0] - b[0],
     p1 = a[1] - b[1],
     sinC = Math.sin(rad),
     cosC = Math.cos(rad); //perform rotation and translate to correct position
@@ -495,7 +495,7 @@ export function rotate(out: Vec2, a: Vec2, b: Vec2, rad: number): Vec2 {
  */
 
 export function angle(a: Vec2, b: Vec2): number {
-  var x1 = a[0],
+  const x1 = a[0],
     y1 = a[1],
     x2 = b[0],
     y2 = b[1],
@@ -526,7 +526,7 @@ export function zero(out: Vec2): Vec2 {
  */
 
 export function str(a: Vec2): string {
-  return 'Vec2(' + a[0] + ', ' + a[1] + ')';
+  return `Vec2(${a[0]}, ${a[1]})`;
 }
 /**
  * Returns whether or not the vectors exactly have the same elements in the same position (when compared with ===)
@@ -548,9 +548,9 @@ export function exactEquals(a: Vec2, b: Vec2) {
  */
 
 export function equals(a: Vec2, b: Vec2): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1];
   return (
     Math.abs(a0 - b0) <= EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) &&
@@ -562,43 +562,43 @@ export function equals(a: Vec2, b: Vec2): boolean {
  * @function
  */
 
-export var len = length;
+export const len = length;
 /**
  * Alias for {@link subtract}
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;
 /**
  * Alias for {@link multiply}
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link divide}
  * @function
  */
 
-export var div = divide;
+export const div = divide;
 /**
  * Alias for {@link distance}
  * @function
  */
 
-export var dist = distance;
+export const dist = distance;
 /**
  * Alias for {@link vsquaredDistance}
  * @function
  */
 
-export var sqrDist = squaredDistance;
+export const sqrDist = squaredDistance;
 /**
  * Alias for {@link squaredLength}
  * @function
  */
 
-export var sqrLen = squaredLength;
+export const sqrLen = squaredLength;
 /**
  * Perform some operation over an array of Vec2s.
  *
@@ -612,17 +612,17 @@ export var sqrLen = squaredLength;
  * @function
  */
 
-export var forEach = (function () {
-  var vec: Vec2[] = [];
+export const forEach = (function () {
+  const vec: Vec2[] = [];
   return function (
     a: Vec2[],
     stride: number,
     offset: number,
     count: number,
-    fn: Function,
+    fn: (a: Vec2[], b: Vec2[], arg: object) => void,
     arg: object,
   ): Vec2[] {
-    var i: number, l: number;
+    let i: number, l: number;
 
     if (!stride) {
       stride = 2;
@@ -639,8 +639,10 @@ export var forEach = (function () {
     }
 
     for (i = offset; i < l; i += stride) {
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       vec[0] = a[i]!;
       vec[1] = a[i + 1]!;
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
       fn(vec, vec, arg);
       a[i] = vec[0];
       a[i + 1] = vec[1];

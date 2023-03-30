@@ -1,25 +1,25 @@
 export type RGBA = [r: number, g: number, b: number, a: number];
 export const normalizeARGB = (argb: number): RGBA => {
-  let r = ((argb / 65536) | 0) % 256;
-  let g = ((argb / 256) | 0) % 256;
-  let b = argb % 256;
-  let a = (argb / 16777216) | 0;
+  const r = ((argb / 65536) | 0) % 256;
+  const g = ((argb / 256) | 0) % 256;
+  const b = argb % 256;
+  const a = (argb / 16777216) | 0;
   return [r / 255, g / 255, b / 255, a / 255];
 };
 
 export const getRgbaComponents = (argb: number): RGBA => {
-  let r = ((argb / 65536) | 0) % 256;
-  let g = ((argb / 256) | 0) % 256;
-  let b = argb % 256;
-  let a = (argb / 16777216) | 0;
+  const r = ((argb / 65536) | 0) % 256;
+  const g = ((argb / 256) | 0) % 256;
+  const b = argb % 256;
+  const a = (argb / 16777216) | 0;
   return [r, g, b, a];
 };
 
 export const norm = (argb: number): number => {
-  let r = ((argb / 65536) | 0) % 256;
-  let g = ((argb / 256) | 0) % 256;
-  let b = argb % 256;
-  let a = (argb / 16777216) | 0;
+  const r = ((argb / 65536) | 0) % 256;
+  const g = ((argb / 256) | 0) % 256;
+  const b = argb % 256;
+  const a = (argb / 16777216) | 0;
   const rgba: RGBA = [r / 255, g / 255, b / 255, a / 255];
 
   rgba[0] = Math.max(0, Math.min(255, rgba[0]));

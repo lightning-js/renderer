@@ -18,7 +18,7 @@ export type Mat4 = Float32ArrayLen16 | NumberArrayLen16;
  */
 
 export function create(): Mat4 {
-  var out = getMatrixArrayType(16) as Mat4;
+  const out = getMatrixArrayType(16) as Mat4;
 
   if (!(out instanceof Float32Array)) {
     out[1] = 0;
@@ -49,7 +49,7 @@ export function create(): Mat4 {
  */
 
 export function clone(a: Mat4): Mat4 {
-  var out = getMatrixArrayType(16) as Mat4;
+  const out = getMatrixArrayType(16) as Mat4;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -135,7 +135,7 @@ export function fromValues(
   m32: number,
   m33: number,
 ): Mat4 {
-  var out = getMatrixArrayType(16) as Mat4;
+  const out = getMatrixArrayType(16) as Mat4;
   out[0] = m00;
   out[1] = m01;
   out[2] = m02;
@@ -251,12 +251,12 @@ export function identity(out: Mat4): Mat4 {
 export function transpose(out: Mat4, a: Mat4): Mat4 {
   // If we are transposing ourselves we can skip a few steps but have to cache some values
   if (out === a) {
-    var a01 = a[1],
+    const a01 = a[1],
       a02 = a[2],
       a03 = a[3];
-    var a12 = a[6],
+    const a12 = a[6],
       a13 = a[7];
-    var a23 = a[11];
+    const a23 = a[11];
     out[1] = a[4];
     out[2] = a[8];
     out[3] = a[12];
@@ -299,36 +299,36 @@ export function transpose(out: Mat4, a: Mat4): Mat4 {
  */
 
 export function invert(out: Mat4, a: Mat4): Mat4 | null {
-  var a00 = a[0],
+  const a00 = a[0],
     a01 = a[1],
     a02 = a[2],
     a03 = a[3];
-  var a10 = a[4],
+  const a10 = a[4],
     a11 = a[5],
     a12 = a[6],
     a13 = a[7];
-  var a20 = a[8],
+  const a20 = a[8],
     a21 = a[9],
     a22 = a[10],
     a23 = a[11];
-  var a30 = a[12],
+  const a30 = a[12],
     a31 = a[13],
     a32 = a[14],
     a33 = a[15];
-  var b00 = a00 * a11 - a01 * a10;
-  var b01 = a00 * a12 - a02 * a10;
-  var b02 = a00 * a13 - a03 * a10;
-  var b03 = a01 * a12 - a02 * a11;
-  var b04 = a01 * a13 - a03 * a11;
-  var b05 = a02 * a13 - a03 * a12;
-  var b06 = a20 * a31 - a21 * a30;
-  var b07 = a20 * a32 - a22 * a30;
-  var b08 = a20 * a33 - a23 * a30;
-  var b09 = a21 * a32 - a22 * a31;
-  var b10 = a21 * a33 - a23 * a31;
-  var b11 = a22 * a33 - a23 * a32; // Calculate the determinant
+  const b00 = a00 * a11 - a01 * a10;
+  const b01 = a00 * a12 - a02 * a10;
+  const b02 = a00 * a13 - a03 * a10;
+  const b03 = a01 * a12 - a02 * a11;
+  const b04 = a01 * a13 - a03 * a11;
+  const b05 = a02 * a13 - a03 * a12;
+  const b06 = a20 * a31 - a21 * a30;
+  const b07 = a20 * a32 - a22 * a30;
+  const b08 = a20 * a33 - a23 * a30;
+  const b09 = a21 * a32 - a22 * a31;
+  const b10 = a21 * a33 - a23 * a31;
+  const b11 = a22 * a33 - a23 * a32; // Calculate the determinant
 
-  var det =
+  let det =
     b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
   if (!det) {
@@ -363,34 +363,34 @@ export function invert(out: Mat4, a: Mat4): Mat4 | null {
  */
 
 export function adjoint(out: Mat4, a: Mat4): Mat4 {
-  var a00 = a[0],
+  const a00 = a[0],
     a01 = a[1],
     a02 = a[2],
     a03 = a[3];
-  var a10 = a[4],
+  const a10 = a[4],
     a11 = a[5],
     a12 = a[6],
     a13 = a[7];
-  var a20 = a[8],
+  const a20 = a[8],
     a21 = a[9],
     a22 = a[10],
     a23 = a[11];
-  var a30 = a[12],
+  const a30 = a[12],
     a31 = a[13],
     a32 = a[14],
     a33 = a[15];
-  var b00 = a00 * a11 - a01 * a10;
-  var b01 = a00 * a12 - a02 * a10;
-  var b02 = a00 * a13 - a03 * a10;
-  var b03 = a01 * a12 - a02 * a11;
-  var b04 = a01 * a13 - a03 * a11;
-  var b05 = a02 * a13 - a03 * a12;
-  var b06 = a20 * a31 - a21 * a30;
-  var b07 = a20 * a32 - a22 * a30;
-  var b08 = a20 * a33 - a23 * a30;
-  var b09 = a21 * a32 - a22 * a31;
-  var b10 = a21 * a33 - a23 * a31;
-  var b11 = a22 * a33 - a23 * a32;
+  const b00 = a00 * a11 - a01 * a10;
+  const b01 = a00 * a12 - a02 * a10;
+  const b02 = a00 * a13 - a03 * a10;
+  const b03 = a01 * a12 - a02 * a11;
+  const b04 = a01 * a13 - a03 * a11;
+  const b05 = a02 * a13 - a03 * a12;
+  const b06 = a20 * a31 - a21 * a30;
+  const b07 = a20 * a32 - a22 * a30;
+  const b08 = a20 * a33 - a23 * a30;
+  const b09 = a21 * a32 - a22 * a31;
+  const b10 = a21 * a33 - a23 * a31;
+  const b11 = a22 * a33 - a23 * a32;
   out[0] = a11 * b11 - a12 * b10 + a13 * b09;
   out[1] = a02 * b10 - a01 * b11 - a03 * b09;
   out[2] = a31 * b05 - a32 * b04 + a33 * b03;
@@ -417,32 +417,32 @@ export function adjoint(out: Mat4, a: Mat4): Mat4 {
  */
 
 export function determinant(a: Mat4): number {
-  var a00 = a[0],
+  const a00 = a[0],
     a01 = a[1],
     a02 = a[2],
     a03 = a[3];
-  var a10 = a[4],
+  const a10 = a[4],
     a11 = a[5],
     a12 = a[6],
     a13 = a[7];
-  var a20 = a[8],
+  const a20 = a[8],
     a21 = a[9],
     a22 = a[10],
     a23 = a[11];
-  var a30 = a[12],
+  const a30 = a[12],
     a31 = a[13],
     a32 = a[14],
     a33 = a[15];
-  var b0 = a00 * a11 - a01 * a10;
-  var b1 = a00 * a12 - a02 * a10;
-  var b2 = a01 * a12 - a02 * a11;
-  var b3 = a20 * a31 - a21 * a30;
-  var b4 = a20 * a32 - a22 * a30;
-  var b5 = a21 * a32 - a22 * a31;
-  var b6 = a00 * b5 - a01 * b4 + a02 * b3;
-  var b7 = a10 * b5 - a11 * b4 + a12 * b3;
-  var b8 = a20 * b2 - a21 * b1 + a22 * b0;
-  var b9 = a30 * b2 - a31 * b1 + a32 * b0; // Calculate the determinant
+  const b0 = a00 * a11 - a01 * a10;
+  const b1 = a00 * a12 - a02 * a10;
+  const b2 = a01 * a12 - a02 * a11;
+  const b3 = a20 * a31 - a21 * a30;
+  const b4 = a20 * a32 - a22 * a30;
+  const b5 = a21 * a32 - a22 * a31;
+  const b6 = a00 * b5 - a01 * b4 + a02 * b3;
+  const b7 = a10 * b5 - a11 * b4 + a12 * b3;
+  const b8 = a20 * b2 - a21 * b1 + a22 * b0;
+  const b9 = a30 * b2 - a31 * b1 + a32 * b0; // Calculate the determinant
 
   return a13 * b6 - a03 * b7 + a33 * b8 - a23 * b9;
 }
@@ -456,24 +456,24 @@ export function determinant(a: Mat4): number {
  */
 
 export function multiply(out: Mat4, a: Mat4, b: Mat4): Mat4 {
-  var a00 = a[0],
+  const a00 = a[0],
     a01 = a[1],
     a02 = a[2],
     a03 = a[3];
-  var a10 = a[4],
+  const a10 = a[4],
     a11 = a[5],
     a12 = a[6],
     a13 = a[7];
-  var a20 = a[8],
+  const a20 = a[8],
     a21 = a[9],
     a22 = a[10],
     a23 = a[11];
-  var a30 = a[12],
+  const a30 = a[12],
     a31 = a[13],
     a32 = a[14],
     a33 = a[15]; // Cache only the current line of the second matrix
 
-  var b0 = b[0],
+  let b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3];
@@ -517,12 +517,12 @@ export function multiply(out: Mat4, a: Mat4, b: Mat4): Mat4 {
  */
 
 export function translate(out: Mat4, a: Mat4, v: Vec3): Mat4 {
-  var x = v[0],
+  const x = v[0],
     y = v[1],
     z = v[2];
-  var a00, a01, a02, a03;
-  var a10, a11, a12, a13;
-  var a20, a21, a22, a23;
+  let a00, a01, a02, a03;
+  let a10, a11, a12, a13;
+  let a20, a21, a22, a23;
 
   if (a === out) {
     out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
@@ -572,7 +572,7 @@ export function translate(out: Mat4, a: Mat4, v: Vec3): Mat4 {
  **/
 
 export function scale(out: Mat4, a: Mat4, v: Mat4): Mat4 {
-  var x = v[0],
+  const x = v[0],
     y = v[1],
     z = v[2];
   out[0] = a[0] * x;
@@ -609,17 +609,26 @@ export function rotate(
   rad: number,
   axis: Vec3,
 ): Mat4 | null {
-  var x = axis[0],
+  let x = axis[0],
     y = axis[1],
     z = axis[2];
-  var len = Math.hypot(x, y, z);
-  var s, c, t;
-  var a00, a01, a02, a03;
-  var a10, a11, a12, a13;
-  var a20, a21, a22, a23;
-  var b00, b01, b02;
-  var b10, b11, b12;
-  var b20, b21, b22;
+  let len = Math.hypot(x, y, z);
+
+  const s = Math.sin(rad),
+    c = Math.cos(rad),
+    t = 1 - c,
+    a00 = a[0],
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3],
+    a10 = a[4],
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7],
+    a20 = a[8],
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11]; // Construct the elements of the rotation matrix
 
   if (len < EPSILON) {
     return null;
@@ -629,31 +638,16 @@ export function rotate(
   x *= len;
   y *= len;
   z *= len;
-  s = Math.sin(rad);
-  c = Math.cos(rad);
-  t = 1 - c;
-  a00 = a[0];
-  a01 = a[1];
-  a02 = a[2];
-  a03 = a[3];
-  a10 = a[4];
-  a11 = a[5];
-  a12 = a[6];
-  a13 = a[7];
-  a20 = a[8];
-  a21 = a[9];
-  a22 = a[10];
-  a23 = a[11]; // Construct the elements of the rotation matrix
 
-  b00 = x * x * t + c;
-  b01 = y * x * t + z * s;
-  b02 = z * x * t - y * s;
-  b10 = x * y * t - z * s;
-  b11 = y * y * t + c;
-  b12 = z * y * t + x * s;
-  b20 = x * z * t + y * s;
-  b21 = y * z * t - x * s;
-  b22 = z * z * t + c; // Perform rotation-specific matrix multiplication
+  const b00 = x * x * t + c,
+    b01 = y * x * t + z * s,
+    b02 = z * x * t - y * s,
+    b10 = x * y * t - z * s,
+    b11 = y * y * t + c,
+    b12 = z * y * t + x * s,
+    b20 = x * z * t + y * s,
+    b21 = y * z * t - x * s,
+    b22 = z * z * t + c; // Perform rotation-specific matrix multiplication
 
   out[0] = a00 * b00 + a10 * b01 + a20 * b02;
   out[1] = a01 * b00 + a11 * b01 + a21 * b02;
@@ -688,16 +682,16 @@ export function rotate(
  */
 
 export function rotateX(out: Mat4, a: Mat4, rad: number): Mat4 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
-  var a20 = a[8];
-  var a21 = a[9];
-  var a22 = a[10];
-  var a23 = a[11];
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
+  const a10 = a[4];
+  const a11 = a[5];
+  const a12 = a[6];
+  const a13 = a[7];
+  const a20 = a[8];
+  const a21 = a[9];
+  const a22 = a[10];
+  const a23 = a[11];
 
   if (a !== out) {
     // If the source and destination differ, copy the unchanged rows
@@ -731,16 +725,16 @@ export function rotateX(out: Mat4, a: Mat4, rad: number): Mat4 {
  */
 
 export function rotateY(out: Mat4, a: Mat4, rad: number): Mat4 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a00 = a[0];
-  var a01 = a[1];
-  var a02 = a[2];
-  var a03 = a[3];
-  var a20 = a[8];
-  var a21 = a[9];
-  var a22 = a[10];
-  var a23 = a[11];
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
+  const a00 = a[0];
+  const a01 = a[1];
+  const a02 = a[2];
+  const a03 = a[3];
+  const a20 = a[8];
+  const a21 = a[9];
+  const a22 = a[10];
+  const a23 = a[11];
 
   if (a !== out) {
     // If the source and destination differ, copy the unchanged rows
@@ -774,16 +768,16 @@ export function rotateY(out: Mat4, a: Mat4, rad: number): Mat4 {
  */
 
 export function rotateZ(out: Mat4, a: Mat4, rad: number) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a00 = a[0];
-  var a01 = a[1];
-  var a02 = a[2];
-  var a03 = a[3];
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
+  const a00 = a[0];
+  const a01 = a[1];
+  const a02 = a[2];
+  const a03 = a[3];
+  const a10 = a[4];
+  const a11 = a[5];
+  const a12 = a[6];
+  const a13 = a[7];
 
   if (a !== out) {
     // If the source and destination differ, copy the unchanged last row
@@ -882,11 +876,13 @@ export function fromScaling(out: Mat4, v: Vec3): Mat4 {
  * @returns {Mat4} out
  */
 export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
-  var x = axis[0],
+  let x = axis[0],
     y = axis[1],
     z = axis[2];
-  var len = Math.hypot(x, y, z);
-  var s, c, t;
+  let len = Math.hypot(x, y, z);
+  const s = Math.sin(rad),
+    c = Math.cos(rad),
+    t = 1 - c; // Perform rotation-specific matrix multiplication
 
   if (len < EPSILON) {
     return null;
@@ -896,9 +892,6 @@ export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
   x *= len;
   y *= len;
   z *= len;
-  s = Math.sin(rad);
-  c = Math.cos(rad);
-  t = 1 - c; // Perform rotation-specific matrix multiplication
 
   out[0] = x * x * t + c;
   out[1] = y * x * t + z * s;
@@ -931,8 +924,8 @@ export function fromRotation(out: Mat4, rad: number, axis: Vec3): Mat4 | null {
  */
 
 export function fromXRotation(out: Mat4, rad: number): Mat4 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad); // Perform axis-specific matrix multiplication
+  const s = Math.sin(rad);
+  const c = Math.cos(rad); // Perform axis-specific matrix multiplication
 
   out[0] = 1;
   out[1] = 0;
@@ -965,8 +958,8 @@ export function fromXRotation(out: Mat4, rad: number): Mat4 {
  */
 
 export function fromYRotation(out: Mat4, rad: number): Mat4 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad); // Perform axis-specific matrix multiplication
+  const s = Math.sin(rad);
+  const c = Math.cos(rad); // Perform axis-specific matrix multiplication
 
   out[0] = c;
   out[1] = 0;
@@ -999,8 +992,8 @@ export function fromYRotation(out: Mat4, rad: number): Mat4 {
  */
 
 export function fromZRotation(out: Mat4, rad: number): Mat4 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad); // Perform axis-specific matrix multiplication
+  const s = Math.sin(rad);
+  const c = Math.cos(rad); // Perform axis-specific matrix multiplication
 
   out[0] = c;
   out[1] = s;
@@ -1042,22 +1035,22 @@ export function fromRotationTranslation(
   v: Vec3,
 ): Mat4 {
   // Quaternion math
-  var x = q[0],
+  const x = q[0],
     y = q[1],
     z = q[2],
     w = q[3];
-  var x2 = x + x;
-  var y2 = y + y;
-  var z2 = z + z;
-  var xx = x * x2;
-  var xy = x * y2;
-  var xz = x * z2;
-  var yy = y * y2;
-  var yz = y * z2;
-  var zz = z * z2;
-  var wx = w * x2;
-  var wy = w * y2;
-  var wz = w * z2;
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
   out[0] = 1 - (yy + zz);
   out[1] = xy + wz;
   out[2] = xz - wy;
@@ -1085,8 +1078,8 @@ export function fromRotationTranslation(
  */
 
 export function fromQuat2(out: Mat4, a: Quat2): Mat4 {
-  var translation = getMatrixArrayType(3) as Vec3;
-  var bx = -a[0],
+  const translation = getMatrixArrayType(3) as Vec3;
+  const bx = -a[0],
     by = -a[1],
     bz = -a[2],
     bw = a[3],
@@ -1094,7 +1087,7 @@ export function fromQuat2(out: Mat4, a: Quat2): Mat4 {
     ay = a[5],
     az = a[6],
     aw = a[7];
-  var magnitude = bx * bx + by * by + bz * bz + bw * bw; //Only scale if it makes sense
+  const magnitude = bx * bx + by * by + bz * bz + bw * bw; //Only scale if it makes sense
 
   if (magnitude > 0) {
     translation[0] = ((ax * bw + aw * bx + ay * bz - az * by) * 2) / magnitude;
@@ -1137,15 +1130,15 @@ export function getTranslation(out: Vec3, mat: Mat4): Vec3 {
  */
 
 export function getScaling(out: Vec3, mat: Mat4): Vec3 {
-  var m11 = mat[0];
-  var m12 = mat[1];
-  var m13 = mat[2];
-  var m21 = mat[4];
-  var m22 = mat[5];
-  var m23 = mat[6];
-  var m31 = mat[8];
-  var m32 = mat[9];
-  var m33 = mat[10];
+  const m11 = mat[0];
+  const m12 = mat[1];
+  const m13 = mat[2];
+  const m21 = mat[4];
+  const m22 = mat[5];
+  const m23 = mat[6];
+  const m31 = mat[8];
+  const m32 = mat[9];
+  const m33 = mat[10];
   out[0] = Math.hypot(m11, m12, m13);
   out[1] = Math.hypot(m21, m22, m23);
   out[2] = Math.hypot(m31, m32, m33);
@@ -1162,22 +1155,22 @@ export function getScaling(out: Vec3, mat: Mat4): Vec3 {
  */
 
 export function getRotation(out: Quat, mat: Mat4): Quat {
-  var scaling = getMatrixArrayType(3) as Vec3;
+  const scaling = getMatrixArrayType(3) as Vec3;
   getScaling(scaling, mat);
-  var is1 = 1 / scaling[0];
-  var is2 = 1 / scaling[1];
-  var is3 = 1 / scaling[2];
-  var sm11 = mat[0] * is1;
-  var sm12 = mat[1] * is2;
-  var sm13 = mat[2] * is3;
-  var sm21 = mat[4] * is1;
-  var sm22 = mat[5] * is2;
-  var sm23 = mat[6] * is3;
-  var sm31 = mat[8] * is1;
-  var sm32 = mat[9] * is2;
-  var sm33 = mat[10] * is3;
-  var trace = sm11 + sm22 + sm33;
-  var S = 0;
+  const is1 = 1 / scaling[0];
+  const is2 = 1 / scaling[1];
+  const is3 = 1 / scaling[2];
+  const sm11 = mat[0] * is1;
+  const sm12 = mat[1] * is2;
+  const sm13 = mat[2] * is3;
+  const sm21 = mat[4] * is1;
+  const sm22 = mat[5] * is2;
+  const sm23 = mat[6] * is3;
+  const sm31 = mat[8] * is1;
+  const sm32 = mat[9] * is2;
+  const sm33 = mat[10] * is3;
+  const trace = sm11 + sm22 + sm33;
+  let S = 0;
 
   if (trace > 0) {
     S = Math.sqrt(trace + 1.0) * 2;
@@ -1226,32 +1219,32 @@ export function decompose(
   out_t[0] = mat[12];
   out_t[1] = mat[13];
   out_t[2] = mat[14];
-  var m11 = mat[0];
-  var m12 = mat[1];
-  var m13 = mat[2];
-  var m21 = mat[4];
-  var m22 = mat[5];
-  var m23 = mat[6];
-  var m31 = mat[8];
-  var m32 = mat[9];
-  var m33 = mat[10];
+  const m11 = mat[0];
+  const m12 = mat[1];
+  const m13 = mat[2];
+  const m21 = mat[4];
+  const m22 = mat[5];
+  const m23 = mat[6];
+  const m31 = mat[8];
+  const m32 = mat[9];
+  const m33 = mat[10];
   out_s[0] = Math.hypot(m11, m12, m13);
   out_s[1] = Math.hypot(m21, m22, m23);
   out_s[2] = Math.hypot(m31, m32, m33);
-  var is1 = 1 / out_s[0];
-  var is2 = 1 / out_s[1];
-  var is3 = 1 / out_s[2];
-  var sm11 = m11 * is1;
-  var sm12 = m12 * is2;
-  var sm13 = m13 * is3;
-  var sm21 = m21 * is1;
-  var sm22 = m22 * is2;
-  var sm23 = m23 * is3;
-  var sm31 = m31 * is1;
-  var sm32 = m32 * is2;
-  var sm33 = m33 * is3;
-  var trace = sm11 + sm22 + sm33;
-  var S = 0;
+  const is1 = 1 / out_s[0];
+  const is2 = 1 / out_s[1];
+  const is3 = 1 / out_s[2];
+  const sm11 = m11 * is1;
+  const sm12 = m12 * is2;
+  const sm13 = m13 * is3;
+  const sm21 = m21 * is1;
+  const sm22 = m22 * is2;
+  const sm23 = m23 * is3;
+  const sm31 = m31 * is1;
+  const sm32 = m32 * is2;
+  const sm33 = m33 * is3;
+  const trace = sm11 + sm22 + sm33;
+  let S = 0;
 
   if (trace > 0) {
     S = Math.sqrt(trace + 1.0) * 2;
@@ -1306,25 +1299,25 @@ export function fromRotationTranslationScale(
   s: Vec3,
 ): Mat4 {
   // Quaternion math
-  var x = q[0],
+  const x = q[0],
     y = q[1],
     z = q[2],
     w = q[3];
-  var x2 = x + x;
-  var y2 = y + y;
-  var z2 = z + z;
-  var xx = x * x2;
-  var xy = x * y2;
-  var xz = x * z2;
-  var yy = y * y2;
-  var yz = y * z2;
-  var zz = z * z2;
-  var wx = w * x2;
-  var wy = w * y2;
-  var wz = w * z2;
-  var sx = s[0];
-  var sy = s[1];
-  var sz = s[2];
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
+  const sx = s[0];
+  const sy = s[1];
+  const sz = s[2];
   out[0] = (1 - (yy + zz)) * sx;
   out[1] = (xy + wz) * sx;
   out[2] = (xz - wy) * sx;
@@ -1372,37 +1365,37 @@ export function fromRotationTranslationScaleOrigin(
   o: Vec3,
 ): Mat4 {
   // Quaternion math
-  var x = q[0],
+  const x = q[0],
     y = q[1],
     z = q[2],
     w = q[3];
-  var x2 = x + x;
-  var y2 = y + y;
-  var z2 = z + z;
-  var xx = x * x2;
-  var xy = x * y2;
-  var xz = x * z2;
-  var yy = y * y2;
-  var yz = y * z2;
-  var zz = z * z2;
-  var wx = w * x2;
-  var wy = w * y2;
-  var wz = w * z2;
-  var sx = s[0];
-  var sy = s[1];
-  var sz = s[2];
-  var ox = o[0];
-  var oy = o[1];
-  var oz = o[2];
-  var out0 = (1 - (yy + zz)) * sx;
-  var out1 = (xy + wz) * sx;
-  var out2 = (xz - wy) * sx;
-  var out4 = (xy - wz) * sy;
-  var out5 = (1 - (xx + zz)) * sy;
-  var out6 = (yz + wx) * sy;
-  var out8 = (xz + wy) * sz;
-  var out9 = (yz - wx) * sz;
-  var out10 = (1 - (xx + yy)) * sz;
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
+  const sx = s[0];
+  const sy = s[1];
+  const sz = s[2];
+  const ox = o[0];
+  const oy = o[1];
+  const oz = o[2];
+  const out0 = (1 - (yy + zz)) * sx;
+  const out1 = (xy + wz) * sx;
+  const out2 = (xz - wy) * sx;
+  const out4 = (xy - wz) * sy;
+  const out5 = (1 - (xx + zz)) * sy;
+  const out6 = (yz + wx) * sy;
+  const out8 = (xz + wy) * sz;
+  const out9 = (yz - wx) * sz;
+  const out10 = (1 - (xx + yy)) * sz;
   out[0] = out0;
   out[1] = out1;
   out[2] = out2;
@@ -1431,22 +1424,22 @@ export function fromRotationTranslationScaleOrigin(
  */
 
 export function fromQuat(out: Mat4, q: Quat): Mat4 {
-  var x = q[0],
+  const x = q[0],
     y = q[1],
     z = q[2],
     w = q[3];
-  var x2 = x + x;
-  var y2 = y + y;
-  var z2 = z + z;
-  var xx = x * x2;
-  var yx = y * x2;
-  var yy = y * y2;
-  var zx = z * x2;
-  var zy = z * y2;
-  var zz = z * z2;
-  var wx = w * x2;
-  var wy = w * y2;
-  var wz = w * z2;
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const yx = y * x2;
+  const yy = y * y2;
+  const zx = z * x2;
+  const zy = z * y2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
   out[0] = 1 - yy - zz;
   out[1] = yx + wz;
   out[2] = zx - wy;
@@ -1487,9 +1480,9 @@ export function frustum(
   near: number,
   far: number,
 ): Mat4 {
-  var rl = 1 / (right - left);
-  var tb = 1 / (top - bottom);
-  var nf = 1 / (near - far);
+  const rl = 1 / (right - left);
+  const tb = 1 / (top - bottom);
+  const nf = 1 / (near - far);
   out[0] = near * 2 * rl;
   out[1] = 0;
   out[2] = 0;
@@ -1529,7 +1522,7 @@ export function perspectiveNO(
   near: number,
   far: number,
 ): Mat4 {
-  var f = 1.0 / Math.tan(fovy / 2);
+  const f = 1.0 / Math.tan(fovy / 2);
   out[0] = f / aspect;
   out[1] = 0;
   out[2] = 0;
@@ -1546,7 +1539,7 @@ export function perspectiveNO(
   out[15] = 0;
 
   if (far != null && far !== Infinity) {
-    var nf = 1 / (near - far);
+    const nf = 1 / (near - far);
     out[10] = (far + near) * nf;
     out[14] = 2 * far * near * nf;
   } else {
@@ -1561,7 +1554,7 @@ export function perspectiveNO(
  * @function
  */
 
-export var perspective = perspectiveNO;
+export const perspective = perspectiveNO;
 /**
  * Generates a perspective projection matrix suitable for WebGPU with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [0, 1],
@@ -1583,7 +1576,7 @@ export function perspectiveZO(
   near: number,
   far: number,
 ): Mat4 {
-  var f = 1.0 / Math.tan(fovy / 2);
+  const f = 1.0 / Math.tan(fovy / 2);
   out[0] = f / aspect;
   out[1] = 0;
   out[2] = 0;
@@ -1600,7 +1593,7 @@ export function perspectiveZO(
   out[15] = 0;
 
   if (far != null && far !== Infinity) {
-    var nf = 1 / (near - far);
+    const nf = 1 / (near - far);
     out[10] = far * nf;
     out[14] = far * near * nf;
   } else {
@@ -1628,12 +1621,12 @@ export function perspectiveFromFieldOfView(
   near: number,
   far: number,
 ): Mat4 {
-  var upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0);
-  var downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0);
-  var leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0);
-  var rightTan = Math.tan((fov.rightDegrees * Math.PI) / 180.0);
-  var xScale = 2.0 / (leftTan + rightTan);
-  var yScale = 2.0 / (upTan + downTan);
+  const upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0);
+  const downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0);
+  const leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0);
+  const rightTan = Math.tan((fov.rightDegrees * Math.PI) / 180.0);
+  const xScale = 2.0 / (leftTan + rightTan);
+  const yScale = 2.0 / (upTan + downTan);
   out[0] = xScale;
   out[1] = 0.0;
   out[2] = 0.0;
@@ -1676,9 +1669,9 @@ export function orthoNO(
   near: number,
   far: number,
 ): Mat4 {
-  var lr = 1 / (left - right);
-  var bt = 1 / (bottom - top);
-  var nf = 1 / (near - far);
+  const lr = 1 / (left - right);
+  const bt = 1 / (bottom - top);
+  const nf = 1 / (near - far);
   out[0] = -2 * lr;
   out[1] = 0;
   out[2] = 0;
@@ -1702,7 +1695,7 @@ export function orthoNO(
  * @function
  */
 
-export var ortho = orthoNO;
+export const ortho = orthoNO;
 /**
  * Generates a orthogonal projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [0, 1],
@@ -1727,9 +1720,9 @@ export function orthoZO(
   near: number,
   far: number,
 ): Mat4 {
-  var lr = 1 / (left - right);
-  var bt = 1 / (bottom - top);
-  var nf = 1 / (near - far);
+  const lr = 1 / (left - right);
+  const bt = 1 / (bottom - top);
+  const nf = 1 / (near - far);
   out[0] = -2 * lr;
   out[1] = 0;
   out[2] = 0;
@@ -1760,16 +1753,16 @@ export function orthoZO(
  */
 
 export function lookAt(out: Mat4, eye: Vec3, center: Vec3, up: Vec3): Mat4 {
-  var x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
-  var eyex = eye[0];
-  var eyey = eye[1];
-  var eyez = eye[2];
-  var upx = up[0];
-  var upy = up[1];
-  var upz = up[2];
-  var centerx = center[0];
-  var centery = center[1];
-  var centerz = center[2];
+  let x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
+  const eyex = eye[0];
+  const eyey = eye[1];
+  const eyez = eye[2];
+  const upx = up[0];
+  const upy = up[1];
+  const upz = up[2];
+  const centerx = center[0];
+  const centery = center[1];
+  const centerz = center[2];
 
   if (
     Math.abs(eyex - centerx) < EPSILON &&
@@ -1847,16 +1840,16 @@ export function lookAt(out: Mat4, eye: Vec3, center: Vec3, up: Vec3): Mat4 {
  */
 
 export function targetTo(out: Mat4, eye: Vec3, target: Vec3, up: Vec3): Mat4 {
-  var eyex = eye[0],
+  const eyex = eye[0],
     eyey = eye[1],
     eyez = eye[2],
     upx = up[0],
     upy = up[1],
     upz = up[2];
-  var z0 = eyex - target[0],
+  let z0 = eyex - target[0],
     z1 = eyey - target[1],
     z2 = eyez - target[2];
-  var len = z0 * z0 + z1 * z1 + z2 * z2;
+  let len = z0 * z0 + z1 * z1 + z2 * z2;
 
   if (len > 0) {
     len = 1 / Math.sqrt(len);
@@ -1865,7 +1858,7 @@ export function targetTo(out: Mat4, eye: Vec3, target: Vec3, up: Vec3): Mat4 {
     z2 *= len;
   }
 
-  var x0 = upy * z2 - upz * z1,
+  let x0 = upy * z2 - upz * z1,
     x1 = upz * z0 - upx * z2,
     x2 = upx * z1 - upy * z0;
   len = x0 * x0 + x1 * x1 + x2 * x2;
@@ -1903,41 +1896,7 @@ export function targetTo(out: Mat4, eye: Vec3, target: Vec3, up: Vec3): Mat4 {
  */
 
 export function str(a: Mat4): string {
-  return (
-    'Mat4(' +
-    a[0] +
-    ', ' +
-    a[1] +
-    ', ' +
-    a[2] +
-    ', ' +
-    a[3] +
-    ', ' +
-    a[4] +
-    ', ' +
-    a[5] +
-    ', ' +
-    a[6] +
-    ', ' +
-    a[7] +
-    ', ' +
-    a[8] +
-    ', ' +
-    a[9] +
-    ', ' +
-    a[10] +
-    ', ' +
-    a[11] +
-    ', ' +
-    a[12] +
-    ', ' +
-    a[13] +
-    ', ' +
-    a[14] +
-    ', ' +
-    a[15] +
-    ')'
-  );
+  return `Mat4(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]}, ${a[4]}, ${a[5]}, ${a[6]}, ${a[7]}, ${a[8]}, ${a[9]}, ${a[10]}, ${a[11]}, ${a[12]}, ${a[13]}, ${a[14]}, ${a[15]})`;
 }
 /**
  * Returns Frobenius norm of a Mat4
@@ -2121,35 +2080,35 @@ export function exactEquals(a: Mat4, b: Mat4): boolean {
  */
 
 export function equals(a: Mat4, b: Mat4): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var a4 = a[4],
+  const a4 = a[4],
     a5 = a[5],
     a6 = a[6],
     a7 = a[7];
-  var a8 = a[8],
+  const a8 = a[8],
     a9 = a[9],
     a10 = a[10],
     a11 = a[11];
-  var a12 = a[12],
+  const a12 = a[12],
     a13 = a[13],
     a14 = a[14],
     a15 = a[15];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3];
-  var b4 = b[4],
+  const b4 = b[4],
     b5 = b[5],
     b6 = b[6],
     b7 = b[7];
-  var b8 = b[8],
+  const b8 = b[8],
     b9 = b[9],
     b10 = b[10],
     b11 = b[11];
-  var b12 = b[12],
+  const b12 = b[12],
     b13 = b[13],
     b14 = b[14],
     b15 = b[15];
@@ -2182,10 +2141,10 @@ export function equals(a: Mat4, b: Mat4): boolean {
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link subtract}
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;

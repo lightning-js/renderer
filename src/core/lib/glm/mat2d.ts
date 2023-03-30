@@ -33,7 +33,7 @@ export type Mat2d = Float32ArrayLen6 | NumberArrayLen6;
  */
 
 export function create(): Mat2d {
-  var out = getMatrixArrayType(6) as Mat2d;
+  const out = getMatrixArrayType(6) as Mat2d;
 
   if (!(out instanceof Float32Array)) {
     out[1] = 0;
@@ -54,7 +54,7 @@ export function create(): Mat2d {
  */
 
 export function clone(a: Mat2d): Mat2d {
-  var out = getMatrixArrayType(6) as Mat2d;
+  const out = getMatrixArrayType(6) as Mat2d;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -116,7 +116,7 @@ export function fromValues(
   tx: number,
   ty: number,
 ): Mat2d {
-  var out = getMatrixArrayType(6) as Mat2d;
+  const out = getMatrixArrayType(6) as Mat2d;
   out[0] = a;
   out[1] = b;
   out[2] = c;
@@ -164,13 +164,13 @@ export function set(
  */
 
 export function invert(out: Mat2d, a: Mat2d): Mat2d | null {
-  var aa = a[0],
+  const aa = a[0],
     ab = a[1],
     ac = a[2],
     ad = a[3];
-  var atx = a[4],
+  const atx = a[4],
     aty = a[5];
-  var det = aa * ad - ab * ac;
+  let det = aa * ad - ab * ac;
 
   if (!det) {
     return null;
@@ -205,13 +205,13 @@ export function determinant(a: Mat2d): number {
  */
 
 export function multiply(out: Mat2d, a: Mat2d, b: Mat2d): Mat2d {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3],
     a4 = a[4],
     a5 = a[5];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3],
@@ -235,14 +235,14 @@ export function multiply(out: Mat2d, a: Mat2d, b: Mat2d): Mat2d {
  */
 
 export function rotate(out: Mat2d, a: Mat2d, rad: number): Mat2d {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3],
     a4 = a[4],
     a5 = a[5];
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
   out[0] = a0 * c + a2 * s;
   out[1] = a1 * c + a3 * s;
   out[2] = a0 * -s + a2 * c;
@@ -261,13 +261,13 @@ export function rotate(out: Mat2d, a: Mat2d, rad: number): Mat2d {
  **/
 
 export function scale(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3],
     a4 = a[4],
     a5 = a[5];
-  var v0 = v[0],
+  const v0 = v[0],
     v1 = v[1];
   out[0] = a0 * v0;
   out[1] = a1 * v0;
@@ -287,13 +287,13 @@ export function scale(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
  **/
 
 export function translate(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3],
     a4 = a[4],
     a5 = a[5];
-  var v0 = v[0],
+  const v0 = v[0],
     v1 = v[1];
   out[0] = a0;
   out[1] = a1;
@@ -316,7 +316,7 @@ export function translate(out: Mat2d, a: Mat2d, v: Vec2): Mat2d {
  */
 
 export function fromRotation(out: Mat2d, rad: number): Mat2d {
-  var s = Math.sin(rad),
+  const s = Math.sin(rad),
     c = Math.cos(rad);
   out[0] = c;
   out[1] = s;
@@ -376,21 +376,7 @@ export function fromTranslation(out: Mat2d, v: Vec2): Mat2d {
  */
 
 export function str(a: Mat2d): string {
-  return (
-    'mat2d(' +
-    a[0] +
-    ', ' +
-    a[1] +
-    ', ' +
-    a[2] +
-    ', ' +
-    a[3] +
-    ', ' +
-    a[4] +
-    ', ' +
-    a[5] +
-    ')'
-  );
+  return `mat2d(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]}, ${a[4]}, ${a[5]})`;
 }
 /**
  * Returns Frobenius norm of a mat2d
@@ -507,13 +493,13 @@ export function exactEquals(a: Mat2d, b: Mat2d): boolean {
  */
 
 export function equals(a: Mat2d, b: Mat2d): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3],
     a4 = a[4],
     a5 = a[5];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3],
@@ -533,10 +519,10 @@ export function equals(a: Mat2d, b: Mat2d): boolean {
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link subtract}
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;

@@ -199,12 +199,13 @@ export function equals(a: number, b: number): boolean {
 }
 
 if (!Math.hypot)
-  Math.hypot = function (): number {
-    let y: number = 0,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Math.hypot = function (...args: any[]): number {
+    let y = 0,
       i: number = arguments.length;
 
     while (i--) {
-      y += arguments[i] * arguments[i];
+      y += args[i] * args[i];
     }
 
     return Math.sqrt(y);

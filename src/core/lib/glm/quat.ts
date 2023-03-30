@@ -29,7 +29,7 @@ export type Quat = Float32ArrayLen4 | NumberArrayLen4;
  */
 
 export function create(): Quat {
-  var out = getMatrixArrayType(4) as Quat;
+  const out = getMatrixArrayType(4) as Quat;
 
   if (!(out instanceof Float32Array)) {
     out[0] = 0;
@@ -66,7 +66,7 @@ export function identity(out: Quat): Quat {
 
 export function setAxisAngle(out: Quat, axis: Vec3, rad: number): Quat {
   rad = rad * 0.5;
-  var s = Math.sin(rad);
+  const s = Math.sin(rad);
   out[0] = s * axis[0];
   out[1] = s * axis[1];
   out[2] = s * axis[2];
@@ -88,8 +88,8 @@ export function setAxisAngle(out: Quat, axis: Vec3, rad: number): Quat {
  */
 
 export function getAxisAngle(out_axis: Vec3, q: Quat): number {
-  var rad = Math.acos(q[3]) * 2.0;
-  var s = Math.sin(rad / 2.0);
+  const rad = Math.acos(q[3]) * 2.0;
+  const s = Math.sin(rad / 2.0);
 
   if (s > EPSILON) {
     out_axis[0] = q[0] / s;
@@ -113,7 +113,7 @@ export function getAxisAngle(out_axis: Vec3, q: Quat): number {
  */
 
 export function getAngle(a: Quat, b: Quat): number {
-  var dotproduct = dot(a, b);
+  const dotproduct = dot(a, b);
   return Math.acos(2 * dotproduct * dotproduct - 1);
 }
 /**
@@ -126,11 +126,11 @@ export function getAngle(a: Quat, b: Quat): number {
  */
 
 export function multiply(out: Quat, a: Quat, b: Quat): Quat {
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     aw = a[3];
-  var bx = b[0],
+  const bx = b[0],
     by = b[1],
     bz = b[2],
     bw = b[3];
@@ -155,11 +155,11 @@ export function rotateX(
   rad: number,
 ): Quat | Quat2 {
   rad *= 0.5;
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     aw = a[3];
-  var bx = Math.sin(rad),
+  const bx = Math.sin(rad),
     bw = Math.cos(rad);
   out[0] = ax * bw + aw * bx;
   out[1] = ay * bw + az * bx;
@@ -182,11 +182,11 @@ export function rotateY(
   rad: number,
 ): Quat | Quat2 {
   rad *= 0.5;
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     aw = a[3];
-  var by = Math.sin(rad),
+  const by = Math.sin(rad),
     bw = Math.cos(rad);
   out[0] = ax * bw - az * by;
   out[1] = ay * bw + aw * by;
@@ -209,11 +209,11 @@ export function rotateZ(
   rad: number,
 ): Quat | Quat2 {
   rad *= 0.5;
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     aw = a[3];
-  var bz = Math.sin(rad),
+  const bz = Math.sin(rad),
     bw = Math.cos(rad);
   out[0] = ax * bw + ay * bz;
   out[1] = ay * bw - ax * bz;
@@ -232,7 +232,7 @@ export function rotateZ(
  */
 
 export function calculateW(out: Quat, a: Quat): Quat {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2];
   out[0] = x;
@@ -250,13 +250,13 @@ export function calculateW(out: Quat, a: Quat): Quat {
  */
 
 export function exp(out: Quat, a: Quat): Quat {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2],
     w = a[3];
-  var r = Math.sqrt(x * x + y * y + z * z);
-  var et = Math.exp(w);
-  var s = r > 0 ? (et * Math.sin(r)) / r : 0;
+  const r = Math.sqrt(x * x + y * y + z * z);
+  const et = Math.exp(w);
+  const s = r > 0 ? (et * Math.sin(r)) / r : 0;
   out[0] = x * s;
   out[1] = y * s;
   out[2] = z * s;
@@ -272,12 +272,12 @@ export function exp(out: Quat, a: Quat): Quat {
  */
 
 export function ln(out: Quat, a: Quat): Quat {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2],
     w = a[3];
-  var r = Math.sqrt(x * x + y * y + z * z);
-  var t = r > 0 ? Math.atan2(r, w) / r : 0;
+  const r = Math.sqrt(x * x + y * y + z * z);
+  const t = r > 0 ? Math.atan2(r, w) / r : 0;
   out[0] = x * t;
   out[1] = y * t;
   out[2] = z * t;
@@ -312,15 +312,15 @@ export function pow(out: Quat, a: Quat, b: number): Quat {
 export function slerp(out: Quat, a: Quat, b: Quat, t: number): Quat {
   // benchmarks:
   //    http://jsperf.com/quaternion-slerp-implementations
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     aw = a[3];
-  var bx = b[0],
+  let bx = b[0],
     by = b[1],
     bz = b[2],
     bw = b[3];
-  var omega, cosom, sinom, scale0, scale1; // calc cosine
+  let omega, cosom, sinom, scale0, scale1; // calc cosine
 
   cosom = ax * bx + ay * by + az * bz + aw * bw; // adjust signs (if necessary)
 
@@ -361,11 +361,11 @@ export function slerp(out: Quat, a: Quat, b: Quat, t: number): Quat {
 export function random(out: Quat): Quat {
   // Implementation of http://planning.cs.uiuc.edu/node198.html
   // TODO: Calling random 3 times is probably not the fastest solution
-  var u1 = RANDOM();
-  var u2 = RANDOM();
-  var u3 = RANDOM();
-  var sqrt1MinusU1 = Math.sqrt(1 - u1);
-  var sqrtU1 = Math.sqrt(u1);
+  const u1 = RANDOM();
+  const u2 = RANDOM();
+  const u3 = RANDOM();
+  const sqrt1MinusU1 = Math.sqrt(1 - u1);
+  const sqrtU1 = Math.sqrt(u1);
   out[0] = sqrt1MinusU1 * Math.sin(2.0 * Math.PI * u2);
   out[1] = sqrt1MinusU1 * Math.cos(2.0 * Math.PI * u2);
   out[2] = sqrtU1 * Math.sin(2.0 * Math.PI * u3);
@@ -381,12 +381,12 @@ export function random(out: Quat): Quat {
  */
 
 export function invert(out: Quat, a: Quat): Quat {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var dot = a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
-  var invDot = dot ? 1.0 / dot : 0; // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
+  const dot = a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
+  const invDot = dot ? 1.0 / dot : 0; // TODO: Would be faster to return [0,0,0,0] immediately if dot == 0
 
   out[0] = -a0 * invDot;
   out[1] = -a1 * invDot;
@@ -425,8 +425,8 @@ export function conjugate(out: Quat, a: Quat): Quat {
 export function fromMat3(out: Quat, m: Mat3) {
   // Algorithm in Ken Shoemake's article in 1987 SIGGRAPH course notes
   // article "Quaternion Calculus and Fast Animation".
-  var fTrace = m[0] + m[4] + m[8];
-  var fRoot: number;
+  const fTrace = m[0] + m[4] + m[8];
+  let fRoot: number;
 
   if (fTrace > 0.0) {
     // |w| > 1/2, may as well choose w > 1/2
@@ -444,11 +444,11 @@ export function fromMat3(out: Quat, m: Mat3) {
     // types so we can easily assert to them below when needed.
     type Mat3Index = Extract<keyof Mat3, number>;
     type QuatIndex = Extract<keyof Quat, number>;
-    var i: number = 0;
+    let i = 0;
     if (m[4] > m[0]) i = 1;
     if (m[8] > m[(i * 3 + i) as Mat3Index]) i = 2;
-    var j = ((i + 1) % 3) as QuatIndex;
-    var k = ((i + 2) % 3) as QuatIndex;
+    const j = ((i + 1) % 3) as QuatIndex;
+    const k = ((i + 2) % 3) as QuatIndex;
     fRoot = Math.sqrt(
       m[(i * 3 + i) as Mat3Index] -
         m[(j * 3 + j) as Mat3Index] -
@@ -487,16 +487,16 @@ export function fromEuler(
   order?: ConversionOrder,
 ): Quat {
   order = order ?? ANGLE_ORDER;
-  var halfToRad = Math.PI / 360;
+  const halfToRad = Math.PI / 360;
   x *= halfToRad;
   z *= halfToRad;
   y *= halfToRad;
-  var sx = Math.sin(x);
-  var cx = Math.cos(x);
-  var sy = Math.sin(y);
-  var cy = Math.cos(y);
-  var sz = Math.sin(z);
-  var cz = Math.cos(z);
+  const sx = Math.sin(x);
+  const cx = Math.cos(x);
+  const sy = Math.sin(y);
+  const cy = Math.cos(y);
+  const sz = Math.sin(z);
+  const cz = Math.cos(z);
 
   switch (order) {
     case 'xyz':
@@ -542,7 +542,7 @@ export function fromEuler(
       break;
 
     default:
-      throw new Error('Unknown angle order ' + order);
+      throw new Error('Unknown angle order ' + (order as string));
   }
 
   return out;
@@ -555,7 +555,7 @@ export function fromEuler(
  */
 
 export function str(a: Quat): string {
-  return 'quat(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
+  return `quat(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]})`;
 }
 /**
  * Creates a new quat initialized with values from an existing quaternion
@@ -565,7 +565,7 @@ export function str(a: Quat): string {
  * @function
  */
 
-export var clone = vec4.clone;
+export const clone = vec4.clone;
 /**
  * Creates a new quat initialized with the given values
  *
@@ -577,7 +577,7 @@ export var clone = vec4.clone;
  * @function
  */
 
-export var fromValues = vec4.fromValues;
+export const fromValues = vec4.fromValues;
 /**
  * Copy the values from one quat to another
  *
@@ -587,7 +587,7 @@ export var fromValues = vec4.fromValues;
  * @function
  */
 
-export var copy = vec4.copy;
+export const copy = vec4.copy;
 /**
  * Set the components of a quat to the given values
  *
@@ -600,7 +600,7 @@ export var copy = vec4.copy;
  * @function
  */
 
-export var set = vec4.set;
+export const set = vec4.set;
 /**
  * Adds two quat's
  *
@@ -611,13 +611,13 @@ export var set = vec4.set;
  * @function
  */
 
-export var add = vec4.add;
+export const add = vec4.add;
 /**
  * Alias for {@link quat.multiply}
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Scales a quat by a scalar number
  *
@@ -628,7 +628,7 @@ export var mul = multiply;
  * @function
  */
 
-export var scale = vec4.scale;
+export const scale = vec4.scale;
 /**
  * Calculates the dot product of two quat's
  *
@@ -638,7 +638,7 @@ export var scale = vec4.scale;
  * @function
  */
 
-export var dot = vec4.dot;
+export const dot = vec4.dot;
 /**
  * Performs a linear interpolation between two quat's
  *
@@ -650,7 +650,7 @@ export var dot = vec4.dot;
  * @function
  */
 
-export var lerp = vec4.lerp;
+export const lerp = vec4.lerp;
 /**
  * Calculates the length of a quat
  *
@@ -658,13 +658,13 @@ export var lerp = vec4.lerp;
  * @returns {Number} length of a
  */
 
-export var length = vec4.length;
+export const length = vec4.length;
 /**
  * Alias for {@link length}
  * @function
  */
 
-export var len = length;
+export const len = length;
 /**
  * Calculates the squared length of a quat
  *
@@ -673,13 +673,13 @@ export var len = length;
  * @function
  */
 
-export var squaredLength = vec4.squaredLength;
+export const squaredLength = vec4.squaredLength;
 /**
  * Alias for {@link squaredLength}
  * @function
  */
 
-export var sqrLen = squaredLength;
+export const sqrLen = squaredLength;
 /**
  * Normalize a quat
  *
@@ -688,7 +688,7 @@ export var sqrLen = squaredLength;
  * @returns {quat} out
  * @function
  */
-export var normalize = vec4.normalize;
+export const normalize = vec4.normalize;
 /**
  * Returns whether or not the quaternions have exactly the same elements in the same position (when compared with ===)
  *
@@ -697,7 +697,7 @@ export var normalize = vec4.normalize;
  * @returns {Boolean} True if the vectors are equal, false otherwise.
  */
 
-export var exactEquals = vec4.exactEquals;
+export const exactEquals = vec4.exactEquals;
 /**
  * Returns whether or not the quaternions point approximately to the same direction.
  *
@@ -723,12 +723,12 @@ export function equals(a: Quat, b: Quat): boolean {
  * @returns {quat} out
  */
 
-export var rotationTo = (function () {
-  var tmpVec3 = vec3.create();
-  var xUnitVec3 = vec3.fromValues(1, 0, 0);
-  var yUnitVec3 = vec3.fromValues(0, 1, 0);
+export const rotationTo = (function () {
+  const tmpVec3 = vec3.create();
+  const xUnitVec3 = vec3.fromValues(1, 0, 0);
+  const yUnitVec3 = vec3.fromValues(0, 1, 0);
   return function (out: Quat, a: Vec3, b: Vec3) {
-    var dot = vec3.dot(a, b);
+    const dot = vec3.dot(a, b);
 
     if (dot < -0.999999) {
       vec3.cross(tmpVec3, xUnitVec3, a);
@@ -764,9 +764,9 @@ export var rotationTo = (function () {
  * @returns {quat} out
  */
 
-export var sqlerp = (function () {
-  var temp1 = create();
-  var temp2 = create();
+export const sqlerp = (function () {
+  const temp1 = create();
+  const temp2 = create();
   return function (
     out: Quat,
     a: Quat,
@@ -792,8 +792,8 @@ export var sqlerp = (function () {
  * @returns {quat} out
  */
 
-export var setAxes = (function () {
-  var matr = mat3.create();
+export const setAxes = (function () {
+  const matr = mat3.create();
   return function (out: Quat, view: Vec3, right: Vec3, up: Vec3) {
     matr[0] = right[0];
     matr[3] = right[1];

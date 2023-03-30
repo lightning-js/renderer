@@ -17,7 +17,7 @@ export type Vec3 = Float32ArrayLen3 | NumberArrayLen3;
  */
 
 export function create(): Vec3 {
-  var out = getMatrixArrayType(3) as Vec3;
+  const out = getMatrixArrayType(3) as Vec3;
 
   if (!(out instanceof Float32Array)) {
     out[0] = 0;
@@ -35,7 +35,7 @@ export function create(): Vec3 {
  */
 
 export function clone(a: Vec3): Vec3 {
-  var out = getMatrixArrayType(3) as Vec3;
+  const out = getMatrixArrayType(3) as Vec3;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -49,9 +49,9 @@ export function clone(a: Vec3): Vec3 {
  */
 
 export function length(a: Vec3): number {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
   return Math.hypot(x, y, z);
 }
 /**
@@ -64,7 +64,7 @@ export function length(a: Vec3): number {
  */
 
 export function fromValues(x: number, y: number, z: number) {
-  var out = getMatrixArrayType(3) as Vec3;
+  const out = getMatrixArrayType(3) as Vec3;
   out[0] = x;
   out[1] = y;
   out[2] = z;
@@ -273,9 +273,9 @@ export function scaleAndAdd(out: Vec3, a: Vec3, b: Vec3, scale: number): Vec3 {
  */
 
 export function distance(a: Vec3, b: Vec3): number {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
+  const x = b[0] - a[0];
+  const y = b[1] - a[1];
+  const z = b[2] - a[2];
   return Math.hypot(x, y, z);
 }
 /**
@@ -287,9 +287,9 @@ export function distance(a: Vec3, b: Vec3): number {
  */
 
 export function squaredDistance(a: Vec3, b: Vec3): number {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
+  const x = b[0] - a[0];
+  const y = b[1] - a[1];
+  const z = b[2] - a[2];
   return x * x + y * y + z * z;
 }
 /**
@@ -300,9 +300,9 @@ export function squaredDistance(a: Vec3, b: Vec3): number {
  */
 
 export function squaredLength(a: Vec3): number {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
   return x * x + y * y + z * z;
 }
 /**
@@ -342,10 +342,10 @@ export function inverse(out: Vec3, a: Vec3): Vec3 {
  */
 
 export function normalize(out: Vec3, a: Vec3): Vec3 {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var len = x * x + y * y + z * z;
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
+  let len = x * x + y * y + z * z;
 
   if (len > 0) {
     //TODO: evaluate use of glm_invsqrt here?
@@ -378,10 +378,10 @@ export function dot(a: Vec3, b: Vec3): number {
  */
 
 export function cross(out: Vec3, a: Vec3, b: Vec3): Vec3 {
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2];
-  var bx = b[0],
+  const bx = b[0],
     by = b[1],
     bz = b[2];
   out[0] = ay * bz - az * by;
@@ -400,9 +400,9 @@ export function cross(out: Vec3, a: Vec3, b: Vec3): Vec3 {
  */
 
 export function lerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
+  const ax = a[0];
+  const ay = a[1];
+  const az = a[2];
   out[0] = ax + t * (b[0] - ax);
   out[1] = ay + t * (b[1] - ay);
   out[2] = az + t * (b[2] - az);
@@ -419,10 +419,10 @@ export function lerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
  */
 
 export function slerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
-  var angle = Math.acos(Math.min(Math.max(dot(a, b), -1), 1));
-  var sinTotal = Math.sin(angle);
-  var ratioA = Math.sin((1 - t) * angle) / sinTotal;
-  var ratioB = Math.sin(t * angle) / sinTotal;
+  const angle = Math.acos(Math.min(Math.max(dot(a, b), -1), 1));
+  const sinTotal = Math.sin(angle);
+  const ratioA = Math.sin((1 - t) * angle) / sinTotal;
+  const ratioB = Math.sin(t * angle) / sinTotal;
   out[0] = ratioA * a[0] + ratioB * b[0];
   out[1] = ratioA * a[1] + ratioB * b[1];
   out[2] = ratioA * a[2] + ratioB * b[2];
@@ -448,11 +448,11 @@ export function hermite(
   d: Vec3,
   t: number,
 ): Vec3 {
-  var factorTimes2 = t * t;
-  var factor1 = factorTimes2 * (2 * t - 3) + 1;
-  var factor2 = factorTimes2 * (t - 2) + t;
-  var factor3 = factorTimes2 * (t - 1);
-  var factor4 = factorTimes2 * (3 - 2 * t);
+  const factorTimes2 = t * t;
+  const factor1 = factorTimes2 * (2 * t - 3) + 1;
+  const factor2 = factorTimes2 * (t - 2) + t;
+  const factor3 = factorTimes2 * (t - 1);
+  const factor4 = factorTimes2 * (3 - 2 * t);
   out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
   out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
   out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
@@ -478,13 +478,13 @@ export function bezier(
   d: Vec3,
   t: number,
 ): Vec3 {
-  var inverseFactor = 1 - t;
-  var inverseFactorTimesTwo = inverseFactor * inverseFactor;
-  var factorTimes2 = t * t;
-  var factor1 = inverseFactorTimesTwo * inverseFactor;
-  var factor2 = 3 * t * inverseFactorTimesTwo;
-  var factor3 = 3 * factorTimes2 * inverseFactor;
-  var factor4 = factorTimes2 * t;
+  const inverseFactor = 1 - t;
+  const inverseFactorTimesTwo = inverseFactor * inverseFactor;
+  const factorTimes2 = t * t;
+  const factor1 = inverseFactorTimesTwo * inverseFactor;
+  const factor2 = 3 * t * inverseFactorTimesTwo;
+  const factor3 = 3 * factorTimes2 * inverseFactor;
+  const factor4 = factorTimes2 * t;
   out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
   out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
   out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
@@ -500,9 +500,9 @@ export function bezier(
 
 export function random(out: Vec3, scale?: number): Vec3 {
   scale = scale ?? 1.0;
-  var r = RANDOM() * 2.0 * Math.PI;
-  var z = RANDOM() * 2.0 - 1.0;
-  var zScale = Math.sqrt(1.0 - z * z) * scale;
+  const r = RANDOM() * 2.0 * Math.PI;
+  const z = RANDOM() * 2.0 - 1.0;
+  const zScale = Math.sqrt(1.0 - z * z) * scale;
   out[0] = Math.cos(r) * zScale;
   out[1] = Math.sin(r) * zScale;
   out[2] = z * scale;
@@ -519,10 +519,10 @@ export function random(out: Vec3, scale?: number): Vec3 {
  */
 
 export function transformMat4(out: Vec3, a: Vec3, m: Mat4): Vec3 {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2];
-  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  let w = m[3] * x + m[7] * y + m[11] * z + m[15];
   w = w || 1.0;
   out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
   out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
@@ -539,7 +539,7 @@ export function transformMat4(out: Vec3, a: Vec3, m: Mat4): Vec3 {
  */
 
 export function transformMat3(out: Vec3, a: Vec3, m: Mat3): Vec3 {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2];
   out[0] = x * m[0] + y * m[3] + z * m[6];
@@ -559,24 +559,23 @@ export function transformMat3(out: Vec3, a: Vec3, m: Mat3): Vec3 {
 
 export function transformQuat(out: Vec3, a: Vec3, q: Quat): Vec3 {
   // benchmarks: https://jsperf.com/quaternion-transform-Vec3-implementations-fixed
-  var qx = q[0],
+  const qx = q[0],
     qy = q[1],
     qz = q[2],
     qw = q[3];
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2]; // var qvec = [qx, qy, qz];
-  // var uv = Vec3.cross([], qvec, a);
 
-  var uvx = qy * z - qz * y,
+  let uvx = qy * z - qz * y,
     uvy = qz * x - qx * z,
     uvz = qx * y - qy * x; // var uuv = Vec3.cross([], qvec, uv);
 
-  var uuvx = qy * uvz - qz * uvy,
+  let uuvx = qy * uvz - qz * uvy,
     uuvy = qz * uvx - qx * uvz,
     uuvz = qx * uvy - qy * uvx; // Vec3.scale(uv, uv, 2 * w);
 
-  var w2 = qw * 2;
+  const w2 = qw * 2;
   uvx *= w2;
   uvy *= w2;
   uvz *= w2; // Vec3.scale(uuv, uuv, 2);
@@ -600,7 +599,7 @@ export function transformQuat(out: Vec3, a: Vec3, q: Quat): Vec3 {
  */
 
 export function rotateX(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
-  var p = [],
+  const p = [],
     r = []; //Translate point to the origin
 
   p[0] = a[0] - b[0];
@@ -626,7 +625,7 @@ export function rotateX(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
  */
 
 export function rotateY(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
-  var p = [],
+  const p = [],
     r = []; //Translate point to the origin
 
   p[0] = a[0] - b[0];
@@ -652,7 +651,7 @@ export function rotateY(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
  */
 
 export function rotateZ(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
-  var p = [],
+  const p = [],
     r = []; //Translate point to the origin
 
   p[0] = a[0] - b[0];
@@ -676,7 +675,7 @@ export function rotateZ(out: Vec3, a: Vec3, b: Vec3, rad: number): Vec3 {
  */
 
 export function angle(a: Vec3, b: Vec3): number {
-  var ax = a[0],
+  const ax = a[0],
     ay = a[1],
     az = a[2],
     bx = b[0],
@@ -709,7 +708,7 @@ export function zero(out: Vec3): Vec3 {
  */
 
 export function str(a: Vec3): string {
-  return 'Vec3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ')';
+  return `Vec3(${a[0]}, ${a[1]}, ${a[2]})`;
 }
 /**
  * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
@@ -731,10 +730,10 @@ export function exactEquals(a: Vec3, b: Vec3): boolean {
  */
 
 export function equals(a: Vec3, b: Vec3): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2];
   return (
@@ -748,43 +747,43 @@ export function equals(a: Vec3, b: Vec3): boolean {
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;
 /**
  * Alias for {@link multiply}
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link divide}
  * @function
  */
 
-export var div = divide;
+export const div = divide;
 /**
  * Alias for {@link distance}
  * @function
  */
 
-export var dist = distance;
+export const dist = distance;
 /**
  * Alias for {@link squaredDistance}
  * @function
  */
 
-export var sqrDist = squaredDistance;
+export const sqrDist = squaredDistance;
 /**
  * Alias for {@link length}
  * @function
  */
 
-export var len = length;
+export const len = length;
 /**
  * Alias for {@link squaredLength}
  * @function
  */
 
-export var sqrLen = squaredLength;
+export const sqrLen = squaredLength;
 /**
  * Perform some operation over an array of Vec3s.
  *
@@ -798,17 +797,17 @@ export var sqrLen = squaredLength;
  * @function
  */
 
-export var forEach = (function () {
-  var vec = [] as Vec3[];
+export const forEach = (function () {
+  const vec = [] as Vec3[];
   return function (
     a: Vec3[],
     stride: number,
     offset: number,
     count: number,
-    fn: Function,
+    fn: (a: Vec3[], b: Vec3[], arg: number) => void,
     arg: number,
   ): Vec3[] {
-    var i: number, l: number;
+    let i: number, l: number;
 
     if (!stride) {
       stride = 3;
@@ -825,9 +824,11 @@ export var forEach = (function () {
     }
 
     for (i = offset; i < l; i += stride) {
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       vec[0] = a[i]!;
       vec[1] = a[i + 1]!;
       vec[2] = a[i + 2]!;
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
       fn(vec, vec, arg);
       a[i] = vec[0];
       a[i + 1] = vec[1];

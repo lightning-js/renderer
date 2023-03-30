@@ -36,7 +36,7 @@ export function create(): Mat2 {
  */
 
 export function clone(a: Mat2): Mat2 {
-  var out = getMatrixArrayType(4) as Mat2;
+  const out = getMatrixArrayType(4) as Mat2;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -90,7 +90,7 @@ export function fromValues(
   m10: number,
   m11: number,
 ): Mat2 {
-  let out = getMatrixArrayType(4) as Mat2;
+  const out = getMatrixArrayType(4) as Mat2;
   out[0] = m00;
   out[1] = m01;
   out[2] = m10;
@@ -134,7 +134,7 @@ export function transpose(out: Mat2, a: Mat2): Mat2 {
   // If we are transposing ourselves we can skip a few steps but have to cache
   // some values
   if (out === a) {
-    var a1 = a[1];
+    const a1 = a[1];
     out[1] = a[2];
     out[2] = a1;
   } else {
@@ -156,12 +156,12 @@ export function transpose(out: Mat2, a: Mat2): Mat2 {
  */
 
 export function invert(out: Mat2, a: Mat2): Mat2 | null {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3]; // Calculate the determinant
 
-  var det = a0 * a3 - a2 * a1;
+  let det = a0 * a3 - a2 * a1;
 
   if (!det) {
     return null;
@@ -185,7 +185,7 @@ export function invert(out: Mat2, a: Mat2): Mat2 | null {
 
 export function adjoint(out: Mat2, a: Mat2) {
   // Caching this value is necessary if out == a
-  var a0 = a[0];
+  const a0 = a[0];
   out[0] = a[3];
   out[1] = -a[1];
   out[2] = -a[2];
@@ -239,12 +239,12 @@ export function multiply(out: Mat2, a: Mat2, b: Mat2): Mat2 {
  */
 
 export function rotate(out: Mat2, a: Mat2, rad: number) {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
   out[0] = a0 * c + a2 * s;
   out[1] = a1 * c + a3 * s;
   out[2] = a0 * -s + a2 * c;
@@ -262,11 +262,11 @@ export function rotate(out: Mat2, a: Mat2, rad: number) {
  **/
 
 export function scale(out: Mat2, a: Mat2, v: Vec2): Mat2 {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var v0 = v[0],
+  const v0 = v[0],
     v1 = v[1];
   out[0] = a0 * v0;
   out[1] = a1 * v0;
@@ -288,8 +288,8 @@ export function scale(out: Mat2, a: Mat2, v: Vec2): Mat2 {
  */
 
 export function fromRotation(out: Mat2, rad: number): Mat2 {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
+  const s = Math.sin(rad);
+  const c = Math.cos(rad);
   out[0] = c;
   out[1] = s;
   out[2] = -s;
@@ -325,7 +325,7 @@ export function fromScaling(out: Mat2, v: Vec2) {
  */
 
 export function str(a: Mat2): string {
-  return 'Mat2(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
+  return `Mat2(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]})`;
 }
 
 /**
@@ -410,11 +410,11 @@ export function exactEquals(a: Mat2, b: Mat2): boolean {
  */
 
 export function equals(a: Mat2, b: Mat2): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3];
@@ -471,10 +471,10 @@ export function multiplyScalarAndAdd(
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link subtract}
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;

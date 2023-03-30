@@ -17,7 +17,7 @@ export type Vec4 = Float32ArrayLen4 | NumberArrayLen4;
  */
 
 export function create(): Vec4 {
-  var out = getMatrixArrayType(4) as Vec4;
+  const out = getMatrixArrayType(4) as Vec4;
 
   if (!(out instanceof Float32Array)) {
     out[0] = 0;
@@ -36,7 +36,7 @@ export function create(): Vec4 {
  */
 
 export function clone(a: Vec4): Vec4 {
-  var out = getMatrixArrayType(4) as Vec4;
+  const out = getMatrixArrayType(4) as Vec4;
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -54,7 +54,7 @@ export function clone(a: Vec4): Vec4 {
  */
 
 export function fromValues(x: number, y: number, z: number, w: number): Vec4 {
-  var out = getMatrixArrayType(4) as Vec4;
+  const out = getMatrixArrayType(4) as Vec4;
   out[0] = x;
   out[1] = y;
   out[2] = z;
@@ -283,10 +283,10 @@ export function scaleAndAdd(out: Vec4, a: Vec4, b: Vec4, scale: number): Vec4 {
  */
 
 export function distance(a: Vec4, b: Vec4): number {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
+  const x = b[0] - a[0];
+  const y = b[1] - a[1];
+  const z = b[2] - a[2];
+  const w = b[3] - a[3];
   return Math.hypot(x, y, z, w);
 }
 /**
@@ -298,10 +298,10 @@ export function distance(a: Vec4, b: Vec4): number {
  */
 
 export function squaredDistance(a: Vec4, b: Vec4): number {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
+  const x = b[0] - a[0];
+  const y = b[1] - a[1];
+  const z = b[2] - a[2];
+  const w = b[3] - a[3];
   return x * x + y * y + z * z + w * w;
 }
 /**
@@ -312,10 +312,10 @@ export function squaredDistance(a: Vec4, b: Vec4): number {
  */
 
 export function length(a: Vec4): number {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
+  const w = a[3];
   return Math.hypot(x, y, z, w);
 }
 /**
@@ -326,10 +326,10 @@ export function length(a: Vec4): number {
  */
 
 export function squaredLength(a: Vec4 | Quat2): number {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
+  const w = a[3];
   return x * x + y * y + z * z + w * w;
 }
 /**
@@ -371,11 +371,11 @@ export function inverse(out: Vec4, a: Vec4): Vec4 {
  */
 
 export function normalize(out: Vec4, a: Vec4): Vec4 {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  var len = x * x + y * y + z * z + w * w;
+  const x = a[0];
+  const y = a[1];
+  const z = a[2];
+  const w = a[3];
+  let len = x * x + y * y + z * z + w * w;
 
   if (len > 0) {
     len = 1 / Math.sqrt(len);
@@ -409,16 +409,16 @@ export function dot(a: Vec4 | Quat2, b: Vec4 | Quat2): number {
  */
 
 export function cross(out: Vec4, u: Vec4, v: Vec4, w: Vec4): Vec4 {
-  var A = v[0] * w[1] - v[1] * w[0],
+  const A = v[0] * w[1] - v[1] * w[0],
     B = v[0] * w[2] - v[2] * w[0],
     C = v[0] * w[3] - v[3] * w[0],
     D = v[1] * w[2] - v[2] * w[1],
     E = v[1] * w[3] - v[3] * w[1],
     F = v[2] * w[3] - v[3] * w[2];
-  var G = u[0];
-  var H = u[1];
-  var I = u[2];
-  var J = u[3];
+  const G = u[0];
+  const H = u[1];
+  const I = u[2];
+  const J = u[3];
   out[0] = H * F - I * E + J * D;
   out[1] = -(G * F) + I * C - J * B;
   out[2] = G * E - H * C + J * A;
@@ -436,10 +436,10 @@ export function cross(out: Vec4, u: Vec4, v: Vec4, w: Vec4): Vec4 {
  */
 
 export function lerp(out: Vec4, a: Vec4, b: Vec4, t: number): Vec4 {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  var aw = a[3];
+  const ax = a[0];
+  const ay = a[1];
+  const az = a[2];
+  const aw = a[3];
   out[0] = ax + t * (b[0] - ax);
   out[1] = ay + t * (b[1] - ay);
   out[2] = az + t * (b[2] - az);
@@ -459,8 +459,8 @@ export function random(out: Vec4, scale?: number): Vec4 {
   // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
   // http://projecteuclid.org/euclid.aoms/1177692644;
 
-  var v1, v2, v3, v4;
-  var s1, s2;
+  let v1, v2, v3, v4;
+  let s1, s2;
 
   do {
     v1 = RANDOM() * 2 - 1;
@@ -474,7 +474,7 @@ export function random(out: Vec4, scale?: number): Vec4 {
     s2 = v3 * v3 + v4 * v4;
   } while (s2 >= 1);
 
-  var d = Math.sqrt((1 - s1) / s2);
+  const d = Math.sqrt((1 - s1) / s2);
   out[0] = scale * v1;
   out[1] = scale * v2;
   out[2] = scale * v3 * d;
@@ -491,7 +491,7 @@ export function random(out: Vec4, scale?: number): Vec4 {
  */
 
 export function transformMat4(out: Vec4, a: Vec4, m: Mat4): Vec4 {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2],
     w = a[3];
@@ -511,18 +511,18 @@ export function transformMat4(out: Vec4, a: Vec4, m: Mat4): Vec4 {
  */
 
 export function transformQuat(out: Vec4, a: Vec4, q: Quat) {
-  var x = a[0],
+  const x = a[0],
     y = a[1],
     z = a[2];
-  var qx = q[0],
+  const qx = q[0],
     qy = q[1],
     qz = q[2],
     qw = q[3]; // calculate quat * vec
 
-  var ix = qw * x + qy * z - qz * y;
-  var iy = qw * y + qz * x - qx * z;
-  var iz = qw * z + qx * y - qy * x;
-  var iw = -qx * x - qy * y - qz * z; // calculate result * inverse quat
+  const ix = qw * x + qy * z - qz * y;
+  const iy = qw * y + qz * x - qx * z;
+  const iz = qw * z + qx * y - qy * x;
+  const iw = -qx * x - qy * y - qz * z; // calculate result * inverse quat
 
   out[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy;
   out[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz;
@@ -552,7 +552,7 @@ export function zero(out: Vec4) {
  */
 
 export function str(a: Vec4): string {
-  return 'Vec4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
+  return `Vec4(${a[0]}, ${a[1]}, ${a[2]}, ${a[3]})`;
 }
 /**
  * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
@@ -574,11 +574,11 @@ export function exactEquals(a: Vec4, b: Vec4): boolean {
  */
 
 export function equals(a: Vec4, b: Vec4): boolean {
-  var a0 = a[0],
+  const a0 = a[0],
     a1 = a[1],
     a2 = a[2],
     a3 = a[3];
-  var b0 = b[0],
+  const b0 = b[0],
     b1 = b[1],
     b2 = b[2],
     b3 = b[3];
@@ -594,43 +594,43 @@ export function equals(a: Vec4, b: Vec4): boolean {
  * @function
  */
 
-export var sub = subtract;
+export const sub = subtract;
 /**
  * Alias for {@link Vec4.multiply}
  * @function
  */
 
-export var mul = multiply;
+export const mul = multiply;
 /**
  * Alias for {@link Vec4.divide}
  * @function
  */
 
-export var div = divide;
+export const div = divide;
 /**
  * Alias for {@link Vec4.distance}
  * @function
  */
 
-export var dist = distance;
+export const dist = distance;
 /**
  * Alias for {@link Vec4.squaredDistance}
  * @function
  */
 
-export var sqrDist = squaredDistance;
+export const sqrDist = squaredDistance;
 /**
  * Alias for {@link Vec4.length}
  * @function
  */
 
-export var len = length;
+export const len = length;
 /**
  * Alias for {@link Vec4.squaredLength}
  * @function
  */
 
-export var sqrLen = squaredLength;
+export const sqrLen = squaredLength;
 /**
  * Perform some operation over an array of Vec4s.
  *
@@ -644,17 +644,17 @@ export var sqrLen = squaredLength;
  * @function
  */
 
-export var forEach = (function () {
-  var vec = [] as Vec4[];
+export const forEach = (function () {
+  const vec = [] as Vec4[];
   return function (
     a: Vec4[],
     stride: number,
     offset: number,
     count: number,
-    fn: Function,
+    fn: (a: Vec4[], b: Vec4[], arg: object) => void,
     arg: object,
   ): Vec4[] {
-    var i: number, l: number;
+    let i: number, l: number;
 
     if (!stride) {
       stride = 4;
@@ -671,10 +671,12 @@ export var forEach = (function () {
     }
 
     for (i = offset; i < l; i += stride) {
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       vec[0] = a[i]!;
       vec[1] = a[i + 1]!;
       vec[2] = a[i + 2]!;
       vec[3] = a[i + 3]!;
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
       fn(vec, vec, arg);
       a[i] = vec[0];
       a[i + 1] = vec[1];
