@@ -19,6 +19,9 @@ const config = {
     tsconfigRootDir: __dirname,
   },
   rules: {
+    // Allow us to write async functions that don't use await
+    // Intresting commentary on this: https://github.com/standard/eslint-config-standard-with-typescript/issues/217
+    '@typescript-eslint/require-await': 'off',
     // Temporary relaxed rules while we tighten up our TypeScript code
     // TODO: Remove these rules once we eliminate all of the unnecessary `any` types in the code
     '@typescript-eslint/no-unsafe-argument': 'warn',
