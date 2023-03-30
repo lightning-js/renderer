@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "outDir": "build-eslint",
+    "types": ["@types/node"],
+    "moduleResolution": "node",
+    "allowJs": true,
+  },
+  "files": [
+    "./.eslintrc.cjs",
+  ]
+}

@@ -7,8 +7,9 @@ import {
 } from './gpu/webgl/index.js';
 import { normalizeARGB } from './utils.js';
 import { glParam } from './platform.js';
+import { Node } from './node.js';
 
-let gl = null;
+let gl: WebGL2RenderingContext | null = null;
 let vertexBuffer = null;
 
 const programs = new Map();
@@ -86,12 +87,12 @@ export const render = (root) => {
  * @return {*}
  */
 
-const createBuffer = (node, buffer, textures) => {
+const createBuffer = (node: Node, buffer, textures) => {
   const { w, h, color, texture, id, alpha } = node;
-  const [x, y, z] = node.getTranslate();
+  const [x, y, z]: [number, number, number] = node.getTranslate();
   let textureUnit = 0;
 
-  color[3] = parseFloat(alpha);
+  color[3] = alpha;
 
   if (!textures.length) {
     textures.push(texture);

@@ -17,13 +17,13 @@ import {
 
 let gl = null;
 let renderer = null;
-let usedMemory = 0;
-let renderPrecision = 1;
-let memoryPressure = 24e6;
-let bufferMemory = 2e6;
+const usedMemory = 0;
+const renderPrecision = 1;
+const memoryPressure = 24e6;
+const bufferMemory = 2e6;
 let rootNode = null;
 
-let autoStart = true;
+const autoStart = true;
 let deltaTime = 0;
 let lastFrameTime = 0;
 let currentFrameTime = 0;
