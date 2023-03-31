@@ -48,7 +48,7 @@ class Node {
   private _id: number;
   private _elementId: number;
   private _src: string | null = null;
-  private _imageBitmap: string | null = null;
+  private _imageBitmap: string | ImageBitmap | null = null;
 
   constructor(config: Partial<NodeConfig> = {}) {
     this._localMatrix = mat4.create();
@@ -170,7 +170,7 @@ class Node {
       });
   }
 
-  set imageBitmap(source: string) {
+  set imageBitmap(source: string | ImageBitmap) {
     this._imageBitmap = source;
     getTexture({
       type: 'imageBitmap',

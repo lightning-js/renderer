@@ -1,6 +1,6 @@
 import threadx from '../../threadx/build/index.js';
 import application, { type Application } from './core/application.js';
-import { boltProperties as props } from './utils.js';
+import { createWebGLContext, boltProperties as props } from './utils.js';
 import createNode from './core/node.js';
 import type { RenderProps } from './renderProperties.js';
 
@@ -63,26 +63,6 @@ threadx.listen('main.text', (data: unknown) => {
 threadx.listen('animation.progress', (data: unknown) => {
   console.log('animation data received:', data);
 });
-
-const createWebGLContext = (
-  canvas: HTMLCanvasElement | OffscreenCanvas,
-): WebGLRenderingContext | null => {
-  const config: WebGLContextAttributes = {
-    alpha: true,
-    antialias: false,
-    depth: false,
-    stencil: true,
-    desynchronized: false,
-    failIfMajorPerformanceCaveat: true,
-    powerPreference: 'high-performance',
-    premultipliedAlpha: true,
-    preserveDrawingBuffer: false,
-  };
-  return (
-    canvas.getContext('webgl', config) ||
-    canvas.getContext('experimental-webgl' as 'webgl', config)
-  );
-};
 
 // /**
 //  * Initialize worker thread. Will run after

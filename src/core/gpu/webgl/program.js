@@ -1,8 +1,8 @@
 import { createShader } from './utils.js';
-import { getGlContext } from '../../stage.js';
+import stage from '../../stage.js';
 
 export default ({ vs, fs, id = 'lightning-shader' }) => {
-  const gl = getGlContext();
+  const gl = stage.getGlContext();
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vs);
   const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fs);
   const program = gl.createProgram();

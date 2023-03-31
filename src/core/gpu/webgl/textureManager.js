@@ -1,6 +1,6 @@
 import { uploadImage } from '../../platform.js';
 import { createImageTexture, createWhitePixelTexture } from './texture.js';
-import { getGlContext } from '../../stage.js';
+import stage from '../../stage.js';
 
 /**
  * Amount of used memory defined in pixels
@@ -27,7 +27,7 @@ const textureSourceHashMap = new Map();
  */
 export const getTexture = (options) => {
   const { type, src: source, id } = options;
-  const gl = getGlContext();
+  const gl = stage.getGlContext();
 
   return new Promise((resolve, reject) => {
     if (!hasTexture(id)) {
