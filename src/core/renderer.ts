@@ -7,28 +7,28 @@ import {
 } from './gpu/webgl/index.js';
 import { normalizeARGB } from './utils.js';
 import { glParam } from './platform.js';
-import { Node } from './node.js';
+import { type Node } from './node.js';
 
-let gl: WebGL2RenderingContext | null = null;
+let gl: WebGLRenderingContext | null = null;
 let vertexBuffer = null;
 
-const programs = new Map();
-let activeProgram = null;
+const programs: Map<string, any> = new Map();
+let activeProgram: any = null;
 
-let typedArray = null;
-let initData = null;
+let typedArray: Int32Array | null = null;
+let initData: InitData | null = null;
 
 export const createRenderer = (
-  glContext,
+  glContext: WebGLRenderingContext,
   clearColor = 0xff000000,
-  bufferMemory,
+  bufferMemory: number,
 ) => {
   // normalized rgb components
   const color = normalizeARGB(clearColor);
 
   gl = glContext;
   gl.viewport(0, 0, 1920, 1080);
-  gl.clearColor(color[0], color[1], color[2], color[3]);
+  gl.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
 
   initPrograms();
 
@@ -42,19 +42,29 @@ export const createRenderer = (
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 };
 
-export const setUpdate = (buffer, data) => {
+export interface InitData {
+  boltId: number;
+}
+
+export const setUpdate = (buffer: Int32Array, data: InitData) => {
   typedArray = buffer;
   initData = data;
 };
 
-export const update = (root) => {
+export const update = (root: Node) => {
+  if (!typedArray || !initData) {
+    throw new Error('No update data');
+  }
   const el = root.find(initData.boltId);
   if (el) {
-    el.y = typedArray[7];
+    el.y = typedArray[7]!;
   }
 };
 
-export const render = (root) => {
+export const render = (root: Node) => {
+  if (!gl) {
+    throw new Error('No WebGL context');
+  }
   // fill vbo
   const { buffer, textures } = createBuffer(root, [], []);
 
@@ -87,9 +97,13 @@ export const render = (root) => {
  * @return {*}
  */
 
-const createBuffer = (node: Node, buffer, textures) => {
+const createBuffer = (
+  node: Node,
+  buffer: number[],
+  textures: WebGLTexture[],
+) => {
   const { w, h, color, texture, id, alpha } = node;
-  const [x, y, z]: [number, number, number] = node.getTranslate();
+  const [x, y, z] = node.getTranslate();
   let textureUnit = 0;
 
   color[3] = alpha;
@@ -137,7 +151,8 @@ const createBuffer = (node: Node, buffer, textures) => {
 
   if (node.children.length) {
     for (let i = 0; i < node.children.length; i++) {
-      createBuffer(node.children[i], buffer, textures);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      createBuffer(node.children[i]!, buffer, textures);
     }
   }
   return { buffer, textures };
@@ -148,7 +163,10 @@ const createBuffer = (node: Node, buffer, textures) => {
  * can re-use to draw quads
  * @param size
  */
-const createIndices = (size) => {
+const createIndices = (size: number) => {
+  if (!gl) {
+    throw new Error('No WebGL context');
+  }
   const maxQuads = ~~(size / 80);
   const indices = new Uint16Array(maxQuads * 6);
 
@@ -166,11 +184,14 @@ const createIndices = (size) => {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 };
 
-const bindTextureArray = (textures) => {
+const bindTextureArray = (textures: WebGLTexture[]) => {
+  if (!gl) {
+    throw new Error('No WebGL context');
+  }
   const len = textures.length;
   for (let i = 0; i < len; i++) {
     gl.activeTexture(gl.TEXTURE0 + i);
-    gl.bindTexture(gl.TEXTURE_2D, textures[i]);
+    gl.bindTexture(gl.TEXTURE_2D, textures[i] || null);
   }
 
   const samplers = Array.from(Array(len).keys());

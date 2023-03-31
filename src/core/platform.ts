@@ -1,9 +1,19 @@
-import { drawFrame } from './stage.js';
-const system = {
+import type {
+  TextureOptions,
+  UInt8ArrayTextureOptions,
+} from './gpu/webgl/texture.js';
+import stage from './stage.js';
+
+interface SystemObject {
+  parameters: Partial<Record<string, number>>;
+  extensions: Partial<Record<string, any>>;
+}
+
+const system: SystemObject = {
   parameters: {},
   extensions: {},
 };
-const events = new Map();
+const events: Map<string, Listener[]> = new Map();
 /**
  * Test if device we run on supports WebGL
  * @return {boolean}
@@ -15,7 +25,7 @@ const deviceSupportsWebGL = (): boolean => {
     }
 
     const c: HTMLCanvasElement = document.createElement('canvas');
-    let gl: WebGLRenderingContext = c.getContext('webgl');
+    const gl = c.getContext('webgl');
 
     const hasSupport = !!gl;
     if (gl) {
@@ -24,7 +34,6 @@ const deviceSupportsWebGL = (): boolean => {
         etxLose.loseContext();
       }
     }
-    gl = null;
     return hasSupport;
   } catch (e) {
     return false;
@@ -77,7 +86,7 @@ export const createWebGLContext = (
  * @param gl
  * @return {*}
  */
-export const getWebGLParameters = (gl) => {
+export const getWebGLParameters = (gl: WebGLRenderingContext) => {
   return [
     'MAX_RENDERBUFFER_SIZE',
     'MAX_TEXTURE_SIZE',
@@ -89,8 +98,10 @@ export const getWebGLParameters = (gl) => {
     'MAX_VARYING_VECTORS',
     'MAX_VERTEX_UNIFORM_VECTORS',
     'MAX_FRAGMENT_UNIFORM_VECTORS',
-  ].reduce((obj, param) => {
-    obj[param] = gl.getParameter(gl[param]);
+  ].reduce<Partial<Record<string, number>>>((obj, param) => {
+    obj[param] = gl.getParameter(
+      gl[param as keyof WebGLRenderingContext] as GLenum,
+    );
     return obj;
   }, {});
 };
@@ -100,7 +111,7 @@ export const getWebGLParameters = (gl) => {
  * @param gl
  * @return {*}-
  */
-export const getWebGLExtensions = (gl) => {
+export const getWebGLExtensions = (gl: WebGLRenderingContext) => {
   return [
     'ANGLE_instanced_arrays',
     'WEBGL_compressed_texture_s3tc',
@@ -111,7 +122,7 @@ export const getWebGLExtensions = (gl) => {
     'WEBKIT_WEBGL_compressed_texture_pvrtc',
     'WEBGL_compressed_texture_s3tc_srgb',
     'OES_vertex_array_object',
-  ].reduce((obj, ext) => {
+  ].reduce<Partial<Record<string, any>>>((obj, ext) => {
     obj[ext] = gl.getExtension(ext);
     return obj;
   }, {});
@@ -127,13 +138,13 @@ export const getSystem = () => {
 export const startLoop = () => {
   const loop = () => {
     emit('frameStart');
-    drawFrame();
+    stage.drawFrame();
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 };
 
-export const uploadImage = (src, hasAlphaChannel) => {
+export const uploadImage = (src: string, hasAlphaChannel: boolean) => {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const isBase64 = src.substring(0, 5) === 'data:';
@@ -164,7 +175,11 @@ export const uploadImage = (src, hasAlphaChannel) => {
  * @param source
  * @param options
  */
-export const uploadTextureData = (gl, source, options) => {
+export const uploadTextureData = (
+  gl: WebGLRenderingContext,
+  source: ImageBitmap | Uint8Array,
+  options: TextureOptions & Partial<UInt8ArrayTextureOptions>,
+) => {
   if (source instanceof ImageBitmap) {
     gl.texImage2D(
       gl.TEXTURE_2D,
@@ -175,6 +190,9 @@ export const uploadTextureData = (gl, source, options) => {
       source,
     );
   } else {
+    if (!options.w || !options.h) {
+      throw new Error('Texture width and height must be specified');
+    }
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -197,29 +215,36 @@ export const getTimeStamp = () => {
   return performance ? performance.now() : Date.now();
 };
 
+interface Listener {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (evt: unknown): void;
+}
+
 /**
  * Simple listener
  * @param event
  * @param listener
  */
-export const on = (event, listener) => {
+export const on = (event: string, listener: Listener) => {
   if (!events.has(event)) {
     events.set(event, []);
   }
 
-  const listeners = events.get(event);
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const listeners = events.get(event)!;
   listeners.push(listener);
 
   events.set(event, listeners);
 };
 
-export const emit = (event, data?) => {
-  if (events.has(event)) {
-    const listeners = events.get(event);
-    listeners.forEach((listener) => {
-      listener(data);
-    });
+export const emit = (event: string, data?: unknown) => {
+  const listeners = events.get(event);
+  if (!listeners) {
+    return;
   }
+  listeners.forEach((listener) => {
+    listener(data);
+  });
 };
 
 // document.addEventListener('keydown', (e) => {
@@ -230,7 +255,7 @@ export const emit = (event, data?) => {
 //     }
 // });
 
-export const glParam = (param) => {
+export const glParam = (param: string) => {
   return system.parameters[param];
 };
 

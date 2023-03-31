@@ -1,3 +1,38 @@
+export interface RenderProps {
+  memBlockIndex: number;
+  elementId: number;
+  /**
+   * elementId of the parent element
+   */
+  parentId: number;
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+  z: number;
+  color: number;
+  alpha: number;
+  /**
+   * ff think about it
+   */
+  parentAlpha: number;
+  rotation: number;
+  pivotX: number;
+  pivotY: number;
+  scaleX: number;
+  scaleY: number;
+  mountX: number;
+  mountY: number;
+  visible: number;
+  zIndex: number;
+  clippingX: number;
+  clippingY: number;
+  clippingW: number;
+  clippingH: number;
+  renderToTexture: number;
+  shaderId: number;
+}
+
 export const renderProperties = [
   'memBlockIndex',
   'boltId', // id of the boltComponent (which has multiple elements)
