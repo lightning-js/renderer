@@ -4,9 +4,9 @@ import {
   type Float32ArrayLen8,
   type NumberArrayLen8,
 } from './common.js';
-import { type Mat4 } from './mat4.js';
-import { type Vec3 } from './vec3.js';
-import { type Quat } from './quat.js';
+import type { Mat4 } from './mat4.js';
+import type { Vec3 } from './vec3.js';
+import type { Quat } from './quat.js';
 
 import * as quat from './quat.js';
 import * as mat4 from './mat4.js';

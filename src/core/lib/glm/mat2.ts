@@ -5,7 +5,7 @@ import {
   type NumberArrayLen4,
 } from './common.js';
 
-import { type Vec2 } from './vec2.js';
+import type { Vec2 } from './vec2.js';
 
 export type Mat2 = Float32ArrayLen4 | NumberArrayLen4;
 

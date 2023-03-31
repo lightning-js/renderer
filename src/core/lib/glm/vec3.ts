@@ -5,9 +5,9 @@ import {
   type Float32ArrayLen3,
   type NumberArrayLen3,
 } from './common.js';
-import { type Mat3 } from './mat3.js';
-import { type Mat4 } from './mat4.js';
-import { type Quat } from './quat.js';
+import type { Mat3 } from './mat3.js';
+import type { Mat4 } from './mat4.js';
+import type { Quat } from './quat.js';
 
 export type Vec3 = Float32ArrayLen3 | NumberArrayLen3;
 /**
