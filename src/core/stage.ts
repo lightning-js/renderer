@@ -1,5 +1,5 @@
+import type { Node } from './node.js';
 import {
-  createWebGLContext,
   getSystem,
   getWebGLParameters,
   getWebGLExtensions,
@@ -13,82 +13,92 @@ import {
   render,
   hasUpdates,
   setUpdate,
+  type InitData,
 } from './renderer.js';
 
-let gl = null;
+let gl: WebGLRenderingContext | null = null;
 let renderer = null;
-const usedMemory = 0;
-const renderPrecision = 1;
-const memoryPressure = 24e6;
+// TODO: Remove? We aren't using any of these
+// const usedMemory = 0;
+// const renderPrecision = 1;
+// const memoryPressure = 24e6;
 const bufferMemory = 2e6;
-let rootNode = null;
+let rootNode: Node | null = null;
 
 const autoStart = true;
 let deltaTime = 0;
 let lastFrameTime = 0;
 let currentFrameTime = 0;
 
-/**
- * Stage constructor
- */
-export const init = ({ w, h, clearColor, context }) => {
-  if (context) {
-    gl = context;
-    const system = getSystem();
-    system.parameters = getWebGLParameters(gl);
-    system.extensions = getWebGLExtensions(gl);
-  }
+export interface MinimalStageOptions {
+  elementId?: number;
+  w?: number;
+  h?: number;
+  context: WebGLRenderingContext;
+  clearColor?: number;
+}
 
-  renderer = createRenderer(gl, clearColor, bufferMemory);
+export type StageOptions = Required<MinimalStageOptions>;
 
-  // execute platform start loop
-  if (autoStart) {
-    startLoop();
-  }
-};
+export default {
+  /**
+   * Stage constructor
+   */
+  init({ clearColor, context }: StageOptions) {
+    if (context) {
+      gl = context;
+      const system = getSystem();
+      system.parameters = getWebGLParameters(context);
+      system.extensions = getWebGLExtensions(context);
+    }
 
-/**
- * Start a new frame draw
- */
-export const drawFrame = () => {
-  lastFrameTime = currentFrameTime;
-  currentFrameTime = getTimeStamp();
+    renderer = createRenderer(context, clearColor, bufferMemory);
 
-  deltaTime = !lastFrameTime
-    ? 1 / 60
-    : (currentFrameTime - lastFrameTime) * 0.001;
+    // execute platform start loop
+    if (autoStart) {
+      startLoop();
+    }
+  },
+  /**
+   * Start a new frame draw
+   */
+  drawFrame() {
+    if (!gl || !rootNode) {
+      return;
+    }
+    lastFrameTime = currentFrameTime;
+    currentFrameTime = getTimeStamp();
 
-  if (hasUpdates()) {
-    update(rootNode);
-  }
+    deltaTime = !lastFrameTime
+      ? 1 / 60
+      : (currentFrameTime - lastFrameTime) * 0.001;
 
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  render(rootNode);
-};
+    if (hasUpdates()) {
+      update(rootNode);
+    }
 
-export const handleDirty = (buffer, data) => {
-  console.log('dirty');
-  setUpdate(buffer, data);
-};
-
-export const getGlContext = () => {
-  return gl;
-};
-
-export const getCanvas = () => {
-  if (gl) {
-    return gl.canvas;
-  }
-};
-
-export const setRootNode = (node) => {
-  rootNode = node;
-};
-
-export const getRootNode = () => {
-  return rootNode;
-};
-
-export const getDeltaTime = () => {
-  return deltaTime;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    render(rootNode);
+  },
+  handleDirty(buffer: Int32Array, data: InitData) {
+    console.log('dirty');
+    setUpdate(buffer, data);
+  },
+  getGlContext() {
+    return gl;
+  },
+  getCanvas() {
+    if (gl) {
+      return gl.canvas;
+    }
+  },
+  setRootNode(node: Node) {
+    rootNode = node;
+  },
+  getRootNode() {
+    return rootNode;
+  },
+  getDeltaTime() {
+    return deltaTime;
+  },
 };

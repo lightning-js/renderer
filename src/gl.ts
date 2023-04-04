@@ -1,17 +1,21 @@
 import threadx from '../../threadx/build/index.js';
-import application from './core/application.js';
-import { boltProperties as props } from './utils.js';
+import application, { type Application } from './core/application.js';
+import { createWebGLContext, boltProperties as props } from './utils.js';
 import createNode from './core/node.js';
+import type { RenderProps } from './renderProperties.js';
 
 let canvas = null;
 let gl = null;
-let app = null;
+let app: Application | null = null;
 const nodes = new Map();
 
 self.addEventListener('message', ({ data: { event, payload } }) => {
   if (event === 'canvas') {
     canvas = payload.offscreenCanvas;
     gl = createWebGLContext(canvas);
+    if (!gl) {
+      throw new Error('WebGL context is not available');
+    }
     app = application({
       w: 1920,
       h: 1080,
@@ -20,7 +24,7 @@ self.addEventListener('message', ({ data: { event, payload } }) => {
   }
 });
 
-threadx.listen('main.bolt', (data) => {
+threadx.listen('main.bolt', (data: RenderProps[]) => {
   data.forEach(
     (el: {
       w: number;
@@ -32,7 +36,7 @@ threadx.listen('main.bolt', (data) => {
       parentId: number;
     }) => {
       const { w, h, x, y, color, elementId, parentId } = el;
-      const root = app.root;
+      const root = app!.root;
       const node = createNode({
         w,
         h,
@@ -52,31 +56,13 @@ threadx.listen('main.bolt', (data) => {
   );
 });
 
-threadx.listen('main.text', (data) => {
+threadx.listen('main.text', (data: unknown) => {
   console.log('text buffer:', data);
 });
 
-threadx.listen('animation.progress', (data) => {
+threadx.listen('animation.progress', (data: unknown) => {
   console.log('animation data received:', data);
 });
-
-const createWebGLContext = (canvas) => {
-  const config = {
-    alpha: true,
-    antialias: false,
-    depth: false,
-    stencil: true,
-    desynchronized: false,
-    failIfMajorPerformanceCaveat: true,
-    powerPreference: 'high-performance',
-    premultipliedAlpha: true,
-    preserveDrawingBuffer: false,
-  };
-  return (
-    canvas.getContext('webgl', config) ||
-    canvas.getContext('experimental-webgl', config)
-  );
-};
 
 // /**
 //  * Initialize worker thread. Will run after
@@ -146,7 +132,7 @@ const createWebGLContext = (canvas) => {
 //     })
 // };
 
-const loadImage = async (src) => {
+const loadImage = async (src: string) => {
   const response = await fetch(src);
   const blob = await response.blob();
 

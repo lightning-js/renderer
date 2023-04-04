@@ -1,4 +1,4 @@
-export const normalizeARGB = (argb) => {
+export const normalizeARGB = (argb: number) => {
   const r = ((argb / 65536) | 0) % 256;
   const g = ((argb / 256) | 0) % 256;
   const b = argb % 256;
@@ -13,15 +13,17 @@ export const RANDOM = Math.random;
 export const ANGLE_ORDER = 'zyx';
 const degree = Math.PI / 180;
 
-export const setMatrixArrayType = (type) => {
+export const setMatrixArrayType = (
+  type: Float32ArrayConstructor | ArrayConstructor,
+) => {
   ARRAY_TYPE = type;
 };
 
-export const toRadian = (a) => {
+export const toRadian = (a: number) => {
   return a * degree;
 };
 
-export const equals = (a, b) => {
+export const equals = (a: number, b: number) => {
   return Math.abs(a - b) <= EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
 };
 
@@ -34,7 +36,7 @@ if (!Math.hypot)
     let y = 0,
       i = args.length;
     while (i--) {
-      y += args[i] * args[i];
+      y += args[i]! * args[i]!;
     }
     return Math.sqrt(y);
   };

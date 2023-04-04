@@ -2,8 +2,6 @@ import { mat4, vec3 } from './lib/glm/index.js';
 import { getTexture } from './gpu/webgl/textureManager.js';
 import { normalizeARGB } from './lib/utils.js';
 
-const rnd = Math.random;
-
 /**
  *
  * - init
@@ -16,54 +14,54 @@ const rnd = Math.random;
  */
 
 let nodeId = 0;
-const nodes = new Map();
+const nodes: Map<number, Node> = new Map();
+
+interface NodeConfig {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: number;
+  events: unknown;
+  elementId: number;
+  src: string | null;
+}
 
 class Node {
   private _localMatrix;
   private _worldMatrix;
-  private _children: any = [];
-  private _parent: any = null;
+  private _children: Node[] = [];
+  private _parent: Node | null = null;
   private _x: number;
   private _y: number;
   private _w: number;
   private _h: number;
   private _localAlpha = 1;
   private _worldAlpha = 1;
-  private _color: any;
+  private _color: number[] = [0, 0, 0, 1];
   private _texture: any = null;
-  private _rotation: any = 0;
-  private _scale: any = 1;
-  private _hasUpdates: any = false;
-  private _matrixDirty: any = false;
-  private _events: any;
+  private _rotation = 0;
+  private _scale = 1;
+  private _hasUpdates = false;
+  private _matrixDirty = false;
+  private _events: unknown;
   private _id: number;
   private _elementId: number;
-  private _src: any;
-  private _imageBitmap: any;
+  private _src: string | null = null;
+  private _imageBitmap: string | ImageBitmap | null = null;
 
-  constructor(
-    config = {
-      x: 0,
-      y: 0,
-      w: 0,
-      h: 0,
-      color: 0xffffffff,
-      events: [],
-      elementId: 0,
-      src: null,
-    },
-  ) {
+  constructor(config: Partial<NodeConfig> = {}) {
     this._localMatrix = mat4.create();
     this._worldMatrix = mat4.create();
-    this._x = config.x;
-    this._y = config.y;
-    this._w = config.w;
-    this._h = config.h;
-    this.color = config.color || 0xffffffff;
+    this._x = config.x ?? 0;
+    this._y = config.y ?? 0;
+    this._w = config.w ?? 0;
+    this._h = config.h ?? 0;
+    this.color = config.color ?? 0xffffffff;
 
     this._events = config.events;
     this._id = ++nodeId;
-    this._elementId = config.elementId;
+    this._elementId = config.elementId ?? 0;
 
     if (config.src) {
       this.src = config.src;
@@ -71,7 +69,7 @@ class Node {
       this.rect = true;
     }
     this.updateTranslate();
-    nodes.set(config.elementId, this);
+    nodes.set(this._elementId, this);
   }
 
   get parent() {
@@ -95,11 +93,11 @@ class Node {
     this._parent = p;
   }
 
-  add(n) {
+  add(n: Node) {
     n.parent = this;
   }
 
-  updateWorldMatrix(pwMatrix) {
+  updateWorldMatrix(pwMatrix: any) {
     if (pwMatrix) {
       // if parent world matrix is provided
       // we multiply times local matrix
@@ -115,7 +113,7 @@ class Node {
     });
   }
 
-  _onParentChange(parent) {
+  _onParentChange(parent: Node) {
     this.updateWorldMatrix(parent.worldMatrix);
   }
 
@@ -129,9 +127,8 @@ class Node {
     }
   }
 
-  updateRotation(v) {
-    mat4.rotateX(this._localMatrix, this._localMatrix, 0.4);
-    mat4.rotateY(this._localMatrix, this._localMatrix, 0.9);
+  updateRotation(v: number) {
+    mat4.rotate(this._localMatrix, this._localMatrix, v, [0, 0, 1]);
     this.updateTranslate();
   }
 
@@ -139,7 +136,7 @@ class Node {
     return mat4.getTranslation(vec3.create(), this._worldMatrix);
   }
 
-  find(elementId) {
+  find(elementId: number) {
     if (nodes.has(elementId)) {
       return nodes.get(elementId);
     }
@@ -157,7 +154,7 @@ class Node {
     return this._localAlpha;
   }
 
-  set src(imageSource) {
+  set src(imageSource: string) {
     this._src = imageSource;
     getTexture({
       type: 'image',
@@ -173,7 +170,7 @@ class Node {
       });
   }
 
-  set imageBitmap(source) {
+  set imageBitmap(source: string | ImageBitmap) {
     this._imageBitmap = source;
     getTexture({
       type: 'imageBitmap',
@@ -189,7 +186,7 @@ class Node {
       });
   }
 
-  set rect(v) {
+  set rect(v: boolean) {
     getTexture({
       type: 'rectangle',
       id: 'rectangle',
@@ -252,7 +249,7 @@ class Node {
     }
   }
 
-  set rotation(v) {
+  set rotation(v: number) {
     this.updateRotation(v);
   }
 
@@ -281,7 +278,7 @@ class Node {
   }
 }
 
-export default (config) => {
+export default (config: Partial<NodeConfig>) => {
   return new Node(config);
 };
 

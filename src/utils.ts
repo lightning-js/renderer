@@ -24,3 +24,23 @@ export const pipelineEvents = {
   progress: 128,
   finished: 256,
 };
+
+export function createWebGLContext(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+): WebGLRenderingContext | null {
+  const config: WebGLContextAttributes = {
+    alpha: true,
+    antialias: false,
+    depth: false,
+    stencil: true,
+    desynchronized: false,
+    failIfMajorPerformanceCaveat: true,
+    powerPreference: 'high-performance',
+    premultipliedAlpha: true,
+    preserveDrawingBuffer: false,
+  };
+  return (
+    canvas.getContext('webgl', config) ||
+    canvas.getContext('experimental-webgl' as 'webgl', config)
+  );
+}
