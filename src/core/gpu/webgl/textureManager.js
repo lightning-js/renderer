@@ -1,4 +1,5 @@
 import { uploadImage } from '../../platform.js';
+import { loadImage } from '../../../utils.js';
 import { createImageTexture, createWhitePixelTexture } from './texture.js';
 import stage from '../../stage.js';
 
@@ -35,8 +36,20 @@ export const getTexture = (options) => {
       setTexture(source, null);
       if (type === 'image') {
         // let platform upload image
-        uploadImage(source, true).then(({ image }) => {
-          resolve(textureLoaded(createImageTexture(gl, image), id));
+        loadImage(source).then((image) => {
+          if (!image) {
+            reject();
+            return;
+          }
+          resolve(
+            textureLoaded(
+              createImageTexture(gl, image, {
+                w: image.width,
+                h: image.height,
+              }),
+              id,
+            ),
+          );
         });
       } else if (type === 'rectangle') {
         resolve(textureLoaded(createWhitePixelTexture(gl), id));

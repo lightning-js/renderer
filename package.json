@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "WebGL Renderer",
   "type": "module",
-  "main": "./build/index.js",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./build/index.js",
-    "./application": "./build/src/core/application.js",
-    "./node": "./build/src/core/node.js"
+    ".": "./dist/index.js",
+    "./workers/renderer": "./dist/src/workers/renderer.js"
   },
   "scripts": {
+    "start": "npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "npm run lint:prettier && npm run lint:eslint",
     "lint:fix": "npm run lint:fix:prettier && npm run lint:fix:eslint",
@@ -18,6 +18,9 @@
     "lint:eslint": "eslint .",
     "lint:fix:eslint": "eslint --fix .",
     "build": "tsc",
+    "watch": "tsc -w",
+    "dev": "concurrently -c \"auto\" \"npm:watch\" \"npm:vite\"",
+    "vite": "vite --open \"/test/index.html\"",
     "prepare": "husky install"
   },
   "repository": {
@@ -36,15 +39,19 @@
   },
   "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
   "devDependencies": {
+    "@lightningjs/renderer": "file:",
     "@types/node": "^18.14.6",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.55.0",
+    "concurrently": "^8.0.1",
     "eslint": "^8.35.0",
     "eslint-config-prettier": "^8.7.0",
     "husky": "^8.0.3",
     "lint-staged": "^13.2.0",
     "prettier": "^2.8.4",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.2",
+    "vite": "^4.1.4",
+    "vite-tsconfig-paths": "^4.0.5"
   },
   "dependencies": {
     "@lightningjs/threadx": "file:../threadx"

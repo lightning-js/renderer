@@ -14,7 +14,7 @@ const config = {
     'prettier',
   ],
   parserOptions: {
-    project: ['./tsconfig.json', './tsconfig.eslint.json'],
+    project: ['./tsconfig.json', './tsconfig.cfg.json', './test/tsconfig.json'],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     tsconfigRootDir: __dirname,
   },

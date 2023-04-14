@@ -5,4 +5,7 @@
     "source.formatDocument",
     "source.fixAll.eslint"
   ],
+  "[typescript]": {
+    "editor.defaultFormatter": "rvest.vs-code-prettier-eslint"
+  },
 }

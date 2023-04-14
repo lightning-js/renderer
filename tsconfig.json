@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "outDir": "build",
+    "rootDir": ".",
+    "types": [],
+    "lib": ["ES2022", "DOM"],
+    "outDir": "dist",
     "allowJs": true,
     "target": "ES2022",
     "module": "ES2022",
@@ -16,5 +19,6 @@
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["./index.ts", "./src/**/*"]
+  "include": ["./index.ts", "./src/**/*"],
+  "exclude": ["node_modules"]
 }

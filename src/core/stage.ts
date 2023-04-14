@@ -30,7 +30,7 @@ let deltaTime = 0;
 let lastFrameTime = 0;
 let currentFrameTime = 0;
 
-export interface MinimalStageOptions {
+export interface StageOptions {
   elementId?: number;
   w?: number;
   h?: number;
@@ -38,13 +38,11 @@ export interface MinimalStageOptions {
   clearColor?: number;
 }
 
-export type StageOptions = Required<MinimalStageOptions>;
-
 export default {
   /**
    * Stage constructor
    */
-  init({ clearColor, context }: StageOptions) {
+  init({ clearColor, context }: Required<StageOptions>) {
     if (context) {
       gl = context;
       const system = getSystem();

@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "outDir": "build-eslint",
+    "outDir": "build-cfg",
     "types": ["@types/node"],
     "moduleResolution": "node",
     "allowJs": true,
+    "noEmit": true,
   },
   "files": [
     "./.eslintrc.cjs",
+    "./vite.config.ts",
   ]
 }
