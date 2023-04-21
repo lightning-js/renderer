@@ -1,7 +1,9 @@
-import { Primitive, type PrimitiveProps } from './Primitive.js';
 import { SpecialElementId } from './SpecialElementId.js';
 import { type IRenderDriver } from './IRenderDriver.js';
 import type { RenderProps } from '../renderProperties.js';
+import { MainNode } from './MainNode.js';
+import { NodeBufferStruct } from '../core/NodeBufferStruct.js';
+import type { PrimitiveProps } from './Primitive.js';
 
 export interface Settings {
   width?: number;
@@ -9,7 +11,7 @@ export interface Settings {
 }
 
 export class RendererMain {
-  root: Primitive;
+  root: MainNode;
   private canvas: HTMLCanvasElement;
   private settings: Required<Settings>;
   readonly driver: IRenderDriver;
@@ -21,7 +23,7 @@ export class RendererMain {
    * - 2 is reserved to mean "root application primitive"
    */
   private nextId = SpecialElementId.Root + 1;
-  private primitives: Map<number, Primitive> = new Map();
+  private primitives: Map<number, MainNode> = new Map();
 
   constructor(
     settings: Settings,
@@ -53,11 +55,8 @@ export class RendererMain {
 
     // TODO: Get the properties for the root primiative from settings or someway where
     // they are guaranteed to be in sync with the renderer worker
-    this.root = new Primitive(this, {
-      elementId: SpecialElementId.Root,
-      w: resolvedSettings.width,
-      h: resolvedSettings.height,
-    });
+    const bufferStruct = new NodeBufferStruct();
+    this.root = new MainNode(bufferStruct);
     this.primitives.set(SpecialElementId.Root, this.root);
 
     // Hook up the driver's callbacks
@@ -76,20 +75,22 @@ export class RendererMain {
     await this.driver.init(this.canvas);
   }
 
-  createPrimitive(
-    props: Partial<PrimitiveProps>,
-    parent?: Primitive,
-  ): Primitive {
+  createPrimitive(props: Partial<PrimitiveProps>, parent?: MainNode): MainNode {
     const id = this.nextId++;
-    const primitive = new Primitive(this, {
-      ...props,
-      elementId: id,
-      parentId: (parent && parent.id) || SpecialElementId.Detached,
-    });
+    const bufferStruct = new NodeBufferStruct();
+    bufferStruct.x = props.x || 0;
+    bufferStruct.y = props.y || 0;
+    bufferStruct.w = props.w || 0;
+    bufferStruct.h = props.h || 0;
+    bufferStruct.parentId = parent ? parent.id : SpecialElementId.Root;
+    bufferStruct.color = props.color || 0xffffffff;
+
+    const primitive = new MainNode(bufferStruct);
+    this.driver.createPrimitiveRaw(primitive);
     return primitive;
   }
 
-  getPrimitiveById(id: number): Primitive | null {
+  getPrimitiveById(id: number): MainNode | null {
     return this.primitives.get(id) || null;
   }
 }

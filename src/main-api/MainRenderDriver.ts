@@ -1,10 +1,10 @@
 import application, { type Application } from '../core/application.js';
 import { assert, createWebGLContext, loadImage } from '../utils.js';
 import type { IRenderDriver } from './IRenderDriver.js';
-import type { Primitive } from './Primitive.js';
 import createNode, { type Node } from '../core/node.js';
 import type { RenderProps } from '../renderProperties.js';
 import { SpecialElementId } from './SpecialElementId.js';
+import { MainNode } from './MainNode.js';
 
 export class MainRenderDriver implements IRenderDriver {
   private app: Application | undefined;
@@ -26,8 +26,8 @@ export class MainRenderDriver implements IRenderDriver {
     this.nodes.set(rootElementId, this.app.root);
   }
 
-  createPrimitiveRaw(primitive: Primitive): void {
-    const { elementId, parentId } = primitive.props;
+  createPrimitiveRaw(primitive: MainNode): void {
+    const { parentId } = primitive.props;
     const { nodes } = this;
     const node = createNode(primitive.props);
     const parent = nodes.get(parentId);
@@ -36,52 +36,52 @@ export class MainRenderDriver implements IRenderDriver {
     } else {
       node.parent = null;
     }
-    nodes.set(elementId, node);
+    nodes.set(primitive.id, node);
     this.onCreatePrimitive(primitive);
   }
 
   mutatePrimitiveRaw(
-    primitive: Primitive,
+    primitive: MainNode,
     mutations: Partial<RenderProps>,
   ): void {
-    const { nodes } = this;
-    const props = primitive.props;
-    const node = nodes.get(props.elementId);
-    if (node) {
-      const keys = Object.keys(mutations);
-      keys.forEach((key) => {
-        if (key === 'parentId') {
-          const parent = nodes.get(props.parentId);
-          if (parent) {
-            node.parent = parent;
-          } else {
-            node.parent = null;
-          }
-        } else if (props[key as keyof RenderProps]) {
-          // @ts-expect-error Ask TS to trust us on this assignment
-          node[key] = props[key as keyof RenderProps];
-        }
-      });
-    }
+    // const { nodes } = this;
+    // const props = primitive.props;
+    // const node = nodes.get(primitive.id);
+    // if (node) {
+    //   const keys = Object.keys(mutations);
+    //   keys.forEach((key) => {
+    //     if (key === 'parentId') {
+    //       const parent = nodes.get(props.parentId);
+    //       if (parent) {
+    //         node.parent = parent;
+    //       } else {
+    //         node.parent = null;
+    //       }
+    //     } else if (props[key as keyof RenderProps]) {
+    //       // @ts-expect-error Ask TS to trust us on this assignment
+    //       node[key] = props[key as keyof RenderProps];
+    //     }
+    //   });
+    // }
   }
 
-  destroyPrimitiveRaw(primitive: Primitive): void {
+  destroyPrimitiveRaw(primitive: MainNode): void {
     const { nodes } = this;
-    const { elementId } = primitive.props;
+    const id = primitive.id;
     this.onDestroyPrimitive(primitive);
-    const node = nodes.get(elementId);
+    const node = nodes.get(id);
     if (node) {
       // Detach from parent and remove from nodes list
       node.parent = null;
-      nodes.delete(elementId);
+      nodes.delete(id);
     }
   }
 
-  onCreatePrimitive(primitive: Primitive): void {
+  onCreatePrimitive(primitive: MainNode): void {
     return;
   }
 
-  onDestroyPrimitive(primitive: Primitive): void {
+  onDestroyPrimitive(primitive: MainNode): void {
     return;
   }
 }

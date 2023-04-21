@@ -1,15 +1,15 @@
 import type { RenderProps } from '../renderProperties.js';
-import { Primitive } from './Primitive.js';
+import type { MainNode } from './MainNode.js';
 
 export interface IRenderDriver {
   init(canvas: HTMLCanvasElement): Promise<void>;
-  createPrimitiveRaw(primitive: Primitive): void;
+  createPrimitiveRaw(primitive: MainNode): void;
   mutatePrimitiveRaw(
-    primitive: Primitive,
+    primitive: MainNode,
     mutations: Partial<RenderProps>,
   ): void;
-  destroyPrimitiveRaw(primitive: Primitive): void;
+  destroyPrimitiveRaw(primitive: MainNode): void;
 
-  onCreatePrimitive(primitive: Primitive): void;
-  onDestroyPrimitive(primitive: Primitive): void;
+  onCreatePrimitive(primitive: MainNode): void;
+  onDestroyPrimitive(primitive: MainNode): void;
 }
