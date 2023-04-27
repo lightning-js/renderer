@@ -1,9 +1,9 @@
-import { ThreadX } from '../__threadx/ThreadX.js';
-import application, { type Application } from '../core/application.js';
-import createNode, { type Node } from '../core/node.js';
-import { createWebGLContext } from '../utils.js';
-import { NodeBufferStruct } from '../core/NodeBufferStruct.js';
-import { BufferStruct } from '../__threadx/BufferStruct.js';
+import { ThreadX } from '../../../__threadx/ThreadX.js';
+import application, { type Application } from '../../../core/application.js';
+import createNode, { type Node } from '../../../core/node.js';
+import { createWebGLContext } from '../../../utils.js';
+import { NodeStruct } from '../NodeStruct.js';
+import { BufferStruct } from '../../../__threadx/BufferStruct.js';
 import { RendererNode } from './RendererNode.js';
 
 let gl = null;
@@ -15,8 +15,8 @@ ThreadX.init({
   threadName: 'renderer',
   sharedObjectFactory(buffer) {
     const typeId = BufferStruct.extractTypeId(buffer);
-    if (typeId === NodeBufferStruct.typeId) {
-      const nodeStruct = new NodeBufferStruct(buffer);
+    if (typeId === NodeStruct.typeId) {
+      const nodeStruct = new NodeStruct(buffer);
       let legacyNode: Node;
       if (nodeStruct.id === rootNode?.elementId) {
         legacyNode = rootNode;

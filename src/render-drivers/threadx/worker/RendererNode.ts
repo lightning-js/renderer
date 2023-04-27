@@ -1,21 +1,17 @@
-import type {
-  NodeBufferStruct,
-  NodeWrittableProps,
-} from '../core/NodeBufferStruct.js';
-import { SharedNode } from '../core/SharedNode.js';
-import type { Node } from '../core/node.js';
+import type { NodeStruct, NodeStructWritableProps } from '../NodeStruct.js';
+import { SharedNode } from '../SharedNode.js';
+import type { Node } from '../../../core/node.js';
 
 export class RendererNode extends SharedNode {
   legacyNode: Node;
 
-  constructor(sharedNodeStruct: NodeBufferStruct, legacyNode: Node) {
+  constructor(sharedNodeStruct: NodeStruct, legacyNode: Node) {
     super(sharedNodeStruct);
     this.legacyNode = legacyNode;
-    this._executeMutations();
   }
 
   override onPropertyChange(
-    propName: keyof NodeWrittableProps,
+    propName: keyof NodeStructWritableProps,
     value: unknown,
   ): void {
     if (propName === 'parentId') {

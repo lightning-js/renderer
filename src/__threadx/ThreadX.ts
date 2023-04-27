@@ -1,7 +1,17 @@
 import { SharedObject } from './SharedObject.js';
 import { stringifyTypeId } from './buffer-struct-utils.js';
+import { assertTruthy } from './utils.js';
 
 interface ThreadXOptions {
+  /**
+   * The ID of the thread. Must be unique across all threads.
+   *
+   * Should be an integer value between 1 and 899.
+   *
+   * @internalRemarks
+   * The reason for the 899 limit is the way we generate unique IDs for
+   * BufferStructs. See `BufferStruct.ts` for more details.
+   */
   threadId: number;
   threadName: string;
   sharedObjectFactory: (buffer: SharedArrayBuffer) => SharedObject | null;
@@ -76,41 +86,46 @@ interface SharedObjectEmitMessage extends ThreadXMessage {
   threadXMessageType: 'sharedObjectEmit';
   sharedObjectId: number;
   eventName: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 interface ResponseMessage extends ThreadXMessage {
   threadXMessageType: 'response';
   asyncMsgId: number;
   error?: true;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 function isMessage(
   messageType: 'shareObjects',
-  message: any,
+  message: unknown,
 ): message is ShareObjectsMessage;
 function isMessage(
   messageType: 'forgetObjects',
-  message: any,
+  message: unknown,
 ): message is ForgetObjectsMessage;
 function isMessage(
   messageType: 'sharedObjectEmit',
-  message: any,
+  message: unknown,
 ): message is SharedObjectEmitMessage;
 function isMessage(
   messageType: 'response',
-  message: any,
+  message: unknown,
 ): message is ResponseMessage;
-function isMessage(messageType: string, message: any): message is MessageEvent {
+function isMessage(
+  messageType: string,
+  message: unknown,
+): message is MessageEvent {
   return (
     typeof message === 'object' &&
     message !== null &&
+    'threadXMessageType' in message &&
     message.threadXMessageType === messageType
   );
 }
 
 function isWebWorker(selfObj: any): selfObj is DedicatedWorkerGlobalScope {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   return typeof selfObj.DedicatedWorkerGlobalScope === 'function';
 }
 
@@ -171,6 +186,10 @@ export class ThreadX {
    */
   private readonly onUserMessage?: (message: any) => Promise<void>;
   readonly sharedObjects = new Map<number, SharedObject>();
+  /**
+   * WeakMap of SharedObjects to the worker that they are shared with
+   */
+  private sharedObjectWorkers = new WeakMap<SharedObject, string>();
   readonly threads = new Map<string, WorkerCommon>();
   private pendingAsyncMsgs = new Map<
     number,
@@ -202,26 +221,28 @@ export class ThreadX {
     this.onUserMessage = options.onMessage;
     const mySelf: unknown = self;
     if (isWebWorker(mySelf)) {
-      this.registerThread('parent', mySelf);
+      this.registerWorker('parent', mySelf);
     }
   }
 
-  registerThread(name: string, worker: WorkerCommon) {
-    this.threads.set(name, worker);
-    this.listenForWorkerMessages(worker);
+  registerWorker(workerName: string, worker: WorkerCommon) {
+    this.threads.set(workerName, worker);
+    this.listenForWorkerMessages(workerName, worker);
   }
 
-  private listenForWorkerMessages(worker: WorkerCommon) {
+  private listenForWorkerMessages(workerName: string, worker: WorkerCommon) {
     worker.addEventListener('message', (event) => {
-      const { data } = event;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { data } = event as { data: Record<string, unknown> };
       // Process only if message is a ThreadX message
-      const asyncMsgId = data.__asyncMsgId;
-      this.onMessage(data)
+      const asyncMsgId = data.__asyncMsgId as number | undefined;
+      this.onMessage(workerName, data)
         .then((response) => {
           if (asyncMsgId !== undefined) {
             worker.postMessage({
               threadXMessageType: 'response',
               asyncMsgId: asyncMsgId,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               data: response,
             } satisfies ResponseMessage);
           }
@@ -232,6 +253,7 @@ export class ThreadX {
               threadXMessageType: 'response',
               asyncMsgId: asyncMsgId,
               error: true,
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               data: error,
             } satisfies ResponseMessage);
           }
@@ -252,12 +274,15 @@ export class ThreadX {
         // TODO: Support sharing objects with multiple workers?
         //   - Do we really need to do this?
         console.warn(
-          `ThreadX.shareObject(): SharedObject ${sharedObject.id} (TypeID: ${
-            stringifyTypeId(sharedObject.typeId) || 'null'
-          }) is already shared.`,
+          `ThreadX.shareObject(): SharedObject ${
+            sharedObject.id
+          } (TypeID: ${stringifyTypeId(
+            sharedObject.typeId,
+          )}) is already shared.`,
         );
       } else {
         this.sharedObjects.set(sharedObject.id, sharedObject);
+        this.sharedObjectWorkers.set(sharedObject, workerName);
       }
     }
     await this.sendMessageAsync(workerName, {
@@ -271,44 +296,68 @@ export class ThreadX {
   }
 
   /**
-   * Tell a worker to forget about a SharedObject
+   * Tell ThreadX to forget about SharedObjects
    *
    * @remarks
-   * This causes ThreadX running on the worker to eliminate its held reference
-   * to the SharedObject. Though it is up to the worker code to actually
-   * make sure that no other references to the SharedObject exist so that
-   * it can be garbage collected.
+   * This causes ThreadX on the current worker and the worker that the object
+   * is shared with to forget about the object. It is up to the worker code to
+   * actually make sure that no other references to the SharedObjects exist so
+   * that they can be garbage collected.
    *
-   * The worker can implement the onObjectForgotten() callback to be notified
+   * A worker can implement the onObjectForgotten() callback to be notified
    * when a SharedObject is forgotten.
    *
-   * @param workerName
    * @param sharedObject
    */
-  async forgetObjects(workerName: string, sharedObjects: SharedObject[]) {
+  async forgetObjects(sharedObjects: SharedObject[]) {
+    /**
+     * Map of worker name to array of SharedObjects
+     *
+     * @remarks
+     * We group the shared objects by worker so that we can send a single message
+     * to forget all of the objects shared with each worker.
+     */
+    const objectsByWorker = new Map<string, SharedObject[]>();
     for (const sharedObject of sharedObjects) {
       if (!this.sharedObjects.has(sharedObject.id)) {
         // Currently we only support sharing objects with only a single worker
         // TODO: Support sharing objects with multiple workers?
         //   - Do we really need to do this?
         console.warn(
-          `ThreadX.forgetObject(): SharedObject ${sharedObject.id} (TypeID: ${
-            stringifyTypeId(sharedObject.typeId) || 'null'
-          }) is not shared.`,
+          `ThreadX.forgetObject(): SharedObject ${
+            sharedObject.id
+          } (TypeID: ${stringifyTypeId(sharedObject.typeId)}) is not shared.`,
         );
       } else {
+        const worker = this.sharedObjectWorkers.get(sharedObject);
+        assertTruthy(worker);
+        let objectsInWorker = objectsByWorker.get(worker);
+        if (!objectsInWorker) {
+          objectsInWorker = [];
+          objectsByWorker.set(worker, objectsInWorker);
+        }
+        objectsInWorker.push(sharedObject);
         this.sharedObjects.delete(sharedObject.id);
+        this.sharedObjectWorkers.delete(sharedObject);
       }
     }
-    await this.sendMessageAsync(workerName, {
-      threadXMessageType: 'forgetObjects',
-      objectIds: sharedObjects.map((so) => so.id),
-    } satisfies ForgetObjectsMessage);
+
+    const promises: Promise<void>[] = [];
+    for (const [workerName, objectsInWorker] of objectsByWorker) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      promises.push(
+        this.sendMessageAsync(workerName, {
+          threadXMessageType: 'forgetObjects',
+          objectIds: objectsInWorker.map((so) => so.id),
+        } satisfies ForgetObjectsMessage),
+      );
+    }
+    await Promise.all(promises);
   }
 
   sendMessage(
     workerName: string,
-    message: any,
+    message: Record<string, unknown>,
     transfer?: Transferable[] | undefined,
   ): void {
     const worker = this.threads.get(workerName);
@@ -322,7 +371,7 @@ export class ThreadX {
 
   async sendMessageAsync(
     workerName: string,
-    message: any,
+    message: Record<string, unknown>,
     transfer?: Transferable[] | undefined,
   ): Promise<any> {
     const worker = this.threads.get(workerName);
@@ -343,7 +392,7 @@ export class ThreadX {
     return promise;
   }
 
-  private async onMessage(message: any): Promise<any> {
+  private async onMessage(srcWorkerName: string, message: any): Promise<any> {
     if (isMessage('shareObjects', message)) {
       message.buffers.forEach((buffer: SharedArrayBuffer) => {
         const sharedObject = this.sharedObjectFactory(buffer);
@@ -353,6 +402,7 @@ export class ThreadX {
           );
         }
         this.sharedObjects.set(sharedObject.id, sharedObject);
+        this.sharedObjectWorkers.set(sharedObject, srcWorkerName);
         this.onSharedObjectCreated?.(sharedObject);
       });
     } else if (isMessage('forgetObjects', message)) {
@@ -409,7 +459,11 @@ export class ThreadX {
    * @param data
    * @returns
    */
-  __sharedObjectEmit(sharedObject: SharedObject, eventName: string, data: any) {
+  __sharedObjectEmit(
+    sharedObject: SharedObject,
+    eventName: string,
+    data: Record<string, unknown>,
+  ) {
     // If we are currently emitting an event from a SharedObject that originated
     // from another worker then we don't want to emit the event again.
     if (this.suppressSharedObjectEmit) {

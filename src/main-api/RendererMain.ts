@@ -1,36 +1,29 @@
-import { SpecialElementId } from './SpecialElementId.js';
-import { type IRenderDriver } from './IRenderDriver.js';
-import type { RenderProps } from '../renderProperties.js';
-import { MainNode } from './MainNode.js';
-import { NodeBufferStruct } from '../core/NodeBufferStruct.js';
-import type { PrimitiveProps } from './Primitive.js';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import type { INode, INodeWritableProps } from '../core/INode.js';
+import type { IRenderDriver } from './IRenderDriver.js';
 
-export interface Settings {
+export interface RendererMainSettings {
   width?: number;
   height?: number;
 }
 
 export class RendererMain {
-  root: MainNode;
-  private canvas: HTMLCanvasElement;
-  private settings: Required<Settings>;
+  readonly root: INode;
   readonly driver: IRenderDriver;
-  /**
-   * @remarks
-   * Starts at (SpecialElementId.Root + 1) because:
-   * - 0 cannot be used because ThreadX's MultiElementWrapper does not support mutations to 0 right now.
-   * - 1 is reserved to mean "no parent"
-   * - 2 is reserved to mean "root application primitive"
-   */
-  private nextId = SpecialElementId.Root + 1;
-  private primitives: Map<number, MainNode> = new Map();
+  private canvas: HTMLCanvasElement;
+  private settings: Required<RendererMainSettings>;
+  canvasDimensions: { width: number; height: number } = {
+    width: 800,
+    height: 600,
+  };
+  private nodes: Map<number, INode> = new Map();
 
   constructor(
-    settings: Settings,
+    settings: RendererMainSettings,
     target: string | HTMLElement,
     driver: IRenderDriver,
   ) {
-    const resolvedSettings: Required<Settings> = {
+    const resolvedSettings: Required<RendererMainSettings> = {
       width: settings.width || 1920,
       height: settings.height || 1080,
     };
@@ -53,19 +46,16 @@ export class RendererMain {
       throw new Error('Could not find target element');
     }
 
-    // TODO: Get the properties for the root primiative from settings or someway where
-    // they are guaranteed to be in sync with the renderer worker
-    const bufferStruct = new NodeBufferStruct();
-    this.root = new MainNode(bufferStruct);
-    this.primitives.set(SpecialElementId.Root, this.root);
+    this.root = this.driver.getRootNode();
+    this.nodes.set(this.root.id, this.root);
 
     // Hook up the driver's callbacks
-    driver.onCreatePrimitive = (primitive) => {
-      this.primitives.set(primitive.id, primitive);
+    driver.onCreateNode = (node) => {
+      this.nodes.set(node.id, node);
     };
 
-    driver.onDestroyPrimitive = (primitive) => {
-      this.primitives.delete(primitive.id);
+    driver.onDestroyNode = (node) => {
+      this.nodes.delete(node.id);
     };
 
     targetEl.appendChild(canvas);
@@ -75,22 +65,32 @@ export class RendererMain {
     await this.driver.init(this.canvas);
   }
 
-  createPrimitive(props: Partial<PrimitiveProps>, parent?: MainNode): MainNode {
-    const id = this.nextId++;
-    const bufferStruct = new NodeBufferStruct();
-    bufferStruct.x = props.x || 0;
-    bufferStruct.y = props.y || 0;
-    bufferStruct.w = props.w || 0;
-    bufferStruct.h = props.h || 0;
-    bufferStruct.parentId = parent ? parent.id : SpecialElementId.Root;
-    bufferStruct.color = props.color || 0xffffffff;
-
-    const primitive = new MainNode(bufferStruct);
-    this.driver.createPrimitiveRaw(primitive);
-    return primitive;
+  createNode(props: Partial<INodeWritableProps>): INode {
+    return this.driver.createNode(props);
   }
 
-  getPrimitiveById(id: number): MainNode | null {
-    return this.primitives.get(id) || null;
+  destroyNode(node: INode) {
+    return this.driver.destroyNode(node);
+  }
+
+  toggleFreeze() {
+    throw new Error('Not implemented');
+  }
+
+  advanceFrame() {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Re-render the current frame without advancing any running animations.
+   *
+   * @remarks
+   * Any state changes will be reflected in the re-rendered frame. Useful for
+   * debugging.
+   *
+   * May not do anything if the render loop is running on a separate thread.
+   */
+  rerender() {
+    throw new Error('Not implemented');
   }
 }

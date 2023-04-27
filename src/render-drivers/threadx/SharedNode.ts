@@ -1,19 +1,17 @@
-import type {
-  NodeBufferStruct,
-  NodeWrittableProps,
-} from './NodeBufferStruct.js';
-import { SharedObject } from '../__threadx/SharedObject.js';
+import type { NodeStruct, NodeStructWritableProps } from './NodeStruct.js';
+import { SharedObject } from '../../__threadx/SharedObject.js';
+import type { INode } from '../../core/INode.js';
 
 export class SharedNode
-  extends SharedObject<NodeWrittableProps, NodeBufferStruct>
-  implements NodeWrittableProps
+  extends SharedObject<NodeStructWritableProps, NodeStruct>
+  implements INode
 {
   /**
    * Must have lock on sharedNode before calling constructor!
    *
    * @param sharedNodeStruct
    */
-  constructor(sharedNodeStruct: NodeBufferStruct) {
+  constructor(sharedNodeStruct: NodeStruct) {
     super(sharedNodeStruct, {
       x: sharedNodeStruct.x,
       y: sharedNodeStruct.y,
@@ -27,12 +25,14 @@ export class SharedNode
     });
   }
 
-  // TODO: Implement parent properly
-  get parent(): SharedNode | null {
-    return null;
+  private _parent: INode | null = null;
+
+  get parent(): INode | null {
+    return this._parent;
   }
 
-  set parent(value: SharedNode | null) {
+  set parent(value: INode | null) {
+    this._parent = value;
     this.parentId = value?.id ?? 0;
   }
 
@@ -43,7 +43,7 @@ export class SharedNode
   declare w: number;
   declare h: number;
   declare color: number;
-  declare parentId: number;
+  private declare parentId: number;
   declare zIndex: number;
   declare text: string;
   declare src: string;

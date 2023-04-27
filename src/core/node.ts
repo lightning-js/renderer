@@ -1,6 +1,6 @@
 import { mat4, vec3 } from './lib/glm/index.js';
 import { getTexture } from './gpu/webgl/textureManager.js';
-import { normalizeARGB } from './lib/utils.js';
+import { normalizeARGB, type RGBA } from './lib/utils.js';
 
 /**
  *
@@ -38,7 +38,7 @@ class Node {
   private _h: number;
   private _localAlpha = 1;
   private _worldAlpha = 1;
-  private _color: number[] = [0, 0, 0, 1];
+  private _color: RGBA = [0, 0, 0, 1];
   private _texture: any = null;
   private _rotation = 0;
   private _scale = 1;
@@ -234,13 +234,11 @@ class Node {
     this._h = v;
   }
 
-  // TODO: Type number[] better
-  get color(): number[] {
+  get color(): RGBA {
     return this._color;
   }
 
-  // TODO: Type number[] better
-  set color(v: number | number[]) {
+  set color(v: number | RGBA) {
     if (typeof v === 'number') {
       v = 0xffffffff + v + 1;
       this._color = normalizeARGB(v);

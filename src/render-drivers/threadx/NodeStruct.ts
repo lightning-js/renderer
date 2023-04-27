@@ -1,7 +1,7 @@
-import { BufferStruct, structProp } from '../__threadx/BufferStruct.js';
-import { genTypeId } from '../__threadx/buffer-struct-utils.js';
+import { BufferStruct, structProp } from '../../__threadx/BufferStruct.js';
+import { genTypeId } from '../../__threadx/buffer-struct-utils.js';
 
-export interface NodeWrittableProps {
+export interface NodeStructWritableProps {
   x: number;
   y: number;
   w: number;
@@ -42,9 +42,9 @@ export interface NodeWrittableProps {
  * [20] - [147] (128 32-bit words = 256 16-bit words = 64 64-bit words)
  *    Uint16[40]: text (255 character string with first 16-bit word being the length)
  */
-export class NodeBufferStruct
+export class NodeStruct
   extends BufferStruct
-  implements NodeWrittableProps
+  implements NodeStructWritableProps
 {
   static override readonly typeId = genTypeId('NODE');
 

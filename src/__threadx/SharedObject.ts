@@ -1,7 +1,7 @@
+import type { IEventEmitter } from './IEventEmitter.js';
 import type { BufferStruct, BufferStructConstructor } from './BufferStruct.js';
 import { ThreadX } from './ThreadX.js';
 
-type SOEventListener<This> = (target: This, data: any) => void;
 export class SharedObject<
   WritableProps extends object = object,
   InstanceT extends BufferStruct & WritableProps = BufferStruct & WritableProps,
@@ -9,7 +9,8 @@ export class SharedObject<
     WritableProps,
     InstanceT
   > = BufferStructConstructor<WritableProps, InstanceT>,
-> {
+> implements IEventEmitter
+{
   private sharedObjectStruct: InstanceT | null;
   protected mutations: { [s in keyof WritableProps]?: true };
   private waitPromise: Promise<void> | null = null;
@@ -18,6 +19,7 @@ export class SharedObject<
   static staticConstructed = false;
   private _id: number;
   private _typeId: number;
+  private initialized = false;
 
   /**
    * Extract the buffer from a SharedObject
@@ -47,14 +49,15 @@ export class SharedObject<
     const constructor = this.constructor as typeof SharedObject;
     if (!constructor.staticConstructed) {
       constructor.staticConstructed = true;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const prototype = Object.getPrototypeOf(this);
       Object.keys(curProps).forEach((key) => {
         Object.defineProperty(prototype, key, {
-          get: function () {
+          get: function (this: SharedObject<WritableProps>) {
             return this.curProps[key as keyof WritableProps];
           },
-          set: function (value: any) {
-            this.curProps[key as keyof WritableProps] = value;
+          set: function (this: SharedObject<WritableProps>, value: unknown) {
+            (this.curProps[key as keyof WritableProps] as unknown) = value;
             this.mutations[key as keyof WritableProps] = true;
             this.queueMutations();
           },
@@ -63,6 +66,8 @@ export class SharedObject<
     }
 
     this.mutations = {};
+    this._executeMutations();
+    this.initialized = true;
   }
 
   get typeId(): number {
@@ -85,7 +90,10 @@ export class SharedObject<
     (sharedObjectStruct.constructor as T).propDefs.forEach((propDef, index) => {
       if (sharedObjectStruct.isDirty(index)) {
         const propName = propDef.name as keyof WritableProps;
-        this.onPropertyChange(propName, sharedObjectStruct[propName]);
+        // Don't call onPropertyChange during the initialization process
+        if (this.initialized) {
+          this.onPropertyChange(propName, sharedObjectStruct[propName]);
+        }
         delete mutations[propName];
         curProps[propName] = sharedObjectStruct[propName];
       }
@@ -103,19 +111,17 @@ export class SharedObject<
     }
     this.mutationsQueued = true;
     queueMicrotask(() => {
-      Promise.resolve()
-        .then(async () => {
-          this.mutationsQueued = false;
-          if (!this.sharedObjectStruct) {
-            throw new Error('SharedObject was destroyed');
-          }
-          await this.sharedObjectStruct.lockAsync(async () => {
-            this._executeMutations();
-          });
-        })
-        .catch((err) => {
-          console.error(err);
-        });
+      this.mutationsQueued = false;
+      this.mutationMicrotask().catch(console.error);
+    });
+  }
+
+  private async mutationMicrotask() {
+    if (!this.sharedObjectStruct) {
+      throw new Error('SharedObject was destroyed');
+    }
+    await this.sharedObjectStruct.lockAsync(async () => {
+      this._executeMutations();
     });
   }
 
@@ -158,7 +164,7 @@ export class SharedObject<
     return this.sharedObjectStruct === null;
   }
 
-  protected _executeMutations(): void {
+  private _executeMutations(): void {
     if (!this.sharedObjectStruct) {
       throw new Error('SharedObject was destroyed');
     }
@@ -207,45 +213,54 @@ export class SharedObject<
   }
 
   //#region EventEmitter
-  private eventListeners: { [eventName: string]: SOEventListener<any>[] } = {};
+  private eventListeners: { [eventName: string]: any } = {};
 
-  on(eventName: string, listener: SOEventListener<this>): void {
-    let listeners = this.eventListeners[eventName];
+  on(event: string, listener: (target: any, data: any) => void): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    let listeners = this.eventListeners[event];
     if (!listeners) {
       listeners = [];
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     listeners.push(listener);
-    this.eventListeners[eventName] = listeners;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    this.eventListeners[event] = listeners;
   }
 
-  off(eventName: string, listener: SOEventListener<this>): void {
-    const listeners = this.eventListeners[eventName];
+  off(event: string, listener: (target: any, data: any) => void): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const listeners = this.eventListeners[event];
     if (!listeners) {
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     const index = listeners.indexOf(listener);
     if (index >= 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
       listeners.splice(index, 1);
     }
   }
 
-  emit(eventName: string, data: any): void {
-    const listeners = this.eventListeners[eventName];
-    ThreadX.instance.__sharedObjectEmit(this, eventName, data);
+  once(event: string, listener: (target: any, data: any) => void): void {
+    const onceListener = (target: any, data: any) => {
+      this.off(event, onceListener);
+      listener(target, data);
+    };
+    this.on(event, onceListener);
+  }
+
+  emit(event: string, data: Record<string, unknown>): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const listeners = this.eventListeners[event];
+    ThreadX.instance.__sharedObjectEmit(this, event, data);
     if (!listeners) {
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     [...listeners].forEach((listener) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       listener(this, data);
     });
-  }
-
-  once(eventName: string, listener: SOEventListener<this>): void {
-    const onceListener: SOEventListener<this> = (target: this, data: any) => {
-      this.off(eventName, onceListener);
-      listener(target, data);
-    };
-    this.on(eventName, onceListener);
   }
   //#endregion EventEmitter
 }

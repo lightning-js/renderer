@@ -31,6 +31,25 @@ export function genTypeId(tidString: string): number {
 }
 
 /**
+ * Returns true if the given type ID is valid.
+ *
+ * @param typeId
+ * @returns
+ */
+export function isValidTypeId(typeId: number): boolean {
+  for (let i = 0; i < 4; i++) {
+    const charCode = typeId & 0xff;
+    if (!isValidTypeIdCharCode(charCode) && (charCode !== 0 || i === 0)) {
+      // Bail as soon as we encounter an invalid character
+      // Except if charCodes other than the first one are 0
+      return false;
+    }
+    typeId >>>= 8;
+  }
+  return true;
+}
+
+/**
  * Converts a type ID to its string form.
  *
  * @remarks
@@ -39,7 +58,7 @@ export function genTypeId(tidString: string): number {
  * @param typeId
  * @returns
  */
-export function stringifyTypeId(typeId: number): string | null {
+export function stringifyTypeId(typeId: number): string {
   const chars = [];
   for (let i = 0; i < 4; i++) {
     const charCode = typeId & 0xff;
@@ -48,7 +67,7 @@ export function stringifyTypeId(typeId: number): string | null {
     } else if (charCode !== 0 || i === 0) {
       // Bail as soon as we encounter an invalid character
       // Except if charCodes other than the first one are 0
-      return null;
+      return '????';
     }
     typeId >>>= 8;
   }

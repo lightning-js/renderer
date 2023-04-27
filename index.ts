@@ -4,5 +4,5 @@ export { mutableRenderProperties as mutableRenderProperties } from './src/render
 export * from './src/main-api/IRenderDriver.js';
 export * from './src/main-api/Primitive.js';
 export * from './src/main-api/RendererMain.js';
-export * from './src/main-api/MainRenderDriver.js';
-export * from './src/main-api/ThreadXRenderDriver.js';
+export * from './src/render-drivers/main/MainRenderDriver.js';
+export * from './src/render-drivers/threadx/ThreadXRenderDriver.js';

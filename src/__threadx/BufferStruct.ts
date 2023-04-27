@@ -9,8 +9,6 @@ const ID_FLOAT64_INDEX = 2;
 
 const MAX_STRING_SIZE = 255;
 
-let nextId = 1;
-
 export type BufferStructConstructor<
   WritableProps = object,
   T extends BufferStruct = BufferStruct,
@@ -18,6 +16,36 @@ export type BufferStructConstructor<
   new (): T & WritableProps;
   propDefs: PropDef[];
 };
+
+function valueIsType(
+  expectedType: 'number',
+  type: string,
+  value: unknown,
+): value is number;
+function valueIsType(
+  expectedType: 'int32',
+  type: string,
+  value: unknown,
+): value is number;
+function valueIsType(
+  expectedType: 'string',
+  type: string,
+  value: unknown,
+): value is string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function valueIsType(
+  expectedType: string,
+  type: string,
+  value: unknown,
+): boolean {
+  return expectedType === type;
+}
+
+function valuesAreEqual(a: number, b: unknown): b is number;
+function valuesAreEqual(a: string, b: unknown): b is string;
+function valuesAreEqual(a: string | number, b: unknown): boolean {
+  return a === b;
+}
 
 export function structProp(type: 'string' | 'number' | 'int32') {
   return function (
@@ -65,7 +93,7 @@ export function structProp(type: 'string' | 'number' | 'int32') {
         if (length > MAX_STRING_SIZE) {
           // This should never happen because we truncate the string when setting it
           throw new Error(
-            `get SharedObject.${key}: Text length is too long. ${length}`,
+            `get SharedObject.${key}: Text length is too long. Length: ${length}`,
           );
         }
         return String.fromCharCode(
@@ -78,9 +106,9 @@ export function structProp(type: 'string' | 'number' | 'int32') {
       }
     };
 
-    descriptor.set = function (this: BufferStruct, value: any) {
-      if (type === 'string') {
-        if (this[key as keyof BufferStruct] !== value) {
+    descriptor.set = function (this: BufferStruct, value: unknown) {
+      if (valueIsType('string', type, value)) {
+        if (!valuesAreEqual(value, this[key as keyof BufferStruct])) {
           this.setDirty(propNum);
           // Copy string into shared memory in the most efficient way possible
           let length = value.length;
@@ -93,19 +121,19 @@ export function structProp(type: 'string' | 'number' | 'int32') {
           }
           this.uint16array[offset] = length;
           const startOffset = offset + 1;
-          const endOffset = startOffset + (length as number);
+          const endOffset = startOffset + length;
           let charIndex = 0;
           for (let i = startOffset; i < endOffset; i++) {
             this.uint16array[i] = value.charCodeAt(charIndex++);
           }
         }
-      } else if (type === 'int32') {
-        if (this[key as keyof BufferStruct] !== value) {
+      } else if (valueIsType('int32', type, value)) {
+        if (!valuesAreEqual(value, this[key as keyof BufferStruct])) {
           this.setDirty(propNum);
           this.int32array[offset] = value;
         }
-      } else if (type === 'number') {
-        if (this[key as keyof BufferStruct] !== value) {
+      } else if (valueIsType('number', type, value)) {
+        if (!valuesAreEqual(value, this[key as keyof BufferStruct])) {
           this.setDirty(propNum);
           this.float64array[offset] = value;
         }
@@ -121,6 +149,12 @@ interface PropDef {
   byteOffset: number;
   offset: number;
   byteSize: number;
+}
+
+let counter = 1;
+
+function generateUniqueId(): number {
+  return ThreadX.threadId * 10000000000000 + counter++;
 }
 
 /**
@@ -176,16 +210,14 @@ export abstract class BufferStruct {
     // If this is a new buffer, initialize the TypeID and ID
     if (isNew) {
       this.int32array[TYPEID_INT32_INDEX] = typeId;
-      this.float64array[ID_FLOAT64_INDEX] = nextId++;
+      this.float64array[ID_FLOAT64_INDEX] = generateUniqueId();
     } else if (this.int32array[TYPEID_INT32_INDEX] !== typeId) {
       // If this is an existing buffer, verify the TypeID is the same as expected
       // by this class
       throw new Error(
         `BufferStruct: TypeId mismatch. Expected '${
           constructor.typeIdStr
-        }', got '${
-          stringifyTypeId(this.int32array[TYPEID_INT32_INDEX]!) || 'null'
-        }'`,
+        }', got '${stringifyTypeId(this.int32array[TYPEID_INT32_INDEX]!)}'`,
       );
     }
   }
