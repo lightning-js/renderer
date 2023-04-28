@@ -1,8 +1,7 @@
 import application, { type Application } from '../../core/application.js';
-import { assert, createWebGLContext, loadImage } from '../../utils.js';
+import { assert, createWebGLContext } from '../../utils.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import createNode, { type Node } from '../../core/node.js';
-import { SpecialElementId } from '../../main-api/SpecialElementId.js';
 import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
 
@@ -17,7 +16,6 @@ export class MainRenderDriver implements IRenderDriver {
       throw new Error('Unable to create WebGL context');
     }
     this.root = this.createNode() as MainOnlyNode;
-    const rootElementId = SpecialElementId.Root;
     this.app = application({
       elementId: this.root.id,
       w: 1920,
@@ -25,13 +23,10 @@ export class MainRenderDriver implements IRenderDriver {
       context: gl,
     });
     assert(this.app.root);
-    this.nodes.set(rootElementId, this.app.root);
+    this.nodes.set(this.root.id, this.app.root);
   }
 
-  createNode(
-    props: Partial<INodeWritableProps> = {},
-    parent?: INode | null,
-  ): INode {
+  createNode(props: Partial<INodeWritableProps> = {}): INode {
     const { nodes } = this;
     const legacyNode = createNode(props);
     const node = new MainOnlyNode(legacyNode);

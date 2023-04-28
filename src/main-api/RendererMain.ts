@@ -8,7 +8,7 @@ export interface RendererMainSettings {
 }
 
 export class RendererMain {
-  readonly root: INode;
+  readonly root: INode | null = null;
   readonly driver: IRenderDriver;
   private canvas: HTMLCanvasElement;
   private settings: Required<RendererMainSettings>;
@@ -46,9 +46,6 @@ export class RendererMain {
       throw new Error('Could not find target element');
     }
 
-    this.root = this.driver.getRootNode();
-    this.nodes.set(this.root.id, this.root);
-
     // Hook up the driver's callbacks
     driver.onCreateNode = (node) => {
       this.nodes.set(node.id, node);
@@ -63,6 +60,8 @@ export class RendererMain {
 
   async init(): Promise<void> {
     await this.driver.init(this.canvas);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    (this.root as INode) = this.driver.getRootNode();
   }
 
   createNode(props: Partial<INodeWritableProps>): INode {
@@ -71,6 +70,10 @@ export class RendererMain {
 
   destroyNode(node: INode) {
     return this.driver.destroyNode(node);
+  }
+
+  getNodeById(id: number): INode | null {
+    return this.nodes.get(id) || null;
   }
 
   toggleFreeze() {

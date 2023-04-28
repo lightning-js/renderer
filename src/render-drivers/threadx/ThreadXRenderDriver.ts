@@ -5,7 +5,6 @@ import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import { MainNode } from './MainNode.js';
-import { SpecialElementId } from '../../main-api/SpecialElementId.js';
 
 export interface ThreadXRendererSettings {
   RendererWorker: new () => Worker;
@@ -37,16 +36,15 @@ export class ThreadXRenderDriver implements IRenderDriver {
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const offscreenCanvas = canvas.transferControlToOffscreen();
-    this.root = this.createNode();
     await this.threadx.sendMessageAsync(
       'renderer',
       {
         type: 'init',
         canvas: offscreenCanvas,
-        rootNodeId: this.root.id,
       },
       [offscreenCanvas],
     );
+    this.root = this.createNode();
   }
 
   getRootNode(): INode {
@@ -54,13 +52,13 @@ export class ThreadXRenderDriver implements IRenderDriver {
     return this.root;
   }
 
-  createNode(props: Partial<INodeWritableProps> = {}, parent?: INode): INode {
+  createNode(props: Partial<INodeWritableProps> = {}): INode {
     const bufferStruct = new NodeStruct();
     bufferStruct.x = props.x || 0;
     bufferStruct.y = props.y || 0;
     bufferStruct.w = props.w || 0;
     bufferStruct.h = props.h || 0;
-    bufferStruct.parentId = parent ? parent.id : SpecialElementId.Root;
+    bufferStruct.parentId = props.parent ? props.parent.id : this.root?.id || 0;
     bufferStruct.color = props.color || 0xffffffff;
     const node = new MainNode(bufferStruct);
     this.threadx.shareObjects('renderer', [node]).catch(console.error);

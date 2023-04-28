@@ -6,7 +6,7 @@ import { NodeStruct } from '../NodeStruct.js';
 import { BufferStruct } from '../../../__threadx/BufferStruct.js';
 import { RendererNode } from './RendererNode.js';
 
-let gl = null;
+let gl: WebGLRenderingContext | null = null;
 let app: Application | null = null;
 let rootNode: Node | null = null;
 const legacyNodes: Map<number, Node> = new Map();
@@ -18,10 +18,17 @@ ThreadX.init({
     if (typeId === NodeStruct.typeId) {
       const nodeStruct = new NodeStruct(buffer);
       let legacyNode: Node;
-      if (nodeStruct.id === rootNode?.elementId) {
+      nodeStruct.parentId = nodeStruct.parentId || rootNode?.elementId || 0;
+      if (gl && rootNode === null) {
+        app = application({
+          elementId: nodeStruct.id,
+          w: 1920,
+          h: 1080,
+          context: gl,
+        });
+        rootNode = app.root!;
         legacyNode = rootNode;
       } else {
-        nodeStruct.parentId = nodeStruct.parentId || rootNode?.elementId || 0;
         legacyNode = createNode(nodeStruct);
         const parent = legacyNodes.get(nodeStruct.parentId);
         if (parent) {
@@ -38,19 +45,11 @@ ThreadX.init({
   async onMessage(message) {
     if (message.type === 'init') {
       const canvas = message.canvas as OffscreenCanvas;
-      const rootNodeId = message.rootNodeId as number;
+      // const rootNodeId = message.rootNodeId as number;
       gl = createWebGLContext(canvas);
       if (!gl) {
         throw new Error('WebGL context is not available');
       }
-      app = application({
-        elementId: rootNodeId,
-        w: 1920,
-        h: 1080,
-        context: gl,
-      });
-      rootNode = app.root!;
-      legacyNodes.set(rootNodeId, rootNode);
     }
   },
   onObjectShared(object) {
