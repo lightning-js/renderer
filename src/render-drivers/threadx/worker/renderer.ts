@@ -3,7 +3,7 @@ import application, { type Application } from '../../../core/application.js';
 import { createWebGLContext } from '../../../utils.js';
 import { NodeStruct } from '../NodeStruct.js';
 import { BufferStruct } from '../../../__threadx/BufferStruct.js';
-import { RendererNode } from './RendererNode.js';
+import { ThreadXRendererNode } from './ThreadXRendererNode.js';
 import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import stage from '../../../core/stage.js';
 
@@ -19,7 +19,7 @@ ThreadX.init({
       const nodeStruct = new NodeStruct(buffer);
       nodeStruct.parentId = nodeStruct.parentId || rootNode?.id || 0;
       const node = nodeStruct.lock(() => {
-        return new RendererNode(stage, nodeStruct);
+        return new ThreadXRendererNode(stage, nodeStruct);
       });
       if (gl && rootNode === null) {
         app = application({
@@ -51,7 +51,7 @@ ThreadX.init({
     // }
   },
   onObjectForgotten(object) {
-    if (object instanceof RendererNode) {
+    if (object instanceof ThreadXRendererNode) {
       object.parent = null;
     }
   },

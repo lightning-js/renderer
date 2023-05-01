@@ -8,7 +8,7 @@ import { createWhitePixelTexture } from '../../../core/gpu/webgl/texture.js';
 import { mat4, vec3 } from '../../../core/lib/glm/index.js';
 import { getTexture } from '../../../core/gpu/webgl/textureManager.js';
 
-export class RendererNode extends SharedNode implements IRenderableNode {
+export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
   private _worldMatrix = mat4.create();
 
@@ -36,7 +36,7 @@ export class RendererNode extends SharedNode implements IRenderableNode {
   ): void {
     if (propName === 'parentId') {
       const parent = ThreadX.instance.getSharedObjectById(value as number);
-      assertTruthy(parent instanceof RendererNode || parent === null);
+      assertTruthy(parent instanceof ThreadXRendererNode || parent === null);
       this.parent = parent;
       return;
     } else if (propName === 'zIndex' || propName === 'text') {
@@ -61,8 +61,8 @@ export class RendererNode extends SharedNode implements IRenderableNode {
     return mat4.getTranslation(vec3.create(), this._worldMatrix);
   }
 
-  override get children(): RendererNode[] {
-    return super.children as RendererNode[];
+  override get children(): ThreadXRendererNode[] {
+    return super.children as ThreadXRendererNode[];
   }
 
   updateWorldMatrix(pwMatrix: any) {
@@ -82,14 +82,14 @@ export class RendererNode extends SharedNode implements IRenderableNode {
     });
   }
 
-  _onParentChange(parent: RendererNode) {
+  _onParentChange(parent: ThreadXRendererNode) {
     this.updateWorldMatrix(parent._worldMatrix);
   }
 
   updateTranslate() {
     mat4.fromTranslation(this._localMatrix, vec3.fromValues(this.x, this.y, 1));
     if (this.parent) {
-      this.updateWorldMatrix((this.parent as RendererNode)._worldMatrix);
+      this.updateWorldMatrix((this.parent as ThreadXRendererNode)._worldMatrix);
     }
   }
 

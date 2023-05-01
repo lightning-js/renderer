@@ -1,7 +1,7 @@
 import type { NodeStruct } from './NodeStruct.js';
 import { SharedNode } from './SharedNode.js';
 
-export class MainNode extends SharedNode {
+export class ThreadXMainNode extends SharedNode {
   constructor(sharedNodeStruct: NodeStruct) {
     super(sharedNodeStruct);
   }

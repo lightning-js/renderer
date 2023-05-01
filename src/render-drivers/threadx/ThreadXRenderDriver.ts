@@ -4,7 +4,7 @@ import { assertTruthy } from '../../__threadx/utils.js';
 import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
-import { MainNode } from './MainNode.js';
+import { ThreadXMainNode } from './ThreadXMainNode.js';
 
 export interface ThreadXRendererSettings {
   RendererWorker: new () => Worker;
@@ -25,7 +25,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
         if (typeId === NodeStruct.typeId) {
           const nodeStruct = new NodeStruct(buffer);
           return nodeStruct.lock(() => {
-            return new MainNode(nodeStruct);
+            return new ThreadXMainNode(nodeStruct);
           });
         }
         return null;
@@ -61,14 +61,17 @@ export class ThreadXRenderDriver implements IRenderDriver {
     bufferStruct.parentId = props.parent ? props.parent.id : 0;
     bufferStruct.color = props.color || 0xffffffff;
     bufferStruct.alpha = props.alpha || 1;
-    const node = new MainNode(bufferStruct);
+    const node = new ThreadXMainNode(bufferStruct);
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
     this.onCreateNode(node);
     return node;
   }
 
   destroyNode(node: INode): void {
-    assertTruthy(node instanceof MainNode, 'Expected node to be a MainNode');
+    assertTruthy(
+      node instanceof ThreadXMainNode,
+      'Expected node to be a MainNode',
+    );
     this.onDestroyNode(node);
     this.threadx.forgetObjects([node]).catch(console.error);
     node.destroy();
