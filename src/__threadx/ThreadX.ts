@@ -445,6 +445,10 @@ export class ThreadX {
     }
   }
 
+  getSharedObjectById(id: number): SharedObject | null {
+    return this.sharedObjects.get(id) || null;
+  }
+
   /**
    * Emit an event from a SharedObject to all other workers
    *

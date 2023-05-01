@@ -1,6 +1,9 @@
 import type { INode } from './INode.js';
+import type { vec3 } from './lib/glm/index.js';
 
 export interface IRenderableNode extends INode {
-  // TOOD: Replace this with a more generic way to store image data
-  imageBitmap?: ImageBitmap | null;
+  readonly children: IRenderableNode[];
+
+  texture: WebGLTexture | null;
+  getTranslate(): vec3.Vec3;
 }

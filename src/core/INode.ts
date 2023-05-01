@@ -5,6 +5,7 @@ export interface INodeWritableProps {
   y: number;
   w: number;
   h: number;
+  alpha: number;
   color: number;
   parent: INode | null;
   zIndex: number;
@@ -19,6 +20,7 @@ export interface INodeEvents {
 export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
   typeId: number; // TODO: Remove since this is ThreadX specific?
   id: number;
+  readonly children: INode[];
 
   flush(): void;
 }

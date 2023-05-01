@@ -1,14 +1,14 @@
 import application, { type Application } from '../../core/application.js';
 import { assert, createWebGLContext } from '../../utils.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
-import createNode, { type Node } from '../../core/node.js';
 import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
+import stage from '../../core/stage.js';
 
 export class MainRenderDriver implements IRenderDriver {
   private root: MainOnlyNode | null = null;
   private app: Application | null = null;
-  private nodes: Map<number, Node> = new Map();
+  private nodes: Map<number, INode> = new Map();
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const gl = createWebGLContext(canvas);
@@ -17,7 +17,7 @@ export class MainRenderDriver implements IRenderDriver {
     }
     this.root = this.createNode() as MainOnlyNode;
     this.app = application({
-      elementId: this.root.id,
+      rootNode: this.root,
       w: 1920,
       h: 1080,
       context: gl,
@@ -28,9 +28,8 @@ export class MainRenderDriver implements IRenderDriver {
 
   createNode(props: Partial<INodeWritableProps> = {}): INode {
     const { nodes } = this;
-    const legacyNode = createNode(props);
-    const node = new MainOnlyNode(legacyNode);
-    nodes.set(legacyNode.id, legacyNode);
+    const node = new MainOnlyNode(stage);
+    nodes.set(node.id, node);
     this.onCreateNode(node);
     return node;
   }

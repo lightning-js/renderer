@@ -1,15 +1,15 @@
 import { ThreadX } from '../../../__threadx/ThreadX.js';
 import application, { type Application } from '../../../core/application.js';
-import createNode, { type Node } from '../../../core/node.js';
 import { createWebGLContext } from '../../../utils.js';
 import { NodeStruct } from '../NodeStruct.js';
 import { BufferStruct } from '../../../__threadx/BufferStruct.js';
 import { RendererNode } from './RendererNode.js';
+import type { IRenderableNode } from '../../../core/IRenderableNode.js';
+import stage from '../../../core/stage.js';
 
 let gl: WebGLRenderingContext | null = null;
 let app: Application | null = null;
-let rootNode: Node | null = null;
-const legacyNodes: Map<number, Node> = new Map();
+let rootNode: IRenderableNode | null = null;
 ThreadX.init({
   threadId: 2,
   threadName: 'renderer',
@@ -17,28 +17,20 @@ ThreadX.init({
     const typeId = BufferStruct.extractTypeId(buffer);
     if (typeId === NodeStruct.typeId) {
       const nodeStruct = new NodeStruct(buffer);
-      let legacyNode: Node;
-      nodeStruct.parentId = nodeStruct.parentId || rootNode?.elementId || 0;
+      nodeStruct.parentId = nodeStruct.parentId || rootNode?.id || 0;
+      const node = nodeStruct.lock(() => {
+        return new RendererNode(stage, nodeStruct);
+      });
       if (gl && rootNode === null) {
         app = application({
-          elementId: nodeStruct.id,
+          rootNode: node,
           w: 1920,
           h: 1080,
           context: gl,
         });
-        rootNode = app.root!;
-        legacyNode = rootNode;
-      } else {
-        legacyNode = createNode(nodeStruct);
-        const parent = legacyNodes.get(nodeStruct.parentId);
-        if (parent) {
-          legacyNode.parent = parent;
-        }
+        rootNode = node;
       }
-      legacyNodes.set(nodeStruct.id, legacyNode);
-      return nodeStruct.lock(() => {
-        return new RendererNode(nodeStruct, legacyNode);
-      });
+      return node;
     }
     return null;
   },
@@ -60,12 +52,7 @@ ThreadX.init({
   },
   onObjectForgotten(object) {
     if (object instanceof RendererNode) {
-      const node = legacyNodes.get(object.id);
-      if (node) {
-        // Detach from parent and remove from nodes list
-        node.parent = null;
-        legacyNodes.delete(object.id);
-      }
+      object.parent = null;
     }
   },
 });

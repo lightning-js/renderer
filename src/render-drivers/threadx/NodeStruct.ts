@@ -6,6 +6,7 @@ export interface NodeStructWritableProps {
   y: number;
   w: number;
   h: number;
+  alpha: number;
   color: number;
   parentId: number;
   zIndex: number;
@@ -13,35 +14,6 @@ export interface NodeStructWritableProps {
   src: string;
 }
 
-/*
- * Structure:
- * [0]
- *    Int32[0]: RESERVED (for notify)
- * [1]
- *    Int32[1]: RESERVED (for write lock)
- * [2] + [3]
- *    Float64[ID_FLOAT64_INDEX = 1]: Shared Unique ID of the object
- * [4]
- *    Int32[DIRTY_INT32_INDEX = 4]: Dirty Bit Mask 1 (Property Indices 0-31)
- * [5]
- *    Int32[DIRTY_INT32_INDEX + 1 = 5]: Dirty Bit Mask 2 (Property Indices 32-63)
- * [6] + [7]
- *    Float64[3]: x
- * [8] + [9]
- *    Float64[4]: y
- * [10] + [11]
- *    Float64[5]: w
- * [12] + [13]
- *    Float64[6]: h
- * [14] + [15]
- *    Float64[7]: color
- * [16] + [17]
- *    Float64[8]: parentId
- * [18] + [19]
- *    Float64[9]: zIndex
- * [20] - [147] (128 32-bit words = 256 16-bit words = 64 64-bit words)
- *    Uint16[40]: text (255 character string with first 16-bit word being the length)
- */
 export class NodeStruct
   extends BufferStruct
   implements NodeStructWritableProps
@@ -81,6 +53,15 @@ export class NodeStruct
   }
 
   set h(value: number) {
+    // Decorator will handle this
+  }
+
+  @structProp('number')
+  get alpha(): number {
+    return 0;
+  }
+
+  set alpha(value: number) {
     // Decorator will handle this
   }
 

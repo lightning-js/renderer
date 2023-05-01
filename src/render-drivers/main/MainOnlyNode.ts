@@ -1,101 +1,156 @@
 import type { IEventEmitter } from '../../__threadx/IEventEmitter.js';
 import { assertTruthy } from '../../__threadx/utils.js';
+import type { INodeWritableProps } from '../../core/INode.js';
 import type { IRenderableNode } from '../../core/IRenderableNode.js';
-import { getArgbNumber } from '../../core/lib/utils.js';
-import type { Node } from '../../core/node.js';
+import { createWhitePixelTexture } from '../../core/gpu/webgl/texture.js';
+import type { Stage } from '../../core/stage.js';
+
+let nextId = 1;
 
 export class MainOnlyNode implements IRenderableNode, IEventEmitter {
   readonly typeId;
   readonly id;
+  private props: INodeWritableProps;
 
-  constructor(private legacyNode: Node) {
+  constructor(private stage: Stage) {
     this.typeId = 0; // Irrelevant for main-only nodes
-    this.id = legacyNode.id;
+    this.id = nextId++;
+    this.props = {
+      x: 0,
+      y: 0,
+      w: 0,
+      h: 0,
+      alpha: 1,
+      color: 0,
+      parent: null,
+      zIndex: 0,
+      text: '',
+      src: '',
+    };
+    const gl = this.stage.getGlContext();
+    assertTruthy(gl);
+    const texture = createWhitePixelTexture(gl);
+    assertTruthy(texture);
+    this.texture = texture;
+  }
+
+  texture: WebGLTexture;
+  getTranslate(): [number, number, number] {
+    throw new Error('Method not implemented.');
   }
 
   get x(): number {
-    return this.legacyNode.x;
+    return this.props.x;
   }
 
   set x(value: number) {
-    this.legacyNode.x = value;
+    this.props.x = value;
   }
 
   get y(): number {
-    return this.legacyNode.y;
+    return this.props.y;
   }
 
   set y(value: number) {
-    this.legacyNode.y = value;
+    this.props.y = value;
   }
 
   get w(): number {
-    return this.legacyNode.w;
+    return this.props.w;
   }
 
   set w(value: number) {
-    this.legacyNode.w = value;
+    this.props.w = value;
   }
 
   get h(): number {
-    return this.legacyNode.h;
+    return this.props.h;
   }
 
   set h(value: number) {
-    this.legacyNode.h = value;
+    this.props.h = value;
+  }
+
+  get alpha(): number {
+    return this.props.alpha;
+  }
+
+  set alpha(value: number) {
+    this.props.alpha = value;
   }
 
   get color(): number {
-    return getArgbNumber(this.legacyNode.color);
+    return this.props.color;
   }
 
   set color(value: number) {
-    this.legacyNode.color = value;
+    this.props.color = value;
   }
 
-  private _parent: IRenderableNode | null = null;
+  // private _parent: IRenderableNode | null = null;
 
-  get parent(): IRenderableNode | null {
+  // get parent(): IRenderableNode | null {
+  //   return this._parent;
+  // }
+
+  // set parent(value: IRenderableNode | null) {
+  //   assertTruthy(
+  //     value instanceof MainOnlyNode,
+  //     'parent must be a MainOnlyNode',
+  //   );
+  //   this._parent = value;
+  // }
+
+  private _parent: MainOnlyNode | null = null;
+
+  get parent(): MainOnlyNode | null {
     return this._parent;
   }
 
-  set parent(value: IRenderableNode | null) {
-    assertTruthy(
-      value instanceof MainOnlyNode,
-      'parent must be a MainOnlyNode',
-    );
-    this.legacyNode.parent = value.legacyNode;
-    this.parent = value;
+  set parent(newParent: MainOnlyNode | null) {
+    const oldParent = this._parent;
+    this._parent = newParent;
+    if (oldParent) {
+      const index = oldParent.children.indexOf(this);
+      assertTruthy(
+        index !== -1,
+        "MainOnlyNode.parent: Node not found in old parent's children!",
+      );
+      oldParent.children.splice(index, 1);
+    }
+    if (newParent) {
+      newParent.children.push(this);
+    }
+  }
+
+  protected _children: MainOnlyNode[] = [];
+
+  get children(): MainOnlyNode[] {
+    return this._children;
   }
 
   get zIndex(): number {
-    // TODO: Implement
-    return 0;
-    // return this.legacyNode.zIndex;
+    return this.props.zIndex;
   }
 
   set zIndex(value: number) {
-    // TODO: Implement
-    // this.legacyNode. = value;
+    this.props.zIndex = value;
   }
 
   get text(): string {
-    // TODO: Implement
-    return '';
-    // return this.legacyNode.text;
+    return this.props.text;
   }
 
   set text(value: string) {
-    // TODO: Implement
-    // this.legacyNode.text = value;
+    this.props.text = value;
   }
 
   get src(): string {
-    return this.legacyNode.src;
+    return this.props.src;
   }
 
   set src(value: string) {
-    this.legacyNode.src = value;
+    this.props.src = value;
   }
 
   imageBitmap: ImageBitmap | null = null;

@@ -1,15 +1,15 @@
+import type { INode } from './INode.js';
 import stage, { type StageOptions } from './stage.js';
-import createNode, { type Node } from './node.js';
 
 export interface Application {
   get stage(): typeof stage;
   get canvas(): HTMLCanvasElement | OffscreenCanvas | undefined;
-  get root(): Node | null;
+  get root(): INode | null;
 }
 
 export default (options: StageOptions): Application => {
   const resolvedOptions: Required<StageOptions> = {
-    elementId: options.elementId ?? 1,
+    rootNode: options.rootNode,
     w: options.w ?? 1920,
     h: options.h ?? 1080,
     context: options.context,
@@ -18,16 +18,7 @@ export default (options: StageOptions): Application => {
   stage.init(resolvedOptions);
 
   // set root view
-  stage.setRootNode(
-    createNode({
-      elementId: resolvedOptions.elementId,
-      w: resolvedOptions.w,
-      h: resolvedOptions.h,
-      x: 0,
-      y: 0,
-      color: resolvedOptions.clearColor,
-    }),
-  );
+  stage.setRootNode(options.rootNode);
 
   return {
     get stage() {

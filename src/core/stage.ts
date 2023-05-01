@@ -1,3 +1,4 @@
+import type { IRenderableNode } from './IRenderableNode.js';
 import type { Node } from './node.js';
 import {
   getSystem,
@@ -9,9 +10,7 @@ import {
 
 import {
   createRenderer,
-  update,
   render,
-  hasUpdates,
   setUpdate,
   type InitData,
 } from './renderer.js';
@@ -23,7 +22,7 @@ let renderer = null;
 // const renderPrecision = 1;
 // const memoryPressure = 24e6;
 const bufferMemory = 2e6;
-let rootNode: Node | null = null;
+let rootNode: IRenderableNode | null = null;
 
 const autoStart = true;
 let deltaTime = 0;
@@ -31,14 +30,19 @@ let lastFrameTime = 0;
 let currentFrameTime = 0;
 
 export interface StageOptions {
-  elementId?: number;
+  rootNode: IRenderableNode;
   w?: number;
   h?: number;
   context: WebGLRenderingContext;
   clearColor?: number;
 }
 
-export default {
+let resolveReady: () => void;
+const readyPromise = new Promise<void>((resolve) => {
+  resolveReady = resolve;
+});
+
+const stage = {
   /**
    * Stage constructor
    */
@@ -56,6 +60,10 @@ export default {
     if (autoStart) {
       startLoop();
     }
+    resolveReady();
+  },
+  async ready(): Promise<void> {
+    return readyPromise;
   },
   /**
    * Start a new frame draw
@@ -71,9 +79,10 @@ export default {
       ? 1 / 60
       : (currentFrameTime - lastFrameTime) * 0.001;
 
-    if (hasUpdates()) {
-      update(rootNode);
-    }
+    // TODO: This doesn't do anything yet so commenting it out
+    // if (hasUpdates()) {
+    //   update(rootNode);
+    // }
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     render(rootNode);
@@ -90,7 +99,7 @@ export default {
       return gl.canvas;
     }
   },
-  setRootNode(node: Node) {
+  setRootNode(node: IRenderableNode) {
     rootNode = node;
   },
   getRootNode() {
@@ -100,3 +109,6 @@ export default {
     return deltaTime;
   },
 };
+
+export type Stage = typeof stage;
+export default stage;

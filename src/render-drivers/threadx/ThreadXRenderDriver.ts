@@ -59,7 +59,8 @@ export class ThreadXRenderDriver implements IRenderDriver {
     bufferStruct.w = props.w || 0;
     bufferStruct.h = props.h || 0;
     bufferStruct.parentId = props.parent ? props.parent.id : this.root?.id || 0;
-    bufferStruct.color = props.color || 0xffffffff;
+    bufferStruct.color = props.color || 0xff00ffff;
+    bufferStruct.alpha = props.alpha || 1;
     const node = new MainNode(bufferStruct);
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
     this.onCreateNode(node);
