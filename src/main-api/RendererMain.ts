@@ -51,7 +51,7 @@ export class RendererMain {
       this.nodes.set(node.id, node);
     };
 
-    driver.onDestroyNode = (node) => {
+    driver.onBeforeDestroyNode = (node) => {
       this.nodes.delete(node.id);
     };
 

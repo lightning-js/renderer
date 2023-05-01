@@ -20,6 +20,7 @@ export class SharedObject<
   private _id: number;
   private _typeId: number;
   private initialized = false;
+  private destroying = false;
 
   /**
    * Extract the buffer from a SharedObject
@@ -33,7 +34,7 @@ export class SharedObject<
   static extractBuffer(
     sharedObject: SharedObject<any, BufferStruct>,
   ): SharedArrayBuffer {
-    if (!sharedObject.sharedObjectStruct) {
+    if (sharedObject.destroying || !sharedObject.sharedObjectStruct) {
       throw new Error('SharedObject was destroyed');
     }
     return sharedObject.sharedObjectStruct.buffer;
@@ -125,6 +126,11 @@ export class SharedObject<
     this.mutationsQueued = true;
     queueMicrotask(() => {
       this.mutationsQueued = false;
+      // If the SharedObject has been destroyed, then forget about processing
+      // any mutations.
+      if (!this.sharedObjectStruct) {
+        return;
+      }
       this.mutationMicrotask().catch(console.error);
     });
   }
@@ -136,15 +142,33 @@ export class SharedObject<
     await this.sharedObjectStruct.lockAsync(async () => {
       this._executeMutations();
     });
+    if (this.destroying) {
+      this.finishDestroy();
+    }
   }
 
   public flush(): void {
-    if (!this.sharedObjectStruct) {
+    if (this.destroying || !this.sharedObjectStruct) {
       throw new Error('SharedObject was destroyed');
     }
     this.sharedObjectStruct.lock(() => {
       this._executeMutations();
     });
+  }
+
+  /**
+   * Called when the SharedObject is being destroyed.
+   *
+   * @remarks
+   * This is an opportunity to clean up anything just prior to the SharedObject
+   * being completely destroyed. Shared mutations are allowed in this method.
+   *
+   * IMPORTANT:
+   * `super.onDestroy()` must be called at the END of any subclass override to
+   * ensure proper cleanup.
+   */
+  protected onDestroy(): void {
+    // Implement in subclass
   }
 
   /**
@@ -160,15 +184,39 @@ export class SharedObject<
    */
   public destroy(): void {
     const struct = this.sharedObjectStruct;
-    if (!struct) {
+    if (this.destroying || !struct) {
       return;
     }
+    this.emit('beforeDestroy', {}, { localOnly: true });
+    this.destroying = true;
+    this.onDestroy();
+    // The remainter of the destroy process (this.finishDestroy) is called
+    // after the next set of mutations is processed. This is to ensure that
+    // any final mutations that are queued up are sent to the opposite thread
+    // before the SharedObject is destroyed on this thread.
+    this.queueMutations();
+  }
+
+  private finishDestroy(): void {
+    const struct = this.sharedObjectStruct;
+    if (!this.destroying || !struct) {
+      return;
+    }
+
+    // Remove this object from ThreadX
+    // Silently because ThreadX may already have been removed if this object
+    // is being destroyed because the current thread was told to forget about it.
+    ThreadX.instance
+      .forgetObjects([this], { silent: true })
+      .catch(console.error);
+
     // Release the reference to the underlying BufferStruct/SharedArrayBuffer
     this.sharedObjectStruct = null;
     // Submit a notify in order to wake up self or other thread if waiting
     // on the struct. Need to do this otherwise memory leaks.
     struct.notify();
-    // TODO: Issue a local-only destroy event?
+    // Emit the afterDestroy event
+    this.emit('afterDestroy', {}, { localOnly: true });
     // Remove all event listeners
     this.eventListeners = {};
   }
@@ -179,7 +227,8 @@ export class SharedObject<
 
   private _executeMutations(): void {
     if (!this.sharedObjectStruct) {
-      throw new Error('SharedObject was destroyed');
+      // SharedObject was destroyed so there's nothing to do
+      return;
     }
     //console.log('start _queueMutations', this.sharedNode.isDirty(), this.sharedNode.lastMutator, ThreadX.threadName);
     if (this.sharedObjectStruct.isDirty()) {
@@ -216,9 +265,7 @@ export class SharedObject<
         // Only respond if this is the most recent wait promise
         if (this.waitPromise === waitPromise && this.sharedObjectStruct) {
           this.waitPromise = null;
-          await this.sharedObjectStruct.lockAsync(async () => {
-            this._executeMutations();
-          });
+          await this.mutationMicrotask();
         }
       });
     this.waitPromise = waitPromise;
@@ -262,10 +309,17 @@ export class SharedObject<
     this.on(event, onceListener);
   }
 
-  emit(event: string, data: Record<string, unknown>): void {
+  emit(
+    event: string,
+    data: Record<string, unknown>,
+    options: { localOnly?: boolean } = {},
+  ): void {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const listeners = this.eventListeners[event];
-    ThreadX.instance.__sharedObjectEmit(this, event, data);
+    if (!options.localOnly) {
+      // Emit on opposite thread (if shared)
+      ThreadX.instance.__sharedObjectEmit(this, event, data);
+    }
     if (!listeners) {
       return;
     }

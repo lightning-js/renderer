@@ -45,14 +45,12 @@ ThreadX.init({
     }
   },
   onObjectShared(object) {
-    // if (object instanceof RendererNode) {
-    //   const node = createNode(object);
-    //   legacyNodes.set(object.id, node);
-    // }
+    // TBD
   },
-  onObjectForgotten(object) {
+  onBeforeSharedObjectForgotten(object) {
     if (object instanceof ThreadXRendererNode) {
       object.parent = null;
+      object.destroy();
     }
   },
 });

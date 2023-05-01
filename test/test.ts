@@ -1,6 +1,6 @@
 import {
   MainRenderDriver,
-  Primitive,
+  type INode,
   RendererMain,
   ThreadXRenderDriver,
 } from '@lightningjs/renderer';
@@ -20,7 +20,8 @@ import rocko from './rocko.png';
       height: 1080,
     },
     'app',
-    threadXDriver /*mainDriver*/,
+    mainDriver,
+    // threadXDriver
   );
 
   await renderer.init();
@@ -30,40 +31,34 @@ import rocko from './rocko.png';
    * greenRect will persist and be detached and reattached to the root every second
    * blueRect will be created and destroyed every 500 ms
    */
-  const redRect = renderer.createPrimitive(
-    {
-      x: 0,
-      y: 0,
-      w: 100,
-      h: 100,
-      color: 0x00ff0000,
-    },
-    renderer.root,
-  );
+  const redRect = renderer.createNode({
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    color: 0x00ff0000,
+    parent: renderer.root,
+  });
 
-  const greenRect = renderer.createPrimitive(
-    {
-      x: 100,
-      y: 0,
-      w: 100,
-      h: 100,
-      color: 0x0000ff00,
-    },
-    renderer.root,
-  );
+  const greenRect = renderer.createNode({
+    x: 100,
+    y: 0,
+    w: 100,
+    h: 100,
+    color: 0x0000ff00,
+    parent: renderer.root,
+  });
 
-  const imageRect = renderer.createPrimitive(
-    {
-      x: 0,
-      y: 100,
-      w: 181,
-      h: 218,
-      src: rocko,
-    },
-    renderer.root,
-  );
+  const imageRect = renderer.createNode({
+    x: 0,
+    y: 100,
+    w: 181,
+    h: 218,
+    src: rocko,
+    parent: renderer.root,
+  });
 
-  let blueRect: Primitive | null = null;
+  let blueRect: INode | null = null;
 
   const interval = setInterval(() => {
     redRect.color++;
@@ -74,16 +69,14 @@ import rocko from './rocko.png';
       blueRect.destroy();
       blueRect = null;
     } else {
-      blueRect = renderer.createPrimitive(
-        {
-          x: 200,
-          y: 0,
-          w: 100,
-          h: 100,
-          color: 0x000000ff,
-        },
-        renderer.root,
-      );
+      blueRect = renderer.createNode({
+        x: 200,
+        y: 0,
+        w: 100,
+        h: 100,
+        color: 0x000000ff,
+        parent: renderer.root,
+      });
     }
   }, 500);
 

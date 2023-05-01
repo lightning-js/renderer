@@ -22,5 +22,6 @@ export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
   id: number;
   readonly children: INode[];
 
+  destroy(): void;
   flush(): void;
 }

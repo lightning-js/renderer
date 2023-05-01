@@ -101,8 +101,8 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
     })
       .then((texture: WebGLTexture | null) => {
         this.texture = texture;
+        this.emit('imageLoaded', { src: imageUrl });
       })
       .catch(console.error);
-    this.emit('imageLoaded', { src: imageUrl });
   }
 }

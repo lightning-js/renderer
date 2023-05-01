@@ -56,6 +56,11 @@ export class SharedNode
     return this._children;
   }
 
+  protected override onDestroy(): void {
+    this.parent = null;
+    super.onDestroy();
+  }
+
   // Declare getters and setters for all properties that are automatically
   // generated on this class.
   declare x: number;

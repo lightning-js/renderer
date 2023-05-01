@@ -61,19 +61,16 @@ export class ThreadXRenderDriver implements IRenderDriver {
     bufferStruct.parentId = props.parent ? props.parent.id : 0;
     bufferStruct.color = props.color || 0xffffffff;
     bufferStruct.alpha = props.alpha || 1;
+    bufferStruct.src = props.src || '';
     const node = new ThreadXMainNode(bufferStruct);
+    node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
     this.onCreateNode(node);
     return node;
   }
 
+  // TODO: Remove?
   destroyNode(node: INode): void {
-    assertTruthy(
-      node instanceof ThreadXMainNode,
-      'Expected node to be a MainNode',
-    );
-    this.onDestroyNode(node);
-    this.threadx.forgetObjects([node]).catch(console.error);
     node.destroy();
   }
 
@@ -81,7 +78,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
     return;
   }
 
-  onDestroyNode(node: INode): void {
+  onBeforeDestroyNode(node: INode): void {
     return;
   }
 }

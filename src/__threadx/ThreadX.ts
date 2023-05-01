@@ -17,7 +17,7 @@ interface ThreadXOptions {
   sharedObjectFactory: (buffer: SharedArrayBuffer) => SharedObject | null;
   // TOOD: Ultimately replace this with a more generic event handler system
   onObjectShared?: (sharedObject: SharedObject) => void;
-  onObjectForgotten?: (sharedObject: SharedObject) => void;
+  onBeforeSharedObjectForgotten?: (sharedObject: SharedObject) => void;
   onMessage?: (message: any) => Promise<any>;
 }
 
@@ -67,6 +67,13 @@ interface WorkerCommon {
     listener: EventListenerOrEventListenerObject | null,
     options?: boolean | AddEventListenerOptions,
   ): void;
+}
+
+interface ForgetOptions {
+  /**
+   * If true, no warning will be logged if the object is not found.
+   */
+  silent?: boolean;
 }
 
 interface ThreadXMessage {
@@ -178,7 +185,7 @@ export class ThreadX {
     buffer: SharedArrayBuffer,
   ) => SharedObject | null;
   private readonly onSharedObjectCreated?: (sharedObject: SharedObject) => void;
-  private readonly onSharedObjectForgotten?: (
+  private readonly onBeforeSharedObjectForgotten?: (
     sharedObject: SharedObject,
   ) => void;
   /**
@@ -217,7 +224,7 @@ export class ThreadX {
     this.threadName = options.threadName;
     this.sharedObjectFactory = options.sharedObjectFactory;
     this.onSharedObjectCreated = options.onObjectShared;
-    this.onSharedObjectForgotten = options.onObjectForgotten;
+    this.onBeforeSharedObjectForgotten = options.onBeforeSharedObjectForgotten;
     this.onUserMessage = options.onMessage;
     const mySelf: unknown = self;
     if (isWebWorker(mySelf)) {
@@ -308,8 +315,12 @@ export class ThreadX {
    * when a SharedObject is forgotten.
    *
    * @param sharedObject
+   * @param options Options
    */
-  async forgetObjects(sharedObjects: SharedObject[]) {
+  async forgetObjects(
+    sharedObjects: SharedObject[],
+    options: ForgetOptions = {},
+  ) {
     /**
      * Map of worker name to array of SharedObjects
      *
@@ -321,13 +332,13 @@ export class ThreadX {
     for (const sharedObject of sharedObjects) {
       if (!this.sharedObjects.has(sharedObject.id)) {
         // Currently we only support sharing objects with only a single worker
-        // TODO: Support sharing objects with multiple workers?
-        //   - Do we really need to do this?
-        console.warn(
-          `ThreadX.forgetObject(): SharedObject ${
-            sharedObject.id
-          } (TypeID: ${stringifyTypeId(sharedObject.typeId)}) is not shared.`,
-        );
+        if (!options.silent) {
+          console.warn(
+            `ThreadX.forgetObject(): SharedObject ${
+              sharedObject.id
+            } (TypeID: ${stringifyTypeId(sharedObject.typeId)}) is not shared.`,
+          );
+        }
       } else {
         const worker = this.sharedObjectWorkers.get(sharedObject);
         assertTruthy(worker);
@@ -413,8 +424,9 @@ export class ThreadX {
           // worker. Just ignore the message.
           return;
         }
+        this.onBeforeSharedObjectForgotten?.(sharedObject);
         this.sharedObjects.delete(id);
-        this.onSharedObjectForgotten?.(sharedObject);
+        sharedObject.destroy();
       });
     } else if (isMessage('sharedObjectEmit', message)) {
       const sharedObject = this.sharedObjects.get(message.sharedObjectId);

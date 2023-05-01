@@ -122,6 +122,7 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     if (newParent) {
       newParent.children.push(this);
     }
+    this.updateTranslate();
   }
 
   protected _children: MainOnlyNode[] = [];
@@ -154,8 +155,6 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     this.props.src = imageUrl;
     this.loadImage(imageUrl).catch(console.error);
   }
-
-  // imageBitmap: ImageBitmap | null = null;
 
   private async loadImage(imageUrl: string): Promise<void> {
     getTexture({
@@ -196,6 +195,13 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     if (this.parent) {
       this.updateWorldMatrix(this.parent._worldMatrix);
     }
+  }
+
+  destroy(): void {
+    this.emit('beforeDestroy', {});
+    this.parent = null;
+    this.emit('afterDestroy', {});
+    this.eventListeners = {};
   }
 
   flush(): void {
