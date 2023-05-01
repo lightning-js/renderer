@@ -47,7 +47,7 @@ ThreadX.init({
   onObjectShared(object) {
     // TBD
   },
-  onBeforeSharedObjectForgotten(object) {
+  onBeforeObjectForgotten(object) {
     if (object instanceof ThreadXRendererNode) {
       object.parent = null;
       object.destroy();

@@ -17,7 +17,7 @@ interface ThreadXOptions {
   sharedObjectFactory: (buffer: SharedArrayBuffer) => SharedObject | null;
   // TOOD: Ultimately replace this with a more generic event handler system
   onObjectShared?: (sharedObject: SharedObject) => void;
-  onBeforeSharedObjectForgotten?: (sharedObject: SharedObject) => void;
+  onBeforeObjectForgotten?: (sharedObject: SharedObject) => void;
   onMessage?: (message: any) => Promise<any>;
 }
 
@@ -185,7 +185,7 @@ export class ThreadX {
     buffer: SharedArrayBuffer,
   ) => SharedObject | null;
   private readonly onSharedObjectCreated?: (sharedObject: SharedObject) => void;
-  private readonly onBeforeSharedObjectForgotten?: (
+  private readonly onBeforeObjectForgotten?: (
     sharedObject: SharedObject,
   ) => void;
   /**
@@ -224,7 +224,7 @@ export class ThreadX {
     this.threadName = options.threadName;
     this.sharedObjectFactory = options.sharedObjectFactory;
     this.onSharedObjectCreated = options.onObjectShared;
-    this.onBeforeSharedObjectForgotten = options.onBeforeSharedObjectForgotten;
+    this.onBeforeObjectForgotten = options.onBeforeObjectForgotten;
     this.onUserMessage = options.onMessage;
     const mySelf: unknown = self;
     if (isWebWorker(mySelf)) {
@@ -355,8 +355,8 @@ export class ThreadX {
 
     const promises: Promise<void>[] = [];
     for (const [workerName, objectsInWorker] of objectsByWorker) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       promises.push(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         this.sendMessageAsync(workerName, {
           threadXMessageType: 'forgetObjects',
           objectIds: objectsInWorker.map((so) => so.id),
@@ -424,7 +424,7 @@ export class ThreadX {
           // worker. Just ignore the message.
           return;
         }
-        this.onBeforeSharedObjectForgotten?.(sharedObject);
+        this.onBeforeObjectForgotten?.(sharedObject);
         this.sharedObjects.delete(id);
         sharedObject.destroy();
       });
