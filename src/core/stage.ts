@@ -101,6 +101,7 @@ const stage = {
   },
   setRootNode(node: IRenderableNode) {
     rootNode = node;
+    console.log('Root Node', rootNode);
   },
   getRootNode() {
     return rootNode;

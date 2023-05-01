@@ -3,11 +3,14 @@ import { assertTruthy } from '../../__threadx/utils.js';
 import type { INodeWritableProps } from '../../core/INode.js';
 import type { IRenderableNode } from '../../core/IRenderableNode.js';
 import { createWhitePixelTexture } from '../../core/gpu/webgl/texture.js';
+import { mat4, vec3 } from '../../core/lib/glm/index.js';
 import type { Stage } from '../../core/stage.js';
 
 let nextId = 1;
 
 export class MainOnlyNode implements IRenderableNode, IEventEmitter {
+  private _localMatrix = mat4.create();
+  private _worldMatrix = mat4.create();
   readonly typeId;
   readonly id;
   private props: INodeWritableProps;
@@ -27,16 +30,25 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
       text: '',
       src: '',
     };
-    const gl = this.stage.getGlContext();
-    assertTruthy(gl);
-    const texture = createWhitePixelTexture(gl);
-    assertTruthy(texture);
-    this.texture = texture;
+
+    this.stage
+      .ready()
+      .then(() => {
+        const gl = this.stage.getGlContext();
+        assertTruthy(gl);
+        const texture = createWhitePixelTexture(gl);
+        assertTruthy(texture);
+        this.texture = texture;
+      })
+      .catch(console.error);
+
+    this.updateTranslate();
   }
 
-  texture: WebGLTexture;
-  getTranslate(): [number, number, number] {
-    throw new Error('Method not implemented.');
+  texture: WebGLTexture | null = null;
+
+  getTranslate(): vec3.Vec3 {
+    return mat4.getTranslation(vec3.create(), this._worldMatrix);
   }
 
   get x(): number {
@@ -45,6 +57,7 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
 
   set x(value: number) {
     this.props.x = value;
+    this.updateTranslate();
   }
 
   get y(): number {
@@ -53,6 +66,7 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
 
   set y(value: number) {
     this.props.y = value;
+    this.updateTranslate();
   }
 
   get w(): number {
@@ -86,20 +100,6 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
   set color(value: number) {
     this.props.color = value;
   }
-
-  // private _parent: IRenderableNode | null = null;
-
-  // get parent(): IRenderableNode | null {
-  //   return this._parent;
-  // }
-
-  // set parent(value: IRenderableNode | null) {
-  //   assertTruthy(
-  //     value instanceof MainOnlyNode,
-  //     'parent must be a MainOnlyNode',
-  //   );
-  //   this._parent = value;
-  // }
 
   private _parent: MainOnlyNode | null = null;
 
@@ -153,21 +153,49 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     this.props.src = value;
   }
 
-  imageBitmap: ImageBitmap | null = null;
+  // imageBitmap: ImageBitmap | null = null;
 
-  private async loadImage(imageURL: string): Promise<void> {
-    // Load image from src url
-    const response = await fetch(imageURL);
+  // private async loadImage(imageURL: string): Promise<void> {
+  //   // Load image from src url
+  //   const response = await fetch(imageURL);
 
-    // Once the file has been fetched, we'll convert it to a `Blob`
-    const blob = await response.blob();
+  //   // Once the file has been fetched, we'll convert it to a `Blob`
+  //   const blob = await response.blob();
 
-    const imageBitmap = await createImageBitmap(blob, {
-      premultiplyAlpha: 'none',
-      colorSpaceConversion: 'none',
+  //   const imageBitmap = await createImageBitmap(blob, {
+  //     premultiplyAlpha: 'none',
+  //     colorSpaceConversion: 'none',
+  //   });
+  //   this.imageBitmap = imageBitmap;
+  //   this.emit('imageLoaded', { src: imageURL });
+  // }
+
+  updateWorldMatrix(pwMatrix: any) {
+    if (pwMatrix) {
+      // if parent world matrix is provided
+      // we multiply times local matrix
+      mat4.multiply(this._worldMatrix, pwMatrix, this._localMatrix);
+    } else {
+      mat4.copy(this._worldMatrix, this._localMatrix);
+    }
+
+    const world = this._worldMatrix;
+
+    this.children.forEach((c) => {
+      const rendererNode = c;
+      rendererNode.updateWorldMatrix(world);
     });
-    this.imageBitmap = imageBitmap;
-    this.emit('imageLoaded', { src: imageURL });
+  }
+
+  _onParentChange(parent: MainOnlyNode) {
+    this.updateWorldMatrix(parent._worldMatrix);
+  }
+
+  updateTranslate() {
+    mat4.fromTranslation(this._localMatrix, vec3.fromValues(this.x, this.y, 1));
+    if (this.parent) {
+      this.updateWorldMatrix(this.parent._worldMatrix);
+    }
   }
 
   flush(): void {

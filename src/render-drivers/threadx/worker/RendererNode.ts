@@ -39,6 +39,9 @@ export class RendererNode extends SharedNode implements IRenderableNode {
       return;
     } else if (propName === 'zIndex' || propName === 'text') {
       return;
+    } else if (propName === 'x' || propName === 'y') {
+      this.updateTranslate();
+      return;
     }
     // switch (propName) {
     //   case "src":

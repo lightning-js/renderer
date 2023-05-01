@@ -30,6 +30,13 @@ export class MainRenderDriver implements IRenderDriver {
     const { nodes } = this;
     const node = new MainOnlyNode(stage);
     nodes.set(node.id, node);
+    node.x = props.x || 0;
+    node.y = props.y || 0;
+    node.w = props.w || 0;
+    node.h = props.h || 0;
+    node.parent = (props.parent as MainOnlyNode) || null;
+    node.color = props.color || 0xff00ffff; // TODO: Make white
+    node.alpha = props.alpha || 1;
     this.onCreateNode(node);
     return node;
   }
