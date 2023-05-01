@@ -35,7 +35,7 @@ export class MainRenderDriver implements IRenderDriver {
     node.w = props.w || 0;
     node.h = props.h || 0;
     node.parent = (props.parent as MainOnlyNode) || null;
-    node.color = props.color || 0xff00ffff; // TODO: Make white
+    node.color = props.color || 0xffffffff;
     node.alpha = props.alpha || 1;
     this.onCreateNode(node);
     return node;

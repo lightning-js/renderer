@@ -6,6 +6,7 @@ import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import type { Stage } from '../../../core/stage.js';
 import { createWhitePixelTexture } from '../../../core/gpu/webgl/texture.js';
 import { mat4, vec3 } from '../../../core/lib/glm/index.js';
+import { getTexture } from '../../../core/gpu/webgl/textureManager.js';
 
 export class RendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
@@ -25,6 +26,7 @@ export class RendererNode extends SharedNode implements IRenderableNode {
       })
       .catch(console.error);
     this.onPropertyChange('parentId', this.parentId);
+    this.onPropertyChange('src', this.src);
     this.updateTranslate();
   }
 
@@ -41,6 +43,9 @@ export class RendererNode extends SharedNode implements IRenderableNode {
       return;
     } else if (propName === 'x' || propName === 'y') {
       this.updateTranslate();
+      return;
+    } else if (propName === 'src') {
+      this.loadImage(value as string).catch(console.error);
       return;
     }
     // switch (propName) {
@@ -88,20 +93,16 @@ export class RendererNode extends SharedNode implements IRenderableNode {
     }
   }
 
-  // public imageBitmap: ImageBitmap | null = null;
-
-  // private async _loadImage(imageURL: string): Promise<void> {
-  //   // Load image from src url
-  //   const response = await fetch(imageURL);
-
-  //   // Once the file has been fetched, we'll convert it to a `Blob`
-  //   const blob = await response.blob();
-
-  //   const imageBitmap = await createImageBitmap(blob, {
-  //     premultiplyAlpha: 'none',
-  //     colorSpaceConversion: 'none',
-  //   });
-  //   this.imageBitmap = imageBitmap;
-  //   this.emit('imageLoaded', { src: imageURL });
-  // }
+  private async loadImage(imageUrl: string): Promise<void> {
+    getTexture({
+      type: 'image',
+      id: imageUrl,
+      src: imageUrl,
+    })
+      .then((texture: WebGLTexture | null) => {
+        this.texture = texture;
+      })
+      .catch(console.error);
+    this.emit('imageLoaded', { src: imageUrl });
+  }
 }
