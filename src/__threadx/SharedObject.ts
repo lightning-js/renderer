@@ -90,18 +90,31 @@ export class SharedObject<
     (sharedObjectStruct.constructor as T).propDefs.forEach((propDef, index) => {
       if (sharedObjectStruct.isDirty(index)) {
         const propName = propDef.name as keyof WritableProps;
+        // If this property has a pending mutation from this thread, then
+        // cancel it. The mutation from the other thread that has already
+        // been applied to the SharedArrayBuffer will take precedence.
+        delete mutations[propName];
+        const oldValue = curProps[propName];
+        // Apply the mutation from the other thread
+        curProps[propName] = sharedObjectStruct[propName];
         // Don't call onPropertyChange during the initialization process
         if (this.initialized) {
-          this.onPropertyChange(propName, sharedObjectStruct[propName]);
+          this.onPropertyChange(
+            propName,
+            sharedObjectStruct[propName],
+            oldValue,
+          );
         }
-        delete mutations[propName];
-        curProps[propName] = sharedObjectStruct[propName];
       }
     });
     sharedObjectStruct.resetDirty();
   }
 
-  onPropertyChange(propName: keyof WritableProps, value: any): void {
+  onPropertyChange(
+    propName: keyof WritableProps,
+    newValue: any,
+    oldValue: any,
+  ): void {
     // console.log(`onPropertyChange: ${propName} = ${value} (${this.dirtyProcessCount}, ${ThreadX.threadName)`);
   }
 
