@@ -7,7 +7,7 @@ import {
 } from './gpu/webgl/index.js';
 import { normalizeARGB } from './utils.js';
 import { glParam } from './platform.js';
-import { type Node } from './node.js';
+import { type Node } from './scene/Node.js';
 
 let gl: WebGLRenderingContext | null = null;
 let vertexBuffer = null;

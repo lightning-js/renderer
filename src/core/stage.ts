@@ -1,4 +1,5 @@
-import type { Node } from './node.js';
+import type { Node } from './scene/Node.js';
+import { Scene } from './scene/Scene.js';
 import {
   getSystem,
   getWebGLParameters,
@@ -17,13 +18,11 @@ import {
 } from './renderer.js';
 
 let gl: WebGLRenderingContext | null = null;
-let renderer = null;
-// TODO: Remove? We aren't using any of these
-// const usedMemory = 0;
-// const renderPrecision = 1;
-// const memoryPressure = 24e6;
+
+let renderer: any;
+let scene: Scene;
 const bufferMemory = 2e6;
-let rootNode: Node | null = null;
+let rootNode: Node;
 
 const autoStart = true;
 let deltaTime = 0;
@@ -45,6 +44,8 @@ export default {
   init({ clearColor, context }: Required<StageOptions>) {
     if (context) {
       gl = context;
+      scene = new Scene();
+      rootNode = scene.root;
       const system = getSystem();
       system.parameters = getWebGLParameters(context);
       system.extensions = getWebGLExtensions(context);
@@ -90,13 +91,13 @@ export default {
       return gl.canvas;
     }
   },
-  setRootNode(node: Node) {
-    rootNode = node;
-  },
   getRootNode() {
-    return rootNode;
+    return scene?.root;
   },
   getDeltaTime() {
     return deltaTime;
+  },
+  getScene() {
+    return scene;
   },
 };

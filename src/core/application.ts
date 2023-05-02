@@ -1,10 +1,12 @@
 import stage, { type StageOptions } from './stage.js';
-import createNode, { type Node } from './node.js';
+import { type Node } from './scene/Node.js';
+import type { Scene } from './scene/Scene.js';
 
 export interface Application {
   get stage(): typeof stage;
   get canvas(): HTMLCanvasElement | OffscreenCanvas | undefined;
-  get root(): Node | null;
+  get root(): Node | undefined;
+  get scene(): Scene;
 }
 
 export default (options: StageOptions): Application => {
@@ -15,19 +17,8 @@ export default (options: StageOptions): Application => {
     context: options.context,
     clearColor: options.clearColor ?? 0xff3677e0,
   };
-  stage.init(resolvedOptions);
 
-  // set root view
-  stage.setRootNode(
-    createNode({
-      elementId: resolvedOptions.elementId,
-      w: resolvedOptions.w,
-      h: resolvedOptions.h,
-      x: 0,
-      y: 0,
-      color: resolvedOptions.clearColor,
-    }),
-  );
+  stage.init(resolvedOptions);
 
   return {
     get stage() {
@@ -38,6 +29,9 @@ export default (options: StageOptions): Application => {
     },
     get root() {
       return stage.getRootNode();
+    },
+    get scene() {
+      return stage.getScene();
     },
   };
 };

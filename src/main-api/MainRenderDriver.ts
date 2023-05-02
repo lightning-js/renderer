@@ -2,7 +2,7 @@ import application, { type Application } from '../core/application.js';
 import { assert, createWebGLContext, loadImage } from '../utils.js';
 import type { IRenderDriver } from './IRenderDriver.js';
 import type { Primitive } from './Primitive.js';
-import createNode, { type Node } from '../core/node.js';
+import createNode, { type Node } from '../core/scene/Node.js';
 import type { RenderProps } from '../renderProperties.js';
 import { SpecialElementId } from './SpecialElementId.js';
 

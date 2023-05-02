@@ -1,16 +1,14 @@
 import threadx from '@lightningjs/threadx';
 import application, { type Application } from '../core/application.js';
-import createNode, { type Node } from '../core/node.js';
+import createNode, { type Node } from '../core/scene/Node.js';
 import { SpecialElementId } from '../main-api/SpecialElementId.js';
-import { createWebGLContext, loadImage } from '../utils.js';
+import { createWebGLContext } from '../utils.js';
 import type { RenderProps } from '../renderProperties.js';
 
 let canvas = null;
 let gl = null;
 let app: Application | null = null;
 const nodes: Map<number, Node> = new Map();
-
-console.log('render worker');
 
 self.addEventListener('message', ({ data: { event, payload } }) => {
   if (event === 'canvas') {

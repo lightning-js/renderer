@@ -1,7 +1,6 @@
 import { Primitive, type PrimitiveProps } from './Primitive.js';
 import { SpecialElementId } from './SpecialElementId.js';
 import { type IRenderDriver } from './IRenderDriver.js';
-import type { RenderProps } from '../renderProperties.js';
 
 export interface Settings {
   width?: number;
