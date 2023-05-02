@@ -54,4 +54,3 @@ ThreadX.init({
     }
   },
 });
-console.log('render worker');

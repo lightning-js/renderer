@@ -1,5 +1,6 @@
 import type { IRenderableNode } from './IRenderableNode.js';
-import type { Node } from './node.js';
+import { Scene } from './scene/Scene.js';
+
 import {
   getSystem,
   getWebGLParameters,
@@ -16,13 +17,9 @@ import {
 } from './renderer.js';
 
 let gl: WebGLRenderingContext | null = null;
-let renderer = null;
-// TODO: Remove? We aren't using any of these
-// const usedMemory = 0;
-// const renderPrecision = 1;
-// const memoryPressure = 24e6;
+
+let scene: Scene | null = null;
 const bufferMemory = 2e6;
-let rootNode: IRenderableNode | null = null;
 
 const autoStart = true;
 let deltaTime = 0;
@@ -46,15 +43,16 @@ const stage = {
   /**
    * Stage constructor
    */
-  init({ clearColor, context }: Required<StageOptions>) {
+  init({ context, clearColor, rootNode }: Required<StageOptions>) {
     if (context) {
       gl = context;
+      scene = new Scene(rootNode);
       const system = getSystem();
       system.parameters = getWebGLParameters(context);
       system.extensions = getWebGLExtensions(context);
     }
 
-    renderer = createRenderer(context, clearColor, bufferMemory);
+    createRenderer(context, clearColor, bufferMemory);
 
     // execute platform start loop
     if (autoStart) {
@@ -69,7 +67,7 @@ const stage = {
    * Start a new frame draw
    */
   drawFrame() {
-    if (!gl || !rootNode) {
+    if (!gl || !scene?.root) {
       return;
     }
     lastFrameTime = currentFrameTime;
@@ -85,7 +83,7 @@ const stage = {
     // }
 
     gl.clear(gl.COLOR_BUFFER_BIT);
-    render(rootNode);
+    render(scene.root);
   },
   handleDirty(buffer: Int32Array, data: InitData) {
     console.log('dirty');
@@ -99,15 +97,14 @@ const stage = {
       return gl.canvas;
     }
   },
-  setRootNode(node: IRenderableNode) {
-    rootNode = node;
-    console.log('Root Node', rootNode);
-  },
   getRootNode() {
-    return rootNode;
+    return scene?.root || null;
   },
   getDeltaTime() {
     return deltaTime;
+  },
+  getScene() {
+    return scene;
   },
 };
 

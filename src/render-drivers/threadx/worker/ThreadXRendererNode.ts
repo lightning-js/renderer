@@ -105,4 +105,12 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
       })
       .catch(console.error);
   }
+
+  update(delta: number): void {
+    // TODO: implement
+  }
+
+  render(ctx: WebGLRenderingContext | WebGL2RenderingContext): void {
+    // TODO: implement
+  }
 }

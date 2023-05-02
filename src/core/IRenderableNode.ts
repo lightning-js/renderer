@@ -6,4 +6,8 @@ export interface IRenderableNode extends INode {
 
   texture: WebGLTexture | null;
   getTranslate(): vec3.Vec3;
+
+  update(delta: number): void;
+
+  render(ctx: WebGLRenderingContext | WebGL2RenderingContext): void;
 }

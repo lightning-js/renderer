@@ -208,6 +208,14 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     // No-op
   }
 
+  update(delta: number): void {
+    // TODO: implement
+  }
+
+  render(ctx: WebGLRenderingContext | WebGL2RenderingContext): void {
+    // TODO: implement
+  }
+
   //#region EventEmitter
   private eventListeners: { [eventName: string]: any } = {};
 
