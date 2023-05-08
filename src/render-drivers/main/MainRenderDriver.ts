@@ -1,5 +1,5 @@
 import application, { type Application } from '../../core/application.js';
-import { assert, createWebGLContext } from '../../utils.js';
+import { assertTruthy, createWebGLContext } from '../../utils.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
@@ -21,7 +21,7 @@ export class MainRenderDriver implements IRenderDriver {
       h: 1080,
       context: gl,
     });
-    assert(this.app.root);
+    assertTruthy(this.app.root);
   }
 
   createNode(props: Partial<INodeWritableProps> = {}): INode {
@@ -45,7 +45,7 @@ export class MainRenderDriver implements IRenderDriver {
   }
 
   getRootNode(): INode {
-    assert(this.root);
+    assertTruthy(this.root);
     return this.root;
   }
 

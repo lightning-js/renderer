@@ -1,5 +1,4 @@
-import { BufferStruct, structProp } from '../../__threadx/BufferStruct.js';
-import { genTypeId } from '../../__threadx/buffer-struct-utils.js';
+import { BufferStruct, structProp, genTypeId } from '@lightningjs/threadx';
 
 export interface NodeStructWritableProps {
   x: number;

@@ -1,12 +1,12 @@
 import type { NodeStruct, NodeStructWritableProps } from '../NodeStruct.js';
 import { SharedNode } from '../SharedNode.js';
-import { ThreadX } from '../../../__threadx/ThreadX.js';
-import { assertTruthy } from '../../../__threadx/utils.js';
+import { ThreadX } from '@lightningjs/threadx';
 import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import type { Stage } from '../../../core/stage.js';
 import { createWhitePixelTexture } from '../../../core/gpu/webgl/texture.js';
 import { mat4, vec3 } from '../../../core/lib/glm/index.js';
 import { getTexture } from '../../../core/gpu/webgl/textureManager.js';
+import { assertTruthy } from '../../../utils.js';
 
 export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
