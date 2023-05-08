@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./workers/renderer": "./dist/src/workers/renderer.js"
+    "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
   },
   "scripts": {
     "start": "npm run dev",

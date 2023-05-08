@@ -1,17 +1,17 @@
+import type { INode } from './INode.js';
 import stage, { type StageOptions } from './stage.js';
-import { type Node } from './scene/Node.js';
 import type { Scene } from './scene/Scene.js';
 
 export interface Application {
   get stage(): typeof stage;
   get canvas(): HTMLCanvasElement | OffscreenCanvas | undefined;
-  get root(): Node | undefined;
-  get scene(): Scene;
+  get root(): INode | null;
+  get scene(): Scene | null;
 }
 
 export default (options: StageOptions): Application => {
   const resolvedOptions: Required<StageOptions> = {
-    elementId: options.elementId ?? 1,
+    rootNode: options.rootNode,
     w: options.w ?? 1920,
     h: options.h ?? 1080,
     context: options.context,

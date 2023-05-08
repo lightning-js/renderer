@@ -1,4 +1,4 @@
-import createNode, { type Node, type NodeConfig } from './Node.js';
+import type { IRenderableNode } from '../IRenderableNode.js';
 
 export type NodeTypes = Node;
 
@@ -9,10 +9,10 @@ export class Scene {
    * @type {Node}
    * @memberof Scene
    */
-  public root: Node;
+  public root: IRenderableNode;
 
-  constructor() {
-    this.root = createNode({});
+  constructor(root: IRenderableNode) {
+    this.root = root;
   }
 
   /**
@@ -38,9 +38,9 @@ export class Scene {
    * @param parent
    * @returns
    */
-  public createNode(settings: Partial<NodeConfig> = {}): NodeTypes {
-    return createNode(settings);
-  }
+  // public createNode(settings: Partial<INodeWritableProps> = {}): NodeTypes {
+  //   return createNode(settings);
+  // }
 
   /**
    * create a new RectangleNode
@@ -49,10 +49,10 @@ export class Scene {
    * @param parent
    * @returns
    */
-  public rectangle(w: number, h: number, parent: NodeTypes | null = null) {
-    // TODO: Fix this
-    // return this.create(new RectangleNode(w, h), parent);
-  }
+  // public rectangle(w: number, h: number, parent: NodeTypes | null = null) {
+  //   // TODO: Fix this
+  //   // return this.create(new RectangleNode(w, h), parent);
+  // }
 
   /**
    * Create a new CircleNode
@@ -60,10 +60,10 @@ export class Scene {
    * @param parent
    * @returns
    */
-  public circle(r: number, parent: NodeTypes | null = null) {
-    // TODO: Fix this
-    // return this.create(new CircleNode(r), parent);
-  }
+  // public circle(r: number, parent: NodeTypes | null = null) {
+  //   // TODO: Fix this
+  //   // return this.create(new CircleNode(r), parent);
+  // }
 
   /**
    * Create a new TextNode
@@ -71,10 +71,10 @@ export class Scene {
    * @param parent
    * @returns
    */
-  public text(text = '', parent: NodeTypes | null = null) {
-    // TODO: Fix this
-    // return this.create(new TextNode(text), parent);
-  }
+  // public text(text = '', parent: NodeTypes | null = null) {
+  //   // TODO: Fix this
+  //   // return this.create(new TextNode(text), parent);
+  // }
 
   /**
    * Setup and attaching Node
@@ -82,14 +82,14 @@ export class Scene {
    * @param parent
    * @returns
    */
-  private create(node: NodeTypes, parent: NodeTypes | null = null): NodeTypes {
-    if (!parent) {
-      parent = this.root;
-    }
+  // private create(node: NodeTypes, parent: NodeTypes | null = null): NodeTypes {
+  //   if (!parent) {
+  //     parent = this.root;
+  //   }
 
-    node.parent = parent;
-    return node;
-  }
+  //   node.parent = parent;
+  //   return node;
+  // }
 
   /**
    * Update the scene

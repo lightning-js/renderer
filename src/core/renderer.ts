@@ -7,7 +7,7 @@ import {
 } from './gpu/webgl/index.js';
 import { normalizeARGB } from './utils.js';
 import { glParam } from './platform.js';
-import { type Node } from './scene/Node.js';
+import type { IRenderableNode } from './IRenderableNode.js';
 
 let gl: WebGLRenderingContext | null = null;
 let vertexBuffer = null;
@@ -51,17 +51,18 @@ export const setUpdate = (buffer: Int32Array, data: InitData) => {
   initData = data;
 };
 
-export const update = (root: Node) => {
-  if (!typedArray || !initData) {
-    throw new Error('No update data');
-  }
-  const el = root.find(initData.boltId);
-  if (el) {
-    el.y = typedArray[7]!;
-  }
-};
+// TODO: Remove?
+// export const update = (root: IRenderableNode) => {
+//   if (!typedArray || !initData) {
+//     throw new Error('No update data');
+//   }
+//   const el = root.find(initData.boltId);
+//   if (el) {
+//     el.y = typedArray[7]!;
+//   }
+// };
 
-export const render = (root: Node) => {
+export const render = (root: IRenderableNode) => {
   if (!gl) {
     throw new Error('No WebGL context');
   }
@@ -84,7 +85,6 @@ export const render = (root: Node) => {
 
   // buffer vertex positions and color
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(buffer), gl.STATIC_DRAW);
-
   // execute draw 9 attribs x bytes per element
   gl.drawElements(gl.TRIANGLES, 6 * (buffer.length / 36), gl.UNSIGNED_SHORT, 0);
 };
@@ -98,19 +98,21 @@ export const render = (root: Node) => {
  */
 
 const createBuffer = (
-  node: Node,
+  node: IRenderableNode,
   buffer: number[],
-  textures: WebGLTexture[],
+  textures: Array<WebGLTexture | null>,
 ) => {
   const { w, h, color, texture, id, alpha } = node;
   const [x, y, z] = node.getTranslate();
   let textureUnit = 0;
 
-  color[3] = alpha;
+  const rgbaColor = normalizeARGB(color);
+
+  rgbaColor[3] = alpha;
 
   if (!textures.length) {
     textures.push(texture);
-  } else {
+  } else if (texture) {
     textureUnit = textures.indexOf(texture);
     if (textureUnit === -1) {
       textures.push(texture);
@@ -125,25 +127,25 @@ const createBuffer = (
   buffer.push(
     x1,
     y1,
-    ...color,
+    ...rgbaColor,
     0,
     0,
     textureUnit,
     x2,
     y1,
-    ...color,
+    ...rgbaColor,
     1,
     0,
     textureUnit,
     x1,
     y2,
-    ...color,
+    ...rgbaColor,
     0,
     1,
     textureUnit,
     x2,
     y2,
-    ...color,
+    ...rgbaColor,
     1,
     1,
     textureUnit,
@@ -184,7 +186,7 @@ const createIndices = (size: number) => {
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 };
 
-const bindTextureArray = (textures: WebGLTexture[]) => {
+const bindTextureArray = (textures: Array<WebGLTexture | null>) => {
   if (!gl) {
     throw new Error('No WebGL context');
   }

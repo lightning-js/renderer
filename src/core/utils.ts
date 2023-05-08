@@ -1,10 +1,10 @@
-export const normalizeARGB = (argb: number) => {
+export function normalizeARGB(argb: number): [number, number, number, number] {
   const r = ((argb / 65536) | 0) % 256;
   const g = ((argb / 256) | 0) % 256;
   const b = argb % 256;
   const a = (argb / 16777216) | 0;
   return [r / 255, g / 255, b / 255, a / 255];
-};
+}
 
 export const EPSILON = 0.000001;
 export let ARRAY_TYPE =
