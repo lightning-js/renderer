@@ -1,10 +1,9 @@
-import { BufferStruct } from '../../__threadx/BufferStruct.js';
-import { ThreadX } from '../../__threadx/ThreadX.js';
-import { assertTruthy } from '../../__threadx/utils.js';
+import { ThreadX, BufferStruct } from '@lightningjs/threadx';
 import type { INode, INodeWritableProps } from '../../core/INode.js';
 import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
+import { assertTruthy } from '../../utils.js';
 
 export interface ThreadXRendererSettings {
   RendererWorker: new () => Worker;
@@ -18,8 +17,8 @@ export class ThreadXRenderDriver implements IRenderDriver {
   constructor(settings: ThreadXRendererSettings) {
     this.settings = settings;
     this.threadx = ThreadX.init({
-      threadId: 1,
-      threadName: 'main',
+      workerId: 1,
+      workerName: 'main',
       sharedObjectFactory(buffer) {
         const typeId = BufferStruct.extractTypeId(buffer);
         if (typeId === NodeStruct.typeId) {

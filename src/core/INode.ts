@@ -1,4 +1,4 @@
-import type { IEventEmitter } from '../__threadx/IEventEmitter.js';
+import type { IEventEmitter } from '@lightningjs/threadx';
 
 export interface INodeWritableProps {
   x: number;

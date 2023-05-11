@@ -91,7 +91,7 @@ export class RendererMain {
    * Any state changes will be reflected in the re-rendered frame. Useful for
    * debugging.
    *
-   * May not do anything if the render loop is running on a separate thread.
+   * May not do anything if the render loop is running on a separate worker.
    */
   rerender() {
     throw new Error('Not implemented');

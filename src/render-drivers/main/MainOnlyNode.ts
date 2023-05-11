@@ -1,11 +1,11 @@
-import type { IEventEmitter } from '../../__threadx/IEventEmitter.js';
-import { assertTruthy } from '../../__threadx/utils.js';
+import type { IEventEmitter } from '@lightningjs/threadx';
 import type { INodeWritableProps } from '../../core/INode.js';
 import type { IRenderableNode } from '../../core/IRenderableNode.js';
 import { createWhitePixelTexture } from '../../core/gpu/webgl/texture.js';
 import { getTexture } from '../../core/gpu/webgl/textureManager.js';
 import { mat4, vec3 } from '../../core/lib/glm/index.js';
 import type { Stage } from '../../core/stage.js';
+import { assertTruthy } from '../../utils.js';
 
 let nextId = 1;
 

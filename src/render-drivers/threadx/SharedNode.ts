@@ -1,7 +1,7 @@
 import type { NodeStruct, NodeStructWritableProps } from './NodeStruct.js';
-import { SharedObject } from '../../__threadx/SharedObject.js';
+import { SharedObject } from '@lightningjs/threadx';
 import type { INode } from '../../core/INode.js';
-import { assertTruthy } from '../../__threadx/utils.js';
+import { assertTruthy } from '../../utils.js';
 
 export class SharedNode
   extends SharedObject<NodeStructWritableProps, NodeStruct>

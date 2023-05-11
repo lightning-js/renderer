@@ -77,12 +77,11 @@ export async function loadImage(src: string) {
  * @param message
  * @returns
  */
-export function assert(
+export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
   if (!condition) {
-    throw new Error(message ?? 'Assertion failed');
+    throw new Error(message || 'Assertion failed');
   }
-  return;
 }
