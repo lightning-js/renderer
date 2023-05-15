@@ -11,10 +11,10 @@ export interface Application {
 
 export default (options: StageOptions): Application => {
   const resolvedOptions: Required<StageOptions> = {
-    rootNode: options.rootNode,
+    createRootNode: options.createRootNode,
+    canvas: options.canvas,
     w: options.w ?? 1920,
     h: options.h ?? 1080,
-    context: options.context,
     clearColor: options.clearColor ?? 0xff3677e0,
   };
 
@@ -25,7 +25,7 @@ export default (options: StageOptions): Application => {
       return stage;
     },
     get canvas() {
-      return stage.getCanvas();
+      return options.canvas;
     },
     get root() {
       return stage.getRootNode();

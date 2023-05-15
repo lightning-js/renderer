@@ -1,22 +1,13 @@
 import type { IRenderableNode } from './IRenderableNode.js';
 import { Scene } from './scene/Scene.js';
 
-import {
-  getSystem,
-  getWebGLParameters,
-  getWebGLExtensions,
-  startLoop,
-  getTimeStamp,
-} from './platform.js';
+import { startLoop, getTimeStamp } from './platform.js';
 
-import {
-  createRenderer,
-  render,
-  setUpdate,
-  type InitData,
-} from './renderer.js';
+import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
+import { assertTruthy } from '../utils.js';
+import type { CoreRenderer } from './renderers/CoreRenderer.js';
 
-let gl: WebGLRenderingContext | null = null;
+let renderer: WebGlCoreRenderer | null = null;
 
 let scene: Scene | null = null;
 const bufferMemory = 2e6;
@@ -27,47 +18,52 @@ let lastFrameTime = 0;
 let currentFrameTime = 0;
 
 export interface StageOptions {
-  rootNode: IRenderableNode;
+  /**
+   * Factory method that the stage uses to create the Root Node
+   *
+   * @remarks
+   * This method is provided by the IRenderDriver implementation
+   *
+   * @privateRemarks
+   * This (or something like this) is required because the stage is responsible
+   * for creating the Root node, while all other nodes are created by the
+   * User App code.
+   *
+   * @param stage
+   * @returns
+   */
+  createRootNode: (stage: Stage) => IRenderableNode;
   w?: number;
   h?: number;
-  context: WebGLRenderingContext;
+  canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor?: number;
 }
-
-let resolveReady: () => void;
-const readyPromise = new Promise<void>((resolve) => {
-  resolveReady = resolve;
-});
 
 const stage = {
   /**
    * Stage constructor
    */
-  init({ context, clearColor, rootNode }: Required<StageOptions>) {
-    if (context) {
-      gl = context;
-      scene = new Scene(rootNode);
-      const system = getSystem();
-      system.parameters = getWebGLParameters(context);
-      system.extensions = getWebGLExtensions(context);
-    }
+  init({ canvas, clearColor, createRootNode }: Required<StageOptions>) {
+    renderer = new WebGlCoreRenderer({
+      canvas,
+      clearColor,
+      bufferMemory,
+    });
 
-    createRenderer(context, clearColor, bufferMemory);
+    // create root node
+    const rootNode = createRootNode(stage);
+    scene = new Scene(rootNode);
 
     // execute platform start loop
     if (autoStart) {
-      startLoop();
+      startLoop(stage);
     }
-    resolveReady();
-  },
-  async ready(): Promise<void> {
-    return readyPromise;
   },
   /**
    * Start a new frame draw
    */
   drawFrame() {
-    if (!gl || !scene?.root) {
+    if (!scene?.root) {
       return;
     }
     lastFrameTime = currentFrameTime;
@@ -82,20 +78,26 @@ const stage = {
     //   update(rootNode);
     // }
 
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    render(scene.root);
+    renderer?.reset();
+
+    this.addQuads(scene.root);
+
+    // Temp: Test
+    renderer?.render();
+
+    // render(scene.root);
   },
-  handleDirty(buffer: Int32Array, data: InitData) {
-    console.log('dirty');
-    setUpdate(buffer, data);
+  addQuads(node: IRenderableNode) {
+    assertTruthy(renderer);
+
+    node.renderQuads(renderer);
+
+    node.children.forEach((child) => {
+      this.addQuads(child);
+    });
   },
-  getGlContext() {
-    return gl;
-  },
-  getCanvas() {
-    if (gl) {
-      return gl.canvas;
-    }
+  getRenderer(): CoreRenderer {
+    return renderer as CoreRenderer;
   },
   getRootNode() {
     return scene?.root || null;

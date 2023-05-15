@@ -35,15 +35,23 @@ export class ThreadXRenderDriver implements IRenderDriver {
 
   async init(canvas: HTMLCanvasElement): Promise<void> {
     const offscreenCanvas = canvas.transferControlToOffscreen();
-    await this.threadx.sendMessageAsync(
+    const rootNodeId = (await this.threadx.sendMessageAsync(
       'renderer',
       {
         type: 'init',
         canvas: offscreenCanvas,
       },
       [offscreenCanvas],
+    )) as number;
+    // The Render worker shares the root node with this worker during the
+    // 'init' call above. That call returns the ID of the root node, which
+    // we can use to retrieve it from the shared object store.
+    const rootNode = this.threadx.getSharedObjectById(rootNodeId);
+    assertTruthy(
+      rootNode instanceof ThreadXMainNode,
+      'Unexpected root node type',
     );
-    this.root = this.createNode();
+    this.root = rootNode;
   }
 
   getRootNode(): INode {

@@ -3,36 +3,32 @@ import { SharedNode } from '../SharedNode.js';
 import { ThreadX } from '@lightningjs/threadx';
 import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import type { Stage } from '../../../core/stage.js';
-import { createWhitePixelTexture } from '../../../core/gpu/webgl/texture.js';
 import { mat4, vec3 } from '../../../core/lib/glm/index.js';
-import { getTexture } from '../../../core/gpu/webgl/textureManager.js';
 import { assertTruthy } from '../../../utils.js';
+import type { CoreTexture } from '../../../core/renderers/CoreTexture.js';
+import { commonRenderNode } from '../../common/RenderNodeCommon.js';
+import type { CoreRenderer } from '../../../core/renderers/CoreRenderer.js';
 
 export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
   private _worldMatrix = mat4.create();
 
+  texture: CoreTexture | null;
+
   constructor(private stage: Stage, sharedNodeStruct: NodeStruct) {
     super(sharedNodeStruct);
-
-    this.stage
-      .ready()
-      .then(() => {
-        const gl = this.stage.getGlContext();
-        assertTruthy(gl);
-        const texture = createWhitePixelTexture(gl);
-        assertTruthy(texture);
-        this.texture = texture;
-      })
-      .catch(console.error);
-    this.onPropertyChange('parentId', this.parentId);
-    this.onPropertyChange('src', this.src);
+    this.texture = this.stage
+      .getRenderer()
+      .textureManager.getWhitePixelTexture();
+    this.onPropertyChange('parentId', this.parentId, undefined);
+    this.onPropertyChange('src', this.src, undefined);
     this.updateTranslate();
   }
 
   override onPropertyChange(
     propName: keyof NodeStructWritableProps,
     value: unknown,
+    oldValue: unknown,
   ): void {
     if (propName === 'parentId') {
       const parent = ThreadX.instance.getSharedObjectById(value as number);
@@ -45,7 +41,9 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
       this.updateTranslate();
       return;
     } else if (propName === 'src') {
-      this.loadImage(value as string).catch(console.error);
+      if (value !== oldValue) {
+        this.loadImage(value as string).catch(console.error);
+      }
       return;
     }
     // switch (propName) {
@@ -54,8 +52,6 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
     //     break;
     // }
   }
-
-  texture: WebGLTexture | null = null;
 
   getTranslate(): vec3.Vec3 {
     return mat4.getTranslation(vec3.create(), this._worldMatrix);
@@ -94,23 +90,18 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   }
 
   private async loadImage(imageUrl: string): Promise<void> {
-    getTexture({
-      type: 'image',
-      id: imageUrl,
-      src: imageUrl,
-    })
-      .then((texture: WebGLTexture | null) => {
-        this.texture = texture;
-        this.emit('imageLoaded', { src: imageUrl });
-      })
-      .catch(console.error);
+    const txManager = this.stage.getRenderer().textureManager;
+    this.texture =
+      (await txManager.getImageTexture(imageUrl)) ||
+      txManager.getWhitePixelTexture();
+    this.emit('imageLoaded', { src: imageUrl });
   }
 
   update(delta: number): void {
     // TODO: implement
   }
 
-  render(ctx: WebGLRenderingContext | WebGL2RenderingContext): void {
-    // TODO: implement
+  renderQuads(renderer: CoreRenderer): void {
+    commonRenderNode(this, renderer);
   }
 }

@@ -55,6 +55,7 @@ import rocko from './rocko.png';
     w: 181,
     h: 218,
     src: rocko,
+    color: 0xffffffff,
     parent: renderer.root,
   });
 
