@@ -18,3 +18,28 @@
 - [ ] Create mechanism that transforms Scene Graph into a flat array of nodes
       ordered by their layering.
 - [ ] Implement RTT
+
+# Animations
+
+- [x] Numeric properties
+- [x] Duration
+- [x] Start / Stop
+- [x] Pause / Resume
+- [x] waitUntilStopped
+- [x] Animation state
+- [ ] Fix issue where you have to use a setTimeout() before starting animations with the ThreadX Driver
+- [ ] Repeat
+
+# Bugs
+
+- [ ] Fix issue where if the same image URL is used immediately twice the image doesn't appear
+
+# Tech Debt
+
+- [ ] Refactor: Extract EventEmitter code (found in MainOnlyNode / CoreAnimation) into its own mixin
+      with unit tests [help wanted]
+- [ ] Tests: Frame-by-frame tests for Animations
+- [ ] Tests: Unit tests for animations
+- [ ] Look through TODO comments
+
+- SharedObjects that don't share data??

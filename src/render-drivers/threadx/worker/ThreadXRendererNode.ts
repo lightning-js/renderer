@@ -8,12 +8,18 @@ import { assertTruthy } from '../../../utils.js';
 import type { CoreTexture } from '../../../core/renderers/CoreTexture.js';
 import { commonRenderNode } from '../../common/RenderNodeCommon.js';
 import type { CoreRenderer } from '../../../core/renderers/CoreRenderer.js';
+import type { IAnimationController } from '../../../core/IAnimationController.js';
+import type { INodeAnimatableProps } from '../../../core/INode.js';
+import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
+import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
 
 export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
   private _worldMatrix = mat4.create();
 
   texture: CoreTexture | null;
+
+  private animationControllers = new Map<number, IAnimationController>();
 
   constructor(private stage: Stage, sharedNodeStruct: NodeStruct) {
     super(sharedNodeStruct);
@@ -23,6 +29,45 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
     this.onPropertyChange('parentId', this.parentId, undefined);
     this.onPropertyChange('src', this.src, undefined);
     this.updateTranslate();
+    // TOOD: Make sure event listeners are removed when the node is destroyed.
+    this.on(
+      'createAnimation',
+      (target: ThreadXRendererNode, { id, props, duration }) => {
+        const animation = new CoreAnimation(
+          this,
+          props as Partial<INodeAnimatableProps>,
+          duration as number,
+        );
+        animation.on('finished', () => {
+          this.emit('animationFinished', { id: id as number });
+        });
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+        const controller = new CoreAnimationController(
+          this.stage.getAnimationManager(),
+          animation,
+        );
+        this.animationControllers.set(id as number, controller);
+      },
+    );
+    this.on('destroyAnimation', (target: ThreadXRendererNode, { id }) => {
+      this.animationControllers.delete(id as number);
+    });
+    this.on('startAnimation', (target: ThreadXRendererNode, { id }) => {
+      this.animationControllers.get(id as number)?.start();
+    });
+    this.on('stopAnimation', (target: ThreadXRendererNode, { id }) => {
+      this.animationControllers.get(id as number)?.stop();
+    });
+    this.on('pauseAnimation', (target: ThreadXRendererNode, { id }) => {
+      this.animationControllers.get(id as number)?.pause();
+    });
+  }
+
+  override animate(
+    props: Partial<INodeAnimatableProps>,
+    duration: number,
+  ): IAnimationController {
+    throw new Error('Method not implemented.');
   }
 
   override onPropertyChange(

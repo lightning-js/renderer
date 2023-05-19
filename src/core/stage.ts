@@ -6,8 +6,10 @@ import { startLoop, getTimeStamp } from './platform.js';
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy } from '../utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import { AnimationManager } from './animations/AnimationManager.js';
 
 let renderer: WebGlCoreRenderer | null = null;
+const animationManager: AnimationManager = new AnimationManager();
 
 let scene: Scene | null = null;
 const bufferMemory = 2e6;
@@ -69,14 +71,9 @@ const stage = {
     lastFrameTime = currentFrameTime;
     currentFrameTime = getTimeStamp();
 
-    deltaTime = !lastFrameTime
-      ? 1 / 60
-      : (currentFrameTime - lastFrameTime) * 0.001;
+    deltaTime = !lastFrameTime ? 100 / 6 : currentFrameTime - lastFrameTime;
 
-    // TODO: This doesn't do anything yet so commenting it out
-    // if (hasUpdates()) {
-    //   update(rootNode);
-    // }
+    animationManager.update(deltaTime);
 
     renderer?.reset();
 
@@ -107,6 +104,9 @@ const stage = {
   },
   getScene() {
     return scene;
+  },
+  getAnimationManager() {
+    return animationManager;
   },
 };
 

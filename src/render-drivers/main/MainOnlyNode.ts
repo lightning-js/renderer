@@ -1,5 +1,8 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
-import type { INodeWritableProps } from '../../core/INode.js';
+import type {
+  INodeAnimatableProps,
+  INodeWritableProps,
+} from '../../core/INode.js';
 import type { IRenderableNode } from '../../core/IRenderableNode.js';
 import { mat4, vec3 } from '../../core/lib/glm/index.js';
 import type { Stage } from '../../core/stage.js';
@@ -7,6 +10,9 @@ import { assertTruthy } from '../../utils.js';
 import type { CoreTexture } from '../../core/renderers/CoreTexture.js';
 import type { CoreRenderer } from '../../core/renderers/CoreRenderer.js';
 import { commonRenderNode } from '../common/RenderNodeCommon.js';
+import type { IAnimationController } from '../../core/IAnimationController.js';
+import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
+import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
 
 let nextId = 1;
 
@@ -198,6 +204,20 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
 
   flush(): void {
     // No-op
+  }
+
+  animate(
+    props: Partial<INodeAnimatableProps>,
+    duration: number,
+  ): IAnimationController {
+    const animation = new CoreAnimation(this, props, duration);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const controller = new CoreAnimationController(
+      this.stage.getAnimationManager(),
+      animation,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return controller;
   }
 
   update(delta: number): void {

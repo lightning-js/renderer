@@ -1,7 +1,8 @@
 import type { NodeStruct, NodeStructWritableProps } from './NodeStruct.js';
 import { SharedObject } from '@lightningjs/threadx';
-import type { INode } from '../../core/INode.js';
+import type { INode, INodeAnimatableProps } from '../../core/INode.js';
 import { assertTruthy } from '../../utils.js';
+import type { IAnimationController } from '../../core/IAnimationController.js';
 
 export class SharedNode
   extends SharedObject<NodeStructWritableProps, NodeStruct>
@@ -59,6 +60,13 @@ export class SharedNode
   protected override onDestroy(): void {
     this.parent = null;
     super.onDestroy();
+  }
+
+  animate(
+    props: Partial<INodeAnimatableProps>,
+    duration: number,
+  ): IAnimationController {
+    throw new Error('Method not implemented.');
   }
 
   // Declare getters and setters for all properties that are automatically
