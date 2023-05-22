@@ -28,16 +28,16 @@ export class CoreAnimation {
   }
 
   update(dt: number) {
+    this.progress += dt / this.duration;
+    if (this.progress > 1) {
+      this.progress = 1;
+      this.emit('finished', {});
+    }
     (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
       (propName) => {
         const propValue = this.props[propName] as number;
         const startValue = this.propStartValues[propName] as number;
         const endValue = propValue;
-        this.progress += dt / this.duration;
-        if (this.progress > 1) {
-          this.progress = 1;
-          this.emit('finished', {});
-        }
         const value = startValue + (endValue - startValue) * this.progress;
         this.node[propName] = value;
       },
