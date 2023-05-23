@@ -99,22 +99,13 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
   setTimeout(async () => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      rockoAnimation = rockoRect
-        .animate(
-          {
-            // x: 400,
-            // y: 200,
-          },
-          1000,
-        )
-        .start();
+      rockoAnimation = rockoRect.animate({}, 1000).start();
       await rockoAnimation.waitUntilStopped();
 
       rockoAnimation = rockoRect
         .animate(
           {
             x: 400,
-            // y: 200,
           },
           1000,
         )
@@ -124,7 +115,6 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
       rockoAnimation = rockoRect
         .animate(
           {
-            // x: 400,
             y: elevatorRect.h - rockoRect.h,
           },
           1000,

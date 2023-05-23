@@ -66,8 +66,8 @@ export class ThreadXRenderDriver implements IRenderDriver {
     bufferStruct.w = props.w || 0;
     bufferStruct.h = props.h || 0;
     bufferStruct.parentId = props.parent ? props.parent.id : 0;
-    bufferStruct.color = props.color || 0xffffffff;
-    bufferStruct.alpha = props.alpha || 1;
+    bufferStruct.color = props.color ?? 0xffffffff;
+    bufferStruct.alpha = props.alpha ?? 1;
     bufferStruct.src = props.src || '';
     const node = new ThreadXMainNode(bufferStruct);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
