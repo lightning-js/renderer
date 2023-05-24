@@ -1,15 +1,13 @@
-import type { RenderProps } from '../renderProperties.js';
-import { Primitive } from './Primitive.js';
+import type { INode, INodeWritableProps } from '../core/INode.js';
 
 export interface IRenderDriver {
   init(canvas: HTMLCanvasElement): Promise<void>;
-  createPrimitiveRaw(primitive: Primitive): void;
-  mutatePrimitiveRaw(
-    primitive: Primitive,
-    mutations: Partial<RenderProps>,
-  ): void;
-  destroyPrimitiveRaw(primitive: Primitive): void;
+  createNode(props?: Partial<INodeWritableProps>): INode;
+  // TODO: Nodes can be destroyed from the INode directly. Do we need this method
+  // on this interface? All it does is call the destroy() method on the node.
+  destroyNode(node: INode): void;
+  getRootNode(): INode;
 
-  onCreatePrimitive(primitive: Primitive): void;
-  onDestroyPrimitive(primitive: Primitive): void;
+  onCreateNode(node: INode): void;
+  onBeforeDestroyNode(node: INode): void;
 }

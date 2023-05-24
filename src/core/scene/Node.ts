@@ -1,17 +1,6 @@
-import { mat4, vec3 } from './lib/glm/index.js';
-import { getTexture } from './gpu/webgl/textureManager.js';
-import { normalizeARGB } from './lib/utils.js';
-
-/**
- *
- * - init
- * - created
- * - updated
- * - active
- * - destroy
- * @param config
- * @return {*}
- */
+import { mat4, vec3 } from '../lib/glm/index.js';
+import { getTexture } from '../gpu/webgl/textureManager.js';
+import { normalizeARGB, type RGBA } from '../lib/utils.js';
 
 let nodeId = 0;
 const nodes: Map<number, Node> = new Map();
@@ -38,7 +27,7 @@ class Node {
   private _h: number;
   private _localAlpha = 1;
   private _worldAlpha = 1;
-  private _color: number[] = [0, 0, 0, 1];
+  private _color: RGBA = [0, 0, 0, 1];
   private _texture: any = null;
   private _rotation = 0;
   private _scale = 1;
@@ -234,13 +223,11 @@ class Node {
     this._h = v;
   }
 
-  // TODO: Type number[] better
-  get color(): number[] {
+  get color(): RGBA {
     return this._color;
   }
 
-  // TODO: Type number[] better
-  set color(v: number | number[]) {
+  set color(v: number | RGBA) {
     if (typeof v === 'number') {
       v = 0xffffffff + v + 1;
       this._color = normalizeARGB(v);
@@ -275,6 +262,35 @@ class Node {
 
   get texture() {
     return this._texture;
+  }
+
+  /**
+   * Update children
+   * @param dt - Delta time
+   */
+  public update(dt: number): void {
+    for (const child of this.children) {
+      child.update(dt);
+    }
+  }
+
+  /**
+   * Render the node
+   */
+  public render(ctx: WebGLRenderingContext): void {
+    this._render(ctx);
+
+    for (const child of this.children) {
+      child.render(ctx);
+    }
+  }
+
+  /**
+   * Render the node
+   * @param ctx
+   */
+  protected _render(ctx: WebGLRenderingContext): void {
+    // render the node
   }
 }
 
