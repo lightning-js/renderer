@@ -1,6 +1,6 @@
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import { WebGlCoreShader } from '../WebGlCoreShader.js';
-import type { WebGlCoreTexture } from '../WebGlCoreTexture.js';
+import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 // import type { Texture } from '../textures/Texture';
 
@@ -61,7 +61,7 @@ export class DefaultShaderBatched extends WebGlCoreShader<
     });
   }
 
-  bindTextures(texture: WebGlCoreTexture[]) {
+  bindTextures(texture: WebGlCoreCtxTexture[]) {
     const { renderer, gl } = this;
     if (
       texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
@@ -72,7 +72,7 @@ export class DefaultShaderBatched extends WebGlCoreShader<
     }
     texture.forEach((t, i) => {
       gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, t.texture);
+      gl.bindTexture(gl.TEXTURE_2D, t.ctxTexture);
     });
 
     const samplers = Array.from(Array(texture.length).keys());

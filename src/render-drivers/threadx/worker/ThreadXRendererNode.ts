@@ -5,27 +5,25 @@ import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import type { Stage } from '../../../core/stage.js';
 import { mat4, vec3 } from '../../../core/lib/glm/index.js';
 import { assertTruthy } from '../../../utils.js';
-import type { CoreTexture } from '../../../core/renderers/CoreTexture.js';
 import { commonRenderNode } from '../../common/RenderNodeCommon.js';
 import type { CoreRenderer } from '../../../core/renderers/CoreRenderer.js';
 import type { IAnimationController } from '../../../core/IAnimationController.js';
 import type { INodeAnimatableProps } from '../../../core/INode.js';
 import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
+import type { Texture } from '../../../core/textures/Texture.js';
+import { ImageTexture } from '../../../core/textures/ImageTexture.js';
 
 export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   private _localMatrix = mat4.create();
   private _worldMatrix = mat4.create();
 
-  texture: CoreTexture | null;
+  texture: Texture | null = null;
 
   private animationControllers = new Map<number, IAnimationController>();
 
   constructor(private stage: Stage, sharedNodeStruct: NodeStruct) {
     super(sharedNodeStruct);
-    this.texture = this.stage
-      .getRenderer()
-      .textureManager.getWhitePixelTexture();
     this.onPropertyChange('parentId', this.parentId, undefined);
     this.onPropertyChange('src', this.src, undefined);
     this.updateTranslate();
@@ -86,7 +84,7 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
       this.updateTranslate();
       return;
     } else if (propName === 'src') {
-      if (value !== oldValue) {
+      if (value !== (oldValue || '')) {
         this.loadImage(value as string).catch(console.error);
       }
       return;
@@ -135,11 +133,9 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
   }
 
   private async loadImage(imageUrl: string): Promise<void> {
-    const txManager = this.stage.getRenderer().textureManager;
-    this.texture =
-      (await txManager.getImageTexture(imageUrl)) ||
-      txManager.getWhitePixelTexture();
-    this.emit('imageLoaded', { src: imageUrl });
+    this.texture = new ImageTexture({
+      src: imageUrl,
+    });
   }
 
   update(delta: number): void {

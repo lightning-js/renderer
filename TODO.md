@@ -32,7 +32,29 @@
 
 # Bugs
 
-- [ ] Fix issue where if the same image URL is used immediately twice the image doesn't appear
+- [x] Fix issue where if the same image URL is used immediately twice the image doesn't appear
+
+# Textures
+
+- [x] Create texture abstraction at two levels:
+  - A `Texture` abstract base that contains a method for loading arbitrary pixel
+    data (in the form of ImageBitmap to start).
+    - This base and its concrete implementations are coupled only to pure Web
+      APIs fetching, and loading image data. Not to any specific canvas context.
+  - A `CoreContextTexture` abstract base whose concrete implementations wrap
+    context native texture data.
+    - The concrete implementations of this base are coupled to a specific
+      canvas context (i.e. WebGL, Canvas2D or WebGPU)
+    - This class is constrcted with a `Texture` which is used to load itself
+      when needed.
+- [x] Texture Manager: When `Texture` instances are garbage collected, their
+      corresponding `CoreContextTextures` are garbage collected
+- [ ] Texture Manager: Garbage Collection
+  - Implement system that keeps track of `CoreContextTexture` usage and allows
+    for unused textures to be garbage collected when a memory threshold is hit
+- [ ] Texture: Allow textures to be marked as "permanent" so that they are never
+      garbage collected.
+- [ ] Resolve "GL_INVALID_OPERATION: The texture is a non-power-of-two texture." warning
 
 # Tech Debt
 

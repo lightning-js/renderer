@@ -7,12 +7,13 @@ import type { IRenderableNode } from '../../core/IRenderableNode.js';
 import { mat4, vec3 } from '../../core/lib/glm/index.js';
 import type { Stage } from '../../core/stage.js';
 import { assertTruthy } from '../../utils.js';
-import type { CoreTexture } from '../../core/renderers/CoreTexture.js';
 import type { CoreRenderer } from '../../core/renderers/CoreRenderer.js';
 import { commonRenderNode } from '../common/RenderNodeCommon.js';
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
+import type { Texture } from '../../core/textures/Texture.js';
+import { ImageTexture } from '../../core/textures/ImageTexture.js';
 
 let nextId = 1;
 
@@ -39,14 +40,10 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
       src: '',
     };
 
-    this.texture = this.stage
-      .getRenderer()
-      .textureManager.getWhitePixelTexture();
-
     this.updateTranslate();
   }
 
-  texture: CoreTexture | null;
+  texture: Texture | null = null;
 
   getTranslate(): vec3.Vec3 {
     return mat4.getTranslation(vec3.create(), this._worldMatrix);
@@ -160,10 +157,9 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
   }
 
   private async loadImage(imageUrl: string): Promise<void> {
-    const txManager = this.stage.getRenderer().textureManager;
-    this.texture =
-      (await txManager.getImageTexture(imageUrl)) ||
-      txManager.getWhitePixelTexture();
+    this.texture = new ImageTexture({
+      src: imageUrl,
+    });
     this.emit('imageLoaded', { src: imageUrl });
   }
 

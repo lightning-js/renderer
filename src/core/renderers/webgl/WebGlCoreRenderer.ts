@@ -4,7 +4,7 @@ import { WebGlCoreTextureManager } from './WebGlCoreTextureManager.js';
 import { DefaultShader } from './shaders/DefaultShader.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import type { CoreTexture } from '../CoreTexture.js';
+import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
   type CoreWebGlParameters,
@@ -13,9 +13,11 @@ import {
   getWebGlExtensions,
 } from './internal/RendererUtils.js';
 import { normalizeARGB } from '../../utils.js';
-import { WebGlCoreTexture } from './WebGlCoreTexture.js';
+import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { CoreShader } from '../CoreShader.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
+import { Texture } from '../../textures/Texture.js';
+import { ColorTexture } from '../../textures/ColorTexture.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -56,6 +58,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultShader: WebGlCoreShader;
   quadWebGlBuffer: WebGLBuffer;
 
+  /**
+   * White pixel texture used by default when no texture is specified.
+   */
+  defaultTexture: Texture = new ColorTexture();
+
   constructor(options: WebGlCoreRendererOptions) {
     super();
     const { canvas, clearColor, bufferMemory } = options;
@@ -91,19 +98,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 
-  addQuad(
+  override addQuad(
     x: number,
     y: number,
     w: number,
     h: number,
     color: number,
-    texture: CoreTexture | null,
+    texture: Texture | null,
   ) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    assertTruthy(
-      texture instanceof WebGlCoreTexture || texture === null,
-      'Invalid texture type',
-    );
+    texture = texture ?? this.defaultTexture;
+    assertTruthy(texture instanceof Texture, 'Invalid texture type');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
 
@@ -120,15 +125,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       assertTruthy(curRenderOp);
     }
 
-    let textureIdx = 0xffffffff;
-
-    if (texture) {
-      textureIdx = this.addTexture(texture, bufferIdx);
-      curRenderOp = this.curRenderOp;
-      assertTruthy(curRenderOp);
-    }
-
-    // color = 0xffff0000;
+    const ctxTexture = this.textureManager.getCtxTexture(texture);
+    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    curRenderOp = this.curRenderOp;
+    assertTruthy(curRenderOp);
 
     // Upper-Left
     fQuadBuffer[bufferIdx++] = x; // vertexX
@@ -200,7 +200,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @returns Assigned Texture Index of the texture in the render op
    */
   private addTexture(
-    texture: WebGlCoreTexture,
+    texture: WebGlCoreCtxTexture,
     bufferIdx: number,
     recursive?: boolean,
   ): number {
@@ -225,7 +225,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    *
    * @param surface
    */
-  render(surface: 'screen' | CoreTexture = 'screen'): void {
+  render(surface: 'screen' | CoreContextTexture = 'screen'): void {
     const { gl, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
