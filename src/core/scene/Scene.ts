@@ -98,12 +98,4 @@ export class Scene {
   public update(delta: number) {
     this.root.update(delta);
   }
-
-  /**
-   * Render the scene
-   * @param ctx
-   */
-  public render(ctx: WebGLRenderingContext | WebGL2RenderingContext) {
-    this.root.render(ctx);
-  }
 }

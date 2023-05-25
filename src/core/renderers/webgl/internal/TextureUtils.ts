@@ -1,18 +1,6 @@
-import { uploadTextureData } from '../../platform.js';
-
-export interface TextureOptions {
-  format: number;
-  type: number;
-}
-
-export interface UInt8ArrayTextureOptions extends TextureOptions {
-  w: number;
-  h: number;
-}
-
 export function createImageTexture(
   gl: WebGLRenderingContext,
-  image: Uint8Array,
+  image: Uint8Array | ImageBitmap,
   dimensions: { w: number; h: number },
 ): WebGLTexture | null {
   const options: UInt8ArrayTextureOptions = {
@@ -38,7 +26,6 @@ export function createImageTexture(
 
   return texture;
 }
-
 /**
  * Create 1x1 white pixel texture where rectangle can sample from
  * and keep tinting capabilities
@@ -51,3 +38,52 @@ export const createWhitePixelTexture = (gl: WebGLRenderingContext) => {
     h: 1,
   });
 };
+
+export interface TextureOptions {
+  format: number;
+  type: number;
+}
+
+export interface UInt8ArrayTextureOptions extends TextureOptions {
+  w: number;
+  h: number;
+}
+
+/**
+ * Upload image data to the currently bound WebGL texture
+ *
+ * @param gl
+ * @param source
+ * @param options
+ */
+export function uploadTextureData(
+  gl: WebGLRenderingContext,
+  source: ImageBitmap | Uint8Array,
+  options: TextureOptions & Partial<UInt8ArrayTextureOptions>,
+) {
+  if (source instanceof ImageBitmap) {
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      options.format,
+      options.format,
+      options.type,
+      source,
+    );
+  } else {
+    if (!options.w || !options.h) {
+      throw new Error('Texture width and height must be specified');
+    }
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      options.format,
+      options.w,
+      options.h,
+      0,
+      options.format,
+      options.type,
+      source,
+    );
+  }
+}

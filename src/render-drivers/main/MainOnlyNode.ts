@@ -1,11 +1,12 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { INodeWritableProps } from '../../core/INode.js';
 import type { IRenderableNode } from '../../core/IRenderableNode.js';
-import { createWhitePixelTexture } from '../../core/gpu/webgl/texture.js';
-import { getTexture } from '../../core/gpu/webgl/textureManager.js';
 import { mat4, vec3 } from '../../core/lib/glm/index.js';
 import type { Stage } from '../../core/stage.js';
 import { assertTruthy } from '../../utils.js';
+import type { CoreTexture } from '../../core/renderers/CoreTexture.js';
+import type { CoreRenderer } from '../../core/renderers/CoreRenderer.js';
+import { commonRenderNode } from '../common/RenderNodeCommon.js';
 
 let nextId = 1;
 
@@ -32,21 +33,14 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
       src: '',
     };
 
-    this.stage
-      .ready()
-      .then(() => {
-        const gl = this.stage.getGlContext();
-        assertTruthy(gl);
-        const texture = createWhitePixelTexture(gl);
-        assertTruthy(texture);
-        this.texture = texture;
-      })
-      .catch(console.error);
+    this.texture = this.stage
+      .getRenderer()
+      .textureManager.getWhitePixelTexture();
 
     this.updateTranslate();
   }
 
-  texture: WebGLTexture | null = null;
+  texture: CoreTexture | null;
 
   getTranslate(): vec3.Vec3 {
     return mat4.getTranslation(vec3.create(), this._worldMatrix);
@@ -152,20 +146,18 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
   }
 
   set src(imageUrl: string) {
+    if (this.props.src === imageUrl) {
+      return;
+    }
     this.props.src = imageUrl;
     this.loadImage(imageUrl).catch(console.error);
   }
 
   private async loadImage(imageUrl: string): Promise<void> {
-    getTexture({
-      type: 'image',
-      id: imageUrl,
-      src: imageUrl,
-    })
-      .then((texture: WebGLTexture | null) => {
-        this.texture = texture;
-      })
-      .catch(console.error);
+    const txManager = this.stage.getRenderer().textureManager;
+    this.texture =
+      (await txManager.getImageTexture(imageUrl)) ||
+      txManager.getWhitePixelTexture();
     this.emit('imageLoaded', { src: imageUrl });
   }
 
@@ -212,8 +204,8 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     // TODO: implement
   }
 
-  render(ctx: WebGLRenderingContext | WebGL2RenderingContext): void {
-    // TODO: implement
+  renderQuads(renderer: CoreRenderer): void {
+    commonRenderNode(this, renderer);
   }
 
   //#region EventEmitter
