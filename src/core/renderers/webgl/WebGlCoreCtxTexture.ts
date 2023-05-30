@@ -14,7 +14,7 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
  * loaded yet.
  */
 export class WebGlCoreCtxTexture extends CoreContextTexture {
-  private _ctxTexture: WebGLTexture | null;
+  private _ctxTexture: WebGLTexture | null = null;
   private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
   private _w = 0;
   private _h = 0;
