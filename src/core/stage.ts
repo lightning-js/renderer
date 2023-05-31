@@ -1,4 +1,3 @@
-import type { IRenderableNode } from './IRenderableNode.js';
 import { Scene } from './scene/Scene.js';
 
 import { startLoop, getTimeStamp } from './platform.js';
@@ -7,9 +6,12 @@ import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy } from '../utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { AnimationManager } from './animations/AnimationManager.js';
+import { CoreNode } from './CoreNode.js';
+import { CoreTextureManager } from './CoreTextureManager.js';
 
 let renderer: WebGlCoreRenderer | null = null;
 const animationManager: AnimationManager = new AnimationManager();
+let textureManager: CoreTextureManager | null = null;
 
 let scene: Scene | null = null;
 const bufferMemory = 2e6;
@@ -20,21 +22,7 @@ let lastFrameTime = 0;
 let currentFrameTime = 0;
 
 export interface StageOptions {
-  /**
-   * Factory method that the stage uses to create the Root Node
-   *
-   * @remarks
-   * This method is provided by the IRenderDriver implementation
-   *
-   * @privateRemarks
-   * This (or something like this) is required because the stage is responsible
-   * for creating the Root node, while all other nodes are created by the
-   * User App code.
-   *
-   * @param stage
-   * @returns
-   */
-  createRootNode: (stage: Stage) => IRenderableNode;
+  rootId: number;
   w?: number;
   h?: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -45,15 +33,21 @@ const stage = {
   /**
    * Stage constructor
    */
-  init({ canvas, clearColor, createRootNode }: Required<StageOptions>) {
+  init({ canvas, clearColor, rootId }: Required<StageOptions>) {
     renderer = new WebGlCoreRenderer({
+      stage,
       canvas,
       clearColor,
       bufferMemory,
     });
 
+    textureManager = new CoreTextureManager(renderer);
+
     // create root node
-    const rootNode = createRootNode(stage);
+    const rootNode = new CoreNode(stage, {
+      id: rootId,
+    });
+
     scene = new Scene(rootNode);
 
     // execute platform start loop
@@ -84,7 +78,7 @@ const stage = {
 
     // render(scene.root);
   },
-  addQuads(node: IRenderableNode) {
+  addQuads(node: CoreNode) {
     assertTruthy(renderer);
 
     node.renderQuads(renderer);
@@ -107,6 +101,9 @@ const stage = {
   },
   getAnimationManager() {
     return animationManager;
+  },
+  getTextureManager() {
+    return textureManager;
   },
 };
 

@@ -1,105 +1,82 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
-import type {
-  INodeAnimatableProps,
-  INodeWritableProps,
-} from '../../core/INode.js';
-import type { IRenderableNode } from '../../core/IRenderableNode.js';
-import { mat4, vec3 } from '../../core/lib/glm/index.js';
+import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
 import type { Stage } from '../../core/stage.js';
 import { assertTruthy } from '../../utils.js';
-import type { CoreRenderer } from '../../core/renderers/CoreRenderer.js';
-import { commonRenderNode } from '../common/RenderNodeCommon.js';
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
-import type { Texture } from '../../core/textures/Texture.js';
-import { ImageTexture } from '../../core/textures/ImageTexture.js';
+import { CoreNode } from '../../core/CoreNode.js';
+import type { TextureDesc } from '../../main-api/RendererMain.js';
 
 let nextId = 1;
 
-export class MainOnlyNode implements IRenderableNode, IEventEmitter {
-  private _localMatrix = mat4.create();
-  private _worldMatrix = mat4.create();
-  readonly typeId;
+export class MainOnlyNode implements IEventEmitter, INode {
   readonly id;
-  private props: INodeWritableProps;
+  private coreNode: CoreNode;
 
-  constructor(private stage: Stage) {
-    this.typeId = 0; // Irrelevant for main-only nodes
+  // Prop stores
+  protected _children: MainOnlyNode[] = [];
+  protected _src = '';
+  protected _text = '';
+  protected _parent: MainOnlyNode | null = null;
+  protected _texture: TextureDesc | null = null;
+
+  constructor(private stage: Stage, coreNode?: CoreNode) {
     this.id = nextId++;
-    this.props = {
-      x: 0,
-      y: 0,
-      w: 0,
-      h: 0,
-      alpha: 1,
-      color: 0,
-      parent: null,
-      zIndex: 0,
-      text: '',
-      src: '',
-    };
-
-    this.updateTranslate();
-  }
-
-  texture: Texture | null = null;
-
-  getTranslate(): vec3.Vec3 {
-    return mat4.getTranslation(vec3.create(), this._worldMatrix);
+    this.coreNode =
+      coreNode ||
+      new CoreNode(this.stage, {
+        id: this.id,
+      });
   }
 
   get x(): number {
-    return this.props.x;
+    return this.coreNode.x;
   }
 
   set x(value: number) {
-    this.props.x = value;
-    this.updateTranslate();
+    this.coreNode.x = value;
   }
 
   get y(): number {
-    return this.props.y;
+    return this.coreNode.y;
   }
 
   set y(value: number) {
-    this.props.y = value;
-    this.updateTranslate();
+    this.coreNode.y = value;
   }
 
   get w(): number {
-    return this.props.w;
+    return this.coreNode.w;
   }
 
   set w(value: number) {
-    this.props.w = value;
+    this.coreNode.w = value;
   }
 
   get h(): number {
-    return this.props.h;
+    return this.coreNode.h;
   }
 
   set h(value: number) {
-    this.props.h = value;
+    this.coreNode.h = value;
   }
 
   get alpha(): number {
-    return this.props.alpha;
+    return this.coreNode.alpha;
   }
 
   set alpha(value: number) {
-    this.props.alpha = value;
+    this.coreNode.alpha = value;
   }
 
   get color(): number {
-    return this.props.color;
+    return this.coreNode.color;
   }
 
   set color(value: number) {
-    this.props.color = value;
+    this.coreNode.color = value;
   }
-
-  private _parent: MainOnlyNode | null = null;
 
   get parent(): MainOnlyNode | null {
     return this._parent;
@@ -108,6 +85,7 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
   set parent(newParent: MainOnlyNode | null) {
     const oldParent = this._parent;
     this._parent = newParent;
+    this.coreNode.parent = newParent?.coreNode ?? null;
     if (oldParent) {
       const index = oldParent.children.indexOf(this);
       assertTruthy(
@@ -119,76 +97,59 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     if (newParent) {
       newParent.children.push(this);
     }
-    this.updateTranslate();
   }
-
-  protected _children: MainOnlyNode[] = [];
 
   get children(): MainOnlyNode[] {
     return this._children;
   }
 
   get zIndex(): number {
-    return this.props.zIndex;
+    return this.coreNode.zIndex;
   }
 
   set zIndex(value: number) {
-    this.props.zIndex = value;
+    this.coreNode.zIndex = value;
   }
 
   get text(): string {
-    return this.props.text;
+    return this._text;
   }
 
   set text(value: string) {
-    this.props.text = value;
+    this._text = value;
   }
 
   get src(): string {
-    return this.props.src;
+    return this._src;
   }
 
   set src(imageUrl: string) {
-    if (this.props.src === imageUrl) {
+    if (this._src === imageUrl) {
       return;
     }
-    this.props.src = imageUrl;
+    this._src = imageUrl;
     this.loadImage(imageUrl).catch(console.error);
   }
 
+  get texture(): TextureDesc | null {
+    return this._texture;
+  }
+
+  set texture(texture: TextureDesc | null) {
+    this._texture = texture;
+    if (!texture) {
+      return;
+    }
+    // TODO: Check for texture type validity
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    this.coreNode.loadTexture(texture.txType, texture.props as any);
+  }
+
   private async loadImage(imageUrl: string): Promise<void> {
-    this.texture = new ImageTexture({
+    this.coreNode.loadTexture('ImageTexture', {
       src: imageUrl,
     });
     this.emit('imageLoaded', { src: imageUrl });
-  }
-
-  updateWorldMatrix(pwMatrix: any) {
-    if (pwMatrix) {
-      // if parent world matrix is provided
-      // we multiply times local matrix
-      mat4.multiply(this._worldMatrix, pwMatrix, this._localMatrix);
-    } else {
-      mat4.copy(this._worldMatrix, this._localMatrix);
-    }
-
-    const world = this._worldMatrix;
-
-    this.children.forEach((c) => {
-      const rendererNode = c;
-      rendererNode.updateWorldMatrix(world);
-    });
-  }
-
-  _onParentChange(parent: MainOnlyNode) {
-    this.updateWorldMatrix(parent._worldMatrix);
-  }
-
-  updateTranslate() {
-    mat4.fromTranslation(this._localMatrix, vec3.fromValues(this.x, this.y, 1));
-    if (this.parent) {
-      this.updateWorldMatrix(this.parent._worldMatrix);
-    }
   }
 
   destroy(): void {
@@ -206,7 +167,7 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     props: Partial<INodeAnimatableProps>,
     duration: number,
   ): IAnimationController {
-    const animation = new CoreAnimation(this, props, duration);
+    const animation = new CoreAnimation(this.coreNode, props, duration);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const controller = new CoreAnimationController(
       this.stage.getAnimationManager(),
@@ -214,14 +175,6 @@ export class MainOnlyNode implements IRenderableNode, IEventEmitter {
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return controller;
-  }
-
-  update(delta: number): void {
-    // TODO: implement
-  }
-
-  renderQuads(renderer: CoreRenderer): void {
-    commonRenderNode(this, renderer);
   }
 
   //#region EventEmitter

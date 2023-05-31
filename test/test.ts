@@ -60,6 +60,10 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     w: 210,
     h: screen.height,
     color: 0xff666666,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: 210,
+      h: 1,
+    }),
     parent: renderer.root,
   });
 
@@ -68,6 +72,10 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     y: 230,
     w: screen.width - 400,
     h: 50,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: screen.width - 400,
+      h: 50,
+    }),
     color: 0xffaabb66,
     parent: renderer.root,
   });

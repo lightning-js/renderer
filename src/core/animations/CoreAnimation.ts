@@ -1,16 +1,12 @@
-import type { INodeAnimatableProps } from '../INode.js';
-import type { IRenderableNode } from '../IRenderableNode.js';
-
-function lerp(start: number, end: number, t: number) {
-  return start * (1 - t) + end * t;
-}
+import type { CoreNode } from '../CoreNode.js';
+import type { INodeAnimatableProps } from '../../main-api/INode.js';
 
 export class CoreAnimation {
   private propStartValues: Partial<INodeAnimatableProps> = {};
   private progress = 0;
 
   constructor(
-    private node: IRenderableNode,
+    private node: CoreNode,
     private props: Partial<INodeAnimatableProps>,
     private duration: number,
   ) {

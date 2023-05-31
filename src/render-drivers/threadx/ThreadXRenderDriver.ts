@@ -1,5 +1,5 @@
 import { ThreadX, BufferStruct } from '@lightningjs/threadx';
-import type { INode, INodeWritableProps } from '../../core/INode.js';
+import type { INode, INodeWritableProps } from '../../main-api/INode.js';
 import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
@@ -72,6 +72,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
     const node = new ThreadXMainNode(bufferStruct);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
+    node.texture = props.texture || null;
     this.onCreateNode(node);
     return node;
   }

@@ -9,9 +9,7 @@ export class ColorTexture extends Texture {
 
   constructor(props?: ColorTextureProps) {
     super();
-    this.props = {
-      color: props?.color || 0xffffffff,
-    };
+    this.props = ColorTexture.resolveDefaults(props || {});
   }
 
   get color() {
@@ -29,4 +27,19 @@ export class ColorTexture extends Texture {
       premultiplyAlpha: 'none',
     });
   }
+
+  static override makeCacheKey(props: ColorTextureProps): string {
+    const resolvedProps = ColorTexture.resolveDefaults(props);
+    return `ColorTexture,${resolvedProps.color}`;
+  }
+
+  static override resolveDefaults(
+    props: ColorTextureProps,
+  ): Required<ColorTextureProps> {
+    return {
+      color: props.color || 0xffffffff,
+    };
+  }
+
+  static z$__type__Props: ColorTextureProps;
 }

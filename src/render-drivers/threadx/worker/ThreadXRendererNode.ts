@@ -1,38 +1,66 @@
 import type { NodeStruct, NodeStructWritableProps } from '../NodeStruct.js';
 import { SharedNode } from '../SharedNode.js';
 import { ThreadX } from '@lightningjs/threadx';
-import type { IRenderableNode } from '../../../core/IRenderableNode.js';
 import type { Stage } from '../../../core/stage.js';
-import { mat4, vec3 } from '../../../core/lib/glm/index.js';
 import { assertTruthy } from '../../../utils.js';
-import { commonRenderNode } from '../../common/RenderNodeCommon.js';
-import type { CoreRenderer } from '../../../core/renderers/CoreRenderer.js';
 import type { IAnimationController } from '../../../core/IAnimationController.js';
-import type { INodeAnimatableProps } from '../../../core/INode.js';
+import type { INodeAnimatableProps } from '../../../main-api/INode.js';
 import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
 import type { Texture } from '../../../core/textures/Texture.js';
-import { ImageTexture } from '../../../core/textures/ImageTexture.js';
+import { CoreNode } from '../../../core/CoreNode.js';
+import type { TextureDesc } from '../../../main-api/RendererMain.js';
 
-export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
-  private _localMatrix = mat4.create();
-  private _worldMatrix = mat4.create();
+export class ThreadXRendererNode extends SharedNode {
+  private coreNode: CoreNode;
 
+  protected _parent: ThreadXRendererNode | null = null;
+  protected _children: ThreadXRendererNode[] = [];
   texture: Texture | null = null;
 
   private animationControllers = new Map<number, IAnimationController>();
 
-  constructor(private stage: Stage, sharedNodeStruct: NodeStruct) {
+  constructor(
+    private stage: Stage,
+    sharedNodeStruct: NodeStruct,
+    coreNode?: CoreNode,
+  ) {
     super(sharedNodeStruct);
+    // This Proxy makes sure properties on the coreNode that an animation
+    // changes are also updated on the shared node.
+    // TODO: Improve this pattern because its ugly!!!
+    this.coreNode = new Proxy(
+      coreNode ||
+        new CoreNode(this.stage, {
+          id: sharedNodeStruct.id,
+        }),
+      {
+        set: (target, prop, value) => {
+          // Only set the numeric properties on the shared node.
+          if (prop !== 'parent' && prop !== 'texture' && prop !== 'shader') {
+            Reflect.set(this, prop, value);
+          }
+          return Reflect.set(target, prop, value);
+        },
+      },
+    );
     this.onPropertyChange('parentId', this.parentId, undefined);
     this.onPropertyChange('src', this.src, undefined);
-    this.updateTranslate();
+    this.onPropertyChange('x', this.x, undefined);
+    this.onPropertyChange('y', this.y, undefined);
+    this.onPropertyChange('w', this.w, undefined);
+    this.onPropertyChange('h', this.h, undefined);
+    this.onPropertyChange('alpha', this.alpha, undefined);
+    this.onPropertyChange('color', this.color, undefined);
+    this.onPropertyChange('zIndex', this.zIndex, undefined);
+    this.onPropertyChange('text', this.text, undefined);
+
     // TOOD: Make sure event listeners are removed when the node is destroyed.
     this.on(
       'createAnimation',
       (target: ThreadXRendererNode, { id, props, duration }) => {
         const animation = new CoreAnimation(
-          this,
+          this.coreNode,
           props as Partial<INodeAnimatableProps>,
           duration as number,
         );
@@ -59,13 +87,13 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
     this.on('pauseAnimation', (target: ThreadXRendererNode, { id }) => {
       this.animationControllers.get(id as number)?.pause();
     });
-  }
-
-  override animate(
-    props: Partial<INodeAnimatableProps>,
-    duration: number,
-  ): IAnimationController {
-    throw new Error('Method not implemented.');
+    this.on(
+      'loadTexture',
+      (target: ThreadXRendererNode, textureDesc: TextureDesc) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        this.coreNode.loadTexture(textureDesc.txType, textureDesc.props as any);
+      },
+    );
   }
 
   override onPropertyChange(
@@ -78,71 +106,55 @@ export class ThreadXRendererNode extends SharedNode implements IRenderableNode {
       assertTruthy(parent instanceof ThreadXRendererNode || parent === null);
       this.parent = parent;
       return;
-    } else if (propName === 'zIndex' || propName === 'text') {
-      return;
-    } else if (propName === 'x' || propName === 'y') {
-      this.updateTranslate();
-      return;
     } else if (propName === 'src') {
       if (value !== (oldValue || '')) {
         this.loadImage(value as string).catch(console.error);
       }
       return;
-    }
-    // switch (propName) {
-    //   case "src":
-    //     this._loadImage(value as string).catch(console.error);
-    //     break;
-    // }
-  }
-
-  getTranslate(): vec3.Vec3 {
-    return mat4.getTranslation(vec3.create(), this._worldMatrix);
-  }
-
-  override get children(): ThreadXRendererNode[] {
-    return super.children as ThreadXRendererNode[];
-  }
-
-  updateWorldMatrix(pwMatrix: any) {
-    if (pwMatrix) {
-      // if parent world matrix is provided
-      // we multiply times local matrix
-      mat4.multiply(this._worldMatrix, pwMatrix, this._localMatrix);
-    } else {
-      mat4.copy(this._worldMatrix, this._localMatrix);
-    }
-
-    const world = this._worldMatrix;
-
-    this.children.forEach((c) => {
-      const rendererNode = c;
-      rendererNode.updateWorldMatrix(world);
-    });
-  }
-
-  _onParentChange(parent: ThreadXRendererNode) {
-    this.updateWorldMatrix(parent._worldMatrix);
-  }
-
-  updateTranslate() {
-    mat4.fromTranslation(this._localMatrix, vec3.fromValues(this.x, this.y, 1));
-    if (this.parent) {
-      this.updateWorldMatrix((this.parent as ThreadXRendererNode)._worldMatrix);
+    } else if (
+      propName === 'x' ||
+      propName === 'y' ||
+      propName === 'w' ||
+      propName === 'h' ||
+      propName === 'alpha' ||
+      propName === 'color' ||
+      propName === 'zIndex'
+    ) {
+      this.coreNode[propName] = value as number;
     }
   }
+
+  //#region Parent/Child Props
+  get parent(): ThreadXRendererNode | null {
+    return this._parent;
+  }
+
+  set parent(newParent: ThreadXRendererNode | null) {
+    const oldParent = this._parent;
+    this._parent = newParent;
+    this.coreNode.parent = newParent?.coreNode ?? null;
+    this.parentId = newParent?.id ?? 0;
+    if (oldParent) {
+      const index = oldParent.children.indexOf(this);
+      assertTruthy(
+        index !== -1,
+        "ThreadXRendererNode.parent: Node not found in old parent's children!",
+      );
+      oldParent.children.splice(index, 1);
+    }
+    if (newParent) {
+      newParent.children.push(this);
+    }
+  }
+
+  get children(): ThreadXRendererNode[] {
+    return this._children;
+  }
+  //#endregion Parent/Child Props
 
   private async loadImage(imageUrl: string): Promise<void> {
-    this.texture = new ImageTexture({
+    this.coreNode.loadTexture('ImageTexture', {
       src: imageUrl,
     });
-  }
-
-  update(delta: number): void {
-    // TODO: implement
-  }
-
-  renderQuads(renderer: CoreRenderer): void {
-    commonRenderNode(this, renderer);
   }
 }

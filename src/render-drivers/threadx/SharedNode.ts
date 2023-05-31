@@ -1,13 +1,10 @@
 import type { NodeStruct, NodeStructWritableProps } from './NodeStruct.js';
 import { SharedObject } from '@lightningjs/threadx';
-import type { INode, INodeAnimatableProps } from '../../core/INode.js';
-import { assertTruthy } from '../../utils.js';
-import type { IAnimationController } from '../../core/IAnimationController.js';
 
-export class SharedNode
-  extends SharedObject<NodeStructWritableProps, NodeStruct>
-  implements INode
-{
+export class SharedNode extends SharedObject<
+  NodeStructWritableProps,
+  NodeStruct
+> {
   /**
    * Must have lock on sharedNode before calling constructor!
    *
@@ -26,47 +23,6 @@ export class SharedNode
       text: sharedNodeStruct.text,
       src: sharedNodeStruct.src,
     });
-  }
-
-  private _parent: SharedNode | null = null;
-
-  get parent(): SharedNode | null {
-    return this._parent;
-  }
-
-  set parent(newParent: SharedNode | null) {
-    const oldParent = this._parent;
-    this._parent = newParent;
-    this.parentId = newParent?.id ?? 0;
-    if (oldParent) {
-      const index = oldParent.children.indexOf(this);
-      assertTruthy(
-        index !== -1,
-        "SharedNode.parent: Node not found in old parent's children!",
-      );
-      oldParent.children.splice(index, 1);
-    }
-    if (newParent) {
-      newParent.children.push(this);
-    }
-  }
-
-  protected _children: SharedNode[] = [];
-
-  get children(): SharedNode[] {
-    return this._children;
-  }
-
-  protected override onDestroy(): void {
-    this.parent = null;
-    super.onDestroy();
-  }
-
-  animate(
-    props: Partial<INodeAnimatableProps>,
-    duration: number,
-  ): IAnimationController {
-    throw new Error('Method not implemented.');
   }
 
   // Declare getters and setters for all properties that are automatically

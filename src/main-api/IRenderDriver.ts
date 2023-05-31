@@ -1,5 +1,4 @@
-import type { INode, INodeWritableProps } from '../core/INode.js';
-
+import type { INode, INodeWritableProps } from './INode.js';
 export interface IRenderDriver {
   init(canvas: HTMLCanvasElement): Promise<void>;
   createNode(props?: Partial<INodeWritableProps>): INode;

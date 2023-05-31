@@ -1,9 +1,13 @@
+import type { Stage } from '../stage.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
-import type { CoreTextureManager } from './CoreTextureManager.js';
 
 export abstract class CoreRenderer {
-  abstract readonly textureManager: CoreTextureManager;
+  protected stage: Stage;
+
+  constructor(stage: Stage) {
+    this.stage = stage;
+  }
 
   abstract reset(): void;
   abstract render(surface: 'screen' | CoreContextTexture): void;
@@ -15,4 +19,5 @@ export abstract class CoreRenderer {
     color: number,
     texture: Texture | null,
   ): void;
+  abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
 }

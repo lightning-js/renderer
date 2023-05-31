@@ -1,7 +1,5 @@
 import { assertTruthy, createWebGLContext } from '../../../utils.js';
 import { CoreRenderer } from '../CoreRenderer.js';
-import { WebGlCoreTextureManager } from './WebGlCoreTextureManager.js';
-import { DefaultShader } from './shaders/DefaultShader.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
@@ -14,15 +12,16 @@ import {
 } from './internal/RendererUtils.js';
 import { normalizeARGB } from '../../utils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { CoreShader } from '../CoreShader.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { Texture } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
+import type { Stage } from '../../stage.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export interface WebGlCoreRendererOptions {
+  stage: Stage;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor: number;
   bufferMemory: number;
@@ -40,9 +39,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   // Options
   options: Required<WebGlCoreRendererOptions>;
-
-  // Managers
-  readonly textureManager: WebGlCoreTextureManager;
 
   // Persistent data
   quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
@@ -64,7 +60,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultTexture: Texture = new ColorTexture();
 
   constructor(options: WebGlCoreRendererOptions) {
-    super();
+    super(options.stage);
     const { canvas, clearColor, bufferMemory } = options;
     this.options = options;
     const gl = createWebGLContext(canvas);
@@ -76,8 +72,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const color = normalizeARGB(clearColor);
     gl.viewport(0, 0, 1920, 1080);
     gl.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
-
-    this.textureManager = new WebGlCoreTextureManager(gl);
 
     createIndexBuffer(gl, bufferMemory);
 
@@ -96,6 +90,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.curRenderOp = null;
     this.renderOps.length = 0;
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  }
+
+  override createCtxTexture(textureSource: Texture): CoreContextTexture {
+    return new WebGlCoreCtxTexture(this.gl, textureSource);
   }
 
   override addQuad(
@@ -125,7 +123,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       assertTruthy(curRenderOp);
     }
 
-    const ctxTexture = this.textureManager.getCtxTexture(texture);
+    const txManager = this.stage.getTextureManager();
+    assertTruthy(txManager);
+    const ctxTexture = txManager.getCtxTexture(texture);
+    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);

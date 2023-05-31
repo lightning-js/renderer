@@ -9,9 +9,7 @@ export class ImageTexture extends Texture {
 
   constructor(props: ImageTextureProps) {
     super();
-    this.props = {
-      src: props.src || '',
-    };
+    this.props = ImageTexture.resolveDefaults(props);
   }
 
   get src() {
@@ -35,4 +33,19 @@ export class ImageTexture extends Texture {
       imageOrientation: 'none',
     });
   }
+
+  static override makeCacheKey(props: ImageTextureProps): string {
+    const resolvedProps = ImageTexture.resolveDefaults(props);
+    return `ImageTexture,${resolvedProps.src}`;
+  }
+
+  static override resolveDefaults(
+    props: ImageTextureProps,
+  ): Required<ImageTextureProps> {
+    return {
+      src: props.src || '',
+    };
+  }
+
+  static z$__type__Props: ImageTextureProps;
 }

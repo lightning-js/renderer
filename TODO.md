@@ -13,6 +13,11 @@
       addition.
 - [x] Get batched rendering working again
 - [x] Move abstraction files to a better place
+- [x] Decouple the core rendering node implementation as a new `CoreNode` class
+  - `CoreNode` is a single implementation of a node in the "Core" of the
+    renderer. Previously we implemented this individually in `MainOnlyNode` and
+    `ThreadXRendererNode`. But that led to some limitations and duplication of
+    code.
 - [ ] Add support for `null` texture
   - `null` texture should just be interpreted as the white pixel texture
 - [ ] Create mechanism that transforms Scene Graph into a flat array of nodes
@@ -49,6 +54,9 @@
       when needed.
 - [x] Texture Manager: When `Texture` instances are garbage collected, their
       corresponding `CoreContextTextures` are garbage collected
+- [x] Texture Manager: Ability to register Texture types
+- [x] Texture Manager: Load textures based on Texture type name and properties
+- [x] INode: Allow textures to be specified by a descriptor type
 - [ ] Texture Manager: Garbage Collection
   - Implement system that keeps track of `CoreContextTexture` usage and allows
     for unused textures to be garbage collected when a memory threshold is hit
@@ -58,10 +66,12 @@
 
 # Tech Debt
 
+- [ ] Refactor: Replace the use of Proxy() in ThreadXRendererNode with something nicer.
 - [ ] Refactor: Extract EventEmitter code (found in MainOnlyNode / CoreAnimation) into its own mixin
       with unit tests [help wanted]
 - [ ] Tests: Frame-by-frame tests for Animations
 - [ ] Tests: Unit tests for animations
 - [ ] Look through TODO comments
+- [ ] Make "Stage" into a class
 
 - SharedObjects that don't share data??
