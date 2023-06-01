@@ -23,6 +23,23 @@ export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
   ? Props
   : never;
 
+/**
+ * Universal options for all texture types
+ */
+export interface TextureOptions {
+  /**
+   * Preload the texture immediately even if it's not being rendered to the
+   * screen.
+   *
+   * @remarks
+   * This allows the texture to be used immediately without any delay when it
+   * is first needed for rendering. Otherwise the loading process will start
+   * when the texture is first rendered, which may cause a delay in that texture
+   * being shown properly.
+   */
+  preload?: boolean;
+}
+
 export class CoreTextureManager {
   /**
    * Amount of used memory defined in pixels
@@ -52,18 +69,25 @@ export class CoreTextureManager {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
+    options?: TextureOptions,
   ): Texture {
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
+    let texture: Texture;
     const cacheKey = TextureClass.makeCacheKey(props as any);
     if (cacheKey && this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
+      texture = this.textureCache.get(cacheKey)!;
+    } else {
+      texture = new TextureClass(props as any);
+      if (cacheKey) {
+        this.textureCache.set(cacheKey, texture);
+      }
     }
-    const texture = new TextureClass(props as any);
-    if (cacheKey) {
-      this.textureCache.set(cacheKey, texture);
+    if (options?.preload) {
+      const ctxTx = this.getCtxTexture(texture);
+      ctxTx.load();
     }
     return texture;
   }

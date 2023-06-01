@@ -91,7 +91,11 @@ export class ThreadXRendererNode extends SharedNode {
       'loadTexture',
       (target: ThreadXRendererNode, textureDesc: TextureDesc) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        this.coreNode.loadTexture(textureDesc.txType, textureDesc.props as any);
+        this.coreNode.loadTexture(
+          textureDesc.txType,
+          textureDesc.props as any,
+          textureDesc.options,
+        );
       },
     );
   }

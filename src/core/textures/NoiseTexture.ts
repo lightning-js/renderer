@@ -1,8 +1,24 @@
 import { Texture, type TextureData } from './Texture.js';
 
 export interface NoiseTextureProps {
+  /**
+   * Width of texture
+   *
+   * @default 128
+   */
   w?: number;
+  /**
+   * Height of texture
+   *
+   * @default 128
+   */
   h?: number;
+  /**
+   * A number value that can be varied to force new textures to be generated
+   *
+   * @default 0
+   */
+  cacheId?: number;
 }
 
 export class NoiseTexture extends Texture {
@@ -31,7 +47,7 @@ export class NoiseTexture extends Texture {
 
   static override makeCacheKey(props: NoiseTextureProps): string {
     const resolvedProps = NoiseTexture.resolveDefaults(props);
-    return `NoiseTexture,${resolvedProps.w},${resolvedProps.h}`;
+    return `NoiseTexture,${resolvedProps.w},${resolvedProps.h},${resolvedProps.cacheId}`;
   }
 
   static override resolveDefaults(
@@ -40,6 +56,7 @@ export class NoiseTexture extends Texture {
     return {
       w: props.w ?? 128,
       h: props.h ?? 128,
+      cacheId: props.cacheId ?? 0,
     };
   }
 

@@ -75,3 +75,7 @@
 - [ ] Make "Stage" into a class
 
 - SharedObjects that don't share data??
+
+# Future
+
+- [ ] Layout Engine / Flex Box / Grid / ???

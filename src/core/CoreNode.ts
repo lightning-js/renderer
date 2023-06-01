@@ -1,5 +1,9 @@
 import { assertTruthy } from '../utils.js';
-import type { ExtractProps, TextureMap } from './CoreTextureManager.js';
+import type {
+  ExtractProps,
+  TextureMap,
+  TextureOptions,
+} from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './stage.js';
@@ -42,10 +46,11 @@ export class CoreNode {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
+    options?: TextureOptions,
   ): void {
-    this.props.texture = this.stage
-      .getTextureManager()!
-      .loadTexture(textureType, props);
+    const txManager = this.stage.getTextureManager();
+    assertTruthy(txManager);
+    this.props.texture = txManager.loadTexture(textureType, props, options);
   }
 
   update(delta: number): void {

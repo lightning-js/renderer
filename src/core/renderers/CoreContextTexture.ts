@@ -6,4 +6,6 @@ export abstract class CoreContextTexture {
   constructor(textureSource: Texture | null) {
     this.textureSource = textureSource;
   }
+
+  abstract load(): void;
 }
