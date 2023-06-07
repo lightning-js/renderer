@@ -1,6 +1,6 @@
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import { WebGlCoreShader } from '../WebGlCoreShader.js';
-import type { WebGlCoreTexture } from '../WebGlCoreTexture.js';
+import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 // import type { Texture } from '../textures/Texture';
 
@@ -53,10 +53,10 @@ export class DefaultShader extends WebGlCoreShader<
   }
 
   // TEMP: This is temporary until we have a proper texture abstraction
-  bindTexture(texture: WebGlCoreTexture) {
+  bindTexture(texture: WebGlCoreCtxTexture) {
     const { gl } = this;
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+    gl.bindTexture(gl.TEXTURE_2D, texture.ctxTexture);
   }
 
   // unbindTexture() {

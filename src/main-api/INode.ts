@@ -1,5 +1,7 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
-import type { IAnimationController } from './IAnimationController.js';
+import type { IAnimationController } from '../core/IAnimationController.js';
+import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
+import type { TextureDesc } from './RendererMain.js';
 
 export interface INodeWritableProps {
   x: number;
@@ -10,6 +12,7 @@ export interface INodeWritableProps {
   color: number;
   parent: INode | null;
   zIndex: number;
+  texture: TextureDesc | null;
   text: string;
   src: string;
 }
@@ -25,7 +28,6 @@ export interface INodeEvents {
 }
 
 export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
-  typeId: number; // TODO: Remove since this is ThreadX specific?
   id: number;
   readonly children: INode[];
 

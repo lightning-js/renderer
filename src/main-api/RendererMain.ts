@@ -1,6 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { INode, INodeWritableProps } from '../core/INode.js';
+import type {
+  ExtractProps,
+  TextureMap,
+  TextureOptions,
+} from '../core/CoreTextureManager.js';
+import type { INode, INodeWritableProps } from './INode.js';
 import type { IRenderDriver } from './IRenderDriver.js';
+
+export interface TextureDesc {
+  descType: 'texture';
+  txType: keyof TextureMap;
+  props: unknown;
+  options?: TextureOptions;
+}
 
 export interface RendererMainSettings {
   width?: number;
@@ -70,6 +82,19 @@ export class RendererMain {
 
   destroyNode(node: INode) {
     return this.driver.destroyNode(node);
+  }
+
+  makeTexture<Type extends keyof TextureMap>(
+    textureType: Type,
+    props: ExtractProps<TextureMap[Type]>,
+    options?: TextureOptions,
+  ): TextureDesc {
+    return {
+      descType: 'texture',
+      txType: textureType,
+      props,
+      options,
+    };
   }
 
   getNodeById(id: number): INode | null {

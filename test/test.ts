@@ -54,12 +54,16 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     parent: renderer.root,
   });
 
-  renderer.createNode({
+  const shaft = renderer.createNode({
     x: 395,
     y: 0,
     w: 210,
     h: screen.height,
-    color: 0xff666666,
+    color: 0xffffffff,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: 210,
+      h: screen.height,
+    }),
     parent: renderer.root,
   });
 
@@ -68,6 +72,10 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     y: 230,
     w: screen.width - 400,
     h: 50,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: screen.width - 400,
+      h: 50,
+    }),
     color: 0xffaabb66,
     parent: renderer.root,
   });
@@ -91,6 +99,20 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     color: 0xffffffff,
     parent: renderer.root,
   });
+
+  setInterval(() => {
+    shaft.texture = renderer.makeTexture(
+      'NoiseTexture',
+      {
+        w: 210,
+        h: screen.height,
+        cacheId: Math.floor(Math.random() * 100000),
+      },
+      {
+        preload: true,
+      },
+    );
+  }, 10);
 
   // setTimeout required for ThreadX right now because the emit() that sends
   // the animation to the renderer worker doesn't work until the Node is fully

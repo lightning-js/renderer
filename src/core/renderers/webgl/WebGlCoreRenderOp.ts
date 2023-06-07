@@ -2,7 +2,7 @@ import { CoreRenderOp } from '../CoreRenderOp.js';
 import { DefaultShader } from './shaders/DefaultShader.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import type { WebGlCoreTexture } from './WebGlCoreTexture.js';
+import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -13,7 +13,7 @@ const MAX_TEXTURES = 8; // TODO: get from gl
 export class WebGlCoreRenderOp extends CoreRenderOp {
   length = 0;
   numQuads = 0;
-  textures: WebGlCoreTexture[] = [];
+  textures: WebGlCoreCtxTexture[] = [];
   readonly maxTextures: number;
 
   constructor(
@@ -30,7 +30,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
       : 1;
   }
 
-  addTexture(texture: WebGlCoreTexture): number {
+  addTexture(texture: WebGlCoreCtxTexture): number {
     const { textures, maxTextures } = this;
     const existingIdx = textures.findIndex((t) => t === texture);
     if (existingIdx !== -1) {

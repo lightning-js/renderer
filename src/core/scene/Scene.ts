@@ -1,4 +1,4 @@
-import type { IRenderableNode } from '../IRenderableNode.js';
+import type { CoreNode } from '../CoreNode.js';
 
 export type NodeTypes = Node;
 
@@ -9,9 +9,9 @@ export class Scene {
    * @type {Node}
    * @memberof Scene
    */
-  public root: IRenderableNode;
+  public root: CoreNode;
 
-  constructor(root: IRenderableNode) {
+  constructor(root: CoreNode) {
     this.root = root;
   }
 
