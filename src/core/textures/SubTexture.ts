@@ -50,6 +50,7 @@ export class SubTexture extends Texture {
     this.parentTexture = this.txManager.loadTexture(
       props.texture.txType,
       props.texture.props,
+      props.texture.options,
     );
     this.props = SubTexture.resolveDefaults(props || {});
   }
