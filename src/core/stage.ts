@@ -11,7 +11,7 @@ import { CoreTextureManager } from './CoreTextureManager.js';
 
 let renderer: WebGlCoreRenderer | null = null;
 const animationManager: AnimationManager = new AnimationManager();
-let textureManager: CoreTextureManager | null = null;
+let txManager: CoreTextureManager | null = null;
 
 let scene: Scene | null = null;
 const bufferMemory = 2e6;
@@ -34,14 +34,18 @@ const stage = {
    * Stage constructor
    */
   init({ canvas, clearColor, rootId }: Required<StageOptions>) {
+    txManager = new CoreTextureManager();
+
     renderer = new WebGlCoreRenderer({
       stage,
       canvas,
       clearColor,
       bufferMemory,
+      txManager,
     });
 
-    textureManager = new CoreTextureManager(renderer);
+    // Must do this after renderer is created
+    txManager.renderer = renderer;
 
     // create root node
     const rootNode = new CoreNode(stage, {
@@ -103,7 +107,7 @@ const stage = {
     return animationManager;
   },
   getTextureManager() {
-    return textureManager;
+    return txManager;
   },
 };
 

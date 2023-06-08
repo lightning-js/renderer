@@ -1,9 +1,9 @@
 import type { Texture } from '../textures/Texture.js';
 
 export abstract class CoreContextTexture {
-  readonly textureSource: Texture | null = null;
+  readonly textureSource: Texture;
 
-  constructor(textureSource: Texture | null) {
+  constructor(textureSource: Texture) {
     this.textureSource = textureSource;
   }
 

@@ -7,11 +7,18 @@ import type {
 import type { INode, INodeWritableProps } from './INode.js';
 import type { IRenderDriver } from './IRenderDriver.js';
 
+/**
+ * A description of a Texture
+ *
+ * @remarks
+ * This structure should only be created by the RendererMain's `makeTexture`
+ * method. The structure is immutable and should not be modified once created.
+ */
 export interface TextureDesc {
-  descType: 'texture';
-  txType: keyof TextureMap;
-  props: unknown;
-  options?: TextureOptions;
+  readonly descType: 'texture';
+  readonly txType: keyof TextureMap;
+  readonly props: unknown;
+  readonly options?: Readonly<TextureOptions>;
 }
 
 export interface RendererMainSettings {
@@ -29,6 +36,7 @@ export class RendererMain {
     height: 600,
   };
   private nodes: Map<number, INode> = new Map();
+  private nextTextureId = 1;
 
   constructor(
     settings: RendererMainSettings,
@@ -93,7 +101,12 @@ export class RendererMain {
       descType: 'texture',
       txType: textureType,
       props,
-      options,
+      options: {
+        ...options,
+        // This ID is used to identify the texture in the CoreTextureManager's
+        // ID cache.
+        id: this.nextTextureId++,
+      },
     };
   }
 

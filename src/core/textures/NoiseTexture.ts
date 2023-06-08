@@ -1,3 +1,4 @@
+import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
 
 export interface NoiseTextureProps {
@@ -24,8 +25,8 @@ export interface NoiseTextureProps {
 export class NoiseTexture extends Texture {
   props: Required<NoiseTextureProps>;
 
-  constructor(props: NoiseTextureProps) {
-    super();
+  constructor(txManager: CoreTextureManager, props: NoiseTextureProps) {
+    super(txManager);
     this.props = NoiseTexture.resolveDefaults(props);
   }
 

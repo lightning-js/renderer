@@ -1,5 +1,6 @@
 import { assertTruthy } from '../../../utils.js';
 import type { Texture } from '../../textures/Texture.js';
+import type { Dimensions } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 
 /**
@@ -14,15 +15,12 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
  * loaded yet.
  */
 export class WebGlCoreCtxTexture extends CoreContextTexture {
-  private _ctxTexture: WebGLTexture | null = null;
+  protected _nativeCtxTexture: WebGLTexture | null = null;
   private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
   private _w = 0;
   private _h = 0;
 
-  constructor(
-    protected gl: WebGLRenderingContext,
-    textureSource: Texture | null,
-  ) {
+  constructor(protected gl: WebGLRenderingContext, textureSource: Texture) {
     super(textureSource);
   }
 
@@ -30,8 +28,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (this._state === 'freed') {
       this.load();
     }
-    assertTruthy(this._ctxTexture);
-    return this._ctxTexture;
+    assertTruthy(this._nativeCtxTexture);
+    return this._nativeCtxTexture;
   }
 
   get w() {
@@ -56,49 +54,72 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (this._state === 'loading' || this._state === 'loaded') {
       return;
     }
-    this._ctxTexture = this.createNativeCtxTexture();
     this._state = 'loading';
-    this.textureSource
-      ?.getTextureData()
-      .then((textureData) => {
-        const { gl } = this;
-        assertTruthy(this._ctxTexture);
-        // If textureData is null, the texture is empty (0, 0) and we don't need to
-        // upload any data to the GPU.
-        if (textureData) {
-          this._w = textureData.width;
-          this._h = textureData.height;
-          gl.bindTexture(gl.TEXTURE_2D, this._ctxTexture);
-
-          // multiply alpha channel in other color channels
-          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-
-          // linear texture filtering
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-          // texture wrapping method
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-          gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            textureData,
-          );
-          gl.generateMipmap(gl.TEXTURE_2D);
-        }
+    this.onLoadRequest()
+      .then(({ width, height }) => {
         this._state = 'loaded';
+        this._w = width;
+        this._h = height;
+        // Update the texture source's width and height so that it can be used
+        // for rendering.
+        this.textureSource.width = width;
+        this.textureSource.height = height;
       })
-      .catch((err: unknown) => {
+      .catch((err) => {
         this._state = 'failed';
         console.error(err);
       });
   }
 
+  /**
+   * Called when the texture data needs to be loaded and uploaded to a texture
+   */
+  async onLoadRequest(): Promise<Dimensions> {
+    this._nativeCtxTexture = this.createNativeCtxTexture();
+    const textureData = await this.textureSource?.getTextureData();
+    const { gl } = this;
+    let width = 0;
+    let height = 0;
+    assertTruthy(this._nativeCtxTexture);
+    // If textureData is null, the texture is empty (0, 0) and we don't need to
+    // upload any data to the GPU.
+    if (textureData instanceof ImageBitmap) {
+      width = textureData.width;
+      height = textureData.height;
+      gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
+
+      // multiply alpha channel in other color channels
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+
+      // linear texture filtering
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+      // texture wrapping method
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        textureData,
+      );
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+      console.error(
+        `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
+        textureData,
+      );
+    }
+
+    return {
+      width,
+      height,
+    };
+  }
   /**
    * Free the WebGLTexture from the GPU
    *
@@ -111,8 +132,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._state = 'freed';
     this._w = 0;
     this._h = 0;
-    this.gl.deleteTexture(this._ctxTexture);
-    this._ctxTexture = null;
+    if (!this._nativeCtxTexture) {
+      return;
+    }
+    this.gl.deleteTexture(this._nativeCtxTexture);
+    this._nativeCtxTexture = null;
   }
 
   private createNativeCtxTexture() {
