@@ -40,7 +40,6 @@ export interface SubTextureProps {
  *
  * @remarks
  * The source texture can be a Sprite Sheet/Texture Atlas.
- *
  */
 export class SubTexture extends Texture {
   props: Required<SubTextureProps>;
@@ -48,10 +47,9 @@ export class SubTexture extends Texture {
 
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     this.parentTexture = this.txManager.loadTexture(
       props.texture.txType,
-      props.texture.props as any,
+      props.texture.props,
     );
     this.props = SubTexture.resolveDefaults(props || {});
   }

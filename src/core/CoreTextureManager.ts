@@ -159,8 +159,10 @@ export class CoreTextureManager {
         options?.cacheKey ?? TextureClass.makeCacheKey(props as any);
       if (cacheKey && this.textureKeyCache.has(cacheKey)) {
         // console.log('Getting texture by cache key', cacheKey);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         texture = this.textureKeyCache.get(cacheKey)!;
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         texture = new TextureClass(this, props as any);
         if (cacheKey) {
           this.textureKeyCache.set(cacheKey, texture);
