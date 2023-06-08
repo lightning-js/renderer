@@ -14,10 +14,12 @@ import type { IRenderDriver } from './IRenderDriver.js';
  * This structure should only be created by the RendererMain's `makeTexture`
  * method. The structure is immutable and should not be modified once created.
  */
-export interface TextureDesc {
+export interface TextureDesc<
+  TxType extends keyof TextureMap = keyof TextureMap,
+> {
   readonly descType: 'texture';
-  readonly txType: keyof TextureMap;
-  readonly props: unknown;
+  readonly txType: TxType;
+  readonly props: ExtractProps<TextureMap[TxType]>;
   readonly options?: Readonly<TextureOptions>;
 }
 
@@ -94,9 +96,9 @@ export class RendererMain {
 
   makeTexture<Type extends keyof TextureMap>(
     textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
+    props: TextureDesc<Type>['props'],
     options?: TextureOptions,
-  ): TextureDesc {
+  ): TextureDesc<Type> {
     return {
       descType: 'texture',
       txType: textureType,
@@ -104,7 +106,7 @@ export class RendererMain {
       options: {
         ...options,
         // This ID is used to identify the texture in the CoreTextureManager's
-        // ID cache.
+        // ID Texture Map cache.
         id: this.nextTextureId++,
       },
     };

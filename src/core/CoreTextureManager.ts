@@ -27,6 +27,18 @@ export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
 
 /**
  * Universal options for all texture types
+ *
+ * @remarks
+ * Texture Options provide a way to specify options that are relevant to the
+ * texture loading process (including caching) and specifically for how a
+ * texture is rendered within a specific Node (or set of Nodes).
+ *
+ * They are not used in determining the cache key for a texture (except if
+ * the `cacheKey` option is provided explicitly to oveerride the default
+ * cache key for the texture instance) nor are they stored/referenced within
+ * the texture instance itself. Instead, the options are stored/referenced
+ * within individual Nodes. So a single texture instance can be used in
+ * multiple Nodes each using a different set of options.
  */
 export interface TextureOptions {
   /**
@@ -38,6 +50,8 @@ export interface TextureOptions {
    * is first needed for rendering. Otherwise the loading process will start
    * when the texture is first rendered, which may cause a delay in that texture
    * being shown properly.
+   *
+   * @defaultValue `false`
    */
   preload?: boolean;
 
@@ -50,6 +64,8 @@ export interface TextureOptions {
    * @privateRemarks
    * This is used to avoid having to look up the texture in the texture cache
    * by its cache key. Theoretically this should be faster.
+   *
+   * @defaultValue Automatically generated
    */
   id?: number;
 
@@ -63,8 +79,24 @@ export interface TextureOptions {
    *
    * If this is not set (undefined), it will be automatically generated via
    * the specified `Texture`'s `makeCacheKey()` method.
+   *
+   * @defaultValue Automatically generated via `Texture.makeCacheKey()`
    */
   cacheKey?: string | false;
+
+  /**
+   * Flip the texture horizontally when rendering
+   *
+   * @defaultValue `false`
+   */
+  flipX?: boolean;
+
+  /**
+   * Flip the texture vertically when rendering
+   *
+   * @defaultValue `false`
+   */
+  flipY?: boolean;
 }
 
 export class CoreTextureManager {
@@ -107,7 +139,7 @@ export class CoreTextureManager {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
-    options?: TextureOptions,
+    options: TextureOptions | null = null,
   ): Texture {
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {

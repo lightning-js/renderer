@@ -141,12 +141,7 @@ export class MainOnlyNode implements IEventEmitter, INode {
       return;
     }
     // TODO: Check for texture type validity
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    this.coreNode.loadTexture(
-      texture.txType,
-      texture.props as any,
-      texture.options,
-    );
+    this.coreNode.loadTexture(texture.txType, texture.props, texture.options);
   }
 
   private async loadImage(imageUrl: string): Promise<void> {

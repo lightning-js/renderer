@@ -269,7 +269,7 @@ import { Character } from './Character.js';
     src: spritemap,
   });
 
-  const frames: TextureDesc[] = Array.from(Array(32).keys()).map((i) => {
+  const frames = Array.from(Array(32).keys()).map((i) => {
     const x = (i % 8) * 120;
     const y = Math.floor(i / 8) * 120;
     console.log(x, y);
@@ -288,6 +288,7 @@ import { Character } from './Character.js';
   // When user presses spacebar, jump
   window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowLeft') {
+      character.setState('left', 'walk');
       character.node
         .animate(
           {
@@ -296,8 +297,8 @@ import { Character } from './Character.js';
           200,
         )
         .start();
-      character.setState('walk');
     } else if (e.code === 'ArrowRight') {
+      character.setState('right', 'walk');
       character.node
         .animate(
           {
@@ -306,9 +307,16 @@ import { Character } from './Character.js';
           200,
         )
         .start();
-      character.setState('walk');
     } else if (e.code === 'Space') {
-      character.setState('jump');
+      character.setState(character.direction, 'jump');
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft') {
+      character.setState('left', 'idle');
+    } else if (e.code === 'ArrowRight') {
+      character.setState('right', 'idle');
     }
   });
 

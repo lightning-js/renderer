@@ -97,11 +97,12 @@
 - [ ] Implement Texture Core Animations
   - Frame-by-frame animate over an array of `Texture`s. Animation handled in
     the Core. (Currently possible to do this manually via the Main thread)
-- [ ] SubTexture: Allow X/Y mirror flipping of the texture coordinates
+- [x] SubTexture: Allow X/Y mirror flipping of the texture coordinates
 - [x] Texture Manager: ID Cache Map
   - Add "ID" to `TextureDesc` and use it as a first level cache for a `Texture`
 - [x] SubTexture: Make cacheable
   - Via ID Cache Map
+- [ ] Texture Compression support
 
 # Tech Debt
 

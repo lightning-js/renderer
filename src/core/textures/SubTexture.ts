@@ -7,24 +7,28 @@ export interface SubTextureProps {
    * The texture that this sub-texture is a sub-region of.
    */
   texture: TextureDesc;
+
   /**
    * The x position of the sub-texture in the parent texture.
    *
    * @default 0
    */
   x?: number;
+
   /**
    * The y position of the sub-texture in the parent texture.
    *
    * @default 0
    **/
   y?: number;
+
   /**
    * The width of the sub-texture.
    *
    * @default 0
    */
   width?: number;
+
   /**
    * The height of the sub-texture.
    **/

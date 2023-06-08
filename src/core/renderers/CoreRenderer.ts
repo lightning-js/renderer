@@ -1,3 +1,4 @@
+import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../stage.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
@@ -18,6 +19,7 @@ export abstract class CoreRenderer {
     h: number,
     color: number,
     texture: Texture | null,
+    textureOptions: TextureOptions | null,
   ): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
 }

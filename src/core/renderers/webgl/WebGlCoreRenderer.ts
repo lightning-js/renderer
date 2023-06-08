@@ -18,7 +18,10 @@ import { ColorTexture } from '../../textures/ColorTexture.js';
 import type { Stage } from '../../stage.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
-import type { CoreTextureManager } from '../../CoreTextureManager.js';
+import type {
+  CoreTextureManager,
+  TextureOptions,
+} from '../../CoreTextureManager.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -115,6 +118,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     h: number,
     color: number,
     texture: Texture | null,
+    textureOptions: TextureOptions | null,
   ) {
     const { fQuadBuffer, uiQuadBuffer } = this;
     texture = texture ?? this.defaultTexture;
@@ -135,6 +139,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       assertTruthy(curRenderOp);
     }
 
+    const flipX = textureOptions?.flipX ?? false;
+    const flipY = textureOptions?.flipY ?? false;
+
     let texCoordX1 = 0;
     let texCoordY1 = 0;
     let texCoordX2 = 1;
@@ -145,10 +152,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
       const parentW = texture.parentTexture.width || 0;
       const parentH = texture.parentTexture.height || 0;
       texCoordX1 = tx / parentW;
-      texCoordY1 = ty / parentH;
       texCoordX2 = texCoordX1 + tw / parentW;
+      texCoordY1 = ty / parentH;
       texCoordY2 = texCoordY1 + th / parentH;
       texture = texture.parentTexture;
+    }
+
+    // Flip texture coordinates if dictated by texture options
+    if (flipX) {
+      [texCoordX1, texCoordX2] = [texCoordX2, texCoordX1];
+    }
+    if (flipY) {
+      [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
     const txManager = this.stage.getTextureManager();
