@@ -1,4 +1,3 @@
-import { assertTruthy } from '../../../utils.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
 import type { Dimensions } from '../../utils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';

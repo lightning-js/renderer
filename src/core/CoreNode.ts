@@ -56,6 +56,13 @@ export class CoreNode {
     this.props.textureOptions = options;
   }
 
+  unloadTexture(): void {
+    const txManager = this.stage.getTextureManager();
+    assertTruthy(txManager);
+    this.props.texture = null;
+    this.props.textureOptions = null;
+  }
+
   update(delta: number): void {
     // TODO: Implement
   }

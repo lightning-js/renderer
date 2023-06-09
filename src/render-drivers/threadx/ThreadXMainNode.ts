@@ -1,6 +1,6 @@
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
-import type { TextureDesc } from '../../main-api/RendererMain.js';
+import type { RendererMain, TextureDesc } from '../../main-api/RendererMain.js';
 import { assertTruthy } from '../../utils.js';
 import type { NodeStruct } from './NodeStruct.js';
 import { SharedNode } from './SharedNode.js';
@@ -11,6 +11,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
   protected _parent: ThreadXMainNode | null = null;
   protected _children: ThreadXMainNode[] = [];
   protected _texture: TextureDesc | null = null;
+  private _src = '';
 
   /**
    * FinalizationRegistry for animation controllers. When an animation
@@ -25,7 +26,10 @@ export class ThreadXMainNode extends SharedNode implements INode {
     this.emit('destroyAnimation', { id });
   });
 
-  constructor(sharedNodeStruct: NodeStruct) {
+  constructor(
+    private rendererMain: RendererMain,
+    sharedNodeStruct: NodeStruct,
+  ) {
     super(sharedNodeStruct);
   }
 
@@ -34,12 +38,15 @@ export class ThreadXMainNode extends SharedNode implements INode {
   }
 
   set texture(texture: TextureDesc | null) {
-    this._texture = texture;
-    if (!texture) {
+    if (this._texture === texture) {
       return;
     }
-    // TODO: Check for texture type validity
-    this.emit('loadTexture', texture as unknown as Record<string, unknown>);
+    this._texture = texture;
+    if (texture) {
+      this.emit('loadTexture', texture as unknown as Record<string, unknown>);
+    } else {
+      this.emit('unloadTexture', {});
+    }
   }
 
   animate(
@@ -51,6 +58,24 @@ export class ThreadXMainNode extends SharedNode implements INode {
     const controller = new ThreadXMainAnimationController(this, id);
     this.animationRegistry.register(controller, id);
     return controller;
+  }
+
+  get src(): string {
+    return this._src;
+  }
+
+  set src(imageUrl: string) {
+    if (this._src === imageUrl) {
+      return;
+    }
+    this._src = imageUrl;
+    if (!imageUrl) {
+      this.texture = null;
+      return;
+    }
+    this.texture = this.rendererMain.makeTexture('ImageTexture', {
+      src: imageUrl,
+    });
   }
 
   //#region Parent/Child Props

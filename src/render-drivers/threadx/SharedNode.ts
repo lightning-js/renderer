@@ -21,7 +21,6 @@ export class SharedNode extends SharedObject<
       parentId: sharedNodeStruct.parentId,
       zIndex: sharedNodeStruct.zIndex,
       text: sharedNodeStruct.text,
-      src: sharedNodeStruct.src,
     });
   }
 
@@ -36,5 +35,4 @@ export class SharedNode extends SharedObject<
   protected declare parentId: number;
   declare zIndex: number;
   declare text: string;
-  declare src: string;
 }

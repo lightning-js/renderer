@@ -45,7 +45,6 @@ export class ThreadXRendererNode extends SharedNode {
       },
     );
     this.onPropertyChange('parentId', this.parentId, undefined);
-    this.onPropertyChange('src', this.src, undefined);
     this.onPropertyChange('x', this.x, undefined);
     this.onPropertyChange('y', this.y, undefined);
     this.onPropertyChange('w', this.w, undefined);
@@ -98,6 +97,10 @@ export class ThreadXRendererNode extends SharedNode {
         );
       },
     );
+    this.on('unloadTexture', (target: ThreadXRendererNode) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      this.coreNode.unloadTexture();
+    });
   }
 
   override onPropertyChange(
@@ -109,11 +112,6 @@ export class ThreadXRendererNode extends SharedNode {
       const parent = ThreadX.instance.getSharedObjectById(value as number);
       assertTruthy(parent instanceof ThreadXRendererNode || parent === null);
       this.parent = parent;
-      return;
-    } else if (propName === 'src') {
-      if (value !== (oldValue || '')) {
-        this.loadImage(value as string).catch(console.error);
-      }
       return;
     } else if (
       propName === 'x' ||
@@ -155,10 +153,4 @@ export class ThreadXRendererNode extends SharedNode {
     return this._children;
   }
   //#endregion Parent/Child Props
-
-  private async loadImage(imageUrl: string): Promise<void> {
-    this.coreNode.loadTexture('ImageTexture', {
-      src: imageUrl,
-    });
-  }
 }

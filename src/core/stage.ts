@@ -27,14 +27,26 @@ export interface StageOptions {
   h?: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor?: number;
+  debug?: {
+    monitorTextureCache?: boolean;
+  };
 }
 
 const stage = {
   /**
    * Stage constructor
    */
-  init({ canvas, clearColor, rootId }: Required<StageOptions>) {
+  init({ canvas, clearColor, rootId, debug }: Required<StageOptions>) {
     txManager = new CoreTextureManager();
+
+    if (debug?.monitorTextureCache) {
+      setInterval(() => {
+        assertTruthy(txManager);
+        const debugInfo = txManager.getDebugInfo();
+        console.log('Texture ID Cache Size: ', debugInfo.idCacheSize);
+        console.log('Texture Key Cache Size: ', debugInfo.keyCacheSize);
+      }, 1000);
+    }
 
     renderer = new WebGlCoreRenderer({
       stage,

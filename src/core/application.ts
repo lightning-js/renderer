@@ -16,6 +16,7 @@ export default (options: StageOptions): Application => {
     w: options.w ?? 1920,
     h: options.h ?? 1080,
     clearColor: options.clearColor ?? 0xff3677e0,
+    debug: options.debug ?? {},
   };
 
   stage.init(resolvedOptions);

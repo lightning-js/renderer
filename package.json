@@ -20,7 +20,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "dev": "concurrently -c \"auto\" \"npm:watch\" \"npm:vite\"",
-    "vite": "vite --open \"/test/index.html\"",
+    "vite": "vite --open \"/test/index.html\" --host",
     "prepare": "husky install"
   },
   "repository": {
