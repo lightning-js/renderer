@@ -3,6 +3,7 @@ import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
+import { SubTexture } from './textures/SubTexture.js';
 import type { Texture } from './textures/Texture.js';
 
 /**
@@ -17,6 +18,7 @@ export interface TextureMap {
   ColorTexture: typeof ColorTexture;
   ImageTexture: typeof ImageTexture;
   NoiseTexture: typeof NoiseTexture;
+  SubTexture: typeof SubTexture;
 }
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
@@ -25,6 +27,18 @@ export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
 
 /**
  * Universal options for all texture types
+ *
+ * @remarks
+ * Texture Options provide a way to specify options that are relevant to the
+ * texture loading process (including caching) and specifically for how a
+ * texture is rendered within a specific Node (or set of Nodes).
+ *
+ * They are not used in determining the cache key for a texture (except if
+ * the `cacheKey` option is provided explicitly to oveerride the default
+ * cache key for the texture instance) nor are they stored/referenced within
+ * the texture instance itself. Instead, the options are stored/referenced
+ * within individual Nodes. So a single texture instance can be used in
+ * multiple Nodes each using a different set of options.
  */
 export interface TextureOptions {
   /**
@@ -36,8 +50,53 @@ export interface TextureOptions {
    * is first needed for rendering. Otherwise the loading process will start
    * when the texture is first rendered, which may cause a delay in that texture
    * being shown properly.
+   *
+   * @defaultValue `false`
    */
   preload?: boolean;
+
+  /**
+   * ID to use for this texture.
+   *
+   * @remarks
+   * This is for internal use only as an optimization.
+   *
+   * @privateRemarks
+   * This is used to avoid having to look up the texture in the texture cache
+   * by its cache key. Theoretically this should be faster.
+   *
+   * @defaultValue Automatically generated
+   */
+  id?: number;
+
+  /**
+   * Cache key to use for this texture
+   *
+   * @remarks
+   * If this is set, the texture will be cached using this key. If a texture
+   * with the same key is already cached, it will be returned instead of
+   * creating a new texture.
+   *
+   * If this is not set (undefined), it will be automatically generated via
+   * the specified `Texture`'s `makeCacheKey()` method.
+   *
+   * @defaultValue Automatically generated via `Texture.makeCacheKey()`
+   */
+  cacheKey?: string | false;
+
+  /**
+   * Flip the texture horizontally when rendering
+   *
+   * @defaultValue `false`
+   */
+  flipX?: boolean;
+
+  /**
+   * Flip the texture vertically when rendering
+   *
+   * @defaultValue `false`
+   */
+  flipY?: boolean;
 }
 
 export class CoreTextureManager {
@@ -48,15 +107,26 @@ export class CoreTextureManager {
 
   txConstructors: Partial<TextureMap> = {};
 
-  textureCache: Map<string, Texture> = new Map();
+  textureKeyCache: Map<string, Texture> = new Map();
+  textureIdCache: Map<number, Texture> = new Map();
 
   ctxTextureCache: WeakMap<Texture, CoreContextTexture> = new WeakMap();
 
-  constructor(private renderer: CoreRenderer) {
+  /**
+   * Renderer that this texture manager is associated with
+   *
+   * @remarks
+   * This MUST be set before the texture manager is used. Otherwise errors
+   * will occur when using the texture manager.
+   */
+  renderer!: CoreRenderer;
+
+  constructor() {
     // Register default known texture types
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
+    this.registerTextureType('SubTexture', SubTexture);
   }
 
   registerTextureType<Type extends keyof TextureMap>(
@@ -69,21 +139,39 @@ export class CoreTextureManager {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
-    options?: TextureOptions,
+    options: TextureOptions | null = null,
   ): Texture {
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
-    let texture: Texture;
-    const cacheKey = TextureClass.makeCacheKey(props as any);
-    if (cacheKey && this.textureCache.has(cacheKey)) {
-      texture = this.textureCache.get(cacheKey)!;
-    } else {
-      texture = new TextureClass(props as any);
-      if (cacheKey) {
-        this.textureCache.set(cacheKey, texture);
+    let texture: Texture | undefined;
+    // If an ID is specified, try to get the texture from the ID cache first
+    if (options?.id !== undefined && this.textureIdCache.has(options.id)) {
+      // console.log('Getting texture by texture desc ID', options.id);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      texture = this.textureIdCache.get(options.id)!;
+    }
+    const notFoundInIdCache = texture === undefined;
+    // If the texture is not found in the ID cache, try to get it from the key cache
+    if (!texture) {
+      const cacheKey =
+        options?.cacheKey ?? TextureClass.makeCacheKey(props as any);
+      if (cacheKey && this.textureKeyCache.has(cacheKey)) {
+        // console.log('Getting texture by cache key', cacheKey);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        texture = this.textureKeyCache.get(cacheKey)!;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        texture = new TextureClass(this, props as any);
+        if (cacheKey) {
+          this.textureKeyCache.set(cacheKey, texture);
+        }
       }
+    }
+    // If the texture was not found in the ID cache, add it to the ID cache
+    if (notFoundInIdCache && options?.id !== undefined) {
+      this.textureIdCache.set(options.id, texture);
     }
     if (options?.preload) {
       const ctxTx = this.getCtxTexture(texture);

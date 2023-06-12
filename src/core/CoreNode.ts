@@ -20,6 +20,7 @@ export interface CoreNodeProps {
   parent?: CoreNode | null;
   zIndex?: number;
   texture?: Texture | null;
+  textureOptions?: TextureOptions | null;
   shader?: CoreShader | null;
 }
 
@@ -39,6 +40,7 @@ export class CoreNode {
       zIndex: props.zIndex ?? 0,
       parent: props.parent ?? null,
       texture: props.texture ?? null,
+      textureOptions: props.textureOptions ?? null,
       shader: props.shader ?? null,
     };
   }
@@ -46,11 +48,12 @@ export class CoreNode {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
-    options?: TextureOptions,
+    options: TextureOptions | null = null,
   ): void {
     const txManager = this.stage.getTextureManager();
     assertTruthy(txManager);
     this.props.texture = txManager.loadTexture(textureType, props, options);
+    this.props.textureOptions = options;
   }
 
   update(delta: number): void {
@@ -58,7 +61,7 @@ export class CoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { x, y, w, h, color, texture, parent } = this.props;
+    const { x, y, w, h, color, texture, parent, textureOptions } = this.props;
     renderer.addQuad(
       x + (parent?.x || 0),
       y + (parent?.y || 0),
@@ -66,6 +69,7 @@ export class CoreNode {
       h,
       color,
       texture,
+      textureOptions,
     );
   }
 

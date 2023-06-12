@@ -1,3 +1,4 @@
+import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture } from './Texture.js';
 
 export interface ColorTextureProps {
@@ -7,8 +8,8 @@ export interface ColorTextureProps {
 export class ColorTexture extends Texture {
   props: Required<ColorTextureProps>;
 
-  constructor(props?: ColorTextureProps) {
-    super();
+  constructor(txManager: CoreTextureManager, props?: ColorTextureProps) {
+    super(txManager);
     this.props = ColorTexture.resolveDefaults(props || {});
   }
 

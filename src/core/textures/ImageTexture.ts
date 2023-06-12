@@ -1,3 +1,4 @@
+import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
 
 export interface ImageTextureProps {
@@ -7,8 +8,8 @@ export interface ImageTextureProps {
 export class ImageTexture extends Texture {
   props: Required<ImageTextureProps>;
 
-  constructor(props: ImageTextureProps) {
-    super();
+  constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
+    super(txManager);
     this.props = ImageTexture.resolveDefaults(props);
   }
 

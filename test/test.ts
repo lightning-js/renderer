@@ -3,12 +3,15 @@ import {
   type INode,
   RendererMain,
   ThreadXRenderDriver,
+  type TextureDesc,
 } from '@lightningjs/renderer';
 import RendererWorker from '@lightningjs/renderer/workers/renderer?worker';
 import rocko from './rocko.png';
 import elevator from './elevator.png';
+import spritemap from './spritemap.png';
 
 import type { IAnimationController } from '../src/core/IAnimationController.js';
+import { Character } from './Character.js';
 
 (async () => {
   const threadXDriver = new ThreadXRenderDriver({
@@ -257,6 +260,69 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
       greenRect.parent = renderer.root;
     }
   }, 1000);
+
+  /*
+   * Begin: Sprite Map Demo
+   */
+
+  const spriteMapTexture = renderer.makeTexture('ImageTexture', {
+    src: spritemap,
+  });
+
+  const frames = Array.from(Array(32).keys()).map((i) => {
+    const x = (i % 8) * 120;
+    const y = Math.floor(i / 8) * 120;
+    console.log(x, y);
+    return renderer.makeTexture('SubTexture', {
+      texture: spriteMapTexture,
+      x,
+      y,
+      width: 120,
+      height: 120,
+    });
+  });
+
+  const character = new Character({ x: 1200, y: 118 }, renderer, frames);
+
+  // When user presses left or right arrow, move the character
+  // When user presses spacebar, jump
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft') {
+      character.setState('left', 'walk');
+      character.node
+        .animate(
+          {
+            x: character.node.x - 30,
+          },
+          200,
+        )
+        .start();
+    } else if (e.code === 'ArrowRight') {
+      character.setState('right', 'walk');
+      character.node
+        .animate(
+          {
+            x: character.node.x + 30,
+          },
+          200,
+        )
+        .start();
+    } else if (e.code === 'Space') {
+      character.setState(character.direction, 'jump');
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft') {
+      character.setState('left', 'idle');
+    } else if (e.code === 'ArrowRight') {
+      character.setState('right', 'idle');
+    }
+  });
+
+  /*
+   * End: Sprite Map Demo
+   */
 
   console.log('ready!');
 })().catch((err) => {

@@ -1,3 +1,17 @@
+/**
+ * Core Utility Functions
+ *
+ * @module
+ */
+
+/**
+ * Represents a width and height.
+ */
+export interface Dimensions {
+  width: number;
+  height: number;
+}
+
 export function normalizeARGB(argb: number): [number, number, number, number] {
   const r = ((argb / 65536) | 0) % 256;
   const g = ((argb / 256) | 0) % 256;

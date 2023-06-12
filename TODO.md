@@ -6,7 +6,7 @@
 - [x] Add cacheKey to CoreTexture for easier debugging
 - [ ] Finish decoupling WebGL from Core
   - [x] Move platform.ts / texture.ts / renderer.ts logic into abstraction
-- [ ] Port and remaining logic to the abstraction from the following files an
+- [x] Port and remaining logic to the abstraction from the following files an
       then delete them - renderer.ts - platform.ts - gpu/webgl/\*
 - [x] Move addQuad logic for rendering nodes into the nodes themselves.
 - [x] Improve the interface that decides whether the render op can handle a new
@@ -18,7 +18,7 @@
     renderer. Previously we implemented this individually in `MainOnlyNode` and
     `ThreadXRendererNode`. But that led to some limitations and duplication of
     code.
-- [ ] Add support for `null` texture
+- [x] Add support for `null` texture
   - `null` texture should just be interpreted as the white pixel texture
 - [ ] Create mechanism that transforms Scene Graph into a flat array of nodes
       ordered by their layering.
@@ -32,7 +32,7 @@
 - [x] Pause / Resume
 - [x] waitUntilStopped
 - [x] Animation state
-- [ ] Fix issue where you have to use a setTimeout() before starting animations with the ThreadX Driver
+- [x] Fix issue where you have to use a setTimeout() before starting animations with the ThreadX Driver
 - [ ] Repeat
 
 # Bugs
@@ -57,12 +57,52 @@
 - [x] Texture Manager: Ability to register Texture types
 - [x] Texture Manager: Load textures based on Texture type name and properties
 - [x] INode: Allow textures to be specified by a descriptor type
-- [ ] Texture Manager: Garbage Collection
+- [x] SubTextures
+- [ ] Texture Manager: Context Texture Garbage Collection
   - Implement system that keeps track of `CoreContextTexture` usage and allows
-    for unused textures to be garbage collected when a memory threshold is hit
+    for unused textures to be NATIVELY garbage collected when a memory threshold is hit.
+    Can iterate over the `Texture`s in the cache, retrieve the corresponding
+    `CoreContextTexture` and call `free()` on it. Done. We can also check if
+    the Texture is on screen and only free those in a Critical GC.
+  - **Critical GC**: Garbage collection that occurs when Texture memory usage
+    reaches above a Critical Threshold. It should free all native textures
+    immediately and offer the App the chance to modify the render tree before
+    attempting to render the next frame. This allows an App to tear down its
+    UI, hopefully free up a ton of texture memory and display an error message
+    that allows the user to start again from the home screen. This should
+    prevent Apps from crashing.
+- [ ] Texture Manager: Texture Source Garbage Collection
+  - Texture Source (`Texture` class) objects are cached in two `Map`s:
+    one by their Cache Key string and one by the ID of the `TextureDesc`. Since
+    these caches are keyed by strings/numbers, their coressponding `Texture`
+    instance is permanently bound to key in the Maps. In order to clean them up
+    we need to know when the `TextureDesc` object(s) that rely on these cache
+    entries are GC'd. We can use the `FinalizationRegistry` to find out when a
+    `TextureDesc` instance is GC'd and then using it's `id` delete the ID cache
+    entry and then finally the Cache Key cache entry when all the ID cache entries
+    that correspond to the Cache Key are removed.
+    There is allows us to keep a strict 1-to-1 relationship between a
+    `Texture` and it's corresponding `CoreContextTexture`! And that in turn is
+    a sort of automatic non-emergency garbage collection. When a `Texture` is
+    garbage collected that allows coresponding `CoreContextTexture` to be freed.
+    That in turn allows the native context texture to be freed.
+    - `CoreContextTexture` should ONLY be kept alive by a single `Texture` instance
+    - MAKE SURE to check if a `Texture` is referenced by a `SubTexture` before
+      before removing its Cache Key entry. If this is not done, it could lead
+      to multiple instances of a `Texture` existing for a single Cache Key
 - [ ] Texture: Allow textures to be marked as "permanent" so that they are never
       garbage collected.
 - [ ] Resolve "GL_INVALID_OPERATION: The texture is a non-power-of-two texture." warning
+- [ ] Ability for CtxTexture to communicate width/height to the Texture
+- [ ] Implement Texture Core Animations
+  - Frame-by-frame animate over an array of `Texture`s. Animation handled in
+    the Core. (Currently possible to do this manually via the Main thread)
+- [x] SubTexture: Allow X/Y mirror flipping of the texture coordinates
+- [x] Texture Manager: ID Cache Map
+  - Add "ID" to `TextureDesc` and use it as a first level cache for a `Texture`
+- [x] SubTexture: Make cacheable
+  - Via ID Cache Map
+- [ ] Texture Compression support
 
 # Tech Debt
 
