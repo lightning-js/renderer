@@ -15,7 +15,7 @@ import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { Texture } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
-import type { Stage } from '../../stage.js';
+import type { Stage, StageOptions } from '../../stage.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
 import type {
@@ -29,6 +29,7 @@ const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 export interface WebGlCoreRendererOptions {
   stage: Stage;
   canvas: HTMLCanvasElement | OffscreenCanvas;
+  pixelRatio: number;
   txManager: CoreTextureManager;
   clearColor: number;
   bufferMemory: number;
@@ -82,7 +83,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.gl = gl;
 
     const color = normalizeARGB(clearColor);
-    gl.viewport(0, 0, 1920, 1080);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
 
     createIndexBuffer(gl, bufferMemory);
@@ -222,6 +223,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   private newRenderOp(shader: WebGlCoreShader, bufferIdx: number) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.gl,
+      this.options,
       this.quadBuffer,
       this.quadWebGlBuffer,
       shader,

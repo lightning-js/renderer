@@ -4,6 +4,10 @@ import { NodeStruct } from '../NodeStruct.js';
 import { ThreadXRendererNode } from './ThreadXRendererNode.js';
 import stage from '../../../core/stage.js';
 import { assertTruthy } from '../../../utils.js';
+import {
+  isThreadXRendererMessage,
+  type ThreadXRendererMessage,
+} from '../ThreadXRendererMessage.js';
 
 let canvas: OffscreenCanvas | null = null;
 let app: Application | null = null;
@@ -23,17 +27,17 @@ const threadx = ThreadX.init({
     }
     return null;
   },
-  async onMessage(message) {
-    if (message.type === 'init') {
-      canvas = message.canvas as OffscreenCanvas;
+  async onMessage(message: ThreadXRendererMessage) {
+    if (isThreadXRendererMessage('init', message)) {
+      canvas = message.canvas;
       const nodeStruct = new NodeStruct();
       app = application({
         rootId: nodeStruct.id,
-        w: 1920,
-        h: 1080,
+        deviceLogicalPixelRatio: message.deviceLogicalPixelRatio,
+        devicePhysicalPixelRatio: message.devicePhysicalPixelRatio,
         canvas,
         debug: {
-          monitorTextureCache: true,
+          monitorTextureCache: false,
         },
       });
       // Share the root node that was created by the Stage with the main worker.
@@ -45,11 +49,11 @@ const threadx = ThreadX.init({
       // Return its ID so the main worker can retrieve it from the shared object
       // store.
       return rootNode.id;
-    } else if (message.type === 'releaseTexture') {
+    } else if (isThreadXRendererMessage('releaseTexture', message)) {
       assertTruthy(app);
       const txManager = app.stage.getTextureManager();
       assertTruthy(txManager);
-      txManager.removeTextureIdFromCache(message.textureDescId as number);
+      txManager.removeTextureIdFromCache(message.textureDescId);
     }
   },
   onObjectShared(object) {

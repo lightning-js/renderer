@@ -24,13 +24,16 @@ import type { IAnimationController } from '../../src/core/IAnimationController.j
 
   const mainDriver = new MainRenderDriver();
 
-  const screen = {
+  const appDimensions = {
     width: 1920,
     height: 1080,
   };
 
   const renderer = new RendererMain(
-    screen,
+    {
+      ...appDimensions,
+      deviceLogicalPixelRatio: 1,
+    },
     'app',
     // mainDriver,
     threadXDriver,
@@ -77,8 +80,8 @@ import type { IAnimationController } from '../../src/core/IAnimationController.j
   const environment = renderer.createNode({
     x: 0,
     y: 0,
-    w: screen.width,
-    h: screen.height,
+    w: appDimensions.width,
+    h: appDimensions.height,
     src: environmentImg,
     parent: renderer.root,
   });
@@ -146,7 +149,10 @@ import type { IAnimationController } from '../../src/core/IAnimationController.j
     await openTopDoors(1000);
     shadow.animate({ alpha: 1 }, 500).start();
     await shadow.animate({}, 2000).start().waitUntilStopped();
-    await robot.animate({ x: screen.width }, 5000).start().waitUntilStopped();
+    await robot
+      .animate({ x: appDimensions.width }, 5000)
+      .start()
+      .waitUntilStopped();
     await closeTopDoors(1000);
   }, 1000);
 

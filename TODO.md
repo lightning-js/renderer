@@ -20,9 +20,13 @@
     code.
 - [x] Add support for `null` texture
   - `null` texture should just be interpreted as the white pixel texture
+
+# Renderer Core
+
 - [ ] Create mechanism that transforms Scene Graph into a flat array of nodes
       ordered by their layering.
 - [ ] Implement RTT
+- [x] Implement resolution specification + precision
 
 # Animations
 
