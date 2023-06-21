@@ -28,7 +28,7 @@ import { Character } from './Character.js';
   const renderer = new RendererMain(
     {
       ...appDimensions,
-      deviceLogicalPixelRatio: 1,
+      deviceLogicalPixelRatio: 0.6666667,
       devicePhysicalPixelRatio: 1,
     },
     'app',
