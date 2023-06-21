@@ -79,7 +79,7 @@
     UI, hopefully free up a ton of texture memory and display an error message
     that allows the user to start again from the home screen. This should
     prevent Apps from crashing.
-- [ ] Texture Manager: Texture Source Garbage Collection
+- [x] Texture Manager: Texture Source Garbage Collection
   - Texture Source (`Texture` class) objects are cached in two `Map`s:
     one by their Cache Key string and one by the ID of the `TextureDesc`. Since
     these caches are keyed by strings/numbers, their coressponding `Texture`

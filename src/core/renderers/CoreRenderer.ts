@@ -1,5 +1,5 @@
 import type { TextureOptions } from '../CoreTextureManager.js';
-import type { Stage } from '../stage.js';
+import type { Stage } from '../Stage.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 

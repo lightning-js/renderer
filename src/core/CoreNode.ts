@@ -6,7 +6,7 @@ import type {
 } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
-import type { Stage } from './stage.js';
+import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 
 export interface CoreNodeProps {

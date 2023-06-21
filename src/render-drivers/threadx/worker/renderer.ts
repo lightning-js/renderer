@@ -1,7 +1,7 @@
 import { ThreadX, BufferStruct } from '@lightningjs/threadx';
 import { NodeStruct } from '../NodeStruct.js';
 import { ThreadXRendererNode } from './ThreadXRendererNode.js';
-import { Stage } from '../../../core/stage.js';
+import { Stage } from '../../../core/Stage.js';
 import { assertTruthy } from '../../../utils.js';
 import {
   isThreadXRendererMessage,

@@ -1,6 +1,6 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
-import type { Stage } from '../../core/stage.js';
+import type { Stage } from '../../core/Stage.js';
 import { assertTruthy } from '../../utils.js';
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';

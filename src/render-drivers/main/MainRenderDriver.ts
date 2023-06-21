@@ -2,7 +2,7 @@ import { assertTruthy } from '../../utils.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import type { INode, INodeWritableProps } from '../../main-api/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
-import { Stage } from '../../core/stage.js';
+import { Stage } from '../../core/Stage.js';
 import type {
   RendererMain,
   RendererMainSettings,
