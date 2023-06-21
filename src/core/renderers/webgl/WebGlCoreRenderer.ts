@@ -167,7 +167,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const txManager = this.stage.getTextureManager();
+    const { txManager } = this.stage;
     assertTruthy(txManager);
     const ctxTexture = txManager.getCtxTexture(texture);
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);

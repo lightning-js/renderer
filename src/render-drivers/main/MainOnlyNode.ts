@@ -175,7 +175,7 @@ export class MainOnlyNode implements IEventEmitter, INode {
     const animation = new CoreAnimation(this.coreNode, props, duration);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const controller = new CoreAnimationController(
-      this.stage.getAnimationManager(),
+      this.stage.animationManager,
       animation,
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return

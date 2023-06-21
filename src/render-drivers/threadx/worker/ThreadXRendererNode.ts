@@ -68,7 +68,7 @@ export class ThreadXRendererNode extends SharedNode {
         });
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const controller = new CoreAnimationController(
-          this.stage.getAnimationManager(),
+          this.stage.animationManager,
           animation,
         );
         this.animationControllers.set(id as number, controller);

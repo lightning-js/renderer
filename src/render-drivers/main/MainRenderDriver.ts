@@ -1,9 +1,8 @@
-import application, { type Application } from '../../core/application.js';
 import { assertTruthy } from '../../utils.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import type { INode, INodeWritableProps } from '../../main-api/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
-import stage from '../../core/stage.js';
+import { Stage } from '../../core/stage.js';
 import type {
   RendererMain,
   RendererMainSettings,
@@ -11,7 +10,7 @@ import type {
 
 export class MainRenderDriver implements IRenderDriver {
   private root: MainOnlyNode | null = null;
-  private app: Application | null = null;
+  private stage: Stage | null = null;
   private rendererMain: RendererMain | null = null;
 
   async init(
@@ -19,7 +18,7 @@ export class MainRenderDriver implements IRenderDriver {
     rendererSettings: Required<RendererMainSettings>,
     canvas: HTMLCanvasElement,
   ): Promise<void> {
-    this.app = application({
+    this.stage = new Stage({
       rootId: 1,
       deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
@@ -29,8 +28,12 @@ export class MainRenderDriver implements IRenderDriver {
       },
     });
     this.rendererMain = rendererMain;
-    assertTruthy(this.app.root);
-    const node = new MainOnlyNode(this.rendererMain, stage, this.app.root);
+    assertTruthy(this.stage.root);
+    const node = new MainOnlyNode(
+      this.rendererMain,
+      this.stage,
+      this.stage.root,
+    );
     this.root = node;
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.onCreateNode(node);
@@ -38,7 +41,8 @@ export class MainRenderDriver implements IRenderDriver {
 
   createNode(props: Partial<INodeWritableProps> = {}): INode {
     assertTruthy(this.rendererMain);
-    const node = new MainOnlyNode(this.rendererMain, stage);
+    assertTruthy(this.stage);
+    const node = new MainOnlyNode(this.rendererMain, this.stage);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     node.x = props.x || 0;
     node.y = props.y || 0;
@@ -63,7 +67,9 @@ export class MainRenderDriver implements IRenderDriver {
   }
 
   releaseTexture(id: number): void {
-    stage.getTextureManager()?.removeTextureIdFromCache(id);
+    const { stage } = this;
+    assertTruthy(stage);
+    stage.txManager.removeTextureIdFromCache(id);
   }
 
   getRootNode(): INode {

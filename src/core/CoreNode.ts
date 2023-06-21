@@ -50,15 +50,12 @@ export class CoreNode {
     props: ExtractProps<TextureMap[Type]>,
     options: TextureOptions | null = null,
   ): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
+    const { txManager } = this.stage;
     this.props.texture = txManager.loadTexture(textureType, props, options);
     this.props.textureOptions = options;
   }
 
   unloadTexture(): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
     this.props.texture = null;
     this.props.textureOptions = null;
   }
