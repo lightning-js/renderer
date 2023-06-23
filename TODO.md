@@ -38,6 +38,10 @@
 # Bugs
 
 - [x] Fix issue where if the same image URL is used immediately twice the image doesn't appear
+- [ ] ThreadX(WPE): Fix wait() exception on main worker !!!
+  - WPE produces a different error string than Chrome. So we don't handle the wait() operation properly.
+    - WPE: "Atomics.wait cannot be called from the current thread."
+    - Chrome: "Atomics.wait cannot be called in this context"
 
 # Textures
 
@@ -113,6 +117,10 @@
 - [ ] Tests: Unit tests for animations
 - [ ] Look through TODO comments
 - [ ] Make "Stage" into a class
+- [ ] Make "Application" into a class.
+
+  - Perhaps merge with Stage? The concept of an application doesn't really exist
+    in core.
 
 - SharedObjects that don't share data??
 

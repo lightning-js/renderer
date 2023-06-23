@@ -40,6 +40,13 @@ export class RendererMain {
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
+  private textureRegistry = new FinalizationRegistry(
+    (textureDescId: number) => {
+      console.log('release texture', textureDescId);
+      this.driver.releaseTexture(textureDescId);
+    },
+  );
+
   constructor(
     settings: RendererMainSettings,
     target: string | HTMLElement,
@@ -81,7 +88,7 @@ export class RendererMain {
   }
 
   async init(): Promise<void> {
-    await this.driver.init(this.canvas);
+    await this.driver.init(this, this.canvas);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     (this.root as INode) = this.driver.getRootNode();
   }
@@ -99,7 +106,8 @@ export class RendererMain {
     props: TextureDesc<Type>['props'],
     options?: TextureOptions,
   ): TextureDesc<Type> {
-    return {
+    const id = this.nextTextureId++;
+    const desc: TextureDesc<Type> = {
       descType: 'texture',
       txType: textureType,
       props,
@@ -107,9 +115,11 @@ export class RendererMain {
         ...options,
         // This ID is used to identify the texture in the CoreTextureManager's
         // ID Texture Map cache.
-        id: this.nextTextureId++,
+        id,
       },
     };
+    this.textureRegistry.register(desc, id);
+    return desc;
   }
 
   getNodeById(id: number): INode | null {

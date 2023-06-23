@@ -2,12 +2,8 @@ import { ThreadX, BufferStruct } from '@lightningjs/threadx';
 import application, { type Application } from '../../../core/application.js';
 import { NodeStruct } from '../NodeStruct.js';
 import { ThreadXRendererNode } from './ThreadXRendererNode.js';
-import stage, { type Stage } from '../../../core/stage.js';
-import type { CoreNode } from '../../../core/CoreNode.js';
+import stage from '../../../core/stage.js';
 import { assertTruthy } from '../../../utils.js';
-import { ImageTexture } from '../../../core/textures/ImageTexture.js';
-import { ColorTexture } from '../../../core/textures/ColorTexture.js';
-import { NoiseTexture } from '../../../core/textures/NoiseTexture.js';
 
 let canvas: OffscreenCanvas | null = null;
 let app: Application | null = null;
@@ -36,6 +32,9 @@ const threadx = ThreadX.init({
         w: 1920,
         h: 1080,
         canvas,
+        debug: {
+          monitorTextureCache: true,
+        },
       });
       // Share the root node that was created by the Stage with the main worker.
       const coreRootNode = app.root;
@@ -46,6 +45,11 @@ const threadx = ThreadX.init({
       // Return its ID so the main worker can retrieve it from the shared object
       // store.
       return rootNode.id;
+    } else if (message.type === 'releaseTexture') {
+      assertTruthy(app);
+      const txManager = app.stage.getTextureManager();
+      assertTruthy(txManager);
+      txManager.removeTextureIdFromCache(message.textureDescId as number);
     }
   },
   onObjectShared(object) {

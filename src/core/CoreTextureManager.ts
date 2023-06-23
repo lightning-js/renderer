@@ -1,3 +1,4 @@
+import { assertTruthy } from '../utils.js';
 import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
@@ -24,6 +25,15 @@ export interface TextureMap {
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
   ? Props
   : never;
+
+/**
+ * Contains information about the texture manager's internal state
+ * for debugging purposes.
+ */
+export interface TextureManagerDebugInfo {
+  keyCacheSize: number;
+  idCacheSize: number;
+}
 
 /**
  * Universal options for all texture types
@@ -111,6 +121,10 @@ export class CoreTextureManager {
   textureIdCache: Map<number, Texture> = new Map();
 
   ctxTextureCache: WeakMap<Texture, CoreContextTexture> = new WeakMap();
+  textureRefCountMap: WeakMap<
+    Texture,
+    { cacheKey: string | false; count: number }
+  > = new WeakMap();
 
   /**
    * Renderer that this texture manager is associated with
@@ -152,9 +166,13 @@ export class CoreTextureManager {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       texture = this.textureIdCache.get(options.id)!;
     }
-    const notFoundInIdCache = texture === undefined;
     // If the texture is not found in the ID cache, try to get it from the key cache
     if (!texture) {
+      const descId = options?.id;
+      assertTruthy(
+        descId,
+        'CoreTextureManager: ID must be specified in a texture descriptor',
+      );
       const cacheKey =
         options?.cacheKey ?? TextureClass.makeCacheKey(props as any);
       if (cacheKey && this.textureKeyCache.has(cacheKey)) {
@@ -164,20 +182,101 @@ export class CoreTextureManager {
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         texture = new TextureClass(this, props as any);
-        if (cacheKey) {
-          this.textureKeyCache.set(cacheKey, texture);
-        }
       }
-    }
-    // If the texture was not found in the ID cache, add it to the ID cache
-    if (notFoundInIdCache && options?.id !== undefined) {
-      this.textureIdCache.set(options.id, texture);
+      this.addTextureIdToCache(descId, cacheKey, texture);
     }
     if (options?.preload) {
       const ctxTx = this.getCtxTexture(texture);
       ctxTx.load();
     }
     return texture;
+  }
+
+  /**
+   * Add a `Texture` to the texture cache by its texture desc ID and cache key
+   *
+   * @remarks
+   * This is used internally by the `CoreTextureManager` to cache textures
+   * when they are created.
+   *
+   * It handles updating the texture ID cache, texture key cache, and texture
+   * reference count map.
+   *
+   * @param textureDescId
+   * @param cacheKey
+   * @param texture
+   */
+  private addTextureIdToCache(
+    textureDescId: number,
+    cacheKey: string | false,
+    texture: Texture,
+  ): void {
+    const { textureIdCache, textureRefCountMap } = this;
+    textureIdCache.set(textureDescId, texture);
+    if (textureRefCountMap.has(texture)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      textureRefCountMap.get(texture)!.count++;
+    } else {
+      textureRefCountMap.set(texture, { cacheKey, count: 1 });
+      if (cacheKey) {
+        this.textureKeyCache.set(cacheKey, texture);
+      }
+    }
+  }
+
+  /**
+   * Remove a `Texture` from the texture cache by its texture desc ID
+   *
+   * @remarks
+   * This is called externally by when we know that the `TextureDesc` has been
+   * garbage collected. This allows us to remove the `Texture` from the cache
+   * so that it can be garbage collected as well.
+   *
+   * @param textureDescId
+   */
+  removeTextureIdFromCache(textureDescId: number): void {
+    const { textureIdCache, textureRefCountMap } = this;
+    const texture = textureIdCache.get(textureDescId);
+    if (!texture) {
+      throw new Error(
+        `Texture ID ${textureDescId} is not in the texture ID cache`,
+      );
+    }
+    textureIdCache.delete(textureDescId);
+    if (textureRefCountMap.has(texture)) {
+      const refCountObj = textureRefCountMap.get(texture);
+      assertTruthy(refCountObj);
+      refCountObj.count--;
+      if (refCountObj.count === 0) {
+        textureRefCountMap.delete(texture);
+        // If the texture is not referenced anywhere else, remove it from the key cache
+        // as well.
+        // This should allow the `Texture` instance to be garbage collected.
+        if (refCountObj.cacheKey) {
+          this.textureKeyCache.delete(refCountObj.cacheKey);
+        }
+      }
+    }
+  }
+
+  /**
+   * Get an object containing debug information about the texture manager.
+   *
+   * @returns
+   */
+  getDebugInfo(): TextureManagerDebugInfo {
+    // const textureSet = new Set<Texture>();
+    // for (const texture of this.textureIdCache.values()) {
+    //   textureSet.add(texture);
+    // }
+    // for (const texture of this.textureKeyCache.values()) {
+    //   textureSet.add(texture);
+    // }
+    // TODO: Output number of bytes used by textures
+    return {
+      keyCacheSize: this.textureKeyCache.size,
+      idCacheSize: this.textureIdCache.size,
+    };
   }
 
   /**

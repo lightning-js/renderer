@@ -10,7 +10,6 @@ export interface NodeStructWritableProps {
   parentId: number;
   zIndex: number;
   text: string;
-  src: string;
 }
 
 export class NodeStruct
@@ -97,15 +96,6 @@ export class NodeStruct
   }
 
   set text(value: string) {
-    // Decorator will handle this
-  }
-
-  @structProp('string')
-  get src(): string {
-    return '';
-  }
-
-  set src(value: string) {
     // Decorator will handle this
   }
 }

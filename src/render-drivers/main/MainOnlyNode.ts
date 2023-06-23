@@ -6,7 +6,7 @@ import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
 import { CoreNode } from '../../core/CoreNode.js';
-import type { TextureDesc } from '../../main-api/RendererMain.js';
+import type { RendererMain, TextureDesc } from '../../main-api/RendererMain.js';
 
 let nextId = 1;
 
@@ -21,7 +21,11 @@ export class MainOnlyNode implements IEventEmitter, INode {
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureDesc | null = null;
 
-  constructor(private stage: Stage, coreNode?: CoreNode) {
+  constructor(
+    private rendererMain: RendererMain,
+    private stage: Stage,
+    coreNode?: CoreNode,
+  ) {
     this.id = nextId++;
     this.coreNode =
       coreNode ||
@@ -128,7 +132,13 @@ export class MainOnlyNode implements IEventEmitter, INode {
       return;
     }
     this._src = imageUrl;
-    this.loadImage(imageUrl).catch(console.error);
+    if (!imageUrl) {
+      this.texture = null;
+      return;
+    }
+    this.texture = this.rendererMain.makeTexture('ImageTexture', {
+      src: imageUrl,
+    });
   }
 
   get texture(): TextureDesc | null {
@@ -136,19 +146,15 @@ export class MainOnlyNode implements IEventEmitter, INode {
   }
 
   set texture(texture: TextureDesc | null) {
-    this._texture = texture;
-    if (!texture) {
+    if (this._texture === texture) {
       return;
     }
-    // TODO: Check for texture type validity
-    this.coreNode.loadTexture(texture.txType, texture.props, texture.options);
-  }
-
-  private async loadImage(imageUrl: string): Promise<void> {
-    this.coreNode.loadTexture('ImageTexture', {
-      src: imageUrl,
-    });
-    this.emit('imageLoaded', { src: imageUrl });
+    this._texture = texture;
+    if (texture) {
+      this.coreNode.loadTexture(texture.txType, texture.props, texture.options);
+    } else {
+      this.coreNode.unloadTexture();
+    }
   }
 
   destroy(): void {

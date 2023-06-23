@@ -272,7 +272,6 @@ import { Character } from './Character.js';
   const frames = Array.from(Array(32).keys()).map((i) => {
     const x = (i % 8) * 120;
     const y = Math.floor(i / 8) * 120;
-    console.log(x, y);
     return renderer.makeTexture('SubTexture', {
       texture: spriteMapTexture,
       x,

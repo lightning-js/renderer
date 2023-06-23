@@ -4,6 +4,7 @@ import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
 import { assertTruthy } from '../../utils.js';
+import type { RendererMain } from '../../main-api/RendererMain.js';
 
 export interface ThreadXRendererSettings {
   RendererWorker: new () => Worker;
@@ -12,6 +13,7 @@ export interface ThreadXRendererSettings {
 export class ThreadXRenderDriver implements IRenderDriver {
   private settings: ThreadXRendererSettings;
   private threadx: ThreadX;
+  private rendererMain: RendererMain | null = null;
   private root: INode | null = null;
 
   constructor(settings: ThreadXRendererSettings) {
@@ -19,12 +21,14 @@ export class ThreadXRenderDriver implements IRenderDriver {
     this.threadx = ThreadX.init({
       workerId: 1,
       workerName: 'main',
-      sharedObjectFactory(buffer) {
+      sharedObjectFactory: (buffer) => {
         const typeId = BufferStruct.extractTypeId(buffer);
         if (typeId === NodeStruct.typeId) {
           const nodeStruct = new NodeStruct(buffer);
+          const rendererMain = this.rendererMain;
+          assertTruthy(rendererMain);
           return nodeStruct.lock(() => {
-            return new ThreadXMainNode(nodeStruct);
+            return new ThreadXMainNode(rendererMain, nodeStruct);
           });
         }
         return null;
@@ -33,7 +37,11 @@ export class ThreadXRenderDriver implements IRenderDriver {
     this.threadx.registerWorker('renderer', new this.settings.RendererWorker());
   }
 
-  async init(canvas: HTMLCanvasElement): Promise<void> {
+  async init(
+    rendererMain: RendererMain,
+    canvas: HTMLCanvasElement,
+  ): Promise<void> {
+    this.rendererMain = rendererMain;
     const offscreenCanvas = canvas.transferControlToOffscreen();
     const rootNodeId = (await this.threadx.sendMessageAsync(
       'renderer',
@@ -60,6 +68,8 @@ export class ThreadXRenderDriver implements IRenderDriver {
   }
 
   createNode(props: Partial<INodeWritableProps> = {}): INode {
+    const rendererMain = this.rendererMain;
+    assertTruthy(rendererMain);
     const bufferStruct = new NodeStruct();
     bufferStruct.x = props.x || 0;
     bufferStruct.y = props.y || 0;
@@ -68,11 +78,11 @@ export class ThreadXRenderDriver implements IRenderDriver {
     bufferStruct.parentId = props.parent ? props.parent.id : 0;
     bufferStruct.color = props.color ?? 0xffffffff;
     bufferStruct.alpha = props.alpha ?? 1;
-    bufferStruct.src = props.src || '';
-    const node = new ThreadXMainNode(bufferStruct);
+    const node = new ThreadXMainNode(rendererMain, bufferStruct);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
     node.texture = props.texture || null;
+    node.src = props.src || '';
     this.onCreateNode(node);
     return node;
   }
@@ -80,6 +90,13 @@ export class ThreadXRenderDriver implements IRenderDriver {
   // TODO: Remove?
   destroyNode(node: INode): void {
     node.destroy();
+  }
+
+  releaseTexture(textureDescId: number): void {
+    this.threadx.sendMessage('renderer', {
+      type: 'releaseTexture',
+      textureDescId,
+    });
   }
 
   onCreateNode(node: INode): void {
