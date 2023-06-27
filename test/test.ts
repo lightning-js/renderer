@@ -20,13 +20,17 @@ import { Character } from './Character.js';
 
   const mainDriver = new MainRenderDriver();
 
-  const screen = {
+  const appDimensions = {
     width: 1920,
     height: 1080,
   };
 
   const renderer = new RendererMain(
-    screen,
+    {
+      ...appDimensions,
+      deviceLogicalPixelRatio: 0.6666667,
+      devicePhysicalPixelRatio: 1,
+    },
     'app',
     // mainDriver,
     threadXDriver,
@@ -61,11 +65,11 @@ import { Character } from './Character.js';
     x: 395,
     y: 0,
     w: 210,
-    h: screen.height,
+    h: appDimensions.height,
     color: 0xffffffff,
     texture: renderer.makeTexture('NoiseTexture', {
       w: 210,
-      h: screen.height,
+      h: appDimensions.height,
     }),
     parent: renderer.root,
   });
@@ -73,10 +77,10 @@ import { Character } from './Character.js';
   renderer.createNode({
     x: 395 + 210,
     y: 230,
-    w: screen.width - 400,
+    w: appDimensions.width - 400,
     h: 50,
     texture: renderer.makeTexture('NoiseTexture', {
-      w: screen.width - 400,
+      w: appDimensions.width - 400,
       h: 50,
     }),
     color: 0xffaabb66,
@@ -95,7 +99,7 @@ import { Character } from './Character.js';
 
   const rockoRect = renderer.createNode({
     x: -181,
-    y: screen.height - 218,
+    y: appDimensions.height - 218,
     w: 181,
     h: 218,
     src: rocko,
@@ -108,7 +112,7 @@ import { Character } from './Character.js';
       'NoiseTexture',
       {
         w: 210,
-        h: screen.height,
+        h: appDimensions.height,
         cacheId: Math.floor(Math.random() * 100000),
       },
       {
@@ -150,7 +154,7 @@ import { Character } from './Character.js';
       rockoAnimation = rockoRect
         .animate(
           {
-            x: screen.width,
+            x: appDimensions.width,
             // y: 100,
           },
           2616,
@@ -160,7 +164,7 @@ import { Character } from './Character.js';
 
       console.log('resetting rocko');
       rockoRect.x = -rockoRect.w;
-      rockoRect.y = screen.height - 218;
+      rockoRect.y = appDimensions.height - 218;
       rockoRect.flush();
     }
   }, 1000);

@@ -13,8 +13,8 @@ export default (options: StageOptions): Application => {
   const resolvedOptions: Required<StageOptions> = {
     rootId: options.rootId,
     canvas: options.canvas,
-    w: options.w ?? 1920,
-    h: options.h ?? 1080,
+    deviceLogicalPixelRatio: options.deviceLogicalPixelRatio,
+    devicePhysicalPixelRatio: options.devicePhysicalPixelRatio,
     clearColor: options.clearColor ?? 0xff3677e0,
     debug: options.debug ?? {},
   };

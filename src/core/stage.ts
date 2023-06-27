@@ -23,8 +23,8 @@ let currentFrameTime = 0;
 
 export interface StageOptions {
   rootId: number;
-  w?: number;
-  h?: number;
+  deviceLogicalPixelRatio: number;
+  devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor?: number;
   debug?: {
@@ -36,7 +36,8 @@ const stage = {
   /**
    * Stage constructor
    */
-  init({ canvas, clearColor, rootId, debug }: Required<StageOptions>) {
+  init(stageOptions: Required<StageOptions>) {
+    const { canvas, clearColor, rootId, debug } = stageOptions;
     txManager = new CoreTextureManager();
 
     if (debug?.monitorTextureCache) {
@@ -51,6 +52,9 @@ const stage = {
     renderer = new WebGlCoreRenderer({
       stage,
       canvas,
+      pixelRatio:
+        stageOptions.devicePhysicalPixelRatio *
+        stageOptions.deviceLogicalPixelRatio,
       clearColor,
       bufferMemory,
       txManager,

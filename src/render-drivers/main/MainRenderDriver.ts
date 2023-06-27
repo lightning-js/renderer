@@ -4,7 +4,10 @@ import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import type { INode, INodeWritableProps } from '../../main-api/INode.js';
 import { MainOnlyNode } from './MainOnlyNode.js';
 import stage from '../../core/stage.js';
-import type { RendererMain } from '../../main-api/RendererMain.js';
+import type {
+  RendererMain,
+  RendererMainSettings,
+} from '../../main-api/RendererMain.js';
 
 export class MainRenderDriver implements IRenderDriver {
   private root: MainOnlyNode | null = null;
@@ -13,15 +16,16 @@ export class MainRenderDriver implements IRenderDriver {
 
   async init(
     rendererMain: RendererMain,
+    rendererSettings: Required<RendererMainSettings>,
     canvas: HTMLCanvasElement,
   ): Promise<void> {
     this.app = application({
       rootId: 1,
-      w: 1920,
-      h: 1080,
+      deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
       canvas,
       debug: {
-        monitorTextureCache: true,
+        monitorTextureCache: false,
       },
     });
     this.rendererMain = rendererMain;

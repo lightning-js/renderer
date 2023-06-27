@@ -3,6 +3,7 @@ import { DefaultShader } from './shaders/DefaultShader.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -18,6 +19,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   constructor(
     protected gl: WebGLRenderingContext | WebGL2RenderingContext,
+    protected options: WebGlCoreRendererOptions,
     protected quadBuffer: ArrayBuffer,
     protected quadWebGlBuffer: WebGLBuffer,
     readonly shader: WebGlCoreShader,
@@ -63,6 +65,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
       this.shader.bindAttributeBuffer('a_textureIndex', this.quadWebGlBuffer);
     }
     this.shader.setUniform('u_resolution', gl.canvas.width, gl.canvas.height);
+    this.shader.setUniform('u_pixelRatio', this.options.pixelRatio);
 
     if (this.textures.length >= 1) {
       if (this.shader instanceof DefaultShader) {
