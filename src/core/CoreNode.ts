@@ -6,7 +6,7 @@ import type {
 } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
-import type { Stage } from './stage.js';
+import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 
 export interface CoreNodeProps {
@@ -50,15 +50,12 @@ export class CoreNode {
     props: ExtractProps<TextureMap[Type]>,
     options: TextureOptions | null = null,
   ): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
+    const { txManager } = this.stage;
     this.props.texture = txManager.loadTexture(textureType, props, options);
     this.props.textureOptions = options;
   }
 
   unloadTexture(): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
     this.props.texture = null;
     this.props.textureOptions = null;
   }

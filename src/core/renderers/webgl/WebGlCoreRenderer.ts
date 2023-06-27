@@ -15,7 +15,7 @@ import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { Texture } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
-import type { Stage, StageOptions } from '../../stage.js';
+import type { Stage, StageOptions } from '../../Stage.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
 import type {
@@ -167,7 +167,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const txManager = this.stage.getTextureManager();
+    const { txManager } = this.stage;
     assertTruthy(txManager);
     const ctxTexture = txManager.getCtxTexture(texture);
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);

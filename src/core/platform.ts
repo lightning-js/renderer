@@ -2,9 +2,9 @@
 //   TextureOptions,
 //   UInt8ArrayTextureOptions,
 // } from './gpu/webgl/texture.js';
-// import stage from './stage.js';
+// import stage from './Stage.js';
 
-import type { Stage } from './stage.js';
+import type { Stage } from './Stage.js';
 
 /**
  * Platform render loop initiator

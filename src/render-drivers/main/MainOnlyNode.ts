@@ -1,6 +1,6 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
-import type { Stage } from '../../core/stage.js';
+import type { Stage } from '../../core/Stage.js';
 import { assertTruthy } from '../../utils.js';
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
@@ -175,7 +175,7 @@ export class MainOnlyNode implements IEventEmitter, INode {
     const animation = new CoreAnimation(this.coreNode, props, duration);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const controller = new CoreAnimationController(
-      this.stage.getAnimationManager(),
+      this.stage.animationManager,
       animation,
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
