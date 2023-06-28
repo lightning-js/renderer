@@ -1,4 +1,6 @@
 import { CoreShader } from '../CoreShader.js';
+import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
 import {
   createProgram,
@@ -134,7 +136,7 @@ export abstract class WebGlCoreShader<
 
       // Bind buffer/attributes to VAO (WebGL2 only)
       if (isWebGl2(this.gl)) {
-        this._bindBufferAttributes(this.gl, location, buffer, attributeInfo);
+        this._bindBufferAttributes(location, buffer, attributeInfo);
       }
 
       this.attributeLocations[attributeInfo.name as Attributes] = location;
@@ -166,11 +168,11 @@ export abstract class WebGlCoreShader<
   }
 
   private _bindBufferAttributes(
-    gl: WebGLRenderingContext,
     location: number,
     buffer: WebGLBuffer,
     attribute: AttributeInfo,
   ) {
+    const gl = this.gl;
     gl.enableVertexAttribArray(location);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -185,6 +187,14 @@ export abstract class WebGlCoreShader<
     );
   }
 
+  bindRenderOp(renderOp: WebGlCoreRenderOp) {
+    this.bindBuffer(renderOp.quadWebGlBuffer);
+    if (renderOp.textures.length > 0) {
+      this.bindTextures(renderOp.textures);
+    }
+    this.bindUniforms(renderOp);
+  }
+
   setUniform<T extends keyof UniformTupleToMap<Uniforms>>(
     name: T,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,22 +206,25 @@ export abstract class WebGlCoreShader<
     this.gl[this.uniformTypes[name]](this.uniformLocations[name], ...args);
   }
 
-  bindAttributeBuffer(attributeName: Attributes, buffer?: WebGLBuffer) {
-    const resolvedBuffer = buffer || this.attributeBuffers[attributeName];
-    if (!resolvedBuffer) {
-      throw new Error();
-    }
-    // For WebGL 1 we need to bind the info for each attribute buffer before each draw
-    if (this.gl instanceof WebGLRenderingContext) {
+  bindBuffer(buffer: WebGLBuffer) {
+    for (const loc in this.attributeLocations) {
+      const resolvedBuffer = buffer || this.attributeBuffers[loc];
       this._bindBufferAttributes(
-        this.gl,
-        this.attributeLocations[attributeName],
+        this.attributeLocations[loc],
         resolvedBuffer,
-        this.attributeInfos[attributeName],
+        this.attributeInfos[loc],
       );
     }
-    // TODO: !!!
-    // this.gl.bindBuffer(this.gl.ARRAY_BUFFER, resolvedBuffer);
+  }
+
+  bindTextures(textures: WebGlCoreCtxTexture[]) {
+    //no defaults
+  }
+
+  bindUniforms(renderOp: WebGlCoreRenderOp) {
+    const { gl } = renderOp;
+    // @ts-expect-error to be fixed
+    this.setUniform('u_resolution', gl.canvas.width, gl.canvas.height);
   }
 
   useProgram() {

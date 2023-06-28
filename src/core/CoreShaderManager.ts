@@ -27,7 +27,6 @@ export class CoreShaderManager {
   }
 
   loadShader<Type extends keyof ShaderMap>(shType: Type): CoreShader {
-    console.log('loadShader', shType);
     if (!this.renderer) {
       throw new Error(`Renderer is not been defined`);
     }

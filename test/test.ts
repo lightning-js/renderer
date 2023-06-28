@@ -28,8 +28,8 @@ import { Character } from './Character.js';
   const renderer = new RendererMain(
     screen,
     'app',
-    // mainDriver,
-    threadXDriver,
+    mainDriver,
+    // threadXDriver,
   );
 
   await renderer.init();

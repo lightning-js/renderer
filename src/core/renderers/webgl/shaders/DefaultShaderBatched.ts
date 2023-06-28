@@ -61,7 +61,7 @@ export class DefaultShaderBatched extends WebGlCoreShader<
     });
   }
 
-  bindTextures(texture: WebGlCoreCtxTexture[]) {
+  override bindTextures(texture: WebGlCoreCtxTexture[]) {
     const { renderer, gl } = this;
     if (
       texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
