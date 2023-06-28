@@ -28,8 +28,8 @@ import { Character } from './Character.js';
   const renderer = new RendererMain(
     screen,
     'app',
-    // mainDriver,
-    threadXDriver,
+    mainDriver,
+    // threadXDriver,
   );
 
   await renderer.init();
@@ -45,6 +45,7 @@ import { Character } from './Character.js';
     w: 100,
     h: 100,
     color: 0x00ff0000,
+    shader: renderer.makeShader('DefaultShader'),
     parent: renderer.root,
   });
 

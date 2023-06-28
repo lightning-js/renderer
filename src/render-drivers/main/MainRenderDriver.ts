@@ -44,6 +44,7 @@ export class MainRenderDriver implements IRenderDriver {
     node.color = props.color ?? 0xffffffff;
     node.alpha = props.alpha ?? 1;
     node.texture = props.texture || null;
+    node.shader = props.shader || null;
 
     // Since setting the `src` will trigger a texture load, we need to set it after
     // we set the texture. Otherwise, problems happen.

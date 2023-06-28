@@ -81,6 +81,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
     const node = new ThreadXMainNode(rendererMain, bufferStruct);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.threadx.shareObjects('renderer', [node]).catch(console.error);
+    node.shader = props.shader || null;
     node.texture = props.texture || null;
     node.src = props.src || '';
     this.onCreateNode(node);

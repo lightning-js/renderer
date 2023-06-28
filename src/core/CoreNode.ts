@@ -1,4 +1,5 @@
 import { assertTruthy } from '../utils.js';
+import type { CoreShaderManager, ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureMap,
@@ -63,12 +64,19 @@ export class CoreNode {
     this.props.textureOptions = null;
   }
 
+  loadShader<Type extends keyof ShaderMap>(shaderType: Type): void {
+    const shManager = this.stage.getRenderer().getShaderManager();
+    assertTruthy(shManager);
+    this.props.shader = shManager.loadShader(shaderType);
+  }
+
   update(delta: number): void {
     // TODO: Implement
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { x, y, w, h, color, texture, parent, textureOptions } = this.props;
+    const { x, y, w, h, color, texture, parent, textureOptions, shader } =
+      this.props;
     renderer.addQuad(
       x + (parent?.x || 0),
       y + (parent?.y || 0),
@@ -77,6 +85,7 @@ export class CoreNode {
       color,
       texture,
       textureOptions,
+      shader,
     );
   }
 

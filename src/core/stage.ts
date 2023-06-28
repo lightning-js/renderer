@@ -58,7 +58,6 @@ const stage = {
 
     // Must do this after renderer is created
     txManager.renderer = renderer;
-
     // create root node
     const rootNode = new CoreNode(stage, {
       id: rootId,
