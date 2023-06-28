@@ -16,8 +16,12 @@ export abstract class WebGlCoreShader<
   Attributes extends string = string,
   Uniforms extends [
     { name: 'u_resolution'; uniform: 'uniform2f' },
+    { name: 'u_pixelRatio'; uniform: 'uniform1f' },
     ...UniformInfo[],
-  ] = [{ name: 'u_resolution'; uniform: 'uniform2f' }],
+  ] = [
+    { name: 'u_resolution'; uniform: 'uniform2f' },
+    { name: 'u_pixelRatio'; uniform: 'uniform1f' },
+  ],
 > extends CoreShader {
   protected program: WebGLProgram;
   /**

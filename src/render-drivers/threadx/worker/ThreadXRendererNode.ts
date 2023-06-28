@@ -1,7 +1,7 @@
 import type { NodeStruct, NodeStructWritableProps } from '../NodeStruct.js';
 import { SharedNode } from '../SharedNode.js';
 import { ThreadX } from '@lightningjs/threadx';
-import type { Stage } from '../../../core/stage.js';
+import type { Stage } from '../../../core/Stage.js';
 import { assertTruthy } from '../../../utils.js';
 import type { IAnimationController } from '../../../core/IAnimationController.js';
 import type { INodeAnimatableProps } from '../../../main-api/INode.js';
@@ -68,7 +68,7 @@ export class ThreadXRendererNode extends SharedNode {
         });
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const controller = new CoreAnimationController(
-          this.stage.getAnimationManager(),
+          this.stage.animationManager,
           animation,
         );
         this.animationControllers.set(id as number, controller);
