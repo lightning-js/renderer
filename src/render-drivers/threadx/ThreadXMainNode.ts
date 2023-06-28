@@ -64,7 +64,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
     }
     this._shader = shader;
     if (shader) {
-      this.emit('loadTexture', shader as unknown as Record<string, unknown>);
+      this.emit('loadShader', shader as unknown as Record<string, unknown>);
     }
   }
 
