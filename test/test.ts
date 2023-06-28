@@ -74,18 +74,51 @@ import { Character } from './Character.js';
     parent: renderer.root,
   });
 
-  renderer.createNode({
-    x: 395 + 210,
+  /*
+   * Begin: Relative Positioning Platform
+   */
+
+  const relativePositioningPlatform = renderer.createNode({
+    x: 605,
     y: 230,
-    w: appDimensions.width - 400,
+    w: 1315,
     h: 50,
+    color: 0xffaabb66,
     texture: renderer.makeTexture('NoiseTexture', {
-      w: appDimensions.width - 400,
+      w: 1315,
       h: 50,
     }),
-    color: 0xffaabb66,
-    parent: renderer.root,
   });
+
+  const relativePositioningChild = renderer.createNode({
+    x: 10,
+    y: 10,
+    w: 1315 - 20,
+    h: 30,
+    color: 0xff0000ff,
+    parent: relativePositioningPlatform,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: 1315 - 20,
+      h: 30,
+    }),
+  });
+
+  const relativePositioningGrandchild = renderer.createNode({
+    x: 10,
+    y: 10,
+    w: 1315 - 20 - 20,
+    h: 10,
+    color: 0x00ff00ff,
+    parent: relativePositioningChild,
+    texture: renderer.makeTexture('NoiseTexture', {
+      w: 1315 - 20 - 20,
+      h: 50,
+    }),
+  });
+
+  /*
+   * End: Relative Positioning Platform
+   */
 
   const elevatorRect = renderer.createNode({
     x: 400,
@@ -326,7 +359,6 @@ import { Character } from './Character.js';
   /*
    * End: Sprite Map Demo
    */
-
   console.log('ready!');
 })().catch((err) => {
   console.error(err);

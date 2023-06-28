@@ -65,16 +65,11 @@ export class CoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { x, y, w, h, color, texture, parent, textureOptions } = this.props;
-    renderer.addQuad(
-      x + (parent?.x || 0),
-      y + (parent?.y || 0),
-      w,
-      h,
-      color,
-      texture,
-      textureOptions,
-    );
+    const { w, h, color, texture, textureOptions } = this.props;
+    const { absX, absY } = this;
+
+    // Calculate absolute X and Y based on all ancestors
+    renderer.addQuad(absX, absY, w, h, color, texture, textureOptions);
   }
 
   //#region Properties
@@ -88,6 +83,14 @@ export class CoreNode {
 
   set x(value: number) {
     this.props.x = value;
+  }
+
+  get absX(): number {
+    return this.props.x + (this.props.parent?.absX ?? 0);
+  }
+
+  get absY(): number {
+    return this.props.y + (this.props.parent?.absY ?? 0);
   }
 
   get y(): number {
