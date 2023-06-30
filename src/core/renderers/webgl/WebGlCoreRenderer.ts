@@ -9,6 +9,7 @@ import {
   type CoreWebGlExtensions,
   getWebGlParameters,
   getWebGlExtensions,
+  type Dimensions,
 } from './internal/RendererUtils.js';
 import { normalizeARGB } from '../../utils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
@@ -141,16 +142,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
 
     const targetShader = shader || this.defaultShader;
+    const dimensions: Dimensions = { w, h };
 
     if (curRenderOp) {
-      // Current operation is using the default shader
       if (curRenderOp.shader !== targetShader) {
         curRenderOp = null;
       }
     }
 
     if (!curRenderOp) {
-      this.newRenderOp(targetShader as WebGlCoreShader, bufferIdx);
+      this.newRenderOp(targetShader as WebGlCoreShader, dimensions, bufferIdx);
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
     }
@@ -186,7 +187,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     assertTruthy(txManager);
     const ctxTexture = txManager.getCtxTexture(texture);
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
-    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    const textureIdx = this.addTexture(ctxTexture, dimensions, bufferIdx);
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
 
@@ -235,11 +236,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(shader: WebGlCoreShader, bufferIdx: number) {
+  private newRenderOp(
+    shader: WebGlCoreShader,
+    dimensions: Dimensions,
+    bufferIdx: number,
+  ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.gl,
+      this.shManager,
       this.quadBuffer,
       this.quadWebGlBuffer,
+      dimensions,
       shader,
       bufferIdx,
     );
@@ -261,6 +268,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   private addTexture(
     texture: WebGlCoreCtxTexture,
+    dimensions: Dimensions,
     bufferIdx: number,
     recursive?: boolean,
   ): number {
@@ -272,8 +280,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(curRenderOp.shader, bufferIdx);
-      return this.addTexture(texture, bufferIdx, true);
+      this.newRenderOp(curRenderOp.shader, dimensions, bufferIdx);
+      return this.addTexture(texture, dimensions, bufferIdx, true);
     }
     return textureIdx;
   }

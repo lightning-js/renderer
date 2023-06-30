@@ -172,7 +172,7 @@ export class MainOnlyNode implements IEventEmitter, INode {
     }
     this._shader = shader;
     if (shader) {
-      this.coreNode.loadShader(shader.shType);
+      this.coreNode.loadShader(shader.shType, shader.props);
     }
   }
 

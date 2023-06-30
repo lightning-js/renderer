@@ -45,7 +45,7 @@ import { Character } from './Character.js';
     w: 100,
     h: 100,
     color: 0x00ff0000,
-    shader: renderer.makeShader('DefaultShader'),
+    shader: renderer.makeShader('RoundedRectangle'),
     parent: renderer.root,
   });
 

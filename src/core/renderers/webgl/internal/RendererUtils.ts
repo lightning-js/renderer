@@ -113,3 +113,8 @@ export function createIndexBuffer(
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 }
+
+export interface Dimensions {
+  w: number;
+  h: number;
+}

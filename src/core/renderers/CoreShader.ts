@@ -10,5 +10,6 @@ export abstract class CoreShader {
     return {};
   }
 
-  abstract useProgram(): void;
+  abstract attach(): void;
+  abstract detach(): void;
 }

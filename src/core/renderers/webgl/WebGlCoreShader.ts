@@ -21,6 +21,7 @@ export abstract class WebGlCoreShader<
     ...UniformInfo[],
   ] = [{ name: 'u_resolution'; uniform: 'uniform2f' }],
 > extends CoreShader {
+  protected buffersBound = false;
   protected program: WebGLProgram;
   /**
    * Vertex Array Object
@@ -135,8 +136,8 @@ export abstract class WebGlCoreShader<
       }
 
       // Bind buffer/attributes to VAO (WebGL2 only)
-      if (isWebGl2(this.gl)) {
-        this._bindBufferAttributes(location, buffer, attributeInfo);
+      if (webGl2) {
+        this.bindBufferAttribute(location, buffer, attributeInfo);
       }
 
       this.attributeLocations[attributeInfo.name as Attributes] = location;
@@ -167,7 +168,7 @@ export abstract class WebGlCoreShader<
     });
   }
 
-  private _bindBufferAttributes(
+  bindBufferAttribute(
     location: number,
     buffer: WebGLBuffer,
     attribute: AttributeInfo,
@@ -185,6 +186,17 @@ export abstract class WebGlCoreShader<
       attribute.stride,
       attribute.offset,
     );
+  }
+
+  disableAttribute(location: number) {
+    this.gl.disableVertexAttribArray(location);
+  }
+
+  disableAttributes() {
+    for (const loc in this.attributeLocations) {
+      this.disableAttribute(this.attributeLocations[loc]);
+    }
+    this.buffersBound = false;
   }
 
   bindRenderOp(renderOp: WebGlCoreRenderOp) {
@@ -207,9 +219,13 @@ export abstract class WebGlCoreShader<
   }
 
   bindBuffer(buffer: WebGLBuffer) {
+    if (this.buffersBound) {
+      return;
+    }
+    this.buffersBound = true;
     for (const loc in this.attributeLocations) {
       const resolvedBuffer = buffer || this.attributeBuffers[loc];
-      this._bindBufferAttributes(
+      this.bindBufferAttribute(
         this.attributeLocations[loc],
         resolvedBuffer,
         this.attributeInfos[loc],
@@ -227,11 +243,15 @@ export abstract class WebGlCoreShader<
     this.setUniform('u_resolution', gl.canvas.width, gl.canvas.height);
   }
 
-  useProgram() {
+  override attach(): void {
     this.gl.useProgram(this.program);
     if (isWebGl2(this.gl) && this.vao) {
       this.gl.bindVertexArray(this.vao);
     }
+  }
+
+  override detach(): void {
+    this.disableAttributes();
   }
 
   protected static shaderSources?: ShaderProgramSources;

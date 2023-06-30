@@ -2,15 +2,20 @@ import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import { WebGlCoreShader } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
-// import type { Texture } from '../textures/Texture';
+import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 
 const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
 
-export class DefaultShader extends WebGlCoreShader<
+export interface RoundedRectangleProps {
+  radius?: number;
+}
+
+export class RoundedRectangle extends WebGlCoreShader<
   'a_position' | 'a_textureCoordinate' | 'a_color',
   [
     { name: 'u_resolution'; uniform: 'uniform2f' },
     { name: 'u_texture'; uniform: 'uniform2f' },
+    { name: 'u_dimensions'; uniform: 'uniform2f' },
     // { name: 'u_pixelRatio'; uniform: 'uniform1f' },
   ]
 > {
@@ -47,15 +52,37 @@ export class DefaultShader extends WebGlCoreShader<
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2f' },
         { name: 'u_texture', uniform: 'uniform2f' },
+        { name: 'u_dimensions', uniform: 'uniform2f' },
         // { name: 'u_pixelRatio', uniform: 'uniform1f' },
       ],
     });
+  }
+
+  static z$__type__Props: RoundedRectangleProps;
+
+  static override makeCacheKey(props: RoundedRectangleProps): string {
+    const resolvedProps = RoundedRectangle.resolveDefaults(props);
+    return `RoundedRectangle,${resolvedProps.radius}`;
+  }
+
+  static override resolveDefaults(
+    props: RoundedRectangleProps,
+  ): Required<RoundedRectangleProps> {
+    return {
+      radius: props.radius || 0,
+    };
   }
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
     const { gl } = this;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
+  }
+
+  override bindUniforms(renderOp: WebGlCoreRenderOp) {
+    super.bindUniforms(renderOp);
+    const { w, h } = renderOp.dimensions;
+    this.setUniform('u_dimensions', w, h);
   }
 
   static override shaderSources: ShaderProgramSources = {
@@ -96,14 +123,29 @@ export class DefaultShader extends WebGlCoreShader<
       # endif
 
       uniform vec2 u_resolution;
+      uniform vec2 u_dimensions;
       uniform sampler2D u_texture;
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
 
+      float boxDist(vec2 p, vec2 size, float radius){
+        size -= vec2(radius);
+        vec2 d = abs(p) - size;
+        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
+      }
+
+      float fillMask(float dist) {
+        return clamp(-dist, 0.0, 1.0);
+      }
+
       void main() {
-          vec4 color = texture2D(u_texture, v_textureCoordinate);
-          gl_FragColor = vec4(v_color) * texture2D(u_texture, v_textureCoordinate);
+        vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+        float radius = 15.0;
+        vec4 r = vec4(radius);
+        vec2 halfDimensions = u_dimensions * 0.5;
+        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, radius);
+        gl_FragColor = mix(vec4(0.0), color, fillMask(d));
       }
     `,
   };

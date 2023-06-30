@@ -27,6 +27,7 @@ export interface TextureDesc<
 export interface ShaderDesc<ShType extends keyof ShaderMap = keyof ShaderMap> {
   readonly descType: 'shader';
   readonly shType: ShType;
+  readonly props: ExtractProps<ShaderMap[ShType]>;
 }
 
 export interface RendererMainSettings {
@@ -129,10 +130,12 @@ export class RendererMain {
 
   makeShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
+    props?: ShaderDesc<ShType>['props'],
   ): ShaderDesc<ShType> {
     return {
       descType: 'shader',
       shType: shaderType,
+      props: props as ShaderDesc<ShType>['props'],
     };
   }
 

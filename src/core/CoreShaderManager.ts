@@ -1,12 +1,15 @@
+import type { ExtractProps } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 
 import { DefaultShader } from './renderers/webgl/shaders/DefaultShader.js';
 import { DefaultShaderBatched } from './renderers/webgl/shaders/DefaultShaderBatched.js';
+import { RoundedRectangle } from './renderers/webgl/shaders/RoundedRectangle.js';
 
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
   DefaultShaderBatched: typeof DefaultShaderBatched;
+  RoundedRectangle: typeof RoundedRectangle;
 }
 
 export class CoreShaderManager {
@@ -17,6 +20,7 @@ export class CoreShaderManager {
   constructor(protected renderer: CoreRenderer) {
     this.registerShaderType('DefaultShader', DefaultShader);
     this.registerShaderType('DefaultShaderBatched', DefaultShaderBatched);
+    this.registerShaderType('RoundedRectangle', RoundedRectangle);
   }
 
   registerShaderType<Type extends keyof ShaderMap>(
@@ -26,7 +30,10 @@ export class CoreShaderManager {
     this.shConstructors[shType] = shClass;
   }
 
-  loadShader<Type extends keyof ShaderMap>(shType: Type): CoreShader {
+  loadShader<Type extends keyof ShaderMap>(
+    shType: Type,
+    props?: ExtractProps<ShaderMap[Type]>,
+  ): CoreShader {
     if (!this.renderer) {
       throw new Error(`Renderer is not been defined`);
     }
@@ -35,7 +42,7 @@ export class CoreShaderManager {
       throw new Error(`Shader type "${shType as string}" is not registered`);
     }
 
-    const cacheKey = ShaderClass.makeCacheKey({});
+    const cacheKey = ShaderClass.makeCacheKey((props ?? {}) as any);
 
     if (cacheKey && this.shCache.has(cacheKey)) {
       return this.shCache.get(cacheKey) as CoreShader;
@@ -50,6 +57,13 @@ export class CoreShaderManager {
   }
 
   useShader(shader: CoreShader): void {
-    shader.useProgram();
+    if (this.attachedShader === shader) {
+      return;
+    }
+    if (this.attachedShader) {
+      this.attachedShader.detach();
+    }
+    shader.attach();
+    this.attachedShader = shader;
   }
 }

@@ -1,5 +1,5 @@
 import { assertTruthy } from '../utils.js';
-import type { CoreShaderManager, ShaderMap } from './CoreShaderManager.js';
+import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureMap,
@@ -64,10 +64,13 @@ export class CoreNode {
     this.props.textureOptions = null;
   }
 
-  loadShader<Type extends keyof ShaderMap>(shaderType: Type): void {
+  loadShader<Type extends keyof ShaderMap>(
+    shaderType: Type,
+    props?: ExtractProps<ShaderMap[Type]>,
+  ): void {
     const shManager = this.stage.getRenderer().getShaderManager();
     assertTruthy(shManager);
-    this.props.shader = shManager.loadShader(shaderType);
+    this.props.shader = shManager.loadShader(shaderType, props);
   }
 
   update(delta: number): void {
