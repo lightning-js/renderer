@@ -1,8 +1,8 @@
 import { CoreRenderOp } from '../CoreRenderOp.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { CoreShaderManager } from '../../CoreShaderManager.js';
-import type { Dimensions } from './internal/RendererUtils.js';
+import type { CoreShaderOp } from '../CoreShaderOp.js';
+import type { Dimensions } from '../../utils.js';
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -16,16 +16,16 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   constructor(
     readonly gl: WebGLRenderingContext | WebGL2RenderingContext,
-    readonly shManager: CoreShaderManager,
     readonly quadBuffer: ArrayBuffer,
     readonly quadWebGlBuffer: WebGLBuffer,
+    readonly shaderOp: CoreShaderOp,
     readonly dimensions: Dimensions,
-    readonly shader: WebGlCoreShader,
     readonly bufferIdx: number,
   ) {
     super();
     this.gl = gl;
-    this.maxTextures = shader.supportsIndexedTextures
+    this.maxTextures = (shaderOp.shader as WebGlCoreShader)
+      .supportsIndexedTextures
       ? (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) as number)
       : 1;
   }
@@ -45,10 +45,9 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   }
 
   draw() {
-    const { gl, shManager, shader } = this;
+    const { gl, shaderOp } = this;
 
-    shManager.useShader(shader);
-    shader.bindRenderOp(this);
+    shaderOp.draw(this);
 
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;

@@ -6,7 +6,7 @@ import type {
   TextureOptions,
 } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { CoreShader } from './renderers/CoreShader.js';
+import type { CoreShaderOp } from './renderers/CoreShaderOp.js';
 import type { Stage } from './stage.js';
 import type { Texture } from './textures/Texture.js';
 
@@ -22,12 +22,13 @@ export interface CoreNodeProps {
   zIndex?: number;
   texture?: Texture | null;
   textureOptions?: TextureOptions | null;
-  shader?: CoreShader | null;
+  shader?: keyof ShaderMap | null;
 }
 
 export class CoreNode {
   readonly children: CoreNode[] = [];
   private props: Required<CoreNodeProps>;
+  private shaderOp: CoreShaderOp | null = null;
 
   constructor(private stage: Stage, props: CoreNodeProps) {
     this.props = {
@@ -70,7 +71,15 @@ export class CoreNode {
   ): void {
     const shManager = this.stage.getRenderer().getShaderManager();
     assertTruthy(shManager);
-    this.props.shader = shManager.loadShader(shaderType, props);
+    this.props.shader = shaderType;
+    this.shaderOp = shManager.loadShaderOp(
+      shaderType,
+      {
+        width: this.w,
+        height: this.h,
+      },
+      props,
+    );
   }
 
   update(delta: number): void {
@@ -78,8 +87,7 @@ export class CoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { x, y, w, h, color, texture, parent, textureOptions, shader } =
-      this.props;
+    const { x, y, w, h, color, texture, parent, textureOptions } = this.props;
     renderer.addQuad(
       x + (parent?.x || 0),
       y + (parent?.y || 0),
@@ -88,7 +96,7 @@ export class CoreNode {
       color,
       texture,
       textureOptions,
-      shader,
+      this.shaderOp,
     );
   }
 
@@ -171,14 +179,6 @@ export class CoreNode {
     if (newParent) {
       newParent.children.push(this);
     }
-  }
-
-  get shader(): CoreShader | null {
-    return this.props.shader;
-  }
-
-  set shader(value: CoreShader | null) {
-    this.props.shader = value;
   }
   //#endregion Properties
 }

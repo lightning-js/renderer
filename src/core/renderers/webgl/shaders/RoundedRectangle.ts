@@ -3,6 +3,7 @@ import { WebGlCoreShader } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
+import type { Dimensions } from '../../../utils.js';
 
 const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
 
@@ -16,6 +17,7 @@ export class RoundedRectangle extends WebGlCoreShader<
     { name: 'u_resolution'; uniform: 'uniform2f' },
     { name: 'u_texture'; uniform: 'uniform2f' },
     { name: 'u_dimensions'; uniform: 'uniform2f' },
+    { name: 'u_radius'; uniform: 'uniform1f' },
     // { name: 'u_pixelRatio'; uniform: 'uniform1f' },
   ]
 > {
@@ -53,6 +55,7 @@ export class RoundedRectangle extends WebGlCoreShader<
         { name: 'u_resolution', uniform: 'uniform2f' },
         { name: 'u_texture', uniform: 'uniform2f' },
         { name: 'u_dimensions', uniform: 'uniform2f' },
+        { name: 'u_radius', uniform: 'uniform1f' },
         // { name: 'u_pixelRatio', uniform: 'uniform1f' },
       ],
     });
@@ -60,9 +63,12 @@ export class RoundedRectangle extends WebGlCoreShader<
 
   static z$__type__Props: RoundedRectangleProps;
 
-  static override makeCacheKey(props: RoundedRectangleProps): string {
+  static override makeCacheKey(
+    props: RoundedRectangleProps,
+    dimensions: Dimensions,
+  ): string {
     const resolvedProps = RoundedRectangle.resolveDefaults(props);
-    return `RoundedRectangle,${resolvedProps.radius}`;
+    return `RoundedRectangle,r:${resolvedProps.radius},w:${dimensions.width},h:${dimensions.height}`;
   }
 
   static override resolveDefaults(
@@ -81,8 +87,15 @@ export class RoundedRectangle extends WebGlCoreShader<
 
   override bindUniforms(renderOp: WebGlCoreRenderOp) {
     super.bindUniforms(renderOp);
-    const { w, h } = renderOp.dimensions;
-    this.setUniform('u_dimensions', w, h);
+    const { width = 100, height = 100 } = renderOp.dimensions;
+    this.setUniform('u_dimensions', width, height);
+  }
+
+  override bindProps(props: RoundedRectangleProps): void {
+    for (const key in props) {
+      // @ts-expect-error to fancy code
+      this.setUniform(`u_${key}`, props[key]);
+    }
   }
 
   static override shaderSources: ShaderProgramSources = {
@@ -124,6 +137,7 @@ export class RoundedRectangle extends WebGlCoreShader<
 
       uniform vec2 u_resolution;
       uniform vec2 u_dimensions;
+      uniform float u_radius;
       uniform sampler2D u_texture;
 
       varying vec4 v_color;
@@ -141,10 +155,8 @@ export class RoundedRectangle extends WebGlCoreShader<
 
       void main() {
         vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-        float radius = 15.0;
-        vec4 r = vec4(radius);
         vec2 halfDimensions = u_dimensions * 0.5;
-        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, radius);
+        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, u_radius);
         gl_FragColor = mix(vec4(0.0), color, fillMask(d));
       }
     `,

@@ -233,8 +233,12 @@ export abstract class WebGlCoreShader<
     }
   }
 
+  override bindProps(props: Record<string, unknown>) {
+    //
+  }
+
   bindTextures(textures: WebGlCoreCtxTexture[]) {
-    //no defaults
+    // no defaults
   }
 
   bindUniforms(renderOp: WebGlCoreRenderOp) {
