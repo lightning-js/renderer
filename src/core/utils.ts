@@ -45,6 +45,10 @@ export const rand = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
+export const isPowerOfTwo = (value: number) => {
+  return value && !(value & (value - 1));
+};
+
 if (!Math.hypot)
   Math.hypot = (...args: number[]) => {
     let y = 0,
