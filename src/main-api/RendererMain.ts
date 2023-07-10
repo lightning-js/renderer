@@ -31,8 +31,53 @@ export interface ShaderDesc<ShType extends keyof ShaderMap = keyof ShaderMap> {
 }
 
 export interface RendererMainSettings {
-  width?: number;
-  height?: number;
+  /**
+   * Authored logical pixel width of the application
+   *
+   * @defaultValue `1920`
+   */
+  appWidth?: number;
+
+  /**
+   * Authored logical pixel height of the application
+   *
+   * @defaultValue `1080`
+   */
+  appHeight?: number;
+
+  /**
+   * Factor to convert app-authored logical coorindates to device logical coordinates
+   *
+   * @remarks
+   * This value allows auto-scaling to support larger/small resolutions than the
+   * app was authored for.
+   *
+   * If the app was authored for 1920x1080 and this value is 2, the app's canvas
+   * will be rendered at 3840x2160 logical pixels.
+   *
+   * Likewise, if the app was authored for 1920x1080 and this value is 0.66667,
+   * the app's canvas will be rendered at 1280x720 logical pixels.
+   *
+   * @defaultValue `1`
+   */
+  deviceLogicalPixelRatio?: number;
+
+  /**
+   * Factor to convert device logical coordinates to device physical coordinates
+   *
+   * @remarks
+   * This value allows auto-scaling to support devices with different pixel densities.
+   *
+   * This controls the number of physical pixels that are used to render each logical
+   * pixel. For example, if the device has a pixel density of 2, each logical pixel
+   * will be rendered using 2x2 physical pixels.
+   *
+   * By default, it will be set to `window.devicePixelRatio` which is the pixel
+   * density of the device the app is running on reported by the browser.
+   *
+   * @defaultValue `window.devicePixelRatio`
+   */
+  devicePhysicalPixelRatio?: number;
 }
 
 export class RendererMain {
@@ -40,10 +85,6 @@ export class RendererMain {
   readonly driver: IRenderDriver;
   private canvas: HTMLCanvasElement;
   private settings: Required<RendererMainSettings>;
-  canvasDimensions: { width: number; height: number } = {
-    width: 800,
-    height: 600,
-  };
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
@@ -59,16 +100,33 @@ export class RendererMain {
     driver: IRenderDriver,
   ) {
     const resolvedSettings: Required<RendererMainSettings> = {
-      width: settings.width || 1920,
-      height: settings.height || 1080,
+      appWidth: settings.appWidth || 1920,
+      appHeight: settings.appHeight || 1080,
+      deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
+      devicePhysicalPixelRatio:
+        settings.devicePhysicalPixelRatio || window.devicePixelRatio,
     };
     this.settings = resolvedSettings;
+
+    const {
+      appWidth,
+      appHeight,
+      deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio,
+    } = resolvedSettings;
+
+    const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
+    const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
+
     this.driver = driver;
 
     const canvas = document.createElement('canvas');
     this.canvas = canvas;
-    canvas.width = resolvedSettings.width;
-    canvas.height = resolvedSettings.height;
+    canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+
+    canvas.style.width = `${deviceLogicalWidth}px`;
+    canvas.style.height = `${deviceLogicalHeight}px`;
 
     let targetEl: HTMLElement | null;
     if (typeof target === 'string') {
@@ -94,7 +152,7 @@ export class RendererMain {
   }
 
   async init(): Promise<void> {
-    await this.driver.init(this, this.canvas);
+    await this.driver.init(this, this.settings, this.canvas);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     (this.root as INode) = this.driver.getRootNode();
   }

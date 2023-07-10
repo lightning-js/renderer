@@ -4,7 +4,14 @@ import { NodeStruct } from './NodeStruct.js';
 import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
 import { assertTruthy } from '../../utils.js';
-import type { RendererMain } from '../../main-api/RendererMain.js';
+import type {
+  RendererMain,
+  RendererMainSettings,
+} from '../../main-api/RendererMain.js';
+import type {
+  ThreadXRendererInitMessage,
+  ThreadXRendererReleaseTextureMessage,
+} from './ThreadXRendererMessage.js';
 
 export interface ThreadXRendererSettings {
   RendererWorker: new () => Worker;
@@ -39,6 +46,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
 
   async init(
     rendererMain: RendererMain,
+    rendererSettings: Required<RendererMainSettings>,
     canvas: HTMLCanvasElement,
   ): Promise<void> {
     this.rendererMain = rendererMain;
@@ -48,7 +56,9 @@ export class ThreadXRenderDriver implements IRenderDriver {
       {
         type: 'init',
         canvas: offscreenCanvas,
-      },
+        deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
+        devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
+      } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;
     // The Render worker shares the root node with this worker during the
@@ -97,7 +107,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
     this.threadx.sendMessage('renderer', {
       type: 'releaseTexture',
       textureDescId,
-    });
+    } satisfies ThreadXRendererReleaseTextureMessage);
   }
 
   onCreateNode(node: INode): void {

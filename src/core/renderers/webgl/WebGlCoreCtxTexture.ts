@@ -1,7 +1,8 @@
 import { assertTruthy } from '../../../utils.js';
 import type { Texture } from '../../textures/Texture.js';
-import type { Dimensions } from '../../utils.js';
+import { type Dimensions, isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
+import { isWebGl2 } from './internal/WebGlUtils.js';
 
 /**
  * A wrapper around a WebGLTexture that handles loading the texture data
@@ -107,7 +108,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         gl.UNSIGNED_BYTE,
         textureData,
       );
-      gl.generateMipmap(gl.TEXTURE_2D);
+
+      // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
+      if (isWebGl2(gl) || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      }
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,

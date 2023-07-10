@@ -20,9 +20,13 @@
     code.
 - [x] Add support for `null` texture
   - `null` texture should just be interpreted as the white pixel texture
+
+# Renderer Core
+
 - [ ] Create mechanism that transforms Scene Graph into a flat array of nodes
       ordered by their layering.
 - [ ] Implement RTT
+- [x] Implement resolution specification + precision
 
 # Animations
 
@@ -75,7 +79,7 @@
     UI, hopefully free up a ton of texture memory and display an error message
     that allows the user to start again from the home screen. This should
     prevent Apps from crashing.
-- [ ] Texture Manager: Texture Source Garbage Collection
+- [x] Texture Manager: Texture Source Garbage Collection
   - Texture Source (`Texture` class) objects are cached in two `Map`s:
     one by their Cache Key string and one by the ID of the `TextureDesc`. Since
     these caches are keyed by strings/numbers, their coressponding `Texture`
@@ -116,11 +120,10 @@
 - [ ] Tests: Frame-by-frame tests for Animations
 - [ ] Tests: Unit tests for animations
 - [ ] Look through TODO comments
-- [ ] Make "Stage" into a class
-- [ ] Make "Application" into a class.
+- [x] Make "Stage" into a class
+- [x] Merge "Application" into "Stage"
 
-  - Perhaps merge with Stage? The concept of an application doesn't really exist
-    in core.
+  - Does not seem to be any need for an Application class in the current model
 
 - SharedObjects that don't share data??
 

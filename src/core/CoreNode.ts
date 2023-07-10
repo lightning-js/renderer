@@ -6,8 +6,8 @@ import type {
   TextureOptions,
 } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { CoreShaderOp } from './renderers/CoreShaderOp.js';
-import type { Stage } from './stage.js';
+import type { CoreShader } from './renderers/CoreShader.js';
+import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 
 export interface CoreNodeProps {
@@ -22,13 +22,13 @@ export interface CoreNodeProps {
   zIndex?: number;
   texture?: Texture | null;
   textureOptions?: TextureOptions | null;
-  shader?: keyof ShaderMap | null;
+  shader?: CoreShader | null;
+  shaderProps?: Record<string, unknown> | null;
 }
 
 export class CoreNode {
   readonly children: CoreNode[] = [];
   private props: Required<CoreNodeProps>;
-  private shaderOp: CoreShaderOp | null = null;
 
   constructor(private stage: Stage, props: CoreNodeProps) {
     this.props = {
@@ -44,6 +44,7 @@ export class CoreNode {
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? null,
       shader: props.shader ?? null,
+      shaderProps: props.shaderProps ?? null,
     };
   }
 
@@ -52,15 +53,12 @@ export class CoreNode {
     props: ExtractProps<TextureMap[Type]>,
     options: TextureOptions | null = null,
   ): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
+    const { txManager } = this.stage;
     this.props.texture = txManager.loadTexture(textureType, props, options);
     this.props.textureOptions = options;
   }
 
   unloadTexture(): void {
-    const txManager = this.stage.getTextureManager();
-    assertTruthy(txManager);
     this.props.texture = null;
     this.props.textureOptions = null;
   }
@@ -69,17 +67,10 @@ export class CoreNode {
     shaderType: Type,
     props?: ExtractProps<ShaderMap[Type]>,
   ): void {
-    const shManager = this.stage.getRenderer().getShaderManager();
+    const shManager = this.stage.renderer.getShaderManager();
     assertTruthy(shManager);
-    this.props.shader = shaderType;
-    this.shaderOp = shManager.loadShaderOp(
-      shaderType,
-      {
-        width: this.w,
-        height: this.h,
-      },
-      props,
-    );
+    this.props.shader = shManager.loadShader(shaderType);
+    this.props.shaderProps = props as any;
   }
 
   update(delta: number): void {
@@ -87,16 +78,21 @@ export class CoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { x, y, w, h, color, texture, parent, textureOptions } = this.props;
+    const { w, h, color, texture, textureOptions, shader, shaderProps } =
+      this.props;
+    const { absX, absY } = this;
+
+    // Calculate absolute X and Y based on all ancestors
     renderer.addQuad(
-      x + (parent?.x || 0),
-      y + (parent?.y || 0),
+      absX,
+      absY,
       w,
       h,
       color,
       texture,
       textureOptions,
-      this.shaderOp,
+      shader,
+      shaderProps,
     );
   }
 
@@ -111,6 +107,14 @@ export class CoreNode {
 
   set x(value: number) {
     this.props.x = value;
+  }
+
+  get absX(): number {
+    return this.props.x + (this.props.parent?.absX ?? 0);
+  }
+
+  get absY(): number {
+    return this.props.y + (this.props.parent?.absY ?? 0);
   }
 
   get y(): number {

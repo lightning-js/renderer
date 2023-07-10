@@ -10,6 +10,7 @@ export class DefaultShaderBatched extends WebGlCoreShader<
   'a_position' | 'a_textureCoordinate' | 'a_color' | 'a_textureIndex',
   [
     { name: 'u_resolution'; uniform: 'uniform2f' },
+    { name: 'u_pixelRatio'; uniform: 'uniform1f' },
     { name: 'u_textures[0]'; uniform: 'uniform1iv' },
   ]
 > {
@@ -55,8 +56,8 @@ export class DefaultShaderBatched extends WebGlCoreShader<
       ],
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2f' },
+        { name: 'u_pixelRatio', uniform: 'uniform1f' },
         { name: 'u_textures[0]', uniform: 'uniform1iv' },
-        // { name: 'u_pixelRatio', uniform: 'uniform1f' },
       ],
     });
   }
@@ -98,13 +99,14 @@ export class DefaultShaderBatched extends WebGlCoreShader<
       attribute float a_textureIndex;
 
       uniform vec2 u_resolution;
+      uniform float u_pixelRatio;
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
       varying float v_textureIndex;
 
       void main(){
-        vec2 normalized = a_position / u_resolution;
+        vec2 normalized = a_position * u_pixelRatio / u_resolution;
         vec2 zero_two = normalized * 2.0;
         vec2 clip_space = zero_two - 1.0;
 
