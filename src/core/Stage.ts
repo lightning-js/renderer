@@ -28,7 +28,7 @@ export class Stage {
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
   public readonly shManager: CoreShaderManager;
-  private renderer: WebGlCoreRenderer;
+  public readonly renderer: WebGlCoreRenderer;
   private scene: Scene;
 
   /// State
