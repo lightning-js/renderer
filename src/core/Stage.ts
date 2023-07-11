@@ -4,10 +4,10 @@ import { startLoop, getTimeStamp } from './platform.js';
 
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy } from '../utils.js';
-import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import { CoreNode } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
+import { CoreShaderManager } from './CoreShaderManager.js';
 
 export interface StageOptions {
   rootId: number;
@@ -27,6 +27,7 @@ export class Stage {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
+  public readonly shManager: CoreShaderManager;
   private renderer: WebGlCoreRenderer;
   private scene: Scene;
 
@@ -41,6 +42,7 @@ export class Stage {
   constructor(stageOptions: StageOptions) {
     const { canvas, clearColor, rootId, debug } = stageOptions;
     this.txManager = new CoreTextureManager();
+    this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
 
     if (debug?.monitorTextureCache) {
@@ -61,6 +63,7 @@ export class Stage {
       clearColor: clearColor ?? 0xff3677e0,
       bufferMemory,
       txManager: this.txManager,
+      shManager: this.shManager,
     });
 
     // Must do this after renderer is created

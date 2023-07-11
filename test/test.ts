@@ -91,6 +91,7 @@ import { Character } from './Character.js';
       w: 1315,
       h: 50,
     }),
+    parent: renderer.root,
   });
 
   const relativePositioningChild = renderer.createNode({
