@@ -6,7 +6,11 @@ import type { IAnimationController } from '../../core/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
 import { CoreNode } from '../../core/CoreNode.js';
-import type { RendererMain, TextureDesc } from '../../main-api/RendererMain.js';
+import type {
+  RendererMain,
+  ShaderDesc,
+  TextureDesc,
+} from '../../main-api/RendererMain.js';
 
 let nextId = 1;
 
@@ -20,6 +24,7 @@ export class MainOnlyNode implements IEventEmitter, INode {
   protected _text = '';
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureDesc | null = null;
+  protected _shader: ShaderDesc | null = null;
 
   constructor(
     private rendererMain: RendererMain,
@@ -154,6 +159,20 @@ export class MainOnlyNode implements IEventEmitter, INode {
       this.coreNode.loadTexture(texture.txType, texture.props, texture.options);
     } else {
       this.coreNode.unloadTexture();
+    }
+  }
+
+  get shader(): ShaderDesc | null {
+    return this._shader;
+  }
+
+  set shader(shader: ShaderDesc | null) {
+    if (this._shader === shader) {
+      return;
+    }
+    this._shader = shader;
+    if (shader) {
+      this.coreNode.loadShader(shader.shType, shader.props);
     }
   }
 

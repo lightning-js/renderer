@@ -1,6 +1,10 @@
 import type { IAnimationController } from '../../core/IAnimationController.js';
 import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
-import type { RendererMain, TextureDesc } from '../../main-api/RendererMain.js';
+import type {
+  RendererMain,
+  ShaderDesc,
+  TextureDesc,
+} from '../../main-api/RendererMain.js';
 import { assertTruthy } from '../../utils.js';
 import type { NodeStruct } from './NodeStruct.js';
 import { SharedNode } from './SharedNode.js';
@@ -11,6 +15,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
   protected _parent: ThreadXMainNode | null = null;
   protected _children: ThreadXMainNode[] = [];
   protected _texture: TextureDesc | null = null;
+  protected _shader: ShaderDesc | null = null;
   private _src = '';
 
   /**
@@ -46,6 +51,20 @@ export class ThreadXMainNode extends SharedNode implements INode {
       this.emit('loadTexture', texture as unknown as Record<string, unknown>);
     } else {
       this.emit('unloadTexture', {});
+    }
+  }
+
+  get shader(): ShaderDesc | null {
+    return this._shader;
+  }
+
+  set shader(shader: ShaderDesc | null) {
+    if (this._shader === shader) {
+      return;
+    }
+    this._shader = shader;
+    if (shader) {
+      this.emit('loadShader', shader as unknown as Record<string, unknown>);
     }
   }
 

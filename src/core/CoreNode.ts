@@ -1,4 +1,5 @@
 import { assertTruthy } from '../utils.js';
+import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureMap,
@@ -22,6 +23,7 @@ export interface CoreNodeProps {
   texture?: Texture | null;
   textureOptions?: TextureOptions | null;
   shader?: CoreShader | null;
+  shaderProps?: Record<string, unknown> | null;
 }
 
 export class CoreNode {
@@ -42,6 +44,7 @@ export class CoreNode {
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? null,
       shader: props.shader ?? null,
+      shaderProps: props.shaderProps ?? null,
     };
   }
 
@@ -60,16 +63,37 @@ export class CoreNode {
     this.props.textureOptions = null;
   }
 
+  loadShader<Type extends keyof ShaderMap>(
+    shaderType: Type,
+    props?: ExtractProps<ShaderMap[Type]>,
+  ): void {
+    const shManager = this.stage.renderer.getShaderManager();
+    assertTruthy(shManager);
+    this.props.shader = shManager.loadShader(shaderType);
+    this.props.shaderProps = props as any;
+  }
+
   update(delta: number): void {
     // TODO: Implement
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { w, h, color, texture, textureOptions } = this.props;
+    const { w, h, color, texture, textureOptions, shader, shaderProps } =
+      this.props;
     const { absX, absY } = this;
 
     // Calculate absolute X and Y based on all ancestors
-    renderer.addQuad(absX, absY, w, h, color, texture, textureOptions);
+    renderer.addQuad(
+      absX,
+      absY,
+      w,
+      h,
+      color,
+      texture,
+      textureOptions,
+      shader,
+      shaderProps,
+    );
   }
 
   //#region Properties
@@ -159,14 +183,6 @@ export class CoreNode {
     if (newParent) {
       newParent.children.push(this);
     }
-  }
-
-  get shader(): CoreShader | null {
-    return this.props.shader;
-  }
-
-  set shader(value: CoreShader | null) {
-    this.props.shader = value;
   }
   //#endregion Properties
 }

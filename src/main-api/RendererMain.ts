@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureMap,
@@ -21,6 +22,12 @@ export interface TextureDesc<
   readonly txType: TxType;
   readonly props: ExtractProps<TextureMap[TxType]>;
   readonly options?: Readonly<TextureOptions>;
+}
+
+export interface ShaderDesc<ShType extends keyof ShaderMap = keyof ShaderMap> {
+  readonly descType: 'shader';
+  readonly shType: ShType;
+  readonly props: ExtractProps<ShaderMap[ShType]>;
 }
 
 export interface RendererMainSettings {
@@ -83,7 +90,6 @@ export class RendererMain {
 
   private textureRegistry = new FinalizationRegistry(
     (textureDescId: number) => {
-      console.log('release texture', textureDescId);
       this.driver.releaseTexture(textureDescId);
     },
   );
@@ -178,6 +184,17 @@ export class RendererMain {
     };
     this.textureRegistry.register(desc, id);
     return desc;
+  }
+
+  makeShader<ShType extends keyof ShaderMap>(
+    shaderType: ShType,
+    props?: ShaderDesc<ShType>['props'],
+  ): ShaderDesc<ShType> {
+    return {
+      descType: 'shader',
+      shType: shaderType,
+      props: props as ShaderDesc<ShType>['props'],
+    };
   }
 
   getNodeById(id: number): INode | null {

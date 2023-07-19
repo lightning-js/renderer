@@ -2,20 +2,25 @@ import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import { WebGlCoreShader } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
-// import type { Texture } from '../textures/Texture';
+import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
+import type { Dimensions } from '../../../utils.js';
 
 const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
 
-export class DefaultShaderBatched extends WebGlCoreShader<
-  'a_position' | 'a_textureCoordinate' | 'a_color' | 'a_textureIndex',
+export interface RoundedRectangleProps {
+  radius?: number;
+}
+
+export class RoundedRectangle extends WebGlCoreShader<
+  'a_position' | 'a_textureCoordinate' | 'a_color',
   [
     { name: 'u_resolution'; uniform: 'uniform2f' },
     { name: 'u_pixelRatio'; uniform: 'uniform1f' },
-    { name: 'u_textures[0]'; uniform: 'uniform1iv' },
+    { name: 'u_texture'; uniform: 'uniform2f' },
+    { name: 'u_dimensions'; uniform: 'uniform2f' },
+    { name: 'u_radius'; uniform: 'uniform1f' },
   ]
 > {
-  override supportsIndexedTextures = true;
-
   constructor(renderer: WebGlCoreRenderer) {
     const { gl } = renderer;
     super({
@@ -45,45 +50,53 @@ export class DefaultShaderBatched extends WebGlCoreShader<
           stride,
           offset: 4 * Float32Array.BYTES_PER_ELEMENT,
         },
-        {
-          name: 'a_textureIndex',
-          size: 1,
-          type: gl.FLOAT,
-          normalized: false,
-          stride,
-          offset: 5 * Float32Array.BYTES_PER_ELEMENT,
-        },
       ],
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2f' },
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_textures[0]', uniform: 'uniform1iv' },
+        { name: 'u_texture', uniform: 'uniform2f' },
+        { name: 'u_dimensions', uniform: 'uniform2f' },
+        { name: 'u_radius', uniform: 'uniform1f' },
       ],
     });
   }
 
-  override bindTextures(texture: WebGlCoreCtxTexture[]) {
-    const { renderer, gl } = this;
-    if (
-      texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
-    ) {
-      throw new Error(
-        `DefaultShaderBatched: Cannot bind more than ${renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS} textures`,
-      );
-    }
-    texture.forEach((t, i) => {
-      gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, t.ctxTexture);
-    });
+  static z$__type__Props: RoundedRectangleProps;
 
-    const samplers = Array.from(Array(texture.length).keys());
-    this.setUniform('u_textures[0]', samplers);
+  static override makeCacheKey(
+    props: RoundedRectangleProps,
+    dimensions: Dimensions,
+  ): string {
+    const resolvedProps = RoundedRectangle.resolveDefaults(props);
+    return `RoundedRectangle,r:${resolvedProps.radius},w:${dimensions.width},h:${dimensions.height}`;
   }
 
-  // unbindTexture() {
-  //   const { gl } = this;
-  //   gl.bindTexture(gl.TEXTURE_2D, null);
-  // }
+  static override resolveDefaults(
+    props: RoundedRectangleProps,
+  ): Required<RoundedRectangleProps> {
+    return {
+      radius: props.radius || 0,
+    };
+  }
+
+  override bindTextures(textures: WebGlCoreCtxTexture[]) {
+    const { gl } = this;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
+  }
+
+  override bindUniforms(renderOp: WebGlCoreRenderOp) {
+    super.bindUniforms(renderOp);
+    const { width = 100, height = 100 } = renderOp.dimensions;
+    this.setUniform('u_dimensions', width, height);
+  }
+
+  override bindProps(props: RoundedRectangleProps): void {
+    for (const key in props) {
+      // @ts-expect-error to fancy code
+      this.setUniform(`u_${key}`, props[key]);
+    }
+  }
 
   static override shaderSources: ShaderProgramSources = {
     vertex: `
@@ -93,19 +106,17 @@ export class DefaultShaderBatched extends WebGlCoreShader<
       precision mediump float;
       # endif
 
-      attribute vec2 a_textureCoordinate;
       attribute vec2 a_position;
+      attribute vec2 a_textureCoordinate;
       attribute vec4 a_color;
-      attribute float a_textureIndex;
 
       uniform vec2 u_resolution;
       uniform float u_pixelRatio;
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
-      varying float v_textureIndex;
 
-      void main(){
+      void main() {
         vec2 normalized = a_position * u_pixelRatio / u_resolution;
         vec2 zero_two = normalized * 2.0;
         vec2 clip_space = zero_two - 1.0;
@@ -113,14 +124,12 @@ export class DefaultShaderBatched extends WebGlCoreShader<
         // pass to fragment
         v_color = a_color;
         v_textureCoordinate = a_textureCoordinate;
-        v_textureIndex = a_textureIndex;
 
         // flip y
         gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
       }
     `,
-    fragment: (textureUnits) => `
-      #define txUnits ${textureUnits}
+    fragment: `
       # ifdef GL_FRAGMENT_PRESICISON_HIGH
       precision highp float;
       # else
@@ -128,28 +137,28 @@ export class DefaultShaderBatched extends WebGlCoreShader<
       # endif
 
       uniform vec2 u_resolution;
-      uniform sampler2D u_image;
-      uniform sampler2D u_textures[txUnits];
+      uniform vec2 u_dimensions;
+      uniform float u_radius;
+      uniform sampler2D u_texture;
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
-      varying float v_textureIndex;
 
-      vec4 sampleFromTexture(sampler2D textures[${textureUnits}], int idx, vec2 uv) {
-        ${Array.from(Array(textureUnits).keys())
-          .map(
-            (idx) => `
-          ${idx !== 0 ? 'else ' : ''}if (idx == ${idx}) {
-            return texture2D(textures[${idx}], uv);
-          }
-        `,
-          )
-          .join('')}
-        return texture2D(textures[0], uv);
+      float boxDist(vec2 p, vec2 size, float radius){
+        size -= vec2(radius);
+        vec2 d = abs(p) - size;
+        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
       }
 
-      void main(){
-        gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoordinate);
+      float fillMask(float dist) {
+        return clamp(-dist, 0.0, 1.0);
+      }
+
+      void main() {
+        vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+        vec2 halfDimensions = u_dimensions * 0.5;
+        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, u_radius);
+        gl_FragColor = mix(vec4(0.0), color, fillMask(d));
       }
     `,
   };

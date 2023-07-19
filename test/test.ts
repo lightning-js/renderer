@@ -32,8 +32,8 @@ import { Character } from './Character.js';
       devicePhysicalPixelRatio: 1,
     },
     'app',
-    // mainDriver,
-    threadXDriver,
+    mainDriver,
+    // threadXDriver,
   );
 
   await renderer.init();
@@ -49,6 +49,9 @@ import { Character } from './Character.js';
     w: 100,
     h: 100,
     color: 0x00ff0000,
+    shader: renderer.makeShader('RoundedRectangle', {
+      radius: 40,
+    }),
     parent: renderer.root,
   });
 
@@ -88,6 +91,7 @@ import { Character } from './Character.js';
       w: 1315,
       h: 50,
     }),
+    parent: renderer.root,
   });
 
   const relativePositioningChild = renderer.createNode({

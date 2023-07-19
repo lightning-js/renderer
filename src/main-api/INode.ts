@@ -1,7 +1,7 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { IAnimationController } from '../core/IAnimationController.js';
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
-import type { TextureDesc } from './RendererMain.js';
+import type { ShaderDesc, TextureDesc } from './RendererMain.js';
 
 export interface INodeWritableProps {
   x: number;
@@ -13,6 +13,7 @@ export interface INodeWritableProps {
   parent: INode | null;
   zIndex: number;
   texture: TextureDesc | null;
+  shader: ShaderDesc | null;
   text: string;
   src: string;
 }

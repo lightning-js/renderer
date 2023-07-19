@@ -1,4 +1,6 @@
 import { CoreShader } from '../CoreShader.js';
+import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
 import {
   createProgram,
@@ -23,6 +25,7 @@ export abstract class WebGlCoreShader<
     { name: 'u_pixelRatio'; uniform: 'uniform1f' },
   ],
 > extends CoreShader {
+  protected buffersBound = false;
   protected program: WebGLProgram;
   /**
    * Vertex Array Object
@@ -137,8 +140,8 @@ export abstract class WebGlCoreShader<
       }
 
       // Bind buffer/attributes to VAO (WebGL2 only)
-      if (isWebGl2(this.gl)) {
-        this._bindBufferAttributes(this.gl, location, buffer, attributeInfo);
+      if (webGl2) {
+        this.bindBufferAttribute(location, buffer, attributeInfo);
       }
 
       this.attributeLocations[attributeInfo.name as Attributes] = location;
@@ -169,12 +172,12 @@ export abstract class WebGlCoreShader<
     });
   }
 
-  private _bindBufferAttributes(
-    gl: WebGLRenderingContext,
+  bindBufferAttribute(
     location: number,
     buffer: WebGLBuffer,
     attribute: AttributeInfo,
   ) {
+    const gl = this.gl;
     gl.enableVertexAttribArray(location);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -189,6 +192,25 @@ export abstract class WebGlCoreShader<
     );
   }
 
+  disableAttribute(location: number) {
+    this.gl.disableVertexAttribArray(location);
+  }
+
+  disableAttributes() {
+    for (const loc in this.attributeLocations) {
+      this.disableAttribute(this.attributeLocations[loc]);
+    }
+    this.buffersBound = false;
+  }
+
+  bindRenderOp(renderOp: WebGlCoreRenderOp) {
+    this.bindBuffer(renderOp.quadWebGlBuffer);
+    if (renderOp.textures.length > 0) {
+      this.bindTextures(renderOp.textures);
+    }
+    this.bindUniforms(renderOp);
+  }
+
   setUniform<T extends keyof UniformTupleToMap<Uniforms>>(
     name: T,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -200,29 +222,46 @@ export abstract class WebGlCoreShader<
     this.gl[this.uniformTypes[name]](this.uniformLocations[name], ...args);
   }
 
-  bindAttributeBuffer(attributeName: Attributes, buffer?: WebGLBuffer) {
-    const resolvedBuffer = buffer || this.attributeBuffers[attributeName];
-    if (!resolvedBuffer) {
-      throw new Error();
+  bindBuffer(buffer: WebGLBuffer) {
+    if (this.buffersBound) {
+      return;
     }
-    // For WebGL 1 we need to bind the info for each attribute buffer before each draw
-    if (this.gl instanceof WebGLRenderingContext) {
-      this._bindBufferAttributes(
-        this.gl,
-        this.attributeLocations[attributeName],
+    this.buffersBound = true;
+    for (const loc in this.attributeLocations) {
+      const resolvedBuffer = buffer || this.attributeBuffers[loc];
+      this.bindBufferAttribute(
+        this.attributeLocations[loc],
         resolvedBuffer,
-        this.attributeInfos[attributeName],
+        this.attributeInfos[loc],
       );
     }
-    // TODO: !!!
-    // this.gl.bindBuffer(this.gl.ARRAY_BUFFER, resolvedBuffer);
   }
 
-  useProgram() {
+  override bindProps(props: Record<string, unknown>) {
+    //
+  }
+
+  bindTextures(textures: WebGlCoreCtxTexture[]) {
+    // no defaults
+  }
+
+  bindUniforms(renderOp: WebGlCoreRenderOp) {
+    const { gl } = renderOp;
+    // @ts-expect-error to be fixed
+    this.setUniform('u_resolution', gl.canvas.width, gl.canvas.height);
+    // @ts-expect-error to be fixed
+    this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
+  }
+
+  override attach(): void {
     this.gl.useProgram(this.program);
     if (isWebGl2(this.gl) && this.vao) {
       this.gl.bindVertexArray(this.vao);
     }
+  }
+
+  override detach(): void {
+    this.disableAttributes();
   }
 
   protected static shaderSources?: ShaderProgramSources;

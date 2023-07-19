@@ -52,17 +52,11 @@ export class DefaultShader extends WebGlCoreShader<
     });
   }
 
-  // TEMP: This is temporary until we have a proper texture abstraction
-  bindTexture(texture: WebGlCoreCtxTexture) {
+  override bindTextures(textures: WebGlCoreCtxTexture[]) {
     const { gl } = this;
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture.ctxTexture);
+    gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }
-
-  // unbindTexture() {
-  //   const { gl } = this;
-  //   gl.bindTexture(gl.TEXTURE_2D, null);
-  // }
 
   static override shaderSources: ShaderProgramSources = {
     vertex: `

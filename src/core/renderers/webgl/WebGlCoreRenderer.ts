@@ -1,7 +1,6 @@
 import { assertTruthy, createWebGLContext } from '../../../utils.js';
 import { CoreRenderer } from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
-import { WebGlCoreShader } from './WebGlCoreShader.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -10,9 +9,8 @@ import {
   getWebGlParameters,
   getWebGlExtensions,
 } from './internal/RendererUtils.js';
-import { normalizeARGB } from '../../utils.js';
+import { normalizeARGB, type Dimensions } from '../../utils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import { DefaultShaderBatched } from './shaders/DefaultShaderBatched.js';
 import { Texture } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
 import type { Stage, StageOptions } from '../../Stage.js';
@@ -22,6 +20,8 @@ import type {
   CoreTextureManager,
   TextureOptions,
 } from '../../CoreTextureManager.js';
+import { CoreShaderManager } from '../../CoreShaderManager.js';
+import type { CoreShader } from '../CoreShader.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -31,6 +31,7 @@ export interface WebGlCoreRendererOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   pixelRatio: number;
   txManager: CoreTextureManager;
+  shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
 }
@@ -47,6 +48,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   //// Core Managers
   txManager: CoreTextureManager;
+  shManager: CoreShaderManager;
 
   //// Options
   options: Required<WebGlCoreRendererOptions>;
@@ -62,7 +64,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   curRenderOp: WebGlCoreRenderOp | null = null;
 
   //// Default Shader
-  defaultShader: WebGlCoreShader;
+  defaultShader: CoreShader;
   quadWebGlBuffer: WebGLBuffer;
 
   /**
@@ -75,7 +77,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { canvas, clearColor, bufferMemory } = options;
     this.options = options;
     this.txManager = options.txManager;
+    this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
+
     const gl = createWebGLContext(canvas);
     if (!gl) {
       throw new Error('Unable to create WebGL context');
@@ -92,8 +96,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       parameters: getWebGlParameters(gl),
       extensions: getWebGlExtensions(gl),
     };
-
-    this.defaultShader = new DefaultShaderBatched(this);
+    this.shManager.renderer = this;
+    this.defaultShader = this.shManager.loadShader('DefaultShaderBatched');
     this.quadWebGlBuffer = gl.createBuffer() as WebGLBuffer;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadWebGlBuffer);
   }
@@ -103,6 +107,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.curRenderOp = null;
     this.renderOps.length = 0;
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  }
+
+  override getShaderManager(): CoreShaderManager {
+    return this.shManager;
   }
 
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
@@ -120,22 +128,34 @@ export class WebGlCoreRenderer extends CoreRenderer {
     color: number,
     texture: Texture | null,
     textureOptions: TextureOptions | null,
+    shader: CoreShader | null,
+    shaderProps: Record<string, unknown> | null,
   ) {
     const { fQuadBuffer, uiQuadBuffer } = this;
     texture = texture ?? this.defaultTexture;
     assertTruthy(texture instanceof Texture, 'Invalid texture type');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
+    const targetDims = {
+      width: w,
+      height: h,
+    };
+    const targetShader = shader || this.defaultShader;
 
     if (curRenderOp) {
-      // Current operation is using the default shader
-      if (curRenderOp.shader !== this.defaultShader) {
+      if (curRenderOp.shader !== targetShader) {
+        curRenderOp = null;
+      } else if (
+        curRenderOp.shader !== this.defaultShader &&
+        (curRenderOp.shaderProps !== shaderProps ||
+          curRenderOp.dimensions !== targetDims)
+      ) {
         curRenderOp = null;
       }
     }
 
     if (!curRenderOp) {
-      this.newRenderOp(this.defaultShader, bufferIdx);
+      this.newRenderOp(targetShader, shaderProps as any, targetDims, bufferIdx);
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
     }
@@ -220,13 +240,20 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(shader: WebGlCoreShader, bufferIdx: number) {
+  private newRenderOp(
+    shader: CoreShader,
+    shaderProps: Record<string, unknown>,
+    dimensions: Dimensions,
+    bufferIdx: number,
+  ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.gl,
       this.options,
       this.quadBuffer,
       this.quadWebGlBuffer,
       shader,
+      shaderProps,
+      dimensions,
       bufferIdx,
     );
     this.curRenderOp = curRenderOp;
@@ -258,7 +285,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(curRenderOp.shader, bufferIdx);
+      const { shader, shaderProps, dimensions } = curRenderOp;
+      this.newRenderOp(shader, shaderProps, dimensions, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;

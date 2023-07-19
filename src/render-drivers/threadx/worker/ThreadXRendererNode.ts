@@ -9,7 +9,10 @@ import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
 import type { Texture } from '../../../core/textures/Texture.js';
 import { CoreNode } from '../../../core/CoreNode.js';
-import type { TextureDesc } from '../../../main-api/RendererMain.js';
+import type {
+  ShaderDesc,
+  TextureDesc,
+} from '../../../main-api/RendererMain.js';
 
 export class ThreadXRendererNode extends SharedNode {
   private coreNode: CoreNode;
@@ -95,6 +98,12 @@ export class ThreadXRendererNode extends SharedNode {
           textureDesc.props as any,
           textureDesc.options,
         );
+      },
+    );
+    this.on(
+      'loadShader',
+      (target: ThreadXRendererNode, shaderDesc: ShaderDesc) => {
+        this.coreNode.loadShader(shaderDesc.shType, shaderDesc.props as any);
       },
     );
     this.on('unloadTexture', (target: ThreadXRendererNode) => {
