@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="BackstopJS" tests="3" failures="0" errors="0" skipped="0">
+    <testcase classname="document" name=" ›› Lightning3 Base Test"/>
+    <testcase classname="document" name=" ›› Lightning3 Base Test"/>
+    <testcase classname="document" name=" ›› Lightning3 Base Test"/>
+  </testsuite>
+</testsuites>

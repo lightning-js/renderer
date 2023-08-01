@@ -1,0 +1,50 @@
+{
+  "id": "backstop_default",
+  "viewports": [
+    {
+      "label": "tv",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "label": "720p",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "label": "220p",
+      "width": 500,
+      "height": 200
+    }
+  ],
+  "onReadyScript": "puppet/onReady.js",
+  "scenarios": [
+    {
+      "label": "Lightning3 Base Test",
+      "url": "http://localhost:5173/test/test.html?scriptUrl=basic.ts",
+      "referenceUrl": "",
+      "readyEvent": "ready!",
+      "readySelector": "",
+      "delay": 50,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    }
+  ],
+  "paths": {
+    "bitmaps_reference": "backstop_data/bitmaps_reference",
+    "bitmaps_test": "backstop_data/bitmaps_test",
+    "engine_scripts": "backstop_data/engine_scripts",
+    "html_report": "backstop_data/html_report",
+    "ci_report": "backstop_data/ci_report"
+  },
+  "report": ["CI"],
+  "engine": "puppeteer",
+  "engineOptions": {
+    "args": ["--no-sandbox"],
+    "headless": "new"
+  },
+  "asyncCaptureLimit": 5,
+  "asyncCompareLimit": 50,
+  "debug": false,
+  "debugWindow": false
+}

@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <title>Renderer Browser Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const scriptUrl = urlParams.get('scriptUrl') || 'test.ts';
+      const scriptElement = document.createElement('script');
+      scriptElement.type = 'module';
+      scriptElement.src = scriptUrl;
+      document.head.appendChild(scriptElement);
+    </script>
+  </body>
+</html>

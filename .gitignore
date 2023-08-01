@@ -6,3 +6,5 @@ build
 releases
 .tmp
 .env
+backstop_data/html_report/
+bitmaps_test/
