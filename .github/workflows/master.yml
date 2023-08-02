@@ -1,0 +1,33 @@
+name: Lightning Pulls
+
+on:
+  pull_request:
+    branches: [ master ]
+jobs:
+  pullrequest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install dependencies
+        run: npm ci
+      - name: run build
+        continue-on-error: true
+        run: npm run build
+      - name: Run the tests
+        run: npm run test:ci
+      - name: create a folder
+        run: mkdir failure_data
+      - name: Archive HTML Report on failure
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: report
+          path: failure_data/
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v2.0.10
+        with:
+         # Artifact name
+         name: Download report
+         # Destination path
+         path: failure_data
+

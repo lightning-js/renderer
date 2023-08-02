@@ -11,6 +11,7 @@
   "scripts": {
     "start": "npm run dev",
     "test": "backstop test",
+    "test:ci": "(npm run serve&) && npm test",
     "test:update": "backstop reference",
     "lint": "npm run lint:prettier && npm run lint:eslint",
     "lint:fix": "npm run lint:fix:prettier && npm run lint:fix:eslint",
@@ -22,6 +23,7 @@
     "watch": "tsc -w",
     "dev": "concurrently -c \"auto\" \"npm:watch\" \"npm:vite\"",
     "vite": "vite --open \"/test/index.html\" --host",
+    "serve": "vite --host",
     "prepare": "husky install"
   },
   "repository": {
