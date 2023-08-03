@@ -41,13 +41,14 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
    * redRect will persist and change color every frame
    * greenRect will persist and be detached and reattached to the root every second
    * blueRect will be created and destroyed every 500 ms
+   * Colors are argb format
    */
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
     w: 100,
     h: 100,
-    color: 0x00ff0000,
+    color: 0xffff0000,
     shader: renderer.makeShader('RoundedRectangle', {
       radius: 40,
     }),
@@ -59,7 +60,25 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     y: 0,
     w: 100,
     h: 100,
-    color: 0x0000ff00,
+    color: 0xff00ff00,
+    parent: renderer.root,
+  });
+  const blueRect = renderer.createNode({
+    x: 200,
+    y: 0,
+    w: 100,
+    h: 100,
+    color: 0xff0000ff,
+    parent: renderer.root,
+  });
+
+  //Alpha test
+  const alphaGreenRect = renderer.createNode({
+    x: 0,
+    y: 100,
+    w: 100,
+    h: 100,
+    color: 0xcc00ff00,
     parent: renderer.root,
   });
 
@@ -108,7 +127,7 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     parent: renderer.root,
   });
 
-  const rockoRect = renderer.createNode({
+  renderer.createNode({
     x: 200,
     y: 500,
     w: 181,
@@ -117,6 +136,29 @@ import type { IAnimationController } from '../src/core/IAnimationController.js';
     color: 0xffffffff,
     parent: renderer.root,
   });
+
+  renderer.createNode({
+    x: 400,
+    y: 500,
+    w: 181,
+    h: 218,
+    src: rocko,
+    color: 0xfff00fff,
+    parent: renderer.root,
+  });
+
+  setTimeout(async () => {
+    elevatorRect.color = 0xffff00ff;
+    elevatorAnimation = elevatorRect
+      .animate(
+        {
+          y: 1080 - elevatorRect.h,
+        },
+        100,
+      )
+      .start();
+  }, 200);
+  setTimeout(() => console.log('ready animation!'), 351);
 
   /*
    * Begin: Sprite Map Demo

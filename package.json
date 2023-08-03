@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lightningDriePuntNul/renderer.git"
+    "url": "git+https://github.com/comcast-lightning/renderer"
   },
   "keywords": [
     "WebGL",
@@ -38,9 +38,9 @@
   "author": "Erik Haandrikman",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ightningDriePuntNul/renderer/issues"
+    "url": "https://github.com/comcast-lightning/renderer/issues"
   },
-  "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
+  "homepage": "https://github.com/comcast-lightning/renderer#readme",
   "devDependencies": {
     "@lightningjs/renderer": "file:",
     "@types/node": "^18.14.6",
