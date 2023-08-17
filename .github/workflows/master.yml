@@ -22,6 +22,7 @@ jobs:
 
       - name: Checkout threadx repo
         uses: actions/checkout@v3
+        with:
           repository: comcast-lightning/threadx
           path: ../threadx
 
