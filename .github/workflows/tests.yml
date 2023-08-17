@@ -56,7 +56,7 @@ jobs:
 
       - name: Download test reports on failure
         if: failure()
-        uses: actions/download-artifact@v30
+        uses: actions/download-artifact@v3
         with:
          # Artifact name
          name: test-report
