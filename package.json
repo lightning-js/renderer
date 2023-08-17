@@ -23,7 +23,7 @@
     "watch": "tsc -w",
     "dev": "concurrently -c \"auto\" \"npm:watch\" \"npm:vite\"",
     "vite": "vite --open \"/test/index.html\" --host",
-    "serve": "vite --host --port 5000",
+    "serve": "vite --host",
     "prepare": "husky install"
   },
   "repository": {
@@ -58,7 +58,7 @@
     "vite-tsconfig-paths": "^4.0.5"
   },
   "dependencies": {
-    "@lightningjs/threadx": "git@github.com:comcast-lightning/threadx.git"
+    "@lightningjs/threadx": "file:../threadx"
   },
   "lint-staged": {
     "*.ts": [
