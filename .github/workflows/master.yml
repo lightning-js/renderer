@@ -24,6 +24,7 @@ jobs:
       - name: Checkout threadx
         uses: actions/checkout@v3
         with:
+          ssh-key: ${{ secrets.THREADX_GH_DEPLOY_PRIVATE_KEY_READ_ONLY }}
           repository: comcast-lightning/threadx
           path: ./threadx
 
