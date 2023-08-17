@@ -16,7 +16,7 @@
   "scenarios": [
     {
       "label": "Lightning3 Base Test",
-      "url": "http://localhost:5173/test/test.html?scriptUrl=basic.ts",
+      "url": "http://localhost:5000/test/test.html?scriptUrl=basic.ts",
       "readyEvent": "ready!",
       "delay": 100,
       "misMatchThreshold" : 0.1,
@@ -24,7 +24,7 @@
     },
     {
       "label": "Lightning3 Base Animation Test",
-      "url": "http://localhost:5173/test/test.html?scriptUrl=basic.ts",
+      "url": "http://localhost:5000/test/test.html?scriptUrl=basic.ts",
       "readyEvent": "ready animation!",
       "misMatchThreshold" : 0.1,
       "requireSameDimensions": true
@@ -37,7 +37,7 @@
     "html_report": "backstop_data/html_report",
     "ci_report": "backstop_data/ci_report"
   },
-  "report": ["CI"],
+  "report": ["CI", "json"],
   "engine": "puppeteer",
   "engineOptions": {
     "args": ["--no-sandbox"],

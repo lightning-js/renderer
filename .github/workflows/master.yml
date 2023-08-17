@@ -7,22 +7,53 @@ jobs:
   pullrequest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Add SSH key to chekout a private repo
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.THREADX_GH_DEPLOY_PRIVATE_KEY_READ_ONLY }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Checkout threadx repo
+        uses: actions/checkout@v3
+          repository: comcast-lightning/threadx
+          path: ../threadx
+
+      - name: Build and link threadx
+        run: |
+          cd ../threadx
+          npm ci
+          npm run build
+          npm link
+          cd ../renderer
+          npm link @lightningjs/threadx
+
       - name: install dependencies
         run: npm ci
+
       - name: run build
-        continue-on-error: true
+        # continue-on-error: true
         run: npm run build
+
       - name: Run the tests
         run: npm run test:ci
+
       - name: create a folder
         run: mkdir failure_data
+
       - name: Archive HTML Report on failure
         if: failure()
         uses: actions/upload-artifact@v1
         with:
           name: report
           path: failure_data/
+
       - name: Download a Build Artifact
         uses: actions/download-artifact@v2.0.10
         with:
@@ -30,4 +61,3 @@ jobs:
          name: Download report
          # Destination path
          path: failure_data
-
