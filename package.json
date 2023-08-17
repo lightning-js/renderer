@@ -23,7 +23,7 @@
     "watch": "tsc -w",
     "dev": "concurrently -c \"auto\" \"npm:watch\" \"npm:vite\"",
     "vite": "vite --open \"/test/index.html\" --host",
-    "serve": "vite --host",
+    "serve": "vite --host --port 5000",
     "prepare": "husky install"
   },
   "repository": {

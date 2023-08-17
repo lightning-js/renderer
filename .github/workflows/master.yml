@@ -39,11 +39,14 @@ jobs:
         continue-on-error: true
         run: npm run build
 
-      - name: Run the tests
-        run: npm run test:ci
+      - name: serve the build
+        run: npm run serve &
 
-      - name: create a folder
+      - name: create failure_data folder
         run: mkdir failure_data
+
+      - name: Run the tests
+        run: npm test
 
       - name: Archive HTML Report on failure
         if: failure()
@@ -53,6 +56,7 @@ jobs:
           path: failure_data/
 
       - name: Download a Build Artifact
+        if: failure()
         uses: actions/download-artifact@v2.0.10
         with:
          # Artifact name
