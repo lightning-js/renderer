@@ -7,7 +7,7 @@ jobs:
   pullrequest:
     runs-on: ubuntu-latest
     steps:
-      - name: Add SSH key to chekout a private repo
+      - name: Add SSH key to checkout a private repo
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.THREADX_GH_DEPLOY_PRIVATE_KEY_READ_ONLY }}
@@ -24,15 +24,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: comcast-lightning/threadx
-          path: ../threadx
+          path: ./threadx
 
       - name: Build and link threadx
         run: |
-          cd ../threadx
+          cd ./threadx
           npm ci
           npm run build
           npm link
-          cd ../renderer
+          cd ../
           npm link @lightningjs/threadx
 
       - name: install dependencies
