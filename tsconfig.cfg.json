@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "outDir": "dist-cfg",
+    "types": ["@types/node"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "composite": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+  },
+  "files": [
+    "./.eslintrc.cjs",
+    "./examples/vite.config.ts",
+    "./typedoc.config.cjs"
+  ]
+}

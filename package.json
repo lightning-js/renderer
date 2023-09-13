@@ -1,0 +1,76 @@
+{
+  "name": "@lightningjs/renderer",
+  "version": "0.3.0",
+  "description": "Lightning 3 Renderer",
+  "type": "module",
+  "main": "./dist/exports/index.js",
+  "exports": {
+    ".": "./dist/exports/main-api.js",
+    "./core": "./dist/exports/core-api.js",
+    "./utils": "./dist/exports/utils.js",
+    "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
+  },
+  "scripts": {
+    "start": "cd examples && npm start",
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "test": "vitest",
+    "lint": "npm run lint:prettier && npm run lint:eslint",
+    "lint:fix": "npm run lint:fix:prettier && npm run lint:fix:eslint",
+    "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
+    "lint:fix:prettier": "prettier --write \"**/*.{ts,js,cjs,md}\"",
+    "lint:eslint": "eslint .",
+    "lint:fix:eslint": "eslint --fix .",
+    "typedoc": "typedoc",
+    "prepare": "husky install",
+    "prepack": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lightningDriePuntNul/renderer.git"
+  },
+  "keywords": [
+    "Lightning",
+    "LightningJS",
+    "WebGL",
+    "JS",
+    "WPE"
+  ],
+  "author": "Comcast Cable Communications Management, LLC",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ightningDriePuntNul/renderer/issues"
+  },
+  "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
+  "devDependencies": {
+    "@types/node": "^18.14.6",
+    "@typescript-eslint/eslint-plugin": "^5.55.0",
+    "@typescript-eslint/parser": "^5.55.0",
+    "concurrently": "^8.0.1",
+    "eslint": "^8.35.0",
+    "eslint-config-prettier": "^8.7.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.0",
+    "prettier": "^2.8.4",
+    "typedoc": "^0.25.1",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.2"
+  },
+  "dependencies": {
+    "@lightningjs/threadx": "^0.3.0",
+    "@protobufjs/eventemitter": "^1.1.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{js,cjs,md}": "prettier --write"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ]
+}

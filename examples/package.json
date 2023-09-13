@@ -1,0 +1,23 @@
+{
+  "name": "examples",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently -c \"auto\" \"npm:watch-renderer\" \"npm:dev\"",
+    "dev": "vite --open",
+    "build": "vite build",
+    "preview": "vite preview",
+    "watch-renderer": "cd .. && npm run watch"
+  },
+  "author": "Frank Weindel",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@lightningjs/renderer": "file:.."
+  },
+  "devDependencies": {
+    "@lightningjs/vite-plugin-import-chunk-url": "^0.3.0",
+    "vite": "^4.4.9"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist-vitest",
+    "types": [],
+    "composite": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "paths": {
+      "test/*": ["./test/*"]
+    },
+  },
+  "include": [
+    "./src/**/*.ts",
+    "./exports/**/*.ts",
+    "./test/mockdata/**/*.json"
+  ],
+  "exclude": []
+}
