@@ -71,6 +71,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
+    color: 0x00ff00ff,
     shader: renderer.makeShader('DynamicShader', {
       effects: [
         {
@@ -126,19 +127,20 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
+    color: 0x0000ffff,
     shader: renderer.makeShader('DynamicShader', {
       effects: [
         {
           type: 'borderRight',
           props: {
-            width: 10,
+            width: 30,
             color: 0xff00ffff,
           },
         },
         {
           type: 'borderLeft',
           props: {
-            width: 10,
+            width: 15,
             color: 0xff00ffff,
           },
         },
@@ -152,6 +154,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
+    color: 0xff0000ff,
     shader: renderer.makeShader('DynamicShader', {
       effects: [
         {

@@ -74,7 +74,7 @@ export class BorderBottomEffect extends ShaderEffect {
   };
 
   static override onEffectMask = `
-  vec2 pos = vec2(0.0, width * 0.5);
+  vec2 pos = vec2(0.0, u_dimensions.y - width * 0.5);
   float mask = $rectDist(v_textureCoordinate.xy * u_dimensions - pos, vec2(u_dimensions.x, width*0.5));
   return mix(shaderColor, maskColor, $fillMask(mask));
   `;
