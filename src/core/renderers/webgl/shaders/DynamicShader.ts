@@ -411,7 +411,7 @@ export class DynamicShader extends WebGlCoreShader {
 
       ${drawEffects}
 
-      gl_FragColor = shaderColor;
+      gl_FragColor = shaderColor * v_color.a;
     }
   `;
 }
