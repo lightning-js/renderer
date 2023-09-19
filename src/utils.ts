@@ -160,10 +160,10 @@ export function mergeColorAlpha(rgba: number, alpha: number): number {
  * NOTE: This method returns a PREMULTIPLIED alpha color which is generally only useful
  * in the context of the internal rendering process. Use {@link mergeColorAlpha} if you
  * need to blend an alpha value into a color in the context of the Renderer's
- * public API.
+ * main API.
  *
  * @internalRemarks
- * Do not expose this method in the public API because Renderer users should instead use
+ * Do not expose this method in the main API because Renderer users should instead use
  * {@link mergeColorAlpha} to manipulate the alpha value of a color.
  *
  * @internal
@@ -188,4 +188,15 @@ export function mergeColorAlphaPremultiplied(
   }
 
   return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
+}
+
+/**
+ * Returns true if the given object has the given "own" property.
+ *
+ * @param obj
+ * @param prop
+ * @returns
+ */
+export function hasOwn(obj: object, prop: string | number | symbol): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
 }

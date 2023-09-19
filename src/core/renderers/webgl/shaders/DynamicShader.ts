@@ -18,7 +18,10 @@
  */
 import type { ExtractProps } from '../../../CoreTextureManager.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import { WebGlCoreShader } from '../WebGlCoreShader.js';
+import {
+  WebGlCoreShader,
+  type DimensionsShaderProp,
+} from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
@@ -33,7 +36,7 @@ import { BorderBottomEffect } from './effects/BorderBottomEffect.js';
 import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 
-export interface DynamicShaderProps {
+export interface DynamicShaderProps extends DimensionsShaderProp {
   effects?: EffectDesc[];
 }
 
@@ -98,13 +101,7 @@ export class DynamicShader extends WebGlCoreShader {
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }
 
-  override bindUniforms(renderOp: WebGlCoreRenderOp) {
-    super.bindUniforms(renderOp);
-    const { width = 100, height = 100 } = renderOp.dimensions;
-    this.setUniform('u_dimensions', [width, height]);
-  }
-
-  override bindProps(props: DynamicShaderProps): void {
+  protected override bindProps(props: Required<DynamicShaderProps>): void {
     props.effects?.forEach((eff, index) => {
       const effect = this.effects[index]!;
       const fxClass = Effects[effect.name as keyof EffectMap];
@@ -313,13 +310,18 @@ export class DynamicShader extends WebGlCoreShader {
   }
 
   static override resolveDefaults(
-    props: DynamicShaderProps = {},
-  ): Record<string, unknown> {
-    props.effects = (props.effects ?? []).map((effect) => ({
-      type: effect.type,
-      props: Effects[effect.type].resolveDefaults(effect.props || {}),
-    }));
-    return props as Record<string, unknown>;
+    props: DynamicShaderProps,
+  ): Required<DynamicShaderProps> {
+    return {
+      effects: (props.effects ?? []).map((effect) => ({
+        type: effect.type,
+        props: Effects[effect.type].resolveDefaults(effect.props || {}),
+      })),
+      $dimensions: {
+        width: 0,
+        height: 0,
+      },
+    };
   }
 
   static override makeCacheKey(props: DynamicShaderProps): string {

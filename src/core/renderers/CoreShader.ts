@@ -31,8 +31,11 @@ export abstract class CoreShader {
     return {};
   }
 
-  abstract bindRenderOp(renderOp: CoreRenderOp): void;
-  abstract bindProps(props: Record<string, unknown>): void;
+  abstract bindRenderOp(
+    renderOp: CoreRenderOp,
+    props: Record<string, unknown> | null,
+  ): void;
+  protected abstract bindProps(props: Record<string, unknown>): void;
   abstract attach(): void;
   abstract detach(): void;
 }
