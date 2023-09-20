@@ -25,6 +25,7 @@ import {
   type Bound,
   intersectBound,
   getNormalizedRgbaComponents,
+  type Rect,
 } from '../../lib/utils.js';
 import type { ImageTexture } from '../../textures/ImageTexture.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
@@ -438,7 +439,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  override renderQuads(state: CanvasTextRendererState): void {
+  override renderQuads(
+    state: CanvasTextRendererState,
+    clippingRect: Rect | null,
+  ): void {
     const { stage } = this;
 
     const { canvasPages, textW = 0, textH = 0, renderWindow } = state;
@@ -484,6 +488,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     if (canvasPages[0].valid) {
       this.stage.renderer.addRenderable({
         alpha,
+        clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,
         colorTl: 0xffffffff,
@@ -508,6 +513,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     if (canvasPages[1].valid) {
       this.stage.renderer.addRenderable({
         alpha,
+        clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,
         colorTl: 0xffffffff,
@@ -532,6 +538,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     if (canvasPages[2].valid) {
       this.stage.renderer.addRenderable({
         alpha,
+        clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,
         colorTl: 0xffffffff,

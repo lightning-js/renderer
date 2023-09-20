@@ -19,6 +19,7 @@
 
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
+import type { Rect } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
@@ -366,5 +367,5 @@ export abstract class TextRenderer<
 
   abstract updateState(state: StateT): void;
 
-  abstract renderQuads(state: StateT): void;
+  abstract renderQuads(state: StateT, clippingRect: Rect | null): void;
 }

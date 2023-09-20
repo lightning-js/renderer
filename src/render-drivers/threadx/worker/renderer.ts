@@ -84,6 +84,7 @@ const threadx = ThreadX.init({
         width: coreRootNode.width,
         height: coreRootNode.height,
         alpha: coreRootNode.alpha,
+        clipping: coreRootNode.clipping,
         color: coreRootNode.color,
         colorTop: coreRootNode.colorTop,
         colorRight: coreRootNode.colorRight,

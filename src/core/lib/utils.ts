@@ -123,6 +123,18 @@ export function intersectRect(a: Rect, b: Rect): Rect {
   };
 }
 
+export function compareRect(a: Rect | null, b: Rect | null): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a === null || b === null) {
+    return false;
+  }
+  return (
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  );
+}
+
 export function isBoundPositive(bound: Bound): boolean {
   return bound.x1 < bound.x2 && bound.y1 < bound.y2;
 }
