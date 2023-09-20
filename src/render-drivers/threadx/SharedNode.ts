@@ -40,6 +40,7 @@ export class SharedNode extends SharedObject {
       width: sharedNodeStruct.width,
       height: sharedNodeStruct.height,
       alpha: sharedNodeStruct.alpha,
+      clipping: sharedNodeStruct.clipping,
       color: sharedNodeStruct.color,
       colorTop: sharedNodeStruct.colorTop,
       colorBottom: sharedNodeStruct.colorBottom,
@@ -70,6 +71,7 @@ export class SharedNode extends SharedObject {
   declare width: number;
   declare height: number;
   declare alpha: number;
+  declare clipping: boolean;
   declare color: number;
   declare colorTop: number;
   declare colorBottom: number;

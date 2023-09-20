@@ -197,6 +197,7 @@ export class ThreadXRendererNode extends SharedNode {
       width: sharedNodeStruct.width,
       height: sharedNodeStruct.height,
       alpha: sharedNodeStruct.alpha,
+      clipping: sharedNodeStruct.clipping,
       color: sharedNodeStruct.color,
       colorTop: sharedNodeStruct.colorTop,
       colorBottom: sharedNodeStruct.colorBottom,

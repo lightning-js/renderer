@@ -30,6 +30,7 @@ import type {
   TextFailedEventHandler,
   TextLoadedEventHandler,
 } from '../common/CommonTypes.js';
+import type { Rect } from './lib/utils.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   text: string;
@@ -280,8 +281,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     });
   }
 
-  override renderQuads(renderer: CoreRenderer) {
-    this.textRenderer.renderQuads(this.trState);
+  override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
+    this.textRenderer.renderQuads(this.trState, clippingRect);
   }
 
   /**
