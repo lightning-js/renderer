@@ -23,11 +23,27 @@ import {
   type ShaderEffectUniforms,
 } from './ShaderEffect.js';
 
+/**
+ * Properties of the {@link BorderEffect} effect
+ */
 export interface BorderEffectProps extends DefaultEffectProps {
+  /**
+   * Width of the border in pixels
+   *
+   * @default 10
+   */
   width?: number;
+  /**
+   * Color of the border in 0xRRGGBBAA
+   *
+   * @default 0xffffffff
+   */
   color?: number;
 }
 
+/**
+ * The BorderEffect renders a border along all edges of an element
+ */
 export class BorderEffect extends ShaderEffect {
   static z$__type__Props: BorderEffectProps;
   override readonly name = 'border';
@@ -41,7 +57,7 @@ export class BorderEffect extends ShaderEffect {
   ): Required<BorderEffectProps> {
     return {
       width: props.width ?? 10,
-      color: props.color ?? 10,
+      color: props.color ?? 0xffffffff,
     };
   }
 
