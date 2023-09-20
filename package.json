@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lightningDriePuntNul/renderer.git"
+    "url": "git+https://github.com/lightning-js/renderer.git"
   },
   "keywords": [
     "Lightning",
@@ -39,9 +39,9 @@
   "author": "Comcast Cable Communications Management, LLC",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ightningDriePuntNul/renderer/issues"
+    "url": "https://github.com/lightning-js/renderer/issues"
   },
-  "homepage": "https://github.com/ightningDriePuntNul/renderer#readme",
+  "homepage": "https://github.com/lightning-js/renderer#readme",
   "devDependencies": {
     "@types/node": "^18.14.6",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
