@@ -22,10 +22,21 @@ import {
   type ShaderEffectUniforms,
 } from './ShaderEffect.js';
 
+/**
+ * Properties of the {@link RadiusEffect} shader
+ */
 export interface RadiusEffectProps extends DefaultEffectProps {
+  /**
+   * Corner radius, in pixels, to cut out of the corners
+   *
+   * @default 10
+   */
   radius?: number | number[];
 }
 
+/**
+ * Masks the current maskcolor with rounded corners similar to {@link RoundedRectangle}
+ */
 export class RadiusEffect extends ShaderEffect {
   static z$__type__Props: RadiusEffectProps;
   override readonly name = 'radius';
