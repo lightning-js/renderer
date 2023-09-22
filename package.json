@@ -58,7 +58,6 @@
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.0",
-    "@lightningjs/vite-plugin-import-chunk-url": "^0.3.0",
     "@protobufjs/eventemitter": "^1.1.0"
   },
   "lint-staged": {
