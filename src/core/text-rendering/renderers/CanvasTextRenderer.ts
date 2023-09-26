@@ -84,12 +84,18 @@ export interface CanvasTextRendererState extends TextRendererState {
 }
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
+  /*
   protected canvas: OffscreenCanvas;
   protected context: OffscreenCanvasRenderingContext2D;
+*/
+  protected canvas: HTMLCanvasElement;
+  protected context: CanvasRenderingContext2D;
 
   constructor(stage: Stage) {
     super(stage);
-    this.canvas = new OffscreenCanvas(0, 0);
+    //this.canvas = new OffscreenCanvas(0, 0);.
+    const canvas = document.createElement('canvas');
+    this.canvas = canvas;
     const context = this.canvas.getContext('2d');
     assertTruthy(context);
     this.context = context;
@@ -273,11 +279,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       };
       const renderInfoCalculateTime = performance.now();
       state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
+      /*
       console.log(
         'Render info calculated in',
         performance.now() - renderInfoCalculateTime,
         'ms',
       );
+      */
       state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
       state.textW = state.renderInfo.width;
 
@@ -432,7 +440,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       }
       pageInfo.valid = true;
     }
-    console.log('pageDrawTime', performance.now() - pageDrawTime, 'ms');
+    //console.log('pageDrawTime', performance.now() - pageDrawTime, 'ms');
 
     // Report final status
     this.setStatus(state, 'loaded');

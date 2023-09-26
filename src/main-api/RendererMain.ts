@@ -151,11 +151,13 @@ export class RendererMain {
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
+  /*
   private textureRegistry = new FinalizationRegistry(
     (textureDescId: number) => {
       this.driver.releaseTexture(textureDescId);
     },
   );
+  */
 
   /**
    * Constructs a new Renderer instance
@@ -389,7 +391,7 @@ export class RendererMain {
         id,
       },
     };
-    this.textureRegistry.register(desc, id);
+    //this.textureRegistry.register(desc, id);
     return desc;
   }
 
