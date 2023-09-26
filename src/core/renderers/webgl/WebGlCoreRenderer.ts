@@ -20,6 +20,7 @@
 import {
   assertTruthy,
   createWebGLContext,
+  hasOwn,
   mergeColorAlphaPremultiplied,
 } from '../../../utils.js';
 import {
@@ -48,9 +49,10 @@ import type {
 import { CoreShaderManager } from '../../CoreShaderManager.js';
 import type { CoreShader } from '../CoreShader.js';
 import { BufferCollection } from './internal/BufferCollection.js';
-import { getNormalizedRgbaComponents } from '../../lib/utils.js';
+import { getNormalizedRgbaComponents, type Rect } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
+import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -94,7 +96,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
 
   //// Default Shader
-  defaultShader: CoreShader;
+  defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
   /**
@@ -231,6 +233,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
     } = params;
     let { texture } = params;
 
+    /**
+     * If the shader props contain any automatic properties, update it with the
+     * current dimensions that will be used to render the quad.
+     */
+    if (shaderProps && hasOwn(shaderProps, '$dimensions')) {
+      const dimensions = shaderProps.$dimensions as Dimensions;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      dimensions.width = width;
+      dimensions.height = height;
+    }
+
     texture = texture ?? this.defaultTexture;
     assertTruthy(texture instanceof Texture, 'Invalid texture type');
 
@@ -241,13 +254,20 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     };
     const targetShader = shader || this.defaultShader;
+    assertTruthy(targetShader instanceof WebGlCoreShader);
     if (curRenderOp) {
+      // If the current render op is not the same shader, create a new one
+      // If the current render op's shader props are not compatible with the
+      // the new shader props, create a new one render op.
       if (curRenderOp.shader !== targetShader) {
         curRenderOp = null;
       } else if (
         curRenderOp.shader !== this.defaultShader &&
-        (curRenderOp.shaderProps !== shaderProps ||
-          curRenderOp.dimensions !== targetDims)
+        (!shaderProps ||
+          !curRenderOp.shader.canBatchShaderProps(
+            curRenderOp.shaderProps,
+            shaderProps,
+          ))
       ) {
         curRenderOp = null;
       }

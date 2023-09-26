@@ -31,9 +31,13 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
 
 (async () => {
   // URL params
+  // - driver: main | threadx (default: threadx)
+  // - test: <test name> (default: test)
+  // - showOverlay: true | false (default: true)
   const urlParams = new URLSearchParams(window.location.search);
   let driverName = urlParams.get('driver');
   const test = urlParams.get('test') || 'test';
+  const showOverlay = urlParams.get('overlay') !== 'false';
 
   if (driverName !== 'main' && driverName !== 'threadx') {
     driverName = 'threadx';
@@ -72,20 +76,22 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
 
   assertTruthy(canvas instanceof HTMLCanvasElement);
 
-  const overlayText = renderer.createTextNode({
-    color: 0xff0000ff,
-    text: `Test: ${test} | Driver: ${driverName}`,
-    zIndex: 99999,
-    parent: renderer.root,
-    fontSize: 50,
-  });
-  overlayText.once(
-    'textLoaded',
-    (target: any, { width, height }: Dimensions) => {
-      overlayText.x = appDimensions.width - width - 20;
-      overlayText.y = appDimensions.height - height - 20;
-    },
-  );
+  if (showOverlay) {
+    const overlayText = renderer.createTextNode({
+      color: 0xff0000ff,
+      text: `Test: ${test} | Driver: ${driverName}`,
+      zIndex: 99999,
+      parent: renderer.root,
+      fontSize: 50,
+    });
+    overlayText.once(
+      'textLoaded',
+      (target: any, { width, height }: Dimensions) => {
+        overlayText.x = appDimensions.width - width - 20;
+        overlayText.y = appDimensions.height - height - 20;
+      },
+    );
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const module = await import(`./tests/${test}.ts`);

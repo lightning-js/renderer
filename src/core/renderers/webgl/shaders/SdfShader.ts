@@ -82,7 +82,7 @@ export class SdfShader extends WebGlCoreShader {
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }
 
-  override bindProps(props: SdfShaderProps): void {
+  protected override bindProps(props: SdfShaderProps): void {
     const resolvedProps = SdfShader.resolveDefaults(props);
     for (const key in resolvedProps) {
       if (key === 'offset') {

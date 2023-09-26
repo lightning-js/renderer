@@ -18,19 +18,21 @@
  */
 
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import { WebGlCoreShader } from '../WebGlCoreShader.js';
+import {
+  WebGlCoreShader,
+  type DimensionsShaderProp,
+} from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 
 /**
  * Properties of the {@link RoundedRectangle} shader
  */
-export interface RoundedRectangleProps {
+export interface RoundedRectangleProps extends DimensionsShaderProp {
   /**
    * Corner radius, in pixels, to cut out of the corners
    *
-   * @default 10
+   * @defaultValue 10
    */
   radius?: number;
 }
@@ -66,6 +68,10 @@ export class RoundedRectangle extends WebGlCoreShader {
   ): Required<RoundedRectangleProps> {
     return {
       radius: props.radius || 10,
+      $dimensions: {
+        width: 0,
+        height: 0,
+      },
     };
   }
 
@@ -75,17 +81,19 @@ export class RoundedRectangle extends WebGlCoreShader {
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }
 
-  override bindUniforms(renderOp: WebGlCoreRenderOp) {
-    super.bindUniforms(renderOp);
-    const { width = 100, height = 100 } = renderOp.dimensions;
-    this.setUniform('u_dimensions', [width, height]);
+  protected override bindProps(props: Required<RoundedRectangleProps>): void {
+    this.setUniform('u_radius', props.radius);
   }
 
-  override bindProps(props: RoundedRectangleProps): void {
-    for (const key in props) {
-      // @ts-expect-error to fancy code
-      this.setUniform(`u_${key}`, props[key]);
-    }
+  override canBatchShaderProps(
+    propsA: Required<RoundedRectangleProps>,
+    propsB: Required<RoundedRectangleProps>,
+  ): boolean {
+    return (
+      propsA.radius === propsB.radius &&
+      propsA.$dimensions.width === propsB.$dimensions.width &&
+      propsA.$dimensions.height === propsB.$dimensions.height
+    );
   }
 
   static override shaderSources: ShaderProgramSources = {
