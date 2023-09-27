@@ -73,8 +73,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
     const { shManager } = options;
     shManager.useShader(shader);
-    shader.bindRenderOp(this);
-    shader.bindProps(shaderProps);
+    shader.bindRenderOp(this, shaderProps);
 
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;

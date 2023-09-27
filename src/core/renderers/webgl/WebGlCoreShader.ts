@@ -17,7 +17,8 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../../../utils.js';
+import type { Dimensions } from '../../../common/CommonTypes.js';
+import { assertTruthy, hasOwn } from '../../../utils.js';
 import { CoreShader } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
@@ -33,6 +34,24 @@ import {
   type ShaderProgramSources,
 } from './internal/ShaderUtils.js';
 import { isWebGl2 } from './internal/WebGlUtils.js';
+
+/**
+ * Automatic shader prop for the dimensions of the Node being rendered
+ *
+ * @remarks
+ * Shader's who's rendering depends on the dimensions of the Node being rendered
+ * should extend this interface from their Prop interface type.
+ */
+export interface DimensionsShaderProp {
+  /**
+   * Dimensions of the Node being rendered (Auto-set by the renderer)
+   *
+   * @remarks
+   * DO NOT SET THIS. It is set automatically by the renderer.
+   * Any values set here will be ignored.
+   */
+  $dimensions?: Dimensions;
+}
 
 export abstract class WebGlCoreShader extends CoreShader {
   protected boundBufferCollection: BufferCollection | null = null;
@@ -197,12 +216,52 @@ export abstract class WebGlCoreShader extends CoreShader {
     this.boundBufferCollection = null;
   }
 
-  bindRenderOp(renderOp: WebGlCoreRenderOp) {
+  /**
+   * Given two sets of Shader props destined for this Shader, determine if they can be batched together
+   * to reduce the number of draw calls.
+   *
+   * @remarks
+   * This is used by the {@link WebGlCoreRenderer} to determine if it can batch multiple consecutive draw
+   * calls into a single draw call.
+   *
+   * By default, this returns false (meaning no batching is allowed), but can be
+   * overridden by child classes to provide more efficient batching.
+   *
+   * @param propsA
+   * @param propsB
+   * @returns
+   */
+  canBatchShaderProps(
+    propsA: Record<string, unknown>,
+    propsB: Record<string, unknown>,
+  ): boolean {
+    return false;
+  }
+
+  bindRenderOp(
+    renderOp: WebGlCoreRenderOp,
+    props: Record<string, unknown> | null,
+  ) {
     this.bindBufferCollection(renderOp.buffers);
     if (renderOp.textures.length > 0) {
       this.bindTextures(renderOp.textures);
     }
-    this.bindUniforms(renderOp);
+    const { gl } = renderOp;
+    // Bind standard automatic uniforms
+    this.setUniform('u_resolution', [gl.canvas.width, gl.canvas.height]); // !!!
+    this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
+    if (props) {
+      // Bind optional automatic uniforms
+      // These are only bound if their keys are present in the props.
+      if (hasOwn(props, '$dimensions')) {
+        let dimensions = props.$dimensions as Dimensions | null;
+        if (!dimensions) {
+          dimensions = renderOp.dimensions;
+        }
+        this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
+      }
+      this.bindProps(props);
+    }
   }
 
   setUniform(name: string, value: any): void {
@@ -228,18 +287,12 @@ export abstract class WebGlCoreShader extends CoreShader {
     this.boundBufferCollection = buffer;
   }
 
-  override bindProps(props: Record<string, unknown>) {
+  protected override bindProps(props: Record<string, unknown>) {
     // Implement in child class
   }
 
   bindTextures(textures: WebGlCoreCtxTexture[]) {
     // no defaults
-  }
-
-  bindUniforms(renderOp: WebGlCoreRenderOp) {
-    const { gl } = renderOp;
-    this.setUniform('u_resolution', [gl.canvas.width, gl.canvas.height]);
-    this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
   }
 
   override attach(): void {

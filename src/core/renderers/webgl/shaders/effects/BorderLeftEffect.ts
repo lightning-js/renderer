@@ -23,11 +23,27 @@ import {
   type ShaderEffectUniforms,
 } from './ShaderEffect.js';
 
+/**
+ * Properties of the {@link BorderLeftEffect} effect
+ */
 export interface BorderLeftEffectProps extends DefaultEffectProps {
+  /**
+   * Width of the border in pixels
+   *
+   * @default 10
+   */
   width?: number;
+  /**
+   * Color of the border in 0xRRGGBBAA
+   *
+   * @default 0xffffffff
+   */
   color?: number;
 }
 
+/**
+ * The BorderBottomEffect renders a border on the left of an element
+ */
 export class BorderLeftEffect extends ShaderEffect {
   static z$__type__Props: BorderLeftEffectProps;
   override readonly name = 'borderLeft';
@@ -41,7 +57,7 @@ export class BorderLeftEffect extends ShaderEffect {
   ): Required<BorderLeftEffectProps> {
     return {
       width: props.width ?? 10,
-      color: props.color ?? 10,
+      color: props.color ?? 0xffffffff,
     };
   }
 

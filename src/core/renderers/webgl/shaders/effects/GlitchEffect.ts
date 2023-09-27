@@ -5,13 +5,41 @@ import {
 } from './ShaderEffect.js';
 
 export interface GlitchEffectProps extends DefaultEffectProps {
+  /**
+   * Amplitude determines the intensity of the horizontal shift that happens in the glitch effect.
+   *
+   * @default 0.2
+   */
   amplitude?: number;
+  /**
+   * Narrowness of the horizontal shift
+   *
+   * @default 4.0
+   */
   narrowness?: number;
+  /**
+   * Blockiness of the horizontal shift
+   *
+   * @default 2.0
+   */
   blockiness?: number;
+  /**
+   * Minimzer of the horizontal shift
+   *
+   * @default 8.0
+   */
   minimizer?: number;
+  /**
+   * Used for the time loop of the horizontal shift
+   *
+   * @default Date.now()
+   */
   time?: number;
 }
 
+/**
+ * Renders a Glitch effect using the incoming texture
+ */
 export class GlitchEffect extends ShaderEffect {
   static z$__type__Props: GlitchEffectProps;
   override readonly name = 'glitch';
