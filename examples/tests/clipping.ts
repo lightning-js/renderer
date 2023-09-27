@@ -17,52 +17,342 @@
  * limitations under the License.
  */
 
+import type {
+  INode,
+  INodeWritableProps,
+  RendererMain,
+} from '@lightningjs/renderer';
+import { Component } from '../common/Component.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { paginateRows } from '../common/paginateRows.js';
+import { PageContainer } from '../common/PageContainer.js';
+
+const SQUARE_SIZE = 200;
+const PADDING = 20;
 
 export default async function ({ renderer, appDimensions }: ExampleSettings) {
   const roundRectShader = renderer.makeShader('RoundedRectangle', {
     radius: 10,
   });
 
-  const parentX = 0;
-  const parentY = 0;
-
-  // Create two nodes spaced appart
-  const n1 = renderer.createNode({
-    x: parentX,
-    y: parentY,
-    width: 400,
-    height: 400,
-    // shader: roundRectShader,
-    color: 0xff0000ff,
-    parent: renderer.root,
-    clipping: true,
-  });
-
-  const n2 = renderer.createNode({
-    x: -parentX,
-    y: -parentY,
+  const pageContainer = new PageContainer(renderer, {
     width: appDimensions.width,
     height: appDimensions.height,
-    // shader: roundRectShader,
-    color: 0x00ff0099,
-    parent: n1,
+    parent: renderer.root,
+    title: 'Clipping Tests',
   });
 
-  const bottomRightCornerX = 1920 - 400;
-  const bottomRightCornerY = 1080 - 400;
+  await paginateRows(pageContainer, [
+    async (rowNode) => {
+      let curX = 0;
+      /// TOP LEFT
+      const clipContainerTopLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopLeft,
+      });
 
-  const a1 = n1
-    .animate(
-      { x: bottomRightCornerX, y: bottomRightCornerY },
-      { duration: 10000, repeat: 10 },
-    )
-    .start();
-  const a2 = n2
-    .animate(
-      { x: -bottomRightCornerX, y: -bottomRightCornerY },
-      { duration: 10000, repeat: 10 },
-    )
-    .start();
-  await Promise.all([a1.waitUntilStopped(), a2.waitUntilStopped()]);
+      curX += SQUARE_SIZE + PADDING;
+
+      /// TOP RIGHT
+      const clipContainerTopRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopRight,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM RIGHT
+      const clipContainerBottomRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 100,
+        y: 100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomRight,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM LEFT
+      const clipContainerBottomLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: -100,
+        y: 100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomLeft,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      // ALL SIDES
+      const clipAllSides = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE * 2,
+        height: SQUARE_SIZE * 2,
+        color: 0xff0000ff,
+        parent: clipAllSides,
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'Standard node clips DIRECT children that are outside of its bounds';
+    },
+    async (rowNode) => {
+      let curX = 0;
+
+      /// TOP LEFT
+      const clipContainerTopLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerTopLeft2 = renderer.createNode({
+        parent: clipContainerTopLeft,
+      });
+      renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopLeft2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// TOP RIGHT
+      const clipContainerTopRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerTopRight2 = renderer.createNode({
+        parent: clipContainerTopRight,
+      });
+      renderer.createNode({
+        x: 100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopRight2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM RIGHT
+      const clipContainerBottomRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerBottomRight2 = renderer.createNode({
+        parent: clipContainerBottomRight,
+      });
+      renderer.createNode({
+        x: 100,
+        y: 100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomRight2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM LEFT
+      const clipContainerBottomLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerBottomLeft2 = renderer.createNode({
+        parent: clipContainerBottomLeft,
+      });
+      renderer.createNode({
+        x: -100,
+        y: 100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomLeft2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      // ALL SIDES
+      const clipAllSides = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipAllSides2 = renderer.createNode({
+        parent: clipAllSides,
+      });
+      renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE * 2,
+        height: SQUARE_SIZE * 2,
+        color: 0xff0000ff,
+        parent: clipAllSides2,
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'Standard node clips ANCESTOR children that are outside of its bounds';
+    },
+    async (rowNode) => {
+      const curX = 0;
+
+      /// Direct
+      renderer.createTextNode({
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent: rowNode,
+        fontFamily: 'Ubuntu',
+        fontSize: 40,
+        textRendererOverride: 'canvas',
+        text: 'Canvas direct clipping',
+        clipping: true,
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'Canvas text clips DIRECT text node children that is outside of its bounds';
+    },
+    async (rowNode) => {
+      const curX = 0;
+
+      const parent = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent: rowNode,
+        clipping: true,
+      });
+
+      renderer.createTextNode({
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent,
+        fontFamily: 'Ubuntu',
+        fontSize: 40,
+        color: 0x000000ff,
+        textRendererOverride: 'canvas',
+        text: 'Canvas ancestor clipping',
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'Canvas text clips ANCESTOR text node children that is outside of its bounds';
+    },
+    async (rowNode) => {
+      const curX = 0;
+
+      /// Direct
+      renderer.createTextNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent: rowNode,
+        fontFamily: 'Ubuntu',
+        fontSize: 40,
+        textRendererOverride: 'sdf',
+        text: 'SDF direct clipping',
+        clipping: true,
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'SDF text clips DIRECT text node children that is outside of its bounds';
+    },
+    async (rowNode) => {
+      const curX = 0;
+
+      const parent = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent: rowNode,
+        clipping: true,
+      });
+
+      renderer.createTextNode({
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        parent,
+        fontFamily: 'Ubuntu',
+        fontSize: 40,
+        color: 0x000000ff,
+        textRendererOverride: 'sdf',
+        text: 'SDF ancestor clipping',
+      });
+
+      rowNode.height = SQUARE_SIZE;
+      return 'SDF text clips ANCESTOR text node children that is outside of its bounds';
+    },
+  ]);
+
+  pageContainer.bindWindowKeys();
 }
