@@ -147,7 +147,7 @@ export class RendererMain {
   readonly root: INode | null = null;
   readonly driver: IRenderDriver;
   private canvas: HTMLCanvasElement;
-  private settings: Required<RendererMainSettings>;
+  readonly settings: Readonly<Required<RendererMainSettings>>;
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
