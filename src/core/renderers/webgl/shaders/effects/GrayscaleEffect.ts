@@ -18,6 +18,9 @@
  */
 import { ShaderEffect } from './ShaderEffect.js';
 
+/**
+ * Grayscale effect grayscales the color values of the current mask color
+ */
 export class GrayscaleEffect extends ShaderEffect {
   override readonly name = 'grayscale';
 
