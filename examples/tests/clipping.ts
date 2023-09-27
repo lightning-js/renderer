@@ -17,12 +17,6 @@
  * limitations under the License.
  */
 
-import type {
-  INode,
-  INodeWritableProps,
-  RendererMain,
-} from '@lightningjs/renderer';
-import { Component } from '../common/Component.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateRows } from '../common/paginateRows.js';
 import { PageContainer } from '../common/PageContainer.js';
@@ -31,10 +25,6 @@ const SQUARE_SIZE = 200;
 const PADDING = 20;
 
 export default async function ({ renderer, appDimensions }: ExampleSettings) {
-  const roundRectShader = renderer.makeShader('RoundedRectangle', {
-    radius: 10,
-  });
-
   const pageContainer = new PageContainer(renderer, {
     width: appDimensions.width,
     height: appDimensions.height,
@@ -266,6 +256,155 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
       return 'Standard node clips ANCESTOR children that are outside of its bounds';
     },
     async (rowNode) => {
+      let curX = 0;
+      /// TOP LEFT
+      const clipContainerTopLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerTopLeft2 = renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopLeft,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 50,
+        y: 50,
+        width: SQUARE_SIZE / 2,
+        height: SQUARE_SIZE / 2,
+        color: 0x0000ffff,
+        parent: clipContainerTopLeft2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// TOP RIGHT
+      const clipContainerTopRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerTopRight2 = renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerTopRight,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 150,
+        y: 50,
+        width: SQUARE_SIZE / 2,
+        height: SQUARE_SIZE / 2,
+        color: 0x0000ffff,
+        parent: clipContainerTopRight2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM RIGHT
+      const clipContainerBottomRight = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerBottomRight2 = renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomRight,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 150,
+        y: 150,
+        width: SQUARE_SIZE / 2,
+        height: SQUARE_SIZE / 2,
+        color: 0x0000ffff,
+        parent: clipContainerBottomRight2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      /// BOTTOM LEFT
+      const clipContainerBottomLeft = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerBottomLeft2 = renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerBottomLeft,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 50,
+        y: 150,
+        width: SQUARE_SIZE / 2,
+        height: SQUARE_SIZE / 2,
+        color: 0x0000ffff,
+        parent: clipContainerBottomLeft2,
+      });
+
+      curX += SQUARE_SIZE + PADDING;
+
+      // ALL SIDES
+      const clipContainerAllSides = renderer.createNode({
+        x: curX,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x00ff00ff,
+        parent: rowNode,
+        clipping: true,
+      });
+      const clipContainerAllSides2 = renderer.createNode({
+        x: -100,
+        y: -100,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0xff0000ff,
+        parent: clipContainerAllSides,
+        clipping: true,
+      });
+      renderer.createNode({
+        x: 50,
+        y: 50,
+        width: SQUARE_SIZE,
+        height: SQUARE_SIZE,
+        color: 0x0000ffff,
+        parent: clipContainerAllSides2,
+      });
+
+      rowNode.height = SQUARE_SIZE;
+
+      return 'Nested clipping nodes clip children that are outside of their interesected bounds';
+    },
+    async (rowNode) => {
       const curX = 0;
 
       /// Direct
@@ -281,7 +420,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
       });
 
       rowNode.height = SQUARE_SIZE;
-      return 'Canvas text clips DIRECT text node children that is outside of its bounds';
+      return 'Canvas text node clips DIRECT text node children that is outside of its bounds';
     },
     async (rowNode) => {
       const curX = 0;

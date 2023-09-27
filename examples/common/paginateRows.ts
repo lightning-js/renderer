@@ -1,9 +1,4 @@
-import type {
-  INode,
-  INodeWritableProps,
-  RendererMain,
-} from '@lightningjs/renderer';
-import { Component } from './Component.js';
+import type { INode } from '@lightningjs/renderer';
 import { PageContainer } from './PageContainer.js';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
@@ -46,7 +41,6 @@ export async function paginateRows(
         height: 0,
         color: 0x00000000,
         parent: pageNode,
-        clipping: true,
       });
       const rowHeaderNode = renderer.createTextNode({
         fontFamily: 'Ubuntu',
