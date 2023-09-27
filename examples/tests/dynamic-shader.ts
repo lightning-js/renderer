@@ -175,6 +175,31 @@ export default async function ({ renderer }: ExampleSettings) {
     parent: renderer.root,
   });
 
+  const t6 = renderer.createNode({
+    x: 200,
+    y: 700,
+    width: 750,
+    height: 250,
+    color: 0xff0000ff,
+    shader: renderer.makeShader('DynamicShader', {
+      effects: [
+        {
+          type: 'radius',
+          props: {
+            radius: 100,
+          },
+        },
+        {
+          type: 'fadeOut',
+          props: {
+            fade: [200, 100, 0, 0],
+          },
+        },
+      ],
+    }),
+    parent: renderer.root,
+  });
+
   /*
    * End: Sprite Map Demo
    */
