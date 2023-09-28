@@ -124,7 +124,7 @@ export function intersectRect(a: Rect, b: Rect): Rect {
 }
 
 export function compareRect(a: Rect | null, b: Rect | null): boolean {
-  if (a === null && b === null) {
+  if (a === b) {
     return true;
   }
   if (a === null || b === null) {
