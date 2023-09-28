@@ -1,10 +1,10 @@
-import type {
-  INode,
-  INodeWritableProps,
-  ITextNode,
-  RendererMain,
-} from '@lightningjs/renderer';
+import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
 import { Component } from './Component.js';
+import { loadStorage, saveStorage } from '../common/LocalStorage.js';
+
+interface PageContainerLocalStorageData {
+  curPage: number;
+}
 
 const TITLE_FONT_SIZE = 40;
 const PADDING = 20;
@@ -18,6 +18,7 @@ interface PageContainerProps {
   color?: number;
 
   //
+  testName?: string;
   title?: string;
 }
 
@@ -27,6 +28,7 @@ export class PageContainer extends Component {
   private curPageNode: INode | null = null;
   private curPageIndex = -1;
   private pageConstructors: ((page: INode) => Promise<void>)[] = [];
+  private testName?: string;
 
   constructor(renderer: RendererMain, props: PageContainerProps) {
     super(renderer, {
@@ -47,6 +49,8 @@ export class PageContainer extends Component {
       text: props.title ?? '',
     });
 
+    this.testName = props.testName;
+
     this.pageNumberNode = renderer.createTextNode({
       fontFamily: 'Ubuntu',
       fontSize: 30,
@@ -62,7 +66,21 @@ export class PageContainer extends Component {
 
   finalizePages() {
     if (this.curPageIndex === -1 && this.pageConstructors.length > 0) {
-      this.setPage(0).catch(console.error);
+      const { testName } = this;
+      let pageNum = 0;
+      if (testName) {
+        const savedState = loadStorage<PageContainerLocalStorageData>(
+          `${testName}-PageContainer`,
+        );
+        if (
+          savedState &&
+          savedState.curPage &&
+          savedState.curPage < this.pageConstructors.length
+        ) {
+          pageNum = savedState.curPage;
+        }
+      }
+      this.setPage(pageNum).catch(console.error);
     }
   }
 
@@ -85,6 +103,13 @@ export class PageContainer extends Component {
       height: this.contentHeight,
       parent: this.node,
     });
+
+    const { testName } = this;
+    if (testName) {
+      saveStorage<PageContainerLocalStorageData>(`${testName}-PageContainer`, {
+        curPage: pageIndex,
+      });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await this.pageConstructors[pageIndex]!(this.curPageNode);

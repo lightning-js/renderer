@@ -5,8 +5,13 @@ import { assertTruthy } from '@lightningjs/renderer/utils';
 const HEADER_FONT_SIZE = 30;
 const PADDING = 20;
 
-type RowContentConstructor = (rowNode: INode) => Promise<string>;
-type RowConstructor = (pageNode: INode) => Promise<INode>;
+export type RowConstructor = (pageNode: INode) => Promise<INode>;
+export type RowContentConstructor = (rowNode: INode) => Promise<number>;
+
+export interface TestRow {
+  title: string;
+  content: RowContentConstructor;
+}
 
 function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
   return async function (
@@ -22,17 +27,17 @@ function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
   }.bind(null, curPageRowConstructors);
 }
 
-export async function paginateRows(
+export async function paginateTestRows(
   pageContainer: PageContainer,
-  rowContentConstructors: RowContentConstructor[],
+  testRows: TestRow[],
 ) {
   const renderer = pageContainer.renderer;
   assertTruthy(renderer.root);
   let pageCurY = 0;
   let curPageRowConstructors: RowConstructor[] = [];
   let curRowIndex = 0;
-  for (const rowContentConstructor of rowContentConstructors) {
-    const isLastRow = curRowIndex === rowContentConstructors.length - 1;
+  for (const testRow of testRows) {
+    const isLastRow = curRowIndex === testRows.length - 1;
     let newRowConstructor: RowConstructor | null = async (pageNode: INode) => {
       const rowContainer = renderer.createNode({
         x: 0,
@@ -55,8 +60,9 @@ export async function paginateRows(
         color: 0x00000000,
         parent: rowContainer,
       });
-      const title = await rowContentConstructor(rowNode);
-      rowHeaderNode.text = title;
+      const rowHeight = await testRow.content(rowNode);
+      rowNode.height = rowHeight;
+      rowHeaderNode.text = testRow.title;
       rowContainer.height = HEADER_FONT_SIZE + PADDING * 2 + rowNode.height;
       return rowContainer;
     };

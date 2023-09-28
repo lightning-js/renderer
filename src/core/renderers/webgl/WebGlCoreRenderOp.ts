@@ -88,8 +88,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     if (this.clippingRect) {
       const { x, y, width, height } = this.clippingRect;
       const pixelRatio = options.pixelRatio;
-      // const canvasWidth = options.canvas.width;
       const canvasHeight = options.canvas.height;
+
       const clipX = Math.round(x * pixelRatio);
       const clipWidth = Math.round(width * pixelRatio);
       const clipHeight = Math.round(height * pixelRatio);
