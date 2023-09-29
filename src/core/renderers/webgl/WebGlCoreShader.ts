@@ -42,7 +42,7 @@ import { isWebGl2 } from './internal/WebGlUtils.js';
  * Shader's who's rendering depends on the dimensions of the Node being rendered
  * should extend this interface from their Prop interface type.
  */
-export interface DimensionsShaderProp {
+export interface AutomaticShaderProps {
   /**
    * Dimensions of the Node being rendered (Auto-set by the renderer)
    *
@@ -51,6 +51,14 @@ export interface DimensionsShaderProp {
    * Any values set here will be ignored.
    */
   $dimensions?: Dimensions;
+  /**
+   * Alpha of the Node being rendered (Auto-set by the renderer)
+   *
+   * @remarks
+   * DO NOT SET THIS. It is set automatically by the renderer.
+   * Any values set here will be ignored.
+   */
+  $alpha?: number;
 }
 
 export abstract class WebGlCoreShader extends CoreShader {
@@ -259,6 +267,13 @@ export abstract class WebGlCoreShader extends CoreShader {
           dimensions = renderOp.dimensions;
         }
         this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
+      }
+      if (hasOwn(props, '$alpha')) {
+        let alpha = props.$alpha as number | null;
+        if (!alpha) {
+          alpha = renderOp.alpha;
+        }
+        this.setUniform('u_alpha', alpha);
       }
       this.bindProps(props);
     }

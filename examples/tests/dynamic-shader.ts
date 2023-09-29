@@ -154,7 +154,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
-    color: 0xff0000ff,
+    color: 0x00000000,
     shader: renderer.makeShader('DynamicShader', {
       effects: [
         {

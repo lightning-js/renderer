@@ -20,10 +20,9 @@ import type { ExtractProps } from '../../../CoreTextureManager.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
-  type DimensionsShaderProp,
+  type AutomaticShaderProps,
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import { RadiusEffect } from './effects/RadiusEffect.js';
 import { BorderEffect } from './effects/BorderEffect.js';
@@ -37,7 +36,7 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 
-export interface DynamicShaderProps extends DimensionsShaderProp {
+export interface DynamicShaderProps extends AutomaticShaderProps {
   effects?: EffectDesc[];
 }
 
@@ -85,6 +84,7 @@ export class DynamicShader extends WebGlCoreShader {
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
         { name: 'u_texture', uniform: 'uniform2fv' },
         { name: 'u_dimensions', uniform: 'uniform2fv' },
+        { name: 'u_alpha', uniform: 'uniform1f' },
         ...shader.uniforms,
       ],
       shaderSources: {
@@ -314,7 +314,7 @@ export class DynamicShader extends WebGlCoreShader {
 
   static override resolveDefaults(
     props: DynamicShaderProps,
-  ): Required<DynamicShaderProps> {
+  ): Record<string, unknown> {
     return {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
@@ -324,6 +324,7 @@ export class DynamicShader extends WebGlCoreShader {
         width: 0,
         height: 0,
       },
+      $alpha: 0,
     };
   }
 
@@ -389,6 +390,7 @@ export class DynamicShader extends WebGlCoreShader {
 
     uniform vec2 u_resolution;
     uniform vec2 u_dimensions;
+    uniform float u_alpha;
     uniform float u_radius;
     uniform sampler2D u_texture;
 
@@ -416,7 +418,7 @@ export class DynamicShader extends WebGlCoreShader {
 
       ${drawEffects}
 
-      gl_FragColor = shaderColor * v_color.a;
+      gl_FragColor = shaderColor * u_alpha;
     }
   `;
 }

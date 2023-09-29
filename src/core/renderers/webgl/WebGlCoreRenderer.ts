@@ -277,7 +277,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     if (!curRenderOp) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      this.newRenderOp(targetShader, shaderProps as any, targetDims, bufferIdx);
+      this.newRenderOp(
+        targetShader,
+        shaderProps as any,
+        alpha,
+        targetDims,
+        bufferIdx,
+      );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
     }
@@ -436,6 +442,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   private newRenderOp(
     shader: WebGlCoreShader,
     shaderProps: Record<string, unknown>,
+    alpha: number,
     dimensions: Dimensions,
     bufferIdx: number,
   ) {
@@ -445,6 +452,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.quadBufferCollection,
       shader,
       shaderProps,
+      alpha,
       dimensions,
       bufferIdx,
       0, // Z-Index is only used for explictly added Render Ops
@@ -478,8 +486,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      const { shader, shaderProps, dimensions } = curRenderOp;
-      this.newRenderOp(shader, shaderProps, dimensions, bufferIdx);
+      const { shader, shaderProps, dimensions, alpha } = curRenderOp;
+      this.newRenderOp(shader, shaderProps, alpha, dimensions, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
