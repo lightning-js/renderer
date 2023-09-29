@@ -25,6 +25,7 @@ export interface NodeStructWritableProps {
   width: number;
   height: number;
   alpha: number;
+  clipping: boolean;
   color: number;
   colorTop: number;
   colorBottom: number;
@@ -95,6 +96,15 @@ export class NodeStruct
   }
 
   set alpha(value: number) {
+    // Decorator will handle this
+  }
+
+  @structProp('boolean')
+  get clipping(): boolean {
+    return false;
+  }
+
+  set clipping(value: boolean) {
     // Decorator will handle this
   }
 

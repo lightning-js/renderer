@@ -23,6 +23,7 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { Rect } from '../../lib/utils.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -42,6 +43,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly buffers: BufferCollection,
     readonly shader: WebGlCoreShader,
     readonly shaderProps: Record<string, unknown>,
+    readonly clippingRect: Rect | null,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
@@ -81,6 +83,22 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // TODO: Move these somewhere else?
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Clipping
+    if (this.clippingRect) {
+      const { x, y, width, height } = this.clippingRect;
+      const pixelRatio = options.pixelRatio;
+      const canvasHeight = options.canvas.height;
+
+      const clipX = Math.round(x * pixelRatio);
+      const clipWidth = Math.round(width * pixelRatio);
+      const clipHeight = Math.round(height * pixelRatio);
+      const clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(clipX, clipY, clipWidth, clipHeight);
+    } else {
+      gl.disable(gl.SCISSOR_TEST);
+    }
 
     gl.drawElements(
       gl.TRIANGLES,

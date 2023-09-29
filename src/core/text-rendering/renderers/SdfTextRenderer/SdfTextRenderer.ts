@@ -19,7 +19,7 @@
 
 // import { Colors } from '../../../Colors.js';
 // import type { Renderer } from '../../../Renderer.js';
-import { intersectBound, type Bound } from '../../../lib/utils.js';
+import { intersectBound, type Bound, type Rect } from '../../../lib/utils.js';
 import {
   TextRenderer,
   type TrProps,
@@ -429,7 +429,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  override renderQuads(state: SdfTextRendererState): void {
+  override renderQuads(
+    state: SdfTextRendererState,
+    clippingRect: Rect | null,
+  ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
@@ -533,6 +536,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         distanceRange,
         debug: debug.sdfShaderDebug,
       } satisfies SdfShaderProps,
+      clippingRect,
       { height: textH, width: textW },
       0,
       zIndex,
