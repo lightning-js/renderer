@@ -40,7 +40,7 @@ export default async function ({ renderer }: ExampleSettings) {
             angle: 220,
             colors: [
               0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
-              0xff0000ff,
+              0xff000000,
             ],
           },
         },
@@ -210,7 +210,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'radialGradient',
           props: {
-            colors: [0xff0000ff, 0x00ff00ff, 0x0000ffff],
+            colors: [0xff0000ff, 0x00ff00ff, 0x00000000],
             stops: [0.1, 0.4, 1.0],
             height: 200,
             width: 1000,

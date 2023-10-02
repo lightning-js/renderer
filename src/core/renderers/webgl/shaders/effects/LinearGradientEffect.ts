@@ -176,7 +176,7 @@ export class LinearGradientEffect extends ShaderEffect {
         stopCalc = (dist - stops[i]) / (stops[i + 1] - stops[i]);
         colorOut = mix(colorOut, colors[i + 1], clamp(stopCalc, 0.0, 1.0));
       }
-      return colorOut;
+      return mix(maskColor, colorOut, colorOut.a);
     `;
   };
 }
