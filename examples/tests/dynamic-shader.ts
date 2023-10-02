@@ -200,6 +200,28 @@ export default async function ({ renderer }: ExampleSettings) {
     parent: renderer.root,
   });
 
+  const t7 = renderer.createNode({
+    x: 1000,
+    y: 700,
+    width: 750,
+    height: 250,
+    shader: renderer.makeShader('DynamicShader', {
+      effects: [
+        {
+          type: 'radialGradient',
+          props: {
+            colors: [0xff0000ff, 0x00ff00ff, 0x0000ffff],
+            stops: [0.1, 0.4, 1.0],
+            height: 200,
+            width: 1000,
+            pivot: [0, 0.5],
+          },
+        },
+      ],
+    }),
+    parent: renderer.root,
+  });
+
   /*
    * End: Sprite Map Demo
    */
