@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 // import { Colors } from '../../../Colors.js';
 // import type { Renderer } from '../../../Renderer.js';
-import { intersectBound, type Bound } from '../../../lib/utils.js';
+import { intersectBound, type Bound, type Rect } from '../../../lib/utils.js';
 import {
   TextRenderer,
   type TrProps,
@@ -429,7 +429,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  override renderQuads(state: SdfTextRendererState): void {
+  override renderQuads(
+    state: SdfTextRendererState,
+    clippingRect: Rect | null,
+  ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
@@ -534,6 +537,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         debug: debug.sdfShaderDebug,
       } satisfies SdfShaderProps,
       alpha,
+      clippingRect,
       { height: textH, width: textW },
       0,
       zIndex,

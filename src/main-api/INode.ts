@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,25 @@ export interface INodeWritableProps {
    * @default `1`
    */
   alpha: number;
+  /**
+   * Clipping Mode
+   *
+   * @remarks
+   * Enable Clipping Mode when you want to prevent the drawing of a Node and
+   * its descendants from overflowing outside of the Node's x/y/width/height
+   * bounds.
+   *
+   * For WebGL, clipping is implemented using the high-performance WebGL
+   * operation scissor. As a consequence, clipping does not work for
+   * non-rectangular areas. So, if the element is rotated
+   * (by itself or by any of its ancestors), clipping will not work as intended.
+   *
+   * TODO: Add support for non-rectangular clipping either automatically or
+   * via Render-To-Texture.
+   *
+   * @default `false`
+   */
+  clipping: boolean;
   /**
    * The color of the Node.
    *

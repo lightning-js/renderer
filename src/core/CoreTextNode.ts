@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import type {
   TextFailedEventHandler,
   TextLoadedEventHandler,
 } from '../common/CommonTypes.js';
+import type { Rect } from './lib/utils.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   text: string;
@@ -280,8 +281,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     });
   }
 
-  override renderQuads(renderer: CoreRenderer) {
-    this.textRenderer.renderQuads(this.trState);
+  override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
+    this.textRenderer.renderQuads(this.trState, clippingRect);
   }
 
   /**

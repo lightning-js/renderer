@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
+import type { Rect } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
@@ -366,5 +367,5 @@ export abstract class TextRenderer<
 
   abstract updateState(state: StateT): void;
 
-  abstract renderQuads(state: StateT): void;
+  abstract renderQuads(state: StateT, clippingRect: Rect | null): void;
 }

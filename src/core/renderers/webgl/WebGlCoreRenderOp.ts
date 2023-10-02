@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { Rect } from '../../lib/utils.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -43,6 +44,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly shader: WebGlCoreShader,
     readonly shaderProps: Record<string, unknown>,
     readonly alpha: number,
+    readonly clippingRect: Rect | null,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
@@ -82,6 +84,22 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // TODO: Move these somewhere else?
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Clipping
+    if (this.clippingRect) {
+      const { x, y, width, height } = this.clippingRect;
+      const pixelRatio = options.pixelRatio;
+      const canvasHeight = options.canvas.height;
+
+      const clipX = Math.round(x * pixelRatio);
+      const clipWidth = Math.round(width * pixelRatio);
+      const clipHeight = Math.round(height * pixelRatio);
+      const clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(clipX, clipY, clipWidth, clipHeight);
+    } else {
+      gl.disable(gl.SCISSOR_TEST);
+    }
 
     gl.drawElements(
       gl.TRIANGLES,

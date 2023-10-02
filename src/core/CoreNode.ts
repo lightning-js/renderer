@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import type {
   TextureLoadedEventHandler,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
+import type { Rect } from './lib/utils.js';
 
 export interface CoreNodeProps {
   id: number;
@@ -44,6 +45,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
+  clipping: boolean;
   color: number;
   colorTop: number;
   colorBottom: number;
@@ -311,7 +313,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.recalculationType = 0;
   }
 
-  renderQuads(renderer: CoreRenderer): void {
+  renderQuads(renderer: CoreRenderer, clippingRect: Rect | null): void {
     const {
       width,
       height,
@@ -342,6 +344,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       shaderProps,
       alpha,
       scale,
+      clippingRect,
       wpx: this.worldContext.px,
       wpy: this.worldContext.py,
       worldScale,
@@ -536,6 +539,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set alpha(value: number) {
     this.props.alpha = value;
+  }
+
+  get clipping(): boolean {
+    return this.props.clipping;
+  }
+
+  set clipping(value: boolean) {
+    this.props.clipping = value;
   }
 
   get color(): number {

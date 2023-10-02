@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,11 @@ import type {
 import { CoreShaderManager } from '../../CoreShaderManager.js';
 import type { CoreShader } from '../CoreShader.js';
 import { BufferCollection } from './internal/BufferCollection.js';
-import { getNormalizedRgbaComponents, type Rect } from '../../lib/utils.js';
+import {
+  compareRect,
+  getNormalizedRgbaComponents,
+  type Rect,
+} from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
@@ -216,6 +220,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const {
       width,
       height,
+      clippingRect,
       colorTl,
       colorTr,
       colorBl,
@@ -259,15 +264,15 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // If the current render op is not the same shader, create a new one
       // If the current render op's shader props are not compatible with the
       // the new shader props, create a new one render op.
-      if (curRenderOp.shader !== targetShader) {
-        curRenderOp = null;
-      } else if (
-        curRenderOp.shader !== this.defaultShader &&
-        (!shaderProps ||
-          !curRenderOp.shader.canBatchShaderProps(
-            curRenderOp.shaderProps,
-            shaderProps,
-          ))
+      if (
+        curRenderOp.shader !== targetShader ||
+        !compareRect(curRenderOp.clippingRect, clippingRect) ||
+        (curRenderOp.shader !== this.defaultShader &&
+          (!shaderProps ||
+            !curRenderOp.shader.canBatchShaderProps(
+              curRenderOp.shaderProps,
+              shaderProps,
+            )))
       ) {
         curRenderOp = null;
       }
@@ -282,6 +287,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
         shaderProps as any,
         alpha,
         targetDims,
+        clippingRect,
         bufferIdx,
       );
       curRenderOp = this.curRenderOp;
@@ -444,6 +450,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     shaderProps: Record<string, unknown>,
     alpha: number,
     dimensions: Dimensions,
+    clippingRect: Rect | null,
     bufferIdx: number,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
@@ -453,6 +460,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       shader,
       shaderProps,
       alpha,
+      clippingRect,
       dimensions,
       bufferIdx,
       0, // Z-Index is only used for explictly added Render Ops
@@ -486,8 +494,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      const { shader, shaderProps, dimensions, alpha } = curRenderOp;
-      this.newRenderOp(shader, shaderProps, alpha, dimensions, bufferIdx);
+
+      const { shader, shaderProps, dimensions, clippingRect } = curRenderOp;
+      this.newRenderOp(
+        shader,
+        shaderProps,
+        alpha
+        dimensions,
+        clippingRect,
+        bufferIdx,
+      );
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;

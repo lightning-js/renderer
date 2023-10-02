@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
+import type { Rect } from '../lib/utils.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreRenderOp } from './CoreRenderOp.js';
@@ -39,6 +40,7 @@ export interface QuadOptions {
   shaderProps: Record<string, unknown> | null;
   alpha: number;
   scale: number;
+  clippingRect: Rect | null;
   wpx: number;
   wpy: number;
   ta: number;

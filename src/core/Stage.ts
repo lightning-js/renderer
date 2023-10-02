@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,9 @@ import type {
   TextRendererMap,
   TrProps,
 } from './text-rendering/renderers/TextRenderer.js';
-import { WebTrFontFace } from './text-rendering/font-face-types/WebTrFontFace.js';
 import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import { SdfTrFontFace } from './text-rendering/font-face-types/SdfTrFontFace/SdfTrFontFace.js';
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { intersectRect, type Rect } from './lib/utils.js';
 
 export interface StageOptions {
   rootId: number;
@@ -115,6 +114,7 @@ export class Stage {
       width: appWidth,
       height: appHeight,
       alpha: 1,
+      clipping: false,
       color: 0x00000000,
       colorTop: 0x00000000,
       colorBottom: 0x00000000,
@@ -180,15 +180,28 @@ export class Stage {
     renderer?.render();
   }
 
-  addQuads(node: CoreNode) {
+  addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
     assertTruthy(this.renderer);
+    let clippingRect: Rect | null = node.clipping
+      ? {
+          x: node.worldContext.px,
+          y: node.worldContext.py,
+          width: node.width,
+          height: node.height,
+        }
+      : null;
+    if (parentClippingRect && clippingRect) {
+      clippingRect = intersectRect(parentClippingRect, clippingRect);
+    } else if (parentClippingRect) {
+      clippingRect = parentClippingRect;
+    }
 
-    node.renderQuads(this.renderer);
+    node.renderQuads(this.renderer, clippingRect);
     node.children.forEach((child) => {
       if (child.alpha === 0) {
         return;
       }
-      this.addQuads(child);
+      this.addQuads(child, clippingRect);
     });
   }
 

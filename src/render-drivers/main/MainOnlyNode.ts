@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
         width: props.width,
         height: props.height,
         alpha: props.alpha,
+        clipping: props.clipping,
         color: props.color,
         colorTop: props.colorTop,
         colorBottom: props.colorBottom,
@@ -156,6 +157,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set alpha(value: number) {
     this.coreNode.alpha = value;
+  }
+
+  get clipping(): boolean {
+    return this.coreNode.clipping;
+  }
+
+  set clipping(value: boolean) {
+    this.coreNode.clipping = value;
   }
 
   get color(): number {

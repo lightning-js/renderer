@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -316,6 +316,7 @@ export class RendererMain {
       width: props.width ?? 0,
       height: props.height ?? 0,
       alpha: props.alpha ?? 1,
+      clipping: props.clipping ?? false,
       color,
       colorTop: props.colorTop ?? color,
       colorBottom: props.colorBottom ?? color,
