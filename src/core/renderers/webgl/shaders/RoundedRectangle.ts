@@ -20,7 +20,7 @@
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
-  type DimensionsShaderProps,
+  type DimensionsShaderProp,
 } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
@@ -28,7 +28,7 @@ import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 /**
  * Properties of the {@link RoundedRectangle} shader
  */
-export interface RoundedRectangleProps extends DimensionsShaderProps {
+export interface RoundedRectangleProps extends DimensionsShaderProp {
   /**
    * Corner radius, in pixels, to cut out of the corners
    *

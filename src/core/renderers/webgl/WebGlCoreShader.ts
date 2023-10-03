@@ -42,7 +42,7 @@ import { isWebGl2 } from './internal/WebGlUtils.js';
  * Shader's who's rendering depends on the dimensions of the Node being rendered
  * should extend this interface from their Prop interface type.
  */
-export interface DimensionsShaderProps {
+export interface DimensionsShaderProp {
   /**
    * Dimensions of the Node being rendered (Auto-set by the renderer)
    *
@@ -53,7 +53,7 @@ export interface DimensionsShaderProps {
   $dimensions?: Dimensions;
 }
 
-export interface AlphaShaderProps {
+export interface AlphaShaderProp {
   /**
    * Alpha of the Node being rendered (Auto-set by the renderer)
    *

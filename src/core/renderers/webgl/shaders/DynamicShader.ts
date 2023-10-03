@@ -20,8 +20,8 @@ import type { ExtractProps } from '../../../CoreTextureManager.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
-  type DimensionsShaderProps,
-  type AlphaShaderProps,
+  type DimensionsShaderProp,
+  type AlphaShaderProp,
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
@@ -38,8 +38,8 @@ import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 
 export interface DynamicShaderProps
-  extends DimensionsShaderProps,
-    AlphaShaderProps {
+  extends DimensionsShaderProp,
+    AlphaShaderProp {
   effects?: EffectDesc[];
 }
 
