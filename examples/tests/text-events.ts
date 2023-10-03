@@ -199,7 +199,7 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
       y: props.y,
       colorTop: props.boxColor1,
       colorBottom: props.boxColor2,
-      shader: renderer.makeShader('RoundedRectangle', {
+      shader: renderer.createShader('RoundedRectangle', {
         radius: 10,
       }),
       parent: props.parent,

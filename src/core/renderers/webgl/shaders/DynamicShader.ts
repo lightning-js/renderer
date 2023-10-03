@@ -37,6 +37,44 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 
+/**
+ * Allows the `keyof EffectMap` to be mapped over and form an discriminated
+ * union of all the EffectDescs structures individually.
+ *
+ * @remarks
+ * When used like the following:
+ * ```
+ * MapEffectDescs<keyof EffectMap>[]
+ * ```
+ * The resultant type will be a discriminated union like so:
+ * ```
+ * (
+ *   {
+ *     type: 'radius',
+ *     props?: {
+ *       radius?: number | number[];
+ *     }
+ *   } |
+ *   {
+ *     type: 'border',
+ *     props?: {
+ *       width?: number;
+ *       color?: number;
+ *     }
+ *   } |
+ *   // ...
+ * )[]
+ * ```
+ * Which means TypeScript will now base its type checking on the `type` field
+ * and will know exactly what the `props` field should be based on the `type`
+ * field.
+ */
+type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
+  ? GenericEffectDesc<T>
+  : never;
+
+type EffectDesc = MapEffectDescs<keyof EffectMap>;
+
 export interface DynamicShaderProps extends DimensionsShaderProp {
   effects?: EffectDesc[];
 }
@@ -67,7 +105,9 @@ const Effects = {
   glitch: GlitchEffect,
 };
 
-export interface EffectDesc<FxType extends keyof EffectMap = keyof EffectMap> {
+export interface GenericEffectDesc<
+  FxType extends keyof EffectMap = keyof EffectMap,
+> {
   type: FxType;
   props?: ExtractProps<EffectMap[FxType]>;
 }
@@ -319,7 +359,7 @@ export class DynamicShader extends WebGlCoreShader {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
         props: Effects[effect.type].resolveDefaults(effect.props || {}),
-      })),
+      })) as MapEffectDescs<keyof EffectMap>[],
       $dimensions: {
         width: 0,
         height: 0,

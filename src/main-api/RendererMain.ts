@@ -31,28 +31,79 @@ import type {
   ITextNodeWritableProps,
 } from './INode.js';
 import type { IRenderDriver } from './IRenderDriver.js';
+import {
+  ManualCountTextureUsageTracker,
+  type ManualCountTextureUsageTrackerOptions,
+} from './texture-usage-trackers/ManualCountTextureUsageTracker.js';
+import { FinalizationRegistryTextureUsageTracker } from './texture-usage-trackers/FinalizationRegistryTextureUsageTracker.js';
+import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageTracker.js';
 
 /**
- * A description of a Texture
+ * An immutable reference to a specific Texture type
  *
  * @remarks
- * This structure should only be created by the RendererMain's `makeTexture`
- * method. The structure is immutable and should not be modified once created.
+ * See {@link TextureRef} for more details.
  */
-export interface TextureDesc<
-  TxType extends keyof TextureMap = keyof TextureMap,
-> {
+export interface SpecificTextureRef<TxType extends keyof TextureMap> {
   readonly descType: 'texture';
   readonly txType: TxType;
   readonly props: ExtractProps<TextureMap[TxType]>;
   readonly options?: Readonly<TextureOptions>;
 }
 
-export interface ShaderDesc<ShType extends keyof ShaderMap = keyof ShaderMap> {
+type MapTextureRefs<TxType extends keyof TextureMap> =
+  TxType extends keyof TextureMap ? SpecificTextureRef<TxType> : never;
+
+/**
+ * An immutable reference to a Texture
+ *
+ * @remarks
+ * This structure should only be created by the RendererMain's `createTexture`
+ * method. The structure is immutable and should not be modified once created.
+ *
+ * A `TextureRef` exists in the Main API Space and is used to point to an actual
+ * `Texture` instance in the Core API Space. The `TextureRef` is used to
+ * communicate with the Core API Space to create, load, and destroy the
+ * `Texture` instance.
+ *
+ * This type is technically a discriminated union of all possible texture types.
+ * If you'd like to represent a specific texture type, you can use the
+ * `SpecificTextureRef` generic type.
+ */
+export type TextureRef = MapTextureRefs<keyof TextureMap>;
+
+/**
+ * An immutable reference to a specific Shader type
+ *
+ * @remarks
+ * See {@link ShaderRef} for more details.
+ */
+export interface SpecificShaderRef<ShType extends keyof ShaderMap> {
   readonly descType: 'shader';
   readonly shType: ShType;
   readonly props: ExtractProps<ShaderMap[ShType]>;
 }
+
+type MapShaderRefs<ShType extends keyof ShaderMap> =
+  ShType extends keyof ShaderMap ? SpecificShaderRef<ShType> : never;
+
+/**
+ * An immutable reference to a Shader
+ *
+ * @remarks
+ * This structure should only be created by the RendererMain's `createShader`
+ * method. The structure is immutable and should not be modified once created.
+ *
+ * A `ShaderRef` exists in the Main API Space and is used to point to an actual
+ * `Shader` instance in the Core API Space. The `ShaderRef` is used to
+ * communicate with the Core API Space to create, load, and destroy the
+ * `Shader` instance.
+ *
+ * This type is technically a discriminated union of all possible shader types.
+ * If you'd like to represent a specific shader type, you can use the
+ * `SpecificShaderRef` generic type.
+ */
+export type ShaderRef = MapShaderRefs<keyof ShaderMap>;
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -115,8 +166,40 @@ export interface RendererMainSettings {
 
   /**
    * Path to a custom core module to use
+   *
+   * @defaultValue `null`
    */
   coreExtensionModule?: string | null;
+
+  /**
+   * Enable experimental FinalizationRegistry-based texture usage tracking
+   * for texture garbage collection
+   *
+   * @remarks
+   * By default, the Renderer uses a manual reference counting system to track
+   * texture usage. Textures are eventually released from the Core Texture
+   * Manager's Usage Cache when they are no longer referenced by any Nodes (or
+   * SubTextures that are referenced by nodes). This works well enough, but has
+   * the consequence of textures being removed from Usage Cache even if their
+   * references are still alive in memory. This can require a texture to be
+   * reloaded from the source when it is used again after being removed from
+   * cache.
+   *
+   * This is an experimental feature that uses a FinalizationRegistry to track
+   * texture usage. This causes textures to be removed from the Usage Cache only
+   * when their references are no longer alive in memory. Meaning a loaded texture
+   * will remain in the Usage Cache until it's reference is garbage collected.
+   *
+   * This feature is not enabled by default because browser support for the
+   * FinalizationRegistry is limited. It should NOT be enabled in production apps
+   * as this behavior is not guaranteed to be supported in the future. Developer
+   * feedback on this feature, however, is welcome.
+   *
+   * @defaultValue `false`
+   */
+  experimental_FinalizationRegistryTextureUsageTracker?: boolean;
+
+  textureCleanupOptions?: ManualCountTextureUsageTrackerOptions;
 }
 
 /**
@@ -151,11 +234,13 @@ export class RendererMain {
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
-  private textureRegistry = new FinalizationRegistry(
-    (textureDescId: number) => {
-      this.driver.releaseTexture(textureDescId);
-    },
-  );
+  /**
+   * Texture Usage Tracker for Usage Based Texture Garbage Collection
+   *
+   * @remarks
+   * For internal use only. DO NOT ACCESS.
+   */
+  public textureTracker: TextureUsageTracker;
 
   /**
    * Constructs a new Renderer instance
@@ -177,6 +262,9 @@ export class RendererMain {
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,
       clearColor: settings.clearColor ?? 0x00000000,
       coreExtensionModule: settings.coreExtensionModule || null,
+      experimental_FinalizationRegistryTextureUsageTracker:
+        settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
+      textureCleanupOptions: settings.textureCleanupOptions || {},
     };
     this.settings = resolvedSettings;
 
@@ -186,6 +274,20 @@ export class RendererMain {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
     } = resolvedSettings;
+
+    const releaseCallback = (textureId: number) => {
+      this.driver.releaseTexture(textureId);
+    };
+
+    const useFinalizationRegistryTracker =
+      resolvedSettings.experimental_FinalizationRegistryTextureUsageTracker &&
+      typeof FinalizationRegistry === 'function';
+    this.textureTracker = useFinalizationRegistryTracker
+      ? new FinalizationRegistryTextureUsageTracker(releaseCallback)
+      : new ManualCountTextureUsageTracker(
+          releaseCallback,
+          this.settings.textureCleanupOptions,
+        );
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
@@ -373,13 +475,13 @@ export class RendererMain {
    * @param options
    * @returns
    */
-  makeTexture<Type extends keyof TextureMap>(
-    textureType: Type,
-    props: TextureDesc<Type>['props'],
+  createTexture<TxType extends keyof TextureMap>(
+    textureType: TxType,
+    props: SpecificTextureRef<TxType>['props'],
     options?: TextureOptions,
-  ): TextureDesc<Type> {
+  ): SpecificTextureRef<TxType> {
     const id = this.nextTextureId++;
-    const desc: TextureDesc<Type> = {
+    const desc = {
       descType: 'texture',
       txType: textureType,
       props,
@@ -389,8 +491,8 @@ export class RendererMain {
         // ID Texture Map cache.
         id,
       },
-    };
-    this.textureRegistry.register(desc, id);
+    } satisfies SpecificTextureRef<TxType>;
+    this.textureTracker.registerTexture(desc as TextureRef);
     return desc;
   }
 
@@ -407,14 +509,14 @@ export class RendererMain {
    * @param props
    * @returns
    */
-  makeShader<ShType extends keyof ShaderMap>(
+  createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
-    props?: ShaderDesc<ShType>['props'],
-  ): ShaderDesc<ShType> {
+    props?: SpecificShaderRef<ShType>['props'],
+  ): SpecificShaderRef<ShType> {
     return {
       descType: 'shader',
       shType: shaderType,
-      props: props as ShaderDesc<ShType>['props'],
+      props: props as SpecificShaderRef<ShType>['props'],
     };
   }
 

@@ -31,7 +31,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     width: 100,
     height: 100,
     color: 0xff0000ff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
     }),
     parent: renderer.root,
@@ -75,7 +75,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     width: 210,
     height: appDimensions.height,
     color: 0xffffffff,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 210,
       height: appDimensions.height,
     }),
@@ -92,7 +92,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     width: 1315,
     height: 50,
     color: 0xaabb66ff,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315,
       height: 50,
     }),
@@ -106,7 +106,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     height: 30,
     color: 0xaaedffaa,
     parent: relativePositioningPlatform,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315 - 20,
       height: 30,
     }),
@@ -119,7 +119,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     height: 10,
     color: 0xff00ffff,
     parent: relativePositioningChild,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315 - 20 - 20,
       height: 50,
     }),
@@ -168,19 +168,19 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     zIndex: 3,
   });
 
-  // setInterval(() => {
-  //   shaft.texture = renderer.makeTexture(
-  //     'NoiseTexture',
-  //     {
-  //       width: 210,
-  //       height: appDimensions.height,
-  //       cacheId: Math.floor(Math.random() * 100000),
-  //     },
-  //     {
-  //       preload: true,
-  //     },
-  //   );
-  // }, 10);
+  setInterval(() => {
+    shaft.texture = renderer.createTexture(
+      'NoiseTexture',
+      {
+        width: 210,
+        height: appDimensions.height,
+        cacheId: Math.floor(Math.random() * 100000),
+      },
+      {
+        preload: true,
+      },
+    );
+  }, 10);
 
   // setTimeout required for ThreadX right now because the emit() that sends
   // the animation to the renderer worker doesn't work until the Node is fully
@@ -339,14 +339,14 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
    * Begin: Sprite Map Demo
    */
 
-  const spriteMapTexture = renderer.makeTexture('ImageTexture', {
+  const spriteMapTexture = renderer.createTexture('ImageTexture', {
     src: spritemap,
   });
 
   const frames = Array.from(Array(8).keys()).map((i) => {
     const x = (i % 8) * 100;
     const y = Math.floor(i / 8) * 150;
-    return renderer.makeTexture('SubTexture', {
+    return renderer.createTexture('SubTexture', {
       texture: spriteMapTexture,
       x,
       y,

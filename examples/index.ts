@@ -34,13 +34,17 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
   // - driver: main | threadx (default: threadx)
   // - test: <test name> (default: test)
   // - showOverlay: true | false (default: true)
+  // - finalizationRegistry: true | false (default: false)
+  //   - Use FinalizationRegistryTextureUsageTracker instead of
+  //     ManualCountTextureUsageTracker
   const urlParams = new URLSearchParams(window.location.search);
   let driverName = urlParams.get('driver');
   const test = urlParams.get('test') || 'test';
   const showOverlay = urlParams.get('overlay') !== 'false';
+  const finalizationRegistry = urlParams.get('finalizationRegistry') === 'true';
 
   if (driverName !== 'main' && driverName !== 'threadx') {
-    driverName = 'threadx';
+    driverName = 'main';
   }
 
   let driver: IRenderDriver | null = null;
@@ -65,6 +69,8 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
       devicePhysicalPixelRatio: 1,
       clearColor: 0x00000000,
       coreExtensionModule: coreExtensionModuleUrl,
+      experimental_FinalizationRegistryTextureUsageTracker:
+        finalizationRegistry,
     },
     'app',
     driver,

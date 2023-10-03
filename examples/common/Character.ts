@@ -18,10 +18,11 @@
  */
 
 import type {
+  SpecificTextureRef,
   INode,
   INodeWritableProps,
   RendererMain,
-  TextureDesc,
+  TextureRef,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
@@ -30,12 +31,12 @@ export class Character {
   curIntervalAnimation: ReturnType<typeof setTimeout> | null = null;
   direction!: 'left' | 'right'; // Set in setState
   state!: 'idle' | 'walk' | 'run' | 'jump'; // Set in setState
-  leftFrames: TextureDesc[] = [];
+  leftFrames: TextureRef[] = [];
 
   constructor(
     private props: Partial<INodeWritableProps>,
     private renderer: RendererMain,
-    private rightFrames: TextureDesc<'SubTexture'>[],
+    private rightFrames: SpecificTextureRef<'SubTexture'>[],
   ) {
     this.node = renderer.createNode({
       x: props.x,
@@ -47,7 +48,7 @@ export class Character {
       zIndex: props.zIndex,
     });
     this.leftFrames = rightFrames.map((frame) => {
-      return renderer.makeTexture('SubTexture', frame.props, {
+      return renderer.createTexture('SubTexture', frame.props, {
         flipX: true,
       });
     });

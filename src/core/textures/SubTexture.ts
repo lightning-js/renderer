@@ -21,7 +21,7 @@ import type {
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
 } from '../../common/CommonTypes.js';
-import type { TextureDesc } from '../../main-api/RendererMain.js';
+import type { TextureRef } from '../../main-api/RendererMain.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture } from './Texture.js';
 
@@ -32,7 +32,7 @@ export interface SubTextureProps {
   /**
    * The texture that this sub-texture is a sub-region of.
    */
-  texture: TextureDesc;
+  texture: TextureRef;
 
   /**
    * The x pixel position of the top-left of the sub-texture within the parent

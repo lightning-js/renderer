@@ -97,7 +97,7 @@ export default async function ({
   curX = appDimensions.width / 2;
   curY = BEGIN_Y;
 
-  const noiseTexture = renderer.makeTexture('NoiseTexture', {
+  const noiseTexture = renderer.createTexture('NoiseTexture', {
     width: 100,
     height: 100,
   });
@@ -122,14 +122,14 @@ export default async function ({
   await execLoadingTest(noise2, 100, 100);
 
   // Test: SubTexture Load
-  const spriteMapTexture = renderer.makeTexture('ImageTexture', {
+  const spriteMapTexture = renderer.createTexture('ImageTexture', {
     src: spritemap,
   });
 
   const frames = Array.from(Array(32).keys()).map((i) => {
     const x = (i % 8) * 100;
     const y = Math.floor(i / 8) * 150;
-    return renderer.makeTexture('SubTexture', {
+    return renderer.createTexture('SubTexture', {
       texture: spriteMapTexture,
       x,
       y,
@@ -158,14 +158,14 @@ export default async function ({
   await execLoadingTest(subTextureNode2, 100, 150);
 
   // Test: SubTetxure Failure
-  const failureTexture = renderer.makeTexture('ImageTexture', {
+  const failureTexture = renderer.createTexture('ImageTexture', {
     src: 'does-not-exist.png',
   });
 
   const failureFrames = Array.from(Array(32).keys()).map((i) => {
     const x = (i % 8) * 120;
     const y = Math.floor(i / 8) * 120;
-    return renderer.makeTexture('SubTexture', {
+    return renderer.createTexture('SubTexture', {
       texture: failureTexture,
       x,
       y,

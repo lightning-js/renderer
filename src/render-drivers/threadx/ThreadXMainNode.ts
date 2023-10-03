@@ -21,8 +21,8 @@ import type { IAnimationController } from '../../common/IAnimationController.js'
 import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
 import type {
   RendererMain,
-  ShaderDesc,
-  TextureDesc,
+  ShaderRef,
+  TextureRef,
 } from '../../main-api/RendererMain.js';
 import { assertTruthy } from '../../utils.js';
 import type { NodeStruct } from './NodeStruct.js';
@@ -34,8 +34,8 @@ export class ThreadXMainNode extends SharedNode implements INode {
   private nextAnimationId = 1;
   protected _parent: ThreadXMainNode | null = null;
   protected _children: ThreadXMainNode[] = [];
-  protected _texture: TextureDesc | null = null;
-  protected _shader: ShaderDesc | null = null;
+  protected _texture: TextureRef | null = null;
+  protected _shader: ShaderRef | null = null;
   private _src = '';
 
   /**
@@ -59,13 +59,19 @@ export class ThreadXMainNode extends SharedNode implements INode {
     super(sharedNodeStruct, extendedCurProps);
   }
 
-  get texture(): TextureDesc | null {
+  get texture(): TextureRef | null {
     return this._texture;
   }
 
-  set texture(texture: TextureDesc | null) {
+  set texture(texture: TextureRef | null) {
     if (this._texture === texture) {
       return;
+    }
+    if (this._texture) {
+      this.rendererMain.textureTracker.decrementTextureRefCount(this._texture);
+    }
+    if (texture) {
+      this.rendererMain.textureTracker.incrementTextureRefCount(texture);
     }
     this._texture = texture;
     if (texture) {
@@ -75,11 +81,11 @@ export class ThreadXMainNode extends SharedNode implements INode {
     }
   }
 
-  get shader(): ShaderDesc | null {
+  get shader(): ShaderRef | null {
     return this._shader;
   }
 
-  set shader(shader: ShaderDesc | null) {
+  set shader(shader: ShaderRef | null) {
     if (this._shader === shader) {
       return;
     }
@@ -113,7 +119,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
       this.texture = null;
       return;
     }
-    this.texture = this.rendererMain.makeTexture('ImageTexture', {
+    this.texture = this.rendererMain.createTexture('ImageTexture', {
       src: imageUrl,
     });
   }
@@ -147,5 +153,10 @@ export class ThreadXMainNode extends SharedNode implements INode {
 
   get props() {
     return this.curProps;
+  }
+
+  override destroy() {
+    super.destroy();
+    this.texture = null;
   }
 }
