@@ -20,7 +20,8 @@ import type { ExtractProps } from '../../../CoreTextureManager.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
-  type AutomaticShaderProps,
+  type DimensionsShaderProps,
+  type AlphaShaderProps,
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
@@ -36,7 +37,9 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 
-export interface DynamicShaderProps extends AutomaticShaderProps {
+export interface DynamicShaderProps
+  extends DimensionsShaderProps,
+    AlphaShaderProps {
   effects?: EffectDesc[];
 }
 
@@ -314,7 +317,7 @@ export class DynamicShader extends WebGlCoreShader {
 
   static override resolveDefaults(
     props: DynamicShaderProps,
-  ): Record<string, unknown> {
+  ): Required<DynamicShaderProps> {
     return {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,

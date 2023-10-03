@@ -20,7 +20,7 @@
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
-  type AutomaticShaderProps,
+  type DimensionsShaderProps,
 } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
@@ -28,7 +28,7 @@ import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 /**
  * Properties of the {@link RoundedRectangle} shader
  */
-export interface RoundedRectangleProps extends AutomaticShaderProps {
+export interface RoundedRectangleProps extends DimensionsShaderProps {
   /**
    * Corner radius, in pixels, to cut out of the corners
    *
@@ -65,7 +65,7 @@ export class RoundedRectangle extends WebGlCoreShader {
 
   static override resolveDefaults(
     props: RoundedRectangleProps,
-  ): Record<string, unknown> {
+  ): Required<RoundedRectangleProps> {
     return {
       radius: props.radius || 10,
       $dimensions: {
@@ -81,7 +81,7 @@ export class RoundedRectangle extends WebGlCoreShader {
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }
 
-  protected override bindProps(props: RoundedRectangleProps): void {
+  protected override bindProps(props: Required<RoundedRectangleProps>): void {
     this.setUniform('u_radius', props.radius);
   }
 
