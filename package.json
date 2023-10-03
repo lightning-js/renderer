@@ -69,6 +69,7 @@
   },
   "files": [
     "dist",
+    "src",
     "LICENSE",
     "NOTICE",
     "README.md"
