@@ -32,11 +32,7 @@ const FONT_SIZE = 60;
 const BUTTON_PADDING = 10;
 const BEGIN_Y = HEADER_SIZE;
 
-export default async function ({
-  renderer,
-  appDimensions,
-  driverName,
-}: ExampleSettings) {
+export default async function ({ renderer, driverName }: ExampleSettings) {
   const header = renderer.createTextNode({
     text: `Text Event Test (${driverName})`,
     fontSize: HEADER_SIZE,
@@ -50,7 +46,7 @@ export default async function ({
     fontSize: 45,
     parent: renderer.root,
     x: 100,
-    y: (appDimensions.height * 1) / 4 - 45 / 2,
+    y: (renderer.settings.appHeight * 1) / 4 - 45 / 2,
   });
 
   const marqueeSdf = new BoxedText(
@@ -67,8 +63,9 @@ export default async function ({
   );
 
   marqueeSdf.on('afterLayout', () => {
-    marqueeSdf.x = appDimensions.width / 2 - marqueeSdf.node.width / 2;
-    marqueeSdf.y = (appDimensions.height * 1) / 4 - marqueeSdf.node.height / 2;
+    marqueeSdf.x = renderer.settings.appWidth / 2 - marqueeSdf.node.width / 2;
+    marqueeSdf.y =
+      (renderer.settings.appHeight * 1) / 4 - marqueeSdf.node.height / 2;
   });
 
   const canvasLabel = renderer.createTextNode({
@@ -76,7 +73,7 @@ export default async function ({
     fontSize: 45,
     parent: renderer.root,
     x: 100,
-    y: (appDimensions.height * 3) / 4 - 45 / 2,
+    y: (renderer.settings.appHeight * 3) / 4 - 45 / 2,
   });
 
   const marqueeCanvas = new BoxedText(
@@ -93,9 +90,10 @@ export default async function ({
   );
 
   marqueeCanvas.on('afterLayout', () => {
-    marqueeCanvas.x = appDimensions.width / 2 - marqueeCanvas.node.width / 2;
+    marqueeCanvas.x =
+      renderer.settings.appWidth / 2 - marqueeCanvas.node.width / 2;
     marqueeCanvas.y =
-      (appDimensions.height * 3) / 4 - marqueeCanvas.node.height / 2;
+      (renderer.settings.appHeight * 3) / 4 - marqueeCanvas.node.height / 2;
   });
 
   const marqueeText = `The following is a test of the textLoaded event...

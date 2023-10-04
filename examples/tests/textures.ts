@@ -23,11 +23,7 @@ import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({
-  renderer,
-  appDimensions,
-  driverName,
-}: ExampleSettings) {
+export default async function ({ renderer, driverName }: ExampleSettings) {
   const FONT_SIZE = 45;
   const BEGIN_Y = FONT_SIZE;
 
@@ -94,7 +90,7 @@ export default async function ({
 
   // Test: NoiseTexture
 
-  curX = appDimensions.width / 2;
+  curX = renderer.settings.appWidth / 2;
   curY = BEGIN_Y;
 
   const noiseTexture = renderer.createTexture('NoiseTexture', {

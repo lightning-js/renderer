@@ -23,6 +23,7 @@ import {
   ThreadXRenderDriver,
   type IRenderDriver,
   type Dimensions,
+  type RendererMainSettings,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
@@ -41,7 +42,13 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
   let driverName = urlParams.get('driver');
   const test = urlParams.get('test') || 'test';
   const showOverlay = urlParams.get('overlay') !== 'false';
-  const finalizationRegistry = urlParams.get('finalizationRegistry') === 'true';
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const module = await import(`./tests/${test}.ts`);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  const customSettings: Partial<RendererMainSettings> =
+    typeof module.customSettings === 'function'
+      ? module.customSettings(urlParams)
+      : {};
 
   if (driverName !== 'main' && driverName !== 'threadx') {
     driverName = 'main';
@@ -57,20 +64,15 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
     });
   }
 
-  const appDimensions = {
-    width: 1920,
-    height: 1080,
-  };
-
   const renderer = new RendererMain(
     {
-      ...appDimensions,
+      appWidth: 1920,
+      appHeight: 1080,
       deviceLogicalPixelRatio: 0.6666667,
       devicePhysicalPixelRatio: 1,
       clearColor: 0x00000000,
       coreExtensionModule: coreExtensionModuleUrl,
-      experimental_FinalizationRegistryTextureUsageTracker:
-        finalizationRegistry,
+      ...customSettings,
     },
     'app',
     driver,
@@ -93,19 +95,15 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
     overlayText.once(
       'textLoaded',
       (target: any, { width, height }: Dimensions) => {
-        overlayText.x = appDimensions.width - width - 20;
-        overlayText.y = appDimensions.height - height - 20;
+        overlayText.x = renderer.settings.appWidth - width - 20;
+        overlayText.y = renderer.settings.appHeight - height - 20;
       },
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const module = await import(`./tests/${test}.ts`);
-
   const exampleSettings: ExampleSettings = {
     testName: test,
     renderer,
-    appDimensions,
     driverName: driverName as 'main' | 'threadx',
     canvas,
   };

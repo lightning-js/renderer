@@ -16,14 +16,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { RendererMainSettings } from '../../dist/exports/main-api.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export function customSettings(
+  urlParams: URLSearchParams,
+): Partial<RendererMainSettings> {
+  const finalizationRegistry = urlParams.get('finalizationRegistry') === 'true';
+  return {
+    textureCleanupOptions: {
+      textureCleanupAgeThreadholdMs: 6000,
+      textureCleanupIntervalMs: 1000,
+    },
+    experimental_FinalizationRegistryTextureUsageTracker: finalizationRegistry,
+  };
+}
+
+export default async function ({ renderer }: ExampleSettings) {
   const screen = renderer.createNode({
     x: 0,
     y: 0,
-    width: appDimensions.width,
-    height: appDimensions.height,
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
     parent: renderer.root,
     color: 0xff00ffff,
   });
@@ -40,7 +54,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
   renderer.createTextNode({
     x: 0,
     y: 100,
-    width: appDimensions.width,
+    width: renderer.settings.appWidth,
     contain: 'width',
     text: `This test will create and display a random texture every 10ms.
 
@@ -49,9 +63,10 @@ To test that the textures are being properly disposed of, you can use the Chrome
 1. Click Window > Task Manager
 2. Locate the "GPU Process"
 3. Observe the "Memory Footprint" column
-4. The value should remain relatively constant, with occasional spikes as new textures are created and disposed of.
+4. The value should eventually drop significantly toward a minimum and/or reach a
+threadhold.
 
-By default, the ManualCountTextureUsageTracker is used to track texture usage. To test the experimental FinalizationRegistryTextureUsageTracker instead, set the URL param "finalizationRegistry=true".
+By default, the ManualCountTextureUsageTracker is used to track texture usage. Also test the experimental FinalizationRegistryTextureUsageTracker instead, by setting the URL param "finalizationRegistry=true".
     `,
     parent: screen,
     fontFamily: 'Ubuntu',

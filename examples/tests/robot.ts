@@ -27,7 +27,7 @@ import robotImg from '../assets/robot/robot.png';
 import shadowImg from '../assets/robot/robot-shadow.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export default async function ({ renderer }: ExampleSettings) {
   const elevatorBg = renderer.createNode({
     x: 368,
     y: 228,
@@ -71,8 +71,8 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
   const environment = renderer.createNode({
     x: 0,
     y: 0,
-    width: appDimensions.width,
-    height: appDimensions.height,
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
     zIndex: 3,
     src: environmentImg,
     parent: renderer.root,
@@ -167,7 +167,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     shadow.animate({ alpha: 1 }, { duration: 500 }).start();
     await shadow.animate({}, { duration: 2000 }).start().waitUntilStopped();
     await robot
-      .animate({ x: appDimensions.width }, { duration: 5000 })
+      .animate({ x: renderer.settings.appWidth }, { duration: 5000 })
       .start()
       .waitUntilStopped();
     await closeTopDoors(1000);

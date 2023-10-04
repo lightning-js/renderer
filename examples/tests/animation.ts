@@ -19,7 +19,7 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export default async function ({ renderer }: ExampleSettings) {
   const randomColor = () => {
     const alpha = Math.floor(Math.random() * 256);
     const red = Math.floor(Math.random() * 256);
@@ -57,7 +57,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     create(i)
       .animate(
         {
-          x: appDimensions.width + 100,
+          x: renderer.settings.appWidth + 100,
         },
         {
           duration: 4400,
@@ -97,7 +97,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     create(2 + i)
       .animate(
         {
-          x: appDimensions.width + 100,
+          x: renderer.settings.appWidth + 100,
         },
         {
           duration: 3400,

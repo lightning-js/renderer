@@ -24,7 +24,7 @@ import spritemap from '../assets/spritemap.png';
 import { Character } from '../common/Character.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export default async function ({ renderer }: ExampleSettings) {
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
@@ -73,11 +73,11 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     x: 395,
     y: 0,
     width: 210,
-    height: appDimensions.height,
+    height: renderer.settings.appHeight,
     color: 0xffffffff,
     texture: renderer.createTexture('NoiseTexture', {
       width: 210,
-      height: appDimensions.height,
+      height: renderer.settings.appHeight,
     }),
     parent: renderer.root,
   });
@@ -131,7 +131,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
 
   const rockoRect = renderer.createNode({
     x: -181,
-    y: appDimensions.height - 218,
+    y: renderer.settings.appHeight - 218,
     width: 181,
     height: 218,
     src: rocko,
@@ -173,7 +173,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
       'NoiseTexture',
       {
         width: 210,
-        height: appDimensions.height,
+        height: renderer.settings.appHeight,
         cacheId: Math.floor(Math.random() * 100000),
       },
       {
@@ -226,7 +226,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
       rockoAnimation = rockoRect
         .animate(
           {
-            x: appDimensions.width,
+            x: renderer.settings.appWidth,
             // y: 100,
           },
           {
@@ -238,7 +238,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
 
       console.log('resetting rocko');
       rockoRect.x = -rockoRect.width;
-      rockoRect.y = appDimensions.height - 218;
+      rockoRect.y = renderer.settings.appHeight - 218;
       rockoRect.flush();
     }
   }, 1000);
@@ -428,8 +428,8 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
   });
 
   const noChangeText = renderer.createTextNode({
-    x: appDimensions.width - 300,
-    y: appDimensions.height - 200,
+    x: renderer.settings.appWidth - 300,
+    y: renderer.settings.appHeight - 200,
     width: 300,
     height: 200,
     color: 0xffffffff,
