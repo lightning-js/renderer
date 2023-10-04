@@ -536,6 +536,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         distanceRange,
         debug: debug.sdfShaderDebug,
       } satisfies SdfShaderProps,
+      alpha,
       clippingRect,
       { height: textH, width: textW },
       0,

@@ -53,6 +53,17 @@ export interface DimensionsShaderProp {
   $dimensions?: Dimensions;
 }
 
+export interface AlphaShaderProp {
+  /**
+   * Alpha of the Node being rendered (Auto-set by the renderer)
+   *
+   * @remarks
+   * DO NOT SET THIS. It is set automatically by the renderer.
+   * Any values set here will be ignored.
+   */
+  $alpha?: number;
+}
+
 export abstract class WebGlCoreShader extends CoreShader {
   protected boundBufferCollection: BufferCollection | null = null;
   protected buffersBound = false;
@@ -259,6 +270,13 @@ export abstract class WebGlCoreShader extends CoreShader {
           dimensions = renderOp.dimensions;
         }
         this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
+      }
+      if (hasOwn(props, '$alpha')) {
+        let alpha = props.$alpha as number | null;
+        if (!alpha) {
+          alpha = renderOp.alpha;
+        }
+        this.setUniform('u_alpha', alpha);
       }
       this.bindProps(props);
     }

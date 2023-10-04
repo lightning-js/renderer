@@ -285,6 +285,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.newRenderOp(
         targetShader,
         shaderProps as any,
+        alpha,
         targetDims,
         clippingRect,
         bufferIdx,
@@ -447,6 +448,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   private newRenderOp(
     shader: WebGlCoreShader,
     shaderProps: Record<string, unknown>,
+    alpha: number,
     dimensions: Dimensions,
     clippingRect: Rect | null,
     bufferIdx: number,
@@ -457,6 +459,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.quadBufferCollection,
       shader,
       shaderProps,
+      alpha,
       clippingRect,
       dimensions,
       bufferIdx,
@@ -491,10 +494,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      const { shader, shaderProps, dimensions, clippingRect } = curRenderOp;
+
+      const { shader, shaderProps, dimensions, clippingRect, alpha } =
+        curRenderOp;
       this.newRenderOp(
         shader,
         shaderProps,
+        alpha,
         dimensions,
         clippingRect,
         bufferIdx,
