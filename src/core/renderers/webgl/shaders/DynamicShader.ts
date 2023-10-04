@@ -36,6 +36,7 @@ import { BorderBottomEffect } from './effects/BorderBottomEffect.js';
 import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
+import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,
@@ -52,6 +53,7 @@ export interface EffectMap {
   borderTop: typeof BorderTopEffect;
   fadeOut: typeof FadeOutEffect;
   linearGradient: typeof LinearGradientEffect;
+  radialGradient: typeof RadialGradientEffect;
   grayscale: typeof GrayscaleEffect;
   glitch: typeof GlitchEffect;
 }
@@ -65,6 +67,7 @@ const Effects = {
   borderTop: BorderTopEffect,
   fadeOut: FadeOutEffect,
   linearGradient: LinearGradientEffect,
+  radialGradient: RadialGradientEffect,
   grayscale: GrayscaleEffect,
   glitch: GlitchEffect,
 };

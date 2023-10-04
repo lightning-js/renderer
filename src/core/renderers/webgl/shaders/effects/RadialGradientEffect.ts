@@ -24,41 +24,46 @@ import {
 } from './ShaderEffect.js';
 
 /**
- * Properties of the {@link LinearGradientEffect} effect
+ * Properties of the {@link RadialGradientEffect} effect
  */
-export interface LinearGradientEffectProps extends DefaultEffectProps {
+export interface RadialGradientEffectProps extends DefaultEffectProps {
   /**
-   * Array of colors to be used in the LinearGradientEffect
+   * Array of colors to be used in the RadialGradientEffect
    *
    * @default [0xff000000, 0xffffffff]
    */
   colors?: number[];
   /**
-   * Angle of the LinearGradientEffect
-   *
-   * @default 0
-   */
-  angle?: number;
-  /**
    * Array of color stops
    */
   stops?: number[];
+  /**
+   * Width of the RadialGradientEffect
+   */
+  width?: number;
+  /**
+   * height of the RadialGradientEffect
+   *
+   * @remarks if not defined uses the width value
+   */
+  height?: number;
+  /**
+   * center point of where the RadialGradientEffect is drawn
+   */
+  pivot?: number[];
 }
 
-/**
- * Linear Gradient effect over a effect mask
- */
-export class LinearGradientEffect extends ShaderEffect {
-  static z$__type__Props: LinearGradientEffectProps;
-  override readonly name = 'linearGradient';
+export class RadialGradientEffect extends ShaderEffect {
+  static z$__type__Props: RadialGradientEffectProps;
+  override readonly name = 'radialGradient';
 
-  static override getEffectKey(props: LinearGradientEffectProps): string {
-    return `linearGradient${props.colors!.length}`;
+  static override getEffectKey(props: RadialGradientEffectProps): string {
+    return `radialGradient${props.colors!.length}`;
   }
 
   static override resolveDefaults(
-    props: LinearGradientEffectProps,
-  ): Required<LinearGradientEffectProps> {
+    props: RadialGradientEffectProps,
+  ): Required<RadialGradientEffectProps> {
     const colors = props.colors ?? [0xff000000, 0xffffffff];
 
     let stops = props.stops;
@@ -72,15 +77,27 @@ export class LinearGradientEffect extends ShaderEffect {
     return {
       colors,
       stops,
-      angle: props.angle ?? 0,
+      width: props.width ?? 0,
+      height: props.height ?? props.width ?? 0,
+      pivot: props.pivot ?? [0.5, 0.5],
     };
   }
 
   static override uniforms: ShaderEffectUniforms = {
-    angle: {
+    width: {
       value: 0,
       method: 'uniform1f',
       type: 'float',
+    },
+    height: {
+      value: 0,
+      method: 'uniform1f',
+      type: 'float',
+    },
+    pivot: {
+      value: [0.5, 0.5],
+      method: 'uniform2fv',
+      type: 'vec2',
     },
     colors: {
       value: 0xffffffff,
@@ -88,7 +105,7 @@ export class LinearGradientEffect extends ShaderEffect {
         const cols = rgbas.map((rgbas) => getNormalizedRgbaComponents(rgbas));
         return cols.reduce((acc, val) => acc.concat(val), [] as number[]);
       },
-      size: (props: LinearGradientEffectProps) => props.colors!.length,
+      size: (props: RadialGradientEffectProps) => props.colors!.length,
       method: 'uniform4fv',
       type: 'vec4',
     },
@@ -96,7 +113,7 @@ export class LinearGradientEffect extends ShaderEffect {
       value: [],
       validator: (
         value: number[],
-        props: LinearGradientEffectProps,
+        props: RadialGradientEffectProps,
       ): number[] => {
         const colors = props.colors ?? [];
         let stops = value;
@@ -116,59 +133,19 @@ export class LinearGradientEffect extends ShaderEffect {
         }
         return tmp;
       },
-      size: (props: LinearGradientEffectProps) => props.colors!.length,
+      size: (props: RadialGradientEffectProps) => props.colors!.length,
       method: 'uniform1fv',
       type: 'float',
     },
   };
 
-  static override methods: Record<string, string> = {
-    fromLinear: `
-      vec4 function(vec4 linearRGB) {
-        vec4 higher = vec4(1.055)*pow(linearRGB, vec4(1.0/2.4)) - vec4(0.055);
-        vec4 lower = linearRGB * vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
-    toLinear: `
-      vec4 function(vec4 sRGB) {
-        vec4 higher = pow((sRGB + vec4(0.055))/vec4(1.055), vec4(2.4));
-        vec4 lower = sRGB/vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
-    degToRad: `
-      float function(float d) {
-        return d * (PI / 180.0);
-      }
-    `,
-    calcPoint: `
-      vec2 function(float d, float angle) {
-        return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
-      }
-    `,
-  };
-
-  static ColorLoop = (amount: number): string => {
-    let loop = '';
-    for (let i = 2; i < amount; i++) {
-      loop += `colorOut = mix(colorOut, colors[${i}], clamp((dist - stops[${
-        i - 1
-      }]) / (stops[${i}] - stops[${i - 1}]), 0.0, 1.0));`;
-    }
-    return loop;
-  };
-
-  static override onColorize = (props: LinearGradientEffectProps) => {
+  static override onColorize = (props: RadialGradientEffectProps) => {
     const colors = props.colors!.length || 1;
     return `
-      float d = angle - 90.0;
-      float a = $degToRad(d);
-      float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
-      vec2 f = $calcPoint(lineDist * 0.5, a);
-      vec2 t = $calcPoint(lineDist * 0.5, $degToRad(d + 180.0));
-      vec2 gradVec = t - f;
-      float dist = dot((v_textureCoordinate.xy * u_dimensions) - f, gradVec) / dot(gradVec, gradVec);
+      vec2 point = v_textureCoordinate.xy * u_dimensions;
+      vec2 projection = vec2(pivot.x * u_dimensions.x, pivot.y * u_dimensions.y);
+
+      float dist = length((point - projection) / vec2(width, height));
 
       float stopCalc = (dist - stops[0]) / (stops[1] - stops[0]);
       vec4 colorOut = mix(colors[0], colors[1], stopCalc);
