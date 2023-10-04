@@ -495,11 +495,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
         throw new Error('Unable to add texture to render op');
       }
 
-      const { shader, shaderProps, dimensions, clippingRect } = curRenderOp;
+      const { shader, shaderProps, dimensions, clippingRect, alpha } =
+        curRenderOp;
       this.newRenderOp(
         shader,
         shaderProps,
-        alpha
+        alpha,
         dimensions,
         clippingRect,
         bufferIdx,
