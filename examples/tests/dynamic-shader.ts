@@ -205,7 +205,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 700,
     width: 750,
     height: 250,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'radialGradient',
