@@ -43,6 +43,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly buffers: BufferCollection,
     readonly shader: WebGlCoreShader,
     readonly shaderProps: Record<string, unknown>,
+    readonly alpha: number,
     readonly clippingRect: Rect | null,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,

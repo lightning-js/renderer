@@ -21,9 +21,9 @@ import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
   type DimensionsShaderProp,
+  type AlphaShaderProp,
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import { RadiusEffect } from './effects/RadiusEffect.js';
 import { BorderEffect } from './effects/BorderEffect.js';
@@ -36,6 +36,7 @@ import { BorderBottomEffect } from './effects/BorderBottomEffect.js';
 import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
+import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
 
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
@@ -75,7 +76,9 @@ type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
 
 type EffectDesc = MapEffectDescs<keyof EffectMap>;
 
-export interface DynamicShaderProps extends DimensionsShaderProp {
+export interface DynamicShaderProps
+  extends DimensionsShaderProp,
+    AlphaShaderProp {
   effects?: EffectDesc[];
 }
 
@@ -88,6 +91,7 @@ export interface EffectMap {
   borderTop: typeof BorderTopEffect;
   fadeOut: typeof FadeOutEffect;
   linearGradient: typeof LinearGradientEffect;
+  radialGradient: typeof RadialGradientEffect;
   grayscale: typeof GrayscaleEffect;
   glitch: typeof GlitchEffect;
 }
@@ -101,6 +105,7 @@ const Effects = {
   borderTop: BorderTopEffect,
   fadeOut: FadeOutEffect,
   linearGradient: LinearGradientEffect,
+  radialGradient: RadialGradientEffect,
   grayscale: GrayscaleEffect,
   glitch: GlitchEffect,
 };
@@ -125,6 +130,7 @@ export class DynamicShader extends WebGlCoreShader {
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
         { name: 'u_texture', uniform: 'uniform2fv' },
         { name: 'u_dimensions', uniform: 'uniform2fv' },
+        { name: 'u_alpha', uniform: 'uniform1f' },
         ...shader.uniforms,
       ],
       shaderSources: {
@@ -364,6 +370,7 @@ export class DynamicShader extends WebGlCoreShader {
         width: 0,
         height: 0,
       },
+      $alpha: 0,
     };
   }
 
@@ -429,6 +436,7 @@ export class DynamicShader extends WebGlCoreShader {
 
     uniform vec2 u_resolution;
     uniform vec2 u_dimensions;
+    uniform float u_alpha;
     uniform float u_radius;
     uniform sampler2D u_texture;
 
@@ -456,7 +464,7 @@ export class DynamicShader extends WebGlCoreShader {
 
       ${drawEffects}
 
-      gl_FragColor = shaderColor * v_color.a;
+      gl_FragColor = shaderColor * u_alpha;
     }
   `;
 }

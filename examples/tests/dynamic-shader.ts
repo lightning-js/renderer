@@ -40,7 +40,7 @@ export default async function ({ renderer }: ExampleSettings) {
             angle: 220,
             colors: [
               0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
-              0xff0000ff,
+              0xff000000,
             ],
           },
         },
@@ -154,7 +154,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
-    color: 0xff0000ff,
+    color: 0x00000000,
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
@@ -193,6 +193,28 @@ export default async function ({ renderer }: ExampleSettings) {
           type: 'fadeOut',
           props: {
             fade: [200, 100, 0, 0],
+          },
+        },
+      ],
+    }),
+    parent: renderer.root,
+  });
+
+  const t7 = renderer.createNode({
+    x: 1000,
+    y: 700,
+    width: 750,
+    height: 250,
+    shader: renderer.makeShader('DynamicShader', {
+      effects: [
+        {
+          type: 'radialGradient',
+          props: {
+            colors: [0xff0000ff, 0x00ff00ff, 0x00000000],
+            stops: [0.1, 0.4, 1.0],
+            height: 200,
+            width: 1000,
+            pivot: [0, 0.5],
           },
         },
       ],
