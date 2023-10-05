@@ -180,7 +180,7 @@ export default async function ({ renderer }: ExampleSettings) {
         preload: true,
       },
     );
-  }, 10);
+  }, 1000);
 
   // setTimeout required for ThreadX right now because the emit() that sends
   // the animation to the renderer worker doesn't work until the Node is fully
