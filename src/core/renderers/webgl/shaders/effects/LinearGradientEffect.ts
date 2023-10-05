@@ -165,18 +165,19 @@ export class LinearGradientEffect extends ShaderEffect {
       float d = angle - 90.0;
       float a = $degToRad(d);
       float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
+
       vec2 f = $calcPoint(lineDist * 0.5, a);
       vec2 t = $calcPoint(lineDist * 0.5, $degToRad(d + 180.0));
       vec2 gradVec = t - f;
-      float dist = dot((v_textureCoordinate.xy * u_dimensions) - f, gradVec) / dot(gradVec, gradVec);
+      float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
 
       float stopCalc = (dist - stops[0]) / (stops[1] - stops[0]);
-      vec4 colorOut = mix(colors[0], colors[1], stopCalc);
+      vec4 colorOut = $fromLinear(mix($toLinear(colors[0]), $toLinear(colors[1]), stopCalc));
       for(int i = 1; i < ${colors}-1; i++) {
         stopCalc = (dist - stops[i]) / (stops[i + 1] - stops[i]);
         colorOut = mix(colorOut, colors[i + 1], clamp(stopCalc, 0.0, 1.0));
       }
-      return mix(maskColor, colorOut, colorOut.a);
+      return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
     `;
   };
 }
