@@ -252,7 +252,7 @@ export class DynamicShader extends WebGlCoreShader {
     }
 
     //fill main functions
-    let currentMask = `mix(shaderColor, maskColor, clamp(-lng_DefaultMask, 0.0, 1.0))`;
+    let currentMask = `mix(shaderColor, maskColor, clamp(-(lng_DefaultMask), 0.0, 1.0))`;
     let drawEffects = `
 
     `;
@@ -399,6 +399,7 @@ export class DynamicShader extends WebGlCoreShader {
     uniform float u_alpha;
     uniform float u_radius;
     uniform sampler2D u_texture;
+    uniform float u_pixelRatio;
 
     ${uniforms}
 
@@ -410,9 +411,8 @@ export class DynamicShader extends WebGlCoreShader {
     ${effectMethods}
 
     void main() {
-      vec2 uv = v_textureCoordinate.xy * u_dimensions.xy;
       vec2 p = v_textureCoordinate.xy * u_dimensions - u_dimensions * 0.5;
-      vec2 d = abs(p) - u_dimensions * 0.5;
+      vec2 d = abs(p) - (u_dimensions) * 0.5;
       float lng_DefaultMask = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 
       vec4 shaderColor = vec4(0.0);
@@ -420,7 +420,7 @@ export class DynamicShader extends WebGlCoreShader {
 
       vec4 maskColor = texture2D(u_texture, v_textureCoordinate) * v_color;
 
-      shaderColor = mix(shaderColor, maskColor, clamp(-lng_DefaultMask, 0.0, 1.0));
+      shaderColor = mix(shaderColor, maskColor, clamp(-(lng_DefaultMask + 0.5), 0.0, 1.0));
 
       ${drawEffects}
 
