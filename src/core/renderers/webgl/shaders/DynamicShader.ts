@@ -70,7 +70,7 @@ import { FadeOutEffect } from './effects/FadeOutEffect.js';
  * field.
  */
 type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
-  ? GenericEffectDesc<T>
+  ? SpecificEffectDesc<T>
   : never;
 
 type EffectDesc = MapEffectDescs<keyof EffectMap>;
@@ -105,7 +105,7 @@ const Effects = {
   glitch: GlitchEffect,
 };
 
-export interface GenericEffectDesc<
+export interface SpecificEffectDesc<
   FxType extends keyof EffectMap = keyof EffectMap,
 > {
   type: FxType;
