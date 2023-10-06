@@ -29,8 +29,8 @@ export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
   override async onLoadRequest(): Promise<Dimensions> {
     const props = await (this.textureSource as SubTexture).getTextureData();
     return {
-      width: props.width || 0,
-      height: props.height || 0,
+      width: props.data?.width || 0,
+      height: props.data?.height || 0,
     };
   }
 }

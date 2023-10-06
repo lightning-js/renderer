@@ -72,9 +72,9 @@ export class NoiseTexture extends Texture {
       pixelData8[i + 2] = v;
       pixelData8[i + 3] = 255;
     }
-    return await createImageBitmap(new ImageData(pixelData8, width, height), {
-      premultiplyAlpha: 'none',
-    });
+    return {
+      data: new ImageData(pixelData8, width, height),
+    };
   }
 
   static override makeCacheKey(props: NoiseTextureProps): string {

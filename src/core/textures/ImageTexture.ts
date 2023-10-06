@@ -73,22 +73,25 @@ export class ImageTexture extends Texture {
   override async getTextureData(): Promise<TextureData> {
     const { src, premultiplyAlpha } = this.props;
     if (!src) {
-      return null;
+      return {
+        data: null,
+      };
     }
     if (src instanceof ImageData) {
-      return await createImageBitmap(src, {
-        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      });
+      return {
+        data: src,
+        premultiplyAlpha,
+      };
     }
     const response = await fetch(src);
     const blob = await response.blob();
-    return await createImageBitmap(blob, {
-      premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-      colorSpaceConversion: 'none',
-      imageOrientation: 'none',
-    });
+    return {
+      data: await createImageBitmap(blob, {
+        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      }),
+    };
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {

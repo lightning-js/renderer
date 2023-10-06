@@ -32,8 +32,13 @@ npm test
 # Build API Documentation (builds into ./docs folder)
 npm run typedoc
 
-# Launch test examples (includes Build Renderer (watch mode))
+# Launch test examples in dev mode (includes Build Renderer (watch mode))
 npm start
+
+# Launch test examples in production mode
+# IMPORTANT: To run test examples on embedded devices that use older browser versions
+# you MUST run the examples in this mode.
+npm run prod
 ```
 
 ## Test Examples

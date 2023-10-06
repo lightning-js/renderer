@@ -45,12 +45,7 @@ export class RoundedRectangle extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: [
-        'a_position',
-        'a_textureCoordinate',
-        'a_color',
-        'a_textureIndex',
-      ],
+      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2fv' },
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
@@ -115,7 +110,6 @@ export class RoundedRectangle extends WebGlCoreShader {
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
-      varying float v_textureIndex;
 
       void main() {
         vec2 normalized = a_position * u_pixelRatio / u_resolution;
@@ -125,7 +119,6 @@ export class RoundedRectangle extends WebGlCoreShader {
         // pass to fragment
         v_color = a_color;
         v_textureCoordinate = a_textureCoordinate;
-        v_textureIndex = a_textureIndex;
 
         // flip y
         gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);

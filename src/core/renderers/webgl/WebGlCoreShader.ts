@@ -166,13 +166,13 @@ export abstract class WebGlCoreShader extends CoreShader {
       const location = gl.getAttribLocation(this.program, attributeName);
       if (location < 0) {
         throw new Error(
-          `Vertex shader must have an attribute "${attributeName}"!`,
+          `${this.constructor.name}: Vertex shader must have an attribute "${attributeName}"!`,
         );
       }
       const buffer = gl.createBuffer();
       if (!buffer) {
         throw new Error(
-          `Could not create buffer for attribute "${attributeName}"`,
+          `${this.constructor.name}: Could not create buffer for attribute "${attributeName}"`,
         );
       }
 
