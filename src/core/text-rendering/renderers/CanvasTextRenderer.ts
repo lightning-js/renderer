@@ -99,6 +99,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
     let context = this.canvas.getContext('2d');
     if (!context) {
+      // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
+      // Here we try getting the context again after falling back to an HTMLCanvasElement.
       this.canvas = document.createElement('canvas');
       context = this.canvas.getContext('2d');
     }
