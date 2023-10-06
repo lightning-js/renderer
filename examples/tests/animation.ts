@@ -17,30 +17,17 @@
  * limitations under the License.
  */
 
+import type { IAnimationController } from '@lightningjs/renderer';
+
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+interface AnimationExampleSettings {
+  duration: number;
+  easing: string;
+  loop: boolean;
+  stopMethod: 'reverse' | 'reset' | false;
+}
 
 export default async function ({ renderer, appDimensions }: ExampleSettings) {
-  const randomColor = () => {
-    const alpha = Math.floor(Math.random() * 256);
-    const red = Math.floor(Math.random() * 256);
-    const green = Math.floor(Math.random() * 256);
-    const blue = Math.floor(Math.random() * 256);
-
-    // Combine components into a single ARGB number
-    return (alpha << 24) | (red << 16) | (green << 8) | blue;
-  };
-
-  const create = (idx: number) => {
-    return renderer.createNode({
-      x: -150,
-      y: 50 * idx,
-      width: 40,
-      height: 40,
-      color: randomColor(),
-      parent: renderer.root,
-    });
-  };
-
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -50,23 +37,31 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     parent: renderer.root,
   });
 
-  /**
-   * Reverse Animation Demo
-   */
-  new Array(1).fill(0).forEach((el, i) => {
-    create(i)
-      .animate(
-        {
-          x: appDimensions.width + 100,
-        },
-        {
-          duration: 4400,
-          loop: false,
-          stopMethod: 'reverse',
-          easing: 'ease-in',
-        },
-      )
-      .start();
+  const animatableNode = renderer.createNode({
+    x: 0,
+    y: 300,
+    width: 200,
+    height: 200,
+    color: 0xffffffff,
+    parent: node,
+  });
+
+  const easingLabel = renderer.createTextNode({
+    parent: node,
+    x: 40,
+    y: 40,
+    fontFamily: 'Ubuntu',
+    fontSize: 40,
+    text: '',
+  });
+
+  const legend = renderer.createTextNode({
+    parent: node,
+    x: 40,
+    y: 90,
+    fontFamily: 'Ubuntu',
+    fontSize: 20,
+    text: 'press left or right arrow key to change easing',
   });
 
   /**
@@ -91,25 +86,65 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     'ease-in-out-back',
     'cubic-bezier(0,1.35,.99,-0.07)',
     'cubic-bezier(.41,.91,.99,-0.07)',
+    'loopReverse',
   ];
 
-  new Array(easings.length).fill(0).forEach((el, i) => {
-    create(2 + i)
-      .animate(
-        {
-          x: appDimensions.width + 100,
-        },
-        {
-          duration: 3400,
-          loop: true,
-          easing: easings[i],
-        },
-      )
-      .start();
+  let animationIndex = 0;
+  let currentAnimation: IAnimationController;
+
+  const animationSettings: Partial<AnimationExampleSettings> = {
+    duration: 2000,
+    loop: false,
+    stopMethod: false,
+  };
+
+  const execEasing = (index = 0): void => {
+    const easing = easings[index] ?? '';
+    easingLabel.text = `Easing demo: ${easing}`;
+
+    // restore x position before start of every animation
+    animatableNode.x = 0;
+
+    if (easing === 'loopReverse') {
+      animationSettings.loop = true;
+      animationSettings.stopMethod = 'reverse';
+    } else {
+      animationSettings.loop = false;
+      animationSettings.stopMethod = false;
+    }
+
+    if (currentAnimation) {
+      currentAnimation.stop();
+    }
+
+    currentAnimation = animatableNode.animate(
+      {
+        x: renderer.settings.appWidth - animatableNode.width,
+      },
+      animationSettings, // Remove the unnecessary assertion
+    );
+
+    currentAnimation.start();
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') {
+      animationIndex++;
+    }
+    if (e.key === 'ArrowLeft') {
+      animationIndex--;
+    }
+    if (e.key === 'ArrowUp') {
+      const s = animationSettings.stopMethod;
+      animationSettings.stopMethod = !s ? 'reverse' : false;
+    }
+
+    // wrap around
+    animationIndex =
+      ((animationIndex % easings.length) + easings.length) % easings.length;
+
+    execEasing(animationIndex);
   });
 
-  /*
-   * End: Sprite Map Demo
-   */
-  console.log('ready!');
+  execEasing(animationIndex);
 }
