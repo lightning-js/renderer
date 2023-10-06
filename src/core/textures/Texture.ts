@@ -28,9 +28,20 @@ import type {
 import { EventEmitter } from '../../common/EventEmitter.js';
 
 /**
- * Texture sources that are used to populate a CoreContextTexture
+ * TextureData that is used to populate a CoreContextTexture
  */
-export type TextureData = ImageBitmap | SubTextureProps | null;
+export interface TextureData {
+  /**
+   * The texture data
+   */
+  data: ImageBitmap | ImageData | SubTextureProps | null;
+  /**
+   * Premultiply alpha when uploading texture data to the GPU
+   *
+   * @defaultValue `false`
+   */
+  premultiplyAlpha?: boolean;
+}
 
 export type TextureState = 'loading' | 'loaded' | 'failed';
 
