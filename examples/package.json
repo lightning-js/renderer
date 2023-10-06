@@ -8,7 +8,7 @@
     "start": "concurrently -c \"auto\" \"npm:watch-renderer\" \"npm:dev\"",
     "dev": "vite --open",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host",
     "watch-renderer": "cd .. && npm run watch"
   },
   "author": "Frank Weindel",

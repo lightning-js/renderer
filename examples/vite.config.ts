@@ -22,6 +22,20 @@ import * as path from 'path';
 import { importChunkUrl } from '@lightningjs/vite-plugin-import-chunk-url';
 
 /**
+ * Targeting ES2019 gets us at least to WPE 2.28
+ *
+ * Despite setting the target in 3 different places in the Vite config below
+ * this does not seem to have an effect on the output when running Vite in
+ * development mode (`npm start`). In order to properly test on embedded devices
+ * that require the set target, you must run `npm run build` and then serve the
+ * content via `npm run preview -- --host`.
+ *
+ * See the following for any updates on this:
+ * https://github.com/vitejs/vite/issues/13756#issuecomment-1751085158
+ */
+const target = 'es2019';
+
+/**
  * Vite Config
  */
 export default defineConfig(({ command, mode, ssrBuild }) => {
@@ -30,7 +44,16 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
     worker: {
       format: 'es',
     },
+    esbuild: {
+      target,
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        target,
+      },
+    },
     build: {
+      target,
       minify: false,
       sourcemap: true,
       outDir: path.resolve(__dirname, 'dist'),

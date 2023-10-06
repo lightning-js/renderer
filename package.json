@@ -12,6 +12,7 @@
   },
   "scripts": {
     "start": "cd examples && npm start",
+    "prod": "npm run build && cd examples && npm run build && npm run preview",
     "build": "tsc --build",
     "watch": "tsc --build --watch",
     "test": "vitest",
