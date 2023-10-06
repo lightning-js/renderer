@@ -19,7 +19,7 @@
 
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { IAnimationController } from '../common/IAnimationController.js';
-import type { ShaderDesc, TextureDesc } from './RendererMain.js';
+import type { ShaderRef, TextureRef } from './RendererMain.js';
 import type {
   TextRendererMap,
   TrProps,
@@ -206,7 +206,7 @@ export interface INodeWritableProps {
    * and TBD properties.
    *
    * To create a Texture in order to set it on this property, call
-   * {@link RendererMain.makeTexture}.
+   * {@link RendererMain.createTexture}.
    *
    * If the {@link src} is set on a Node, the Node will use the
    * {@link ImageTexture} by default and the Node will simply load the image at
@@ -215,7 +215,7 @@ export interface INodeWritableProps {
    * Note: If this is a Text Node, the Texture will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  texture: TextureDesc | null;
+  texture: TextureRef | null;
   /**
    * The Node's shader
    *
@@ -225,12 +225,12 @@ export interface INodeWritableProps {
    * or {@link color}(s) within the Node without any special effects.
    *
    * To create a Shader in order to set it on this property, call
-   * {@link RendererMain.makeShader}.
+   * {@link RendererMain.createShader}.
    *
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: ShaderDesc | null;
+  shader: ShaderRef | null;
   /**
    * Image URL
    *

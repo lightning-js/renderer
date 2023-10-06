@@ -74,7 +74,7 @@ export default async function ({ renderer }: ExampleSettings) {
     colorBottom: randomColor() * 0xffffffaa,
     colorTop: randomColor() * 0xffffffaa,
     parent: renderer.root,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: rnd(10, 50),
     }),
     mountX,
@@ -90,7 +90,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 20,
     color: 0xffffffff,
     parent: node,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 10,
     }),
     scale: 1,

@@ -19,7 +19,6 @@
 
 import {
   type ITextNodeWritableProps,
-  type RendererMain,
   type TextRendererMap,
   type TrFontFaceMap,
 } from '@lightningjs/renderer';
@@ -34,8 +33,6 @@ import {
 const FONT_FAMILY = 'Ubuntu';
 const HEADER_SIZE = 45;
 const FONT_SIZE = 40;
-const BUTTON_PADDING = 10;
-const BEGIN_Y = HEADER_SIZE;
 
 const initialMutableProps: Partial<ITextNodeWritableProps> = {
   x: 0,
@@ -67,11 +64,7 @@ interface LocalStorageData {
 
 const colors = Object.values(Colors);
 
-export default async function ({
-  testName,
-  renderer,
-  appDimensions,
-}: ExampleSettings) {
+export default async function ({ testName, renderer }: ExampleSettings) {
   const savedState = loadStorage<LocalStorageData>(testName);
 
   let curMode = savedState?.curMode || 0;
@@ -93,8 +86,8 @@ export default async function ({
     ...(savedState?.mutableProps || initialMutableProps),
     fontFamily: FONT_FAMILY,
     contain: 'both',
-    width: appDimensions.width,
-    height: appDimensions.height,
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
     text,
   };
 
@@ -130,7 +123,7 @@ export default async function ({
   statusNode.on(
     'textLoaded',
     (target: any, dimensions: { width: number; height: number }) => {
-      statusNode.x = appDimensions.width - dimensions.width;
+      statusNode.x = renderer.settings.appWidth - dimensions.width;
     },
   );
 

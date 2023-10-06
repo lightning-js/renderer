@@ -30,8 +30,8 @@ import { CoreAnimationController } from '../../core/animations/CoreAnimationCont
 import { CoreNode } from '../../core/CoreNode.js';
 import type {
   RendererMain,
-  ShaderDesc,
-  TextureDesc,
+  ShaderRef,
+  TextureRef,
 } from '../../main-api/RendererMain.js';
 import type { IAnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -54,8 +54,8 @@ export class MainOnlyNode extends EventEmitter implements INode {
   protected _children: MainOnlyNode[] = [];
   protected _src = '';
   protected _parent: MainOnlyNode | null = null;
-  protected _texture: TextureDesc | null = null;
-  protected _shader: ShaderDesc | null = null;
+  protected _texture: TextureRef | null = null;
+  protected _shader: ShaderRef | null = null;
 
   constructor(
     props: INodeWritableProps,
@@ -357,19 +357,25 @@ export class MainOnlyNode extends EventEmitter implements INode {
       this.texture = null;
       return;
     }
-    this.texture = this.rendererMain.makeTexture('ImageTexture', {
+    this.texture = this.rendererMain.createTexture('ImageTexture', {
       src: imageUrl,
     });
   }
 
   //#region Texture
-  get texture(): TextureDesc | null {
+  get texture(): TextureRef | null {
     return this._texture;
   }
 
-  set texture(texture: TextureDesc | null) {
+  set texture(texture: TextureRef | null) {
     if (this._texture === texture) {
       return;
+    }
+    if (this._texture) {
+      this.rendererMain.textureTracker.decrementTextureRefCount(this._texture);
+    }
+    if (texture) {
+      this.rendererMain.textureTracker.incrementTextureRefCount(texture);
     }
     this._texture = texture;
     if (texture) {
@@ -388,11 +394,11 @@ export class MainOnlyNode extends EventEmitter implements INode {
   };
   //#endregion Texture
 
-  get shader(): ShaderDesc | null {
+  get shader(): ShaderRef | null {
     return this._shader;
   }
 
-  set shader(shader: ShaderDesc | null) {
+  set shader(shader: ShaderRef | null) {
     if (this._shader === shader) {
       return;
     }
@@ -405,6 +411,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
   destroy(): void {
     this.emit('beforeDestroy', {});
     this.parent = null;
+    this.texture = null;
     this.emit('afterDestroy', {});
     this.removeAllListeners();
   }

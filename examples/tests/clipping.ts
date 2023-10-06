@@ -24,14 +24,10 @@ import { PageContainer } from '../common/PageContainer.js';
 const SQUARE_SIZE = 200;
 const PADDING = 20;
 
-export default async function ({
-  testName,
-  renderer,
-  appDimensions,
-}: ExampleSettings) {
+export default async function ({ testName, renderer }: ExampleSettings) {
   const pageContainer = new PageContainer(renderer, {
-    width: appDimensions.width,
-    height: appDimensions.height,
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
     parent: renderer.root,
     title: 'Clipping Tests',
     testName,

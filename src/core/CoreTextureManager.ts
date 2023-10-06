@@ -245,9 +245,10 @@ export class CoreTextureManager {
    * Remove a `Texture` from the texture cache by its texture desc ID
    *
    * @remarks
-   * This is called externally by when we know that the `TextureDesc` has been
-   * garbage collected. This allows us to remove the `Texture` from the cache
-   * so that it can be garbage collected as well.
+   * This is called externally by when we know (at least reasonably well) that
+   * the `TextureRef` in the Main API space has been is no longer used. This
+   * allows us to remove the `Texture` from the Usage Cache so that it can be
+   * garbage collected as well.
    *
    * @param textureDescId
    */
@@ -255,9 +256,9 @@ export class CoreTextureManager {
     const { textureIdCache, textureRefCountMap } = this;
     const texture = textureIdCache.get(textureDescId);
     if (!texture) {
-      throw new Error(
-        `Texture ID ${textureDescId} is not in the texture ID cache`,
-      );
+      // Sometimes a texture is removed from the cache before it ever gets
+      // added to the cache. This is fine and not an error.
+      return;
     }
     textureIdCache.delete(textureDescId);
     if (textureRefCountMap.has(texture)) {
