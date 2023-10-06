@@ -126,14 +126,16 @@ export interface RenderInfo {
 }
 
 export class LightningTextTextureRenderer {
-  private _canvas: OffscreenCanvas;
-  private _context: OffscreenCanvasRenderingContext2D;
+  private _canvas: OffscreenCanvas | HTMLCanvasElement;
+  private _context:
+    | OffscreenCanvasRenderingContext2D
+    | CanvasRenderingContext2D;
   private _settings: Settings;
   private renderInfo: RenderInfo | undefined;
 
   constructor(
-    canvas: OffscreenCanvas,
-    context: OffscreenCanvasRenderingContext2D,
+    canvas: OffscreenCanvas | HTMLCanvasElement,
+    context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
   ) {
     this._canvas = canvas;
     this._context = context;

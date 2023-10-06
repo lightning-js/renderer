@@ -85,12 +85,18 @@ export interface CanvasTextRendererState extends TextRendererState {
 }
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
-  protected canvas: OffscreenCanvas;
-  protected context: OffscreenCanvasRenderingContext2D;
+  protected canvas: OffscreenCanvas | HTMLCanvasElement;
+  protected context:
+    | OffscreenCanvasRenderingContext2D
+    | CanvasRenderingContext2D;
 
   constructor(stage: Stage) {
     super(stage);
-    this.canvas = new OffscreenCanvas(0, 0);
+    if (typeof OffscreenCanvas !== 'undefined') {
+      this.canvas = new OffscreenCanvas(0, 0);
+    } else {
+      this.canvas = document.createElement('canvas');
+    }
     const context = this.canvas.getContext('2d');
     assertTruthy(context);
     this.context = context;
