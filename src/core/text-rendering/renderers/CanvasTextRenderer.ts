@@ -97,7 +97,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    const context = this.canvas.getContext('2d');
+    let context = this.canvas.getContext('2d');
+    if (!context) {
+      this.canvas = document.createElement('canvas');
+      context = this.canvas.getContext('2d');
+    }
     assertTruthy(context);
     this.context = context;
   }
