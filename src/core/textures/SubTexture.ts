@@ -21,9 +21,9 @@ import type {
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
 } from '../../common/CommonTypes.js';
-import type { TextureDesc } from '../../main-api/RendererMain.js';
+import type { TextureRef } from '../../main-api/RendererMain.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture } from './Texture.js';
+import { Texture, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link SubTexture}
@@ -32,7 +32,7 @@ export interface SubTextureProps {
   /**
    * The texture that this sub-texture is a sub-region of.
    */
-  texture: TextureDesc;
+  texture: TextureRef;
 
   /**
    * The x pixel position of the top-left of the sub-texture within the parent
@@ -115,8 +115,10 @@ export class SubTexture extends Texture {
     this.setState('failed', error);
   };
 
-  override async getTextureData(): Promise<SubTextureProps> {
-    return this.props;
+  override async getTextureData(): Promise<TextureData> {
+    return {
+      data: this.props,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

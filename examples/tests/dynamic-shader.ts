@@ -26,7 +26,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'radius',
@@ -72,7 +72,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 250,
     height: 500,
     color: 0x00ff00ff,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'borderTop',
@@ -98,7 +98,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'linearGradient',
@@ -128,7 +128,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 250,
     height: 500,
     color: 0x0000ffff,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'borderRight',
@@ -154,20 +154,23 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 500,
-    color: 0x00000000,
-    shader: renderer.makeShader('DynamicShader', {
+    color: 0xff0000ff,
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          type: 'radius',
+          type: 'linearGradient',
           props: {
-            radius: 100,
+            angle: 180,
+            stops: [0.4, 0.8],
+            colors: [0x0000ffff, 0x00000000],
           },
         },
         {
-          type: 'border',
+          type: 'linearGradient',
           props: {
-            width: 20,
-            color: 0x00ff00ff,
+            angle: -90,
+            stops: [0.1, 0.75],
+            colors: [0x0000ffff, 0x00000000],
           },
         },
       ],
@@ -181,7 +184,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 750,
     height: 250,
     color: 0xff0000ff,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'radius',
@@ -205,7 +208,7 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 700,
     width: 750,
     height: 250,
-    shader: renderer.makeShader('DynamicShader', {
+    shader: renderer.createShader('DynamicShader', {
       effects: [
         {
           type: 'radialGradient',

@@ -26,7 +26,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 200,
     height: 200,
     color: 0xaabb66ff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 40,
     }),
     zIndex: 1,
@@ -39,7 +39,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 200,
     height: 200,
     color: 0xffaaee00,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 40,
     }),
     zIndex: 3,
@@ -52,7 +52,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 200,
     height: 200,
     color: 0x0000ffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 40,
     }),
     zIndex: 4,
@@ -65,7 +65,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 600,
     height: 600,
     color: 0xaabb66ff,
-    // shader: renderer.makeShader('RoundedRectangle', {
+    // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
     zIndex: 2,
@@ -79,7 +79,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 200,
     height: 200,
     color: 0xffaaee00,
-    // shader: renderer.makeShader('RoundedRectangle', {
+    // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
     zIndex: 4,
@@ -92,7 +92,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 200,
     height: 200,
     color: 0x0000ffff,
-    // shader: renderer.makeShader('RoundedRectangle', {
+    // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
     zIndex: 5,
@@ -105,7 +105,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 1600,
     height: 800,
     color: 0x00ffffff,
-    // shader: renderer.makeShader('RoundedRectangle', {
+    // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
     zIndex: 0,
@@ -146,7 +146,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
@@ -162,7 +162,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
@@ -178,7 +178,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
@@ -194,7 +194,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
@@ -210,7 +210,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
@@ -226,7 +226,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     zIndex: undefined,
@@ -240,7 +240,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
@@ -258,7 +258,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 10,
     height: 10,
     color: 0x00ffffff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test

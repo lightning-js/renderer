@@ -28,10 +28,7 @@ import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
 import type { Texture } from '../../../core/textures/Texture.js';
 import { CoreNode } from '../../../core/CoreNode.js';
-import type {
-  ShaderDesc,
-  TextureDesc,
-} from '../../../main-api/RendererMain.js';
+import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
 import type { IAnimationSettings } from '../../../core/animations/CoreAnimation.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 
@@ -112,19 +109,18 @@ export class ThreadXRendererNode extends SharedNode {
     });
     this.on(
       'loadTexture',
-      (target: ThreadXRendererNode, textureDesc: TextureDesc) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      (target: ThreadXRendererNode, textureDesc: TextureRef) => {
         this.coreNode.loadTexture(
           textureDesc.txType,
-          textureDesc.props as any,
+          textureDesc.props,
           textureDesc.options,
         );
       },
     );
     this.on(
       'loadShader',
-      (target: ThreadXRendererNode, shaderDesc: ShaderDesc) => {
-        this.coreNode.loadShader(shaderDesc.shType, shaderDesc.props as any);
+      (target: ThreadXRendererNode, shaderDesc: ShaderRef) => {
+        this.coreNode.loadShader(shaderDesc.shType, shaderDesc.props);
       },
     );
     this.on('unloadTexture', (target: ThreadXRendererNode) => {

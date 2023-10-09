@@ -85,13 +85,26 @@ export interface CanvasTextRendererState extends TextRendererState {
 }
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
-  protected canvas: OffscreenCanvas;
-  protected context: OffscreenCanvasRenderingContext2D;
+  protected canvas: OffscreenCanvas | HTMLCanvasElement;
+  protected context:
+    | OffscreenCanvasRenderingContext2D
+    | CanvasRenderingContext2D;
 
   constructor(stage: Stage) {
     super(stage);
-    this.canvas = new OffscreenCanvas(0, 0);
-    const context = this.canvas.getContext('2d');
+    if (typeof OffscreenCanvas !== 'undefined') {
+      this.canvas = new OffscreenCanvas(0, 0);
+    } else {
+      this.canvas = document.createElement('canvas');
+    }
+    let context = this.canvas.getContext('2d');
+    if (!context) {
+      // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
+      // Here we try getting the context again after falling back to an HTMLCanvasElement.
+      // See: https://github.com/lightning-js/renderer/issues/26#issuecomment-1750438486
+      this.canvas = document.createElement('canvas');
+      context = this.canvas.getContext('2d');
+    }
     assertTruthy(context);
     this.context = context;
   }

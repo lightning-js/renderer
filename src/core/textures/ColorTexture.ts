@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture } from './Texture.js';
+import { Texture, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link ColorTexture}
@@ -60,12 +60,13 @@ export class ColorTexture extends Texture {
     this.props.color = color;
   }
 
-  override async getTextureData(): Promise<ImageBitmap> {
+  override async getTextureData(): Promise<TextureData> {
     const pixelData32 = new Uint32Array([this.color]);
     const pixelData8 = new Uint8ClampedArray(pixelData32.buffer);
-    return await createImageBitmap(new ImageData(pixelData8, 1, 1), {
-      premultiplyAlpha: 'none',
-    });
+    return {
+      data: new ImageData(pixelData8, 1, 1),
+      premultiplyAlpha: true,
+    };
   }
 
   static override makeCacheKey(props: ColorTextureProps): string {

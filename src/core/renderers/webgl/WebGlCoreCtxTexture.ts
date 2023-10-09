@@ -133,25 +133,27 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     assertTruthy(this._nativeCtxTexture);
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
-    if (textureData instanceof ImageBitmap) {
-      width = textureData.width;
-      height = textureData.height;
+    if (
+      textureData.data instanceof ImageBitmap ||
+      textureData.data instanceof ImageData
+    ) {
+      const data = textureData.data;
+      width = data.width;
+      height = data.height;
       gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
 
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        textureData,
+      gl.pixelStorei(
+        gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyAlpha,
       );
+
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
       if (isWebGl2(gl) || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
         gl.generateMipmap(gl.TEXTURE_2D);
       }
-    } else if (textureData === null) {
+    } else if (textureData.data === null) {
       width = 0;
       height = 0;
       // Reset to a 1x1 transparent texture

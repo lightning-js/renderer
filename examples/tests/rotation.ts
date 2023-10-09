@@ -42,7 +42,7 @@ export default async function ({ renderer }: ExampleSettings) {
       colorBottom: randomColor(),
       colorTop: randomColor(),
       parent: renderer.root,
-      shader: renderer.makeShader('RoundedRectangle', {
+      shader: renderer.createShader('RoundedRectangle', {
         radius: rnd(10, 50),
       }),
       scale: 1,

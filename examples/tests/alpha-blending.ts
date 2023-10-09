@@ -37,7 +37,6 @@ interface LocalStorageData {
 export default async function ({
   testName,
   renderer,
-  appDimensions,
   canvas,
 }: ExampleSettings) {
   const savedState = loadStorage<LocalStorageData>(testName);
@@ -55,10 +54,10 @@ export default async function ({
   // the right half of the canvas
   // We will test WebGL -> WebGL alpha over this background
   const rightBackground = renderer.createNode({
-    x: appDimensions.width / 2,
+    x: renderer.settings.appWidth / 2,
     y: 0,
-    width: appDimensions.width / 2,
-    height: appDimensions.height,
+    width: renderer.settings.appWidth / 2,
+    height: renderer.settings.appHeight,
     color: rightSideBg === 'red' ? 0xff0000ff : 0x00ff00ff,
     parent: renderer.root,
     zIndex: 0,
@@ -76,7 +75,7 @@ export default async function ({
     fontSize: HEADER_FONT_SIZE,
     color: 0xffffffff,
     contain: 'width',
-    width: appDimensions.width / 2,
+    width: renderer.settings.appWidth / 2,
     y: PADDING,
     textAlign: 'center',
     parent: renderer.root,
@@ -88,8 +87,8 @@ export default async function ({
     fontSize: HEADER_FONT_SIZE,
     color: 0xffffffff,
     contain: 'width',
-    width: appDimensions.width / 2,
-    x: appDimensions.width / 2,
+    width: renderer.settings.appWidth / 2,
+    x: renderer.settings.appWidth / 2,
     y: PADDING,
     textAlign: 'center',
     parent: renderer.root,
@@ -100,7 +99,7 @@ export default async function ({
     fontSize: 30,
     color: 0xffffffff,
     x: PADDING,
-    y: appDimensions.height - 30 - PADDING,
+    y: renderer.settings.appHeight - 30 - PADDING,
     parent: renderer.root,
   });
 

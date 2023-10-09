@@ -38,6 +38,44 @@ import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
 
+/**
+ * Allows the `keyof EffectMap` to be mapped over and form an discriminated
+ * union of all the EffectDescs structures individually.
+ *
+ * @remarks
+ * When used like the following:
+ * ```
+ * MapEffectDescs<keyof EffectMap>[]
+ * ```
+ * The resultant type will be a discriminated union like so:
+ * ```
+ * (
+ *   {
+ *     type: 'radius',
+ *     props?: {
+ *       radius?: number | number[];
+ *     }
+ *   } |
+ *   {
+ *     type: 'border',
+ *     props?: {
+ *       width?: number;
+ *       color?: number;
+ *     }
+ *   } |
+ *   // ...
+ * )[]
+ * ```
+ * Which means TypeScript will now base its type checking on the `type` field
+ * and will know exactly what the `props` field should be based on the `type`
+ * field.
+ */
+type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
+  ? SpecificEffectDesc<T>
+  : never;
+
+type EffectDesc = MapEffectDescs<keyof EffectMap>;
+
 export interface DynamicShaderProps
   extends DimensionsShaderProp,
     AlphaShaderProp {
@@ -72,7 +110,9 @@ const Effects = {
   glitch: GlitchEffect,
 };
 
-export interface EffectDesc<FxType extends keyof EffectMap = keyof EffectMap> {
+export interface SpecificEffectDesc<
+  FxType extends keyof EffectMap = keyof EffectMap,
+> {
   type: FxType;
   props?: ExtractProps<EffectMap[FxType]>;
 }
@@ -252,7 +292,7 @@ export class DynamicShader extends WebGlCoreShader {
     }
 
     //fill main functions
-    let currentMask = `mix(shaderColor, maskColor, clamp(-lng_DefaultMask, 0.0, 1.0))`;
+    let currentMask = `mix(shaderColor, maskColor, clamp(-(lng_DefaultMask), 0.0, 1.0))`;
     let drawEffects = `
 
     `;
@@ -325,7 +365,7 @@ export class DynamicShader extends WebGlCoreShader {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
         props: Effects[effect.type].resolveDefaults(effect.props || {}),
-      })),
+      })) as MapEffectDescs<keyof EffectMap>[],
       $dimensions: {
         width: 0,
         height: 0,
@@ -399,6 +439,7 @@ export class DynamicShader extends WebGlCoreShader {
     uniform float u_alpha;
     uniform float u_radius;
     uniform sampler2D u_texture;
+    uniform float u_pixelRatio;
 
     ${uniforms}
 
@@ -410,9 +451,8 @@ export class DynamicShader extends WebGlCoreShader {
     ${effectMethods}
 
     void main() {
-      vec2 uv = v_textureCoordinate.xy * u_dimensions.xy;
       vec2 p = v_textureCoordinate.xy * u_dimensions - u_dimensions * 0.5;
-      vec2 d = abs(p) - u_dimensions * 0.5;
+      vec2 d = abs(p) - (u_dimensions) * 0.5;
       float lng_DefaultMask = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 
       vec4 shaderColor = vec4(0.0);
@@ -420,7 +460,7 @@ export class DynamicShader extends WebGlCoreShader {
 
       vec4 maskColor = texture2D(u_texture, v_textureCoordinate) * v_color;
 
-      shaderColor = mix(shaderColor, maskColor, clamp(-lng_DefaultMask, 0.0, 1.0));
+      shaderColor = mix(shaderColor, maskColor, clamp(-(lng_DefaultMask + 0.5), 0.0, 1.0));
 
       ${drawEffects}
 

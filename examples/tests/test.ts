@@ -24,14 +24,14 @@ import spritemap from '../assets/spritemap.png';
 import { Character } from '../common/Character.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export default async function ({ renderer }: ExampleSettings) {
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
     width: 100,
     height: 100,
     color: 0xff0000ff,
-    shader: renderer.makeShader('RoundedRectangle', {
+    shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
     }),
     parent: renderer.root,
@@ -73,11 +73,11 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     x: 395,
     y: 0,
     width: 210,
-    height: appDimensions.height,
+    height: renderer.settings.appHeight,
     color: 0xffffffff,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 210,
-      height: appDimensions.height,
+      height: renderer.settings.appHeight,
     }),
     parent: renderer.root,
   });
@@ -92,7 +92,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     width: 1315,
     height: 50,
     color: 0xaabb66ff,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315,
       height: 50,
     }),
@@ -106,7 +106,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     height: 30,
     color: 0xaaedffaa,
     parent: relativePositioningPlatform,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315 - 20,
       height: 30,
     }),
@@ -119,7 +119,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     height: 10,
     color: 0xff00ffff,
     parent: relativePositioningChild,
-    texture: renderer.makeTexture('NoiseTexture', {
+    texture: renderer.createTexture('NoiseTexture', {
       width: 1315 - 20 - 20,
       height: 50,
     }),
@@ -131,7 +131,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
 
   const rockoRect = renderer.createNode({
     x: -181,
-    y: appDimensions.height - 218,
+    y: renderer.settings.appHeight - 218,
     width: 181,
     height: 218,
     src: rocko,
@@ -168,19 +168,19 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     zIndex: 3,
   });
 
-  // setInterval(() => {
-  //   shaft.texture = renderer.makeTexture(
-  //     'NoiseTexture',
-  //     {
-  //       width: 210,
-  //       height: appDimensions.height,
-  //       cacheId: Math.floor(Math.random() * 100000),
-  //     },
-  //     {
-  //       preload: true,
-  //     },
-  //   );
-  // }, 10);
+  setInterval(() => {
+    shaft.texture = renderer.createTexture(
+      'NoiseTexture',
+      {
+        width: 210,
+        height: renderer.settings.appHeight,
+        cacheId: Math.floor(Math.random() * 100000),
+      },
+      {
+        preload: true,
+      },
+    );
+  }, 1000);
 
   // setTimeout required for ThreadX right now because the emit() that sends
   // the animation to the renderer worker doesn't work until the Node is fully
@@ -226,7 +226,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
       rockoAnimation = rockoRect
         .animate(
           {
-            x: appDimensions.width,
+            x: renderer.settings.appWidth,
             // y: 100,
           },
           {
@@ -238,7 +238,7 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
 
       console.log('resetting rocko');
       rockoRect.x = -rockoRect.width;
-      rockoRect.y = appDimensions.height - 218;
+      rockoRect.y = renderer.settings.appHeight - 218;
       rockoRect.flush();
     }
   }, 1000);
@@ -339,14 +339,14 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
    * Begin: Sprite Map Demo
    */
 
-  const spriteMapTexture = renderer.makeTexture('ImageTexture', {
+  const spriteMapTexture = renderer.createTexture('ImageTexture', {
     src: spritemap,
   });
 
   const frames = Array.from(Array(8).keys()).map((i) => {
     const x = (i % 8) * 100;
     const y = Math.floor(i / 8) * 150;
-    return renderer.makeTexture('SubTexture', {
+    return renderer.createTexture('SubTexture', {
       texture: spriteMapTexture,
       x,
       y,
@@ -428,8 +428,8 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
   });
 
   const noChangeText = renderer.createTextNode({
-    x: appDimensions.width - 300,
-    y: appDimensions.height - 200,
+    x: renderer.settings.appWidth - 300,
+    y: renderer.settings.appHeight - 200,
     width: 300,
     height: 200,
     color: 0xffffffff,
