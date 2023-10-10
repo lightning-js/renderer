@@ -96,11 +96,13 @@ export default async function ({ renderer, appDimensions }: ExampleSettings) {
     duration: 2000,
     loop: false,
     stopMethod: false,
+    easing: 'linear',
   };
 
   const execEasing = (index = 0): void => {
-    const easing = easings[index] ?? '';
+    const easing = easings[index] ?? 'linear';
     easingLabel.text = `Easing demo: ${easing}`;
+    animationSettings.easing = easing;
 
     // restore x position before start of every animation
     animatableNode.x = 0;
