@@ -21,6 +21,10 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 import robot from '../assets/robot/robot.png';
 
 export default async function ({ renderer }: ExampleSettings) {
+  const degToRad = (deg: number) => {
+    return (Math.PI / 180) * deg;
+  };
+
   const t1 = renderer.createNode({
     x: 200,
     y: 100,
@@ -37,7 +41,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'linearGradient',
           props: {
-            angle: 220,
+            angle: 0,
             colors: [
               0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
               0xff000000,
@@ -54,7 +58,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'linearGradient',
           props: {
-            angle: 40,
+            angle: degToRad(40),
             colors: [
               0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
               0xff0000ff,
@@ -103,7 +107,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'linearGradient',
           props: {
-            angle: 60,
+            angle: degToRad(90),
             stops: [0.2, 0.3],
             colors: [
               0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
@@ -160,7 +164,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'linearGradient',
           props: {
-            angle: 180,
+            angle: degToRad(180),
             stops: [0.4, 0.8],
             colors: [0x0000ffff, 0x00000000],
           },
@@ -168,7 +172,7 @@ export default async function ({ renderer }: ExampleSettings) {
         {
           type: 'linearGradient',
           props: {
-            angle: -90,
+            angle: degToRad(-90),
             stops: [0.1, 0.75],
             colors: [0x0000ffff, 0x00000000],
           },

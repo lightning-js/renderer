@@ -37,6 +37,7 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
+import type { EffectMap } from '../../../CoreShaderManager.js';
 
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
@@ -82,20 +83,6 @@ export interface DynamicShaderProps
   effects?: EffectDesc[];
 }
 
-export interface EffectMap {
-  radius: typeof RadiusEffect;
-  border: typeof BorderEffect;
-  borderBottom: typeof BorderBottomEffect;
-  borderLeft: typeof BorderLeftEffect;
-  borderRight: typeof BorderRightEffect;
-  borderTop: typeof BorderTopEffect;
-  fadeOut: typeof FadeOutEffect;
-  linearGradient: typeof LinearGradientEffect;
-  radialGradient: typeof RadialGradientEffect;
-  grayscale: typeof GrayscaleEffect;
-  glitch: typeof GlitchEffect;
-}
-
 const Effects = {
   radius: RadiusEffect,
   border: BorderEffect,
@@ -120,8 +107,12 @@ export interface SpecificEffectDesc<
 export class DynamicShader extends WebGlCoreShader {
   effects: Array<InstanceType<EffectMap[keyof EffectMap]>> = [];
 
-  constructor(renderer: WebGlCoreRenderer, props: DynamicShaderProps) {
-    const shader = DynamicShader.createShader(props);
+  constructor(
+    renderer: WebGlCoreRenderer,
+    props: DynamicShaderProps,
+    effectContructors: Partial<EffectMap>,
+  ) {
+    const shader = DynamicShader.createShader(props, effectContructors);
     super({
       renderer,
       attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
@@ -170,7 +161,10 @@ export class DynamicShader extends WebGlCoreShader {
     });
   }
 
-  static createShader(props: DynamicShaderProps) {
+  static createShader(
+    props: DynamicShaderProps,
+    effectContructors: Partial<EffectMap>,
+  ) {
     //counts duplicate effects
     const effectNameCount: Record<string, number> = {};
     const methods: Record<string, string> = {};
@@ -181,7 +175,7 @@ export class DynamicShader extends WebGlCoreShader {
     const uFx: Record<string, unknown>[] = [];
 
     const effects = props.effects!.map((effect) => {
-      const baseClass = Effects[effect.type];
+      const baseClass = effectContructors[effect.type]!;
       const key = baseClass.getEffectKey(effect.props || {});
 
       effectNameCount[key] = effectNameCount[key] ? ++effectNameCount[key] : 1;
@@ -208,7 +202,7 @@ export class DynamicShader extends WebGlCoreShader {
     let effectMethods = '';
 
     uFx?.forEach((fx) => {
-      const fxClass = Effects[fx.type as keyof EffectMap];
+      const fxClass = effectContructors[fx.type as keyof EffectMap]!;
       const fxProps = fxClass.resolveDefaults(
         (fx.props ?? {}) as Record<string, unknown>,
       );
@@ -360,11 +354,14 @@ export class DynamicShader extends WebGlCoreShader {
 
   static override resolveDefaults(
     props: DynamicShaderProps,
+    effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
     return {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
-        props: Effects[effect.type].resolveDefaults(effect.props || {}),
+        props: effectContructors![effect.type]!.resolveDefaults(
+          effect.props || {},
+        ),
       })) as MapEffectDescs<keyof EffectMap>[],
       $dimensions: {
         width: 0,
@@ -374,10 +371,13 @@ export class DynamicShader extends WebGlCoreShader {
     };
   }
 
-  static override makeCacheKey(props: DynamicShaderProps): string {
+  static override makeCacheKey(
+    props: DynamicShaderProps,
+    effectContructors?: Partial<EffectMap>,
+  ): string {
     let fx = '';
     props.effects?.forEach((effect) => {
-      const baseClass = Effects[effect.type];
+      const baseClass = effectContructors![effect.type]!;
       const key = baseClass.getEffectKey(effect.props || {});
       fx += `,${key}`;
     });
