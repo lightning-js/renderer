@@ -82,6 +82,7 @@
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
+export * from '../src/core/renderers/webgl/shaders/effects/ShaderEffect.js';
 
 // Textures
 export * from '../src/core/textures/Texture.js';

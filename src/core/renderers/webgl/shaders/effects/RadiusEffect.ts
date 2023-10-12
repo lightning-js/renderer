@@ -29,6 +29,7 @@ export interface RadiusEffectProps extends DefaultEffectProps {
   /**
    * Corner radius, in pixels, to cut out of the corners
    *
+   * @remarks
    * You can input an array with a length of up to four or a number.
    *
    * array length 4:

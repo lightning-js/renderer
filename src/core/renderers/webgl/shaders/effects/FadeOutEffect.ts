@@ -30,6 +30,7 @@ export interface FadeOutEffectProps extends DefaultEffectProps {
   /**
    * Fade around the edges of the node
    *
+   * @remarks
    * You can input an array with a length of up to four or a number.
    *
    * array length 4:
