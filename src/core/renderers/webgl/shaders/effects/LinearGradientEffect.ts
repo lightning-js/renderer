@@ -34,7 +34,7 @@ export interface LinearGradientEffectProps extends DefaultEffectProps {
    */
   colors?: number[];
   /**
-   * Angle of the LinearGradientEffect
+   * Angle of the LinearGradientEffect, Angle in Radians
    *
    * @default 0
    */
@@ -137,11 +137,6 @@ export class LinearGradientEffect extends ShaderEffect {
         return mix(higher, lower, 1.0);
       }
     `,
-    degToRad: `
-      float function(float d) {
-        return d * (PI / 180.0);
-      }
-    `,
     calcPoint: `
       vec2 function(float d, float angle) {
         return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
@@ -162,12 +157,10 @@ export class LinearGradientEffect extends ShaderEffect {
   static override onColorize = (props: LinearGradientEffectProps) => {
     const colors = props.colors!.length || 1;
     return `
-      float d = angle - 90.0;
-      float a = $degToRad(d);
+      float a = angle - (PI / 180.0 * 90.0);
       float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
-
       vec2 f = $calcPoint(lineDist * 0.5, a);
-      vec2 t = $calcPoint(lineDist * 0.5, $degToRad(d + 180.0));
+      vec2 t = $calcPoint(lineDist * 0.5, a + PI);
       vec2 gradVec = t - f;
       float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
 
