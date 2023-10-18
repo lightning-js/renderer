@@ -40,6 +40,7 @@ import { BorderLeftEffect } from './renderers/webgl/shaders/effects/BorderLeftEf
 import { GlitchEffect } from './renderers/webgl/shaders/effects/GlitchEffect.js';
 import { FadeOutEffect } from './renderers/webgl/shaders/effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './renderers/webgl/shaders/effects/RadialGradientEffect.js';
+import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
@@ -171,9 +172,8 @@ export class CoreShaderManager {
         props: resolvedProps,
       };
     }
-    // @ts-expect-error ShaderClass currently does accept a Renderer
     const shader = new DynamicShader(
-      this.renderer,
+      this.renderer as WebGlCoreRenderer,
       props,
       this.effectConstructors,
     );
