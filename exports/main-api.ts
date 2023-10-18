@@ -48,3 +48,4 @@ export * from '../src/common/CommonTypes.js';
 // context of the main API.
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
+export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
