@@ -229,7 +229,7 @@ export interface RendererMainSettings {
 export class RendererMain {
   readonly root: INode | null = null;
   readonly driver: IRenderDriver;
-  private canvas: HTMLCanvasElement;
+  readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
