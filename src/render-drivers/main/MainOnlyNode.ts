@@ -33,7 +33,7 @@ import type {
   ShaderRef,
   TextureRef,
 } from '../../main-api/RendererMain.js';
-import type { IAnimationSettings } from '../../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   TextureFailedEventHandler,
@@ -422,7 +422,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   animate(
     props: Partial<INodeAnimatableProps>,
-    settings: Partial<IAnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this.coreNode, props, settings);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call

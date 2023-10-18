@@ -23,7 +23,7 @@ import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 
-export interface IAnimationSettings {
+export interface AnimationSettings {
   duration: number;
   delay: number;
   easing: string;
@@ -42,7 +42,7 @@ export class CoreAnimation extends EventEmitter {
   constructor(
     private node: CoreNode,
     private props: Partial<INodeAnimatableProps>,
-    public settings: Partial<IAnimationSettings>,
+    public settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};

@@ -24,7 +24,7 @@ import type {
   TextRendererMap,
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
-import type { IAnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 
 /**
  * Writable properties of a Node.
@@ -399,7 +399,7 @@ export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
   readonly children: INode[];
   animate(
     props: Partial<INodeAnimatableProps>,
-    settings: Partial<IAnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ): IAnimationController;
   destroy(): void;
   flush(): void;
