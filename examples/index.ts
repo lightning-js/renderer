@@ -110,6 +110,7 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   await module.default(exampleSettings);
+  console.log('ready!');
 })().catch((err) => {
   console.error(err);
 });

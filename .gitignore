@@ -10,3 +10,7 @@ build
 releases
 .tmp
 .env
+backstop_data/html_report/
+backstop_data/ci_report/
+backstop_data/json_report/
+bitmaps_test/

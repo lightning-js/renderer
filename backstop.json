@@ -1,0 +1,91 @@
+{
+  "id": "backstop_default",
+  "viewports": [
+    {
+      "label": "tv",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "label": "720p",
+      "width": 1280,
+      "height": 720
+    }
+  ],
+  "onReadyScript": "puppet/onReady.js",
+  "scenarios": [
+    {
+      "label": "Lightning3 Alpha Blending Test",
+      "url": "http://localhost:5174/?test=alpha-blending",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 Alpha Test",
+      "url": "http://localhost:5174/?test=alpha",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 child-positioning Test",
+      "url": "http://localhost:5174/?test=child-positioning",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 clipping Test",
+      "url": "http://localhost:5174/?test=clipping",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 dynamic-shader Test",
+      "url": "http://localhost:5174/?test=dynamic-shader",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 gradient Test",
+      "url": "http://localhost:5174/?test=gradient",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Lightning3 mount-pivot Test",
+      "url": "http://localhost:5174/?test=mount-pivot",
+      "readyEvent": "ready!",
+      "delay": 100,
+      "misMatchThreshold" : 0.1,
+      "requireSameDimensions": true
+    }
+  ],
+  "paths": {
+    "bitmaps_reference": "backstop_data/bitmaps_reference",
+    "bitmaps_test": "backstop_data/bitmaps_test",
+    "engine_scripts": "backstop_data/engine_scripts",
+    "html_report": "backstop_data/html_report",
+    "ci_report": "backstop_data/ci_report"
+  },
+  "report": ["CI", "json"],
+  "engine": "puppeteer",
+  "engineOptions": {
+    "args": ["--no-sandbox"],
+    "headless": "new"
+  },
+  "asyncCaptureLimit": 5,
+  "asyncCompareLimit": 50,
+  "debug": false,
+  "debugWindow": false
+}

@@ -1,0 +1,63 @@
+name: Lightning Tests
+
+on:
+  pull_request:
+    branches: [ master ]
+jobs:
+  runTests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Checkout renderer
+        uses: actions/checkout@v3
+
+      - name: Checkout threadx
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.THREADX_GH_DEPLOY_PRIVATE_KEY_READ_ONLY }}
+          repository: comcast-lightning/threadx
+          # we can't clone it to a folder outside the current folder
+          path: ./threadx
+
+      - name: Build threadx and change package.json
+        run: |
+          cd ./threadx
+          npm ci
+          npm run build
+          sed -i 's/\.\.\/threadx/.\/threadx/' ../package.json
+
+      - name: Install dependencies
+        # due to changing package.json on fly, we can't use npm ci
+        run: npm install
+
+      - name: Build renderer
+        # fixme: we should remove the continue-on-error flag at some point
+        continue-on-error: true
+        run: npm run build
+
+      - name: Serve the project
+        run: npm run serve &
+
+      - name: Run the tests
+        run: npm test
+
+      - name: Archive test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: |
+            backstop_data/html_report
+            backstop_data/json_report
+            backstop_data/ci_report
+
+      - name: Download test reports on failure
+        if: failure()
+        uses: actions/download-artifact@v3
+        with:
+         # Artifact name
+         name: test-report
