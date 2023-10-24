@@ -59,6 +59,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
       outDir: path.resolve(__dirname, 'dist'),
     },
     server: {
+      port: 5174,
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp',
