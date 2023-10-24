@@ -43,7 +43,11 @@ npm run prod
 
 ## Test Examples
 
-[See README](./examples/README.md)
+See [examples/README.md](./examples/README.md)
+
+## Release Procedure
+
+See [RELEASE.md](./RELEASE.md)
 
 ## Main Space vs Core Space
 
