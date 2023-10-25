@@ -1,3 +1,5 @@
+const sleep = (time = 0) => new Promise((resolve) => setTimeout(resolve, time));
+
 export default async (page, scenario) => {
   const hoverSelector = scenario.hoverSelectors || scenario.hoverSelector;
   const clickSelector = scenario.clickSelectors || scenario.clickSelector;
@@ -5,6 +7,7 @@ export default async (page, scenario) => {
     scenario.keyPressSelectors || scenario.keyPressSelector;
   const scrollToSelector = scenario.scrollToSelector;
   const postInteractionWait = scenario.postInteractionWait; // selector [str] | ms [int]
+  const keyboardEvents = scenario.keyboardEvents;
 
   if (keyPressSelector) {
     for (const keyPressSelectorItem of [].concat(keyPressSelector)) {
@@ -43,5 +46,16 @@ export default async (page, scenario) => {
     await page.evaluate((scrollToSelector) => {
       document.querySelector(scrollToSelector).scrollIntoView();
     }, scrollToSelector);
+  }
+
+  if (keyboardEvents) {
+    for (const { key, delay } of keyboardEvents) {
+      if (delay) {
+        await sleep(delay);
+      }
+      if (key) {
+        await page.keyboard.press(key);
+      }
+    }
   }
 };
