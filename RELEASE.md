@@ -2,7 +2,7 @@
 
 Publish a new release with the below instructions, you must first be a contributor
 who is authorized to both push directly to this repo and publish packages to the
-lighntingjs NPM scope.
+lightningjs NPM scope.
 
 ## Mark, push and publish the release
 
