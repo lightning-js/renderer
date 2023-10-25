@@ -5,16 +5,20 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently -c \"auto\" \"npm:watch-renderer\" \"npm:dev\"",
+    "start": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:dev\"",
+    "start:prod": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
     "dev": "vite --open",
     "build": "vite build",
-    "preview": "vite preview --host",
-    "watch-renderer": "cd .. && npm run watch"
+    "watch": "vite build --watch",
+    "watch-all": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:watch\"",
+    "preview": "vite preview --host --open",
+    "build-renderer": "cd .. && pnpm build",
+    "watch-renderer": "cd .. && pnpm watch"
   },
   "author": "Frank Weindel",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lightningjs/renderer": "file:.."
+    "@lightningjs/renderer": "link:.."
   },
   "devDependencies": {
     "@lightningjs/vite-plugin-import-chunk-url": "^0.3.0",
