@@ -47,6 +47,12 @@ const config = {
       },
     ],
   },
+  overrides: [
+    {
+      extends: ['plugin:@typescript-eslint/disable-type-checked'],
+      files: ['./**/*.cjs'],
+    },
+  ],
 };
 
 module.exports = config;
