@@ -1,9 +1,10 @@
-module.exports = async (
+export default async (
   page,
   scenario,
   viewport,
   isReference,
   browserContext,
 ) => {
-  await require('./loadCookies')(browserContext, scenario);
+  const { default: loadCookie } = await import('./loadCookies.js');
+  await loadCookie(browserContext, scenario);
 };

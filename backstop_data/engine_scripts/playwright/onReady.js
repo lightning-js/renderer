@@ -1,4 +1,4 @@
-module.exports = async (
+export default async (
   page,
   scenario,
   viewport,
@@ -6,7 +6,9 @@ module.exports = async (
   browserContext,
 ) => {
   console.log('SCENARIO > ' + scenario.label);
-  await require('./clickAndHoverHelper')(page, scenario);
+
+  const { default: clickAndHoverHelper } = import('./clickAndHoverHelper.js');
+  await clickAndHoverHelper(page, scenario);
 
   // add more ready handlers here...
 };
