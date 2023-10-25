@@ -50,7 +50,7 @@
     "@types/node": "^18.14.6",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.55.0",
-    "backstopjs": "^6.2.2",
+    "backstopjs": "erikhaandrikman/backstopjs#feature/playwright-esm-support",
     "concurrently": "^8.0.1",
     "eslint": "^8.35.0",
     "eslint-config-prettier": "^8.7.0",
