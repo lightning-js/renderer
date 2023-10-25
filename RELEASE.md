@@ -14,14 +14,14 @@ git checkout main
 git stash -u
 
 # Run the build once to make sure it completes without errors
-npm run build
+pnpm run build
 
 # Mark the version update
 # This creates a new tagged commit for the version
-npm version <release-increment> # patch/minor/major
+pnpm version <release-increment> # patch/minor/major
 
 # Publish the package to NPM
-npm publish --access public
+pnpm publish --access public
 
 # Push version commit to github
 git push

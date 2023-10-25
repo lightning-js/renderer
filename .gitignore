@@ -10,3 +10,6 @@ build
 releases
 .tmp
 .env
+*.tgz
+# This project uses `pnpm` for package management
+package-lock.json

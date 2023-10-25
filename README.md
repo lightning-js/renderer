@@ -13,32 +13,28 @@ Solid.
 ## Setup & Commands
 
 ```
-# Install renderer dependencies
-npm install
-
-# Install example dependencies
-cd examples
-npm install
+# Install renderer + example dependencies
+pnpm install
 
 # Build Renderer
-npm run build
+pnpm build
 
 # Build Renderer (watch mode)
-npm run watch
+pnpm watch
 
 # Run unit tests
-npm test
+pnpm test
 
 # Build API Documentation (builds into ./docs folder)
-npm run typedoc
+pnpm typedoc
 
 # Launch test examples in dev mode (includes Build Renderer (watch mode))
-npm start
+pnpm start
 
 # Launch test examples in production mode
 # IMPORTANT: To run test examples on embedded devices that use older browser versions
 # you MUST run the examples in this mode.
-npm run prod
+pnpm start:prod
 ```
 
 ## Test Examples
