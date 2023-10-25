@@ -55,8 +55,8 @@ importers:
   examples:
     dependencies:
       '@lightningjs/renderer':
-        specifier: file:..
-        version: 'file:'
+        specifier: link:..
+        version: link:..
     devDependencies:
       '@lightningjs/vite-plugin-import-chunk-url':
         specifier: ^0.3.0
@@ -2136,12 +2136,3 @@ packages:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
     dev: true
-
-  'file:':
-    resolution: {directory: '', type: directory}
-    name: '@lightningjs/renderer'
-    engines: {npm: please-use-pnpm, pnpm: '>= 8.9.2'}
-    dependencies:
-      '@lightningjs/threadx': 0.3.4
-      '@protobufjs/eventemitter': 1.1.0
-    dev: false
