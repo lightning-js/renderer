@@ -7,6 +7,8 @@
       "height": 1080
     }
   ],
+  "onBeforeScript": "playwright/onBefore.js",
+  "onReadyScript": "playwright/onReady.js",
   "paths": {
     "bitmaps_reference": "backstop_data/bitmaps_reference",
     "bitmaps_test": "backstop_data/bitmaps_test",
@@ -14,7 +16,7 @@
     "html_report": "backstop_data/html_report",
     "ci_report": "backstop_data/ci_report"
   },
-  "report": ["CI", "json"],
+  "report": ["browser","CI", "json"],
   "engine": "playwright",
   "engineOptions": {
       "args": ["--no-sandbox"],
