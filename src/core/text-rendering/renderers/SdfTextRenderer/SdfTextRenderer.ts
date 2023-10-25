@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-// import { Colors } from '../../../Colors.js';
-// import type { Renderer } from '../../../Renderer.js';
 import { intersectBound, type Bound, type Rect } from '../../../lib/utils.js';
 import {
   TextRenderer,
