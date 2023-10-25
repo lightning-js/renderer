@@ -1,8 +1,7 @@
 const fs = require('fs');
 
-// exclude following files regression test
+// Exclude the following files from regression testing.
 const ignoreList = [
-  'animation.ts',
   'rotation.ts',
   'child-positioning.ts',
   'scale.ts',
@@ -12,10 +11,47 @@ const ignoreList = [
   'texture-memory-stress.ts',
 ];
 
-// grab command line arg port if provided or fallback to default
-// i.e $ npm run backstop 5178
+// To run a specific test, provide its name;
+// leave it empty to run all tests (except those on the ignoreList).
+const forceTest = '';
+
+// Supply individual configuration for each test file.
+const overrideConfig = [
+  {
+    file: 'animation.ts',
+    config: {
+      // move to ease-out demo
+      keyboardEvents: [
+        {
+          key: 'ArrowRight',
+          delay: 300,
+        },
+        {
+          key: 'ArrowRight',
+          delay: 300,
+        },
+        {
+          delay: 150,
+        },
+      ],
+    },
+  },
+];
+
+// Retrieve the 'port' command line argument if it's provided, or use the default value.
+// Example: $ npm run backstop 5178
 const port = () => {
   return process.argv.filter((v) => /\d{4}/.test(v))[0] || '5174';
+};
+
+// Check for additional override configuration specific to a given test file.
+const getConfigByFileName = (file, override) => {
+  for (const entry of override) {
+    if (entry.file === file) {
+      return entry.config;
+    }
+  }
+  return null;
 };
 
 const resolveScenarios = (path, ignore) => {
@@ -28,7 +64,7 @@ const resolveScenarios = (path, ignore) => {
       const getFile = /^([-\w]+)\./;
       const [match, fileName] = getFile.exec(file);
 
-      if (!fileName) {
+      if (!fileName || (forceTest && forceTest !== file)) {
         return;
       }
 
@@ -37,8 +73,10 @@ const resolveScenarios = (path, ignore) => {
         url: `http://localhost:${port()}/?test=${fileName}`,
         readyEvent: 'ready!',
         misMatchThreshold: 0.1,
+        ...getConfigByFileName(file, overrideConfig),
       };
-    });
+    })
+    .filter(Boolean);
 };
 
 module.exports = {
