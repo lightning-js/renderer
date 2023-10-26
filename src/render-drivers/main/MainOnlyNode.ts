@@ -23,7 +23,7 @@ import type {
   INodeWritableProps,
 } from '../../main-api/INode.js';
 import type { Stage } from '../../core/Stage.js';
-import { assertTruthy } from '../../utils.js';
+import { assertTruthy, getImageAspectRatio } from '../../utils.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
@@ -386,6 +386,25 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    if (this.src) {
+      if (dimensions.width && dimensions.height) {
+        if (isNaN(this.width) && isNaN(this.height)) {
+          this.width = dimensions.width;
+          this.height = dimensions.height;
+        } else {
+          const imageAspectRatio = getImageAspectRatio(
+            dimensions.width,
+            dimensions.height,
+          );
+
+          if (isNaN(this.width)) {
+            this.width = this.height * imageAspectRatio;
+          } else if (isNaN(this.height)) {
+            this.height = this.width / imageAspectRatio;
+          }
+        }
+      }
+    }
     this.emit('txLoaded', dimensions);
   };
 
