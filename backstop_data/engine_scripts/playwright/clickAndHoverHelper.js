@@ -49,12 +49,15 @@ export default async (page, scenario) => {
   }
 
   if (keyboardEvents) {
-    for (const { key, delay } of keyboardEvents) {
+    for (const { key, delay, repeat = 0 } of keyboardEvents) {
+      let n = repeat;
+      while (n--) {
+        if (key) {
+          await page.keyboard.press(key);
+        }
+      }
       if (delay) {
         await sleep(delay);
-      }
-      if (key) {
-        await page.keyboard.press(key);
       }
     }
   }
