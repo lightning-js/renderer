@@ -20,6 +20,10 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
+import { waitForTextDimensions } from '../common/utils.js';
+import { deg2Rad } from '@lightningjs/renderer/utils';
+import type { INodeWritableProps } from '@lightningjs/renderer';
+import robotImg from '../assets/robot/robot.png';
 
 const SQUARE_SIZE = 200;
 const PADDING = 20;
@@ -53,7 +57,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopLeft,
         });
 
@@ -73,7 +77,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopRight,
         });
 
@@ -93,7 +97,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomRight,
         });
 
@@ -113,7 +117,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomLeft,
         });
 
@@ -133,7 +137,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE * 2,
           height: SQUARE_SIZE * 2,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipAllSides,
         });
         return SQUARE_SIZE;
@@ -162,7 +166,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopLeft2,
         });
 
@@ -185,7 +189,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopRight2,
         });
 
@@ -208,7 +212,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomRight2,
         });
 
@@ -231,7 +235,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 100,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomLeft2,
         });
 
@@ -254,7 +258,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: -100,
           width: SQUARE_SIZE * 2,
           height: SQUARE_SIZE * 2,
-          color: 0xff0000ff,
+          src: robotImg,
           parent: clipAllSides2,
         });
 
@@ -282,6 +286,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopLeft,
           clipping: true,
         });
@@ -290,7 +295,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 50,
           width: SQUARE_SIZE / 2,
           height: SQUARE_SIZE / 2,
-          color: 0x0000ffff,
+          src: robotImg,
           parent: clipContainerTopLeft2,
         });
 
@@ -311,6 +316,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerTopRight,
           clipping: true,
         });
@@ -319,7 +325,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 50,
           width: SQUARE_SIZE / 2,
           height: SQUARE_SIZE / 2,
-          color: 0x0000ffff,
+          src: robotImg,
           parent: clipContainerTopRight2,
         });
 
@@ -340,6 +346,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomRight,
           clipping: true,
         });
@@ -348,7 +355,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 150,
           width: SQUARE_SIZE / 2,
           height: SQUARE_SIZE / 2,
-          color: 0x0000ffff,
+          src: robotImg,
           parent: clipContainerBottomRight2,
         });
 
@@ -369,6 +376,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerBottomLeft,
           clipping: true,
         });
@@ -377,7 +385,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 150,
           width: SQUARE_SIZE / 2,
           height: SQUARE_SIZE / 2,
-          color: 0x0000ffff,
+          src: robotImg,
           parent: clipContainerBottomLeft2,
         });
 
@@ -398,6 +406,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           color: 0xff0000ff,
+          src: robotImg,
           parent: clipContainerAllSides,
           clipping: true,
         });
@@ -406,7 +415,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           y: 50,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
-          color: 0x0000ffff,
+          src: robotImg,
           parent: clipContainerAllSides2,
         });
         return SQUARE_SIZE;
@@ -506,6 +515,223 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           color: 0x000000ff,
           textRendererOverride: 'sdf',
           text: 'SDF ancestor clipping',
+        });
+
+        return SQUARE_SIZE;
+      },
+    },
+    {
+      title: 'Clipping bounds are scaled with the `scale` property',
+      content: async (rowNode) => {
+        let curX = 0;
+
+        const containerProps = {
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          parent: rowNode,
+          color: 0x00ff00ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const clippingParentProps = {
+          mount: 0.5,
+          x: SQUARE_SIZE / 2,
+          y: SQUARE_SIZE / 2,
+          width: SQUARE_SIZE / 2,
+          height: SQUARE_SIZE / 2,
+          clipping: true,
+          // rotation: Math.PI / 4
+        } satisfies Partial<INodeWritableProps>;
+
+        const clippingChildProps = {
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          mount: 0.5,
+          src: robotImg,
+        } satisfies Partial<INodeWritableProps>;
+
+        const container = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent = renderer.createNode({
+          ...clippingParentProps,
+          parent: container,
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent,
+        });
+
+        curX += SQUARE_SIZE + PADDING;
+
+        const dim = await waitForTextDimensions(
+          renderer.createTextNode({
+            mount: 0.5,
+            x: curX,
+            y: SQUARE_SIZE / 2,
+            text: 'scale 2 >',
+            parent: rowNode,
+          }),
+        );
+
+        curX += dim.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent2 = renderer.createNode({
+          ...clippingParentProps,
+          parent: container2,
+          scale: 2,
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent2,
+        });
+
+        curX += SQUARE_SIZE + PADDING;
+
+        const dim2 = await waitForTextDimensions(
+          renderer.createTextNode({
+            mount: 0.5,
+            x: curX,
+            y: SQUARE_SIZE / 2,
+            text: 'pivot 0 >',
+            parent: rowNode,
+          }),
+        );
+
+        curX += dim.width + PADDING;
+
+        const container3 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent3 = renderer.createNode({
+          ...clippingParentProps,
+          parent: container3,
+          scale: 2,
+          pivot: 0,
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent3,
+        });
+
+        curX += SQUARE_SIZE + PADDING;
+
+        const dim3 = await waitForTextDimensions(
+          renderer.createTextNode({
+            mount: 0.5,
+            x: curX,
+            y: SQUARE_SIZE / 2,
+            text: 'pivot 1 >',
+            parent: rowNode,
+          }),
+        );
+
+        curX += dim.width + PADDING;
+
+        const container4 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent4 = renderer.createNode({
+          ...clippingParentProps,
+          parent: container4,
+          scale: 2,
+          pivot: 1,
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent4,
+        });
+
+        return SQUARE_SIZE;
+      },
+    },
+    {
+      title: 'Clipping is automatically disabled when node is rotated',
+      content: async (rowNode) => {
+        let curX = 0;
+
+        const containerProps = {
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          parent: rowNode,
+          color: 0x00ff00ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const clippingParentProps = {
+          mount: 0.5,
+          x: SQUARE_SIZE / 2,
+          y: SQUARE_SIZE / 2,
+          width: SQUARE_SIZE / 2,
+          height: SQUARE_SIZE / 2,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const clippingChildProps = {
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          mount: 0.5,
+          src: robotImg,
+        } satisfies Partial<INodeWritableProps>;
+
+        const container = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent = renderer.createNode({
+          ...clippingParentProps,
+          parent: container,
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent,
+        });
+
+        curX += SQUARE_SIZE + PADDING;
+
+        const dimensions = await waitForTextDimensions(
+          renderer.createTextNode({
+            mount: 0.5,
+            x: curX,
+            y: SQUARE_SIZE / 2,
+            text: 'rotate 45 degrees >',
+            parent: rowNode,
+          }),
+        );
+
+        curX += dimensions.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const clippingParent2 = renderer.createNode({
+          ...clippingParentProps,
+          parent: container2,
+          rotation: deg2Rad(45),
+        });
+
+        renderer.createNode({
+          ...clippingChildProps,
+          parent: clippingParent2,
         });
 
         return SQUARE_SIZE;
