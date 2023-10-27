@@ -167,7 +167,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
     if (target.props.src) {
       if (dimensions.width && dimensions.height) {
-        if (isNaN(this.width) && isNaN(this.height)) {
+        if (
+          (isNaN(this.width) && isNaN(this.height)) ||
+          (this.width === 0 && this.height === 0)
+        ) {
           this.width = dimensions.width;
           this.height = dimensions.height;
         } else {
@@ -176,9 +179,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
             dimensions.height,
           );
 
-          if (isNaN(this.width)) {
+          if (isNaN(this.width) || this.width === 0) {
             this.width = this.height * imageAspectRatio;
-          } else if (isNaN(this.height)) {
+          } else if (isNaN(this.height) || this.height === 0) {
             this.height = this.width / imageAspectRatio;
           }
         }
