@@ -23,7 +23,7 @@ import type {
   INodeWritableProps,
 } from '../../main-api/INode.js';
 import type { Stage } from '../../core/Stage.js';
-import { assertTruthy, getImageAspectRatio } from '../../utils.js';
+import { assertTruthy } from '../../utils.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 import { CoreAnimation } from '../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../core/animations/CoreAnimationController.js';
