@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../utils.js';
+import { assertTruthy, getImageAspectRatio } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -165,6 +165,26 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    if (target.props.src) {
+      if (dimensions.width && dimensions.height) {
+        if (isNaN(this.width) && isNaN(this.height)) {
+          this.width = dimensions.width;
+          this.height = dimensions.height;
+        } else {
+          const imageAspectRatio = getImageAspectRatio(
+            dimensions.width,
+            dimensions.height,
+          );
+
+          if (isNaN(this.width)) {
+            this.width = this.height * imageAspectRatio;
+          } else if (isNaN(this.height)) {
+            this.height = this.width / imageAspectRatio;
+          }
+        }
+      }
+    }
+
     this.emit('txLoaded', dimensions);
   };
 
