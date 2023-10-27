@@ -2,9 +2,9 @@
   "id": "backstop_default",
   "viewports": [
     {
-      "label": "tv",
-      "width": 1920,
-      "height": 1080
+      "label": "720p",
+      "width": 1280,
+      "height": 720
     }
   ],
   "onBeforeScript": "playwright/onBefore.js",
