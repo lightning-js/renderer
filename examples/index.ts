@@ -22,7 +22,7 @@ import {
   RendererMain,
   ThreadXRenderDriver,
   type IRenderDriver,
-  type Dimensions,
+  type LoadedPayload,
   type RendererMainSettings,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
@@ -92,13 +92,10 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
       parent: renderer.root,
       fontSize: 50,
     });
-    overlayText.once(
-      'textLoaded',
-      (target: any, { width, height }: Dimensions) => {
-        overlayText.x = renderer.settings.appWidth - width - 20;
-        overlayText.y = renderer.settings.appHeight - height - 20;
-      },
-    );
+    overlayText.once('loaded', (target: any, { dimensions }: LoadedPayload) => {
+      overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
+      overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
+    });
   }
 
   const exampleSettings: ExampleSettings = {

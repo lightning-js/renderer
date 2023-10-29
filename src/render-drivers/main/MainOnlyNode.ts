@@ -38,6 +38,7 @@ import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
+  LoadedPayload,
 } from '../../common/CommonTypes.js';
 
 let nextId = 1;
@@ -386,7 +387,12 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    this.emit('txLoaded', dimensions);
+    const texturePayload: LoadedPayload = {
+      type: 'texture',
+      dimensions,
+    };
+
+    this.emit('loaded', texturePayload);
   };
 
   private onTextureFailed: TextureFailedEventHandler = (target, error) => {

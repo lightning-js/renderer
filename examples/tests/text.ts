@@ -21,6 +21,7 @@ import {
   type ITextNodeWritableProps,
   type TextRendererMap,
   type TrFontFaceMap,
+  type LoadedPayload,
 } from '@lightningjs/renderer';
 import { getLoremIpsum } from '../common/LoremIpsum.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -120,12 +121,9 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     parent: renderer.root,
   });
 
-  statusNode.on(
-    'textLoaded',
-    (target: any, dimensions: { width: number; height: number }) => {
-      statusNode.x = renderer.settings.appWidth - dimensions.width;
-    },
-  );
+  statusNode.on('textLoaded', (target: any, { dimensions }: LoadedPayload) => {
+    statusNode.x = renderer.settings.appWidth - dimensions.width;
+  });
 
   function updateStatus() {
     const modeName = modes[curMode];

@@ -68,3 +68,24 @@ export type TextLoadedEventHandler = (
  * Event handler for when text fails to load
  */
 export type TextFailedEventHandler = (target: any, error: Error) => void;
+
+/**
+ * Payload for when text is loaded
+ */
+type TextLoadedPayload = {
+  type: 'text';
+  dimensions: Dimensions;
+};
+
+/**
+ * Payload for when texture is loaded
+ */
+type TextureLoadedPayload = {
+  type: 'texture';
+  dimensions: Dimensions;
+};
+
+/**
+ * Combined type for all loaded payloads
+ */
+export type LoadedPayload = TextLoadedPayload | TextureLoadedPayload;

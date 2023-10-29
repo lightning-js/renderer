@@ -28,6 +28,8 @@ import { CoreTextNode } from '../../core/CoreTextNode.js';
 import type {
   TextFailedEventHandler,
   TextLoadedEventHandler,
+  LoadedPayload,
+  Dimensions,
 } from '../../common/CommonTypes.js';
 
 export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
@@ -98,8 +100,16 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
     this.coreNode.on('textFailed', this.onTextFailed);
   }
 
-  private onTextLoaded: TextLoadedEventHandler = (target, dimensions) => {
-    this.emit('textLoaded', dimensions);
+  private onTextLoaded: TextLoadedEventHandler = (
+    target,
+    dimensions: Dimensions,
+  ) => {
+    const textPayload: LoadedPayload = {
+      type: 'text',
+      dimensions,
+    };
+
+    this.emit('loaded', textPayload);
   };
 
   private onTextFailed: TextFailedEventHandler = (target, error) => {
