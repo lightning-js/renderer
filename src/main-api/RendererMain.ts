@@ -418,6 +418,7 @@ export class RendererMain {
       width: props.width ?? 0,
       height: props.height ?? 0,
       alpha: props.alpha ?? 1,
+      autosize: props.autosize ?? false,
       clipping: props.clipping ?? false,
       color,
       colorTop: props.colorTop ?? color,

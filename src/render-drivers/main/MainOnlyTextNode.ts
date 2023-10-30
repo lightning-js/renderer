@@ -49,6 +49,7 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         width: props.width,
         height: props.height,
         alpha: props.alpha,
+        autosize: props.autosize,
         clipping: props.clipping,
         color: props.color,
         colorTop: props.colorTop,

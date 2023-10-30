@@ -30,6 +30,7 @@ import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 import type {
+  Dimensions,
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
 } from '../common/CommonTypes.js';
@@ -45,6 +46,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -164,28 +166,32 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.textureOptions = null;
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    if (target.props.src) {
-      if (dimensions.width && dimensions.height) {
-        if (
-          (isNaN(this.width) && isNaN(this.height)) ||
-          (this.width === 0 && this.height === 0)
-        ) {
-          this.width = dimensions.width;
-          this.height = dimensions.height;
-        } else {
-          const imageAspectRatio = getImageAspectRatio(
-            dimensions.width,
-            dimensions.height,
-          );
+  autosizeNode(dimensions: Dimensions) {
+    if (this.autosize && dimensions.width && dimensions.height) {
+      if (
+        (isNaN(this.width) && isNaN(this.height)) ||
+        (this.width === 0 && this.height === 0)
+      ) {
+        this.width = dimensions.width;
+        this.height = dimensions.height;
+      } else {
+        const imageAspectRatio = getImageAspectRatio(
+          dimensions.width,
+          dimensions.height,
+        );
 
-          if (isNaN(this.width) || this.width === 0) {
-            this.width = this.height * imageAspectRatio;
-          } else if (isNaN(this.height) || this.height === 0) {
-            this.height = this.width / imageAspectRatio;
-          }
+        if (isNaN(this.width) || this.width === 0) {
+          this.width = this.height * imageAspectRatio;
+        } else if (isNaN(this.height) || this.height === 0) {
+          this.height = this.width / imageAspectRatio;
         }
       }
+    }
+  }
+
+  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    if (target.props.src) {
+      this.autosizeNode(dimensions);
     }
 
     this.emit('txLoaded', dimensions);
@@ -562,6 +568,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set alpha(value: number) {
     this.props.alpha = value;
+  }
+
+  get autosize(): boolean {
+    return this.props.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.props.autosize = value;
   }
 
   get clipping(): boolean {

@@ -114,6 +114,7 @@ export class Stage {
       width: appWidth,
       height: appHeight,
       alpha: 1,
+      autosize: false,
       clipping: false,
       color: 0x00000000,
       colorTop: 0x00000000,

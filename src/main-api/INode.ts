@@ -73,6 +73,16 @@ export interface INodeWritableProps {
    */
   alpha: number;
   /**
+   * The autosize toggle of the Node.
+   *
+   * @remarks
+   * The autosize to true let the image node to be resized with the original size of the image.
+   * Combined with one of width and height the other size will be set manteining the aspect ratio
+   *
+   * @default `false`
+   */
+  autosize: boolean;
+  /**
    * Clipping Mode
    *
    * @remarks
