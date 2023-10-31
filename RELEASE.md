@@ -27,7 +27,7 @@ pnpm publish --access public
 git push
 
 # Push version tag to github
-git push vX.X.X
+git push origin vX.X.X
 
 # Pop the stash (if one was created)
 git stash pop
@@ -40,6 +40,9 @@ git stash pop
 3. Target: _main_
 4. Name the release with the same name as the tag: vX.X.X
 5. Click "Generate release notes"
-6. Edit the release notes as appropriate.
+6. Edit the release notes as appropriate:
+   - User facing changes should go under the main "What's Changed" heading
+   - Mark all breaking changes with: :warning: **Breaking Change:** (Description)
+   - If there are non-user facing changes move them to a new level 3 heading called: **Non-User Facing**.
 7. Set as the latest release: _Check_
 8. Click "Publish release"
