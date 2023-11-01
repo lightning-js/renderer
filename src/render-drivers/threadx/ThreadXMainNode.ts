@@ -95,6 +95,22 @@ export class ThreadXMainNode extends SharedNode implements INode {
     }
   }
 
+  get scale(): number | null {
+    if (this.scaleX !== this.scaleY) {
+      return null;
+    }
+    return this.scaleX;
+  }
+
+  set scale(scale: number | null) {
+    // We ignore `null` when it's set.
+    if (scale === null) {
+      return;
+    }
+    this.scaleX = scale;
+    this.scaleY = scale;
+  }
+
   animate(
     props: Partial<INodeAnimatableProps>,
     settings: Partial<AnimationSettings>,
