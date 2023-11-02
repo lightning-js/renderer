@@ -160,7 +160,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.alpha = value;
   }
 
-  get autosize(): boolean {
+  get autosize(): boolean | null {
     return this.coreNode.autosize;
   }
 
@@ -369,6 +369,10 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.texture = this.rendererMain.createTexture('ImageTexture', {
       src: imageUrl,
     });
+
+    if (this.autosize !== false) {
+      this.autosize = true;
+    }
   }
 
   //#region Texture

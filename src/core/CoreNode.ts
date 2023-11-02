@@ -46,7 +46,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
-  autosize: boolean;
+  autosize: boolean | null;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -168,31 +168,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   autosizeNode(dimensions: Dimensions) {
     if (this.autosize && dimensions.width && dimensions.height) {
-      if (
-        (isNaN(this.width) && isNaN(this.height)) ||
-        (this.width === 0 && this.height === 0)
-      ) {
-        this.width = dimensions.width;
-        this.height = dimensions.height;
-      } else {
-        const imageAspectRatio = getImageAspectRatio(
-          dimensions.width,
-          dimensions.height,
-        );
-
-        if (isNaN(this.width) || this.width === 0) {
-          this.width = this.height * imageAspectRatio;
-        } else if (isNaN(this.height) || this.height === 0) {
-          this.height = this.width / imageAspectRatio;
-        }
-      }
+      this.width = dimensions.width;
+      this.height = dimensions.height;
     }
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    if (target.props.src) {
-      this.autosizeNode(dimensions);
-    }
+    this.autosizeNode(dimensions);
 
     this.emit('txLoaded', dimensions);
   };
@@ -570,7 +552,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.alpha = value;
   }
 
-  get autosize(): boolean {
+  get autosize(): boolean | null {
     return this.props.autosize;
   }
 

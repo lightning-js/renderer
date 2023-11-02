@@ -122,6 +122,9 @@ export class ThreadXMainNode extends SharedNode implements INode {
     this.texture = this.rendererMain.createTexture('ImageTexture', {
       src: imageUrl,
     });
+    if (this.autosize !== false) {
+      this.autosize = true;
+    }
   }
 
   //#region Parent/Child Props
