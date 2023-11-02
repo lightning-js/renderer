@@ -97,7 +97,7 @@ export interface INodeWritableProps {
    * TODO: Add support for non-rectangular clipping either automatically or
    * via Render-To-Texture.
    *
-   * @default `false`
+   * @default `null`
    */
   clipping: boolean;
   /**
