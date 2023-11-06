@@ -89,3 +89,24 @@ type TextureLoadedPayload = {
  * Combined type for all loaded payloads
  */
 export type LoadedPayload = TextLoadedPayload | TextureLoadedPayload;
+
+/**
+ * Payload for when text failed to load
+ */
+type TextFailedPayload = {
+  type: 'text';
+  error: Error;
+};
+
+/**
+ * Payload for when texture failed to load
+ */
+type TextureFailedPayload = {
+  type: 'texture';
+  error: Error;
+};
+
+/**
+ * Combined type for all failed payloads
+ */
+export type FailedPayload = TextFailedPayload | TextureFailedPayload;

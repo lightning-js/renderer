@@ -29,6 +29,7 @@ import type {
   TextFailedEventHandler,
   TextLoadedEventHandler,
   LoadedPayload,
+  FailedPayload,
   Dimensions,
 } from '../../common/CommonTypes.js';
 
@@ -113,7 +114,12 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
   };
 
   private onTextFailed: TextFailedEventHandler = (target, error) => {
-    this.emit('textFailed', error);
+    const textFailedPayload: FailedPayload = {
+      type: 'text',
+      error,
+    };
+
+    this.emit('failed', textFailedPayload);
   };
 
   get text(): string {

@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-import type { Dimensions, LoadedPayload } from '../../../common/CommonTypes.js';
+import type {
+  Dimensions,
+  LoadedPayload,
+  FailedPayload,
+} from '../../../common/CommonTypes.js';
 import { CoreTextNode } from '../../../core/CoreTextNode.js';
 import type { Stage } from '../../../core/Stage.js';
 import type { TrProps } from '../../../core/text-rendering/renderers/TextRenderer.js';
@@ -124,7 +128,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
       },
     );
     this.coreNode.on('textFailed', (target: CoreTextNode, error: Error) => {
-      this.emit('textFailed', error as unknown as Record<string, unknown>);
+      const textFailedPayload: FailedPayload = {
+        type: 'text',
+        error,
+      };
+      this.emit('failed', textFailedPayload);
     });
     this.on('debug', (target: ThreadXRendererNode, debug: TrProps['debug']) => {
       this.coreNode.debug = debug;

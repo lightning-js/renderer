@@ -39,6 +39,7 @@ import type {
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
   LoadedPayload,
+  FailedPayload,
 } from '../../common/CommonTypes.js';
 
 let nextId = 1;
@@ -396,7 +397,11 @@ export class MainOnlyNode extends EventEmitter implements INode {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (target, error) => {
-    this.emit('txFailed', error);
+    const textureFailedPayload: FailedPayload = {
+      type: 'texture',
+      error,
+    };
+    this.emit('failed', textureFailedPayload);
   };
   //#endregion Texture
 
