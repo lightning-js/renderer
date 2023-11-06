@@ -217,7 +217,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const {
       width,
       height,
-      clippingRect,
       colorTl,
       colorTr,
       colorBl,
@@ -226,8 +225,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       shader,
       shaderProps,
       alpha,
-      wpx,
-      wpy,
+      clippingRect,
+      tx,
+      ty,
       ta,
       tb,
       tc,
@@ -328,8 +328,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // render quad advanced
     if (tb !== 0 || tc !== 0) {
       // Upper-Left
-      fQuadBuffer[bufferIdx++] = wpx; // vertexX
-      fQuadBuffer[bufferIdx++] = wpy; // vertexY
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -340,8 +340,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
-      fQuadBuffer[bufferIdx++] = wpx + width * ta;
-      fQuadBuffer[bufferIdx++] = wpy + width * tc;
+      fQuadBuffer[bufferIdx++] = tx + width * ta;
+      fQuadBuffer[bufferIdx++] = ty + width * tc;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -352,8 +352,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
-      fQuadBuffer[bufferIdx++] = wpx + height * tb;
-      fQuadBuffer[bufferIdx++] = wpy + height * td;
+      fQuadBuffer[bufferIdx++] = tx + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -364,8 +364,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
-      fQuadBuffer[bufferIdx++] = wpx + width * ta + height * tb;
-      fQuadBuffer[bufferIdx++] = wpy + width * tc + height * td;
+      fQuadBuffer[bufferIdx++] = tx + width * ta + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + width * tc + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -377,12 +377,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     } else {
       // Calculate the right corner of the quad
       // multiplied by the scale
-      const rightCornerX = wpx + width * ta;
-      const rightCornerY = wpy + height * td;
+      const rightCornerX = tx + width * ta;
+      const rightCornerY = ty + height * td;
 
       // Upper-Left
-      fQuadBuffer[bufferIdx++] = wpx; // vertexX
-      fQuadBuffer[bufferIdx++] = wpy; // vertexY
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -394,7 +394,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
-      fQuadBuffer[bufferIdx++] = wpy;
+      fQuadBuffer[bufferIdx++] = ty;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
@@ -405,7 +405,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
-      fQuadBuffer[bufferIdx++] = wpx;
+      fQuadBuffer[bufferIdx++] = tx;
       fQuadBuffer[bufferIdx++] = rightCornerY;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;

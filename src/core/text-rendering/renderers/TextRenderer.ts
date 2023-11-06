@@ -19,6 +19,7 @@
 
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
+import type { Matrix3d } from '../../lib/Matrix3d.js';
 import type { Rect } from '../../lib/utils.js';
 import type {
   TrFontFace,
@@ -199,6 +200,14 @@ export interface TrProps extends TrFontProps {
   width: number;
   height: number;
   /**
+   * X-Axis scaling factor for text
+   */
+  scaleX: number;
+  /**
+   * Y-Axis scaling factor for text
+   */
+  scaleY: number;
+  /**
    * Whether or not the text is scrollable
    *
    * @remarks
@@ -284,6 +293,12 @@ const trPropSetterDefaults: TrPropSetters = {
   fontSize: (state, value) => {
     state.props.fontSize = value;
   },
+  scaleX: (state, value) => {
+    state.props.scaleX = value;
+  },
+  scaleY: (state, value) => {
+    state.props.scaleY = value;
+  },
   text: (state, value) => {
     state.props.text = value;
   },
@@ -367,5 +382,9 @@ export abstract class TextRenderer<
 
   abstract updateState(state: StateT): void;
 
-  abstract renderQuads(state: StateT, clippingRect: Rect | null): void;
+  abstract renderQuads(
+    state: StateT,
+    transform: Matrix3d,
+    clippingRect: Rect | null,
+  ): void;
 }

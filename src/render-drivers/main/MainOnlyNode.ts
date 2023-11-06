@@ -128,14 +128,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.y = value;
   }
 
-  get worldX(): number {
-    return this.coreNode.worldX;
-  }
-
-  get worldY(): number {
-    return this.coreNode.worldY;
-  }
-
   get width(): number {
     return this.coreNode.width;
   }

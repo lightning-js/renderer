@@ -31,6 +31,7 @@ import type {
   TextLoadedEventHandler,
 } from '../common/CommonTypes.js';
 import type { Rect } from './lib/utils.js';
+import { assertTruthy } from '../utils.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   text: string;
@@ -52,7 +53,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   constructor(stage: Stage, props: CoreTextNodeProps) {
     super(stage, props);
     this.updateScheduled = false;
-    // console.log('fontfamily', props.fontFamily)
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
       this.resolveTextRendererAndState(
@@ -66,6 +66,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           alpha: props.alpha,
           zIndex: props.zIndex,
           contain: props.contain,
+          scaleX: props.scaleX,
+          scaleY: props.scaleY,
           scrollable: props.scrollable,
           scrollY: props.scrollY,
           offsetY: props.offsetY,
@@ -85,6 +87,24 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   private onTextLoaded: TextLoadedEventHandler = () => {
+    const { contain } = this;
+    const setWidth = this.trState.props.width;
+    const setHeight = this.trState.props.height;
+    const calcWidth = this.trState.textW || 0;
+    const calcHeight = this.trState.textH || 0;
+
+    if (contain === 'both') {
+      this.props.width = setWidth;
+      this.props.height = setHeight;
+    } else if (contain === 'width') {
+      this.props.width = setWidth;
+      this.props.height = calcHeight;
+    } else if (contain === 'none') {
+      this.props.width = calcWidth;
+      this.props.height = calcHeight;
+    }
+    this.updateLocalTransform();
+
     this.emit('textLoaded', {
       width: this.trState.textW,
       height: this.trState.textH,
@@ -263,10 +283,16 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override update(delta: number) {
     super.update(delta);
-    this.textRenderer.set.x(this.trState, this.worldContext.px);
-    this.textRenderer.set.y(this.trState, this.worldContext.py);
+
+    assertTruthy(this.globalTransform);
+
+    // globalTransform is updated in super.update(delta)
+    this.textRenderer.set.x(this.trState, this.globalTransform.tx);
+    this.textRenderer.set.y(this.trState, this.globalTransform.ty);
+
     if (this.trState.status === 'loading') {
-      this.updateText();
+      // Update the text state now
+      this.textRenderer.updateState(this.trState);
     }
   }
 
@@ -282,7 +308,12 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
-    this.textRenderer.renderQuads(this.trState, clippingRect);
+    assertTruthy(this.globalTransform);
+    this.textRenderer.renderQuads(
+      this.trState,
+      this.globalTransform,
+      clippingRect,
+    );
   }
 
   /**

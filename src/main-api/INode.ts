@@ -392,8 +392,6 @@ export interface INodeWritableProps {
    * - `2 * Math.PI`: 360 rotation clockwise
    */
   rotation: number;
-  worldX?: number;
-  worldY?: number;
 }
 
 export type INodeAnimatableProps = {

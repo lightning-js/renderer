@@ -24,7 +24,6 @@ import type {
   TextureMap,
   TextureOptions,
 } from './CoreTextureManager.js';
-import { Matrix2DContext } from './Matrix2DContext.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
@@ -35,6 +34,7 @@ import type {
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import type { Rect } from './lib/utils.js';
+import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreNodeProps {
   id: number;
@@ -71,14 +71,6 @@ export interface CoreNodeProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
-  worldX?: number;
-  worldY?: number;
-
-  // Internal properties that are resolved in CoreNode constructor (see below)
-  ta?: number;
-  tb?: number;
-  tc?: number;
-  td?: number;
 }
 
 type ICoreNode = Omit<
@@ -99,12 +91,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    */
   public recalculationType = 6;
   public hasUpdates = true;
-  public worldContext: Matrix2DContext = new Matrix2DContext();
-
-  // local translation / transform updates
-  // derived from x, y, w, h, scale, pivot, rotation
-  public localPx = 0;
-  public localPy = 0;
+  public globalTransform?: Matrix3d;
+  public scaleRotateTransform?: Matrix3d;
+  public localTransform?: Matrix3d;
 
   private isComplex = false;
 
@@ -113,16 +102,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props = {
       ...props,
       parent: null,
-      ta: props.ta ?? 1,
-      tb: props.tb ?? 0,
-      tc: props.tc ?? 0,
-      td: props.td ?? 1,
-      worldX: props.worldX ?? 0,
-      worldY: props.worldY ?? 0,
     };
     // Allow for parent to be processed appropriately
     this.parent = props.parent;
-    this.updateLocalTransform();
+    this.updateScaleRotateTransform();
   }
 
   //#region Textures
@@ -209,58 +192,33 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.setHasUpdates();
   }
 
-  updateLocalTransform() {
-    // if rotation is equal to previous render pass, we only need
-    // to use sin and cosine of rotation to calculate new position
-    if (this.props.rotation !== 0 && this.props.rotation % (Math.PI * 2)) {
-      const sineRotation = Math.sin(this.props.rotation);
-      const cosineRotation = Math.cos(this.props.rotation);
-
-      this.setLocalTransform(
-        cosineRotation * this.props.scaleX,
-        -sineRotation * this.props.scaleY,
-        sineRotation * this.props.scaleX,
-        cosineRotation * this.props.scaleY,
-      );
-    } else {
-      this.setLocalTransform(this.props.scaleX, 0, 0, this.props.scaleY);
-    }
-    // do transformations when matrix is implemented
-    this.updateLocalTranslate();
-  }
-
-  // update 2x2 matrix
-  setLocalTransform(a: number, b: number, c: number, d: number) {
+  updateScaleRotateTransform() {
     this.setRecalculationType(4);
-    this.props.ta = a;
-    this.props.tb = b;
-    this.props.tc = c;
-    this.props.td = d;
 
-    // test if there is scaling or shearing in transformation ( b !== 0 || c !== 0 )
-    // test if there is flipping or reflection in transformation ( a < 0 || d < 0 )
-    this.isComplex = b !== 0 || c !== 0 || a < 0 || d < 0;
+    this.scaleRotateTransform = Matrix3d.rotate(
+      this.props.rotation,
+      this.scaleRotateTransform,
+    ).scale(this.props.scaleX, this.props.scaleY);
+
+    // do transformations when matrix is implemented
+    this.updateLocalTransform();
   }
 
-  updateLocalTranslate() {
+  updateLocalTransform() {
+    assertTruthy(this.scaleRotateTransform);
     this.setRecalculationType(2);
-    const pivotXMultiplier = this.props.pivotX * this.props.width;
-    const pivotYMultiplier = this.props.pivotY * this.props.height;
+    const pivotTranslateX = this.props.pivotX * this.props.width;
+    const pivotTranslateY = this.props.pivotY * this.props.height;
+    const mountTranslateX = this.props.mountX * this.props.width;
+    const mountTranslateY = this.props.mountY * this.props.height;
 
-    let px =
-      this.props.x -
-      (pivotXMultiplier * this.props.ta + pivotYMultiplier * this.props.tb) +
-      pivotXMultiplier;
-    let py =
-      this.props.y -
-      (pivotXMultiplier * this.props.tc + pivotYMultiplier * this.props.td) +
-      pivotYMultiplier;
-
-    px -= this.props.mountX * this.props.width;
-    py -= this.props.mountY * this.props.height;
-
-    this.localPx = px;
-    this.localPy = py;
+    this.localTransform = Matrix3d.translate(
+      pivotTranslateX - mountTranslateX + this.props.x,
+      pivotTranslateY - mountTranslateY + this.props.y,
+      this.localTransform,
+    )
+      .multiply(this.scaleRotateTransform)
+      .translate(-pivotTranslateX, -pivotTranslateY);
   }
 
   /**
@@ -268,38 +226,19 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    * @param delta
    */
   update(delta: number): void {
-    const parentWorldContext = this.props.parent?.worldContext;
-    const worldContext = this.worldContext;
-
-    worldContext.px =
-      (parentWorldContext?.px || 0) +
-      this.localPx * (parentWorldContext?.ta || 1);
-    worldContext.py =
-      (parentWorldContext?.py || 0) +
-      this.localPy * (parentWorldContext?.td || 1);
-
-    if (parentWorldContext?.tb !== 0) {
-      worldContext.px += this.localPy * (parentWorldContext?.tb || 0);
+    assertTruthy(this.localTransform);
+    const parentGlobalTransform = this.parent?.globalTransform;
+    if (parentGlobalTransform) {
+      this.globalTransform = Matrix3d.copy(
+        parentGlobalTransform,
+        this.globalTransform,
+      ).multiply(this.localTransform);
+    } else {
+      this.globalTransform = Matrix3d.copy(
+        this.localTransform,
+        this.globalTransform,
+      );
     }
-
-    if (parentWorldContext?.tc !== 0) {
-      worldContext.py += this.localPx * (parentWorldContext?.tc || 0);
-    }
-
-    worldContext.ta = this.props.ta * (parentWorldContext?.ta || 1);
-    worldContext.tb = this.props.td * (parentWorldContext?.tb || 0);
-    worldContext.tc = this.props.ta * (parentWorldContext?.tc || 0);
-    worldContext.td = this.props.td * (parentWorldContext?.td || 1);
-
-    if (this.isComplex) {
-      worldContext.ta += this.props.tc * (parentWorldContext?.tb || 0);
-      worldContext.tb += this.props.tb * (parentWorldContext?.ta || 1);
-      worldContext.tc += this.props.tc * (parentWorldContext?.td || 1);
-      worldContext.td += this.props.tb * (parentWorldContext?.tc || 0);
-    }
-
-    this.worldX = worldContext.px;
-    this.worldY = worldContext.py;
 
     if (this.children.length) {
       this.children.forEach((child) => {
@@ -326,10 +265,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       textureOptions,
       shader,
       shaderProps,
-      scaleX,
-      scaleY,
     } = this.props;
-    const { zIndex, alpha, worldScaleX, worldScaleY } = this;
+    const { zIndex, alpha, globalTransform: gt } = this;
+
+    assertTruthy(gt);
 
     // add to list of renderables to be sorted before rendering
     renderer.addRenderable({
@@ -345,17 +284,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       shader,
       shaderProps,
       alpha,
-      scaleX,
-      scaleY,
       clippingRect,
-      wpx: this.worldContext.px,
-      wpy: this.worldContext.py,
-      worldScaleX,
-      worldScaleY,
-      ta: this.worldContext.ta,
-      tb: this.worldContext.tb,
-      tc: this.worldContext.tc,
-      td: this.worldContext.td,
+      tx: gt.tx,
+      ty: gt.ty,
+      ta: gt.ta,
+      tb: gt.tb,
+      tc: gt.tc,
+      td: gt.td,
     });
 
     // Calculate absolute X and Y based on all ancestors
@@ -374,30 +309,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set x(value: number) {
     if (this.props.x !== value) {
       this.props.x = value;
-      this.updateLocalTranslate();
+      this.updateLocalTransform();
     }
-  }
-
-  get worldX(): number {
-    return this.props.worldX || 0;
-  }
-
-  set worldX(value: number) {
-    this.props.worldX = value;
-  }
-
-  get worldY(): number {
-    return this.props.worldY || 0;
-  }
-
-  set worldY(value: number) {
-    this.props.worldY = value;
   }
 
   get absX(): number {
     return (
       this.props.x +
-      (this.props.parent?.absX || this.props.parent?.worldContext.px || 0)
+      (this.props.parent?.absX || this.props.parent?.globalTransform?.tx || 0)
     );
   }
 
@@ -412,7 +331,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set y(value: number) {
     if (this.props.y !== value) {
       this.props.y = value;
-      this.updateLocalTranslate();
+      this.updateLocalTransform();
     }
   }
 
@@ -458,7 +377,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set scaleX(value: number) {
     if (this.props.scaleX !== value) {
       this.props.scaleX = value;
-      this.updateLocalTransform();
+      this.updateScaleRotateTransform();
     }
   }
 
@@ -469,7 +388,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set scaleY(value: number) {
     if (this.props.scaleY !== value) {
       this.props.scaleY = value;
-      this.updateLocalTransform();
+      this.updateScaleRotateTransform();
     }
   }
 
@@ -496,7 +415,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.mountX = value;
     this.props.mountY = value;
     this.props.mount = value;
-    this.updateLocalTranslate();
+    this.updateLocalTransform();
     // }
   }
 
@@ -506,7 +425,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set mountX(value: number) {
     this.props.mountX = value;
-    this.updateLocalTranslate();
+    this.updateLocalTransform();
   }
 
   get mountY(): number {
@@ -515,7 +434,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set mountY(value: number) {
     this.props.mountY = value;
-    this.updateLocalTranslate();
+    this.updateLocalTransform();
   }
 
   get pivot(): number {
@@ -526,7 +445,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.pivotX !== value || this.props.pivotY !== value) {
       this.props.pivotX = value;
       this.props.pivotY = value;
-      this.updateLocalTranslate();
+      this.updateLocalTransform();
     }
   }
 
@@ -536,7 +455,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set pivotX(value: number) {
     this.props.pivotX = value;
-    this.updateLocalTranslate();
+    this.updateLocalTransform();
   }
 
   get pivotY(): number {
@@ -545,7 +464,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set pivotY(value: number) {
     this.props.pivotY = value;
-    this.updateLocalTranslate();
+    this.updateLocalTransform();
   }
 
   get rotation(): number {
@@ -555,7 +474,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set rotation(value: number) {
     if (this.props.rotation !== value) {
       this.props.rotation = value;
-      this.updateLocalTransform();
+      this.updateScaleRotateTransform();
     }
   }
 
@@ -728,7 +647,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (newParent) {
       newParent.children.push(this);
     }
-    this.updateLocalTransform();
+    this.updateScaleRotateTransform();
   }
   //#endregion Properties
 }

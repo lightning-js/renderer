@@ -26,7 +26,6 @@ import type {
 import type { TrProps, TextRendererState } from '../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
 import { PeekableIterator } from './PeekableGenerator.js';
-import { FLOATS_PER_GLYPH } from './constants.js';
 import { getUnicodeCodepoints } from './getUnicodeCodepoints.js';
 import { measureText } from './measureText.js';
 

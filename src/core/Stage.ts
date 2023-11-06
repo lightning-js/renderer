@@ -182,17 +182,17 @@ export class Stage {
   }
 
   addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
-    assertTruthy(this.renderer);
-    const wc = node.worldContext;
-    const isRotated = wc.tb !== 0 || wc.tc !== 0;
+    assertTruthy(this.renderer && node.globalTransform);
+    const gt = node.globalTransform;
+    const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
     let clippingRect: Rect | null =
       node.clipping && !isRotated
         ? {
-            x: wc.px,
-            y: wc.py,
-            width: node.width * wc.ta,
-            height: node.height * wc.td,
+            x: gt.tx,
+            y: gt.ty,
+            width: node.width * gt.ta,
+            height: node.height * gt.td,
           }
         : null;
     if (parentClippingRect && clippingRect) {

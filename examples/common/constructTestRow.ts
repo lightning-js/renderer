@@ -34,7 +34,7 @@ export async function constructTestRow(
     if (typeof testNode === 'string') {
       const dimensions = await waitForTextDimensions(
         renderer.createTextNode({
-          mount: 0.5,
+          mountY: 0.5,
           x: curX,
           y: SQUARE_SIZE / 2,
           text: testNode,

@@ -42,6 +42,7 @@ import type {
 } from '../../../renderers/webgl/shaders/SdfShader.js';
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
+import type { Matrix3d } from '../../../lib/Matrix3d.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -267,6 +268,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       this.setStatus(state, 'loading');
     }
 
+    // Resolve font face if we haven't yet
     if (!trFontFace) {
       trFontFace = this.resolveFontFace(state.props);
       state.trFontFace = trFontFace;
@@ -278,7 +280,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       }
     }
 
-    // If the font hasn't been loaded yet, don't do anything
+    // If the font hasn't been loaded yet, stop here.
+    // Listen for the 'loaded' event and forward fontLoaded event
     if (!trFontFace.loaded) {
       trFontFace.on('loaded', function loadedHandler() {
         state.emitter.emit('fontLoaded', {});
@@ -429,6 +432,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
   override renderQuads(
     state: SdfTextRendererState,
+    transform: Matrix3d,
     clippingRect: Rect | null,
   ): void {
     if (!state.vertexBuffer) {
@@ -444,19 +448,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const { appWidth, appHeight } = this.stage.options;
 
-    const {
-      fontSize,
-      color,
-      alpha,
-      x,
-      y,
-      contain,
-      width,
-      height,
-      scrollable,
-      zIndex,
-      debug,
-    } = state.props;
+    const { fontSize, color, alpha, contain, scrollable, zIndex, debug } =
+      state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
     const scrollY = contain === 'both' && scrollable ? state.props.scrollY : 0;
@@ -525,12 +518,13 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       webGlBuffers,
       this.sdfShader,
       {
+        transform: transform.data,
         // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
         // for the best blending results. Which is why we use `mergeColorAlpha`
         // instead of `mergeColorAlphaPremultiplied` here.
         color: mergeColorAlpha(color, alpha),
         size: fontSize / (trFontFace.data?.info.size || 0),
-        offset: [x, y - scrollY],
+        scrollY,
         distanceRange,
         debug: debug.sdfShaderDebug,
       } satisfies SdfShaderProps,
