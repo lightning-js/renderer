@@ -4,54 +4,69 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-dependencies:
-  '@lightningjs/threadx':
-    specifier: ^0.3.3
-    version: 0.3.4
-  '@protobufjs/eventemitter':
-    specifier: ^1.1.0
-    version: 1.1.0
+importers:
 
-devDependencies:
-  '@types/node':
-    specifier: ^18.14.6
-    version: 18.18.6
-  '@typescript-eslint/eslint-plugin':
-    specifier: ^5.55.0
-    version: 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.52.0)(typescript@5.2.2)
-  '@typescript-eslint/parser':
-    specifier: ^5.55.0
-    version: 5.62.0(eslint@8.52.0)(typescript@5.2.2)
-  backstopjs:
-    specifier: ^6.2.2
-    version: 6.2.2(typescript@5.2.2)
-  concurrently:
-    specifier: ^8.0.1
-    version: 8.2.2
-  eslint:
-    specifier: ^8.35.0
-    version: 8.52.0
-  eslint-config-prettier:
-    specifier: ^8.7.0
-    version: 8.10.0(eslint@8.52.0)
-  husky:
-    specifier: ^8.0.3
-    version: 8.0.3
-  lint-staged:
-    specifier: ^13.2.0
-    version: 13.3.0
-  prettier:
-    specifier: ^2.8.4
-    version: 2.8.8
-  typedoc:
-    specifier: ^0.25.1
-    version: 0.25.2(typescript@5.2.2)
-  typescript:
-    specifier: ^5.2.2
-    version: 5.2.2
-  vitest:
-    specifier: ^0.34.2
-    version: 0.34.6
+  .:
+    dependencies:
+      '@lightningjs/threadx':
+        specifier: ^0.3.4
+        version: 0.3.4
+      '@protobufjs/eventemitter':
+        specifier: ^1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@types/node':
+        specifier: ^18.14.6
+        version: 18.18.6
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^5.55.0
+        version: 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.52.0)(typescript@5.2.2)
+      '@typescript-eslint/parser':
+        specifier: ^5.55.0
+        version: 5.62.0(eslint@8.52.0)(typescript@5.2.2)
+      backstopjs:
+        specifier: erikhaandrikman/backstopjs#feature/playwright-esm-support
+        version: github.com/erikhaandrikman/backstopjs/3436baf3943476ac99d38b96edfbd98b2685f522(typescript@5.2.2)
+      concurrently:
+        specifier: ^8.0.1
+        version: 8.2.2
+      eslint:
+        specifier: ^8.35.0
+        version: 8.52.0
+      eslint-config-prettier:
+        specifier: ^8.7.0
+        version: 8.10.0(eslint@8.52.0)
+      husky:
+        specifier: ^8.0.3
+        version: 8.0.3
+      lint-staged:
+        specifier: ^13.2.0
+        version: 13.3.0
+      prettier:
+        specifier: ^2.8.4
+        version: 2.8.8
+      typedoc:
+        specifier: ^0.25.1
+        version: 0.25.2(typescript@5.2.2)
+      typescript:
+        specifier: ^5.2.2
+        version: 5.2.2
+      vitest:
+        specifier: ^0.34.2
+        version: 0.34.6
+
+  examples:
+    dependencies:
+      '@lightningjs/renderer':
+        specifier: link:..
+        version: link:..
+    devDependencies:
+      '@lightningjs/vite-plugin-import-chunk-url':
+        specifier: ^0.3.0
+        version: 0.3.0(vite@4.5.0)
+      vite:
+        specifier: ^4.4.9
+        version: 4.5.0(@types/node@18.18.6)
 
 packages:
 
@@ -358,6 +373,14 @@ packages:
   /@lightningjs/threadx@0.3.4:
     resolution: {integrity: sha512-x9ylADrRxSrIczcMHgkNYpmnvoPvWKuasxmEf3dnixazpYJCw9HLoWNOi2UsD0U4oEL/tMQZA0sZbO7VVGMTag==}
     dev: false
+
+  /@lightningjs/vite-plugin-import-chunk-url@0.3.0(vite@4.5.0):
+    resolution: {integrity: sha512-cozdB9gcPrnITWTymo525Vb+98EfsBOBQnrbzXI6rOFveshxc754eco0ffnuqyFUkN8pds+DwJrJ5saJDmJz/g==}
+    peerDependencies:
+      vite: ^4.4.9
+    dependencies:
+      vite: 4.5.0(@types/node@18.18.6)
+    dev: true
 
   /@mirzazeyrek/node-resemble-js@1.2.1:
     resolution: {integrity: sha512-+z1c7HpC5ysdSVVyUVz67hctVLl337VlRJP/MBwpvXHkKJdlnSUVrBhlRzxgal7xpm1uDE2JeUhWbQh6wPRC4w==}
@@ -741,36 +764,6 @@ packages:
       lodash: 4.17.21
     dev: true
 
-  /backstopjs@6.2.2(typescript@5.2.2):
-    resolution: {integrity: sha512-Uy+y7FR+4jjhg+lxO2Sx9ag7D08HII9p5bfTpLD6/t2wkSk38pTTFbb7eeRvhuUNoPAgEk4o1urYrtPq4G9jyg==}
-    hasBin: true
-    dependencies:
-      os: 0.1.2
-      '@mirzazeyrek/node-resemble-js': 1.2.1
-      chalk: 4.1.2
-      diverged: 0.1.3
-      fs-extra: 10.1.0
-      jump.js: 1.0.2
-      junit-report-builder: 3.1.0
-      lodash: 4.17.21
-      minimist: 1.2.8
-      object-hash: 3.0.0
-      opn: 5.5.0
-      p-map: 4.0.0
-      path: 0.12.7
-      playwright: 1.39.0
-      portfinder: 1.0.32
-      puppeteer: 19.11.1(typescript@5.2.2)
-      super-simple-web-server: 1.1.4
-      temp: 0.9.4
-    transitivePeerDependencies:
-      - bufferutil
-      - encoding
-      - supports-color
-      - typescript
-      - utf-8-validate
-    dev: true
-
   /balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
     dev: true
@@ -1073,7 +1066,7 @@ packages:
       supports-color:
         optional: true
     dependencies:
-      ms: 2.1.3
+      ms: 2.1.2
     dev: true
 
   /debug@4.3.4:
@@ -1536,7 +1529,7 @@ packages:
     dependencies:
       graceful-fs: 4.2.11
       jsonfile: 6.1.0
-      universalify: 2.0.0
+      universalify: 2.0.1
     dev: true
 
   /fs.realpath@1.0.0:
@@ -1858,7 +1851,7 @@ packages:
   /jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
     dependencies:
-      universalify: 2.0.0
+      universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
     dev: true
@@ -2974,8 +2967,8 @@ packages:
       through: 2.3.8
     dev: true
 
-  /universalify@2.0.0:
-    resolution: {integrity: sha512-hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==}
+  /universalify@2.0.1:
+    resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
     dev: true
 
@@ -3269,4 +3262,37 @@ packages:
   /yocto-queue@1.0.0:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
+    dev: true
+
+  github.com/erikhaandrikman/backstopjs/3436baf3943476ac99d38b96edfbd98b2685f522(typescript@5.2.2):
+    resolution: {tarball: https://codeload.github.com/erikhaandrikman/backstopjs/tar.gz/3436baf3943476ac99d38b96edfbd98b2685f522}
+    id: github.com/erikhaandrikman/backstopjs/3436baf3943476ac99d38b96edfbd98b2685f522
+    name: backstopjs
+    version: 6.2.2
+    hasBin: true
+    dependencies:
+      os: 0.1.2
+      '@mirzazeyrek/node-resemble-js': 1.2.1
+      chalk: 4.1.2
+      diverged: 0.1.3
+      fs-extra: 10.1.0
+      jump.js: 1.0.2
+      junit-report-builder: 3.1.0
+      lodash: 4.17.21
+      minimist: 1.2.8
+      object-hash: 3.0.0
+      opn: 5.5.0
+      p-map: 4.0.0
+      path: 0.12.7
+      playwright: 1.39.0
+      portfinder: 1.0.32
+      puppeteer: 19.11.1(typescript@5.2.2)
+      super-simple-web-server: 1.1.4
+      temp: 0.9.4
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - supports-color
+      - typescript
+      - utf-8-validate
     dev: true

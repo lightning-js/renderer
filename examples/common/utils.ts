@@ -17,11 +17,17 @@
  * limitations under the License.
  */
 
-import type { Dimensions, RendererMain } from '@lightningjs/renderer';
+import type { Dimensions, ITextNode, INode } from '@lightningjs/renderer';
 
-export interface ExampleSettings {
-  testName: string;
-  renderer: RendererMain;
-  driverName: 'main' | 'threadx';
-  canvas: HTMLCanvasElement;
+export async function waitForTextDimensions(
+  node: ITextNode,
+): Promise<Dimensions> {
+  return new Promise((resolve) => {
+    node.once('textLoaded', (_node: INode, dimensions: Dimensions) => {
+      resolve({
+        width: dimensions.width,
+        height: dimensions.height,
+      });
+    });
+  });
 }

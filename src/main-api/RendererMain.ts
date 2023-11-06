@@ -436,7 +436,9 @@ export class RendererMain {
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',
-      scale: props.scale ?? 1,
+      scale: props.scale ?? null,
+      scaleX: props.scaleX ?? props.scale ?? 1,
+      scaleY: props.scaleY ?? props.scale ?? 1,
       mount: props.mount ?? 0,
       mountX: props.mountX ?? props.mount ?? 0,
       mountY: props.mountY ?? props.mount ?? 0,

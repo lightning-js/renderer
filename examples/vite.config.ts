@@ -26,9 +26,9 @@ import { importChunkUrl } from '@lightningjs/vite-plugin-import-chunk-url';
  *
  * Despite setting the target in 3 different places in the Vite config below
  * this does not seem to have an effect on the output when running Vite in
- * development mode (`npm start`). In order to properly test on embedded devices
- * that require the set target, you must run `npm run build` and then serve the
- * content via `npm run preview -- --host`.
+ * development mode (`pnpm start`). In order to properly test on embedded devices
+ * that require the set target, you must run `pnpm run build` and then serve the
+ * content via `pnpm run preview -- --host`.
  *
  * See the following for any updates on this:
  * https://github.com/vitejs/vite/issues/13756#issuecomment-1751085158

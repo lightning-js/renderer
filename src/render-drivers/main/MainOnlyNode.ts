@@ -86,7 +86,8 @@ export class MainOnlyNode extends EventEmitter implements INode {
         colorBr: props.colorBr,
         zIndex: props.zIndex,
         zIndexLocked: props.zIndexLocked,
-        scale: props.scale,
+        scaleX: props.scaleX,
+        scaleY: props.scaleY,
         mountX: props.mountX,
         mountY: props.mountY,
         mount: props.mount,
@@ -239,12 +240,36 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.colorBr = value;
   }
 
-  get scale(): number {
-    return this.coreNode.scale;
+  get scale(): number | null {
+    if (this.scaleX !== this.scaleY) {
+      return null;
+    }
+    return this.coreNode.scaleX;
   }
 
-  set scale(value: number) {
-    this.coreNode.scale = value;
+  set scale(value: number | null) {
+    // We ignore `null` when it's set.
+    if (value === null) {
+      return;
+    }
+    this.coreNode.scaleX = value;
+    this.coreNode.scaleY = value;
+  }
+
+  get scaleX(): number {
+    return this.coreNode.scaleX;
+  }
+
+  set scaleX(value: number) {
+    this.coreNode.scaleX = value;
+  }
+
+  get scaleY(): number {
+    return this.coreNode.scaleY;
+  }
+
+  set scaleY(value: number) {
+    this.coreNode.scaleY = value;
   }
 
   get mount(): number {

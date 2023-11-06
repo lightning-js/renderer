@@ -27,7 +27,7 @@ interface AnimationExampleSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
-export default async function ({ renderer, appDimensions }: ExampleSettings) {
+export default async function ({ renderer }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,

@@ -126,7 +126,8 @@ export class Stage {
       colorBr: 0x00000000,
       zIndex: 0,
       zIndexLocked: 0,
-      scale: 1,
+      scaleX: 1,
+      scaleY: 1,
       mountX: 0,
       mountY: 0,
       mount: 0,
@@ -182,14 +183,18 @@ export class Stage {
 
   addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
     assertTruthy(this.renderer);
-    let clippingRect: Rect | null = node.clipping
-      ? {
-          x: node.worldContext.px,
-          y: node.worldContext.py,
-          width: node.width,
-          height: node.height,
-        }
-      : null;
+    const wc = node.worldContext;
+    const isRotated = wc.tb !== 0 || wc.tc !== 0;
+
+    let clippingRect: Rect | null =
+      node.clipping && !isRotated
+        ? {
+            x: wc.px,
+            y: wc.py,
+            width: node.width * wc.ta,
+            height: node.height * wc.td,
+          }
+        : null;
     if (parentClippingRect && clippingRect) {
       clippingRect = intersectRect(parentClippingRect, clippingRect);
     } else if (parentClippingRect) {
