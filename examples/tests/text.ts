@@ -121,7 +121,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     parent: renderer.root,
   });
 
-  statusNode.on('textLoaded', (target: any, { dimensions }: LoadedPayload) => {
+  statusNode.on('loaded', (target: any, { dimensions }: LoadedPayload) => {
     statusNode.x = renderer.settings.appWidth - dimensions.width;
   });
 
