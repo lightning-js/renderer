@@ -78,7 +78,7 @@ export interface INodeWritableProps {
    * @remarks
    * The autosize to true let the image node to be resized with the original size of the image.
    *
-   * @default `false`
+   * @default `null`
    */
   autosize: boolean | null;
   /**
@@ -97,7 +97,7 @@ export interface INodeWritableProps {
    * TODO: Add support for non-rectangular clipping either automatically or
    * via Render-To-Texture.
    *
-   * @default `null`
+   * @default `false`
    */
   clipping: boolean;
   /**
