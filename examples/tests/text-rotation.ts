@@ -91,7 +91,7 @@ function generateRotationTest(
       },
     },
     {
-      title: `SDF Text Node ('rotation', ${textRenderer},  mount = 0.5)`,
+      title: `Text Node ('rotation', ${textRenderer},  mount = 0.5)`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
@@ -127,7 +127,7 @@ function generateRotationTest(
       },
     },
     {
-      title: `SDF Text Node ('rotation', ${textRenderer},  mount = 1)`,
+      title: `Text Node ('rotation', ${textRenderer},  mount = 1)`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
