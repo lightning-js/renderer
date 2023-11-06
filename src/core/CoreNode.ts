@@ -167,7 +167,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   autosizeNode(dimensions: Dimensions) {
-    if (this.autosize && dimensions.width && dimensions.height) {
+    if (this.autosize) {
       this.width = dimensions.width;
       this.height = dimensions.height;
     }
