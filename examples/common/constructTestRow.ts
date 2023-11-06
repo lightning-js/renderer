@@ -20,14 +20,26 @@
 import type { INode, RendererMain } from '../../dist/exports/main-api.js';
 import { waitForTextDimensions } from './utils.js';
 
-const SQUARE_SIZE = 200;
+const CONTAINER_SIZE = 200;
 const PADDING = 20;
 
+export interface TestRowOptions {
+  renderer: RendererMain;
+  rowNode: INode;
+  containerSize?: number;
+  padding?: number;
+}
+
 export async function constructTestRow(
-  renderer: RendererMain,
-  rowNode: INode,
+  options: TestRowOptions,
   testNodes: (INode | string)[],
 ): Promise<number> {
+  const {
+    renderer,
+    rowNode,
+    containerSize = CONTAINER_SIZE,
+    padding = PADDING,
+  } = options;
   let curX = 0;
   const curY = 0;
   for (const testNode of testNodes) {
@@ -36,25 +48,25 @@ export async function constructTestRow(
         renderer.createTextNode({
           mountY: 0.5,
           x: curX,
-          y: SQUARE_SIZE / 2,
+          y: containerSize / 2,
           text: testNode,
           parent: rowNode,
         }),
       );
-      curX += dimensions.width + PADDING;
+      curX += dimensions.width + padding;
     } else {
       const container = renderer.createNode({
         parent: rowNode,
         color: 0xffffffff,
-        width: SQUARE_SIZE,
-        height: SQUARE_SIZE,
+        width: containerSize,
+        height: containerSize,
         clipping: true,
         x: curX,
         y: curY,
       });
       testNode.parent = container;
-      curX += SQUARE_SIZE + PADDING;
+      curX += containerSize + padding;
     }
   }
-  return curY + SQUARE_SIZE;
+  return curY + containerSize;
 }

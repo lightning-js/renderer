@@ -52,7 +52,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -89,7 +89,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -126,7 +126,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -166,7 +166,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -203,7 +203,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -240,7 +240,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -280,7 +280,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -317,7 +317,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),
@@ -354,7 +354,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
           src: robotImg,
         } satisfies Partial<INodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
             ...nodeProps,
           }),

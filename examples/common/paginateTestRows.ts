@@ -27,10 +27,12 @@ const PADDING = 20;
 export type RowConstructor = (pageNode: INode) => Promise<INode>;
 export type RowContentConstructor = (rowNode: INode) => Promise<number>;
 
-export interface TestRow {
+export interface TestRowDesc {
   title: string;
   content: RowContentConstructor;
 }
+
+export type TestRow = TestRowDesc | null;
 
 function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
   return async function (
@@ -46,9 +48,18 @@ function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
   }.bind(null, curPageRowConstructors);
 }
 
+/**
+ * Paginate a list of test rows
+ *
+ * @remarks
+ * `null` values in the testRows array will be treated as manual page breaks
+ *
+ * @param pageContainer
+ * @param testRows
+ */
 export async function paginateTestRows(
   pageContainer: PageContainer,
-  testRows: TestRow[],
+  testRows: (TestRow | null)[],
 ) {
   const renderer = pageContainer.renderer;
   assertTruthy(renderer.root);
@@ -57,63 +68,75 @@ export async function paginateTestRows(
   let curRowIndex = 0;
   for (const testRow of testRows) {
     const isLastRow = curRowIndex === testRows.length - 1;
-    let newRowConstructor: RowConstructor | null = async (pageNode: INode) => {
-      const rowContainer = renderer.createNode({
-        x: 0,
-        y: pageCurY,
-        width: pageContainer.contentWidth,
-        height: 0,
-        color: 0x00000000,
-        parent: pageNode,
+    let newRowConstructor: RowConstructor | null =
+      testRow &&
+      (async (pageNode: INode) => {
+        assertTruthy(testRow);
+        const rowContainer = renderer.createNode({
+          x: 0,
+          y: pageCurY,
+          width: pageContainer.contentWidth,
+          height: 0,
+          color: 0x00000000,
+          parent: pageNode,
+        });
+        const rowHeaderNode = renderer.createTextNode({
+          fontFamily: 'Ubuntu',
+          fontSize: HEADER_FONT_SIZE,
+          y: PADDING,
+          parent: rowContainer,
+        });
+        const rowNode = renderer.createNode({
+          y: HEADER_FONT_SIZE + PADDING * 2,
+          width: pageContainer.contentWidth,
+          height: 0,
+          color: 0x00000000,
+          parent: rowContainer,
+        });
+        const rowHeight = await testRow.content(rowNode);
+        rowNode.height = rowHeight;
+        rowHeaderNode.text = testRow.title;
+        rowContainer.height = HEADER_FONT_SIZE + PADDING * 2 + rowNode.height;
+        return rowContainer;
       });
-      const rowHeaderNode = renderer.createTextNode({
-        fontFamily: 'Ubuntu',
-        fontSize: HEADER_FONT_SIZE,
-        y: PADDING,
-        parent: rowContainer,
-      });
-      const rowNode = renderer.createNode({
-        y: HEADER_FONT_SIZE + PADDING * 2,
-        width: pageContainer.contentWidth,
-        height: 0,
-        color: 0x00000000,
-        parent: rowContainer,
-      });
-      const rowHeight = await testRow.content(rowNode);
-      rowNode.height = rowHeight;
-      rowHeaderNode.text = testRow.title;
-      rowContainer.height = HEADER_FONT_SIZE + PADDING * 2 + rowNode.height;
-      return rowContainer;
-    };
-    // Construct the row just to get its height
-    const tmpRowContainer = await newRowConstructor(renderer.root);
-    // curPageRowConstructors.push(newRowConstructor);
-    // If it fits, add it to the current page
-    const itFits =
-      pageCurY + tmpRowContainer.height <= pageContainer.contentHeight;
-    if (itFits) {
-      curPageRowConstructors.push(newRowConstructor);
-      pageCurY += tmpRowContainer.height;
-      newRowConstructor = null;
+
+    let itFits = false;
+    let tmpRowContainer: INode | undefined;
+    // debugger;
+    if (newRowConstructor) {
+      // Construct the row just to get its height
+      tmpRowContainer = await newRowConstructor(renderer.root);
+      // curPageRowConstructors.push(newRowConstructor);
+      // If it fits, add it to the current page
+      itFits = pageCurY + tmpRowContainer.height <= pageContainer.contentHeight;
+      if (itFits) {
+        curPageRowConstructors.push(newRowConstructor);
+        pageCurY += tmpRowContainer.height;
+        newRowConstructor = null;
+      }
     }
+
     // If it doesn't fit OR it's the last row, add the current page to the page container and start a new page
     if (!itFits || isLastRow) {
       const pageConstructor = createPageConstructor(curPageRowConstructors);
       pageContainer.pushPage(pageConstructor);
 
-      pageCurY = tmpRowContainer.height;
+      pageCurY = tmpRowContainer?.height || 0;
       curPageRowConstructors = [];
       if (newRowConstructor) {
         curPageRowConstructors.push(newRowConstructor);
       }
 
-      if (isLastRow && !itFits) {
+      if (isLastRow && !itFits && curPageRowConstructors.length > 0) {
         const pageConstructor = createPageConstructor(curPageRowConstructors);
         pageContainer.pushPage(pageConstructor);
       }
     }
-    tmpRowContainer.parent = null;
-    tmpRowContainer.destroy();
+    if (tmpRowContainer) {
+      tmpRowContainer.parent = null;
+      tmpRowContainer.destroy();
+    }
+
     curRowIndex++;
   }
   pageContainer.finalizePages();
