@@ -111,7 +111,7 @@ function generateScalingTest(
       },
     },
     {
-      title: `SDF Text Node ('${scaleProp}', ${textRenderer},  mount = 0.5)`,
+      title: `Text Node ('${scaleProp}', ${textRenderer},  mount = 0.5)`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
@@ -168,7 +168,7 @@ function generateScalingTest(
       },
     },
     {
-      title: `SDF Text Node ('${scaleProp}', ${textRenderer},  mount = 1)`,
+      title: `Text Node ('${scaleProp}', ${textRenderer},  mount = 1)`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
@@ -243,7 +243,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
     parent: renderer.root,
-    title: 'Text Transformations',
+    title: 'Text Scaling',
     testName,
   });
 

@@ -183,7 +183,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
     parent: renderer.root,
-    title: 'Text Transformations',
+    title: 'Text Rotation',
     testName,
   });
 
