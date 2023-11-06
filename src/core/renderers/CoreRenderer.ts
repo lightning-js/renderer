@@ -39,7 +39,8 @@ export interface QuadOptions {
   shader: CoreShader | null;
   shaderProps: Record<string, unknown> | null;
   alpha: number;
-  scale: number;
+  scaleX: number;
+  scaleY: number;
   clippingRect: Rect | null;
   wpx: number;
   wpy: number;
@@ -47,7 +48,8 @@ export interface QuadOptions {
   tb: number;
   tc: number;
   td: number;
-  worldScale: number;
+  worldScaleX: number;
+  worldScaleY: number;
 }
 
 export abstract class CoreRenderer {
