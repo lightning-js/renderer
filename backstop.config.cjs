@@ -6,9 +6,9 @@ const ignoreList = [
   'child-positioning.ts',
   'scale.ts',
   'test.ts',
-  'text.ts',
   'textures.ts',
   'texture-memory-stress.ts',
+  'animation.ts',
 ];
 
 // To run a specific test, provide its name;
