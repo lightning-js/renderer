@@ -33,7 +33,7 @@ import type {
   ShaderRef,
   TextureRef,
 } from '../../main-api/RendererMain.js';
-import type { IAnimationSettings } from '../../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   TextureFailedEventHandler,
@@ -88,7 +88,8 @@ export class MainOnlyNode extends EventEmitter implements INode {
         colorBr: props.colorBr,
         zIndex: props.zIndex,
         zIndexLocked: props.zIndexLocked,
-        scale: props.scale,
+        scaleX: props.scaleX,
+        scaleY: props.scaleY,
         mountX: props.mountX,
         mountY: props.mountY,
         mount: props.mount,
@@ -241,12 +242,36 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.colorBr = value;
   }
 
-  get scale(): number {
-    return this.coreNode.scale;
+  get scale(): number | null {
+    if (this.scaleX !== this.scaleY) {
+      return null;
+    }
+    return this.coreNode.scaleX;
   }
 
-  set scale(value: number) {
-    this.coreNode.scale = value;
+  set scale(value: number | null) {
+    // We ignore `null` when it's set.
+    if (value === null) {
+      return;
+    }
+    this.coreNode.scaleX = value;
+    this.coreNode.scaleY = value;
+  }
+
+  get scaleX(): number {
+    return this.coreNode.scaleX;
+  }
+
+  set scaleX(value: number) {
+    this.coreNode.scaleX = value;
+  }
+
+  get scaleY(): number {
+    return this.coreNode.scaleY;
+  }
+
+  set scaleY(value: number) {
+    this.coreNode.scaleY = value;
   }
 
   get mount(): number {
@@ -433,7 +458,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   animate(
     props: Partial<INodeAnimatableProps>,
-    settings: Partial<IAnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this.coreNode, props, settings);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call

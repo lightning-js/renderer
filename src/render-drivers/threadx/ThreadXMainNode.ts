@@ -28,7 +28,7 @@ import { assertTruthy } from '../../utils.js';
 import type { NodeStruct } from './NodeStruct.js';
 import { SharedNode } from './SharedNode.js';
 import { ThreadXMainAnimationController } from './ThreadXMainAnimationController.js';
-import type { IAnimationSettings } from '../../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 
 export class ThreadXMainNode extends SharedNode implements INode {
   private nextAnimationId = 1;
@@ -95,9 +95,25 @@ export class ThreadXMainNode extends SharedNode implements INode {
     }
   }
 
+  get scale(): number | null {
+    if (this.scaleX !== this.scaleY) {
+      return null;
+    }
+    return this.scaleX;
+  }
+
+  set scale(scale: number | null) {
+    // We ignore `null` when it's set.
+    if (scale === null) {
+      return;
+    }
+    this.scaleX = scale;
+    this.scaleY = scale;
+  }
+
   animate(
     props: Partial<INodeAnimatableProps>,
-    settings: Partial<IAnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const id = this.nextAnimationId++;
     this.emit('createAnimation', { id, props, settings });

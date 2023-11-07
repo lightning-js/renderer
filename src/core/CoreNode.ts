@@ -62,7 +62,8 @@ export interface CoreNodeProps {
   shader: CoreShader | null;
   shaderProps: Record<string, unknown> | null;
   zIndexLocked: number;
-  scale: number;
+  scaleX: number;
+  scaleY: number;
   mount: number;
   mountX: number;
   mountY: number;
@@ -216,13 +217,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       const cosineRotation = Math.cos(this.props.rotation);
 
       this.setLocalTransform(
-        cosineRotation * this.props.scale,
-        -sineRotation * this.props.scale,
-        sineRotation * this.props.scale,
-        cosineRotation * this.props.scale,
+        cosineRotation * this.props.scaleX,
+        -sineRotation * this.props.scaleY,
+        sineRotation * this.props.scaleX,
+        cosineRotation * this.props.scaleY,
       );
     } else {
-      this.setLocalTransform(this.props.scale, 0, 0, this.props.scale);
+      this.setLocalTransform(this.props.scaleX, 0, 0, this.props.scaleY);
     }
     // do transformations when matrix is implemented
     this.updateLocalTranslate();
@@ -325,9 +326,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       textureOptions,
       shader,
       shaderProps,
-      scale,
+      scaleX,
+      scaleY,
     } = this.props;
-    const { zIndex, alpha, worldScale } = this;
+    const { zIndex, alpha, worldScaleX, worldScaleY } = this;
 
     // add to list of renderables to be sorted before rendering
     renderer.addRenderable({
@@ -343,11 +345,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       shader,
       shaderProps,
       alpha,
-      scale,
+      scaleX,
+      scaleY,
       clippingRect,
       wpx: this.worldContext.px,
       wpy: this.worldContext.py,
-      worldScale,
+      worldScaleX,
+      worldScaleY,
       ta: this.worldContext.ta,
       tb: this.worldContext.tb,
       tc: this.worldContext.tc,
@@ -435,21 +439,51 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   get scale(): number {
-    return this.props.scale;
+    // The CoreNode `scale` property is only used by Animations.
+    // Unlike INode, `null` should never be possibility for Animations.
+    return this.scaleX;
   }
 
-  // @todo: implement scaleX and scaleY
   set scale(value: number) {
-    if (this.props.scale !== value) {
-      this.props.scale = value;
+    // The CoreNode `scale` property is only used by Animations.
+    // Unlike INode, `null` should never be possibility for Animations.
+    this.scaleX = value;
+    this.scaleY = value;
+  }
+
+  get scaleX(): number {
+    return this.props.scaleX;
+  }
+
+  set scaleX(value: number) {
+    if (this.props.scaleX !== value) {
+      this.props.scaleX = value;
       this.updateLocalTransform();
     }
   }
 
-  get worldScale(): number {
+  get scaleY(): number {
+    return this.props.scaleY;
+  }
+
+  set scaleY(value: number) {
+    if (this.props.scaleY !== value) {
+      this.props.scaleY = value;
+      this.updateLocalTransform();
+    }
+  }
+
+  get worldScaleX(): number {
     return (
-      this.props.scale * (this.props.parent?.worldScale ?? 1) ||
-      this.props.scale
+      this.props.scaleX * (this.props.parent?.worldScaleX ?? 1) ||
+      this.props.scaleX
+    );
+  }
+
+  get worldScaleY(): number {
+    return (
+      this.props.scaleY * (this.props.parent?.worldScaleY ?? 1) ||
+      this.props.scaleY
     );
   }
 

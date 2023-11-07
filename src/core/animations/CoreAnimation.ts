@@ -23,7 +23,7 @@ import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 
-export interface IAnimationSettings {
+export interface AnimationSettings {
   duration: number;
   delay: number;
   easing: string;
@@ -42,7 +42,7 @@ export class CoreAnimation extends EventEmitter {
   constructor(
     private node: CoreNode,
     private props: Partial<INodeAnimatableProps>,
-    public settings: Partial<IAnimationSettings>,
+    public settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};
@@ -78,7 +78,7 @@ export class CoreAnimation extends EventEmitter {
     (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
       (propName) => {
         // set the start value to the current value
-        const startValue = this.node[propName];
+        const startValue = this.props[propName];
         const endValue = this.propStartValues[propName] as number;
 
         // swap the start and end values
@@ -87,8 +87,10 @@ export class CoreAnimation extends EventEmitter {
       },
     );
 
-    // restore stop method
-    this.settings.stopMethod = false;
+    // restore stop method if we are not looping
+    if (!this.settings.loop) {
+      this.settings.stopMethod = false;
+    }
   }
 
   applyEasing(p: number, s: number, e: number): number {
@@ -96,7 +98,6 @@ export class CoreAnimation extends EventEmitter {
   }
 
   update(dt: number) {
-    // finish if no duration is provided
     const { duration, loop, easing } = this.settings;
     if (!duration) {
       this.emit('finished', {});

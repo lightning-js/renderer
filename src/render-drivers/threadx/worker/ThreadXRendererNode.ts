@@ -29,7 +29,7 @@ import { CoreAnimationController } from '../../../core/animations/CoreAnimationC
 import type { Texture } from '../../../core/textures/Texture.js';
 import { CoreNode } from '../../../core/CoreNode.js';
 import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
-import type { IAnimationSettings } from '../../../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../../../core/animations/CoreAnimation.js';
 import type {
   Dimensions,
   LoadedPayload,
@@ -82,7 +82,7 @@ export class ThreadXRendererNode extends SharedNode {
         const animation = new CoreAnimation(
           this.coreNode,
           props as Partial<INodeAnimatableProps>,
-          settings as Partial<IAnimationSettings>,
+          settings as Partial<AnimationSettings>,
         );
         animation.on('finished', () => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -219,7 +219,8 @@ export class ThreadXRendererNode extends SharedNode {
       colorBr: sharedNodeStruct.colorBr,
       zIndex: sharedNodeStruct.zIndex,
       zIndexLocked: sharedNodeStruct.zIndexLocked,
-      scale: sharedNodeStruct.scale,
+      scaleX: sharedNodeStruct.scaleX,
+      scaleY: sharedNodeStruct.scaleY,
       mount: sharedNodeStruct.mount,
       mountX: sharedNodeStruct.mountX,
       mountY: sharedNodeStruct.mountY,

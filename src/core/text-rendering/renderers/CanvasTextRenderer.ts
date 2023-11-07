@@ -42,11 +42,13 @@ import {
   type TrProps,
 } from './TextRenderer.js';
 
+const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
+
 /**
  * Global font set regardless of if run in the main thread or a web worker
  */
-const globalFontSet = ((self.document as any)?.fonts ||
-  (self as any).fonts) as FontFaceSet;
+const globalFontSet = ((resolvedGlobal.document as any)?.fonts ||
+  (resolvedGlobal as any).fonts) as FontFaceSet;
 
 declare module './TextRenderer.js' {
   interface TextRendererMap {
@@ -513,8 +515,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
+        worldScaleX: 1,
+        worldScaleY: 1,
+        scaleX: 1,
+        scaleY: 1,
         wpx: x,
         wpy: y - scrollY + renderWindow.y1,
         ta: 1,
@@ -538,8 +542,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
+        worldScaleX: 1,
+        worldScaleY: 1,
+        scaleX: 1,
+        scaleY: 1,
         wpx: x,
         wpy: y - scrollY + renderWindow.y1 + pageSize,
         ta: 1,
@@ -563,8 +569,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
+        worldScaleX: 1,
+        worldScaleY: 1,
+        scaleX: 1,
+        scaleY: 1,
         wpx: x,
         wpy: y - scrollY + renderWindow.y1 + pageSize + pageSize,
         ta: 1,

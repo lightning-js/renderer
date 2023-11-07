@@ -37,5 +37,5 @@
  *
  * @packageDocumentation
  */
-export { assertTruthy, mergeColorAlpha } from '../src/utils.js';
+export { assertTruthy, mergeColorAlpha, deg2Rad } from '../src/utils.js';
 export { EventEmitter } from '../src/common/EventEmitter.js';

@@ -24,7 +24,7 @@ import type {
   TextRendererMap,
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
-import type { IAnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 
 /**
  * Writable properties of a Node.
@@ -246,12 +246,39 @@ export interface INodeWritableProps {
    *
    * @remarks
    * The scale value multiplies the provided {@link width} and {@link height}
-   * of the Node around the Node's Mount Point (defined by the {@link mount}
+   * of the Node around the Node's Pivot Point (defined by the {@link pivot}
    * props).
+   *
+   * Behind the scenes, setting this property sets both the {@link scaleX} and
+   * {@link scaleY} props to the same value.
+   *
+   * NOTE: When the scaleX and scaleY props are explicitly set to different values,
+   * this property returns `null`. Setting `null` on this property will have no
+   * effect.
    *
    * @default 1.0
    */
-  scale: number;
+  scale: number | null;
+  /**
+   * Scale to render the Node at (X-Axis)
+   *
+   * @remarks
+   * The scaleX value multiplies the provided {@link width} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleX: number;
+  /**
+   * Scale to render the Node at (Y-Axis)
+   *
+   * @remarks
+   * The scaleY value multiplies the provided {@link height} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleY: number;
   /**
    * Combined position of the Node's Mount Point
    *
@@ -370,7 +397,9 @@ export interface INodeWritableProps {
 }
 
 export type INodeAnimatableProps = {
-  [Key in keyof INodeWritableProps as INodeWritableProps[Key] extends number
+  [Key in keyof INodeWritableProps as NonNullable<
+    INodeWritableProps[Key]
+  > extends number
     ? Key
     : never]: number;
 };
@@ -399,7 +428,7 @@ export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
   readonly children: INode[];
   animate(
     props: Partial<INodeAnimatableProps>,
-    settings: Partial<IAnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ): IAnimationController;
   destroy(): void;
   flush(): void;

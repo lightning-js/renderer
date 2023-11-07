@@ -23,10 +23,7 @@ import {
   hasOwn,
   mergeColorAlphaPremultiplied,
 } from '../../../utils.js';
-import {
-  CoreRenderer,
-  type QuadOptions as QuadOptions,
-} from '../CoreRenderer.js';
+import { CoreRenderer, type QuadOptions } from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {

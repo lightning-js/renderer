@@ -69,7 +69,8 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         pivot: sharedNodeStruct.pivot,
         pivotX: sharedNodeStruct.pivotX,
         pivotY: sharedNodeStruct.pivotY,
-        scale: sharedNodeStruct.scale,
+        scaleX: sharedNodeStruct.scaleX,
+        scaleY: sharedNodeStruct.scaleY,
         rotation: sharedNodeStruct.rotation,
 
         // These are passed in via message handlers
