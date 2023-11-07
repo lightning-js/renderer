@@ -16,12 +16,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import { WebGlCoreShader } from '../WebGlCoreShader.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
+
+const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 declare module '../../../CoreShaderManager.js' {
   interface ShaderMap {
@@ -33,7 +34,8 @@ declare module '../../../CoreShaderManager.js' {
  * Properties of the {@link SdfShader}
  */
 export interface SdfShaderProps {
-  offset?: [number, number];
+  transform?: Float32Array;
+  scrollY?: number;
   /**
    * Color in RGBA format
    *
@@ -65,9 +67,10 @@ export class SdfShader extends WebGlCoreShader {
       attributes: ['a_position', 'a_textureCoordinate'],
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2fv' },
+        { name: 'u_transform', uniform: 'uniformMatrix3fv' },
+        { name: 'u_scrollY', uniform: 'uniform1f' },
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
         { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_offset', uniform: 'uniform2fv' },
         { name: 'u_color', uniform: 'uniform4fv' },
         { name: 'u_size', uniform: 'uniform1f' },
         { name: 'u_distanceRange', uniform: 'uniform1f' },
@@ -85,8 +88,10 @@ export class SdfShader extends WebGlCoreShader {
   protected override bindProps(props: SdfShaderProps): void {
     const resolvedProps = SdfShader.resolveDefaults(props);
     for (const key in resolvedProps) {
-      if (key === 'offset') {
-        this.setUniform('u_offset', resolvedProps[key]);
+      if (key === 'transform') {
+        this.setUniform('u_transform', false, resolvedProps[key]);
+      } else if (key === 'scrollY') {
+        this.setUniform('u_scrollY', resolvedProps[key]);
       } else if (key === 'color') {
         const components = getNormalizedRgbaComponents(resolvedProps.color);
         this.setUniform('u_color', components);
@@ -104,7 +109,8 @@ export class SdfShader extends WebGlCoreShader {
     props: SdfShaderProps = {},
   ): Required<SdfShaderProps> {
     return {
-      offset: props.offset ?? [0.0, 0.0],
+      transform: props.transform ?? IDENTITY_MATRIX_3x3,
+      scrollY: props.scrollY ?? 0,
       color: props.color ?? 0xffffffff,
       size: props.size ?? 16,
       distanceRange: props.distanceRange ?? 1.0,
@@ -119,15 +125,18 @@ export class SdfShader extends WebGlCoreShader {
       attribute vec2 a_position;
       attribute vec2 a_textureCoordinate;
 
-      uniform vec2 u_offset;
       uniform vec2 u_resolution;
+      uniform mat3 u_transform;
+      uniform float u_scrollY;
       uniform float u_pixelRatio;
       uniform float u_size;
 
       varying vec2 v_texcoord;
 
       void main() {
-        gl_Position = vec4(((a_position * u_size + u_offset) * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1), 0, 1);
+        vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
+        vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
+        gl_Position = vec4((transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1), 0, 1);
         v_texcoord = a_textureCoordinate;
       }
     `,

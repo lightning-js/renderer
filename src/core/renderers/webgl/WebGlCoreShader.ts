@@ -282,9 +282,9 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
   }
 
-  setUniform(name: string, value: any): void {
+  setUniform(name: string, ...value: any[]): void {
     // @ts-expect-error Typing of args is too funky apparently for TS
-    this.gl[this.uniformTypes[name]](this.uniformLocations[name], value);
+    this.gl[this.uniformTypes[name]](this.uniformLocations[name], ...value);
   }
 
   bindBufferCollection(buffer: BufferCollection) {

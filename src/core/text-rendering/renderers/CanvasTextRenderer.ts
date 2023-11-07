@@ -20,6 +20,7 @@
 import { EventEmitter } from '../../../common/EventEmitter.js';
 import { assertTruthy } from '../../../utils.js';
 import type { Stage } from '../../Stage.js';
+import type { Matrix3d } from '../../lib/Matrix3d.js';
 import {
   intersectRect,
   type Bound,
@@ -456,6 +457,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   override renderQuads(
     state: CanvasTextRendererState,
+    transform: Matrix3d,
     clippingRect: Rect | null,
   ): void {
     const { stage } = this;
@@ -515,16 +517,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScaleX: 1,
-        worldScaleY: 1,
-        scaleX: 1,
-        scaleY: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
     if (canvasPages[1].valid) {
@@ -542,16 +540,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScaleX: 1,
-        worldScaleY: 1,
-        scaleX: 1,
-        scaleY: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1 + pageSize,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
     if (canvasPages[2].valid) {
@@ -569,16 +563,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScaleX: 1,
-        worldScaleY: 1,
-        scaleX: 1,
-        scaleY: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1 + pageSize + pageSize,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
 

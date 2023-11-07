@@ -87,6 +87,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     ...(savedState?.mutableProps || initialMutableProps),
     fontFamily: FONT_FAMILY,
     contain: 'both',
+    scrollable: true,
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
     text,
