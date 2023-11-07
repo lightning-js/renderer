@@ -183,3 +183,14 @@ export function hasOwn(obj: object, prop: string | number | symbol): boolean {
 export function deg2Rad(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
+
+/**
+ * Returns image aspect ratio
+ *
+ * @param width
+ * @param height
+ * @returns
+ */
+export function getImageAspectRatio(width: number, height: number): number {
+  return width / height;
+}

@@ -76,6 +76,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
         width: props.width,
         height: props.height,
         alpha: props.alpha,
+        autosize: props.autosize,
         clipping: props.clipping,
         color: props.color,
         colorTop: props.colorTop,
@@ -152,6 +153,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set alpha(value: number) {
     this.coreNode.alpha = value;
+  }
+
+  get autosize(): boolean | null {
+    return this.coreNode.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.coreNode.autosize = value;
   }
 
   get clipping(): boolean {
@@ -379,6 +388,10 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.texture = this.rendererMain.createTexture('ImageTexture', {
       src: imageUrl,
     });
+
+    if (this.autosize !== false) {
+      this.autosize = true;
+    }
   }
 
   //#region Texture

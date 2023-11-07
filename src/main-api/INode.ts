@@ -73,6 +73,15 @@ export interface INodeWritableProps {
    */
   alpha: number;
   /**
+   * The autosize toggle of the Node.
+   *
+   * @remarks
+   * The autosize to true let the image node to be resized with the original size of the image.
+   *
+   * @default `null`
+   */
+  autosize: boolean | null;
+  /**
    * Clipping Mode
    *
    * @remarks

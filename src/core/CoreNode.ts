@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../utils.js';
+import { assertTruthy, getImageAspectRatio } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -29,6 +29,7 @@ import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 import type {
+  Dimensions,
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
 } from '../common/CommonTypes.js';
@@ -45,6 +46,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
+  autosize: boolean | null;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -148,7 +150,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.textureOptions = null;
   }
 
+  autosizeNode(dimensions: Dimensions) {
+    if (this.autosize) {
+      this.width = dimensions.width;
+      this.height = dimensions.height;
+    }
+  }
+
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    this.autosizeNode(dimensions);
+
     this.emit('txLoaded', dimensions);
   };
 
@@ -492,6 +503,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set alpha(value: number) {
     this.props.alpha = value;
+  }
+
+  get autosize(): boolean | null {
+    return this.props.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.props.autosize = value;
   }
 
   get clipping(): boolean {
