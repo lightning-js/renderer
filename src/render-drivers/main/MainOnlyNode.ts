@@ -36,10 +36,8 @@ import type {
 import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
-  TextureFailedEventHandler,
-  TextureLoadedEventHandler,
-  LoadedPayload,
-  FailedPayload,
+  NodeLoadedEventHandler,
+  NodeFailedEventHandler,
 } from '../../common/CommonTypes.js';
 
 let nextId = 1;
@@ -103,9 +101,9 @@ export class MainOnlyNode extends EventEmitter implements INode {
         texture: null,
         textureOptions: null,
       });
-    // Forward texture events
-    this.coreNode.on('txLoaded', this.onTextureLoaded);
-    this.coreNode.on('txFailed', this.onTextureFailed);
+    // Forward loaded/failed events
+    this.coreNode.on('loaded', this.onTextureLoaded);
+    this.coreNode.on('failed', this.onTextureFailed);
 
     // Assign properties to this object
     this.parent = props.parent as MainOnlyNode;
@@ -404,21 +402,12 @@ export class MainOnlyNode extends EventEmitter implements INode {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    const texturePayload: LoadedPayload = {
-      type: 'texture',
-      dimensions,
-    };
-
-    this.emit('loaded', texturePayload);
+  private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {
+    this.emit('loaded', payload);
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (target, error) => {
-    const textureFailedPayload: FailedPayload = {
-      type: 'texture',
-      error,
-    };
-    this.emit('failed', textureFailedPayload);
+  private onTextureFailed: NodeFailedEventHandler = (target, payload) => {
+    this.emit('failed', payload);
   };
   //#endregion Texture
 

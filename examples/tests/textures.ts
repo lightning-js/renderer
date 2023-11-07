@@ -17,7 +17,12 @@
  * limitations under the License.
  */
 
-import { type INode, type Dimensions } from '@lightningjs/renderer';
+import {
+  type INode,
+  type Dimensions,
+  type NodeLoadedEventHandler,
+  type NodeFailedEventHandler,
+} from '@lightningjs/renderer';
 import rockoImg from '../assets/rocko.png';
 import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
@@ -191,13 +196,13 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
   await execFailureTest(subTxFailure2);
 
   function waitForTxLoaded(imgNode: INode) {
-    return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    return new Promise<Dimensions>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
       }, 1000);
-      imgNode.once('txLoaded', (target, dimensions) => {
-        resolve(dimensions);
-      });
+      imgNode.once('loaded', ((target, payload) => {
+        resolve(payload.dimensions);
+      }) satisfies NodeLoadedEventHandler);
     });
   }
 
@@ -206,9 +211,9 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
       }, 1000);
-      imgNode.once('txFailed', () => {
+      imgNode.once('failed', (() => {
         resolve(true);
-      });
+      }) satisfies NodeFailedEventHandler);
     });
   }
 

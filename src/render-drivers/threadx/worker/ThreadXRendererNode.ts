@@ -31,9 +31,8 @@ import { CoreNode } from '../../../core/CoreNode.js';
 import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
 import type { AnimationSettings } from '../../../core/animations/CoreAnimation.js';
 import type {
-  Dimensions,
-  LoadedPayload,
-  FailedPayload,
+  NodeLoadedPayload,
+  NodeFailedPayload,
 } from '../../../common/CommonTypes.js';
 
 export class ThreadXRendererNode extends SharedNode {
@@ -132,22 +131,18 @@ export class ThreadXRendererNode extends SharedNode {
       this.coreNode.unloadTexture();
     });
     // Forward on CoreNode events
-    this.coreNode.on('txLoaded', (target: CoreNode, dimensions: Dimensions) => {
-      const texturePayload: LoadedPayload = {
-        type: 'texture',
-        dimensions,
-      };
-
-      this.emit('loaded', texturePayload);
-    });
-    this.coreNode.on('txFailed', (target: CoreNode, error: Error) => {
-      const textureFailedPayload: FailedPayload = {
-        type: 'texture',
-        error,
-      };
-
-      this.emit('failed', textureFailedPayload);
-    });
+    this.coreNode.on(
+      'loaded',
+      (target: CoreNode, payload: NodeLoadedPayload) => {
+        this.emit('loaded', payload);
+      },
+    );
+    this.coreNode.on(
+      'failed',
+      (target: CoreNode, payload: NodeFailedPayload) => {
+        this.emit('failed', payload);
+      },
+    );
   }
 
   override onPropertyChange<Key extends keyof this['z$__type__Props']>(

@@ -325,6 +325,22 @@ const trPropSetterDefaults: TrPropSetters = {
   },
 };
 
+/**
+ * Event handler for when text is loaded
+ *
+ * @remarks
+ * Emitted by state.emitter
+ */
+export type TrLoadedEventHandler = (target: any) => void;
+
+/**
+ * Event handler for when text failed to load
+ *
+ * @remarks
+ * Emitted by state.emitter
+ */
+export type TrFailedEventHandler = (target: any, error: Error) => void;
+
 export abstract class TextRenderer<
   StateT extends TextRendererState = TextRendererState,
 > {

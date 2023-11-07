@@ -17,16 +17,22 @@
  * limitations under the License.
  */
 
-import type { Dimensions, ITextNode, INode } from '@lightningjs/renderer';
+import type {
+  Dimensions,
+  ITextNode,
+  INode,
+  NodeTextLoadedPayload,
+} from '@lightningjs/renderer';
 
 export async function waitForTextDimensions(
   node: ITextNode,
 ): Promise<Dimensions> {
   return new Promise((resolve) => {
-    node.once('textLoaded', (_node: INode, dimensions: Dimensions) => {
+    node.once('loaded', (_node: INode, payload: NodeTextLoadedPayload) => {
+      const { width, height } = payload.dimensions;
       resolve({
-        width: dimensions.width,
-        height: dimensions.height,
+        width,
+        height,
       });
     });
   });

@@ -17,13 +17,14 @@
  * limitations under the License.
  */
 
-import type {
-  TextureFailedEventHandler,
-  TextureLoadedEventHandler,
-} from '../../common/CommonTypes.js';
 import type { TextureRef } from '../../main-api/RendererMain.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import {
+  Texture,
+  type TextureData,
+  type TextureFailedEventHandler,
+  type TextureLoadedEventHandler,
+} from './Texture.js';
 
 /**
  * Properties of the {@link SubTexture}

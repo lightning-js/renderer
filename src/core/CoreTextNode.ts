@@ -22,13 +22,15 @@ import type {
   TextRendererMap,
   TrProps,
   TextRendererState,
+  TrFailedEventHandler,
+  TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
 import { CoreNode, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
-  TextFailedEventHandler,
-  TextLoadedEventHandler,
+  NodeTextFailedPayload,
+  NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { Rect } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
@@ -86,7 +88,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.trState = textRendererState;
   }
 
-  private onTextLoaded: TextLoadedEventHandler = () => {
+  private onTextLoaded: TrLoadedEventHandler = () => {
     const { contain } = this;
     const setWidth = this.trState.props.width;
     const setHeight = this.trState.props.height;
@@ -105,14 +107,20 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     }
     this.updateLocalTransform();
 
-    this.emit('textLoaded', {
-      width: this.trState.textW,
-      height: this.trState.textH,
-    });
+    this.emit('loaded', {
+      type: 'text',
+      dimensions: {
+        width: this.trState.textW || 0,
+        height: this.trState.textH || 0,
+      },
+    } satisfies NodeTextLoadedPayload);
   };
 
-  private onTextFailed: TextFailedEventHandler = (target, error) => {
-    this.emit('textFailed', error);
+  private onTextFailed: TrFailedEventHandler = (target, error) => {
+    this.emit('failed', {
+      type: 'text',
+      error,
+    } satisfies NodeTextFailedPayload);
   };
 
   override get width(): number {
