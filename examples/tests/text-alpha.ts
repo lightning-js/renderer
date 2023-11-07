@@ -131,10 +131,16 @@ function generateAlphaTest(
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           renderer.createTextNode({
             ...nodeProps,
-            alpha: 0.25,
+            alpha: 1.0,
             color: 0x000000ff,
           }),
-          '<- should look the same ->',
+          'color.a -> 0.5',
+          renderer.createTextNode({
+            ...nodeProps,
+            alpha: 1.0,
+            color: 0x00000080,
+          }),
+          'alpha -> 0.5',
           renderer.createTextNode({
             ...nodeProps,
             alpha: 0.5,
@@ -153,10 +159,17 @@ function generateAlphaTest(
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           createContainedTextNode(renderer, textRenderer, {
-            alpha: 0.25,
+            alpha: 1.0,
             color: 0xff0000ff,
           }),
-          '<- should look the same ->',
+          'container\n  .color.a -> 0.5',
+          createContainedTextNode(renderer, textRenderer, {
+            alpha: 1.0,
+            // Just changing the color alpha of the container doesn't affect
+            // the contained text's alpha
+            color: 0xff000080,
+          }),
+          'container\n  .alpha -> 0.5',
           createContainedTextNode(renderer, textRenderer, {
             alpha: 0.5,
             color: 0xff000080,

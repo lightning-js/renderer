@@ -180,7 +180,6 @@ export interface TrProps extends TrFontProps {
    * @default 0xffffffff (opaque white)
    */
   color: number;
-  alpha: number;
   x: number;
   y: number;
   /**
@@ -271,9 +270,6 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   color: (state, value) => {
     state.props.color = value;
-  },
-  alpha: (state, value) => {
-    state.props.alpha = value;
   },
   zIndex: (state, value) => {
     state.props.zIndex = value;
@@ -386,5 +382,6 @@ export abstract class TextRenderer<
     state: StateT,
     transform: Matrix3d,
     clippingRect: Rect | null,
+    alpha: number,
   ): void;
 }

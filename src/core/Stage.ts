@@ -203,7 +203,7 @@ export class Stage {
 
     node.renderQuads(this.renderer, clippingRect);
     node.children.forEach((child) => {
-      if (child.alpha === 0) {
+      if (child.worldAlpha === 0) {
         return;
       }
       this.addQuads(child, clippingRect);

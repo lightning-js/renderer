@@ -63,7 +63,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           height: props.height,
           textAlign: props.textAlign,
           color: props.color,
-          alpha: props.alpha,
           zIndex: props.zIndex,
           contain: props.contain,
           scaleX: props.scaleX,
@@ -130,15 +129,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override set height(value: number) {
     this.textRenderer.set.height(this.trState, value);
-    this.updateText();
-  }
-
-  override get alpha(): number {
-    return this.trState.props.alpha;
-  }
-
-  override set alpha(value: number) {
-    this.textRenderer.set.alpha(this.trState, value);
     this.updateText();
   }
 
@@ -313,6 +303,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
       this.trState,
       this.globalTransform,
       clippingRect,
+      this.worldAlpha,
     );
   }
 
