@@ -41,6 +41,7 @@ import { GlitchEffect } from './renderers/webgl/shaders/effects/GlitchEffect.js'
 import { FadeOutEffect } from './renderers/webgl/shaders/effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './renderers/webgl/shaders/effects/RadialGradientEffect.js';
 import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
+import { RadialProgressEffect } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
 
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
@@ -67,6 +68,7 @@ export interface EffectMap {
   radialGradient: typeof RadialGradientEffect;
   grayscale: typeof GrayscaleEffect;
   glitch: typeof GlitchEffect;
+  radialProgress: typeof RadialProgressEffect;
 }
 
 export class CoreShaderManager {
@@ -95,6 +97,7 @@ export class CoreShaderManager {
     this.registerEffectType('grayscale', GrayscaleEffect);
     this.registerEffectType('glitch', GlitchEffect);
     this.registerEffectType('radius', RadiusEffect);
+    this.registerEffectType('radialProgress', RadialProgressEffect);
   }
 
   registerShaderType<Type extends keyof ShaderMap>(

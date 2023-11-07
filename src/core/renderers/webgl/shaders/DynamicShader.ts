@@ -37,6 +37,7 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
+import { RadialProgressEffect } from './effects/RadialProgressEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 
 /**
@@ -95,6 +96,7 @@ const Effects = {
   radialGradient: RadialGradientEffect,
   grayscale: GrayscaleEffect,
   glitch: GlitchEffect,
+  radialProgress: RadialProgressEffect,
 };
 
 export interface SpecificEffectDesc<
