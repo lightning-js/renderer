@@ -28,6 +28,9 @@ import { CoreTextNode } from '../../core/CoreTextNode.js';
 import type {
   TextFailedEventHandler,
   TextLoadedEventHandler,
+  LoadedPayload,
+  FailedPayload,
+  Dimensions,
 } from '../../common/CommonTypes.js';
 
 export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
@@ -99,12 +102,25 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
     this.coreNode.on('textFailed', this.onTextFailed);
   }
 
-  private onTextLoaded: TextLoadedEventHandler = (target, dimensions) => {
-    this.emit('textLoaded', dimensions);
+  private onTextLoaded: TextLoadedEventHandler = (
+    target,
+    dimensions: Dimensions,
+  ) => {
+    const textPayload: LoadedPayload = {
+      type: 'text',
+      dimensions,
+    };
+
+    this.emit('loaded', textPayload);
   };
 
   private onTextFailed: TextFailedEventHandler = (target, error) => {
-    this.emit('textFailed', error);
+    const textFailedPayload: FailedPayload = {
+      type: 'text',
+      error,
+    };
+
+    this.emit('failed', textFailedPayload);
   };
 
   get text(): string {

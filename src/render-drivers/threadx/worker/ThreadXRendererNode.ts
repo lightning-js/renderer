@@ -30,7 +30,11 @@ import type { Texture } from '../../../core/textures/Texture.js';
 import { CoreNode } from '../../../core/CoreNode.js';
 import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
 import type { AnimationSettings } from '../../../core/animations/CoreAnimation.js';
-import type { Dimensions } from '../../../common/CommonTypes.js';
+import type {
+  Dimensions,
+  LoadedPayload,
+  FailedPayload,
+} from '../../../common/CommonTypes.js';
 
 export class ThreadXRendererNode extends SharedNode {
   protected coreNode: CoreNode;
@@ -129,10 +133,20 @@ export class ThreadXRendererNode extends SharedNode {
     });
     // Forward on CoreNode events
     this.coreNode.on('txLoaded', (target: CoreNode, dimensions: Dimensions) => {
-      this.emit('txLoaded', dimensions as unknown as Record<string, unknown>);
+      const texturePayload: LoadedPayload = {
+        type: 'texture',
+        dimensions,
+      };
+
+      this.emit('loaded', texturePayload);
     });
     this.coreNode.on('txFailed', (target: CoreNode, error: Error) => {
-      this.emit('txFailed', error as unknown as Record<string, unknown>);
+      const textureFailedPayload: FailedPayload = {
+        type: 'texture',
+        error,
+      };
+
+      this.emit('failed', textureFailedPayload);
     });
   }
 
