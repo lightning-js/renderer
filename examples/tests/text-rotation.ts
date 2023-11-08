@@ -64,7 +64,7 @@ function generateRotationTest(
         baselineNode.x = position.x;
         baselineNode.y = position.y;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
           'rotation 45 deg ->\npivot 0.5 ->',
           renderer.createTextNode({
@@ -101,7 +101,7 @@ function generateRotationTest(
           textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeWritableProps>;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           renderer.createTextNode({
             ...nodeProps,
           }),
@@ -149,7 +149,7 @@ function generateRotationTest(
         baselineNode.x = position.x;
         baselineNode.y = position.y;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
           'scale 2 ->\npivot 0.5 ->',
           renderer.createTextNode({

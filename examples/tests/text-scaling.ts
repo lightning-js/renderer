@@ -65,7 +65,7 @@ function generateScalingTest(
         baselineNode.x = position.x;
         baselineNode.y = position.y;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
           'scale 2 ->\npivot 0.5 ->',
           renderer.createTextNode({
@@ -127,7 +127,7 @@ function generateScalingTest(
 
         const dimensions = await waitForTextDimensions(baselineNode);
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
           'scale 2 ->\npivot 0.5 ->',
           renderer.createTextNode({
@@ -190,7 +190,7 @@ function generateScalingTest(
         baselineNode.x = position.x;
         baselineNode.y = position.y;
 
-        return await constructTestRow(renderer, rowNode, [
+        return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
           'scale 2 ->\npivot 0.5 ->',
           renderer.createTextNode({

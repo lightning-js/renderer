@@ -27,6 +27,7 @@ import {
   intersectBound,
   getNormalizedRgbaComponents,
   type Rect,
+  getNormalizedAlphaComponent,
 } from '../../lib/utils.js';
 import type { ImageTexture } from '../../textures/ImageTexture.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
@@ -459,6 +460,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     state: CanvasTextRendererState,
     transform: Matrix3d,
     clippingRect: Rect | null,
+    alpha: number,
   ): void {
     const { stage } = this;
 
@@ -500,11 +502,15 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const renderWindowHeight = renderWindow.y2 - renderWindow.y1;
     const pageSize = renderWindowHeight / 3.0;
 
-    const { zIndex, alpha } = state.props;
+    const { zIndex, color } = state.props;
+
+    // Color alpha of text is not properly rendered to the Canvas texture, so we
+    // need to apply it here.
+    const combinedAlpha = alpha * getNormalizedAlphaComponent(color);
 
     if (canvasPages[0].valid) {
       this.stage.renderer.addRenderable({
-        alpha,
+        alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,
@@ -527,7 +533,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
     if (canvasPages[1].valid) {
       this.stage.renderer.addRenderable({
-        alpha,
+        alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,
@@ -550,7 +556,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
     if (canvasPages[2].valid) {
       this.stage.renderer.addRenderable({
-        alpha,
+        alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
         colorBr: 0xffffffff,

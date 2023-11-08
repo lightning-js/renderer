@@ -56,6 +56,10 @@ export const norm = (rgba: number): number => {
   return v;
 };
 
+export function getNormalizedAlphaComponent(rgba: number): number {
+  return (rgba & 0xff) / 255.0;
+}
+
 /**
  * Get a CSS color string from a RGBA color
  *

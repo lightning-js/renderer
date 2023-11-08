@@ -276,7 +276,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       shader,
       shaderProps,
     } = this.props;
-    const { zIndex, alpha, globalTransform: gt } = this;
+    const { zIndex, worldAlpha, globalTransform: gt } = this;
 
     assertTruthy(gt);
 
@@ -293,7 +293,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       zIndex,
       shader,
       shaderProps,
-      alpha,
+      alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,
       ty: gt.ty,
@@ -489,19 +489,18 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   get alpha(): number {
-    const props = this.props;
-    const parent = props.parent;
-
-    // root always visible
-    if (!parent) {
-      return 1;
-    }
-
-    return props.alpha * parent.alpha;
+    return this.props.alpha;
   }
 
   set alpha(value: number) {
     this.props.alpha = value;
+  }
+
+  get worldAlpha(): number {
+    const props = this.props;
+    const parent = props.parent;
+
+    return props.alpha * (parent?.worldAlpha || 1);
   }
 
   get clipping(): boolean {

@@ -147,9 +147,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       color: (state, value) => {
         state.props.color = value;
       },
-      alpha: (state, value) => {
-        state.props.alpha = value;
-      },
       x: (state, value) => {
         state.props.x = value;
       },
@@ -434,6 +431,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     state: SdfTextRendererState,
     transform: Matrix3d,
     clippingRect: Rect | null,
+    alpha: number,
   ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
@@ -448,8 +446,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const { appWidth, appHeight } = this.stage.options;
 
-    const { fontSize, color, alpha, contain, scrollable, zIndex, debug } =
-      state.props;
+    const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
     const scrollY = contain === 'both' && scrollable ? state.props.scrollY : 0;
