@@ -18,11 +18,12 @@
  */
 
 import type {
-  ITextNode,
+  INode,
   ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { PageContainer } from '../common/PageContainer.js';
 
 const commonTextProps = {
   mount: 0.5,
@@ -35,77 +36,51 @@ const commonTextProps = {
   fontSize: 50,
 } satisfies Partial<ITextNodeWritableProps>;
 
-export default async function ({ renderer }: ExampleSettings) {
-  const subheader = renderer.createTextNode({
-    x: 0,
-    y: 0,
-    text: '',
-    fontFamily: 'Ubuntu',
-    textRendererOverride: 'sdf',
-    fontSize: 50,
+export default async function ({ renderer, testName }: ExampleSettings) {
+  const pageContainer = new PageContainer(renderer, {
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
     parent: renderer.root,
+    title: 'Text Offscreen Move Tests',
+    testName,
   });
 
-  const testCaseArr = [
-    createTestCase(renderer, 1, subheader, 'sdf', 'none'),
-    createTestCase(renderer, 2, subheader, 'sdf', 'width'),
-    createTestCase(renderer, 3, subheader, 'sdf', 'both'),
-    createTestCase(renderer, 4, subheader, 'canvas', 'none'),
-    createTestCase(renderer, 5, subheader, 'canvas', 'width'),
-    createTestCase(renderer, 6, subheader, 'canvas', 'both'),
-  ];
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'none'));
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'width'));
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'both'));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'none'));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'width'));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'both'));
+  pageContainer.finalizePages();
 
-  let i = 0;
-  let destroyTest = testCaseArr[i]!();
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      destroyTest();
-    }
-
-    if (e.key === 'ArrowRight') {
-      i++;
-      if (i >= testCaseArr.length) {
-        i = 0;
-      }
-    }
-
-    if (e.key === 'ArrowLeft') {
-      i--;
-      if (i < 0) {
-        i = testCaseArr.length - 1;
-      }
-    }
-
-    destroyTest = testCaseArr[i]!();
-  });
-}
-
-function constructHeader(
-  testNum: number,
-  textRenderer: 'canvas' | 'sdf',
-  contain: ITextNodeWritableProps['contain'],
-) {
-  return `Text Offscreen Move Test #${testNum}\n\ntextRenderer = ${textRenderer}\ncontain = ${contain}\n`;
+  pageContainer.bindWindowKeys();
 }
 
 function createTestCase(
   renderer: RendererMain,
-  testNum: number,
-  subheader: ITextNode,
   textRenderer: 'canvas' | 'sdf',
   contain: ITextNodeWritableProps['contain'],
 ) {
-  return function () {
-    subheader.text = constructHeader(testNum, textRenderer, contain);
-    const onscreenStartText = renderer.createTextNode({
+  return async function (page: INode) {
+    const subheader = renderer.createTextNode({
+      x: 0,
+      y: 10,
+      text: '',
+      fontFamily: 'Ubuntu',
+      textRendererOverride: 'sdf',
+      fontSize: 30,
+      parent: page,
+    });
+
+    subheader.text = `textRenderer = ${textRenderer}\ncontain = ${contain}`;
+    renderer.createTextNode({
       ...commonTextProps,
       color: 0xff0000ff,
       x: renderer.settings.appWidth / 2,
       y: renderer.settings.appHeight / 2,
       textRendererOverride: textRenderer,
       contain,
-      parent: renderer.root,
+      parent: page,
     });
 
     const offscreenStartText = renderer.createTextNode({
@@ -115,22 +90,11 @@ function createTestCase(
       y: -1000,
       textRendererOverride: textRenderer,
       contain,
-      parent: renderer.root,
+      parent: page,
     });
-
-    // await delay(1000);
-
-    subheader.text = constructHeader(testNum, textRenderer, contain);
 
     // Move Offscreen Text on screen
     offscreenStartText.x = renderer.settings.appWidth / 2;
     offscreenStartText.y = renderer.settings.appHeight / 2;
-
-    return function destroy() {
-      offscreenStartText.parent = null;
-      onscreenStartText.parent = null;
-      offscreenStartText.destroy();
-      onscreenStartText.destroy();
-    };
   };
 }
