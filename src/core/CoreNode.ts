@@ -27,10 +27,14 @@ import type {
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
-import type { Texture } from './textures/Texture.js';
 import type {
+  Texture,
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
+} from './textures/Texture.js';
+import type {
+  NodeTextureFailedPayload,
+  NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import type { Rect } from './lib/utils.js';
@@ -149,11 +153,17 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    this.emit('txLoaded', dimensions);
+    this.emit('loaded', {
+      type: 'texture',
+      dimensions,
+    } satisfies NodeTextureLoadedPayload);
   };
 
   private onTextureFailed: TextureFailedEventHandler = (target, error) => {
-    this.emit('txFailed', error);
+    this.emit('failed', {
+      type: 'texture',
+      error,
+    } satisfies NodeTextureFailedPayload);
   };
   //#endregion Textures
 

@@ -19,13 +19,26 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import type { SubTextureProps } from './SubTexture.js';
-import type {
-  Dimensions,
-  TextureFailedEventHandler,
-  TextureLoadedEventHandler,
-  TextureLoadingEventHandler,
-} from '../../common/CommonTypes.js';
+import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+
+/**
+ * Event handler for when a Texture is loading
+ */
+export type TextureLoadingEventHandler = (target: any) => void;
+
+/**
+ * Event handler for when a Texture is loaded
+ */
+export type TextureLoadedEventHandler = (
+  target: any,
+  dimensions: Readonly<Dimensions>,
+) => void;
+
+/**
+ * Event handler for when a Texture fails to load
+ */
+export type TextureFailedEventHandler = (target: any, error: Error) => void;
 
 /**
  * TextureData that is used to populate a CoreContextTexture

@@ -34,45 +34,9 @@ export interface Dimensions {
 }
 
 /**
- * Event handler for when a texture is loading
- */
-export type TextureLoadingEventHandler = (target: any) => void;
-
-/**
- * Event handler for when a texture is loaded
- */
-export type TextureLoadedEventHandler = (
-  target: any,
-  dimensions: Readonly<Dimensions>,
-) => void;
-
-/**
- * Event handler for when a texture fails to load
- */
-export type TextureFailedEventHandler = (target: any, error: Error) => void;
-
-/**
- * Event handler for when text is loading
- */
-export type TextLoadingEventHandler = (target: any) => void;
-
-/**
- * Event handler for when text is loaded
- */
-export type TextLoadedEventHandler = (
-  target: any,
-  dimensions: Dimensions,
-) => void;
-
-/**
- * Event handler for when text fails to load
- */
-export type TextFailedEventHandler = (target: any, error: Error) => void;
-
-/**
  * Payload for when text is loaded
  */
-type TextLoadedPayload = {
+export type NodeTextLoadedPayload = {
   type: 'text';
   dimensions: Dimensions;
 };
@@ -80,7 +44,7 @@ type TextLoadedPayload = {
 /**
  * Payload for when texture is loaded
  */
-type TextureLoadedPayload = {
+export type NodeTextureLoadedPayload = {
   type: 'texture';
   dimensions: Dimensions;
 };
@@ -88,12 +52,14 @@ type TextureLoadedPayload = {
 /**
  * Combined type for all loaded payloads
  */
-export type LoadedPayload = TextLoadedPayload | TextureLoadedPayload;
+export type NodeLoadedPayload =
+  | NodeTextLoadedPayload
+  | NodeTextureLoadedPayload;
 
 /**
  * Payload for when text failed to load
  */
-type TextFailedPayload = {
+export type NodeTextFailedPayload = {
   type: 'text';
   error: Error;
 };
@@ -101,7 +67,7 @@ type TextFailedPayload = {
 /**
  * Payload for when texture failed to load
  */
-type TextureFailedPayload = {
+export type NodeTextureFailedPayload = {
   type: 'texture';
   error: Error;
 };
@@ -109,4 +75,22 @@ type TextureFailedPayload = {
 /**
  * Combined type for all failed payloads
  */
-export type FailedPayload = TextFailedPayload | TextureFailedPayload;
+export type NodeFailedPayload =
+  | NodeTextFailedPayload
+  | NodeTextureFailedPayload;
+
+/**
+ * Event handler for when the texture/text of a node has loaded
+ */
+export type NodeLoadedEventHandler = (
+  target: any,
+  payload: NodeLoadedPayload,
+) => void;
+
+/**
+ * Event handler for when the texture/text of a node has failed to load
+ */
+export type NodeFailedEventHandler = (
+  target: any,
+  payload: NodeFailedPayload,
+) => void;

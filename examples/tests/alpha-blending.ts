@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, TextureLoadedEventHandler } from '@lightningjs/renderer';
+import type { INode, NodeLoadedEventHandler } from '@lightningjs/renderer';
 import { mergeColorAlpha } from '@lightningjs/renderer/utils';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import red25 from '../assets/red-25.png';
@@ -445,9 +445,10 @@ export default async function ({
 
     curY += 30 + PADDING;
 
-    const sizeToTexture: TextureLoadedEventHandler = (target, dimensions) => {
-      target.width = dimensions.width;
-      target.height = dimensions.height;
+    const sizeToTexture: NodeLoadedEventHandler = (target, payload) => {
+      const { width, height } = payload.dimensions;
+      target.width = width;
+      target.height = height;
     };
 
     renderer
@@ -460,7 +461,7 @@ export default async function ({
         alpha: 1,
         parent: sideContainer,
       })
-      .once('txLoaded', sizeToTexture);
+      .once('loaded', sizeToTexture);
 
     curX += RECT_SIZE + PADDING;
 
@@ -472,7 +473,7 @@ export default async function ({
         alpha: 1.0,
         parent: sideContainer,
       })
-      .once('txLoaded', sizeToTexture);
+      .once('loaded', sizeToTexture);
 
     curX += RECT_SIZE + PADDING;
 
