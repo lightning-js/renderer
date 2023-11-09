@@ -33,16 +33,15 @@ export default async function ({ renderer }: ExampleSettings) {
       effects: [
         {
           type: 'radialProgress',
+          props: {
+            progress: 0.6,
+          },
         },
         {
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
-            stops: [0.2, 0.3],
-            colors: [
-              0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
-              0xff0000ff,
-            ],
+            colors: [0xff0000ff, 0x00ff00ff],
           },
         },
       ],
@@ -55,50 +54,62 @@ export default async function ({ renderer }: ExampleSettings) {
     y: 100,
     width: 250,
     height: 250,
-    color: 0x00ff00ff,
+    color: 0xffffff00,
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          type: 'borderTop',
+          type: 'radialProgress',
           props: {
-            width: 30,
-            color: 0xff0000ff,
+            progress: 1,
+            color: 0x000000ff,
           },
         },
         {
-          type: 'borderBottom',
+          type: 'radialProgress',
           props: {
-            width: 30,
-            color: 0xff0000ff,
+            progress: 0.2,
+          },
+        },
+        {
+          type: 'linearGradient',
+          props: {
+            angle: degToRad(90),
+            colors: [0xff0000ff, 0x00ff00ff],
           },
         },
       ],
     }),
     parent: renderer.root,
   });
-  /*
+
   const t3 = renderer.createNode({
     x: 800,
     y: 100,
     width: 250,
-    height: 500,
+    height: 250,
+    color: 0xffffff00,
     shader: renderer.createShader('DynamicShader', {
       effects: [
+        {
+          type: 'radialProgress',
+          props: {
+            progress: 1,
+            color: 0x000000ff,
+            range: degToRad(180),
+          },
+        },
+        {
+          type: 'radialProgress',
+          props: {
+            progress: 0.2,
+            range: degToRad(180),
+          },
+        },
         {
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
-            stops: [0.2, 0.3],
-            colors: [
-              0xff0000ff, 0x00ff00ff, 0xff0000ff, 0x0000ffff, 0xffff00ff,
-              0xff0000ff,
-            ],
-          },
-        },
-        {
-          type: 'radius',
-          props: {
-            radius: 50,
+            colors: [0xff0000ff, 0x00ff00ff],
           },
         },
       ],
@@ -110,22 +121,32 @@ export default async function ({ renderer }: ExampleSettings) {
     x: 1100,
     y: 100,
     width: 250,
-    height: 500,
-    color: 0x0000ffff,
+    height: 250,
+    color: 0xffffff00,
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          type: 'borderRight',
+          type: 'radialProgress',
           props: {
-            width: 30,
-            color: 0xff00ffff,
+            progress: 1,
+            color: 0x000000ff,
+            offset: -degToRad(120),
+            range: degToRad(240),
           },
         },
         {
-          type: 'borderLeft',
+          type: 'radialProgress',
           props: {
-            width: 15,
-            color: 0xff00ffff,
+            progress: 0.2,
+            offset: -degToRad(120),
+            range: degToRad(240),
+          },
+        },
+        {
+          type: 'linearGradient',
+          props: {
+            angle: degToRad(90),
+            colors: [0xff0000ff, 0x00ff00ff],
           },
         },
       ],
@@ -137,77 +158,40 @@ export default async function ({ renderer }: ExampleSettings) {
     x: 1400,
     y: 100,
     width: 250,
-    height: 500,
-    color: 0xff0000ff,
+    height: 250,
+    color: 0xffffff00,
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          type: 'linearGradient',
+          type: 'radialProgress',
           props: {
-            angle: degToRad(180),
-            stops: [0.4, 0.8],
-            colors: [0x0000ffff, 0x00000000],
+            progress: 1,
+            color: 0x000000ff,
+            width: 30,
+            offset: -degToRad(120),
+            range: degToRad(240),
+          },
+        },
+        {
+          type: 'radialProgress',
+          props: {
+            progress: 0.2,
+            width: 30,
+            offset: -degToRad(120),
+            range: degToRad(240),
           },
         },
         {
           type: 'linearGradient',
           props: {
-            angle: degToRad(-90),
-            stops: [0.1, 0.75],
-            colors: [0x0000ffff, 0x00000000],
+            angle: degToRad(90),
+            colors: [0xff0000ff, 0x00ff00ff],
           },
         },
       ],
     }),
     parent: renderer.root,
   });
-
-  const t6 = renderer.createNode({
-    x: 200,
-    y: 700,
-    width: 750,
-    height: 250,
-    color: 0xff0000ff,
-    shader: renderer.createShader('DynamicShader', {
-      effects: [
-        {
-          type: 'radius',
-          props: {
-            radius: 100,
-          },
-        },
-        {
-          type: 'fadeOut',
-          props: {
-            fade: [200, 100, 0, 0],
-          },
-        },
-      ],
-    }),
-    parent: renderer.root,
-  });
-
-  const t7 = renderer.createNode({
-    x: 1000,
-    y: 700,
-    width: 750,
-    height: 250,
-    shader: renderer.createShader('DynamicShader', {
-      effects: [
-        {
-          type: 'radialGradient',
-          props: {
-            colors: [0xff0000ff, 0x00ff00ff, 0x00000000],
-            stops: [0.1, 0.4, 1.0],
-            height: 200,
-            width: 1000,
-            pivot: [0, 0.5],
-          },
-        },
-      ],
-    }),
-    parent: renderer.root,
-  });*/
 
   console.log('ready!');
 }

@@ -115,6 +115,7 @@ export class DynamicShader extends WebGlCoreShader {
     effectContructors: Partial<EffectMap>,
   ) {
     const shader = DynamicShader.createShader(props, effectContructors);
+    console.log('sad', shader.fragment);
     super({
       renderer,
       attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
@@ -362,7 +363,7 @@ export class DynamicShader extends WebGlCoreShader {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
         props: effectContructors![effect.type]!.resolveDefaults(
-          effect.props || {},
+          (effect.props || {}) as any,
         ),
       })) as MapEffectDescs<keyof EffectMap>[],
       $dimensions: {

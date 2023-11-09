@@ -62,7 +62,7 @@ export interface RadialProgressEffectProps extends DefaultEffectProps {
    *
    * @default 1
    */
-  // radius?: number;
+  radius?: number;
   /**
    * Color of the border in 0xRRGGBBAA
    *
@@ -91,7 +91,7 @@ export class RadialProgressEffect extends ShaderEffect {
       offset: props.offset ?? 0,
       range: props.range ?? Math.PI * 2,
       rounded: props.rounded ?? false,
-      // radius: props.radius ?? 1,
+      radius: props.radius ?? 1,
       color: props.color ?? 0xffffffff,
     };
   }
@@ -125,6 +125,11 @@ export class RadialProgressEffect extends ShaderEffect {
         return value ? 1 : 0;
       },
     },
+    radius: {
+      value: 1,
+      method: 'uniform1f',
+      type: 'float',
+    },
     color: {
       value: 0xffffffff,
       validator: (rgba): number[] => getNormalizedRgbaComponents(rgba),
@@ -152,27 +157,27 @@ export class RadialProgressEffect extends ShaderEffect {
   };
 
   static override onEffectMask = `
-    float outerRadius = u_dimensions.y * 0.5;
+    float outerRadius = radius * u_dimensions.y * 0.5;
 
-    float endAngle = range * progress;
+    float endAngle = range * progress - 0.0005;
 
     vec2 uv = v_textureCoordinate.xy * u_dimensions.xy - u_dimensions * 0.5;
 
     uv = $rotateUV(uv, -(offset));
-    float linewidth = 50. * u_pixelRatio;
+    float linewidth = width * u_pixelRatio;
     float circle = length(uv) - (outerRadius - linewidth) ;
     circle = abs(circle) - linewidth;
     circle = clamp(-circle, 0.0, 1.0);
 
     float angle = (atan(uv.x, -uv.y) / 3.14159265359 * 0.5);
-    float p2 = endAngle / (PI * 2.);
-    circle *= step(fract(angle), fract(p2));
+    float p = endAngle / (PI * 2.);
 
+    circle *= step(fract(angle), fract(p));
 
     circle = rounded < 1. ? circle : max(circle, $drawDot(uv, vec2(0, outerRadius - linewidth), linewidth));
     circle = rounded < 1. ? circle : max(circle, $drawDot($rotateUV(uv, -(endAngle)), vec2(0, outerRadius - linewidth), linewidth));
 
-    return maskColor * circle;
+    return mix(shaderColor, maskColor, circle);
   `;
 
   static override onColorize = `
