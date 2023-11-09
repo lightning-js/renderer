@@ -115,7 +115,6 @@ export class DynamicShader extends WebGlCoreShader {
     effectContructors: Partial<EffectMap>,
   ) {
     const shader = DynamicShader.createShader(props, effectContructors);
-    console.log('sad', shader.fragment);
     super({
       renderer,
       attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
