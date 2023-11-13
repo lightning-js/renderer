@@ -48,13 +48,11 @@ type ICoreTextNode = Omit<
 export class CoreTextNode extends CoreNode implements ICoreTextNode {
   textRenderer: TextRenderer;
   trState: TextRendererState;
-  updateScheduled: boolean;
   private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
     null;
 
   constructor(stage: Stage, props: CoreTextNodeProps) {
     super(stage, props);
-    this.updateScheduled = false;
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
       this.resolveTextRendererAndState(
@@ -67,8 +65,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           color: props.color,
           zIndex: props.zIndex,
           contain: props.contain,
-          scaleX: props.scaleX,
-          scaleY: props.scaleY,
           scrollable: props.scrollable,
           scrollY: props.scrollY,
           offsetY: props.offsetY,
@@ -128,7 +124,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override set width(value: number) {
     this.textRenderer.set.width(this.trState, value);
-    this.updateText();
   }
 
   override get height(): number {
@@ -137,7 +132,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override set height(value: number) {
     this.textRenderer.set.height(this.trState, value);
-    this.updateText();
   }
 
   override get color(): number {
@@ -146,7 +140,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override set color(value: number) {
     this.textRenderer.set.color(this.trState, value);
-    this.updateText();
   }
 
   get text(): string {
@@ -155,7 +148,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
-    this.updateText();
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -177,7 +169,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set fontSize(value: CoreTextNodeProps['fontSize']) {
     this.textRenderer.set.fontSize(this.trState, value);
-    this.updateText();
   }
 
   get fontFamily(): CoreTextNodeProps['fontFamily'] {
@@ -186,7 +177,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set fontFamily(value: CoreTextNodeProps['fontFamily']) {
     this.textRenderer.set.fontFamily(this.trState, value);
-    this.updateText();
   }
 
   get fontStretch(): CoreTextNodeProps['fontStretch'] {
@@ -195,7 +185,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set fontStretch(value: CoreTextNodeProps['fontStretch']) {
     this.textRenderer.set.fontStretch(this.trState, value);
-    this.updateText();
   }
 
   get fontStyle(): CoreTextNodeProps['fontStyle'] {
@@ -204,7 +193,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set fontStyle(value: CoreTextNodeProps['fontStyle']) {
     this.textRenderer.set.fontStyle(this.trState, value);
-    this.updateText();
   }
 
   get fontWeight(): CoreTextNodeProps['fontWeight'] {
@@ -213,7 +201,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set fontWeight(value: CoreTextNodeProps['fontWeight']) {
     this.textRenderer.set.fontWeight(this.trState, value);
-    this.updateText();
   }
 
   get textAlign(): CoreTextNodeProps['textAlign'] {
@@ -222,7 +209,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set textAlign(value: CoreTextNodeProps['textAlign']) {
     this.textRenderer.set.textAlign(this.trState, value);
-    this.updateText();
   }
 
   get contain(): CoreTextNodeProps['contain'] {
@@ -231,7 +217,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set contain(value: CoreTextNodeProps['contain']) {
     this.textRenderer.set.contain(this.trState, value);
-    this.updateText();
   }
 
   get scrollable(): CoreTextNodeProps['scrollable'] {
@@ -240,7 +225,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set scrollable(value: CoreTextNodeProps['scrollable']) {
     this.textRenderer.set.scrollable(this.trState, value);
-    this.updateText();
   }
 
   get scrollY(): CoreTextNodeProps['scrollY'] {
@@ -249,7 +233,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set scrollY(value: CoreTextNodeProps['scrollY']) {
     this.textRenderer.set.scrollY(this.trState, value);
-    this.updateText();
   }
 
   get offsetY(): CoreTextNodeProps['offsetY'] {
@@ -258,7 +241,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set offsetY(value: CoreTextNodeProps['offsetY']) {
     this.textRenderer.set.offsetY(this.trState, value);
-    this.updateText();
   }
 
   get letterSpacing(): CoreTextNodeProps['letterSpacing'] {
@@ -267,7 +249,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set letterSpacing(value: CoreTextNodeProps['letterSpacing']) {
     this.textRenderer.set.letterSpacing(this.trState, value);
-    this.updateText();
   }
 
   get debug(): CoreTextNodeProps['debug'] {
@@ -276,7 +257,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set debug(value: CoreTextNodeProps['debug']) {
     this.textRenderer.set.debug(this.trState, value);
-    this.updateText();
   }
 
   override update(delta: number) {
@@ -287,22 +267,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     // globalTransform is updated in super.update(delta)
     this.textRenderer.set.x(this.trState, this.globalTransform.tx);
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
-
-    if (this.trState.status === 'loading') {
-      // Update the text state now
-      this.textRenderer.updateState(this.trState);
-    }
-  }
-
-  private updateText() {
-    if (this.updateScheduled) {
-      return;
-    }
-    this.updateScheduled = true;
-    queueMicrotask(() => {
-      this.updateScheduled = false;
-      this.textRenderer.updateState(this.trState);
-    });
   }
 
   override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
@@ -343,26 +307,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
       });
     }
 
-    // Forward basic status events from the text renderer state
-    textRendererState.emitter.on('loading', () => {
-      // This event will be fired only once between the `loading` and `loaded`
-      // event ONLY if the font is not already loaded
-      textRendererState.emitter.once('fontLoaded', () => {
-        // When it's fired we must run update to make sure the text renders
-        this.updateText();
-      });
-
-      textRendererState.emitter.once('loaded', () => {
-        // Make sure we stop listening for fontLoaded events
-        textRendererState.emitter.off('fontLoaded');
-      });
-    });
-
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);
-    this.updateText();
-
-    // TODO: Handle text renderer errors
+    resolvedTextRenderer.scheduleUpdateState(textRendererState);
 
     return {
       resolvedTextRenderer,

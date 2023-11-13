@@ -36,6 +36,15 @@ const commonTextProps = {
   fontSize: 50,
 } satisfies Partial<ITextNodeWritableProps>;
 
+/**
+ * This test is to ensure that text that starts offscreen and moves onscreen
+ * is rendered correctly.
+ *
+ * This test was designed around the following bug report:
+ * https://github.com/lightning-js/renderer/issues/50
+ *
+ * @param param0
+ */
 export default async function ({ renderer, testName }: ExampleSettings) {
   const pageContainer = new PageContainer(renderer, {
     width: renderer.settings.appWidth,
@@ -51,6 +60,8 @@ export default async function ({ renderer, testName }: ExampleSettings) {
   pageContainer.pushPage(createTestCase(renderer, 'canvas', 'none'));
   pageContainer.pushPage(createTestCase(renderer, 'canvas', 'width'));
   pageContainer.pushPage(createTestCase(renderer, 'canvas', 'both'));
+
+  await delay(200);
   pageContainer.finalizePages();
 
   pageContainer.bindWindowKeys();
@@ -97,4 +108,8 @@ function createTestCase(
     offscreenStartText.x = renderer.settings.appWidth / 2;
     offscreenStartText.y = renderer.settings.appHeight / 2;
   };
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
