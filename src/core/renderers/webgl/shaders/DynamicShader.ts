@@ -37,6 +37,7 @@ import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
 import { GlitchEffect } from './effects/GlitchEffect.js';
 import { FadeOutEffect } from './effects/FadeOutEffect.js';
 import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
+import { RadialProgressEffect } from './effects/RadialProgressEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 
 /**
@@ -95,6 +96,7 @@ const Effects = {
   radialGradient: RadialGradientEffect,
   grayscale: GrayscaleEffect,
   glitch: GlitchEffect,
+  radialProgress: RadialProgressEffect,
 };
 
 export interface SpecificEffectDesc<
@@ -360,7 +362,7 @@ export class DynamicShader extends WebGlCoreShader {
       effects: (props.effects ?? []).map((effect) => ({
         type: effect.type,
         props: effectContructors![effect.type]!.resolveDefaults(
-          effect.props || {},
+          (effect.props || {}) as any,
         ),
       })) as MapEffectDescs<keyof EffectMap>[],
       $dimensions: {
