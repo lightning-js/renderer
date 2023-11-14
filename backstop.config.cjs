@@ -38,12 +38,6 @@ const overrideConfig = [
   },
 ];
 
-// Retrieve the 'port' command line argument if it's provided, or use the default value.
-// Example: $ npm run backstop 5178
-const port = () => {
-  return process.argv.filter((v) => /\d{4}/.test(v))[0] || '5174';
-};
-
 // Check for additional override configuration specific to a given test file.
 const getConfigByFileName = (file, override) => {
   for (const entry of override) {
@@ -70,7 +64,7 @@ const resolveScenarios = (path, ignore) => {
 
       return {
         label: fileName.replace('-', ' '),
-        url: `http://localhost:${port()}/?test=${fileName}`,
+        url: `http://localhost:50535/?test=${fileName}`,
         readyEvent: 'ready!',
         misMatchThreshold: 0.1,
         ...getConfigByFileName(file, overrideConfig),
