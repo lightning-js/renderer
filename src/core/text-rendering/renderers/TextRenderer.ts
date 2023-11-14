@@ -43,6 +43,11 @@ export interface TextRendererMap {}
 
 export interface TextRendererState {
   props: TrProps;
+  /**
+   * Whether or not the text renderer state is scheduled to be updated
+   * via queueMicrotask.
+   */
+  updateScheduled: boolean;
   status: 'initialState' | 'loading' | 'loaded' | 'failed';
   /**
    * Event emitter for the text renderer
@@ -199,14 +204,6 @@ export interface TrProps extends TrFontProps {
   width: number;
   height: number;
   /**
-   * X-Axis scaling factor for text
-   */
-  scaleX: number;
-  /**
-   * Y-Axis scaling factor for text
-   */
-  scaleY: number;
-  /**
    * Whether or not the text is scrollable
    *
    * @remarks
@@ -289,12 +286,6 @@ const trPropSetterDefaults: TrPropSetters = {
   fontSize: (state, value) => {
     state.props.fontSize = value;
   },
-  scaleX: (state, value) => {
-    state.props.scaleX = value;
-  },
-  scaleY: (state, value) => {
-    state.props.scaleY = value;
-  },
   text: (state, value) => {
     state.props.text = value;
   },
@@ -343,10 +334,26 @@ export abstract class TextRenderer<
   readonly set: Readonly<TrPropSetters<StateT>>;
 
   constructor(protected stage: Stage) {
-    this.set = Object.freeze({
+    const propSetters = {
       ...trPropSetterDefaults,
       ...this.getPropertySetters(),
-    });
+    };
+    // For each prop setter add a wrapper method that checks if the prop is
+    // different before calling the setter
+    this.set = Object.freeze(
+      Object.fromEntries(
+        Object.entries(propSetters).map(([key, setter]) => {
+          return [
+            key as keyof TrProps,
+            (state: StateT, value: TrProps[keyof TrProps]) => {
+              if (state.props[key as keyof TrProps] !== value) {
+                setter(state, value as never);
+              }
+            },
+          ];
+        }),
+      ),
+    ) as typeof this.set;
   }
 
   setStatus(state: StateT, status: StateT['status'], error?: Error) {
@@ -391,6 +398,27 @@ export abstract class TextRenderer<
   abstract addFontFace(fontFace: TrFontFace): void;
 
   abstract createState(props: TrProps): StateT;
+
+  /**
+   * Schedule a state update via queueMicrotask
+   *
+   * @remarks
+   * This method is used to schedule a state update via queueMicrotask. This
+   * method should be called whenever a state update is needed, and it will
+   * ensure that the state is only updated once per microtask.
+   * @param state
+   * @returns
+   */
+  scheduleUpdateState(state: StateT): void {
+    if (state.updateScheduled) {
+      return;
+    }
+    state.updateScheduled = true;
+    queueMicrotask(() => {
+      state.updateScheduled = false;
+      this.updateState(state);
+    });
+  }
 
   abstract updateState(state: StateT): void;
 

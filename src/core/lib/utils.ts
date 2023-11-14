@@ -88,22 +88,48 @@ export interface Bound {
   y2: number;
 }
 
-export function intersectBound(a: Bound, b: Bound): Bound {
-  const intersection = {
-    x1: Math.max(a.x1, b.x1),
-    y1: Math.max(a.y1, b.y1),
-    x2: Math.min(a.x2, b.x2),
-    y2: Math.min(a.y2, b.y2),
-  };
+export interface BoundWithValid extends Bound {
+  valid: boolean;
+}
+
+export function createBound<T extends Bound = Bound>(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  out?: T,
+): T {
+  if (out) {
+    out.x1 = x1;
+    out.y1 = y1;
+    out.x2 = x2;
+    out.y2 = y2;
+    return out;
+  }
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+  } as T;
+}
+
+export function intersectBound<T extends Bound = Bound>(
+  a: Bound,
+  b: Bound,
+  out?: T,
+): T {
+  const intersection = createBound(
+    Math.max(a.x1, b.x1),
+    Math.max(a.y1, b.y1),
+    Math.min(a.x2, b.x2),
+    Math.min(a.y2, b.y2),
+    out,
+  );
   if (intersection.x1 < intersection.x2 && intersection.y1 < intersection.y2) {
     return intersection;
   }
-  return {
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 0,
-  };
+  return createBound(0, 0, 0, 0, intersection);
 }
 
 export function intersectRect(a: Rect, b: Rect): Rect {
