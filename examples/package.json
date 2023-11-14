@@ -7,6 +7,7 @@
   "scripts": {
     "start": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:dev\"",
     "start:prod": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
+    "start:test": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"vite --port 50535 --open\"",
     "dev": "vite --open",
     "build": "vite build",
     "watch": "vite build --watch",

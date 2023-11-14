@@ -13,12 +13,13 @@
   "scripts": {
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
+    "start:test": "cd examples && pnpm start:test",
     "build": "tsc --build",
     "watch": "tsc --build --watch",
     "test": "vitest",
-    "backstop": "backstop test --config='backstop.config.cjs'",
+    "backstop": "concurrently -c \"auto\" \"pnpm start:test\" \"npx wait-port 50535 && backstop test --config='backstop.config.cjs'\"",
+    "backstop:update": "concurrently -c \"auto\" \"pnpm start:test\" \"npx wait-port 50535 && backstop reference --config='backstop.config.cjs'\"",
     "test:ci": "(npm run serve&) && npm run backstop",
-    "backstop:update": "backstop reference --config='backstop.config.cjs'",
     "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
     "lint:fix": "pnpm run lint:fix:prettier && pnpm run lint:fix:eslint",
     "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
@@ -59,7 +60,8 @@
     "prettier": "^2.8.4",
     "typedoc": "^0.25.1",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.2"
+    "vitest": "^0.34.2",
+    "wait-port": "^1.1.0"
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.4",
