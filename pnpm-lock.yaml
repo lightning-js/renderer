@@ -15,6 +15,9 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.39.0
+        version: 1.39.0
       '@types/node':
         specifier: ^18.14.6
         version: 18.18.6
@@ -411,6 +414,14 @@ packages:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.15.0
+    dev: true
+
+  /@playwright/test@1.39.0:
+    resolution: {integrity: sha512-3u1iFqgzl7zr004bGPYiN/5EZpRUSFddQBra8Rqll5N0/vfpqlP9I9EXqAoGacuAbX6c9Ulg/Cjqglp5VkK6UQ==}
+    engines: {node: '>=16'}
+    hasBin: true
+    dependencies:
+      playwright: 1.39.0
     dev: true
 
   /@protobufjs/eventemitter@1.1.0:
