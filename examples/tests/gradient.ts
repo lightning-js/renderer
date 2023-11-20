@@ -19,7 +19,7 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const elements = [
     'colorTl',
     'colorTr',
@@ -40,7 +40,7 @@ export default async function ({ renderer }: ExampleSettings) {
       height: 250,
       color: 0x000000ff,
       [element]: 0xff0000ff,
-      parent: renderer.root,
+      parent: testRoot,
     });
   });
 
