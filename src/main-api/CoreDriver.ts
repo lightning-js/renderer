@@ -33,7 +33,7 @@ import type { RendererMain, RendererMainSettings } from './RendererMain.js';
  * that implement this interface to support both the single-threaded and
  * multi-threaded Core modes.
  */
-export interface IRenderDriver {
+export interface CoreDriver {
   init(
     rendererMain: RendererMain,
     rendererSettings: Required<RendererMainSettings>,
