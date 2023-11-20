@@ -99,6 +99,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
         devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
         clearColor: rendererSettings.clearColor,
         coreExtensionModule: rendererSettings.coreExtensionModule,
+        pauseRaf: rendererSettings.pauseRaf,
       } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;

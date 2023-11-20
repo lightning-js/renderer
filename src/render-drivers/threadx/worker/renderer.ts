@@ -72,6 +72,7 @@ const threadx = ThreadX.init({
         debug: {
           monitorTextureCache: false,
         },
+        pauseRaf: message.pauseRaf,
       });
 
       const coreRootNode = stage.root;

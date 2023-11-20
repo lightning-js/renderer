@@ -199,6 +199,13 @@ export interface RendererMainSettings {
    */
   experimental_FinalizationRegistryTextureUsageTracker?: boolean;
 
+  /**
+   * Pause the render loop if there are no scene updates
+   *
+   * @defaultValue `true`
+   */
+  pauseRaf?: boolean;
+
   textureCleanupOptions?: ManualCountTextureUsageTrackerOptions;
 }
 
@@ -265,6 +272,7 @@ export class RendererMain {
       experimental_FinalizationRegistryTextureUsageTracker:
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
+      pauseRaf: settings.pauseRaf ?? true,
     };
     this.settings = resolvedSettings;
 

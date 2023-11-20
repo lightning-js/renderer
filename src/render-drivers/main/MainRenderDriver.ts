@@ -54,6 +54,7 @@ export class MainRenderDriver implements IRenderDriver {
       debug: {
         monitorTextureCache: false,
       },
+      pauseRaf: rendererSettings.pauseRaf,
     });
     this.rendererMain = rendererMain;
     assertTruthy(this.stage.root);

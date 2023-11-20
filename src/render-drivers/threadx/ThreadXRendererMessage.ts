@@ -43,6 +43,7 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   devicePhysicalPixelRatio: number;
   clearColor: number;
   coreExtensionModule: string | null;
+  pauseRaf: boolean;
 }
 
 /**
