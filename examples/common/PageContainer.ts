@@ -20,6 +20,7 @@
 import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
 import { Component } from './Component.js';
 import { loadStorage, saveStorage } from '../common/LocalStorage.js';
+import type { ExampleSettings } from './ExampleSettings.js';
 
 interface PageContainerLocalStorageData {
   curPage: number;
@@ -37,7 +38,6 @@ interface PageContainerProps {
   color?: number;
 
   //
-  testName?: string;
   title?: string;
 }
 
@@ -47,16 +47,17 @@ export class PageContainer extends Component {
   private curPageNode: INode | null = null;
   private curPageIndex = -1;
   private pageConstructors: ((page: INode) => Promise<void>)[] = [];
-  private testName?: string;
+  private settings: ExampleSettings;
 
-  constructor(renderer: RendererMain, props: PageContainerProps) {
+  constructor(settings: ExampleSettings, props: PageContainerProps) {
+    const { renderer } = settings;
     super(renderer, {
       x: props.x,
       y: props.y,
       color: props.color ?? 0x00000000,
       width: props.width,
       height: props.height,
-      parent: props.parent,
+      parent: props.parent ? props.parent : settings.testRoot,
     });
 
     this.titleNode = renderer.createTextNode({
@@ -64,18 +65,18 @@ export class PageContainer extends Component {
       fontSize: TITLE_FONT_SIZE,
       x: PADDING,
       y: PADDING,
-      parent: renderer.root,
+      parent: this.node,
       text: props.title ?? '',
     });
 
-    this.testName = props.testName;
+    this.settings = settings;
 
     this.pageNumberNode = renderer.createTextNode({
       fontFamily: 'Ubuntu',
       fontSize: 30,
       x: PADDING,
       y: this.node.height - 30 - PADDING,
-      parent: renderer.root,
+      parent: this.node,
     });
   }
 
@@ -85,9 +86,9 @@ export class PageContainer extends Component {
 
   finalizePages() {
     if (this.curPageIndex === -1 && this.pageConstructors.length > 0) {
-      const { testName } = this;
+      const { automation, testName } = this.settings;
       let pageNum = 0;
-      if (testName) {
+      if (!automation) {
         const savedState = loadStorage<PageContainerLocalStorageData>(
           `${testName}-PageContainer`,
         );
@@ -98,6 +99,7 @@ export class PageContainer extends Component {
         ) {
           pageNum = savedState.curPage;
         }
+        this.bindWindowKeys();
       }
       this.setPage(pageNum).catch(console.error);
     }
@@ -123,8 +125,8 @@ export class PageContainer extends Component {
       parent: this.node,
     });
 
-    const { testName } = this;
-    if (testName) {
+    const { automation, testName } = this.settings;
+    if (!automation) {
       saveStorage<PageContainerLocalStorageData>(`${testName}-PageContainer`, {
         curPage: pageIndex,
       });
@@ -134,7 +136,20 @@ export class PageContainer extends Component {
     await this.pageConstructors[pageIndex]!(this.curPageNode);
   }
 
-  bindWindowKeys() {
+  /**
+   * Performs an automation run of all the pages in this container.
+   */
+  async snapshotPages() {
+    if (!this.settings.automation) {
+      throw new Error('Cannot snapshot pages when not in automation mode');
+    }
+    for (let i = 0; i < this.pageConstructors.length; i++) {
+      await this.setPage(i);
+      await this.settings.snapshot();
+    }
+  }
+
+  private bindWindowKeys() {
     window.addEventListener('keydown', (e) => {
       const numPages = this.pageConstructors.length;
       if (e.key === 'ArrowLeft') {

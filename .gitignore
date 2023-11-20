@@ -6,6 +6,7 @@ dist
 dist-cfg
 dist-vitest
 examples/dist-tsc
+visual-regression/failed-results
 build
 releases
 .tmp

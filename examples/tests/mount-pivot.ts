@@ -19,7 +19,7 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const randomColor = () => {
     const randomInt = Math.floor(Math.random() * Math.pow(2, 32));
     const hexString = randomInt.toString(16).padStart(8, '0');
@@ -37,7 +37,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 1920,
     height: 1080,
     color: 0x000000ff,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const x = renderer.createNode({
@@ -46,7 +46,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 1920,
     height: 4,
     color: 0xffffffff,
-    parent: renderer.root,
+    parent: testRoot,
     mountY: 0.5,
   });
 
@@ -56,7 +56,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 4,
     height: 1080,
     color: 0xffffffff,
-    parent: renderer.root,
+    parent: testRoot,
     mountX: 0.5,
   });
 
@@ -73,7 +73,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 500,
     colorBottom: randomColor() * 0xffffffaa,
     colorTop: randomColor() * 0xffffffaa,
-    parent: renderer.root,
+    parent: testRoot,
     shader: renderer.createShader('RoundedRectangle', {
       radius: rnd(10, 50),
     }),

@@ -32,13 +32,13 @@ export function customSettings(
   };
 }
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const screen = renderer.createNode({
     x: 0,
     y: 0,
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    parent: renderer.root,
+    parent: testRoot,
     color: 0xff00ffff,
   });
 

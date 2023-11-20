@@ -16,6 +16,7 @@
     "build": "tsc --build",
     "watch": "tsc --build --watch",
     "test": "vitest",
+    "test:visual": "cd visual-regression && pnpm test:visual",
     "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
     "lint:fix": "pnpm run lint:fix:prettier && pnpm run lint:fix:eslint",
     "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
@@ -24,7 +25,8 @@
     "lint:fix:eslint": "eslint --fix .",
     "typedoc": "typedoc",
     "prepare": "husky install",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "node-version": "node --version"
   },
   "repository": {
     "type": "git",
@@ -80,6 +82,7 @@
   "packageManager": "pnpm@8.9.2",
   "engines": {
     "npm": "please-use-pnpm",
-    "pnpm": ">= 8.9.2"
+    "pnpm": ">= 8.9.2",
+    "node": ">= 20.9.0"
   }
 }

@@ -22,13 +22,37 @@ import {
   RendererMain,
   ThreadXRenderDriver,
   type IRenderDriver,
-  type LoadedPayload,
+  type NodeLoadedPayload,
   type RendererMainSettings,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type { ExampleSettings } from './common/ExampleSettings.js';
+
+interface TestModule {
+  default: (settings: ExampleSettings) => Promise<void>;
+  customSettings?: (
+    urlParams: URLSearchParams,
+  ) => Partial<RendererMainSettings>;
+  automation?: (settings: ExampleSettings) => Promise<void>;
+}
+
+const getTestPath = (testName: string) => `./tests/${testName}.ts`;
+const testRegex = /\/tests\/(.*)\.ts$/;
+const getTestName = (path: string) => {
+  const match = path.match(testRegex);
+  if (!match) {
+    throw new Error(`Invalid test path: ${path}`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return match[1]!;
+};
+
+const testModules = import.meta.glob('./tests/*.ts') as Record<
+  string,
+  () => Promise<TestModule>
+>;
 
 (async () => {
   // URL params
@@ -38,22 +62,86 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
   // - finalizationRegistry: true | false (default: false)
   //   - Use FinalizationRegistryTextureUsageTracker instead of
   //     ManualCountTextureUsageTracker
+  // - automation: true | false (default: false)
   const urlParams = new URLSearchParams(window.location.search);
-  let driverName = urlParams.get('driver');
-  const test = urlParams.get('test') || 'test';
+  const automation = urlParams.get('automation') === 'true';
+  const test = urlParams.get('test') || (automation ? null : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const module = await import(`./tests/${test}.ts`);
+
+  let driverName = urlParams.get('driver');
+  if (driverName !== 'main' && driverName !== 'threadx') {
+    driverName = 'main';
+  }
+
+  if (test) {
+    await runTest(test, driverName, urlParams, showOverlay);
+    return;
+  }
+  assertTruthy(automation);
+  await runAutomation(driverName);
+})().catch((err) => {
+  console.error(err);
+});
+
+async function runTest(
+  test: string,
+  driverName: string,
+  urlParams: URLSearchParams,
+  showOverlay: boolean,
+) {
+  const testModule = testModules[getTestPath(test)];
+  if (!testModule) {
+    throw new Error(`Test "${test}" not found`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  const module = await testModule();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   const customSettings: Partial<RendererMainSettings> =
     typeof module.customSettings === 'function'
       ? module.customSettings(urlParams)
       : {};
 
-  if (driverName !== 'main' && driverName !== 'threadx') {
-    driverName = 'main';
+  const { renderer, canvas } = await initRenderer(driverName, customSettings);
+
+  if (showOverlay) {
+    const overlayText = renderer.createTextNode({
+      color: 0xff0000ff,
+      text: `Test: ${test} | Driver: ${driverName}`,
+      zIndex: 99999,
+      parent: renderer.root,
+      fontSize: 50,
+    });
+    overlayText.once(
+      'loaded',
+      (target: any, { dimensions }: NodeLoadedPayload) => {
+        overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
+        overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
+      },
+    );
   }
 
+  const exampleSettings: ExampleSettings = {
+    testName: test,
+    renderer,
+    driverName: driverName as 'main' | 'threadx',
+    canvas,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    testRoot: renderer.root!,
+    automation: false,
+    snapshot: async () => {
+      // No-op
+    },
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  await module.default(exampleSettings);
+}
+
+async function initRenderer(
+  driverName: string,
+  customSettings?: Partial<RendererMainSettings>,
+) {
   let driver: IRenderDriver | null = null;
 
   if (driverName === 'main') {
@@ -84,29 +172,67 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
 
   assertTruthy(canvas instanceof HTMLCanvasElement);
 
-  if (showOverlay) {
-    const overlayText = renderer.createTextNode({
-      color: 0xff0000ff,
-      text: `Test: ${test} | Driver: ${driverName}`,
-      zIndex: 99999,
-      parent: renderer.root,
-      fontSize: 50,
-    });
-    overlayText.once('loaded', (target: any, { dimensions }: LoadedPayload) => {
-      overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
-      overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
-    });
+  return { renderer, canvas };
+}
+
+async function runAutomation(driverName: string) {
+  const { renderer, canvas } = await initRenderer(driverName);
+
+  // Iterate through all test modules
+  for (const testPath in testModules) {
+    const testModule = testModules[testPath];
+    const testName = getTestName(testPath);
+    assertTruthy(testModule);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const { automation, customSettings } = await testModule();
+    console.log(`Attempting to run automation for ${testName}...`);
+    if (automation) {
+      console.log(`Running automation for ${testName}...`);
+      if (customSettings) {
+        console.error('customSettings not supported for automation');
+      } else {
+        const testRoot = renderer.createNode({
+          parent: renderer.root,
+          color: 0x00000000,
+        });
+        const exampleSettings: ExampleSettings = {
+          testName,
+          renderer,
+          testRoot,
+          driverName: driverName as 'main' | 'threadx',
+          canvas,
+          automation: true,
+          snapshot: async () => {
+            const snapshot = (window as any).snapshot as
+              | ((testName: string) => Promise<void>)
+              | undefined;
+            if (snapshot) {
+              console.error(`Calling snapshot(${testName})`);
+              await snapshot(testName);
+            } else {
+              console.error(
+                'snapshot() not defined (not running in playwright?)',
+              );
+            }
+          },
+        };
+        await automation(exampleSettings);
+        testRoot.parent = null;
+        testRoot.destroy();
+      }
+    }
   }
+  const doneTests = (window as any).doneTests as
+    | (() => Promise<void>)
+    | undefined;
+  if (doneTests) {
+    console.error('Calling doneTests()');
+    await doneTests();
+  } else {
+    console.error('doneTests() not defined (not running in playwright?)');
+  }
+}
 
-  const exampleSettings: ExampleSettings = {
-    testName: test,
-    renderer,
-    driverName: driverName as 'main' | 'threadx',
-    canvas,
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  await module.default(exampleSettings);
-})().catch((err) => {
-  console.error(err);
-});
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

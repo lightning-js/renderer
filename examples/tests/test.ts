@@ -24,7 +24,7 @@ import spritemap from '../assets/spritemap.png';
 import { Character } from '../common/Character.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
@@ -34,7 +34,7 @@ export default async function ({ renderer }: ExampleSettings) {
     shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const holder = renderer.createNode({
@@ -43,7 +43,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 100,
     height: 100,
     color: 0xff0000ff,
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 0,
     zIndexLocked: 0,
     alpha: 0.5,
@@ -66,7 +66,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 100,
     height: 100,
     color: 0x00ff00ff,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const shaft = renderer.createNode({
@@ -79,7 +79,7 @@ export default async function ({ renderer }: ExampleSettings) {
       width: 210,
       height: renderer.settings.appHeight,
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   /*
@@ -96,7 +96,7 @@ export default async function ({ renderer }: ExampleSettings) {
       width: 1315,
       height: 50,
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const relativePositioningChild = renderer.createNode({
@@ -136,7 +136,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 218,
     src: rocko,
     color: 0xffffffff,
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 1,
   });
 
@@ -147,7 +147,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 268,
     src: elevator,
     color: 0x0000ffff,
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 2,
     alpha: 0.9,
   });
@@ -322,7 +322,7 @@ export default async function ({ renderer }: ExampleSettings) {
         width: 100,
         height: 100,
         color: 0x0000ffff,
-        parent: renderer.root,
+        parent: testRoot,
       });
     }
   }, 500);
@@ -331,7 +331,7 @@ export default async function ({ renderer }: ExampleSettings) {
     if (greenRect.parent) {
       greenRect.parent = null;
     } else {
-      greenRect.parent = renderer.root;
+      greenRect.parent = testRoot;
     }
   }, 1000);
 
@@ -423,8 +423,8 @@ export default async function ({ renderer }: ExampleSettings) {
     contain: 'width',
     textAlign: 'center',
     fontSize: 100,
-    scale: 1, // !!! Scale
-    parent: renderer.root,
+    scale: 1,
+    parent: testRoot,
   });
 
   const noChangeText = renderer.createTextNode({
@@ -439,7 +439,7 @@ export default async function ({ renderer }: ExampleSettings) {
     contain: 'width',
     textAlign: 'center',
     fontSize: 100,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   let count = 1;
