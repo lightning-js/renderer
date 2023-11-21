@@ -309,7 +309,7 @@ export default async function ({ renderer }: ExampleSettings) {
 
   const interval = setInterval(() => {
     redRect.color++;
-  }, 0);
+  }, 100);
 
   setInterval(() => {
     if (blueRect) {
