@@ -300,7 +300,6 @@ export class DynamicShader extends WebGlCoreShader {
       }
 
       const next = effects[i + 1]!;
-      console.log('next', next);
       if (
         next === undefined ||
         effectContructors[next.name as keyof EffectMap]!.onEffectMask
