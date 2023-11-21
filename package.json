@@ -45,18 +45,18 @@
   },
   "homepage": "https://github.com/lightning-js/renderer#readme",
   "devDependencies": {
-    "@types/node": "^18.18.10",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "concurrently": "^8.2.2",
-    "eslint": "^8.54.0",
-    "eslint-config-prettier": "^8.10.0",
+    "@types/node": "^18.14.6",
+    "@typescript-eslint/eslint-plugin": "^5.55.0",
+    "@typescript-eslint/parser": "^5.55.0",
+    "concurrently": "^8.0.1",
+    "eslint": "^8.35.0",
+    "eslint-config-prettier": "^8.7.0",
     "husky": "^8.0.3",
-    "lint-staged": "^13.3.0",
-    "prettier": "^2.8.8",
-    "typedoc": "^0.25.3",
+    "lint-staged": "^13.2.0",
+    "prettier": "^2.8.4",
+    "typedoc": "^0.25.1",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.6"
+    "vitest": "^0.34.2"
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.4",
