@@ -25,21 +25,8 @@ import {
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import { RadiusEffect } from './effects/RadiusEffect.js';
-import { BorderEffect } from './effects/BorderEffect.js';
-import { LinearGradientEffect } from './effects/LinearGradientEffect.js';
-import { GrayscaleEffect } from './effects/GrayscaleEffect.js';
 import { ShaderEffect } from './effects/ShaderEffect.js';
-import { BorderRightEffect } from './effects/BorderRightEffect.js';
-import { BorderTopEffect } from './effects/BorderTopEffect.js';
-import { BorderBottomEffect } from './effects/BorderBottomEffect.js';
-import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
-import { GlitchEffect } from './effects/GlitchEffect.js';
-import { FadeOutEffect } from './effects/FadeOutEffect.js';
-import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
-import { RadialProgressEffect } from './effects/RadialProgressEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
 
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
