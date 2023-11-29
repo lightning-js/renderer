@@ -33,7 +33,7 @@ import type {
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
 
-export class MainRenderDriver implements ICoreDriver {
+export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
   private stage: Stage | null = null;
   private rendererMain: RendererMain | null = null;

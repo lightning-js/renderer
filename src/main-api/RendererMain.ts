@@ -213,7 +213,7 @@ export interface RendererMainSettings {
  *
  * Example:
  * ```ts
- * import { RendererMain, MainRenderDriver } from '@lightningjs/renderer';
+ * import { RendererMain, MainCoreDriver } from '@lightningjs/renderer';
  *
  * // Initialize the Renderer
  * const renderer = new RendererMain(
@@ -222,7 +222,7 @@ export interface RendererMainSettings {
  *     appHeight: 1080
  *   },
  *   'app',
- *   new MainRenderDriver(),
+ *   new MainCoreDriver(),
  * );
  * ```
  */

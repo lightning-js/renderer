@@ -29,7 +29,7 @@ import type { RendererMain, RendererMainSettings } from './RendererMain.js';
  * This interface is to be implemented by Core Drivers
  *
  * @remarks
- * Both the {@link MainRenderDriver} and the {@link ThreadXRenderDriver} exist
+ * Both the {@link MainCoreDriver} and the {@link ThreadXCoreDriver} exist
  * that implement this interface to support both the single-threaded and
  * multi-threaded Core modes.
  */

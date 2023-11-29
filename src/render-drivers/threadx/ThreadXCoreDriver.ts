@@ -46,7 +46,7 @@ export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
 }
 
-export class ThreadXRenderDriver implements ICoreDriver {
+export class ThreadXCoreDriver implements ICoreDriver {
   private settings: ThreadXRendererSettings;
   private threadx: ThreadX;
   private rendererMain: RendererMain | null = null;
