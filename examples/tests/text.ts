@@ -21,7 +21,7 @@ import {
   type ITextNodeWritableProps,
   type TextRendererMap,
   type TrFontFaceMap,
-  type LoadedPayload,
+  type NodeLoadedEventHandler,
 } from '@lightningjs/renderer';
 import { getLoremIpsum } from '../common/LoremIpsum.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -65,7 +65,11 @@ interface LocalStorageData {
 
 const colors = Object.values(Colors);
 
-export default async function ({ testName, renderer }: ExampleSettings) {
+export default async function ({
+  testName,
+  renderer,
+  testRoot,
+}: ExampleSettings) {
   const savedState = loadStorage<LocalStorageData>(testName);
 
   let curMode = savedState?.curMode || 0;
@@ -97,21 +101,21 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     ...initialProps,
     ...getFontProps('msdf'),
     zIndex: 1,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const ssdfTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('ssdf'),
     zIndex: 2,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const canvasTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('web'),
     zIndex: 3,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const statusNode = renderer.createTextNode({
@@ -119,12 +123,12 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     fontSize: 30,
     offsetY: -5,
     zIndex: 100,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
-  statusNode.on('loaded', (target: any, { dimensions }: LoadedPayload) => {
+  statusNode.on('loaded', ((target: any, { dimensions }) => {
     statusNode.x = renderer.settings.appWidth - dimensions.width;
-  });
+  }) satisfies NodeLoadedEventHandler);
 
   function updateStatus() {
     const modeName = modes[curMode];
