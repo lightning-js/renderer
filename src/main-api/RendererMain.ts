@@ -30,7 +30,7 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { CoreDriver } from './CoreDriver.js';
+import type { ICoreDriver } from './ICoreDriver.js';
 import {
   ManualCountTextureUsageTracker,
   type ManualCountTextureUsageTrackerOptions,
@@ -228,7 +228,7 @@ export interface RendererMainSettings {
  */
 export class RendererMain {
   readonly root: INode | null = null;
-  readonly driver: CoreDriver;
+  readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   private nodes: Map<number, INode> = new Map();
@@ -252,7 +252,7 @@ export class RendererMain {
   constructor(
     settings: RendererMainSettings,
     target: string | HTMLElement,
-    driver: CoreDriver,
+    driver: ICoreDriver,
   ) {
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,

@@ -18,7 +18,7 @@
  */
 
 import { assertTruthy } from '../../utils.js';
-import type { CoreDriver } from '../../main-api/CoreDriver.js';
+import type { ICoreDriver } from '../../main-api/ICoreDriver.js';
 import type {
   INode,
   INodeWritableProps,
@@ -33,7 +33,7 @@ import type {
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
 
-export class MainRenderDriver implements CoreDriver {
+export class MainRenderDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
   private stage: Stage | null = null;
   private rendererMain: RendererMain | null = null;

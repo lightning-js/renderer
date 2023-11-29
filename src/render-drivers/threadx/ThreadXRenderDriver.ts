@@ -25,7 +25,7 @@ import type {
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
 import { NodeStruct, type NodeStructWritableProps } from './NodeStruct.js';
-import type { CoreDriver } from '../../main-api/CoreDriver.js';
+import type { ICoreDriver } from '../../main-api/ICoreDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
 import { assertTruthy } from '../../utils.js';
 import type {
@@ -46,7 +46,7 @@ export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
 }
 
-export class ThreadXRenderDriver implements CoreDriver {
+export class ThreadXRenderDriver implements ICoreDriver {
   private settings: ThreadXRendererSettings;
   private threadx: ThreadX;
   private rendererMain: RendererMain | null = null;
