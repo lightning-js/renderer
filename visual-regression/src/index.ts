@@ -37,6 +37,7 @@ import chalk from 'chalk';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { execa, $ } from 'execa';
+import { fileURLToPath } from 'url';
 
 const certifiedSnapshotDir = 'certified-snapshots';
 const failedResultsDir = 'failed-results';
@@ -135,7 +136,7 @@ async function dockerCiMode(): Promise<number> {
   ].join(' ');
 
   // Get the directory of the current file
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const rootDir = path.resolve(__dirname, '..', '..', '..');
 
   const childProc = $({ stdio: 'inherit' })`docker run --network host \
