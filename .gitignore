@@ -6,10 +6,13 @@ dist
 dist-cfg
 dist-vitest
 examples/dist-tsc
+visual-regression/failed-results
+visual-regression/certified-snapshots/*-local
 build
 releases
 .tmp
 .env
 *.tgz
+.pnpm-store
 # This project uses `pnpm` for package management
 package-lock.json

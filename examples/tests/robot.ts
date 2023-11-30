@@ -27,7 +27,7 @@ import robotImg from '../assets/robot/robot.png';
 import shadowImg from '../assets/robot/robot-shadow.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const elevatorBg = renderer.createNode({
     x: 368,
     y: 228,
@@ -35,7 +35,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 214,
     zIndex: 0,
     src: elevatorBgImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const elevatorBg2 = renderer.createNode({
@@ -45,7 +45,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 214,
     zIndex: 0,
     src: elevatorBgImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const doorLeftGround = renderer.createNode({
@@ -55,7 +55,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 194,
     zIndex: 2,
     src: doorLeftGroundImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const doorRightGround = renderer.createNode({
@@ -65,7 +65,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 194,
     zIndex: 2,
     src: doorRightGroundImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const environment = renderer.createNode({
@@ -75,7 +75,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: renderer.settings.appHeight,
     zIndex: 3,
     src: environmentImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const robot = renderer.createNode({
@@ -85,7 +85,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 140,
     zIndex: 5,
     color: 0x00000000,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const shadow = renderer.createNode({
@@ -130,7 +130,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 129,
     zIndex: 4,
     src: doorTopTopImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const doorBottomTop = renderer.createNode({
@@ -140,7 +140,7 @@ export default async function ({ renderer }: ExampleSettings) {
     height: 129,
     zIndex: 4,
     src: doorBottomTopImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

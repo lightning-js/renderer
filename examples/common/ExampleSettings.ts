@@ -17,11 +17,43 @@
  * limitations under the License.
  */
 
-import type { Dimensions, RendererMain } from '@lightningjs/renderer';
+import type { INode, RendererMain } from '@lightningjs/renderer';
 
 export interface ExampleSettings {
+  /**
+   * Name of the test being run.
+   */
   testName: string;
+  /**
+   * Renderer instance
+   */
   renderer: RendererMain;
+  /**
+   * Core Driver being used by the test.
+   */
   driverName: 'main' | 'threadx';
-  canvas: HTMLCanvasElement;
+  /**
+   * The HTML Element that the Renderer's canvas is a child of
+   */
+  appElement: HTMLDivElement;
+  /**
+   * Renderer Node that all tests should use as their root node.
+   *
+   * @remarks
+   * Tests should NEVER use the `renderer.root` node as this will prevent the
+   * automation mode from being able to clean up after each test.
+   */
+  testRoot: INode;
+  /**
+   * Whether the test is being run in automation mode.
+   */
+  automation: boolean;
+  /**
+   * If the test is run in automation mode, this method will take a visual
+   * snapshot of the current state of the renderer's canvas for the Visual
+   * Regression Test Runner.
+   *
+   * This method will be a no-op if the test is not run in automation mode.
+   */
+  snapshot(): Promise<void>;
 }

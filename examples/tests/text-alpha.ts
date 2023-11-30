@@ -20,7 +20,6 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForTextDimensions } from '../common/utils.js';
 import type {
   INodeWritableProps,
   ITextNodeWritableProps,
@@ -35,19 +34,24 @@ const NODE_PROPS = {
   x: containerSize / 2,
   y: containerSize / 2,
   color: 0x000000ff,
-  text: 'abc',
+  text: 'xyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
 } satisfies Partial<ITextNodeWritableProps>;
 
-export default async function ({ testName, renderer }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
+
+export default async function test(settings: ExampleSettings) {
+  const { renderer, testRoot } = settings;
+  const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    parent: renderer.root,
+    parent: testRoot,
     title: 'Text Alpha',
-    testName,
   });
 
   await paginateTestRows(pageContainer, [
@@ -55,7 +59,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     ...generateAlphaTest(renderer, 'canvas'),
   ]);
 
-  pageContainer.bindWindowKeys();
+  return pageContainer;
 }
 
 function generateAlphaTest(

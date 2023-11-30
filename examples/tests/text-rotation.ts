@@ -27,11 +27,32 @@ import type {
 } from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
+
+export default async function test(settings: ExampleSettings) {
+  const { renderer } = settings;
+  const pageContainer = new PageContainer(settings, {
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
+    title: 'Text Rotation',
+  });
+
+  await paginateTestRows(pageContainer, [
+    ...generateRotationTest(renderer, 'sdf'),
+    ...generateRotationTest(renderer, 'canvas'),
+  ]);
+
+  return pageContainer;
+}
+
 const NODE_PROPS = {
   x: 100,
   y: 100,
   color: 0x000000ff,
-  text: 'abc',
+  text: 'xyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
@@ -176,21 +197,4 @@ function generateRotationTest(
       },
     },
   ] satisfies TestRow[];
-}
-
-export default async function ({ testName, renderer }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
-    parent: renderer.root,
-    title: 'Text Rotation',
-    testName,
-  });
-
-  await paginateTestRows(pageContainer, [
-    ...generateRotationTest(renderer, 'sdf'),
-    ...generateRotationTest(renderer, 'canvas'),
-  ]);
-
-  pageContainer.bindWindowKeys();
 }

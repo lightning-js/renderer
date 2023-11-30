@@ -25,16 +25,10 @@ import type {
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { PageContainer } from '../common/PageContainer.js';
 
-const commonTextProps = {
-  mount: 0.5,
-  width: 400,
-  height: 400,
-  contain: 'none',
-  text: 'Test passes if this text appears only as green',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'canvas',
-  fontSize: 50,
-} satisfies Partial<ITextNodeWritableProps>;
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
 
 /**
  * This test is to ensure that text that starts offscreen and moves onscreen
@@ -45,13 +39,12 @@ const commonTextProps = {
  *
  * @param param0
  */
-export default async function ({ renderer, testName }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
+export default async function test(settings: ExampleSettings) {
+  const { renderer } = settings;
+  const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    parent: renderer.root,
     title: 'Text Offscreen Move Tests',
-    testName,
   });
 
   pageContainer.pushPage(createTestCase(renderer, 'sdf', 'none'));
@@ -63,9 +56,19 @@ export default async function ({ renderer, testName }: ExampleSettings) {
 
   await delay(200);
   pageContainer.finalizePages();
-
-  pageContainer.bindWindowKeys();
+  return pageContainer;
 }
+
+const commonTextProps = {
+  mount: 0.5,
+  width: 400,
+  height: 400,
+  contain: 'none',
+  text: 'Test passes if this text appears only as green',
+  fontFamily: 'Ubuntu',
+  textRendererOverride: 'canvas',
+  fontSize: 50,
+} satisfies Partial<ITextNodeWritableProps>;
 
 function createTestCase(
   renderer: RendererMain,

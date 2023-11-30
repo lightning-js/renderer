@@ -27,11 +27,37 @@ import type {
 } from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
+
+export default async function test(settings: ExampleSettings) {
+  const { renderer, testRoot } = settings;
+  const pageContainer = new PageContainer(settings, {
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
+    parent: testRoot,
+    title: 'Text Scaling',
+  });
+
+  await paginateTestRows(pageContainer, [
+    ...generateScalingTest(renderer, 'sdf', 'scale'),
+    ...generateScalingTest(renderer, 'sdf', 'scaleX'),
+    ...generateScalingTest(renderer, 'sdf', 'scaleY'),
+    ...generateScalingTest(renderer, 'canvas', 'scale'),
+    ...generateScalingTest(renderer, 'canvas', 'scaleX'),
+    ...generateScalingTest(renderer, 'canvas', 'scaleY'),
+  ]);
+
+  return pageContainer;
+}
+
 const NODE_PROPS = {
   x: 100,
   y: 100,
   color: 0x000000ff,
-  text: 'abc',
+  text: 'xyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
@@ -236,25 +262,4 @@ function generateScalingTest(
       },
     },
   ] satisfies TestRow[];
-}
-
-export default async function ({ testName, renderer }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
-    parent: renderer.root,
-    title: 'Text Scaling',
-    testName,
-  });
-
-  await paginateTestRows(pageContainer, [
-    ...generateScalingTest(renderer, 'sdf', 'scale'),
-    ...generateScalingTest(renderer, 'sdf', 'scaleX'),
-    ...generateScalingTest(renderer, 'sdf', 'scaleY'),
-    ...generateScalingTest(renderer, 'canvas', 'scale'),
-    ...generateScalingTest(renderer, 'canvas', 'scaleX'),
-    ...generateScalingTest(renderer, 'canvas', 'scaleY'),
-  ]);
-
-  pageContainer.bindWindowKeys();
 }

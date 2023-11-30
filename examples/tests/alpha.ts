@@ -19,7 +19,13 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export async function automation(settings: ExampleSettings) {
+  // Snapshot single page
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   /*
    * redRect will persist and change color every frame
    * greenRect will persist and be detached and reattached to the root every second
@@ -32,7 +38,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 500,
     height: 500,
     color: 0x000000ff,
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 0,
     zIndexLocked: 1,
     alpha: 0.5,
