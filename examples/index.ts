@@ -18,10 +18,10 @@
  */
 
 import {
-  MainRenderDriver,
+  MainCoreDriver,
   RendererMain,
-  ThreadXRenderDriver,
-  type IRenderDriver,
+  ThreadXCoreDriver,
+  type ICoreDriver,
   type NodeLoadedPayload,
   type RendererMainSettings,
 } from '@lightningjs/renderer';
@@ -145,12 +145,12 @@ async function initRenderer(
   driverName: string,
   customSettings?: Partial<RendererMainSettings>,
 ) {
-  let driver: IRenderDriver | null = null;
+  let driver: ICoreDriver | null = null;
 
   if (driverName === 'main') {
-    driver = new MainRenderDriver();
+    driver = new MainCoreDriver();
   } else {
-    driver = new ThreadXRenderDriver({
+    driver = new ThreadXCoreDriver({
       coreWorkerUrl,
     });
   }

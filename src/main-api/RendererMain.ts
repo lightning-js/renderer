@@ -30,7 +30,7 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { IRenderDriver } from './IRenderDriver.js';
+import type { ICoreDriver } from './ICoreDriver.js';
 import {
   ManualCountTextureUsageTracker,
   type ManualCountTextureUsageTrackerOptions,
@@ -213,7 +213,7 @@ export interface RendererMainSettings {
  *
  * Example:
  * ```ts
- * import { RendererMain, MainRenderDriver } from '@lightningjs/renderer';
+ * import { RendererMain, MainCoreDriver } from '@lightningjs/renderer';
  *
  * // Initialize the Renderer
  * const renderer = new RendererMain(
@@ -222,13 +222,13 @@ export interface RendererMainSettings {
  *     appHeight: 1080
  *   },
  *   'app',
- *   new MainRenderDriver(),
+ *   new MainCoreDriver(),
  * );
  * ```
  */
 export class RendererMain {
   readonly root: INode | null = null;
-  readonly driver: IRenderDriver;
+  readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   private nodes: Map<number, INode> = new Map();
@@ -252,7 +252,7 @@ export class RendererMain {
   constructor(
     settings: RendererMainSettings,
     target: string | HTMLElement,
-    driver: IRenderDriver,
+    driver: ICoreDriver,
   ) {
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,

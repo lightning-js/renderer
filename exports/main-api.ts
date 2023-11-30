@@ -37,10 +37,10 @@
  * @module
  */
 export * from '../src/main-api/INode.js';
-export * from '../src/main-api/IRenderDriver.js';
+export * from '../src/main-api/ICoreDriver.js';
 export * from '../src/main-api/RendererMain.js';
-export * from '../src/render-drivers/main/MainRenderDriver.js';
-export * from '../src/render-drivers/threadx/ThreadXRenderDriver.js';
+export * from '../src/render-drivers/main/MainCoreDriver.js';
+export * from '../src/render-drivers/threadx/ThreadXCoreDriver.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 

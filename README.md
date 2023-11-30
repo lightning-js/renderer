@@ -119,14 +119,14 @@ The Main Core Driver renders your application on the web page's main thread.
 It can be configured into the Renderer like so:
 
 ```ts
-import { MainRenderDriver, RendererMain } from '@lightningjs/renderer';
+import { MainCoreDriver, RendererMain } from '@lightningjs/renderer';
 
 const renderer = new RendererMain(
   {
     // App Config
   },
   'app', // App div ID
-  new MainRenderDriver(), // Main Render driver
+  new MainCoreDriver(), // Main Render driver
 );
 
 // ...
@@ -141,7 +141,7 @@ It can be configured into the Renderer like so:
 
 ```ts
 import {
-  ThreadXRenderDriver,
+  ThreadXCoreDriver,
   RendererMain,
 } from '@lightningjs/renderer';
 
@@ -153,7 +153,7 @@ const renderer = new RendererMain(
     // App Config
   },
   'app', // App div ID
-  new ThreadXRenderDriver({
+  new ThreadXCoreDriver({
     coreWorkerUrl,
   });
 );
