@@ -27,14 +27,14 @@ interface AnimationExampleSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
     width: 1920,
     height: 1080,
     color: 0x000000ff,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const animatableNode = renderer.createNode({

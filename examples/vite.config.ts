@@ -24,16 +24,25 @@ import { importChunkUrl } from '@lightningjs/vite-plugin-import-chunk-url';
 /**
  * Targeting ES2019 gets us at least to WPE 2.28
  *
- * Despite setting the target in 3 different places in the Vite config below
+ * Despite setting the target in different places in the Vite config below
  * this does not seem to have an effect on the output when running Vite in
  * development mode (`pnpm start`). In order to properly test on embedded devices
- * that require the set target, you must run `pnpm run build` and then serve the
- * content via `pnpm run preview -- --host`.
+ * that require the es2019 target, you must run `pnpm run build` and then serve the
+ * production build via `pnpm run preview`.
  *
  * See the following for any updates on this:
  * https://github.com/vitejs/vite/issues/13756#issuecomment-1751085158
  */
-const target = 'es2019';
+const prodTarget = 'es2019';
+
+/**
+ * esbuild target for development mode
+ *
+ * Must be at least ES2020 to `import.meta.glob` to work. Even though this target
+ * mainly affects the output for the Vite dev server, it still affects how the
+ * `import.meta.glob` is transpiled in the production output.
+ */
+const devTarget = 'es2020';
 
 /**
  * Vite Config
@@ -45,15 +54,15 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
       format: 'es',
     },
     esbuild: {
-      target,
+      target: devTarget,
     },
     optimizeDeps: {
       esbuildOptions: {
-        target,
+        target: devTarget,
       },
     },
     build: {
-      target,
+      target: prodTarget,
       minify: false,
       sourcemap: true,
       outDir: path.resolve(__dirname, 'dist'),
