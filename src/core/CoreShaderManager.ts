@@ -114,6 +114,14 @@ export class CoreShaderManager {
     this.effectConstructors[effectType] = effectClass;
   }
 
+  getRegisteredEffects(): Partial<EffectMap> {
+    return this.effectConstructors;
+  }
+
+  getRegisteredShaders(): Partial<ShaderMap> {
+    return this.shConstructors;
+  }
+
   loadShader<Type extends keyof ShaderMap>(
     shType: Type,
     props?: ExtractProps<ShaderMap[Type]>,

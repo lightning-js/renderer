@@ -25,19 +25,7 @@ import {
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import { RadiusEffect } from './effects/RadiusEffect.js';
-import { BorderEffect } from './effects/BorderEffect.js';
-import { LinearGradientEffect } from './effects/LinearGradientEffect.js';
-import { GrayscaleEffect } from './effects/GrayscaleEffect.js';
 import { ShaderEffect } from './effects/ShaderEffect.js';
-import { BorderRightEffect } from './effects/BorderRightEffect.js';
-import { BorderTopEffect } from './effects/BorderTopEffect.js';
-import { BorderBottomEffect } from './effects/BorderBottomEffect.js';
-import { BorderLeftEffect } from './effects/BorderLeftEffect.js';
-import { GlitchEffect } from './effects/GlitchEffect.js';
-import { FadeOutEffect } from './effects/FadeOutEffect.js';
-import { RadialGradientEffect } from './effects/RadialGradientEffect.js';
-import { RadialProgressEffect } from './effects/RadialProgressEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 
 /**
@@ -84,21 +72,6 @@ export interface DynamicShaderProps
   effects?: EffectDesc[];
 }
 
-const Effects = {
-  radius: RadiusEffect,
-  border: BorderEffect,
-  borderBottom: BorderBottomEffect,
-  borderLeft: BorderLeftEffect,
-  borderRight: BorderRightEffect,
-  borderTop: BorderTopEffect,
-  fadeOut: FadeOutEffect,
-  linearGradient: LinearGradientEffect,
-  radialGradient: RadialGradientEffect,
-  grayscale: GrayscaleEffect,
-  glitch: GlitchEffect,
-  radialProgress: RadialProgressEffect,
-};
-
 export interface SpecificEffectDesc<
   FxType extends keyof EffectMap = keyof EffectMap,
 > {
@@ -144,9 +117,10 @@ export class DynamicShader extends WebGlCoreShader {
   }
 
   protected override bindProps(props: Required<DynamicShaderProps>): void {
+    const effects = this.renderer.shManager.getRegisteredEffects();
     props.effects?.forEach((eff, index) => {
       const effect = this.effects[index]!;
-      const fxClass = Effects[effect.name as keyof EffectMap];
+      const fxClass = effects[effect.name as keyof EffectMap]!;
       const props = eff.props ?? {};
       const uniInfo = effect.uniformInfo;
       Object.keys(props).forEach((p) => {
@@ -296,7 +270,7 @@ export class DynamicShader extends WebGlCoreShader {
       const current = effects[i]!;
       const pm =
         current.passParameters.length > 0 ? `, ${current.passParameters}` : '';
-      const currentClass = Effects[current.name as keyof EffectMap];
+      const currentClass = effectContructors[current.name as keyof EffectMap]!;
 
       if (currentClass.onShaderMask) {
         drawEffects += `
@@ -315,7 +289,7 @@ export class DynamicShader extends WebGlCoreShader {
       const next = effects[i + 1]!;
       if (
         next === undefined ||
-        Effects[next.name as keyof EffectMap].onEffectMask
+        effectContructors[next.name as keyof EffectMap]!.onEffectMask
       ) {
         drawEffects += `
           shaderColor = ${currentMask};
