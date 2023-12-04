@@ -55,4 +55,6 @@ export interface ICoreDriver {
   onCreateNode(node: INode): void;
 
   onBeforeDestroyNode(node: INode): void;
+
+  onFpsUpdate(fps: number): void;
 }

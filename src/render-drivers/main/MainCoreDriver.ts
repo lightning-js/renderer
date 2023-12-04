@@ -51,6 +51,7 @@ export class MainCoreDriver implements ICoreDriver {
       devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
       clearColor: rendererSettings.clearColor,
       canvas,
+      fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
       debug: {
         monitorTextureCache: false,
       },
@@ -71,6 +72,11 @@ export class MainCoreDriver implements ICoreDriver {
     if (rendererSettings.coreExtensionModule) {
       await loadCoreExtension(rendererSettings.coreExtensionModule, this.stage);
     }
+
+    // Forward fpsUpdate events from the stage to RendererMain
+    this.stage.on('fpsUpdate', (stage: Stage, fps: number) => {
+      this.onFpsUpdate(fps);
+    });
   }
 
   createNode(props: INodeWritableProps): INode {
@@ -107,6 +113,8 @@ export class MainCoreDriver implements ICoreDriver {
     return this.root;
   }
 
+  //#region Event Methods
+  // The implementations for these event methods are provided by RendererMain
   onCreateNode(node: INode): void {
     throw new Error('Method not implemented.');
   }
@@ -114,4 +122,9 @@ export class MainCoreDriver implements ICoreDriver {
   onBeforeDestroyNode(node: INode): void {
     throw new Error('Method not implemented.');
   }
+
+  onFpsUpdate(fps: number) {
+    throw new Error('Method not implemented.');
+  }
+  //#endregion
 }

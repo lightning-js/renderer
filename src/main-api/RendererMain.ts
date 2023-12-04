@@ -37,6 +37,7 @@ import {
 } from './texture-usage-trackers/ManualCountTextureUsageTracker.js';
 import { FinalizationRegistryTextureUsageTracker } from './texture-usage-trackers/FinalizationRegistryTextureUsageTracker.js';
 import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageTracker.js';
+import { EventEmitter } from '../common/EventEmitter.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -200,6 +201,16 @@ export interface RendererMainSettings {
   experimental_FinalizationRegistryTextureUsageTracker?: boolean;
 
   textureCleanupOptions?: ManualCountTextureUsageTrackerOptions;
+
+  /**
+   * Interval in milliseconds to receive FPS updates
+   *
+   * @remarks
+   * If set to `0`, FPS updates will be disabled.
+   *
+   * @defaultValue `0` (disabled)
+   */
+  fpsUpdateInterval?: number;
 }
 
 /**
@@ -226,7 +237,7 @@ export interface RendererMainSettings {
  * );
  * ```
  */
-export class RendererMain {
+export class RendererMain extends EventEmitter {
   readonly root: INode | null = null;
   readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
@@ -254,6 +265,7 @@ export class RendererMain {
     target: string | HTMLElement,
     driver: ICoreDriver,
   ) {
+    super();
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
@@ -265,6 +277,7 @@ export class RendererMain {
       experimental_FinalizationRegistryTextureUsageTracker:
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
+      fpsUpdateInterval: settings.fpsUpdateInterval || 0,
     };
     this.settings = resolvedSettings;
 
@@ -320,6 +333,10 @@ export class RendererMain {
 
     driver.onBeforeDestroyNode = (node) => {
       this.nodes.delete(node.id);
+    };
+
+    driver.onFpsUpdate = (fps) => {
+      this.emit('fpsUpdate', fps);
     };
 
     targetEl.appendChild(canvas);
