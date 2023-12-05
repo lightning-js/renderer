@@ -56,9 +56,8 @@ export abstract class CoreRenderer {
   }
 
   abstract reset(): void;
-  abstract sortRenderables(): void;
   abstract render(surface: 'screen' | CoreContextTexture): void;
-  abstract addRenderable(params: QuadOptions | CoreRenderOp): void;
+  abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract getShaderManager(): CoreShaderManager;
 }

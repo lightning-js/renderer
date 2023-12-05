@@ -130,9 +130,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(gl),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader(
-      'DefaultShaderBatched',
-    ).shader;
+    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
     const quadBuffer = gl.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -196,23 +194,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
-   * Add a renderable to the current set of renderables.
+   * This function adds a quad (a rectangle composed of two triangles) to the WebGL rendering pipeline.
    *
-   * @remarks
-   * If a {@link QuadOptions} structure is provided, this will ultimately result
-   * in a render ops being created, merged and added to the render ops list.
+   * It takes a set of options that define the quad's properties, such as its dimensions, colors, texture, shader, and transformation matrix.
+   * The function first updates the shader properties with the current dimensions if necessary, then sets the default texture if none is provided.
+   * It then checks if a new render operation is needed, based on the current shader and clipping rectangle.
+   * If a new render operation is needed, it creates one and updates the current render operation.
+   * The function then adjusts the texture coordinates based on the texture options and adds the texture to the texture manager.
    *
-   * If a direct {@link WebGlCoreRenderOp} instance is provided, it will be
-   * added to the render ops list as-is. Be sure to set the zIndex correctly of
-   * the render op to ensure proper rendering order.
-   *
-   * @param renderable
+   * Finally, it calculates the vertices for the quad, taking into account any transformations, and adds them to the quad buffer.
+   * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
-  override addRenderable(renderable: QuadOptions | WebGlCoreRenderOp) {
-    this.renderables?.push(renderable);
-  }
-
-  private addQuad(params: QuadOptions) {
+  addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
     const {
       width,
@@ -508,25 +501,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
-   * Sort renderable children and add them to the render ops.
-   * @todo:
-   * - move to merge sort to keep relative order
-   * - support z-index parent locking
-   *
+   * add RenderOp to the render pipeline
    */
-
-  sortRenderables() {
-    const { renderables } = this;
-    renderables.sort((a, b) => a.zIndex - b.zIndex);
-
-    renderables.forEach((renderable) => {
-      if (renderable instanceof WebGlCoreRenderOp) {
-        this.renderOps.push(renderable);
-        this.curRenderOp = null;
-      } else {
-        this.addQuad(renderable);
-      }
-    });
+  addRenderOp(renderable: WebGlCoreRenderOp) {
+    this.renderOps.push(renderable);
+    this.curRenderOp = null;
   }
 
   /**

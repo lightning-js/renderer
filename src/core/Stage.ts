@@ -35,7 +35,6 @@ import type {
 } from './text-rendering/renderers/TextRenderer.js';
 import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
-import { intersectRect, type Rect } from './lib/utils.js';
 
 export interface StageOptions {
   rootId: number;
@@ -149,11 +148,12 @@ export class Stage {
       startLoop(this);
     }
   }
+
   /**
-   * Start a new frame draw
+   * Update animations
    */
-  drawFrame() {
-    const { renderer, scene, animationManager } = this;
+  updateAnimations() {
+    const { scene, animationManager } = this;
     if (!scene?.root) {
       return;
     }
@@ -166,48 +166,58 @@ export class Stage {
 
     // step animation
     animationManager.update(this.deltaTime);
+  }
+
+  /**
+   * Check if the scene has updates
+   */
+  hasSceneUpdates() {
+    const { scene } = this;
+
+    if (!scene?.root) {
+      return false;
+    }
+
+    return scene?.root?.hasUpdates;
+  }
+
+  /**
+   * Start a new frame draw
+   */
+  drawFrame() {
+    const { renderer, scene } = this;
+    if (!scene?.root) {
+      return;
+    }
 
     // reset and clear viewport
-    renderer?.reset();
+    scene?.root?.update(this.deltaTime);
 
     // test if we need to update the scene
-    if (scene?.root?.hasUpdates) {
-      scene?.root?.update(this.deltaTime);
-    }
+    renderer?.reset();
 
     this.addQuads(scene.root);
 
-    renderer?.sortRenderables();
     renderer?.render();
   }
 
-  addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
+  addQuads(node: CoreNode) {
     assertTruthy(this.renderer && node.globalTransform);
-    const gt = node.globalTransform;
-    const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
-    let clippingRect: Rect | null =
-      node.clipping && !isRotated
-        ? {
-            x: gt.tx,
-            y: gt.ty,
-            width: node.width * gt.ta,
-            height: node.height * gt.td,
-          }
-        : null;
-    if (parentClippingRect && clippingRect) {
-      clippingRect = intersectRect(parentClippingRect, clippingRect);
-    } else if (parentClippingRect) {
-      clippingRect = parentClippingRect;
-    }
+    node.renderQuads(this.renderer);
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
 
-    node.renderQuads(this.renderer, clippingRect);
-    node.children.forEach((child) => {
-      if (child.worldAlpha === 0) {
-        return;
+      if (!child) {
+        continue;
       }
-      this.addQuads(child, clippingRect);
-    });
+
+      if (child?.worldAlpha === 0) {
+        continue;
+      }
+
+      this.addQuads(child);
+    }
   }
 
   /**

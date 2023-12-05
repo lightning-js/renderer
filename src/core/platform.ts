@@ -23,12 +23,18 @@ import type { Stage } from './Stage.js';
  * Platform render loop initiator
  */
 export const startLoop = (stage: Stage) => {
-  const loop = () => {
-    // emit('frameStart');
+  const runLoop = () => {
+    stage.updateAnimations();
+
+    if (!stage.hasSceneUpdates()) {
+      setTimeout(runLoop, 1000 / 60);
+      return;
+    }
+
     stage.drawFrame();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(runLoop);
   };
-  requestAnimationFrame(loop);
+  requestAnimationFrame(runLoop);
 };
 
 /**

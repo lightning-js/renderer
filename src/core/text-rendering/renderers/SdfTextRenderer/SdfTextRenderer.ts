@@ -575,7 +575,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 
-    renderer.addRenderable(renderOp);
+    renderer.addRenderOp(renderOp);
 
     // const elementRect = {
     //   x: x,

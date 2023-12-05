@@ -545,7 +545,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const combinedAlpha = alpha * getNormalizedAlphaComponent(color);
 
     if (canvasPages[0].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
@@ -568,7 +568,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       });
     }
     if (canvasPages[1].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
@@ -591,7 +591,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       });
     }
     if (canvasPages[2].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
         colorBl: 0xffffffff,
