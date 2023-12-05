@@ -37,6 +37,10 @@ export class DefaultShader extends WebGlCoreShader {
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
     const { gl } = this;
+    if (gl.getParameter(gl.TEXTURE_BINDING_2D) === textures[0]!.ctxTexture) {
+      return;
+    }
+
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
   }

@@ -259,8 +259,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.debug(this.trState, value);
   }
 
-  override update(delta: number) {
-    super.update(delta);
+  override update(delta: number, parentClippingRect: Rect | null = null) {
+    super.update(delta, parentClippingRect);
 
     assertTruthy(this.globalTransform);
 
@@ -269,12 +269,12 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
+  override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
     this.textRenderer.renderQuads(
       this.trState,
       this.globalTransform,
-      clippingRect,
+      this.clippingRect,
       this.worldAlpha,
     );
   }
