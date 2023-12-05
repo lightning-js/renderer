@@ -24,7 +24,7 @@ import type {
   INodeWritableProps,
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
-import { MainOnlyNode } from './MainOnlyNode.js';
+import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
 import { Stage } from '../../core/Stage.js';
 import type {
   RendererMain,
@@ -44,7 +44,7 @@ export class MainCoreDriver implements ICoreDriver {
     canvas: HTMLCanvasElement,
   ): Promise<void> {
     this.stage = new Stage({
-      rootId: 1,
+      rootId: getNewId(),
       appWidth: rendererSettings.appWidth,
       appHeight: rendererSettings.appHeight,
       deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
