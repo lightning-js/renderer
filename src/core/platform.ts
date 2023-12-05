@@ -26,11 +26,6 @@ export const startLoop = (stage: Stage) => {
   const runLoop = () => {
     stage.updateAnimations();
 
-    if (!stage.hasSceneUpdates()) {
-      setTimeout(runLoop, 1000 / 60);
-      return;
-    }
-
     stage.drawFrame();
     requestAnimationFrame(runLoop);
   };
