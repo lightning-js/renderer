@@ -59,6 +59,8 @@ const testModules = import.meta.glob('./tests/*.ts') as Record<
   // - driver: main | threadx (default: threadx)
   // - test: <test name> (default: test)
   // - showOverlay: true | false (default: true)
+  // - fps: true | false (default: false)
+  //   - Log FPS to console every second
   // - finalizationRegistry: true | false (default: false)
   //   - Use FinalizationRegistryTextureUsageTracker instead of
   //     ManualCountTextureUsageTracker
@@ -67,6 +69,7 @@ const testModules = import.meta.glob('./tests/*.ts') as Record<
   const automation = urlParams.get('automation') === 'true';
   const test = urlParams.get('test') || (automation ? null : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
+  const logFps = urlParams.get('fps') === 'true';
 
   let driverName = urlParams.get('driver');
   if (driverName !== 'main' && driverName !== 'threadx') {
@@ -74,11 +77,11 @@ const testModules = import.meta.glob('./tests/*.ts') as Record<
   }
 
   if (test) {
-    await runTest(test, driverName, urlParams, showOverlay);
+    await runTest(test, driverName, urlParams, showOverlay, logFps);
     return;
   }
   assertTruthy(automation);
-  await runAutomation(driverName);
+  await runAutomation(driverName, logFps);
 })().catch((err) => {
   console.error(err);
 });
@@ -88,6 +91,7 @@ async function runTest(
   driverName: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
+  logFps: boolean,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -104,6 +108,7 @@ async function runTest(
 
   const { renderer, appElement } = await initRenderer(
     driverName,
+    logFps,
     customSettings,
   );
 
@@ -143,6 +148,7 @@ async function runTest(
 
 async function initRenderer(
   driverName: string,
+  logFps: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let driver: ICoreDriver | null = null;
@@ -163,11 +169,16 @@ async function initRenderer(
       devicePhysicalPixelRatio: 1,
       clearColor: 0x00000000,
       coreExtensionModule: coreExtensionModuleUrl,
+      fpsUpdateInterval: logFps ? 1000 : 0,
       ...customSettings,
     },
     'app',
     driver,
   );
+
+  renderer.on('fpsUpdate', (target: RendererMain, fps: number) => {
+    console.log(`FPS: ${fps}`);
+  });
 
   await renderer.init();
 
@@ -178,8 +189,8 @@ async function initRenderer(
   return { renderer, appElement };
 }
 
-async function runAutomation(driverName: string) {
-  const { renderer, appElement } = await initRenderer(driverName);
+async function runAutomation(driverName: string, logFps: boolean) {
+  const { renderer, appElement } = await initRenderer(driverName, logFps);
 
   // Iterate through all test modules
   for (const testPath in testModules) {

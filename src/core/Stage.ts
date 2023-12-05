@@ -36,6 +36,7 @@ import type {
 import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { intersectRect, type Rect } from './lib/utils.js';
+import { EventEmitter } from '../common/EventEmitter.js';
 
 export interface StageOptions {
   rootId: number;
@@ -45,6 +46,7 @@ export interface StageOptions {
   devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor: number;
+  fpsUpdateInterval: number;
   debug?: {
     monitorTextureCache?: boolean;
   };
@@ -53,7 +55,7 @@ export interface StageOptions {
 const bufferMemory = 2e6;
 const autoStart = true;
 
-export class Stage {
+export class Stage extends EventEmitter {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -67,11 +69,14 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  private fpsNumFrames = 0;
+  private fpsElapsedTime = 0;
 
   /**
    * Stage constructor
    */
   constructor(readonly options: StageOptions) {
+    super();
     const { canvas, clearColor, rootId, debug, appWidth, appHeight } = options;
     this.txManager = new CoreTextureManager();
     this.shManager = new CoreShaderManager();
@@ -179,6 +184,22 @@ export class Stage {
 
     renderer?.sortRenderables();
     renderer?.render();
+
+    // If there's an FPS update interval, emit the FPS update event
+    // when the specified interval has elapsed.
+    const { fpsUpdateInterval } = this.options;
+    if (fpsUpdateInterval) {
+      this.fpsNumFrames++;
+      this.fpsElapsedTime += this.deltaTime;
+      if (this.fpsElapsedTime >= fpsUpdateInterval) {
+        const fps = Math.round(
+          (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
+        );
+        this.fpsNumFrames = 0;
+        this.fpsElapsedTime = 0;
+        this.emit('fpsUpdate', fps);
+      }
+    }
   }
 
   addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
