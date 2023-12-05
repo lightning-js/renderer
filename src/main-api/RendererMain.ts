@@ -372,7 +372,7 @@ export class RendererMain {
    * @returns
    */
   createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
-    return this.driver.createTextNode({
+    const data = {
       ...this.resolveNodeDefaults(props),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
@@ -387,8 +387,14 @@ export class RendererMain {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight ?? null,
+      maxLines: props.maxLines ?? undefined,
+      maxLinesSuffix: props.maxLinesSuffix ?? undefined,
+      textOverflow: props.textOverflow ?? undefined,
       debug: props.debug ?? {},
-    });
+    };
+
+    return this.driver.createTextNode(data);
   }
 
   /**

@@ -82,7 +82,10 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         offsetY: props.offsetY,
         textRendererOverride: props.textRendererOverride,
         debug: props.debug,
-
+        lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        maxLinesSuffix: props.maxLinesSuffix,
+        textOverflow: props.textOverflow,
         // These properties will get set appropriately in the base MainOnlyNode class
         parent: null,
         texture: null,
@@ -195,6 +198,46 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
 
   set letterSpacing(value: ITextNode['letterSpacing']) {
     this.coreNode.letterSpacing = value;
+  }
+
+  get lineHeight(): ITextNode['lineHeight'] {
+    return this.coreNode.lineHeight;
+  }
+
+  set lineHeight(value: ITextNode['lineHeight']) {
+    if (value) {
+      this.coreNode.maxLines = value;
+    }
+  }
+
+  get maxLines(): ITextNode['maxLines'] {
+    return this.coreNode.maxLines;
+  }
+
+  set maxLines(value: ITextNode['maxLines']) {
+    if (value) {
+      this.coreNode.maxLines = value;
+    }
+  }
+
+  get maxLinesSuffix(): ITextNode['maxLinesSuffix'] {
+    return this.coreNode.maxLinesSuffix;
+  }
+
+  set maxLinesSuffix(value: ITextNode['maxLinesSuffix']) {
+    if (value) {
+      this.coreNode.maxLinesSuffix = value;
+    }
+  }
+
+  get textOverflow(): ITextNode['textOverflow'] {
+    return this.coreNode.textOverflow;
+  }
+
+  set textOverflow(value: ITextNode['textOverflow']) {
+    if (value) {
+      this.coreNode.textOverflow = value;
+    }
   }
 
   get debug(): ITextNode['debug'] {
