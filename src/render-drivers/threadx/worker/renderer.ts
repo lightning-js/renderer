@@ -24,6 +24,7 @@ import { Stage } from '../../../core/Stage.js';
 import { assertTruthy } from '../../../utils.js';
 import {
   isThreadXRendererMessage,
+  type ThreadXRendererFpsUpdateMessage,
   type ThreadXRendererMessage,
 } from '../ThreadXRendererMessage.js';
 import { TextNodeStruct } from '../TextNodeStruct.js';
@@ -69,6 +70,7 @@ const threadx = ThreadX.init({
         devicePhysicalPixelRatio: message.devicePhysicalPixelRatio,
         clearColor: message.clearColor,
         canvas,
+        fpsUpdateInterval: message.fpsUpdateInterval,
         debug: {
           monitorTextureCache: false,
         },
@@ -116,6 +118,14 @@ const threadx = ThreadX.init({
       if (message.coreExtensionModule) {
         await loadCoreExtension(message.coreExtensionModule, stage);
       }
+
+      // Forward FPS updates to the main worker.
+      stage.on('fpsUpdate', (stage: Stage, fps: number) => {
+        threadx.sendMessage('parent', {
+          type: 'fpsUpdate',
+          fps,
+        } satisfies ThreadXRendererFpsUpdateMessage);
+      });
 
       // Return its ID so the main worker can retrieve it from the shared object
       // store.

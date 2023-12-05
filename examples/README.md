@@ -1,13 +1,15 @@
-# Lightning 3 Renderer Test Examples
+# Example Tests
 
-This directory contains a set of independent examples which can be selected via
-URL parameters.
+This directory contains a set of independent Example Tests which can be selected
+via URL parameters for manual testing.
+
+Many of these Example Tests also define Snapshots for the Visual Regression Test
+Runner. See [visual-regression/README.md](../visual-regression/README.md) for
+more information on how those tests are run and how their Snapshots are defined.
 
 ## Setup
 
 ```
-pnpm install
-
 # Run code in dev mode (includes building Renderer in watch mode)
 pnpm start
 
@@ -33,10 +35,23 @@ pnpm watch
 
 ## URL Params
 
-- `test` - Test example to run
+- `test` (string, default: "test")
+  - Test example to run.
   - Can be any of the file names (minus extension) in the `tests` directory.
-- `driver` - Core driver to use
+- `driver` (string, default: "main")
+  - Core driver to use
   - Either `main` or `threadx`
+- `overlay` (boolean, default: "true")
+  - Whether or not to show the text overlay in the bottom-right corner that
+    displays the current test and driver being used.
+- `fps` (boolean, default: "false")
+  - Whether or not to log the latest FPS to the console every 1 second.
+- `automation` (boolean, default: "false")
+  - Automation mode.
+  - Executes the exported `automation()` function for every Example Test
+    that defines one, one after the other.
+  - This is used by the Visual Regression Test Runner.
+  - See [visual-regression/README.md](../visual-regression/README.md) for more info.
 
 ## Note on imports
 

@@ -42,6 +42,7 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   clearColor: number;
+  fpsUpdateInterval: number;
   coreExtensionModule: string | null;
 }
 
@@ -56,11 +57,21 @@ export interface ThreadXRendererReleaseTextureMessage
 }
 
 /**
+ * A message sent from the renderer worker to the main worker to update the FPS
+ */
+export interface ThreadXRendererFpsUpdateMessage
+  extends ThreadXRendererMessage {
+  type: 'fpsUpdate';
+  fps: number;
+}
+
+/**
  * A map of message types to message shapes
  */
 export interface ThreadXRendererMessageMap {
   init: ThreadXRendererInitMessage;
   releaseTexture: ThreadXRendererReleaseTextureMessage;
+  fpsUpdate: ThreadXRendererFpsUpdateMessage;
 }
 
 /**

@@ -25,16 +25,17 @@ import type {
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
 import { NodeStruct, type NodeStructWritableProps } from './NodeStruct.js';
-import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
+import type { ICoreDriver } from '../../main-api/ICoreDriver.js';
 import { ThreadXMainNode } from './ThreadXMainNode.js';
 import { assertTruthy } from '../../utils.js';
 import type {
   RendererMain,
   RendererMainSettings,
 } from '../../main-api/RendererMain.js';
-import type {
-  ThreadXRendererInitMessage,
-  ThreadXRendererReleaseTextureMessage,
+import {
+  isThreadXRendererMessage,
+  type ThreadXRendererInitMessage,
+  type ThreadXRendererReleaseTextureMessage,
 } from './ThreadXRendererMessage.js';
 import {
   TextNodeStruct,
@@ -46,11 +47,12 @@ export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
 }
 
-export class ThreadXRenderDriver implements IRenderDriver {
+export class ThreadXCoreDriver implements ICoreDriver {
   private settings: ThreadXRendererSettings;
   private threadx: ThreadX;
   private rendererMain: RendererMain | null = null;
   private root: INode | null = null;
+  private fps = 0;
 
   constructor(settings: ThreadXRendererSettings) {
     this.settings = settings;
@@ -73,6 +75,12 @@ export class ThreadXRenderDriver implements IRenderDriver {
           });
         }
         return null;
+      },
+      onMessage: async (message) => {
+        // Forward fpsUpdate events from the renderer worker's Stage to RendererMain
+        if (isThreadXRendererMessage('fpsUpdate', message)) {
+          this.onFpsUpdate(message.fps);
+        }
       },
     });
     this.threadx.registerWorker(
@@ -99,6 +107,7 @@ export class ThreadXRenderDriver implements IRenderDriver {
         devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
         clearColor: rendererSettings.clearColor,
         coreExtensionModule: rendererSettings.coreExtensionModule,
+        fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
       } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;
@@ -239,11 +248,18 @@ export class ThreadXRenderDriver implements IRenderDriver {
     } satisfies ThreadXRendererReleaseTextureMessage);
   }
 
+  //#region Event Methods
+  // The implementations for these event methods are provided by RendererMain
   onCreateNode(node: INode): void {
-    return;
+    throw new Error('Method not implemented.');
   }
 
   onBeforeDestroyNode(node: INode): void {
-    return;
+    throw new Error('Method not implemented.');
   }
+
+  onFpsUpdate(fps: number): void {
+    throw new Error('Method not implemented.');
+  }
+  //#endregion
 }

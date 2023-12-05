@@ -20,20 +20,21 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import type {
-  INodeWritableProps,
-  ITextNodeWritableProps,
-} from '../../dist/exports/main-api.js';
+import type { INodeWritableProps } from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 import robotImg from '../assets/robot/robot.png';
 
-export default async function ({ testName, renderer }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
+
+export default async function test(settings: ExampleSettings) {
+  const { renderer } = settings;
+  const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    parent: renderer.root,
     title: 'Scaling',
-    testName,
   });
 
   await paginateTestRows(pageContainer, [
@@ -381,5 +382,5 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     },
   ]);
 
-  pageContainer.bindWindowKeys();
+  return pageContainer;
 }

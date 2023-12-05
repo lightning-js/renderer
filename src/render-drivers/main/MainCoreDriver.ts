@@ -18,13 +18,13 @@
  */
 
 import { assertTruthy } from '../../utils.js';
-import type { IRenderDriver } from '../../main-api/IRenderDriver.js';
+import type { ICoreDriver } from '../../main-api/ICoreDriver.js';
 import type {
   INode,
   INodeWritableProps,
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
-import { MainOnlyNode } from './MainOnlyNode.js';
+import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
 import { Stage } from '../../core/Stage.js';
 import type {
   RendererMain,
@@ -33,7 +33,7 @@ import type {
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
 
-export class MainRenderDriver implements IRenderDriver {
+export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
   private stage: Stage | null = null;
   private rendererMain: RendererMain | null = null;
@@ -44,13 +44,14 @@ export class MainRenderDriver implements IRenderDriver {
     canvas: HTMLCanvasElement,
   ): Promise<void> {
     this.stage = new Stage({
-      rootId: 1,
+      rootId: getNewId(),
       appWidth: rendererSettings.appWidth,
       appHeight: rendererSettings.appHeight,
       deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
       clearColor: rendererSettings.clearColor,
       canvas,
+      fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
       debug: {
         monitorTextureCache: false,
       },
@@ -71,6 +72,11 @@ export class MainRenderDriver implements IRenderDriver {
     if (rendererSettings.coreExtensionModule) {
       await loadCoreExtension(rendererSettings.coreExtensionModule, this.stage);
     }
+
+    // Forward fpsUpdate events from the stage to RendererMain
+    this.stage.on('fpsUpdate', (stage: Stage, fps: number) => {
+      this.onFpsUpdate(fps);
+    });
   }
 
   createNode(props: INodeWritableProps): INode {
@@ -107,6 +113,8 @@ export class MainRenderDriver implements IRenderDriver {
     return this.root;
   }
 
+  //#region Event Methods
+  // The implementations for these event methods are provided by RendererMain
   onCreateNode(node: INode): void {
     throw new Error('Method not implemented.');
   }
@@ -114,4 +122,9 @@ export class MainRenderDriver implements IRenderDriver {
   onBeforeDestroyNode(node: INode): void {
     throw new Error('Method not implemented.');
   }
+
+  onFpsUpdate(fps: number) {
+    throw new Error('Method not implemented.');
+  }
+  //#endregion
 }

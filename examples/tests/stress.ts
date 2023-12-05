@@ -24,7 +24,7 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 const randomIntBetween = (from: number, to: number) =>
   Math.floor(Math.random() * (to - from + 1) + from);
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   // create 100 nodes
   const nodes: INode[] = [];
 
@@ -32,7 +32,7 @@ export default async function ({ renderer }: ExampleSettings) {
     width: 1920,
     height: 1080,
     color: 0xff1e293b,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   for (let i = 0; i < 103; i++) {

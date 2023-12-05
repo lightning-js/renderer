@@ -29,11 +29,11 @@ import type { RendererMain, RendererMainSettings } from './RendererMain.js';
  * This interface is to be implemented by Core Drivers
  *
  * @remarks
- * Both the {@link MainRenderDriver} and the {@link ThreadXRenderDriver} exist
+ * Both the {@link MainCoreDriver} and the {@link ThreadXCoreDriver} exist
  * that implement this interface to support both the single-threaded and
  * multi-threaded Core modes.
  */
-export interface IRenderDriver {
+export interface ICoreDriver {
   init(
     rendererMain: RendererMain,
     rendererSettings: Required<RendererMainSettings>,
@@ -55,4 +55,6 @@ export interface IRenderDriver {
   onCreateNode(node: INode): void;
 
   onBeforeDestroyNode(node: INode): void;
+
+  onFpsUpdate(fps: number): void;
 }

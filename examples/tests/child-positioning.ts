@@ -19,7 +19,7 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rand = (min: number, max: number) => {
     return Math.random() * (max - min) + min;
   };
@@ -33,7 +33,7 @@ export default async function ({ renderer }: ExampleSettings) {
       width: rand(50, 120),
       height: rand(50, 120),
       color: 0x0000ffaa,
-      parent: renderer.root,
+      parent: testRoot,
     });
 
     const R1 = renderer.createNode({

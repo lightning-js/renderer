@@ -1,4 +1,10 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npx lint-staged
+# If files exist in the `visual-regression/failed-results` directory, fail the commit
+if [ -n "$(ls -A visual-regression/failed-results)" ]; then
+  echo "Failed Visual Regression Test results found in \`visual-regression/failed-results\`. Please fix them before committing."
+  exit 1
+fi
+
+pnpm exec lint-staged

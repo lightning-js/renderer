@@ -29,7 +29,13 @@ export const Colors = {
   White: 0xffffffff,
 };
 
-export default async function ({ renderer }: ExampleSettings) {
+export async function automation(settings: ExampleSettings) {
+  // Snapshot single page
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const leftStackText = renderer.createTextNode({
     x: 100,
     y: 100,
@@ -42,7 +48,7 @@ export default async function ({ renderer }: ExampleSettings) {
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 3,
   });
 
@@ -66,7 +72,7 @@ export default async function ({ renderer }: ExampleSettings) {
             radius: 2,
           }),
           zIndex: 10 + (i + 1),
-          parent: renderer.root,
+          parent: testRoot,
         }),
       );
     });
@@ -81,7 +87,7 @@ export default async function ({ renderer }: ExampleSettings) {
     //   radius: 40,
     // }),
     zIndex: 2,
-    parent: renderer.root,
+    parent: testRoot,
     zIndexLocked: 1,
   });
 
@@ -123,7 +129,7 @@ export default async function ({ renderer }: ExampleSettings) {
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 3,
   });
 
@@ -137,7 +143,7 @@ export default async function ({ renderer }: ExampleSettings) {
     //   radius: 40,
     // }),
     zIndex: 2,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   window.addEventListener('keydown', (e) => {
@@ -168,7 +174,7 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: 148901482921849101841290481,
     // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
     zIndexLocked: 148901482921849101841290481,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -184,7 +190,7 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: -148901482921849101841290481,
     // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
     zIndexLocked: -148901482921849101841290481,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -200,7 +206,7 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: 'boop',
     // @ts-expect-error Invalid prop test
     zIndexLocked: 'boop',
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -216,7 +222,7 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: true,
     // @ts-expect-error Invalid prop test
     zIndexLocked: true,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -232,7 +238,7 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: null,
     // @ts-expect-error Invalid prop test
     zIndexLocked: null,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -246,7 +252,7 @@ export default async function ({ renderer }: ExampleSettings) {
     }),
     zIndex: undefined,
     zIndexLocked: undefined,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -264,7 +270,7 @@ export default async function ({ renderer }: ExampleSettings) {
     // @ts-expect-error Invalid prop test
     // eslint-disable-next-line  @typescript-eslint/no-empty-function
     zIndexLocked: () => {},
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   renderer.createNode({
@@ -280,6 +286,6 @@ export default async function ({ renderer }: ExampleSettings) {
     zIndex: {},
     // @ts-expect-error Invalid prop test
     zIndexLocked: {},
-    parent: renderer.root,
+    parent: testRoot,
   });
 }

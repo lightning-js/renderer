@@ -417,8 +417,8 @@ export interface INodeEvents {
  * For text rendering, see {@link ITextNode}.
  *
  * Nodes are represented by an interface since they may be implemented in
- * different ways depending on the Core Driver. For example, the MainRenderDriver
- * implements it with it's `MainOnlyNode` while the ThreadXRenderDriver implements
+ * different ways depending on the Core Driver. For example, the MainCoreDriver
+ * implements it with it's `MainOnlyNode` while the ThreadXCoreDriver implements
  * it with it's `ThreadXMainNode`.
  */
 export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {

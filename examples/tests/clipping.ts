@@ -25,16 +25,20 @@ import { deg2Rad } from '@lightningjs/renderer/utils';
 import type { INodeWritableProps } from '@lightningjs/renderer';
 import robotImg from '../assets/robot/robot.png';
 
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
+
 const SQUARE_SIZE = 200;
 const PADDING = 20;
 
-export default async function ({ testName, renderer }: ExampleSettings) {
-  const pageContainer = new PageContainer(renderer, {
+export default async function test(settings: ExampleSettings) {
+  const { renderer } = settings;
+  const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    parent: renderer.root,
     title: 'Clipping Tests',
-    testName,
   });
 
   await paginateTestRows(pageContainer, [
@@ -569,7 +573,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
 
         const dim = await waitForTextDimensions(
           renderer.createTextNode({
-            mount: 0.5,
+            mountY: 0.5,
             x: curX,
             y: SQUARE_SIZE / 2,
             text: 'scale 2 >',
@@ -599,7 +603,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
 
         const dim2 = await waitForTextDimensions(
           renderer.createTextNode({
-            mount: 0.5,
+            mountY: 0.5,
             x: curX,
             y: SQUARE_SIZE / 2,
             text: 'pivot 0 >',
@@ -630,7 +634,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
 
         const dim3 = await waitForTextDimensions(
           renderer.createTextNode({
-            mount: 0.5,
+            mountY: 0.5,
             x: curX,
             y: SQUARE_SIZE / 2,
             text: 'pivot 1 >',
@@ -708,7 +712,7 @@ export default async function ({ testName, renderer }: ExampleSettings) {
 
         const dimensions = await waitForTextDimensions(
           renderer.createTextNode({
-            mount: 0.5,
+            mountY: 0.5,
             x: curX,
             y: SQUARE_SIZE / 2,
             text: 'rotate 45 degrees >',
@@ -739,5 +743,5 @@ export default async function ({ testName, renderer }: ExampleSettings) {
     },
   ]);
 
-  pageContainer.bindWindowKeys();
+  return pageContainer;
 }
