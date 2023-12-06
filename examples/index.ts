@@ -54,22 +54,40 @@ const testModules = import.meta.glob('./tests/*.ts') as Record<
   () => Promise<TestModule>
 >;
 
+const appWidth = 1920;
+const appHeight = 1080;
+const defaultResolution = 720;
+const defaultPhysicalPixelRatio = 1;
+
 (async () => {
   // URL params
   // - driver: main | threadx (default: threadx)
   // - test: <test name> (default: test)
+  // - resolution: <number> (default: 720)
+  //   - Resolution (height) of to render the test at (in logical pixels)
+  // - ppr: <number> (default: 1)
+  //   - Device physical pixel ratio
   // - showOverlay: true | false (default: true)
   // - fps: true | false (default: false)
   //   - Log FPS to console every second
+  // - multiplier: <number> (default: 1)
+  //   - In tests that support it, multiply the number of objects created by
+  //     this number. Useful for performance tests.
   // - finalizationRegistry: true | false (default: false)
   //   - Use FinalizationRegistryTextureUsageTracker instead of
   //     ManualCountTextureUsageTracker
   // - automation: true | false (default: false)
+  //   - Run all tests in automation mode
   const urlParams = new URLSearchParams(window.location.search);
   const automation = urlParams.get('automation') === 'true';
   const test = urlParams.get('test') || (automation ? null : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
   const logFps = urlParams.get('fps') === 'true';
+  const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
+  const resolution = Number(urlParams.get('resolution')) || 720;
+  const physicalPixelRatio =
+    Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
+  const logicalPixelRatio = resolution / appHeight;
 
   let driverName = urlParams.get('driver');
   if (driverName !== 'main' && driverName !== 'threadx') {
@@ -77,7 +95,16 @@ const testModules = import.meta.glob('./tests/*.ts') as Record<
   }
 
   if (test) {
-    await runTest(test, driverName, urlParams, showOverlay, logFps);
+    await runTest(
+      test,
+      driverName,
+      urlParams,
+      showOverlay,
+      logicalPixelRatio,
+      physicalPixelRatio,
+      logFps,
+      perfMultiplier,
+    );
     return;
   }
   assertTruthy(automation);
@@ -91,7 +118,10 @@ async function runTest(
   driverName: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
+  logicalPixelRatio: number,
+  physicalPixelRatio: number,
   logFps: boolean,
+  perfMultiplier: number,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -109,6 +139,8 @@ async function runTest(
   const { renderer, appElement } = await initRenderer(
     driverName,
     logFps,
+    logicalPixelRatio,
+    physicalPixelRatio,
     customSettings,
   );
 
@@ -137,6 +169,7 @@ async function runTest(
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     testRoot: renderer.root!,
     automation: false,
+    perfMultiplier: perfMultiplier,
     snapshot: async () => {
       // No-op
     },
@@ -149,6 +182,8 @@ async function runTest(
 async function initRenderer(
   driverName: string,
   logFps: boolean,
+  logicalPixelRatio: number,
+  physicalPixelRatio: number,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let driver: ICoreDriver | null = null;
@@ -163,10 +198,10 @@ async function initRenderer(
 
   const renderer = new RendererMain(
     {
-      appWidth: 1920,
-      appHeight: 1080,
-      deviceLogicalPixelRatio: 0.6666667,
-      devicePhysicalPixelRatio: 1,
+      appWidth,
+      appHeight,
+      deviceLogicalPixelRatio: logicalPixelRatio,
+      devicePhysicalPixelRatio: physicalPixelRatio,
       clearColor: 0x00000000,
       coreExtensionModule: coreExtensionModuleUrl,
       fpsUpdateInterval: logFps ? 1000 : 0,
@@ -190,7 +225,13 @@ async function initRenderer(
 }
 
 async function runAutomation(driverName: string, logFps: boolean) {
-  const { renderer, appElement } = await initRenderer(driverName, logFps);
+  const logicalPixelRatio = defaultResolution / appHeight;
+  const { renderer, appElement } = await initRenderer(
+    driverName,
+    logFps,
+    logicalPixelRatio,
+    defaultPhysicalPixelRatio,
+  );
 
   // Iterate through all test modules
   for (const testPath in testModules) {
@@ -216,6 +257,7 @@ async function runAutomation(driverName: string, logFps: boolean) {
           driverName: driverName as 'main' | 'threadx',
           appElement,
           automation: true,
+          perfMultiplier: 1,
           snapshot: async () => {
             const snapshot = (window as any).snapshot as
               | ((testName: string) => Promise<void>)
