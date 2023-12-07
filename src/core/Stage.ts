@@ -183,7 +183,7 @@ export class Stage extends EventEmitter {
       return false;
     }
 
-    return scene?.root?.hasUpdates;
+    return !!scene?.root?.updateType;
   }
 
   /**
