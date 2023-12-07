@@ -699,7 +699,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set alpha(value: number) {
     this.props.alpha = value;
-    this.setUpdateType(UpdateType.PremultipliedColors);
+    this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
   }
 
   get clipping(): boolean {
