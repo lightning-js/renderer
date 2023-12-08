@@ -313,16 +313,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           parent.globalTransform,
           this.globalTransform,
         ).multiply(this.localTransform);
+        this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
         childUpdateType |= UpdateType.Global;
-        this.setUpdateType(UpdateType.Clipping);
       } else {
         assertTruthy(this.localTransform);
         this.globalTransform = Matrix3d.copy(
           this.localTransform,
           this.globalTransform,
         );
-        childUpdateType |= UpdateType.Global;
         this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
+        childUpdateType |= UpdateType.Global;
       }
     }
 
@@ -332,47 +332,57 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       childUpdateType |= UpdateType.Clipping;
     }
 
+    if (this.updateType & UpdateType.WorldAlpha) {
+      if (parent) {
+        this.worldAlpha = parent.worldAlpha * this.props.alpha;
+      } else {
+        this.worldAlpha = this.props.alpha;
+      }
+      this.setUpdateType(UpdateType.Children | UpdateType.PremultipliedColors);
+      childUpdateType |= UpdateType.WorldAlpha;
+    }
+
     if (this.updateType & UpdateType.PremultipliedColors) {
       if (parent) {
         this.premultipliedColorTl = mergeColorAlphaPremultiplied(
           this.props.colorTl,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorTr = mergeColorAlphaPremultiplied(
           this.props.colorTr,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorBl = mergeColorAlphaPremultiplied(
           this.props.colorBl,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorBr = mergeColorAlphaPremultiplied(
           this.props.colorBr,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
       } else {
         this.premultipliedColorTl = mergeColorAlphaPremultiplied(
           this.props.colorTl,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorTr = mergeColorAlphaPremultiplied(
           this.props.colorTr,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorBl = mergeColorAlphaPremultiplied(
           this.props.colorBl,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
         this.premultipliedColorBr = mergeColorAlphaPremultiplied(
           this.props.colorBr,
-          this.props.alpha,
+          this.worldAlpha,
           true,
         );
       }
@@ -380,36 +390,30 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       childUpdateType |= UpdateType.PremultipliedColors;
     }
 
-    if (this.updateType & UpdateType.WorldAlpha) {
-      if (parent) {
-        this.worldAlpha = parent.worldAlpha * this.props.alpha;
-      } else {
-        this.worldAlpha = this.props.alpha;
-      }
-      this.setUpdateType(UpdateType.Children);
-      childUpdateType |= UpdateType.WorldAlpha;
-    }
-
-    if (this.updateType & UpdateType.CalculatedZIndex) {
+    // No need to update zIndex if there is no parent
+    if (parent && this.updateType & UpdateType.CalculatedZIndex) {
       this.calculateZIndex();
-      this.setUpdateType(UpdateType.ZIndexSortedChildren);
-    }
-
-    if (this.updateType & UpdateType.ZIndexSortedChildren) {
-      // reorder z-index
-      this.sortChildren();
+      // Tell parent to re-sort children
+      parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
     if (this.updateType & UpdateType.Children && this.children.length) {
       this.children.forEach((child) => {
+        // Trigger the depenedent update types on the child
+        child.setUpdateType(childUpdateType);
         // If child has no updates, skip
         if (child.updateType === 0) {
           return;
         }
-        // Trigger the depenedent update types on the child
-        child.setUpdateType(childUpdateType);
         child.update(delta, this.clippingRect);
       });
+    }
+
+    // Sorting children MUST happen after children have been updated so
+    // that they have the oppotunity to update their calculated zIndex.
+    if (this.updateType & UpdateType.ZIndexSortedChildren) {
+      // reorder z-index
+      this.sortChildren();
     }
 
     // reset update type
@@ -476,15 +480,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       premultipliedColorBl,
       premultipliedColorBr,
     } = this;
-
-    if (
-      premultipliedColorTl === 0 &&
-      premultipliedColorTr === 0 &&
-      premultipliedColorBl === 0 &&
-      premultipliedColorBr === 0
-    ) {
-      return;
-    }
 
     const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
 
@@ -828,7 +823,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set zIndexLocked(value: number) {
     this.props.zIndexLocked = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex);
+    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
+    this.children.forEach((child) => {
+      child.setUpdateType(UpdateType.CalculatedZIndex);
+    });
   }
 
   get zIndex(): number {
@@ -837,7 +835,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set zIndex(value: number) {
     this.props.zIndex = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex);
+    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
+    this.children.forEach((child) => {
+      child.setUpdateType(UpdateType.CalculatedZIndex);
+    });
   }
 
   get parent(): CoreNode | null {
@@ -860,8 +861,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
     if (newParent) {
       newParent.children.push(this);
-      // force parent to re-sort children by z-index
-      newParent.setUpdateType(UpdateType.ZIndexSortedChildren);
+      // Since this node has a new parent, to be safe, have it do a full update.
+      this.setUpdateType(UpdateType.All);
+      // Tell parent that it's children need to be updated and sorted.
+      newParent.setUpdateType(
+        UpdateType.Children | UpdateType.ZIndexSortedChildren,
+      );
     }
 
     this.updateScaleRotateTransform();
