@@ -183,7 +183,7 @@ export class Stage extends EventEmitter {
       return false;
     }
 
-    return scene?.root?.hasUpdates;
+    return !!scene?.root?.updateType;
   }
 
   /**
@@ -191,12 +191,11 @@ export class Stage extends EventEmitter {
    */
   drawFrame() {
     const { renderer, scene } = this;
-    if (!scene?.root) {
-      return;
-    }
 
-    // reset and clear viewport
-    scene?.root?.update(this.deltaTime);
+    // Update tree if needed
+    if (scene.root.updateType !== 0) {
+      scene.root.update(this.deltaTime);
+    }
 
     // test if we need to update the scene
     renderer?.reset();
