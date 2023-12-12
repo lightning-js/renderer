@@ -28,7 +28,7 @@ pnpm test
 # Run Visual Regression Tests
 pnpm test:visual
 
-# Build API Documentation (builds into ./docs folder)
+# Build API Documentation (builds into ./typedocs folder)
 pnpm typedoc
 
 # Launch Example Tests in dev mode (includes Build Renderer (watch mode))

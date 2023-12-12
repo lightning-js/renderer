@@ -24,7 +24,11 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 const randomIntBetween = (from: number, to: number) =>
   Math.floor(Math.random() * (to - from + 1) + from);
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  testRoot,
+  perfMultiplier,
+}: ExampleSettings) {
   // create 100 nodes
   const nodes: INode[] = [];
 
@@ -35,7 +39,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  for (let i = 0; i < 103; i++) {
+  for (let i = 0; i < 100 * perfMultiplier; i++) {
     const node = renderer.createNode({
       width: 505,
       height: 101,
@@ -61,6 +65,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
           {
             duration: 3000,
             easing: 'ease-out',
+            loop: true,
+            stopMethod: 'reverse',
           },
         )
         .start();
@@ -69,5 +75,5 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   animate();
 
-  setInterval(animate, 3000);
+  // setInterval(animate, 3000);
 }

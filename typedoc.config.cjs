@@ -6,5 +6,5 @@ module.exports = {
     './exports/core-api.ts',
     './exports/utils.ts',
   ],
-  out: 'docs',
+  out: 'typedocs',
 };

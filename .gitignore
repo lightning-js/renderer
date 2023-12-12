@@ -1,7 +1,7 @@
 node_modules
 .DS_store
 .idea
-docs
+typedocs
 dist
 dist-cfg
 dist-vitest

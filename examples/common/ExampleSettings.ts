@@ -49,6 +49,14 @@ export interface ExampleSettings {
    */
   automation: boolean;
   /**
+   * For performance tests that want to support it, use this number as a multiplier
+   * for the number of objects created by a test.
+   *
+   * @remarks
+   * This value is `1` by default.
+   */
+  perfMultiplier: number;
+  /**
    * If the test is run in automation mode, this method will take a visual
    * snapshot of the current state of the renderer's canvas for the Visual
    * Regression Test Runner.

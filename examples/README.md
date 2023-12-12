@@ -44,8 +44,14 @@ pnpm watch
 - `overlay` (boolean, default: "true")
   - Whether or not to show the text overlay in the bottom-right corner that
     displays the current test and driver being used.
+- `resolution` (number, default: 720)
+  - Resolution (height) of to render the test at (in logical pixels)
 - `fps` (boolean, default: "false")
   - Whether or not to log the latest FPS to the console every 1 second.
+- `ppr` (number, default: 1)
+  - Device physical pixel ratio.
+- `multiplier` (number, default: 1)
+  - In tests that support it, multiply the number of objects created by this number. Useful for performance tests.
 - `automation` (boolean, default: "false")
   - Automation mode.
   - Executes the exported `automation()` function for every Example Test
