@@ -27,7 +27,7 @@ export const startLoop = (stage: Stage) => {
     stage.updateAnimations();
 
     if (!stage.hasSceneUpdates()) {
-      setTimeout(runLoop, 1000 / 60);
+      setTimeout(runLoop, 16.666666666666668);
       return;
     }
 

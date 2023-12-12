@@ -262,8 +262,11 @@ async function runAutomation(driverName: string, logFps: boolean) {
             const snapshot = (window as any).snapshot as
               | ((testName: string) => Promise<void>)
               | undefined;
+            // Allow at least a frame to render for any existing RaF pause to
+            // resume and finish rendering the scene before taking the snapshot
+            await delay(17);
             if (snapshot) {
-              console.error(`Calling snapshot(${testName})`);
+              console.log(`Calling snapshot(${testName})`);
               await snapshot(testName);
             } else {
               console.error(
