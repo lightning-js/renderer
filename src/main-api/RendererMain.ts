@@ -387,7 +387,8 @@ export class RendererMain {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight ?? null,
+      lineHeight: props.lineHeight ?? 0,
+      maxLines: props.maxLines ?? 0,
       debug: props.debug ?? {},
     };
 

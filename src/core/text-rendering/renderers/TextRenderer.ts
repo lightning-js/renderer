@@ -248,11 +248,20 @@ export interface TrProps extends TrFontProps {
    * Line height for text (in pixels)
    *
    * @remarks
-   * This property sets the height of the line.
+   * This property sets the height of each line.
    *
-   * @default null
+   * @default 0
    */
-  lineHeight: number | null;
+  lineHeight: number;
+  /**
+   * Max lines for text
+   *
+   * @remarks
+   * This property sets max number of lines of a text paragraph.
+   *
+   * @default 0
+   */
+  maxLines: number;
   zIndex: number;
   debug: Partial<TextRendererDebugProps>;
 }
@@ -318,6 +327,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   lineHeight: (state, value) => {
     state.props.lineHeight = value;
+  },
+  maxLines: (state, value) => {
+    state.props.maxLines = value;
   },
   debug: (state, value) => {
     state.props.debug = value;

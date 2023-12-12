@@ -81,8 +81,9 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         scrollY: props.scrollY,
         offsetY: props.offsetY,
         textRendererOverride: props.textRendererOverride,
-        debug: props.debug,
         lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        debug: props.debug,
         // These properties will get set appropriately in the base MainOnlyNode class
         parent: null,
         texture: null,
@@ -204,6 +205,16 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
   set lineHeight(value: ITextNode['lineHeight']) {
     if (value) {
       this.coreNode.lineHeight = value;
+    }
+  }
+
+  get maxLines(): ITextNode['maxLines'] {
+    return this.coreNode.maxLines;
+  }
+
+  set maxLines(value: ITextNode['maxLines']) {
+    if (value) {
+      this.coreNode.maxLines = value;
     }
   }
 

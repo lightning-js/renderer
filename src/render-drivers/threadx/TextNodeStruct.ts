@@ -172,4 +172,13 @@ export class TextNodeStruct
   set lineHeight(value: TextNodeStructWritableProps['lineHeight']) {
     // Decorator will handle this
   }
+
+  @structProp('number')
+  get maxLines(): TextNodeStructWritableProps['maxLines'] {
+    return 0;
+  }
+
+  set maxLines(value: TextNodeStructWritableProps['maxLines']) {
+    // Decorator will handle this
+  }
 }

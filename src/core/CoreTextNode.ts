@@ -77,6 +77,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           fontWeight: props.fontWeight,
           text: props.text,
           lineHeight: props.lineHeight,
+          maxLines: props.maxLines,
         },
         undefined,
       );
@@ -259,6 +260,16 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   set lineHeight(value: CoreTextNodeProps['lineHeight']) {
     if (this.textRenderer.set.lineHeight) {
       this.textRenderer.set.lineHeight(this.trState, value);
+    }
+  }
+
+  get maxLines(): CoreTextNodeProps['maxLines'] {
+    return this.trState.props.maxLines;
+  }
+
+  set maxLines(value: CoreTextNodeProps['maxLines']) {
+    if (this.textRenderer.set.maxLines) {
+      this.textRenderer.set.maxLines(this.trState, value);
     }
   }
 
