@@ -206,6 +206,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       fontWeight: props.fontWeight,
       fontStretch: props.fontStretch,
       fontStyle: props.fontStyle,
+      lineHeight: props.lineHeight,
       contain: props.contain,
       letterSpacing: props.letterSpacing,
       offsetY: props.offsetY,

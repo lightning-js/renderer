@@ -163,4 +163,13 @@ export class TextNodeStruct
   set letterSpacing(value: TextNodeStructWritableProps['letterSpacing']) {
     // Decorator will handle this
   }
+
+  @structProp('number')
+  get lineHeight(): TextNodeStructWritableProps['lineHeight'] {
+    return 0;
+  }
+
+  set lineHeight(value: TextNodeStructWritableProps['lineHeight']) {
+    // Decorator will handle this
+  }
 }

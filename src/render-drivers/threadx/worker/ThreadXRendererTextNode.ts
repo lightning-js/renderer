@@ -85,6 +85,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -101,6 +102,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -125,6 +127,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
   declare fontWeight: TextNodeStructWritableProps['fontWeight'];
   declare fontStretch: TextNodeStructWritableProps['fontStretch'];
   declare fontStyle: TextNodeStructWritableProps['fontStyle'];
+  declare lineHeight: TextNodeStructWritableProps['lineHeight'];
   declare contain: TextNodeStructWritableProps['contain'];
   declare letterSpacing: TextNodeStructWritableProps['letterSpacing'];
   declare offsetY: TextNodeStructWritableProps['offsetY'];

@@ -38,6 +38,7 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
       fontStretch: sharedNodeStruct.fontStretch,
       fontStyle: sharedNodeStruct.fontStyle,
       fontWeight: sharedNodeStruct.fontWeight,
+      lineHeight: sharedNodeStruct.lineHeight,
       contain: sharedNodeStruct.contain,
       letterSpacing: sharedNodeStruct.letterSpacing,
       offsetY: sharedNodeStruct.offsetY,
@@ -54,6 +55,7 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
   declare fontStretch: ITextNode['fontStretch'];
   declare fontStyle: ITextNode['fontStyle'];
   declare fontWeight: ITextNode['fontWeight'];
+  declare lineHeight: ITextNode['lineHeight'];
   declare textAlign: ITextNode['textAlign'];
   declare contain: ITextNode['contain'];
   declare scrollable: ITextNode['scrollable'];

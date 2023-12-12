@@ -676,7 +676,7 @@ export class LightningTextTextureRenderer {
       verticalAlign: 'top',
       offsetY: null,
       maxLines: 0,
-      maxLinesSuffix: '..',
+      maxLinesSuffix: '...',
       textColor: [1.0, 1.0, 1.0, 1.0],
       paddingLeft: 0,
       paddingRight: 0,
