@@ -16,11 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { Scene } from './scene/Scene.js';
-
 import { startLoop, getTimeStamp } from './platform.js';
-
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
@@ -62,7 +58,7 @@ export class Stage extends EventEmitter {
   public readonly textRenderers: Partial<TextRendererMap>;
   public readonly shManager: CoreShaderManager;
   public readonly renderer: WebGlCoreRenderer;
-  private scene: Scene;
+  public readonly root: CoreNode;
 
   /// State
   deltaTime = 0;
@@ -70,6 +66,7 @@ export class Stage extends EventEmitter {
   currentFrameTime = 0;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
+  private renderRequested = false;
 
   /**
    * Stage constructor
@@ -146,7 +143,7 @@ export class Stage extends EventEmitter {
       shaderProps: null,
     });
 
-    this.scene = new Scene(rootNode);
+    this.root = rootNode;
 
     // execute platform start loop
     if (autoStart) {
@@ -158,8 +155,8 @@ export class Stage extends EventEmitter {
    * Update animations
    */
   updateAnimations() {
-    const { scene, animationManager } = this;
-    if (!scene?.root) {
+    const { animationManager } = this;
+    if (!this.root) {
       return;
     }
     this.lastFrameTime = this.currentFrameTime;
@@ -177,32 +174,31 @@ export class Stage extends EventEmitter {
    * Check if the scene has updates
    */
   hasSceneUpdates() {
-    const { scene } = this;
-
-    if (!scene?.root) {
-      return false;
-    }
-
-    return !!scene?.root?.updateType;
+    return !!this.root.updateType || this.renderRequested;
   }
 
   /**
    * Start a new frame draw
    */
   drawFrame() {
-    const { renderer, scene } = this;
+    const { renderer, renderRequested } = this;
 
     // Update tree if needed
-    if (scene.root.updateType !== 0) {
-      scene.root.update(this.deltaTime);
+    if (this.root.updateType !== 0) {
+      this.root.update(this.deltaTime);
     }
 
     // test if we need to update the scene
     renderer?.reset();
 
-    this.addQuads(scene.root);
+    this.addQuads(this.root);
 
     renderer?.render();
+
+    // Reset renderRequested flag if it was set
+    if (renderRequested) {
+      this.renderRequested = false;
+    }
 
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
@@ -238,6 +234,13 @@ export class Stage extends EventEmitter {
 
       this.addQuads(child);
     }
+  }
+
+  /**
+   * Request a render pass without forcing an update
+   */
+  requestRender() {
+    this.renderRequested = true;
   }
 
   /**
@@ -304,12 +307,4 @@ export class Stage extends EventEmitter {
     // the covariant state argument in the setter method map
     return resolvedTextRenderer as unknown as TextRenderer;
   }
-
-  //#region Properties
-
-  get root() {
-    return this.scene?.root || null;
-  }
-
-  //#endregion Properties
 }

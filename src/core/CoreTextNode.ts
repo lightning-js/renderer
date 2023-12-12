@@ -102,6 +102,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     }
     this.updateLocalTransform();
 
+    // Incase the RAF loop has been stopped already before text was loaded,
+    // we request a render so it can be drawn.
+    this.stage.requestRender();
     this.emit('loaded', {
       type: 'text',
       dimensions: {
