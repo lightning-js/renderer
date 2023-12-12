@@ -103,6 +103,18 @@ to speed up the time it takes to verify if your changes cause any regressions.
 3. Before pushing new commits to the remote PR branch, compare your changes
    to the snapshots you took prior to starting your PR: `pnpm test:visual`
 
+## GitHub Actions Workflow
+
+The Visual Regression Tests run as a status check on every pull request update
+via the GitHub Actions workflow defined in `.github/workflows/tests.yml`. The tests
+that run are compared with the snapshots in the `certified-snapshots/chromium-ci`
+directory.
+
+When tests failed, the failure results that you normally find in
+`visual-regression/failed-results` are uploaded to the workflow run as a zip file
+artifact named **failed-results**. See [Where does the upload go?](https://github.com/actions/upload-artifact#where-does-the-upload-go)
+for more on how to find it.
+
 ## How to define Snapshots
 
 The Snapshots themselves are defined in the individual Example Tests located in the
