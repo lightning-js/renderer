@@ -1,6 +1,7 @@
 on:
-  - pull_request
-
+  pull_request:
+  merge_group:
+    types: [checks_requested]
 jobs:
   run-all-tests:
     runs-on: ubuntu-latest
