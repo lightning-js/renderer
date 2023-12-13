@@ -179,6 +179,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
+    this.gl.disable(this.gl.SCISSOR_TEST);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 

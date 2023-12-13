@@ -217,6 +217,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    // Texture was loaded. In case the RAF loop has already stopped, we request
+    // a render to ensure the texture is rendered.
+    this.stage.requestRender();
     this.emit('loaded', {
       type: 'texture',
       dimensions,
