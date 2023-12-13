@@ -40,6 +40,8 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
       fontWeight: sharedNodeStruct.fontWeight,
       lineHeight: sharedNodeStruct.lineHeight,
       maxLines: sharedNodeStruct.maxLines,
+      textBaseline: sharedNodeStruct.textBaseline,
+      verticalAlign: sharedNodeStruct.verticalAlign,
       contain: sharedNodeStruct.contain,
       letterSpacing: sharedNodeStruct.letterSpacing,
       offsetY: sharedNodeStruct.offsetY,
@@ -58,6 +60,8 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
   declare fontWeight: ITextNode['fontWeight'];
   declare lineHeight: ITextNode['lineHeight'];
   declare maxLines: ITextNode['maxLines'];
+  declare textBaseline: ITextNode['textBaseline'];
+  declare verticalAlign: ITextNode['verticalAlign'];
   declare textAlign: ITextNode['textAlign'];
   declare contain: ITextNode['contain'];
   declare scrollable: ITextNode['scrollable'];

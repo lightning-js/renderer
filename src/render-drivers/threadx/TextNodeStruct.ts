@@ -181,4 +181,22 @@ export class TextNodeStruct
   set maxLines(value: TextNodeStructWritableProps['maxLines']) {
     // Decorator will handle this
   }
+
+  @structProp('string')
+  get textBaseline(): TextNodeStructWritableProps['textBaseline'] {
+    return 'alphabetic';
+  }
+
+  set textBaseline(value: TextNodeStructWritableProps['textBaseline']) {
+    // Decorator will handle this
+  }
+
+  @structProp('string')
+  get verticalAlign(): TextNodeStructWritableProps['verticalAlign'] {
+    return 'middle';
+  }
+
+  set verticalAlign(value: TextNodeStructWritableProps['verticalAlign']) {
+    // Decorator will handle this
+  }
 }

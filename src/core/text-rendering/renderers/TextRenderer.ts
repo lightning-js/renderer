@@ -25,6 +25,10 @@ import type {
   TrFontFace,
   TrFontFaceDescriptors,
 } from '../font-face-types/TrFontFace.js';
+import type {
+  TextBaseline,
+  TextVerticalAlign,
+} from './LightningTextTextureRenderer.js';
 
 /**
  * Augmentable map of text renderer type IDs to text renderer types.
@@ -258,10 +262,31 @@ export interface TrProps extends TrFontProps {
    *
    * @remarks
    * This property sets max number of lines of a text paragraph.
+   * Not yet implemented in the SDF renderer.
    *
    * @default 0
    */
   maxLines: number;
+  /**
+   * Baseline for text
+   *
+   * @remarks
+   * This property sets the text baseline used when drawing text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default alphabetic
+   */
+  textBaseline: TextBaseline;
+  /**
+   * Vertical Align for text when lineHeight > fontSize
+   *
+   * @remarks
+   * This property sets the vertical align of the text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default middle
+   */
+  verticalAlign: TextVerticalAlign;
   zIndex: number;
   debug: Partial<TextRendererDebugProps>;
 }
@@ -330,6 +355,12 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   maxLines: (state, value) => {
     state.props.maxLines = value;
+  },
+  textBaseline: (state, value) => {
+    state.props.textBaseline = value;
+  },
+  verticalAlign: (state, value) => {
+    state.props.verticalAlign = value;
   },
   debug: (state, value) => {
     state.props.debug = value;

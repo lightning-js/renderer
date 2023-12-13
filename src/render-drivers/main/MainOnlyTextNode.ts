@@ -83,6 +83,8 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         textRendererOverride: props.textRendererOverride,
         lineHeight: props.lineHeight,
         maxLines: props.maxLines,
+        textBaseline: props.textBaseline,
+        verticalAlign: props.verticalAlign,
         debug: props.debug,
         // These properties will get set appropriately in the base MainOnlyNode class
         parent: null,
@@ -215,6 +217,26 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
   set maxLines(value: ITextNode['maxLines']) {
     if (value) {
       this.coreNode.maxLines = value;
+    }
+  }
+
+  get textBaseline(): ITextNode['textBaseline'] {
+    return this.coreNode.textBaseline;
+  }
+
+  set textBaseline(value: ITextNode['textBaseline']) {
+    if (value) {
+      this.coreNode.textBaseline = value;
+    }
+  }
+
+  get verticalAlign(): ITextNode['verticalAlign'] {
+    return this.coreNode.verticalAlign;
+  }
+
+  set verticalAlign(value: ITextNode['verticalAlign']) {
+    if (value) {
+      this.coreNode.verticalAlign = value;
     }
   }
 

@@ -87,6 +87,8 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontStyle: sharedNodeStruct.fontStyle,
         lineHeight: sharedNodeStruct.lineHeight,
         maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -105,6 +107,8 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontStyle: sharedNodeStruct.fontStyle,
         lineHeight: sharedNodeStruct.lineHeight,
         maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -131,6 +135,8 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
   declare fontStyle: TextNodeStructWritableProps['fontStyle'];
   declare lineHeight: TextNodeStructWritableProps['lineHeight'];
   declare maxLines: TextNodeStructWritableProps['maxLines'];
+  declare textBaseline: TextNodeStructWritableProps['textBaseline'];
+  declare verticalAlign: TextNodeStructWritableProps['verticalAlign'];
   declare contain: TextNodeStructWritableProps['contain'];
   declare letterSpacing: TextNodeStructWritableProps['letterSpacing'];
   declare offsetY: TextNodeStructWritableProps['offsetY'];

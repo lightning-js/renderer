@@ -209,6 +209,22 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.letterSpacing = value;
         this.invalidateLayoutCache(state);
       },
+      lineHeight: (state, value) => {
+        state.props.lineHeight = value;
+        this.invalidateLayoutCache(state);
+      },
+      maxLines: (state, value) => {
+        state.props.maxLines = value;
+        this.invalidateLayoutCache(state);
+      },
+      textBaseline: (state, value) => {
+        state.props.textBaseline = value;
+        this.invalidateLayoutCache(state);
+      },
+      verticalAlign: (state, value) => {
+        state.props.verticalAlign = value;
+        this.invalidateLayoutCache(state);
+      },
       debug: (state, value) => {
         state.props.debug = value;
       },

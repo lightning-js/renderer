@@ -389,6 +389,8 @@ export class RendererMain {
       letterSpacing: props.letterSpacing ?? 0,
       lineHeight: props.lineHeight ?? 0,
       maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'middle',
       debug: props.debug ?? {},
     };
 
