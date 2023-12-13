@@ -211,8 +211,49 @@ async function initRenderer(
     driver,
   );
 
+  /**
+   * FPS sample captured
+   */
+  const fpsSamples: number[] = [];
+  /**
+   * Number of samples to capture before calculating FPS stats
+   */
+  const fpsSampleCount = 30;
+  /**
+   * Number of samples to skip before starting to capture FPS samples.
+   */
+  const fpsSampleSkipCount = 10;
+  /**
+   * FPS sample index
+   */
+  let fpsSampleIndex = 0;
   renderer.on('fpsUpdate', (target: RendererMain, fps: number) => {
     console.log(`FPS: ${fps}`);
+    const captureSample = fpsSampleIndex >= fpsSampleSkipCount;
+    if (captureSample) {
+      fpsSamples.push(fps);
+      const calculateStats =
+        (fpsSampleIndex - fpsSampleSkipCount + 1) % fpsSampleCount === 0;
+      if (fpsSampleIndex !== fpsSampleSkipCount && calculateStats) {
+        const sortedSamples = fpsSamples.sort((a, b) => a - b);
+        const averageFps =
+          fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length;
+        const p99Fps = sortedSamples[Math.floor(fpsSamples.length * 0.99)]!;
+        const p95Fps = sortedSamples[Math.floor(fpsSamples.length * 0.95)]!;
+        const p75Fps = sortedSamples[Math.floor(fpsSamples.length * 0.75)]!;
+        const medianFps = sortedSamples[Math.floor(fpsSamples.length * 0.5)]!;
+        console.log(`---------------------------------`);
+        console.log(`Average FPS: ${averageFps}`);
+        console.log(`Median FPS: ${medianFps}`);
+        console.log(`P75 FPS: ${p75Fps}`);
+        console.log(`P95 FPS: ${p95Fps}`);
+        console.log(`P99 FPS: ${p99Fps}`);
+        console.log(`Num samples: ${fpsSamples.length}`);
+        console.log(`---------------------------------`);
+        fpsSamples.length = 0;
+      }
+    }
+    fpsSampleIndex++;
   });
 
   await renderer.init();
