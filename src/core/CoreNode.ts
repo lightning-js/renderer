@@ -155,6 +155,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
   public clippingRect: Rect | null = null;
+  public isRenderable = false;
   private parentClippingRect: Rect | null = null;
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
@@ -191,6 +192,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = texture;
     this.props.textureOptions = options;
+    this.checkIsRenderable();
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -214,6 +216,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
     this.props.texture = null;
     this.props.textureOptions = null;
+    this.checkIsRenderable();
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
@@ -243,6 +246,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
+    this.checkIsRenderable();
   }
 
   /**
@@ -310,27 +314,23 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const parent = this.props.parent;
     let childUpdateType = UpdateType.None;
     if (this.updateType & UpdateType.Global) {
+      assertTruthy(this.localTransform);
+      this.globalTransform = Matrix3d.copy(
+        parent?.globalTransform || this.localTransform,
+        this.globalTransform,
+      );
+
       if (parent) {
-        assertTruthy(this.localTransform && parent.globalTransform);
-        this.globalTransform = Matrix3d.copy(
-          parent.globalTransform,
-          this.globalTransform,
-        ).multiply(this.localTransform);
-        this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
-        childUpdateType |= UpdateType.Global;
-      } else {
-        assertTruthy(this.localTransform);
-        this.globalTransform = Matrix3d.copy(
-          this.localTransform,
-          this.globalTransform,
-        );
-        this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
-        childUpdateType |= UpdateType.Global;
+        this.globalTransform.multiply(this.localTransform);
       }
+
+      this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
+      childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
+      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.Clipping;
     }
@@ -346,49 +346,28 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
 
     if (this.updateType & UpdateType.PremultipliedColors) {
-      if (parent) {
-        this.premultipliedColorTl = mergeColorAlphaPremultiplied(
-          this.props.colorTl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorTr = mergeColorAlphaPremultiplied(
-          this.props.colorTr,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBl = mergeColorAlphaPremultiplied(
-          this.props.colorBl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBr = mergeColorAlphaPremultiplied(
-          this.props.colorBr,
-          this.worldAlpha,
-          true,
-        );
-      } else {
-        this.premultipliedColorTl = mergeColorAlphaPremultiplied(
-          this.props.colorTl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorTr = mergeColorAlphaPremultiplied(
-          this.props.colorTr,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBl = mergeColorAlphaPremultiplied(
-          this.props.colorBl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBr = mergeColorAlphaPremultiplied(
-          this.props.colorBr,
-          this.worldAlpha,
-          true,
-        );
-      }
+      this.premultipliedColorTl = mergeColorAlphaPremultiplied(
+        this.props.colorTl,
+        this.worldAlpha,
+        true,
+      );
+      this.premultipliedColorTr = mergeColorAlphaPremultiplied(
+        this.props.colorTr,
+        this.worldAlpha,
+        true,
+      );
+      this.premultipliedColorBl = mergeColorAlphaPremultiplied(
+        this.props.colorBl,
+        this.worldAlpha,
+        true,
+      );
+      this.premultipliedColorBr = mergeColorAlphaPremultiplied(
+        this.props.colorBr,
+        this.worldAlpha,
+        true,
+      );
+
+      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
     }
@@ -421,6 +400,41 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // reset update type
     this.updateType = 0;
+  }
+
+  // This function checks if the current node is renderable based on certain properties.
+  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
+  checkIsRenderable(): boolean {
+    if (this.props.texture) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.shader) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.clipping) {
+      return (this.isRenderable = true);
+    }
+
+    const colors = [
+      'color',
+      'colorTop',
+      'colorBottom',
+      'colorLeft',
+      'colorRight',
+      'colorTl',
+      'colorTr',
+      'colorBl',
+      'colorBr',
+    ];
+    if (
+      colors.some((color) => this.props[color as keyof CoreNodeProps] !== 0)
+    ) {
+      return (this.isRenderable = true);
+    }
+
+    return (this.isRenderable = false);
   }
 
   /**

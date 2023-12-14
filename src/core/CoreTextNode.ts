@@ -151,6 +151,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
+    this.checkIsRenderable();
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -270,6 +271,18 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     // globalTransform is updated in super.update(delta)
     this.textRenderer.set.x(this.trState, this.globalTransform.tx);
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
+  }
+
+  override checkIsRenderable(): boolean {
+    if (super.checkIsRenderable()) {
+      return true;
+    }
+
+    if (this.trState.props.text !== '') {
+      return (this.isRenderable = true);
+    }
+
+    return (this.isRenderable = false);
   }
 
   override renderQuads(renderer: CoreRenderer) {
