@@ -218,7 +218,7 @@ async function initRenderer(
   /**
    * Number of samples to capture before calculating FPS stats
    */
-  const fpsSampleCount = 30;
+  const fpsSampleCount = 100;
   /**
    * Number of samples to skip before starting to capture FPS samples.
    */
@@ -227,32 +227,38 @@ async function initRenderer(
    * FPS sample index
    */
   let fpsSampleIndex = 0;
+  let fpsSamplesLeft = fpsSampleCount;
   renderer.on('fpsUpdate', (target: RendererMain, fps: number) => {
-    console.log(`FPS: ${fps}`);
     const captureSample = fpsSampleIndex >= fpsSampleSkipCount;
     if (captureSample) {
       fpsSamples.push(fps);
-      const calculateStats =
-        (fpsSampleIndex - fpsSampleSkipCount + 1) % fpsSampleCount === 0;
-      if (fpsSampleIndex !== fpsSampleSkipCount && calculateStats) {
+      fpsSamplesLeft--;
+      if (fpsSamplesLeft === 0) {
         const sortedSamples = fpsSamples.sort((a, b) => a - b);
         const averageFps =
           fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length;
-        const p99Fps = sortedSamples[Math.floor(fpsSamples.length * 0.99)]!;
-        const p95Fps = sortedSamples[Math.floor(fpsSamples.length * 0.95)]!;
-        const p75Fps = sortedSamples[Math.floor(fpsSamples.length * 0.75)]!;
+        const p01Fps = sortedSamples[Math.floor(fpsSamples.length * 0.01)]!;
+        const p05Fps = sortedSamples[Math.floor(fpsSamples.length * 0.05)]!;
+        const p25Fps = sortedSamples[Math.floor(fpsSamples.length * 0.25)]!;
         const medianFps = sortedSamples[Math.floor(fpsSamples.length * 0.5)]!;
+        const stdDevFps = Math.sqrt(
+          fpsSamples.reduce((a, b) => a + (b - averageFps) ** 2, 0) /
+            fpsSamples.length,
+        );
         console.log(`---------------------------------`);
         console.log(`Average FPS: ${averageFps}`);
         console.log(`Median FPS: ${medianFps}`);
-        console.log(`P75 FPS: ${p75Fps}`);
-        console.log(`P95 FPS: ${p95Fps}`);
-        console.log(`P99 FPS: ${p99Fps}`);
+        console.log(`P01 FPS: ${p01Fps}`);
+        console.log(`P05 FPS: ${p05Fps}`);
+        console.log(`P25 FPS: ${p25Fps}`);
+        console.log(`Std Dev FPS: ${stdDevFps}`);
         console.log(`Num samples: ${fpsSamples.length}`);
         console.log(`---------------------------------`);
         fpsSamples.length = 0;
+        fpsSamplesLeft = fpsSampleCount;
       }
     }
+    console.log(`FPS: ${fps} (samples left: ${fpsSamplesLeft})`);
     fpsSampleIndex++;
   });
 

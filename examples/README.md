@@ -48,7 +48,7 @@ pnpm watch
   - Resolution (height) of to render the test at (in logical pixels)
 - `fps` (boolean, default: "false")
   - Whether or not to log the latest FPS sample to the console every 1 second.
-  - After skipping the first 10 samples, every 30 samples after that will result
+  - After skipping the first 10 samples, every 100 samples after that will result
     in a statistics summary printed to the console.
 - `ppr` (number, default: 1)
   - Device physical pixel ratio.
