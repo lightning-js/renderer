@@ -220,7 +220,10 @@ export class Stage extends EventEmitter {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer && node.globalTransform);
 
-    node.renderQuads(this.renderer);
+    if (node.isRenderable) {
+      node.renderQuads(this.renderer);
+    }
+
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i];
 
