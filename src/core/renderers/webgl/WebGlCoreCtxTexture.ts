@@ -169,6 +169,34 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         gl.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
+      // @ts-expect-error compressed props missing on SubTextureProps
+    } else if (textureData.data.mipmaps) {
+      // @ts-expect-error compressed props missing on SubTextureProps
+      const {
+        mipmaps,
+        width = 0,
+        height = 0,
+        type,
+        glInternalFormat,
+      } = textureData.data;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      const view = type === 'ktx' ? new DataView(mipmaps[0]) : mipmaps[0];
+
+      gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
+      gl.compressedTexImage2D(
+        gl.TEXTURE_2D,
+        0,
+        glInternalFormat,
+        width,
+        height,
+        0,
+        view,
+      );
+
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,

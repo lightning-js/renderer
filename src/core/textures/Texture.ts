@@ -36,6 +36,38 @@ export type TextureLoadedEventHandler = (
 ) => void;
 
 /**
+ * Represents compressed texture data.
+ */
+interface CompressedData {
+  /**
+   * GLenum spcifying compression format
+   */
+  glInternalFormat: number;
+
+  /**
+   * All mipmap levels
+   */
+  mipmaps: ArrayBuffer[];
+
+  /**
+   * Supported container types ('pvr' or 'ktx').
+   */
+  type: 'pvr' | 'ktx';
+
+  /**
+   * The width of the compressed texture in pixels. Defaults to 0.
+   *
+   * @default 0
+   */
+  width: number;
+
+  /**
+   * The height of the compressed texture in pixels.
+   **/
+  height: number;
+}
+
+/**
  * Event handler for when a Texture fails to load
  */
 export type TextureFailedEventHandler = (target: any, error: Error) => void;
@@ -47,7 +79,7 @@ export interface TextureData {
   /**
    * The texture data
    */
-  data: ImageBitmap | ImageData | SubTextureProps | null;
+  data: ImageBitmap | ImageData | SubTextureProps | CompressedData | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
    *
