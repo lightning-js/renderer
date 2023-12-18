@@ -94,3 +94,12 @@ export type NodeFailedEventHandler = (
   target: any,
   payload: NodeFailedPayload,
 ) => void;
+
+/**
+ * Event payload for when an FpsUpdate event is emitted by either the Stage or
+ * MainRenderer
+ */
+export interface FpsUpdatePayload {
+  fps: number;
+  contextSpyData: Record<string, number> | null;
+}

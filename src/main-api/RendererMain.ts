@@ -211,6 +211,21 @@ export interface RendererMainSettings {
    * @defaultValue `0` (disabled)
    */
   fpsUpdateInterval?: number;
+
+  /**
+   * Include context call (i.e. WebGL) information in FPS updates
+   *
+   * @remarks
+   * When enabled the number of calls to each context method over the
+   * `fpsUpdateInterval` will be included in the FPS update payload's
+   * `contextSpyData` property.
+   *
+   * Enabling the context spy has a serious impact on performance so only use it
+   * when you need to extract context call information.
+   *
+   * @defaultValue `false` (disabled)
+   */
+  enableContextSpy?: boolean;
 }
 
 /**
@@ -278,6 +293,7 @@ export class RendererMain extends EventEmitter {
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      enableContextSpy: settings.enableContextSpy ?? false,
     };
     this.settings = resolvedSettings;
 
@@ -335,8 +351,8 @@ export class RendererMain extends EventEmitter {
       this.nodes.delete(node.id);
     };
 
-    driver.onFpsUpdate = (fps) => {
-      this.emit('fpsUpdate', fps);
+    driver.onFpsUpdate = (fpsData) => {
+      this.emit('fpsUpdate', fpsData);
     };
 
     targetEl.appendChild(canvas);
