@@ -111,9 +111,9 @@ export class DynamicShader extends WebGlCoreShader {
   }
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
-    const { gl } = this;
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, textures[0]!.ctxTexture);
+    const { glw } = this;
+    glw.activeTexture(0);
+    glw.bindTexture(textures[0]!.ctxTexture);
   }
 
   protected override bindProps(props: Required<DynamicShaderProps>): void {
