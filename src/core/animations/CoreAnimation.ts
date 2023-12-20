@@ -93,8 +93,12 @@ export class CoreAnimation extends EventEmitter {
     }
   }
 
-  applyEasing(p: number, s: number, e: number): number {
-    return (this.timingFunction(p) || p) * (e - s) + s;
+  applyEasing(progress: number, startValue: number, endValue: number): number {
+    const easedProgress = this.timingFunction(progress) || progress;
+    const currentValue = easedProgress * (endValue - startValue) + startValue;
+
+    // Ensure currentValue doesn't exceed endValue
+    return Math.min(currentValue, endValue);
   }
 
   update(dt: number) {
