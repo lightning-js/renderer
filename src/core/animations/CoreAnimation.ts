@@ -98,7 +98,7 @@ export class CoreAnimation extends EventEmitter {
   }
 
   update(dt: number) {
-    const { duration, loop, easing } = this.settings;
+    const { duration, loop, easing, stopMethod } = this.settings;
     if (!duration) {
       this.emit('finished', {});
       return;
@@ -108,7 +108,13 @@ export class CoreAnimation extends EventEmitter {
 
     if (this.progress > 1) {
       this.progress = loop ? 0 : 1;
-      return this.emit('finished', {});
+      if (stopMethod) {
+        // If there's a stop method emit finished so the stop method can be applied.
+        // TODO: We should probably reevaluate how stopMethod is implemented as currently
+        // stop method 'reset' does not work when looping.
+        this.emit('finished', {});
+        return;
+      }
     }
 
     for (let i = 0; i < this.propsList.length; i++) {
@@ -155,6 +161,9 @@ export class CoreAnimation extends EventEmitter {
 
       this.node[propName] =
         startValue + (endValue - startValue) * this.progress;
+    }
+    if (this.progress === 1) {
+      this.emit('finished', {});
     }
   }
 }
