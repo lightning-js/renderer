@@ -409,6 +409,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return (this.isRenderable = true);
     }
 
+    if (!this.props.width || !this.props.height) {
+      return (this.isRenderable = false);
+    }
+
     if (this.props.shader) {
       return (this.isRenderable = true);
     }
