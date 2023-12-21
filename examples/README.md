@@ -50,6 +50,16 @@ pnpm watch
   - Whether or not to log the latest FPS sample to the console every 1 second.
   - After skipping the first 10 samples, every 100 samples after that will result
     in a statistics summary printed to the console.
+- `contextSpy` (boolean, default: "false")
+  - Whether or not to turn on the context spy and reporting
+  - The context spy intercepts all calls to the (WebGL) context and reports
+    how many calls to each function occurred during the last FPS sampling period
+    (1 second for these tests).
+  - Statistical results of every context call will be reported along with the
+    FPS statistics summary.
+  - `fps` must be enabled in order to see any reporting.
+  - Enabling the context spy has a serious impact on performance so only use it
+    when you need to extract context call information.
 - `ppr` (number, default: 1)
   - Device physical pixel ratio.
 - `multiplier` (number, default: 1)

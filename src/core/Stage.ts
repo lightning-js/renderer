@@ -32,6 +32,8 @@ import type {
 import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { EventEmitter } from '../common/EventEmitter.js';
+import { ContextSpy } from './lib/ContextSpy.js';
+import type { FpsUpdatePayload } from '../common/CommonTypes.js';
 
 export interface StageOptions {
   rootId: number;
@@ -42,10 +44,17 @@ export interface StageOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor: number;
   fpsUpdateInterval: number;
+  enableContextSpy: boolean;
+
   debug?: {
     monitorTextureCache?: boolean;
   };
 }
+
+export type StageFpsUpdateHandler = (
+  stage: Stage,
+  fpsData: FpsUpdatePayload,
+) => void;
 
 const bufferMemory = 2e6;
 const autoStart = true;
@@ -68,15 +77,27 @@ export class Stage extends EventEmitter {
   private fpsElapsedTime = 0;
   private renderRequested = false;
 
+  /// Debug data
+  contextSpy: ContextSpy | null = null;
+
   /**
    * Stage constructor
    */
   constructor(readonly options: StageOptions) {
     super();
-    const { canvas, clearColor, rootId, debug, appWidth, appHeight } = options;
+    const {
+      canvas,
+      clearColor,
+      rootId,
+      debug,
+      appWidth,
+      appHeight,
+      enableContextSpy,
+    } = options;
     this.txManager = new CoreTextureManager();
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
+    this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     if (debug?.monitorTextureCache) {
       setInterval(() => {
@@ -96,6 +117,7 @@ export class Stage extends EventEmitter {
       bufferMemory,
       txManager: this.txManager,
       shManager: this.shManager,
+      contextSpy: this.contextSpy,
     });
 
     // Must do this after renderer is created
@@ -212,7 +234,11 @@ export class Stage extends EventEmitter {
         );
         this.fpsNumFrames = 0;
         this.fpsElapsedTime = 0;
-        this.emit('fpsUpdate', fps);
+        this.emit('fpsUpdate', {
+          fps,
+          contextSpyData: this.contextSpy?.getData() ?? null,
+        } satisfies FpsUpdatePayload);
+        this.contextSpy?.reset();
       }
     }
   }

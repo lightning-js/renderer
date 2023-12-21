@@ -54,6 +54,7 @@ import {
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
+import { ContextSpy } from '../../lib/ContextSpy.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,6 +67,7 @@ export interface WebGlCoreRendererOptions {
   shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
+  contextSpy: ContextSpy | null;
 }
 
 interface CoreWebGlSystem {
@@ -113,11 +115,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
 
-    const gl = createWebGLContext(canvas);
-    if (!gl) {
-      throw new Error('Unable to create WebGL context');
-    }
-    this.gl = gl;
+    const gl = (this.gl = createWebGLContext(canvas, options.contextSpy));
 
     const color = getNormalizedRgbaComponents(clearColor);
     gl.viewport(0, 0, canvas.width, canvas.height);
