@@ -86,30 +86,39 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     'ease-in-out-back',
     'cubic-bezier(0,1.35,.99,-0.07)',
     'cubic-bezier(.41,.91,.99,-0.07)',
-    'loopReverse',
+    'loopStopMethodReverse',
+    'loopStopMethodReset',
+    'loop',
   ];
 
   let animationIndex = 0;
   let currentAnimation: IAnimationController;
 
-  const animationSettings: Partial<AnimationExampleSettings> = {
-    duration: 2000,
-    loop: false,
-    stopMethod: false,
-    easing: 'linear',
-  };
-
   const execEasing = (index = 0): void => {
     const easing = easings[index] ?? 'linear';
     easingLabel.text = `Easing demo: ${easing}`;
+    const animationSettings: Partial<AnimationExampleSettings> = {
+      duration: 2000,
+      loop: false,
+      stopMethod: false,
+      easing: 'linear',
+    };
     animationSettings.easing = easing;
 
     // restore x position before start of every animation
     animatableNode.x = 0;
 
-    if (easing === 'loopReverse') {
+    if (easing === 'loopStopMethodReverse') {
+      animationSettings.easing = 'linear';
       animationSettings.loop = true;
       animationSettings.stopMethod = 'reverse';
+    } else if (easing === 'loopStopMethodReset') {
+      animationSettings.easing = 'linear';
+      animationSettings.loop = true;
+      animationSettings.stopMethod = 'reset';
+    } else if (easing === 'loop') {
+      animationSettings.easing = 'linear';
+      animationSettings.loop = true;
     } else {
       animationSettings.loop = false;
       animationSettings.stopMethod = false;
@@ -135,10 +144,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     }
     if (e.key === 'ArrowLeft') {
       animationIndex--;
-    }
-    if (e.key === 'ArrowUp') {
-      const s = animationSettings.stopMethod;
-      animationSettings.stopMethod = !s ? 'reverse' : false;
     }
 
     // wrap around

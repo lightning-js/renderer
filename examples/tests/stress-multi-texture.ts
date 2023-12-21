@@ -19,6 +19,8 @@
 
 import { type INode } from '@lightningjs/renderer';
 import logo from '../assets/lightning.png';
+import robot from '../assets/robot/robot.png';
+
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 const randomIntBetween = (from: number, to: number) =>
@@ -29,7 +31,8 @@ export default async function ({
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
-  // create 100 nodes
+  // create nodes
+  const numOuterNodes = 100 * perfMultiplier;
   const nodes: INode[] = [];
 
   const bg = renderer.createNode({
@@ -39,20 +42,30 @@ export default async function ({
     parent: testRoot,
   });
 
-  for (let i = 0; i < 100 * perfMultiplier; i++) {
+  for (let i = 0; i < numOuterNodes; i++) {
     const node = renderer.createNode({
-      width: 505,
-      height: 101,
       x: Math.random() * 1920,
       y: Math.random() * 1080,
-      src: logo,
+      ...(i % 2 === 0
+        ? {
+            width: 505,
+            height: 101,
+            src: logo,
+          }
+        : {
+            width: 140,
+            height: 140,
+            src: robot,
+          }),
       parent: bg,
     });
 
     nodes.push(node);
   }
 
-  // create 100 animations
+  console.log(`Created ${numOuterNodes} nodes with alternating textures`);
+
+  // create animations
   const animate = () => {
     nodes.forEach((node) => {
       node
