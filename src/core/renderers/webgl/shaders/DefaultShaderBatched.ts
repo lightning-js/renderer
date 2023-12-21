@@ -44,7 +44,7 @@ export class DefaultShaderBatched extends WebGlCoreShader {
   }
 
   override bindTextures(texture: WebGlCoreCtxTexture[]) {
-    const { renderer, gl } = this;
+    const { renderer, glw } = this;
     if (
       texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
     ) {
@@ -53,8 +53,8 @@ export class DefaultShaderBatched extends WebGlCoreShader {
       );
     }
     texture.forEach((t, i) => {
-      gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, t.ctxTexture);
+      glw.activeTexture(i);
+      glw.bindTexture(t.ctxTexture);
     });
     const samplers = Array.from(Array(texture.length).keys());
     this.setUniform('u_textures[0]', samplers);
