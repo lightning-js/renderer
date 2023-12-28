@@ -16,7 +16,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ShaderEffect } from './ShaderEffect.js';
+import {
+  ShaderEffect,
+  type DefaultEffectProps,
+  type ShaderEffectUniforms,
+} from './ShaderEffect.js';
+
+/**
+ * Properties of the {@link GrayscaleEffect} effect
+ */
+export interface GrayscaleEffectProps extends DefaultEffectProps {
+  /**
+   * Grey scale amount between 0 - 1.
+   *
+   * @default 1
+   */
+  amount?: number;
+}
 
 /**
  * Grayscale effect grayscales the color values of the current mask color
@@ -28,10 +44,24 @@ export class GrayscaleEffect extends ShaderEffect {
     return `grayscale`;
   }
 
+  static override resolveDefaults(
+    props: GrayscaleEffectProps,
+  ): Required<GrayscaleEffectProps> {
+    return {
+      amount: props.amount ?? 1,
+    };
+  }
+
+  static override uniforms: ShaderEffectUniforms = {
+    amount: {
+      value: 1,
+      method: 'uniform1f',
+      type: 'float',
+    },
+  };
+
   static override onColorize = `
-    vec3 color = pow(maskColor.rgb, vec3(2.0));
-    float gray = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    float gammaGray = sqrt(gray);
-    return vec4(gammaGray, gammaGray, gammaGray, 1.0);
+    float grayness = 0.2 * maskColor.r + 0.6 * maskColor.g + 0.2 * maskColor.b;
+    return vec4(amount * vec3(grayness) + (1.0 - amount) * maskColor.rgb, maskColor.a);
   `;
 }
