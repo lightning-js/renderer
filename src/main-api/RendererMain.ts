@@ -405,7 +405,7 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
-    return this.driver.createTextNode({
+    const data = {
       ...this.resolveNodeDefaults(props),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
@@ -420,8 +420,14 @@ export class RendererMain extends EventEmitter {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight ?? 0,
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'middle',
       debug: props.debug ?? {},
-    });
+    };
+
+    return this.driver.createTextNode(data);
   }
 
   /**

@@ -81,8 +81,11 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         scrollY: props.scrollY,
         offsetY: props.offsetY,
         textRendererOverride: props.textRendererOverride,
+        lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        textBaseline: props.textBaseline,
+        verticalAlign: props.verticalAlign,
         debug: props.debug,
-
         // These properties will get set appropriately in the base MainOnlyNode class
         parent: null,
         texture: null,
@@ -195,6 +198,46 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
 
   set letterSpacing(value: ITextNode['letterSpacing']) {
     this.coreNode.letterSpacing = value;
+  }
+
+  get lineHeight(): ITextNode['lineHeight'] {
+    return this.coreNode.lineHeight;
+  }
+
+  set lineHeight(value: ITextNode['lineHeight']) {
+    if (value) {
+      this.coreNode.lineHeight = value;
+    }
+  }
+
+  get maxLines(): ITextNode['maxLines'] {
+    return this.coreNode.maxLines;
+  }
+
+  set maxLines(value: ITextNode['maxLines']) {
+    if (value) {
+      this.coreNode.maxLines = value;
+    }
+  }
+
+  get textBaseline(): ITextNode['textBaseline'] {
+    return this.coreNode.textBaseline;
+  }
+
+  set textBaseline(value: ITextNode['textBaseline']) {
+    if (value) {
+      this.coreNode.textBaseline = value;
+    }
+  }
+
+  get verticalAlign(): ITextNode['verticalAlign'] {
+    return this.coreNode.verticalAlign;
+  }
+
+  set verticalAlign(value: ITextNode['verticalAlign']) {
+    if (value) {
+      this.coreNode.verticalAlign = value;
+    }
   }
 
   get debug(): ITextNode['debug'] {
