@@ -82,10 +82,9 @@ export class SdfTrFontFace<
       },
     );
 
-    // TODO: Add texture loaded support
-    // this.texture.on('loaded', () => {
-    //   this.checkLoaded();
-    // });
+    this.texture.on('loaded', () => {
+      this.checkLoaded();
+    });
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)
@@ -120,7 +119,7 @@ export class SdfTrFontFace<
 
   private checkLoaded(): void {
     if (this.loaded) return;
-    if (/*this.texture.loaded && */ this.data) {
+    if (this.texture.state === 'loaded' && this.data) {
       (this.loaded as boolean) = true;
       this.emit('loaded');
     }

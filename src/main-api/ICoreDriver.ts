@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { FpsUpdatePayload } from '../common/CommonTypes.js';
 import type {
   INode,
   INodeWritableProps,
@@ -55,4 +56,6 @@ export interface ICoreDriver {
   onCreateNode(node: INode): void;
 
   onBeforeDestroyNode(node: INode): void;
+
+  onFpsUpdate(fpsData: FpsUpdatePayload): void;
 }

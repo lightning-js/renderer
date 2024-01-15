@@ -16,11 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { Scene } from './scene/Scene.js';
-
 import { startLoop, getTimeStamp } from './platform.js';
-
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
@@ -35,7 +31,9 @@ import type {
 } from './text-rendering/renderers/TextRenderer.js';
 import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
-import { intersectRect, type Rect } from './lib/utils.js';
+import { EventEmitter } from '../common/EventEmitter.js';
+import { ContextSpy } from './lib/ContextSpy.js';
+import type { FpsUpdatePayload } from '../common/CommonTypes.js';
 
 export interface StageOptions {
   rootId: number;
@@ -45,15 +43,23 @@ export interface StageOptions {
   devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor: number;
+  fpsUpdateInterval: number;
+  enableContextSpy: boolean;
+
   debug?: {
     monitorTextureCache?: boolean;
   };
 }
 
+export type StageFpsUpdateHandler = (
+  stage: Stage,
+  fpsData: FpsUpdatePayload,
+) => void;
+
 const bufferMemory = 2e6;
 const autoStart = true;
 
-export class Stage {
+export class Stage extends EventEmitter {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -61,21 +67,37 @@ export class Stage {
   public readonly textRenderers: Partial<TextRendererMap>;
   public readonly shManager: CoreShaderManager;
   public readonly renderer: WebGlCoreRenderer;
-  private scene: Scene;
+  public readonly root: CoreNode;
 
   /// State
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  private fpsNumFrames = 0;
+  private fpsElapsedTime = 0;
+  private renderRequested = false;
+
+  /// Debug data
+  contextSpy: ContextSpy | null = null;
 
   /**
    * Stage constructor
    */
   constructor(readonly options: StageOptions) {
-    const { canvas, clearColor, rootId, debug, appWidth, appHeight } = options;
+    super();
+    const {
+      canvas,
+      clearColor,
+      rootId,
+      debug,
+      appWidth,
+      appHeight,
+      enableContextSpy,
+    } = options;
     this.txManager = new CoreTextureManager();
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
+    this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     if (debug?.monitorTextureCache) {
       setInterval(() => {
@@ -95,6 +117,7 @@ export class Stage {
       bufferMemory,
       txManager: this.txManager,
       shManager: this.shManager,
+      contextSpy: this.contextSpy,
     });
 
     // Must do this after renderer is created
@@ -142,19 +165,20 @@ export class Stage {
       shaderProps: null,
     });
 
-    this.scene = new Scene(rootNode);
+    this.root = rootNode;
 
     // execute platform start loop
     if (autoStart) {
       startLoop(this);
     }
   }
+
   /**
-   * Start a new frame draw
+   * Update animations
    */
-  drawFrame() {
-    const { renderer, scene, animationManager } = this;
-    if (!scene?.root) {
+  updateAnimations() {
+    const { animationManager } = this;
+    if (!this.root) {
       return;
     }
     this.lastFrameTime = this.currentFrameTime;
@@ -166,48 +190,86 @@ export class Stage {
 
     // step animation
     animationManager.update(this.deltaTime);
-
-    // reset and clear viewport
-    renderer?.reset();
-
-    // test if we need to update the scene
-    if (scene?.root?.hasUpdates) {
-      scene?.root?.update(this.deltaTime);
-    }
-
-    this.addQuads(scene.root);
-
-    renderer?.sortRenderables();
-    renderer?.render();
   }
 
-  addQuads(node: CoreNode, parentClippingRect: Rect | null = null) {
-    assertTruthy(this.renderer && node.globalTransform);
-    const gt = node.globalTransform;
-    const isRotated = gt.tb !== 0 || gt.tc !== 0;
+  /**
+   * Check if the scene has updates
+   */
+  hasSceneUpdates() {
+    return !!this.root.updateType || this.renderRequested;
+  }
 
-    let clippingRect: Rect | null =
-      node.clipping && !isRotated
-        ? {
-            x: gt.tx,
-            y: gt.ty,
-            width: node.width * gt.ta,
-            height: node.height * gt.td,
-          }
-        : null;
-    if (parentClippingRect && clippingRect) {
-      clippingRect = intersectRect(parentClippingRect, clippingRect);
-    } else if (parentClippingRect) {
-      clippingRect = parentClippingRect;
+  /**
+   * Start a new frame draw
+   */
+  drawFrame() {
+    const { renderer, renderRequested } = this;
+
+    // Update tree if needed
+    if (this.root.updateType !== 0) {
+      this.root.update(this.deltaTime);
     }
 
-    node.renderQuads(this.renderer, clippingRect);
-    node.children.forEach((child) => {
-      if (child.worldAlpha === 0) {
-        return;
+    // test if we need to update the scene
+    renderer?.reset();
+
+    this.addQuads(this.root);
+
+    renderer?.render();
+
+    // Reset renderRequested flag if it was set
+    if (renderRequested) {
+      this.renderRequested = false;
+    }
+
+    // If there's an FPS update interval, emit the FPS update event
+    // when the specified interval has elapsed.
+    const { fpsUpdateInterval } = this.options;
+    if (fpsUpdateInterval) {
+      this.fpsNumFrames++;
+      this.fpsElapsedTime += this.deltaTime;
+      if (this.fpsElapsedTime >= fpsUpdateInterval) {
+        const fps = Math.round(
+          (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
+        );
+        this.fpsNumFrames = 0;
+        this.fpsElapsedTime = 0;
+        this.emit('fpsUpdate', {
+          fps,
+          contextSpyData: this.contextSpy?.getData() ?? null,
+        } satisfies FpsUpdatePayload);
+        this.contextSpy?.reset();
       }
-      this.addQuads(child, clippingRect);
-    });
+    }
+  }
+
+  addQuads(node: CoreNode) {
+    assertTruthy(this.renderer && node.globalTransform);
+
+    if (node.isRenderable) {
+      node.renderQuads(this.renderer);
+    }
+
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+
+      if (!child) {
+        continue;
+      }
+
+      if (child?.worldAlpha === 0) {
+        continue;
+      }
+
+      this.addQuads(child);
+    }
+  }
+
+  /**
+   * Request a render pass without forcing an update
+   */
+  requestRender() {
+    this.renderRequested = true;
   }
 
   /**
@@ -274,12 +336,4 @@ export class Stage {
     // the covariant state argument in the setter method map
     return resolvedTextRenderer as unknown as TextRenderer;
   }
-
-  //#region Properties
-
-  get root() {
-    return this.scene?.root || null;
-  }
-
-  //#endregion Properties
 }

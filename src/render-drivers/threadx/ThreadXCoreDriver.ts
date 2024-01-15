@@ -32,15 +32,17 @@ import type {
   RendererMain,
   RendererMainSettings,
 } from '../../main-api/RendererMain.js';
-import type {
-  ThreadXRendererInitMessage,
-  ThreadXRendererReleaseTextureMessage,
+import {
+  isThreadXRendererMessage,
+  type ThreadXRendererInitMessage,
+  type ThreadXRendererReleaseTextureMessage,
 } from './ThreadXRendererMessage.js';
 import {
   TextNodeStruct,
   type TextNodeStructWritableProps,
 } from './TextNodeStruct.js';
 import { ThreadXMainTextNode } from './ThreadXMainTextNode.js';
+import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
 
 export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
@@ -51,6 +53,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
   private threadx: ThreadX;
   private rendererMain: RendererMain | null = null;
   private root: INode | null = null;
+  private fps = 0;
 
   constructor(settings: ThreadXRendererSettings) {
     this.settings = settings;
@@ -73,6 +76,12 @@ export class ThreadXCoreDriver implements ICoreDriver {
           });
         }
         return null;
+      },
+      onMessage: async (message) => {
+        // Forward fpsUpdate events from the renderer worker's Stage to RendererMain
+        if (isThreadXRendererMessage('fpsUpdate', message)) {
+          this.onFpsUpdate(message.fpsData);
+        }
       },
     });
     this.threadx.registerWorker(
@@ -99,6 +108,8 @@ export class ThreadXCoreDriver implements ICoreDriver {
         devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
         clearColor: rendererSettings.clearColor,
         coreExtensionModule: rendererSettings.coreExtensionModule,
+        fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
+        enableContextSpy: rendererSettings.enableContextSpy,
       } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;
@@ -243,11 +254,18 @@ export class ThreadXCoreDriver implements ICoreDriver {
     } satisfies ThreadXRendererReleaseTextureMessage);
   }
 
+  //#region Event Methods
+  // The implementations for these event methods are provided by RendererMain
   onCreateNode(node: INode): void {
-    return;
+    throw new Error('Method not implemented.');
   }
 
   onBeforeDestroyNode(node: INode): void {
-    return;
+    throw new Error('Method not implemented.');
   }
+
+  onFpsUpdate(fps: FpsUpdatePayload): void {
+    throw new Error('Method not implemented.');
+  }
+  //#endregion
 }

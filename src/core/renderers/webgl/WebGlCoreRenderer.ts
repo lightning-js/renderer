@@ -54,6 +54,7 @@ import {
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
+import { ContextSpy } from '../../lib/ContextSpy.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,6 +67,7 @@ export interface WebGlCoreRendererOptions {
   shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
+  contextSpy: ContextSpy | null;
 }
 
 interface CoreWebGlSystem {
@@ -113,11 +115,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
 
-    const gl = createWebGLContext(canvas);
-    if (!gl) {
-      throw new Error('Unable to create WebGL context');
-    }
-    this.gl = gl;
+    const gl = (this.gl = createWebGLContext(canvas, options.contextSpy));
 
     const color = getNormalizedRgbaComponents(clearColor);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -130,9 +128,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(gl),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader(
-      'DefaultShaderBatched',
-    ).shader;
+    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
     const quadBuffer = gl.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -181,6 +177,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
+    this.gl.disable(this.gl.SCISSOR_TEST);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 
@@ -196,23 +193,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
-   * Add a renderable to the current set of renderables.
+   * This function adds a quad (a rectangle composed of two triangles) to the WebGL rendering pipeline.
    *
-   * @remarks
-   * If a {@link QuadOptions} structure is provided, this will ultimately result
-   * in a render ops being created, merged and added to the render ops list.
+   * It takes a set of options that define the quad's properties, such as its dimensions, colors, texture, shader, and transformation matrix.
+   * The function first updates the shader properties with the current dimensions if necessary, then sets the default texture if none is provided.
+   * It then checks if a new render operation is needed, based on the current shader and clipping rectangle.
+   * If a new render operation is needed, it creates one and updates the current render operation.
+   * The function then adjusts the texture coordinates based on the texture options and adds the texture to the texture manager.
    *
-   * If a direct {@link WebGlCoreRenderOp} instance is provided, it will be
-   * added to the render ops list as-is. Be sure to set the zIndex correctly of
-   * the render op to ensure proper rendering order.
-   *
-   * @param renderable
+   * Finally, it calculates the vertices for the quad, taking into account any transformations, and adds them to the quad buffer.
+   * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
-  override addRenderable(renderable: QuadOptions | WebGlCoreRenderOp) {
-    this.renderables?.push(renderable);
-  }
-
-  private addQuad(params: QuadOptions) {
+  addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
     const {
       width,
@@ -332,11 +324,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTl,
-        alpha,
-        true,
-      ); // color
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
@@ -344,11 +332,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty + width * tc;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
@@ -356,11 +340,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBl,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
@@ -368,11 +348,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty + width * tc + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     } else {
       // Calculate the right corner of the quad
@@ -385,11 +361,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTl,
-        alpha,
-        true,
-      ); // color
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
@@ -397,11 +369,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = ty;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
@@ -409,11 +377,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = rightCornerY;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBl,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
@@ -421,11 +385,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = rightCornerY;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     }
 
@@ -508,25 +468,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
-   * Sort renderable children and add them to the render ops.
-   * @todo:
-   * - move to merge sort to keep relative order
-   * - support z-index parent locking
-   *
+   * add RenderOp to the render pipeline
    */
-
-  sortRenderables() {
-    const { renderables } = this;
-    renderables.sort((a, b) => a.zIndex - b.zIndex);
-
-    renderables.forEach((renderable) => {
-      if (renderable instanceof WebGlCoreRenderOp) {
-        this.renderOps.push(renderable);
-        this.curRenderOp = null;
-      } else {
-        this.addQuad(renderable);
-      }
-    });
+  addRenderOp(renderable: WebGlCoreRenderOp) {
+    this.renderOps.push(renderable);
+    this.curRenderOp = null;
   }
 
   /**

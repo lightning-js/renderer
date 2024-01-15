@@ -19,6 +19,16 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
+export const Colors = {
+  Black: 0x000000ff,
+  Red: 0xff0000ff,
+  Green: 0x00ff00ff,
+  Blue: 0x0000ffff,
+  Magenta: 0xff00ffff,
+  Gray: 0x7f7f7fff,
+  White: 0xffffffff,
+};
+
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await test(settings);
@@ -26,51 +36,53 @@ export async function automation(settings: ExampleSettings) {
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
-  const rectOne = renderer.createNode({
-    x: 200,
-    y: 200,
-    width: 200,
-    height: 200,
-    color: 0xaabb66ff,
-    shader: renderer.createShader('RoundedRectangle', {
-      radius: 40,
-    }),
-    zIndex: 1,
+  const leftStackText = renderer.createTextNode({
+    x: 100,
+    y: 100,
+    width: 400,
+    height: 268,
+    color: 0xffffffff,
+    alpha: 1.0,
+    text: 'These should neatly stack on top of each other.',
+    contain: 'both',
+    fontFamily: 'Ubuntu',
+    fontSize: 30,
+    textAlign: 'center',
     parent: testRoot,
-  });
-
-  const rectTwo = renderer.createNode({
-    x: 220,
-    y: 220,
-    width: 200,
-    height: 200,
-    color: 0xffaaee00,
-    shader: renderer.createShader('RoundedRectangle', {
-      radius: 40,
-    }),
     zIndex: 3,
-    parent: testRoot,
   });
 
-  const rectThree = renderer.createNode({
-    x: 240,
-    y: 240,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    shader: renderer.createShader('RoundedRectangle', {
-      radius: 40,
-    }),
-    zIndex: 4,
-    parent: testRoot,
-  });
+  const generatedRectangles: any = [];
+
+  Array(10)
+    .fill(null)
+    .forEach((_, i) => {
+      const color = Object.keys(Colors)[i % Object.keys(Colors).length];
+
+      generatedRectangles.push(
+        renderer.createNode({
+          x: 200 + i * 20,
+          y: 200 + i * 20,
+          width: 200,
+          height: 200,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          //@ts-ignore
+          color: Colors[color],
+          shader: renderer.createShader('RoundedRectangle', {
+            radius: 2,
+          }),
+          zIndex: 10 + (i + 1),
+          parent: testRoot,
+        }),
+      );
+    });
 
   const parentRect = renderer.createNode({
     x: 800,
     y: 200,
     width: 600,
     height: 600,
-    color: 0xaabb66ff,
+    color: Colors.Gray,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
@@ -84,7 +96,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     width: 200,
     height: 200,
-    color: 0xffaaee00,
+    color: Colors.White,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
@@ -97,7 +109,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: 120,
     width: 200,
     height: 200,
-    color: 0x0000ffff,
+    color: Colors.Red,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
@@ -105,40 +117,43 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: parentRect,
   });
 
+  const rightStackText = renderer.createTextNode({
+    x: 700,
+    y: 100,
+    width: 700,
+    height: 268,
+    color: 0xffffffff,
+    alpha: 1.0,
+    text: 'Green box should overlap even though it has a lower zIndex because the parent is locked',
+    contain: 'both',
+    fontFamily: 'Ubuntu',
+    fontSize: 30,
+    textAlign: 'center',
+    parent: testRoot,
+    zIndex: 3,
+  });
+
   const blockingRect = renderer.createNode({
-    x: 80,
-    y: 80,
-    width: 1600,
-    height: 800,
-    color: 0x00ffffff,
+    x: 750,
+    y: 300,
+    width: 400,
+    height: 100,
+    color: Colors.Green,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
     // }),
-    zIndex: 0,
+    zIndex: 2,
     parent: testRoot,
   });
 
-  const rectOrder = [rectOne, rectTwo, rectThree];
-  const rectChildOrder = [parentRect, childRectWhite, childRectRed];
-
   window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowLeft') {
-      console.log('Reversing');
-      rectOrder.reverse();
-      rectOrder.forEach((rect, i) => {
-        rect.zIndex = i + 1;
+      // reverse the order of the rectangles
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+      generatedRectangles.forEach((rect: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        rect.zIndex = 100 - rect.zIndex;
       });
-
-      rectChildOrder.reverse();
-      rectChildOrder.forEach((rect, i) => {
-        rect.zIndex = i + 2;
-      });
-    } else if (e.code === 'ArrowRight') {
-      console.log('middle');
-      rectTwo.zIndex = rectTwo.zIndex === 100 ? 2 : 100;
-      childRectWhite.zIndex = childRectWhite.zIndex === 100 ? 4 : 100;
-    } else if (e.code === 'Space') {
-      blockingRect.zIndex = blockingRect.zIndex === 10 ? 0 : 10;
     }
   });
 

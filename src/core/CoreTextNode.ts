@@ -106,6 +106,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     }
     this.updateLocalTransform();
 
+    // Incase the RAF loop has been stopped already before text was loaded,
+    // we request a render so it can be drawn.
+    this.stage.requestRender();
     this.emit('loaded', {
       type: 'text',
       dimensions: {
@@ -152,6 +155,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
+    this.checkIsRenderable();
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -303,8 +307,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.debug(this.trState, value);
   }
 
-  override update(delta: number) {
-    super.update(delta);
+  override update(delta: number, parentClippingRect: Rect | null = null) {
+    super.update(delta, parentClippingRect);
 
     assertTruthy(this.globalTransform);
 
@@ -313,12 +317,24 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override renderQuads(renderer: CoreRenderer, clippingRect: Rect | null) {
+  override checkIsRenderable(): boolean {
+    if (super.checkIsRenderable()) {
+      return true;
+    }
+
+    if (this.trState.props.text !== '') {
+      return (this.isRenderable = true);
+    }
+
+    return (this.isRenderable = false);
+  }
+
+  override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
     this.textRenderer.renderQuads(
       this.trState,
       this.globalTransform,
-      clippingRect,
+      this.clippingRect,
       this.worldAlpha,
     );
   }

@@ -1,6 +1,7 @@
 on:
-  - pull_request
-
+  pull_request:
+  merge_group:
+    types: [checks_requested]
 jobs:
   run-all-tests:
     runs-on: ubuntu-latest
@@ -46,3 +47,10 @@ jobs:
         run: pnpm run test:visual --color
         env:
           RUNTIME_ENV: ci
+
+      - name: Upload failed-results as artifact
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: failed-results
+          path: visual-regression/failed-results/

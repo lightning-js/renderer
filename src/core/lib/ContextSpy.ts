@@ -17,30 +17,25 @@
  * limitations under the License.
  */
 
-import type { Stage } from './Stage.js';
-
 /**
- * Platform render loop initiator
+ * Class that keeps track of the invocations of Context methods when
+ * the `enableContextSpy` renderer option is enabled.
  */
-export const startLoop = (stage: Stage) => {
-  const runLoop = () => {
-    stage.updateAnimations();
+export class ContextSpy {
+  private data: Record<string, number> = {};
 
-    if (!stage.hasSceneUpdates()) {
-      setTimeout(runLoop, 16.666666666666668);
-      return;
+  reset() {
+    this.data = {};
+  }
+
+  increment(name: string) {
+    if (!this.data[name]) {
+      this.data[name] = 0;
     }
+    this.data[name]++;
+  }
 
-    stage.drawFrame();
-    requestAnimationFrame(runLoop);
-  };
-  requestAnimationFrame(runLoop);
-};
-
-/**
- * Return unix timestamp
- * @return {number}
- */
-export const getTimeStamp = () => {
-  return performance ? performance.now() : Date.now();
-};
+  getData() {
+    return { ...this.data };
+  }
+}

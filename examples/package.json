@@ -8,7 +8,7 @@
   "scripts": {
     "start": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:dev\"",
     "start:prod": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
-    "dev": "vite --open",
+    "dev": "vite --open --host",
     "build": "vite build",
     "watch": "vite build --watch",
     "watch-all": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\"",

@@ -18,7 +18,7 @@
  */
 
 import { EventEmitter } from '../../../common/EventEmitter.js';
-import { assertTruthy } from '../../../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../../../utils.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
 import {
@@ -114,7 +114,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    let context = this.canvas.getContext('2d');
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    let context = this.canvas.getContext('2d') as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null;
     if (!context) {
       // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
       // Here we try getting the context again after falling back to an HTMLCanvasElement.
@@ -563,15 +567,15 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     // Color alpha of text is not properly rendered to the Canvas texture, so we
     // need to apply it here.
     const combinedAlpha = alpha * getNormalizedAlphaComponent(color);
-
+    const quadColor = mergeColorAlphaPremultiplied(0xffffffff, combinedAlpha);
     if (canvasPages[0].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[0].texture?.dimensions?.width || 0,
         height: canvasPages[0].texture?.dimensions?.height || 0,
         texture: canvasPages[0].texture!,
@@ -588,13 +592,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       });
     }
     if (canvasPages[1].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[1].texture?.dimensions?.width || 0,
         height: canvasPages[1].texture?.dimensions?.height || 0,
         texture: canvasPages[1].texture!,
@@ -611,13 +615,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       });
     }
     if (canvasPages[2].valid) {
-      this.stage.renderer.addRenderable({
+      this.stage.renderer.addQuad({
         alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[2].texture?.dimensions?.width || 0,
         height: canvasPages[2].texture?.dimensions?.height || 0,
         texture: canvasPages[2].texture!,
