@@ -287,6 +287,7 @@ export interface TrProps extends TrFontProps {
    * @default middle
    */
   verticalAlign: TextVerticalAlign;
+
   zIndex: number;
   debug: Partial<TextRendererDebugProps>;
 }
