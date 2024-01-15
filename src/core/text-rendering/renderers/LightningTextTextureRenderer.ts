@@ -212,7 +212,7 @@ export class LightningTextTextureRenderer {
       this._settings.offsetY === null
         ? null
         : this._settings.offsetY * precision;
-    let lineHeight = (this._settings.lineHeight || fontSize) * precision;
+    let lineHeight = (this._settings.lineHeight || fontSize * 1.4) * precision;
     const w = this._settings.w * precision;
     const h = this._settings.h * precision;
     let wordWrapWidth = this._settings.wordWrapWidth * precision;
