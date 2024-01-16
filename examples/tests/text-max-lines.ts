@@ -68,7 +68,9 @@ function generateLineHeightTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('maxLines', ${textRenderer})`,
+      title: `Text Node ('maxLines', ${textRenderer})${
+        textRenderer === 'sdf' ? ', broken' : ''
+      }`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
