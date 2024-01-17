@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+
 export interface CoreWebGlParameters {
   MAX_RENDERBUFFER_SIZE: number;
   MAX_TEXTURE_SIZE: number;
@@ -32,10 +34,10 @@ export interface CoreWebGlParameters {
 
 /**
  * Get device specific webgl parameters
- * @param gl
+ * @param glw
  */
 export function getWebGlParameters(
-  gl: WebGLRenderingContext | WebGL2RenderingContext,
+  glw: WebGlContextWrapper,
 ): CoreWebGlParameters {
   const params: CoreWebGlParameters = {
     MAX_RENDERBUFFER_SIZE: 0,
@@ -55,7 +57,7 @@ export function getWebGlParameters(
   const keys = Object.keys(params) as Array<keyof CoreWebGlParameters>;
   keys.forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    params[key] = gl.getParameter(gl[key]);
+    params[key] = glw.getParameter(glw[key]);
   });
 
   return params;
@@ -77,10 +79,10 @@ export interface CoreWebGlExtensions {
 
 /**
  * Get device webgl extensions
- * @param gl
+ * @param glw
  */
 export function getWebGlExtensions(
-  gl: WebGLRenderingContext,
+  glw: WebGlContextWrapper,
 ): CoreWebGlExtensions {
   const extensions: CoreWebGlExtensions = {
     ANGLE_instanced_arrays: null,
@@ -98,7 +100,7 @@ export function getWebGlExtensions(
   const keys = Object.keys(extensions) as Array<keyof CoreWebGlExtensions>;
   keys.forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    extensions[key] = gl.getExtension(key);
+    extensions[key] = glw.getExtension(key);
   });
 
   return extensions;
@@ -107,15 +109,11 @@ export function getWebGlExtensions(
 /**
  * Allocate big memory chunk that we
  * can re-use to draw quads
+ *
+ * @param glw
  * @param size
  */
-export function createIndexBuffer(
-  gl: WebGLRenderingContext | WebGL2RenderingContext,
-  size: number,
-) {
-  if (!gl) {
-    throw new Error('No WebGL context');
-  }
+export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
   const maxQuads = ~~(size / 80);
   const indices = new Uint16Array(maxQuads * 6);
 
@@ -128,7 +126,6 @@ export function createIndexBuffer(
     indices[i + 5] = j + 3;
   }
 
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+  const buffer = glw.createBuffer();
+  glw.elementArrayBufferData(buffer, indices, glw.STATIC_DRAW);
 }

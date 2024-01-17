@@ -19,6 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy, hasOwn } from '../../../utils.js';
+import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { CoreShader } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
@@ -76,7 +77,7 @@ export abstract class WebGlCoreShader extends CoreShader {
    */
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlCoreRenderer;
-  protected gl: WebGLRenderingContext;
+  protected glw: WebGlContextWrapper;
   protected attributeBuffers: Record<string, WebGLBuffer>;
   protected attributeLocations: Record<string, number>;
   protected attributeNames: string[];
@@ -87,18 +88,18 @@ export abstract class WebGlCoreShader extends CoreShader {
   constructor(options: ShaderOptions) {
     super();
     const renderer = (this.renderer = options.renderer);
-    const gl = (this.gl = this.renderer.gl);
+    const glw = (this.glw = this.renderer.glw);
     this.supportsIndexedTextures = options.supportsIndexedTextures || false;
 
     // Check that extensions are supported
-    const webGl2 = isWebGl2(gl);
+    const webGl2 = glw.isWebGl2();
     const requiredExtensions =
       (webGl2 && options.webgl2Extensions) ||
       (!webGl2 && options.webgl1Extensions) ||
       [];
     const glVersion = webGl2 ? '2.0' : '1.0';
     requiredExtensions.forEach((extensionName) => {
-      if (!gl.getExtension(extensionName)) {
+      if (!glw.getExtension(extensionName)) {
         throw new Error(
           `Shader "${this.constructor.name}" requires extension "${extensionName}" for WebGL ${glVersion} but wasn't found`,
         );
@@ -136,26 +137,30 @@ export abstract class WebGlCoreShader extends CoreShader {
         ? shaderSources.fragment(textureUnits)
         : shaderSources.fragment;
 
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSource);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    const vertexShader = createShader(glw, glw.VERTEX_SHADER, vertexSource);
+    const fragmentShader = createShader(
+      glw,
+      glw.FRAGMENT_SHADER,
+      fragmentSource,
+    );
     if (!vertexShader || !fragmentShader) {
       throw new Error();
     }
 
-    const program = createProgram(gl, vertexShader, fragmentShader);
+    const program = createProgram(glw, vertexShader, fragmentShader);
     if (!program) {
       throw new Error();
     }
     this.program = program;
 
     if (webGl2) {
-      const vao = gl.createVertexArray();
+      const vao = glw.createVertexArray();
       if (!vao) {
         throw new Error();
       }
       this.vao = vao;
 
-      gl.bindVertexArray(this.vao);
+      glw.bindVertexArray(this.vao);
     }
 
     this.attributeLocations = {} as Record<string, number>;
@@ -163,13 +168,13 @@ export abstract class WebGlCoreShader extends CoreShader {
     this.attributeNames = [];
 
     [...options.attributes].forEach((attributeName) => {
-      const location = gl.getAttribLocation(this.program, attributeName);
+      const location = glw.getAttribLocation(this.program, attributeName);
       if (location < 0) {
         throw new Error(
           `${this.constructor.name}: Vertex shader must have an attribute "${attributeName}"!`,
         );
       }
-      const buffer = gl.createBuffer();
+      const buffer = glw.createBuffer();
       if (!buffer) {
         throw new Error(
           `${this.constructor.name}: Could not create buffer for attribute "${attributeName}"`,
@@ -184,7 +189,7 @@ export abstract class WebGlCoreShader extends CoreShader {
     this.uniformLocations = {} as Record<string, WebGLRenderingContext>;
     this.uniformTypes = {} as Record<string, keyof UniformMethodMap>;
     options.uniforms.forEach((uniform: UniformInfo) => {
-      const location = gl.getUniformLocation(this.program, uniform.name);
+      const location = glw.getUniformLocation(this.program, uniform.name);
       this.uniformTypes[uniform.name] = uniform.uniform;
       if (!location) {
         console.warn(
@@ -201,12 +206,11 @@ export abstract class WebGlCoreShader extends CoreShader {
     buffer: WebGLBuffer,
     attribute: AttributeInfo,
   ) {
-    const gl = this.gl;
-    gl.enableVertexAttribArray(location);
+    const { glw } = this;
+    glw.enableVertexAttribArray(location);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-
-    gl.vertexAttribPointer(
+    glw.vertexAttribPointer(
+      buffer,
       location,
       attribute.size,
       attribute.type,
@@ -217,7 +221,7 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   disableAttribute(location: number) {
-    this.gl.disableVertexAttribArray(location);
+    this.glw.disableVertexAttribArray(location);
   }
 
   disableAttributes() {
@@ -257,9 +261,9 @@ export abstract class WebGlCoreShader extends CoreShader {
     if (renderOp.textures.length > 0) {
       this.bindTextures(renderOp.textures);
     }
-    const { gl } = renderOp;
+    const { glw } = renderOp;
     // Bind standard automatic uniforms
-    this.setUniform('u_resolution', [gl.canvas.width, gl.canvas.height]); // !!!
+    this.setUniform('u_resolution', [glw.canvas.width, glw.canvas.height]);
     this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
     if (props) {
       // Bind optional automatic uniforms
@@ -283,8 +287,12 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   setUniform(name: string, ...value: any[]): void {
-    // @ts-expect-error Typing of args is too funky apparently for TS
-    this.gl[this.uniformTypes[name]](this.uniformLocations[name], ...value);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-argument
+    this.glw.setUniform(
+      this.uniformTypes[name]!,
+      this.uniformLocations[name]!,
+      ...(value as any),
+    );
   }
 
   bindBufferCollection(buffer: BufferCollection) {
@@ -314,9 +322,10 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   override attach(): void {
-    this.gl.useProgram(this.program);
-    if (isWebGl2(this.gl) && this.vao) {
-      this.gl.bindVertexArray(this.vao);
+    this.glw.useProgram(this.program);
+    this.glw.useProgram(this.program);
+    if (this.glw.isWebGl2() && this.vao) {
+      this.glw.bindVertexArray(this.vao);
     }
   }
 
