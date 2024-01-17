@@ -19,10 +19,10 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
-import { isWebGl2 } from './internal/WebGlUtils.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -43,7 +43,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   private _w = 0;
   private _h = 0;
 
-  constructor(protected gl: WebGLRenderingContext, textureSource: Texture) {
+  constructor(protected glw: WebGlContextWrapper, textureSource: Texture) {
     super(textureSource);
   }
 
@@ -100,30 +100,29 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    */
   async onLoadRequest(): Promise<Dimensions> {
     this._nativeCtxTexture = this.createNativeCtxTexture();
-    const { gl } = this;
+    const { glw } = this;
 
     // On initial load request, create a 1x1 transparent texture to use until
     // the texture data is finally loaded.
-    gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
+    glw.activeTexture(0);
+    glw.bindTexture(this._nativeCtxTexture);
 
     // linear texture filtering
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
+    glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
 
     // texture wrapping method
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
+    glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
 
-    gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
+    glw.texImage2D(
       0,
-      gl.RGBA,
+      glw.RGBA,
       1,
       1,
       0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
+      glw.RGBA,
+      glw.UNSIGNED_BYTE,
       TRANSPARENT_TEXTURE_DATA,
     );
 
@@ -131,6 +130,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     let width = 0;
     let height = 0;
     assertTruthy(this._nativeCtxTexture);
+    glw.activeTexture(0);
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
@@ -140,33 +140,32 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       const data = textureData.data;
       width = data.width;
       height = data.height;
-      gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
+      glw.bindTexture(this._nativeCtxTexture);
 
-      gl.pixelStorei(
-        gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
         !!textureData.premultiplyAlpha,
       );
 
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
-      if (isWebGl2(gl) || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
-        gl.generateMipmap(gl.TEXTURE_2D);
+      if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
+        glw.generateMipmap();
       }
     } else if (textureData.data === null) {
       width = 0;
       height = 0;
       // Reset to a 1x1 transparent texture
-      gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
+      glw.bindTexture(this._nativeCtxTexture);
+      glw.texImage2D(
         0,
-        gl.RGBA,
+        glw.RGBA,
         1,
         1,
         0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
+        glw.RGBA,
+        glw.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
     } else {
@@ -196,12 +195,14 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (!this._nativeCtxTexture) {
       return;
     }
-    this.gl.deleteTexture(this._nativeCtxTexture);
+    const { glw } = this;
+    glw.deleteTexture(this._nativeCtxTexture);
     this._nativeCtxTexture = null;
   }
 
   private createNativeCtxTexture() {
-    const nativeTexture = this.gl.createTexture();
+    const { glw } = this;
+    const nativeTexture = glw.createTexture();
     if (!nativeTexture) {
       throw new Error('Could not create WebGL Texture');
     }

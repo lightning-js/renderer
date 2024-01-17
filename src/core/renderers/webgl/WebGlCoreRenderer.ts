@@ -55,6 +55,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 import { ContextSpy } from '../../lib/ContextSpy.js';
+import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -77,7 +78,7 @@ interface CoreWebGlSystem {
 
 export class WebGlCoreRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  gl: WebGLRenderingContext;
+  glw: WebGlContextWrapper;
   system: CoreWebGlSystem;
 
   //// Core Managers
@@ -115,21 +116,24 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
 
-    const gl = (this.gl = createWebGLContext(canvas, options.contextSpy));
+    const gl = createWebGLContext(canvas, options.contextSpy);
+    const glw = (this.glw = new WebGlContextWrapper(gl));
 
     const color = getNormalizedRgbaComponents(clearColor);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.viewport(0, 0, canvas.width, canvas.height);
+    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.setBlend(true);
+    glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(gl, bufferMemory);
+    createIndexBuffer(glw, bufferMemory);
 
     this.system = {
-      parameters: getWebGlParameters(gl),
-      extensions: getWebGlExtensions(gl),
+      parameters: getWebGlParameters(this.glw),
+      extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
     this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
-    const quadBuffer = gl.createBuffer();
+    const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
@@ -139,7 +143,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_position: {
             name: 'a_position',
             size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
+            type: glw.FLOAT, // the data is 32bit floats
             normalized: false, // don't normalize the data
             stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
             offset: 0, // start at the beginning of the buffer
@@ -147,7 +151,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureCoordinate: {
             name: 'a_textureCoordinate',
             size: 2,
-            type: gl.FLOAT,
+            type: glw.FLOAT,
             normalized: false,
             stride,
             offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -155,7 +159,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_color: {
             name: 'a_color',
             size: 4,
-            type: gl.UNSIGNED_BYTE,
+            type: glw.UNSIGNED_BYTE,
             normalized: true,
             stride,
             offset: 4 * Float32Array.BYTES_PER_ELEMENT,
@@ -163,7 +167,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureIndex: {
             name: 'a_textureIndex',
             size: 1,
-            type: gl.FLOAT,
+            type: glw.FLOAT,
             normalized: false,
             stride,
             offset: 5 * Float32Array.BYTES_PER_ELEMENT,
@@ -174,11 +178,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   reset() {
+    const { glw } = this;
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
-    this.gl.disable(this.gl.SCISSOR_TEST);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    glw.setScissorTest(false);
+    glw.clear();
   }
 
   override getShaderManager(): CoreShaderManager {
@@ -187,9 +192,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
-      return new WebGlCoreCtxSubTexture(this.gl, textureSource);
+      return new WebGlCoreCtxSubTexture(this.glw, textureSource);
     }
-    return new WebGlCoreCtxTexture(this.gl, textureSource);
+    return new WebGlCoreCtxTexture(this.glw, textureSource);
   }
 
   /**
@@ -411,7 +416,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     bufferIdx: number,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
-      this.gl,
+      this.glw,
       this.options,
       this.quadBufferCollection,
       shader,
@@ -483,13 +488,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param surface
    */
   render(surface: 'screen' | CoreContextTexture = 'screen'): void {
-    const { gl, quadBuffer } = this;
+    const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
 
     const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
+    glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
     const doLog = false; // idx++ % 100 === 0;
     if (doLog) {

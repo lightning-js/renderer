@@ -521,9 +521,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     let { webGlBuffers } = state;
 
     if (!webGlBuffers) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
       const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-      const webGlBuffer = gl.createBuffer();
+      const webGlBuffer = glw.createBuffer();
       assertTruthy(webGlBuffer);
       state.webGlBuffers = new BufferCollection([
         {
@@ -532,7 +532,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_position: {
               name: 'a_position',
               size: 2, // 2 components per iteration
-              type: gl.FLOAT, // the data is 32bit floats
+              type: glw.FLOAT, // the data is 32bit floats
               normalized: false, // don't normalize the data
               stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
               offset: 0, // start at the beginning of the buffer
@@ -540,7 +540,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_textureCoordinate: {
               name: 'a_textureCoordinate',
               size: 2,
-              type: gl.FLOAT,
+              type: glw.FLOAT,
               normalized: false,
               stride,
               offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -554,18 +554,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     if (!bufferUploaded) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
 
       const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
+      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
     }
 
     assertTruthy(trFontFace);
 
     const renderOp = new WebGlCoreRenderOp(
-      renderer.gl,
+      renderer.glw,
       renderer.options,
       webGlBuffers,
       this.sdfShader,
