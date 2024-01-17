@@ -65,7 +65,7 @@ function generateLineHeightTest(
   return [
     {
       title: `Text Node ('lineHeight', ${textRenderer})${
-        textRenderer === 'sdf' ? ', broken' : ''
+        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
       }`,
       content: async (rowNode) => {
         const nodeProps = {

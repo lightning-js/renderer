@@ -66,7 +66,7 @@ function generateLineHeightTest(
   return [
     {
       title: `Text Node ('verticalAlign', ${textRenderer}), lineHeight = 70${
-        textRenderer === 'sdf' ? ', broken' : ''
+        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
       }`,
       content: async (rowNode) => {
         const nodeProps = {
