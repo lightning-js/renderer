@@ -341,6 +341,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       } else {
         this.worldAlpha = this.props.alpha;
       }
+      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children | UpdateType.PremultipliedColors);
       childUpdateType |= UpdateType.WorldAlpha;
     }
@@ -409,7 +410,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return (this.isRenderable = true);
     }
 
-    if (!this.props.width || !this.props.height) {
+    if (!this.props.width || !this.props.height || this.worldAlpha === 0) {
       return (this.isRenderable = false);
     }
 
