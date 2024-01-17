@@ -199,4 +199,13 @@ export class TextNodeStruct
   set verticalAlign(value: TextNodeStructWritableProps['verticalAlign']) {
     // Decorator will handle this
   }
+
+  @structProp('string')
+  get overflowSuffix(): TextNodeStructWritableProps['overflowSuffix'] {
+    return '...';
+  }
+
+  set overflowSuffix(value: TextNodeStructWritableProps['overflowSuffix']) {
+    // Decorator will handle this
+  }
 }

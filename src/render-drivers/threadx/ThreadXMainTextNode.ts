@@ -48,6 +48,7 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
       scrollable: sharedNodeStruct.scrollable,
       scrollY: sharedNodeStruct.scrollY,
       textAlign: sharedNodeStruct.textAlign,
+      overflowSuffix: sharedNodeStruct.overflowSuffix,
     } satisfies Omit<TextNodeStructWritableProps, keyof NodeStructWritableProps>);
   }
 
@@ -68,6 +69,7 @@ export class ThreadXMainTextNode extends ThreadXMainNode implements ITextNode {
   declare scrollY: ITextNode['scrollY'];
   declare offsetY: ITextNode['offsetY'];
   declare letterSpacing: ITextNode['letterSpacing'];
+  declare overflowSuffix: ITextNode['overflowSuffix'];
 
   get debug(): ITextNode['debug'] {
     return this._debug;

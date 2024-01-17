@@ -73,7 +73,7 @@ export interface Settings {
   verticalAlign: TextVerticalAlign;
   offsetY: number | null;
   maxLines: number;
-  maxLinesSuffix: string;
+  overflowSuffix: string;
   precision: number;
   textColor: RGBA;
   paddingLeft: number;
@@ -248,7 +248,7 @@ export class LightningTextTextureRenderer {
           suffix = '';
           break;
         case 'ellipsis':
-          suffix = this._settings.maxLinesSuffix;
+          suffix = this._settings.overflowSuffix;
           break;
         default:
           suffix = this._settings.textOverflow;
@@ -283,10 +283,10 @@ export class LightningTextTextureRenderer {
       const usedLines = lines.slice(0, this._settings.maxLines);
 
       let otherLines = null;
-      if (this._settings.maxLinesSuffix) {
+      if (this._settings.overflowSuffix) {
         // Wrap again with max lines suffix enabled.
-        const w = this._settings.maxLinesSuffix
-          ? this.measureText(this._settings.maxLinesSuffix)
+        const w = this._settings.overflowSuffix
+          ? this.measureText(this._settings.overflowSuffix)
           : 0;
         const al = this.wrapText(
           usedLines[usedLines.length - 1]!,
@@ -295,7 +295,7 @@ export class LightningTextTextureRenderer {
           textIndent,
         );
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
-          this._settings.maxLinesSuffix
+          this._settings.overflowSuffix
         }`;
         otherLines = [al.l.length > 1 ? al.l[1] : ''];
       } else {
@@ -676,7 +676,7 @@ export class LightningTextTextureRenderer {
       verticalAlign: 'middle',
       offsetY: null,
       maxLines: 0,
-      maxLinesSuffix: '...',
+      overflowSuffix: '...',
       textColor: [1.0, 1.0, 1.0, 1.0],
       paddingLeft: 0,
       paddingRight: 0,

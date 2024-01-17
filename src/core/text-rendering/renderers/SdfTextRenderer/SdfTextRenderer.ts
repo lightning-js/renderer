@@ -225,6 +225,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.verticalAlign = value;
         this.invalidateLayoutCache(state);
       },
+      overflowSuffix: (state, value) => {
+        state.props.overflowSuffix = value;
+        this.invalidateLayoutCache(state);
+      },
       debug: (state, value) => {
         state.props.debug = value;
       },

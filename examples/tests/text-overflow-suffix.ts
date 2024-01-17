@@ -67,7 +67,7 @@ function generateLineHeightTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('maxLines', ${textRenderer})${
+      title: `Text Node ('overflowSuffix', ${textRenderer})${
         textRenderer === 'sdf' ? ', "BROKEN!"' : ''
       }`,
       content: async (rowNode) => {
@@ -90,23 +90,19 @@ function generateLineHeightTest(
 
         return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
-          'maxLines: 1 ->',
+          'overflowSuffix: "..." ->',
           renderer.createTextNode({
             ...nodeProps,
             ...position,
+            overflowSuffix: '...',
             maxLines: 1,
           }),
-          'maxLines: 2 ->',
+          'overflowSuffix: ".." ->',
           renderer.createTextNode({
             ...nodeProps,
             ...position,
-            maxLines: 2,
-          }),
-          'maxLines: 3 ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            maxLines: 3,
+            overflowSuffix: '..',
+            maxLines: 1,
           }),
         ]);
       },

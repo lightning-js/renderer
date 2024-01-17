@@ -287,6 +287,16 @@ export interface TrProps extends TrFontProps {
    * @default middle
    */
   verticalAlign: TextVerticalAlign;
+  /**
+   * Overflow Suffix for text
+   *
+   * @remarks
+   * The suffix to be added when text is cropped due to overflow.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default "..."
+   */
+  overflowSuffix: string;
 
   zIndex: number;
   debug: Partial<TextRendererDebugProps>;
@@ -362,6 +372,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   verticalAlign: (state, value) => {
     state.props.verticalAlign = value;
+  },
+  overflowSuffix: (state, value) => {
+    state.props.overflowSuffix = value;
   },
   debug: (state, value) => {
     state.props.debug = value;

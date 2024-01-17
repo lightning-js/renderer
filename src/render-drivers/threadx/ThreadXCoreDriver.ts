@@ -223,6 +223,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       verticalAlign: props.verticalAlign,
       contain: props.contain,
       letterSpacing: props.letterSpacing,
+      overflowSuffix: props.overflowSuffix,
       offsetY: props.offsetY,
       textAlign: props.textAlign,
       scrollable: props.scrollable,

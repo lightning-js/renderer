@@ -80,6 +80,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           maxLines: props.maxLines,
           textBaseline: props.textBaseline,
           verticalAlign: props.verticalAlign,
+          overflowSuffix: props.overflowSuffix,
         },
         undefined,
       );
@@ -296,6 +297,16 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   set verticalAlign(value: CoreTextNodeProps['verticalAlign']) {
     if (this.textRenderer.set.verticalAlign) {
       this.textRenderer.set.verticalAlign(this.trState, value);
+    }
+  }
+
+  get overflowSuffix(): CoreTextNodeProps['overflowSuffix'] {
+    return this.trState.props.overflowSuffix;
+  }
+
+  set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
+    if (this.textRenderer.set.overflowSuffix) {
+      this.textRenderer.set.overflowSuffix(this.trState, value);
     }
   }
 
