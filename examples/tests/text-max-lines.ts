@@ -41,8 +41,8 @@ export default async function test(settings: ExampleSettings) {
   });
 
   await paginateTestRows(pageContainer, [
-    ...generateLineHeightTest(renderer, 'sdf'),
-    ...generateLineHeightTest(renderer, 'canvas'),
+    ...generateMaxLinesTest(renderer, 'sdf'),
+    ...generateMaxLinesTest(renderer, 'canvas'),
   ]);
 
   return pageContainer;
@@ -61,7 +61,7 @@ const NODE_PROPS = {
   contain: 'width',
 } satisfies Partial<ITextNodeWritableProps>;
 
-function generateLineHeightTest(
+function generateMaxLinesTest(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
 ): TestRow[] {

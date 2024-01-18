@@ -37,7 +37,7 @@ export default async function test(settings: ExampleSettings) {
   const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    title: 'Text Max Lines',
+    title: 'Text Overflow Suffix',
   });
 
   await paginateTestRows(pageContainer, [
