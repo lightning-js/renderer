@@ -423,7 +423,7 @@ export class RendererMain extends EventEmitter {
       lineHeight: props.lineHeight ?? 0,
       maxLines: props.maxLines ?? 0,
       textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
+      verticalAlign: props.verticalAlign ?? 'top',
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
     };
