@@ -563,6 +563,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       clippingRect,
       { height: textH, width: textW },
       0,
+      0,
       zIndex,
     );
 

@@ -102,7 +102,6 @@ export class RoundedRectangle extends WebGlCoreShader {
       attribute vec2 a_position;
       attribute vec2 a_textureCoordinate;
       attribute vec4 a_color;
-      attribute float a_textureIndex;
       attribute float a_depth;
 
       uniform vec2 u_resolution;

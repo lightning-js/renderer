@@ -17,12 +17,7 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  createWebGLContext,
-  hasOwn,
-  mergeColorAlphaPremultiplied,
-} from '../../../utils.js';
+import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import { CoreRenderer, type QuadOptions } from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
@@ -39,12 +34,8 @@ import { ColorTexture } from '../../textures/ColorTexture.js';
 import type { Stage } from '../../Stage.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
-import type {
-  CoreTextureManager,
-  TextureOptions,
-} from '../../CoreTextureManager.js';
+import type { CoreTextureManager } from '../../CoreTextureManager.js';
 import { CoreShaderManager } from '../../CoreShaderManager.js';
-import type { CoreShader } from '../CoreShader.js';
 import { BufferCollection } from './internal/BufferCollection.js';
 import {
   compareRect,
@@ -53,12 +44,11 @@ import {
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
-const WORDS_PER_QUAD = 24;
-const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
+const WORDS_PER_VERTEX = 5;
+const WORDS_PER_QUAD = WORDS_PER_VERTEX * 4; /* vertices per quad */
 
 export interface WebGlCoreRendererOptions {
   stage: Stage;
@@ -96,6 +86,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
+  curQuadIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
   renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
 
@@ -135,7 +126,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
-    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = WORDS_PER_VERTEX * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
       {
         buffer: quadBuffer,
@@ -164,14 +155,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
             stride,
             offset: 4 * Float32Array.BYTES_PER_ELEMENT,
           },
-          a_textureIndex: {
-            name: 'a_textureIndex',
-            size: 1,
-            type: glw.FLOAT,
-            normalized: false,
-            stride,
-            offset: 5 * Float32Array.BYTES_PER_ELEMENT,
-          },
+          // a_textureIndex: {
+          //   name: 'a_textureIndex',
+          //   size: 1,
+          //   type: glw.FLOAT,
+          //   normalized: false,
+          //   stride,
+          //   offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+          // },
         },
       },
     ]);
@@ -180,6 +171,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   reset() {
     const { glw } = this;
     this.curBufferIdx = 0;
+    this.curQuadIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
     glw.setScissorTest(false);
@@ -247,6 +239,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     assertTruthy(texture instanceof Texture, 'Invalid texture type');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
+    const { curQuadIdx: quadIdx } = this;
     const targetDims = {
       width,
       height,
@@ -283,6 +276,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
         targetDims,
         clippingRect,
         bufferIdx,
+        quadIdx,
       );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
@@ -318,7 +312,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { txManager } = this.stage;
     const ctxTexture = txManager.getCtxTexture(texture);
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
-    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    this.addTexture(ctxTexture, bufferIdx, quadIdx);
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
 
@@ -330,7 +324,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = colorTl; // color
-      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = tx + width * ta;
@@ -338,7 +331,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = colorTr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
       fQuadBuffer[bufferIdx++] = tx + height * tb;
@@ -346,7 +338,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = colorBl;
-      fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
       fQuadBuffer[bufferIdx++] = tx + width * ta + height * tb;
@@ -354,7 +345,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = colorBr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
     } else {
       // Calculate the right corner of the quad
       // multiplied by the scale
@@ -367,7 +357,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = colorTl; // color
-      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
@@ -375,7 +364,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = colorTr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
       fQuadBuffer[bufferIdx++] = tx;
@@ -383,7 +371,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = colorBl;
-      fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
@@ -391,13 +378,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = colorBr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
     }
 
     // Update the length of the current render op
     curRenderOp.length += WORDS_PER_QUAD;
     curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
+    this.curQuadIdx = quadIdx + 1;
   }
 
   /**
@@ -414,6 +401,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     dimensions: Dimensions,
     clippingRect: Rect | null,
     bufferIdx: number,
+    quadIdx: number,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.glw,
@@ -425,6 +413,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       clippingRect,
       dimensions,
       bufferIdx,
+      quadIdx,
       0, // Z-Index is only used for explictly added Render Ops
     );
     this.curRenderOp = curRenderOp;
@@ -446,6 +435,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   private addTexture(
     texture: WebGlCoreCtxTexture,
     bufferIdx: number,
+    quadIdx: number,
     recursive?: boolean,
   ): number {
     const { curRenderOp } = this;
@@ -466,8 +456,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
         dimensions,
         clippingRect,
         bufferIdx,
+        quadIdx,
       );
-      return this.addTexture(texture, bufferIdx, true);
+      return this.addTexture(texture, bufferIdx, quadIdx, true);
     }
     return textureIdx;
   }

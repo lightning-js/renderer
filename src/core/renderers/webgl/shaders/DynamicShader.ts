@@ -372,7 +372,6 @@ export class DynamicShader extends WebGlCoreShader {
     attribute vec2 a_textureCoordinate;
     attribute vec2 a_position;
     attribute vec4 a_color;
-    attribute float a_textureIndex;
 
     uniform vec2 u_resolution;
     uniform float u_pixelRatio;
@@ -389,7 +388,6 @@ export class DynamicShader extends WebGlCoreShader {
       // pass to fragment
       v_color = a_color;
       v_textureCoordinate = a_textureCoordinate;
-      v_textureIndex = a_textureIndex;
 
       // flip y
       gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);

@@ -48,6 +48,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly clippingRect: Rect | null,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
+    readonly quadIdx: number,
     readonly zIndex: number,
   ) {
     super();
@@ -79,7 +80,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     shader.bindRenderOp(this, shaderProps);
 
     // TODO: Reduce calculations required
-    const quadIdx = (this.bufferIdx / 24) * 6 * 2;
+    const quadElementOffset = this.quadIdx * 6 * 2;
 
     // Clipping
     if (this.clippingRect) {
@@ -101,7 +102,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
       glw.TRIANGLES,
       6 * this.numQuads,
       glw.UNSIGNED_SHORT,
-      quadIdx,
+      quadElementOffset,
     );
   }
 }
