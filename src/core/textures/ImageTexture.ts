@@ -19,6 +19,7 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
+import { isWorkerSupported, getImageFromWorker } from '../lib/ImageWorker.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -83,15 +84,20 @@ export class ImageTexture extends Texture {
         premultiplyAlpha,
       };
     }
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return {
-      data: await createImageBitmap(blob, {
-        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      }),
-    };
+
+    if (isWorkerSupported) {
+      return await getImageFromWorker(src, premultiplyAlpha);
+    } else {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+      };
+    }
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
