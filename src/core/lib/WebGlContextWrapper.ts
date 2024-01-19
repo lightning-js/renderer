@@ -940,7 +940,11 @@ export type UniformMethodMap = {
 };
 
 /**
+ * Compare two arrays for equality.
  *
+ * @remarks
+ * This function will not try to compare nested arrays or Float32Arrays and
+ * instead will always return false when they are encountered.
  *
  * @param a
  * @param b
@@ -951,8 +955,9 @@ export function compareArrays<T>(a: T[], b: T[]): boolean {
     return false;
   }
   return a.every((v, i) => {
-    if (Array.isArray(v)) {
-      return compareArrays(v, b[i] as any[]);
+    // Don't bother to compare nested arrays or Float32Arrays
+    if (Array.isArray(v) || v instanceof Float32Array) {
+      return false;
     } else {
       return v === b[i];
     }

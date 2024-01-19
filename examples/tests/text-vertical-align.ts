@@ -41,8 +41,8 @@ export default async function test(settings: ExampleSettings) {
   });
 
   await paginateTestRows(pageContainer, [
-    ...generateLineHeightTest(renderer, 'sdf'),
-    ...generateLineHeightTest(renderer, 'canvas'),
+    ...generateVerticalAlignTest(renderer, 'sdf'),
+    ...generateVerticalAlignTest(renderer, 'canvas'),
   ]);
 
   return pageContainer;
@@ -59,7 +59,7 @@ const NODE_PROPS = {
   lineHeight: 70,
 } satisfies Partial<ITextNodeWritableProps>;
 
-function generateLineHeightTest(
+function generateVerticalAlignTest(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
 ): TestRow[] {
