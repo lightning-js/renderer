@@ -20,41 +20,48 @@
 import { type TextureData } from '../textures/Texture.js';
 
 export const isWorkerSupported = !!window.Worker;
-const messageManager: Record<string, [(value: any) => void, (reason: any) => void]> = {};
-const numWorkers = 2;
+const messageManager: Record<
+  string,
+  [(value: any) => void, (reason: any) => void]
+> = {};
+const numWorkers = 4;
 let workers: Worker[] = [];
+
+function handleMessage(event: MessageEvent) {
+  const { src, data, error } = event.data as {
+    src: string;
+    data?: any;
+    error?: string;
+  };
+  if (src && messageManager[src]) {
+    const [resolve, reject] = messageManager[src]!;
+    delete messageManager[src];
+    if (error) {
+      reject(new Error(error));
+    } else {
+      resolve(data);
+    }
+  }
+}
 
 if (isWorkerSupported && numWorkers > 0) {
   workers = createWorkers(numWorkers);
   workers.forEach((worker) => {
-    worker.onmessage = (event: MessageEvent) => {
-      const { src, data, error } = event.data as { src: string, data?: any; error?: string };
-      if (src) {
-        const [resolve, reject] = messageManager[src]!;
-
-        if (error) {
-          reject(new Error(error));
-        } else {
-          resolve(data);
-        }
-      }
-    };
+    worker.onmessage = handleMessage;
   });
 }
-
 
 function createWorkers(numWorkers = 1): Worker[] {
   const workerCode = `
     async function getImage(src, premultiplyAlpha) {
       const response = await fetch(src);
       const blob = await response.blob();
-      return {
-        data: await createImageBitmap(blob, {
-          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }),
-      };
+      const data = await createImageBitmap(blob, {
+        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      });
+      return { data };
     }
 
     self.onmessage = async (event) => {
@@ -69,7 +76,9 @@ function createWorkers(numWorkers = 1): Worker[] {
     };
   `;
 
-  const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], { type: 'application/javascript' });
+  const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
+    type: 'application/javascript',
+  });
   const blobURL: string = (window.URL ? URL : webkitURL).createObjectURL(blob);
   const workers: Worker[] = [];
   for (let i = 0; i < numWorkers; i++) {
@@ -85,13 +94,16 @@ function getNextWorker(): Worker {
   return worker!;
 }
 
+const anchor = document.createElement('a');
 function convertUrlToAbsolute(url: string): string {
-  const a = document.createElement('a');
-  a.href = url;
-  return a.href;
+  anchor.href = url;
+  return anchor.href;
 }
 
-export function getImageFromWorker(src: string, premultiplyAlpha: boolean): Promise<TextureData> {
+export function getImageFromWorker(
+  src: string,
+  premultiplyAlpha: boolean,
+): Promise<TextureData> {
   return new Promise((resolve, reject) => {
     try {
       if (workers) {
