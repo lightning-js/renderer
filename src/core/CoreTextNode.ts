@@ -76,6 +76,11 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
           fontStyle: props.fontStyle,
           fontWeight: props.fontWeight,
           text: props.text,
+          lineHeight: props.lineHeight,
+          maxLines: props.maxLines,
+          textBaseline: props.textBaseline,
+          verticalAlign: props.verticalAlign,
+          overflowSuffix: props.overflowSuffix,
         },
         undefined,
       );
@@ -255,6 +260,56 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.letterSpacing(this.trState, value);
   }
 
+  get lineHeight(): CoreTextNodeProps['lineHeight'] {
+    return this.trState.props.lineHeight;
+  }
+
+  set lineHeight(value: CoreTextNodeProps['lineHeight']) {
+    if (this.textRenderer.set.lineHeight) {
+      this.textRenderer.set.lineHeight(this.trState, value);
+    }
+  }
+
+  get maxLines(): CoreTextNodeProps['maxLines'] {
+    return this.trState.props.maxLines;
+  }
+
+  set maxLines(value: CoreTextNodeProps['maxLines']) {
+    if (this.textRenderer.set.maxLines) {
+      this.textRenderer.set.maxLines(this.trState, value);
+    }
+  }
+
+  get textBaseline(): CoreTextNodeProps['textBaseline'] {
+    return this.trState.props.textBaseline;
+  }
+
+  set textBaseline(value: CoreTextNodeProps['textBaseline']) {
+    if (this.textRenderer.set.textBaseline) {
+      this.textRenderer.set.textBaseline(this.trState, value);
+    }
+  }
+
+  get verticalAlign(): CoreTextNodeProps['verticalAlign'] {
+    return this.trState.props.verticalAlign;
+  }
+
+  set verticalAlign(value: CoreTextNodeProps['verticalAlign']) {
+    if (this.textRenderer.set.verticalAlign) {
+      this.textRenderer.set.verticalAlign(this.trState, value);
+    }
+  }
+
+  get overflowSuffix(): CoreTextNodeProps['overflowSuffix'] {
+    return this.trState.props.overflowSuffix;
+  }
+
+  set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
+    if (this.textRenderer.set.overflowSuffix) {
+      this.textRenderer.set.overflowSuffix(this.trState, value);
+    }
+  }
+
   get debug(): CoreTextNodeProps['debug'] {
     return this.trState.props.debug;
   }
@@ -325,6 +380,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);
+
     resolvedTextRenderer.scheduleUpdateState(textRendererState);
 
     return {
