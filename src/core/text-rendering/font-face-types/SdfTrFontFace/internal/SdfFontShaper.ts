@@ -36,11 +36,13 @@ type KerningTable = Record<
 
 export class SdfFontShaper extends FontShaper {
   private readonly data: SdfFontData;
+  private readonly glyphMap: Map<number, SdfFontData['chars'][0]>;
   private readonly kernings: KerningTable;
 
-  constructor(data: SdfFontData) {
+  constructor(data: SdfFontData, glyphMap: Map<number, SdfFontData['chars'][0]>) {
     super();
     this.data = data;
+    this.glyphMap = glyphMap;
 
     const kernings: KerningTable = (this.kernings = {});
     data.kernings.forEach((kerning) => {
@@ -59,7 +61,7 @@ export class SdfFontShaper extends FontShaper {
     let lastGlyphId: number | undefined = undefined;
     while ((codepointResult = codepoints.peek()) && !codepointResult.done) {
       const codepoint = codepointResult.value;
-      const glyph = this.data.chars.find((char) => char.id === codepoint);
+      const glyph = this.glyphMap.get(codepoint);
       codepoints.next();
       if (glyph !== undefined) {
         // We found a glyph for this codepoint

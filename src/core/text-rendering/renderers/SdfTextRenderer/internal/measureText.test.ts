@@ -25,10 +25,15 @@ import {
   type SdfFontData,
 } from '../../../font-face-types/SdfTrFontFace/internal/SdfFontShaper.js';
 
+const glyphMap = new Map<number, SdfFontData['chars'][0]>();
+sdfData.chars.forEach((glyph) => {
+  glyphMap.set(glyph.id, glyph);
+});
+
 describe('measureText', () => {
   it('should measure text width', () => {
     const PERIOD_WIDTH = 10.332;
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData);
+    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData, glyphMap);
     expect(measureText('', { letterSpacing: 0 }, shaper)).toBe(0);
     expect(measureText('.', { letterSpacing: 0 }, shaper)).toBe(PERIOD_WIDTH);
     expect(measureText('..', { letterSpacing: 0 }, shaper)).toBeCloseTo(
