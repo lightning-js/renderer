@@ -173,11 +173,11 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       },
       x: (state, value) => {
         state.props.x = value;
-        this.invalidateVisibleWindowCache(state);
+        // this.invalidateVisibleWindowCache(state);
       },
       y: (state, value) => {
         state.props.y = value;
-        this.invalidateVisibleWindowCache(state);
+        // this.invalidateVisibleWindowCache(state);
       },
       contain: (state, value) => {
         state.props.contain = value;

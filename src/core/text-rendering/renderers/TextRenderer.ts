@@ -484,8 +484,8 @@ export abstract class TextRenderer<
     }
     state.updateScheduled = true;
     queueMicrotask(() => {
-      state.updateScheduled = false;
       this.updateState(state);
+      state.updateScheduled = false;
     });
   }
 
