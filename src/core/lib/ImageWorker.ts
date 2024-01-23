@@ -21,8 +21,8 @@ import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
 
-class ImageWorkerManager {
-  isWorkerSupported = !!window.Worker;
+export class ImageWorkerManager {
+  isWorkerSupported = !!self.Worker;
   imageWorkersEnabled = true;
   messageManager: Record<string, MessageCallback> = {};
   workers: Worker[] = [];
@@ -124,5 +124,3 @@ class ImageWorkerManager {
     });
   }
 }
-
-export default ImageWorkerManager;
