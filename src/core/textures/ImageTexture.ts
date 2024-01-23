@@ -19,7 +19,6 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
-import { isWorkerSupported, getImageFromWorker } from '../lib/ImageWorker.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -85,8 +84,11 @@ export class ImageTexture extends Texture {
       };
     }
 
-    if (isWorkerSupported) {
-      return await getImageFromWorker(src, premultiplyAlpha);
+    if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
     } else {
       const response = await fetch(src);
       const blob = await response.blob();

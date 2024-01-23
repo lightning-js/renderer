@@ -226,6 +226,18 @@ export interface RendererMainSettings {
    * @defaultValue `false` (disabled)
    */
   enableContextSpy?: boolean;
+
+  /**
+   * Number or Image Workers to use
+   *
+   * @remarks
+   * On devices with multiple cores, this can be used to improve image loading
+   * as well as reduce the impact of image loading on the main thread.
+   * Set to 0 to disable image workers.
+   *
+   * @defaultValue `2`
+   */
+  numImageWorkers?: number;
 }
 
 /**
@@ -293,6 +305,8 @@ export class RendererMain extends EventEmitter {
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      numImageWorkers:
+        settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
     };
     this.settings = resolvedSettings;

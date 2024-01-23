@@ -54,6 +54,7 @@ export class MainCoreDriver implements ICoreDriver {
       canvas,
       fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
       enableContextSpy: rendererSettings.enableContextSpy,
+      numImageWorkers: rendererSettings.numImageWorkers,
       debug: {
         monitorTextureCache: false,
       },

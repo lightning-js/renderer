@@ -46,6 +46,7 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   clearColor: number;
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
+  numImageWorkers: number;
   coreExtensionModule: string | null;
 }
 

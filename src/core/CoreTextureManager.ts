@@ -18,6 +18,7 @@
  */
 
 import { assertTruthy } from '../utils.js';
+import ImageWorkerManager from './lib/ImageWorker.js';
 import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
@@ -144,7 +145,7 @@ export class CoreTextureManager {
     Texture,
     { cacheKey: string | false; count: number }
   > = new WeakMap();
-
+  imageWorkerManager: ImageWorkerManager;
   /**
    * Renderer that this texture manager is associated with
    *
@@ -154,8 +155,9 @@ export class CoreTextureManager {
    */
   renderer!: CoreRenderer;
 
-  constructor() {
+  constructor(numImageWorkers: number) {
     // Register default known texture types
+    this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
