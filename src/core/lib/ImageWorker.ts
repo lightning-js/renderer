@@ -34,7 +34,9 @@ export class ImageWorkerManager {
       this.workers.forEach((worker) => {
         worker.onmessage = this.handleMessage.bind(this);
       });
+      console.log('Image Workers Enabled numWorkers:', numImageWorkers);
     } else {
+      console.log('Image Workers Disabled numWorkers:', numImageWorkers);
       this.imageWorkersEnabled = false;
     }
   }
@@ -52,7 +54,7 @@ export class ImageWorkerManager {
       if (error) {
         reject(new Error(error));
       } else {
-        resolve(data);
+        resolve({ data: data as ImageBitmap });
       }
     }
   }
@@ -62,12 +64,11 @@ export class ImageWorkerManager {
       async function getImage(src, premultiplyAlpha) {
         const response = await fetch(src);
         const blob = await response.blob();
-        const data = await createImageBitmap(blob, {
+        return await createImageBitmap(blob, {
           premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         });
-        return { data };
       }
 
       self.onmessage = async (event) => {
@@ -75,7 +76,7 @@ export class ImageWorkerManager {
 
         try {
           const data = await getImage(src, premultiplyAlpha);
-          self.postMessage({ src, data });
+          self.postMessage({ src, data }, [data]);
         } catch (error) {
           self.postMessage({ src, error: error.message });
         }
