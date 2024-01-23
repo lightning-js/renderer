@@ -27,6 +27,7 @@ import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import { ShaderEffect } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
+import memize from 'memize';
 
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
@@ -79,6 +80,27 @@ export interface SpecificEffectDesc<
   props?: ExtractProps<EffectMap[FxType]>;
 }
 
+const effectCache = new Map<string, EffectDesc[]>();
+const getResolvedEffect = (
+  effects: EffectDesc[] | undefined,
+  effectContructors: Partial<EffectMap> | undefined,
+): EffectDesc[] => {
+  const key = JSON.stringify(effects);
+  if (effectCache.has(key)) {
+    return effectCache.get(key)!;
+  }
+
+  const value = (effects ?? []).map((effect) => ({
+    type: effect.type,
+    props: effectContructors![effect.type]!.resolveDefaults(
+      (effect.props || {}) as any,
+    ),
+  })) as EffectDesc[];
+
+  effectCache.set(key, value);
+  return value;
+};
+
 export class DynamicShader extends WebGlCoreShader {
   effects: Array<InstanceType<EffectMap[keyof EffectMap]>> = [];
 
@@ -108,6 +130,8 @@ export class DynamicShader extends WebGlCoreShader {
     this.effects = shader.effects as Array<
       InstanceType<EffectMap[keyof EffectMap]>
     >;
+
+    this.calculateProps = memize(this.calculateProps.bind(this));
   }
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
@@ -116,11 +140,12 @@ export class DynamicShader extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  protected override bindProps(props: Required<DynamicShaderProps>): void {
-    const effects = this.renderer.shManager.getRegisteredEffects();
-    props.effects?.forEach((eff, index) => {
+  private calculateProps(effects: EffectDesc[]) {
+    const regEffects = this.renderer.shManager.getRegisteredEffects();
+    const results: { name: string; value: unknown }[] = [];
+    effects?.forEach((eff, index) => {
       const effect = this.effects[index]!;
-      const fxClass = effects[effect.name as keyof EffectMap]!;
+      const fxClass = regEffects[effect.name as keyof EffectMap]!;
       const props = eff.props ?? {};
       const uniInfo = effect.uniformInfo;
       Object.keys(props).forEach((p) => {
@@ -132,8 +157,16 @@ export class DynamicShader extends WebGlCoreShader {
         if (Array.isArray(value)) {
           value = new Float32Array(value);
         }
-        this.setUniform(propInfo.name, value);
+        results.push({ name: propInfo.name, value });
       });
+    });
+    return results;
+  }
+
+  protected override bindProps(props: Required<DynamicShaderProps>): void {
+    const results = this.calculateProps(props.effects);
+    results.forEach((r) => {
+      this.setUniform(r.name, r.value);
     });
   }
 
@@ -333,12 +366,7 @@ export class DynamicShader extends WebGlCoreShader {
     effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
     return {
-      effects: (props.effects ?? []).map((effect) => ({
-        type: effect.type,
-        props: effectContructors![effect.type]!.resolveDefaults(
-          (effect.props || {}) as any,
-        ),
-      })) as MapEffectDescs<keyof EffectMap>[],
+      effects: getResolvedEffect(props.effects, effectContructors),
       $dimensions: {
         width: 0,
         height: 0,

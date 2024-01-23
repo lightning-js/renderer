@@ -37,11 +37,7 @@ import type {
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import {
-  getNormalizedAlphaComponent,
-  intersectRect,
-  type Rect,
-} from './lib/utils.js';
+import { intersectRect, type Rect } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreNodeProps {
@@ -351,22 +347,34 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         this.worldAlpha,
         true,
       );
-      this.premultipliedColorTr = mergeColorAlphaPremultiplied(
-        this.props.colorTr,
-        this.worldAlpha,
-        true,
-      );
-      this.premultipliedColorBl = mergeColorAlphaPremultiplied(
-        this.props.colorBl,
-        this.worldAlpha,
-        true,
-      );
-      this.premultipliedColorBr = mergeColorAlphaPremultiplied(
-        this.props.colorBr,
-        this.worldAlpha,
-        true,
-      );
 
+      // If all the colors are the same just sent them all to the same value
+      if (
+        this.props.colorTl === this.props.colorTr &&
+        this.props.colorBl === this.props.colorBr &&
+        this.props.colorTl === this.props.colorBl
+      ) {
+        this.premultipliedColorTr =
+          this.premultipliedColorBl =
+          this.premultipliedColorBr =
+            this.premultipliedColorTl;
+      } else {
+        this.premultipliedColorTr = mergeColorAlphaPremultiplied(
+          this.props.colorTr,
+          this.worldAlpha,
+          true,
+        );
+        this.premultipliedColorBl = mergeColorAlphaPremultiplied(
+          this.props.colorBl,
+          this.worldAlpha,
+          true,
+        );
+        this.premultipliedColorBr = mergeColorAlphaPremultiplied(
+          this.props.colorBr,
+          this.worldAlpha,
+          true,
+        );
+      }
       this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
@@ -421,20 +429,41 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return (this.isRenderable = true);
     }
 
-    const colors = [
-      'color',
-      'colorTop',
-      'colorBottom',
-      'colorLeft',
-      'colorRight',
-      'colorTl',
-      'colorTr',
-      'colorBl',
-      'colorBr',
-    ];
-    if (
-      colors.some((color) => this.props[color as keyof CoreNodeProps] !== 0)
-    ) {
+    if (this.props.color !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    // Consider removing these checks and just using the color property check above.
+    // Maybe add a forceRender prop for nodes that should always render.
+    if (this.props.colorTop !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBottom !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorLeft !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorRight !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorTl !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorTr !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBl !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBr !== 0) {
       return (this.isRenderable = true);
     }
 
