@@ -79,6 +79,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
+  if (import.meta.env.PROD) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
