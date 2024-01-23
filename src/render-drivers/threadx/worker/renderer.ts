@@ -72,6 +72,7 @@ const threadx = ThreadX.init({
         canvas,
         fpsUpdateInterval: message.fpsUpdateInterval,
         enableContextSpy: message.enableContextSpy,
+        numImageWorkers: message.numImageWorkers,
         debug: {
           monitorTextureCache: false,
         },

@@ -83,15 +83,23 @@ export class ImageTexture extends Texture {
         premultiplyAlpha,
       };
     }
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return {
-      data: await createImageBitmap(blob, {
-        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      }),
-    };
+
+    if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
+    } else {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+      };
+    }
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {

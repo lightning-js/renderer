@@ -110,6 +110,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
         coreExtensionModule: rendererSettings.coreExtensionModule,
         fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
         enableContextSpy: rendererSettings.enableContextSpy,
+        numImageWorkers: rendererSettings.numImageWorkers,
       } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;

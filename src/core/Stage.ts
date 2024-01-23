@@ -45,6 +45,7 @@ export interface StageOptions {
   clearColor: number;
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
+  numImageWorkers: number;
 
   debug?: {
     monitorTextureCache?: boolean;
@@ -93,8 +94,10 @@ export class Stage extends EventEmitter {
       appWidth,
       appHeight,
       enableContextSpy,
+      numImageWorkers,
     } = options;
-    this.txManager = new CoreTextureManager();
+
+    this.txManager = new CoreTextureManager(numImageWorkers);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
