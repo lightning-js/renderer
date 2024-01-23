@@ -27,7 +27,6 @@ export class ImageWorkerManager {
   messageManager: Record<string, MessageCallback> = {};
   workers: Worker[] = [];
   workerIndex = 0;
-  anchor = document.createElement('a');
 
   constructor(numImageWorkers: number) {
     if (this.isWorkerSupported && numImageWorkers > 0) {
@@ -103,8 +102,8 @@ export class ImageWorkerManager {
   }
 
   private convertUrlToAbsolute(url: string): string {
-    this.anchor.href = url;
-    return this.anchor.href;
+    const absoluteUrl = new URL(url, self.location.href);
+    return absoluteUrl.href;
   }
 
   getImage(src: string, premultiplyAlpha: boolean): Promise<TextureData> {
