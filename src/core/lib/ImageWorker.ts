@@ -34,9 +34,7 @@ export class ImageWorkerManager {
       this.workers.forEach((worker) => {
         worker.onmessage = this.handleMessage.bind(this);
       });
-      console.log('Image Workers Enabled numWorkers:', numImageWorkers);
     } else {
-      console.log('Image Workers Disabled numWorkers:', numImageWorkers);
       this.imageWorkersEnabled = false;
     }
   }
