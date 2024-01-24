@@ -303,26 +303,40 @@ async function runTest(browserType: 'chromium') {
       );
       const actualPng = await page.screenshot();
       const actualImage = upng.decode(actualPng);
-      const expectedPng = await fs.readFile(snapshotPath, null);
-      const expectedImage = upng.decode(expectedPng);
-      const result = compareBuffers(actualImage, expectedImage);
+      let expectedPng: Buffer | null = null;
+      let expectedImage: upng.Image | null = null;
+      let result: { doesMatch: boolean; diffImageBuffer?: Buffer } = {
+        doesMatch: false,
+      };
+
+      if (fs.existsSync(snapshotPath)) {
+        expectedPng = await fs.readFile(snapshotPath, null);
+        expectedImage = upng.decode(expectedPng);
+        result = compareBuffers(actualImage, expectedImage);
+      }
+
       if (result.doesMatch) {
         snapshotsPassed++;
         console.log(chalk.green.bold('PASS!'));
       } else {
         snapshotsFailed++;
-        console.log(chalk.red.bold('FAILED!'));
+        console.log(
+          chalk.red.bold(
+            `FAILED!${!expectedPng ? ' (snapshot does not exist!)' : ''}`,
+          ),
+        );
         try {
           // Ensure the failedResult directory exists
           await Promise.all([
-            fs.writeFile(
-              path.join(
-                './',
-                failedResultsDir,
-                `${snapshotSubDirName}-${makeFilename('diff')}`,
+            result.diffImageBuffer &&
+              fs.writeFile(
+                path.join(
+                  './',
+                  failedResultsDir,
+                  `${snapshotSubDirName}-${makeFilename('diff')}`,
+                ),
+                result.diffImageBuffer,
               ),
-              result.diffImageBuffer,
-            ),
             fs.writeFile(
               path.join(
                 './',
@@ -331,14 +345,15 @@ async function runTest(browserType: 'chromium') {
               ),
               actualPng,
             ),
-            fs.writeFile(
-              path.join(
-                './',
-                failedResultsDir,
-                `${snapshotSubDirName}-${makeFilename('expected')}`,
+            expectedPng &&
+              fs.writeFile(
+                path.join(
+                  './',
+                  failedResultsDir,
+                  `${snapshotSubDirName}-${makeFilename('expected')}`,
+                ),
+                expectedPng,
               ),
-              expectedPng,
-            ),
           ]);
         } catch (e: unknown) {
           process.stderr.write(chalk.red.bold('Failed to write result:\n'));
