@@ -168,6 +168,10 @@ export function layoutText(
      * Vertex X position to the beginning of the last word boundary. This becomes -1 when we start traversing a word.
      */
     let xStartLastWordBoundary = 0;
+
+    const lineIsBelowWindowTop = curY + vertexLineHeight >= rwSdf.y1;
+    const lineIsAboveWindowBottom = curY <= rwSdf.y2;
+    const lineIsWithinWindow = lineIsBelowWindowTop && lineIsAboveWindowBottom;
     // Layout glyphs in this line
     // Any break statements in this while loop will trigger a line break
     while ((glyphResult = glyphs.next()) && !glyphResult.done) {
@@ -238,11 +242,8 @@ export function layoutText(
           const quadX = curX + glyph.xOffset;
           const quadY = curY + glyph.yOffset;
 
-          const lineIsBelowWindowTop = curY + vertexLineHeight >= rwSdf.y1;
-          const lineIsAboveWindowBottom = curY <= rwSdf.y2;
-
           // Only add to buffer for rendering if the line is within the render window
-          if (lineIsBelowWindowTop && lineIsAboveWindowBottom) {
+          if (lineIsWithinWindow) {
             if (curLineBufferStart === -1) {
               curLineBufferStart = bufferOffset;
             }
@@ -334,9 +335,7 @@ export function layoutText(
     } else if (glyphResult && glyphResult.done) {
       // If we've reached the end of the text, we know we're done
       moreLines = false;
-    } else if (
-      /*contain === 'both' && !scrollable &&  !!!!!!!! */ !nextLineWillFit
-    ) {
+    } else if (!nextLineWillFit) {
       // If we're contained vertically+horizontally (contain === 'both')
       // but not scrollable and the next line won't fit, we're done.
       moreLines = false;
