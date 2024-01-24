@@ -52,13 +52,14 @@ const NODE_PROPS = {
   x: 100,
   y: 100,
   width: 200,
+  height: 200,
   color: 0x000000ff,
   text: getLoremIpsum(100),
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
   lineHeight: 28,
-  contain: 'width',
+  contain: 'both',
 } satisfies Partial<ITextNodeWritableProps>;
 
 function generateOverflowSuffixTest(
@@ -67,9 +68,7 @@ function generateOverflowSuffixTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('overflowSuffix', ${textRenderer})${
-        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
-      }`,
+      title: `Text Node ('overflowSuffix', ${textRenderer})`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,

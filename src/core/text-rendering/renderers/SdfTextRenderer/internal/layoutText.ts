@@ -18,6 +18,7 @@
  */
 
 import { assertTruthy } from '../../../../../utils.js';
+import type { Bound } from '../../../../lib/utils.js';
 import type {
   FontShaperProps,
   MappedGlyphInfo,
@@ -38,6 +39,7 @@ export function layoutText(
   width: TrProps['width'],
   height: TrProps['height'],
   fontSize: TrProps['fontSize'],
+  lineHeight: TrProps['lineHeight'],
   letterSpacing: TrProps['letterSpacing'],
   /**
    * Mutated
@@ -48,10 +50,12 @@ export function layoutText(
    * Mutated
    */
   lineCache: SdfTextRendererState['lineCache'],
-  renderWindow: SdfTextRendererState['renderWindow'],
+  rwSdf: Bound,
   trFontFace: SdfTextRendererState['trFontFace'],
   forceFullLayoutCalc: TextRendererState['forceFullLayoutCalc'],
   scrollable: TrProps['scrollable'],
+  overflowSuffix: TrProps['overflowSuffix'],
+  maxLines: TrProps['maxLines'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;
@@ -75,13 +79,13 @@ export function layoutText(
   // We convert these to the vertex space by dividing them the `fontSizeRatio` factor.
 
   /**
-   * `lineHeight` in vertex coordinates
-   */
-  const vertexLineHeight = trFontFace.data.info.size;
-  /**
    * See above
    */
-  const fontSizeRatio = fontSize / vertexLineHeight;
+  const fontSizeRatio = fontSize / trFontFace.data.info.size;
+  /**
+   * `lineHeight` in vertex coordinates
+   */
+  const vertexLineHeight = lineHeight / fontSizeRatio;
   /**
    * `w` in vertex coordinates
    */
@@ -142,24 +146,32 @@ export function layoutText(
     bufferEnd: number;
   }[] = [];
 
-  const truncateSeq = '...';
   const vertexTruncateHeight = height / fontSizeRatio;
-  const truncateSeqVertexWidth = measureText(truncateSeq, shaperProps, shaper);
+  const overflowSuffVertexWidth = measureText(
+    overflowSuffix,
+    shaperProps,
+    shaper,
+  );
 
   // Line-by-line layout
   let moreLines = true;
   while (moreLines) {
     const nextLineWillFit =
-      contain !== 'both' ||
-      scrollable ||
-      curY + vertexLineHeight + vertexLineHeight <= vertexTruncateHeight;
+      (maxLines === 0 || curLineIndex + 1 < maxLines) &&
+      (contain !== 'both' ||
+        scrollable ||
+        curY + vertexLineHeight + vertexLineHeight <= vertexTruncateHeight);
     const lineVertexW = nextLineWillFit
       ? vertexW
-      : vertexW - truncateSeqVertexWidth;
+      : vertexW - overflowSuffVertexWidth;
     /**
      * Vertex X position to the beginning of the last word boundary. This becomes -1 when we start traversing a word.
      */
     let xStartLastWordBoundary = 0;
+
+    const lineIsBelowWindowTop = curY + vertexLineHeight >= rwSdf.y1;
+    const lineIsAboveWindowBottom = curY <= rwSdf.y2;
+    const lineIsWithinWindow = lineIsBelowWindowTop && lineIsAboveWindowBottom;
     // Layout glyphs in this line
     // Any break statements in this while loop will trigger a line break
     while ((glyphResult = glyphs.next()) && !glyphResult.done) {
@@ -220,7 +232,7 @@ export function layoutText(
           } else {
             glyphs = shaper.shapeText(
               shaperProps,
-              new PeekableIterator(getUnicodeCodepoints(truncateSeq, 0), 0),
+              new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
             );
             curX = lastWord.xStart;
             bufferOffset = lastWord.bufferOffset;
@@ -230,15 +242,8 @@ export function layoutText(
           const quadX = curX + glyph.xOffset;
           const quadY = curY + glyph.yOffset;
 
-          const lineIsBelowWindowTop = renderWindow
-            ? curY + vertexLineHeight >= renderWindow.y1 / fontSizeRatio
-            : true;
-          const lineIsAboveWindowBottom = renderWindow
-            ? curY <= renderWindow.y2 / fontSizeRatio
-            : true;
-
           // Only add to buffer for rendering if the line is within the render window
-          if (lineIsBelowWindowTop && lineIsAboveWindowBottom) {
+          if (lineIsWithinWindow) {
             if (curLineBufferStart === -1) {
               curLineBufferStart = bufferOffset;
             }
@@ -288,7 +293,19 @@ export function layoutText(
 
         // Handle newlines
         if (glyph.codepoint === 10) {
-          break;
+          if (nextLineWillFit) {
+            // The whole line fit, so we can break to the next line
+            break;
+          } else {
+            // The whole line won't fit, so we need to add the overflow suffix
+            glyphs = shaper.shapeText(
+              shaperProps,
+              new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
+            );
+            // HACK: For the rest of the line when inserting the overflow suffix,
+            // set contain = 'none' to prevent an infinite loop.
+            contain = 'none';
+          }
         }
       }
     }
@@ -308,12 +325,7 @@ export function layoutText(
     xStartLastWordBoundary = 0;
 
     // Figure out if there are any more lines to render...
-    if (
-      !forceFullLayoutCalc &&
-      contain === 'both' &&
-      renderWindow &&
-      curY > renderWindow.y2 / fontSizeRatio
-    ) {
+    if (!forceFullLayoutCalc && contain === 'both' && curY > rwSdf.y2) {
       // Stop layout calculation early (for performance purposes) if:
       // - We're not forcing a full layout calculation (for width/height calculation)
       // - ...and we're containing the text vertically+horizontally (contain === 'both')
@@ -323,7 +335,7 @@ export function layoutText(
     } else if (glyphResult && glyphResult.done) {
       // If we've reached the end of the text, we know we're done
       moreLines = false;
-    } else if (contain === 'both' && !scrollable && !nextLineWillFit) {
+    } else if (!nextLineWillFit) {
       // If we're contained vertically+horizontally (contain === 'both')
       // but not scrollable and the next line won't fit, we're done.
       moreLines = false;

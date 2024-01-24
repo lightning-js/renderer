@@ -17,8 +17,10 @@
  * limitations under the License.
  */
 
+import type { Bound } from '../../../../lib/utils.js';
 import type { TrProps, TextRendererState } from '../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
+import type { SdfRenderWindow } from './setRenderWindow.js';
 
 /**
  * Gets the start conditions for the layout loop.
@@ -35,42 +37,48 @@ import type { SdfTextRendererState } from '../SdfTextRenderer.js';
  * @returns
  */
 export function getStartConditions(
-  fontSize: TrProps['fontSize'],
+  sdfFontSize: number,
+  sdfLineHeight: number,
+  lineHeight: number,
+  verticalAlign: TrProps['verticalAlign'],
   offsetY: TrProps['offsetY'],
   fontSizeRatio: number,
-  sdfLineHeight: number,
-  renderWindow: SdfTextRendererState['renderWindow'],
+  renderWindow: SdfRenderWindow,
   lineCache: SdfTextRendererState['lineCache'],
   textH: TextRendererState['textH'],
 ):
   | {
-      x: number;
-      y: number;
+      sdfX: number;
+      sdfY: number;
       lineIndex: number;
     }
   | undefined {
   // State variables
-  let startLineIndex = 0;
-  if (renderWindow) {
-    startLineIndex = Math.min(
-      Math.max(Math.floor(renderWindow.y1 / fontSize), 0),
-      lineCache.length,
-    );
-  }
+  const startLineIndex = Math.min(
+    Math.max(renderWindow.firstLineIdx, 0),
+    lineCache.length,
+  );
 
-  // TODO: Possibly break out startX / startY into a separate function
   // TODO: (fontSize / 6.4286 / fontSizeRatio) Adding this to the startY helps the text line up better with Canvas rendered text
-  const startX = 0;
-  const startY = offsetY / fontSizeRatio + startLineIndex * sdfLineHeight; // TODO: Figure out what determines the initial y offset of text.
+  const sdfStartX = 0;
+  let sdfVerticalAlignYOffset = 0;
+  if (verticalAlign === 'middle') {
+    sdfVerticalAlignYOffset = (sdfLineHeight - sdfFontSize) / 2;
+  } else if (verticalAlign === 'bottom') {
+    sdfVerticalAlignYOffset = sdfLineHeight - sdfFontSize;
+  }
+  const sdfOffsetY = offsetY / fontSizeRatio;
+  const sdfStartY =
+    sdfOffsetY + startLineIndex * sdfLineHeight + sdfVerticalAlignYOffset; // TODO: Figure out what determines the initial y offset of text.
 
   // Don't attempt to render anything if we know we're starting past the established end of the text
-  if (textH && startY >= textH / fontSizeRatio) {
+  if (textH && sdfStartY >= textH / fontSizeRatio) {
     return;
   }
 
   return {
-    x: startX,
-    y: startY,
+    sdfX: sdfStartX,
+    sdfY: sdfStartY,
     lineIndex: startLineIndex,
   };
 }

@@ -417,6 +417,10 @@ export abstract class TextRenderer<
             (state: StateT, value: TrProps[keyof TrProps]) => {
               if (state.props[key as keyof TrProps] !== value) {
                 setter(state, value as never);
+                // Assume any prop change will require a render
+                // This is required because otherwise a paused RAF will result
+                // in renders when text props are changed.
+                this.stage.requestRender();
               }
             },
           ];

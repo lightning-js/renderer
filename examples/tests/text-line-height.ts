@@ -37,7 +37,7 @@ export default async function test(settings: ExampleSettings) {
   const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
-    title: 'Text LineHeight',
+    title: 'Text Line Height',
   });
 
   await paginateTestRows(pageContainer, [
@@ -49,10 +49,11 @@ export default async function test(settings: ExampleSettings) {
 }
 
 const NODE_PROPS = {
-  x: 100,
-  y: 100,
+  x: 90,
+  y: 90,
+  mount: 0.5,
   color: 0x000000ff,
-  text: 'txyz',
+  text: 'abcd\ntxyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
@@ -64,8 +65,8 @@ function generateLineHeightTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('lineHeight', ${textRenderer})${
-        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
+      title: `Text Node ('lineHeight', ${textRenderer}, fontSize=50)${
+        textRenderer === 'canvas' ? ', "BROKEN!"' : ''
       }`,
       content: async (rowNode) => {
         const nodeProps = {
@@ -76,38 +77,47 @@ function generateLineHeightTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForTextDimensions(baselineNode);
+        // const dimensions = await waitForTextDimensions(baselineNode);
 
-        // Get the position for the center of the container based on mount = 0
-        const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
-        };
+        // // Get the position for the center of the container based on mount = 0
+        // const position = {
+        //   y: 100 - dimensions.height / 2,
+        // };
 
-        baselineNode.x = position.x;
-        baselineNode.y = position.y;
+        // baselineNode.y = position.y;
 
-        return await constructTestRow({ renderer, rowNode }, [
-          baselineNode,
-          'lineHeight 50 ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            lineHeight: 50,
-          }),
-          'lineHeight 60 ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            lineHeight: 60,
-          }),
-          'lineHeight 70 ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            lineHeight: 70,
-          }),
-        ]);
+        return await constructTestRow(
+          { renderer, rowNode, containerSize: 180 },
+          [
+            'lineHeight: fontSize\n(default)\n->',
+            baselineNode,
+            '60 ->',
+            renderer.createTextNode({
+              ...nodeProps,
+              lineHeight: 60,
+            }),
+            '70 ->',
+            renderer.createTextNode({
+              ...nodeProps,
+              lineHeight: 70,
+            }),
+            '25 ->',
+            renderer.createTextNode({
+              ...nodeProps,
+              lineHeight: 25,
+            }),
+            '10 ->',
+            renderer.createTextNode({
+              ...nodeProps,
+              lineHeight: 10,
+            }),
+            '0 ->',
+            renderer.createTextNode({
+              ...nodeProps,
+              lineHeight: 0,
+            }),
+          ],
+        );
       },
     },
   ] satisfies TestRow[];

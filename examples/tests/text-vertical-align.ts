@@ -42,6 +42,7 @@ export default async function test(settings: ExampleSettings) {
 
   await paginateTestRows(pageContainer, [
     ...generateVerticalAlignTest(renderer, 'sdf'),
+    null,
     ...generateVerticalAlignTest(renderer, 'canvas'),
   ]);
 
@@ -49,10 +50,7 @@ export default async function test(settings: ExampleSettings) {
 }
 
 const NODE_PROPS = {
-  x: 100,
-  y: 100,
   color: 0x000000ff,
-  text: 'txyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
@@ -65,47 +63,58 @@ function generateVerticalAlignTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('verticalAlign', ${textRenderer}), lineHeight = 70${
-        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
-      }`,
+      title: `One Line ('verticalAlign', ${textRenderer}, fontSize = 50, lineHeight = 70)`,
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
+          text: 'txyz',
           textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForTextDimensions(baselineNode);
-
-        // Get the position for the center of the container based on mount = 0
-        const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
-        };
-
-        baselineNode.x = position.x;
-        baselineNode.y = position.y;
 
         return await constructTestRow({ renderer, rowNode }, [
+          'verticalAlign: top\n(default)\n->',
           baselineNode,
-          'verticalAlign: top ->',
+          'middle ->',
           renderer.createTextNode({
             ...nodeProps,
-            ...position,
-            verticalAlign: 'top',
-          }),
-          'verticalAlign: middle ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
             verticalAlign: 'middle',
           }),
-          'verticalAlign: bottom ->',
+          'bottom ->',
           renderer.createTextNode({
             ...nodeProps,
-            ...position,
+            verticalAlign: 'bottom',
+          }),
+        ]);
+      },
+    },
+    {
+      title: `Two Lines ('verticalAlign', ${textRenderer}, fontSize = 50, lineHeight = 70)`,
+      content: async (rowNode) => {
+        const nodeProps = {
+          ...NODE_PROPS,
+          text: 'abcd\ntxyz',
+          textRendererOverride: textRenderer,
+        } satisfies Partial<ITextNodeWritableProps>;
+
+        const baselineNode = renderer.createTextNode({
+          ...nodeProps,
+        });
+
+        return await constructTestRow({ renderer, rowNode }, [
+          'verticalAlign: top\n(default)\n->',
+          baselineNode,
+          'middle ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            verticalAlign: 'middle',
+          }),
+          'bottom ->',
+          renderer.createTextNode({
+            ...nodeProps,
             verticalAlign: 'bottom',
           }),
         ]);

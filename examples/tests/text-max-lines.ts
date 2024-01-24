@@ -42,18 +42,18 @@ export default async function test(settings: ExampleSettings) {
 
   await paginateTestRows(pageContainer, [
     ...generateMaxLinesTest(renderer, 'sdf'),
+    null,
     ...generateMaxLinesTest(renderer, 'canvas'),
   ]);
 
   return pageContainer;
 }
 
-const NODE_PROPS = {
+const BASE_NODE_PROPS = {
   x: 100,
   y: 100,
   width: 200,
   color: 0x000000ff,
-  text: getLoremIpsum(100),
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
@@ -67,12 +67,11 @@ function generateMaxLinesTest(
 ): TestRow[] {
   return [
     {
-      title: `Text Node ('maxLines', ${textRenderer})${
-        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
-      }`,
+      title: `Wrapped + Explicit Lines ('maxLines', ${textRenderer})`,
       content: async (rowNode) => {
         const nodeProps = {
-          ...NODE_PROPS,
+          ...BASE_NODE_PROPS,
+          text: 'Line1 Line1_Line1_Line1\nLine2 Line2____Line2\nLine 3\nLine 4',
           textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeWritableProps>;
 
@@ -96,17 +95,85 @@ function generateMaxLinesTest(
             ...position,
             maxLines: 1,
           }),
-          'maxLines: 2 ->',
+          '2 ->',
           renderer.createTextNode({
             ...nodeProps,
             ...position,
             maxLines: 2,
           }),
-          'maxLines: 3 ->',
+          '3 ->',
           renderer.createTextNode({
             ...nodeProps,
             ...position,
             maxLines: 3,
+          }),
+          '4 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 4,
+          }),
+          '5 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 5,
+          }),
+        ]);
+      },
+    },
+    {
+      title: `Lorem Ipsum ('maxLines', ${textRenderer})`,
+      content: async (rowNode) => {
+        const nodeProps = {
+          ...BASE_NODE_PROPS,
+          text: getLoremIpsum(100),
+          textRendererOverride: textRenderer,
+        } satisfies Partial<ITextNodeWritableProps>;
+
+        const baselineNode = renderer.createTextNode({
+          ...nodeProps,
+        });
+
+        const position = {
+          x: 0,
+          y: 0,
+        };
+
+        baselineNode.x = position.x;
+        baselineNode.y = position.y;
+
+        return await constructTestRow({ renderer, rowNode }, [
+          baselineNode,
+          'maxLines: 1 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 1,
+          }),
+          '2 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 2,
+          }),
+          '3 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 3,
+          }),
+          '4 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 4,
+          }),
+          '5 ->',
+          renderer.createTextNode({
+            ...nodeProps,
+            ...position,
+            maxLines: 5,
           }),
         ]);
       },

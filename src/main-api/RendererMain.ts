@@ -419,11 +419,12 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
+    const fontSize = props.fontSize ?? 16;
     const data = {
       ...this.resolveNodeDefaults(props),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
-      fontSize: props.fontSize ?? 16,
+      fontSize,
       fontFamily: props.fontFamily ?? 'sans-serif',
       fontStyle: props.fontStyle ?? 'normal',
       fontWeight: props.fontWeight ?? 'normal',
@@ -434,7 +435,7 @@ export class RendererMain extends EventEmitter {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight ?? 0,
+      lineHeight: props.lineHeight ?? fontSize,
       maxLines: props.maxLines ?? 0,
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'top',
