@@ -13,8 +13,14 @@ git checkout main
 # Stash any untracked + uncomitted changes
 git stash -u
 
-# Run the build once to make sure it completes without errors
-pnpm run build
+# Run the unit tests
+pnpm test
+
+# Run the Visual Regression Tests in CI mode
+pnpm test:visual --ci
+
+# Review changes in order to decide which release-increment to use
+git log --first-parent main...v<last-version-number>
 
 # Mark the version update
 # This creates a new tagged commit for the version
@@ -43,6 +49,7 @@ git stash pop
 6. Edit the release notes as appropriate:
    - User facing changes should go under the main "What's Changed" heading
    - Mark all breaking changes with: :warning: **Breaking Change:** (Description)
-   - If there are non-user facing changes move them to a new level 3 heading called: **Non-User Facing**.
+   - Move any changes specific to performance to a new level 3 heading called: **Performance**
+   - If there are other non-user facing changes move them to a new level 3 heading called: **Non-User Facing**.
 7. Set as the latest release: _Check_
 8. Click "Publish release"
