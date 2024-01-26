@@ -23,13 +23,16 @@ import type { Stage } from './Stage.js';
  * Platform render loop initiator
  */
 export const startLoop = (stage: Stage) => {
+  let doOneMoreRaf = true;
   const runLoop = () => {
     stage.updateAnimations();
 
-    if (!stage.hasSceneUpdates()) {
+    const hasUpdates = stage.hasSceneUpdates();
+    if (!hasUpdates && !doOneMoreRaf) {
       setTimeout(runLoop, 16.666666666666668);
       return;
     }
+    doOneMoreRaf = hasUpdates;
 
     stage.drawFrame();
     requestAnimationFrame(runLoop);
