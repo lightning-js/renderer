@@ -152,7 +152,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public localTransform?: Matrix3d;
   public clippingRect: Rect | null = null;
   public isRenderable = false;
-  private parentClippingRect: Rect | null = null;
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
   public premultipliedColorTr = 0;
@@ -473,8 +472,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   /**
    * This function calculates the clipping rectangle for a node.
    *
-   * If the parent clipping rectangle has not changed and the node's clipping rectangle is already set, the function returns immediately.
-   *
    * The function then checks if the node is rotated. If the node requires clipping and is not rotated, a new clipping rectangle is created based on the node's global transform and dimensions.
    * If a parent clipping rectangle exists, it is intersected with the node's clipping rectangle (if it exists), or replaces the node's clipping rectangle.
    *
@@ -482,10 +479,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    */
   calculateClippingRect(parentClippingRect: Rect | null = null) {
     assertTruthy(this.globalTransform);
-
-    if (this.parentClippingRect === parentClippingRect && this.clippingRect) {
-      return;
-    }
 
     const gt = this.globalTransform;
     const isRotated = gt.tb !== 0 || gt.tc !== 0;
@@ -505,7 +498,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       clippingRect = parentClippingRect;
     }
 
-    this.parentClippingRect = parentClippingRect;
     this.clippingRect = clippingRect;
   }
 
