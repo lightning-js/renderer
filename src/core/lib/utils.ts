@@ -81,6 +81,10 @@ export interface Rect {
   height: number;
 }
 
+export interface RectWithValid extends Rect {
+  valid: boolean;
+}
+
 export interface Bound {
   x1: number;
   y1: number;
@@ -132,12 +136,25 @@ export function intersectBound<T extends Bound = Bound>(
   return createBound(0, 0, 0, 0, intersection);
 }
 
-export function intersectRect(a: Rect, b: Rect): Rect {
+export function intersectRect(a: Rect, b: Rect): Rect;
+export function intersectRect<T extends Rect = Rect>(
+  a: Rect,
+  b: Rect,
+  out: T,
+): T;
+export function intersectRect(a: Rect, b: Rect, out?: Rect): Rect {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);
   const width = Math.min(a.x + a.width, b.x + b.width) - x;
   const height = Math.min(a.y + a.height, b.y + b.height) - y;
   if (width > 0 && height > 0) {
+    if (out) {
+      out.x = x;
+      out.y = y;
+      out.width = width;
+      out.height = height;
+      return out;
+    }
     return {
       x,
       y,
@@ -145,11 +162,36 @@ export function intersectRect(a: Rect, b: Rect): Rect {
       height,
     };
   }
+  if (out) {
+    out.x = 0;
+    out.y = 0;
+    out.width = 0;
+    out.height = 0;
+    return out;
+  }
   return {
     x: 0,
     y: 0,
     width: 0,
     height: 0,
+  };
+}
+
+export function copyRect(a: Rect): Rect;
+export function copyRect<T extends Rect = Rect>(a: Rect, out: T): T;
+export function copyRect(a: Rect, out?: Rect): Rect {
+  if (out) {
+    out.x = a.x;
+    out.y = a.y;
+    out.width = a.width;
+    out.height = a.height;
+    return out;
+  }
+  return {
+    x: a.x,
+    y: a.y,
+    width: a.width,
+    height: a.height,
   };
 }
 

@@ -50,6 +50,7 @@ import {
   compareRect,
   getNormalizedRgbaComponents,
   type Rect,
+  type RectWithValid,
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
@@ -412,7 +413,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     shaderProps: Record<string, unknown>,
     alpha: number,
     dimensions: Dimensions,
-    clippingRect: Rect | null,
+    clippingRect: RectWithValid,
     bufferIdx: number,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(

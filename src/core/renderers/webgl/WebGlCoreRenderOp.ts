@@ -23,7 +23,7 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { Rect } from '../../lib/utils.js';
+import type { Rect, RectWithValid } from '../../lib/utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
@@ -45,7 +45,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly shader: WebGlCoreShader,
     readonly shaderProps: Record<string, unknown>,
     readonly alpha: number,
-    readonly clippingRect: Rect | null,
+    readonly clippingRect: RectWithValid,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
@@ -82,7 +82,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;
 
     // Clipping
-    if (this.clippingRect) {
+    if (this.clippingRect.valid) {
       const { x, y, width, height } = this.clippingRect;
       const pixelRatio = options.pixelRatio;
       const canvasHeight = options.canvas.height;

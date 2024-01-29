@@ -210,7 +210,7 @@ export class Stage extends EventEmitter {
 
     // Update tree if needed
     if (this.root.updateType !== 0) {
-      this.root.update(this.deltaTime);
+      this.root.update(this.deltaTime, this.root.clippingRect);
     }
 
     // test if we need to update the scene

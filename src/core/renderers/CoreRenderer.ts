@@ -20,7 +20,7 @@
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
-import type { Rect } from '../lib/utils.js';
+import type { Rect, RectWithValid } from '../lib/utils.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreRenderOp } from './CoreRenderOp.js';
@@ -39,7 +39,7 @@ export interface QuadOptions {
   shader: CoreShader | null;
   shaderProps: Record<string, unknown> | null;
   alpha: number;
-  clippingRect: Rect | null;
+  clippingRect: RectWithValid;
   tx: number;
   ty: number;
   ta: number;

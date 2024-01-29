@@ -20,7 +20,7 @@
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
-import type { Rect } from '../../lib/utils.js';
+import type { Rect, RectWithValid } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
@@ -498,7 +498,7 @@ export abstract class TextRenderer<
   abstract renderQuads(
     state: StateT,
     transform: Matrix3d,
-    clippingRect: Rect | null,
+    clippingRect: RectWithValid,
     alpha: number,
   ): void;
 }
