@@ -168,9 +168,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         glw.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
-      // @ts-expect-error compressed props missing on SubTextureProps
-    } else if (textureData.data.mipmaps) {
-      // @ts-expect-error compressed props missing on SubTextureProps
+    } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
       const {
         mipmaps,
         width = 0,
@@ -178,12 +176,14 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         type,
         glInternalFormat,
       } = textureData.data;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const view = type === 'ktx' ? new DataView(mipmaps[0]) : mipmaps[0];
+      const view =
+        type === 'ktx'
+          ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
+          : (mipmaps[0] as unknown as ArrayBufferView);
 
-      gl.bindTexture(gl.TEXTURE_2D, this._nativeCtxTexture);
-      gl.compressedTexImage2D(
-        gl.TEXTURE_2D,
+      glw.bindTexture(this._nativeCtxTexture);
+      glw.compressedTexImage2D(
+        glw.TEXTURE_2D,
         0,
         glInternalFormat,
         width,
@@ -192,10 +192,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         view,
       );
 
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
+      glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
+      glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
+      glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,

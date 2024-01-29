@@ -47,7 +47,7 @@ interface CompressedData {
   /**
    * All mipmap levels
    */
-  mipmaps: ArrayBuffer[];
+  mipmaps?: ArrayBuffer[];
 
   /**
    * Supported container types ('pvr' or 'ktx').
