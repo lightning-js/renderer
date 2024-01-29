@@ -182,15 +182,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           : (mipmaps[0] as unknown as ArrayBufferView);
 
       glw.bindTexture(this._nativeCtxTexture);
-      glw.compressedTexImage2D(
-        glw.TEXTURE_2D,
-        0,
-        glInternalFormat,
-        width,
-        height,
-        0,
-        view,
-      );
+      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
 
       glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);

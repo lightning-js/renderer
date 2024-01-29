@@ -66,7 +66,6 @@ export class WebGlContextWrapper {
   public readonly MAX_VARYING_VECTORS;
   public readonly MAX_VERTEX_UNIFORM_VECTORS;
   public readonly MAX_FRAGMENT_UNIFORM_VECTORS;
-  public readonly TEXTURE_2D;
   public readonly TEXTURE_MAG_FILTER;
   public readonly TEXTURE_MIN_FILTER;
   public readonly TEXTURE_WRAP_S;
@@ -153,7 +152,6 @@ export class WebGlContextWrapper {
     this.MAX_VARYING_VECTORS = gl.MAX_VARYING_VECTORS;
     this.MAX_VERTEX_UNIFORM_VECTORS = gl.MAX_VERTEX_UNIFORM_VECTORS;
     this.MAX_FRAGMENT_UNIFORM_VECTORS = gl.MAX_FRAGMENT_UNIFORM_VECTORS;
-    this.TEXTURE_2D = gl.TEXTURE_2D;
     this.TEXTURE_MAG_FILTER = gl.TEXTURE_MAG_FILTER;
     this.TEXTURE_MIN_FILTER = gl.TEXTURE_MIN_FILTER;
     this.TEXTURE_WRAP_S = gl.TEXTURE_WRAP_S;
@@ -339,11 +337,13 @@ export class WebGlContextWrapper {
   }
   /**
    * ```
-   * gl.compressedTexImage2D(tt, level, internalFormat, width, height, border, data);
+   * gl.compressedTexImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, data);
+   *
+   * * @remarks
+   * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
    */
 
   compressedTexImage2D(
-    target: GLenum,
     level: GLint,
     internalformat: GLenum,
     width: GLsizei,
@@ -353,7 +353,7 @@ export class WebGlContextWrapper {
   ): void {
     const { gl } = this;
     gl.compressedTexImage2D(
-      target,
+      gl.TEXTURE_2D,
       level,
       internalformat,
       width,
