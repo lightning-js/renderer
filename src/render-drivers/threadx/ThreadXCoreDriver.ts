@@ -42,6 +42,7 @@ import {
   type TextNodeStructWritableProps,
 } from './TextNodeStruct.js';
 import { ThreadXMainTextNode } from './ThreadXMainTextNode.js';
+import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
 
 export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
@@ -79,7 +80,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       onMessage: async (message) => {
         // Forward fpsUpdate events from the renderer worker's Stage to RendererMain
         if (isThreadXRendererMessage('fpsUpdate', message)) {
-          this.onFpsUpdate(message.fps);
+          this.onFpsUpdate(message.fpsData);
         }
       },
     });
@@ -108,6 +109,8 @@ export class ThreadXCoreDriver implements ICoreDriver {
         clearColor: rendererSettings.clearColor,
         coreExtensionModule: rendererSettings.coreExtensionModule,
         fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
+        enableContextSpy: rendererSettings.enableContextSpy,
+        numImageWorkers: rendererSettings.numImageWorkers,
       } satisfies ThreadXRendererInitMessage,
       [offscreenCanvas],
     )) as number;
@@ -215,8 +218,13 @@ export class ThreadXCoreDriver implements ICoreDriver {
       fontWeight: props.fontWeight,
       fontStretch: props.fontStretch,
       fontStyle: props.fontStyle,
+      lineHeight: props.lineHeight,
+      maxLines: props.maxLines,
+      textBaseline: props.textBaseline,
+      verticalAlign: props.verticalAlign,
       contain: props.contain,
       letterSpacing: props.letterSpacing,
+      overflowSuffix: props.overflowSuffix,
       offsetY: props.offsetY,
       textAlign: props.textAlign,
       scrollable: props.scrollable,
@@ -258,7 +266,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
     throw new Error('Method not implemented.');
   }
 
-  onFpsUpdate(fps: number): void {
+  onFpsUpdate(fps: FpsUpdatePayload): void {
     throw new Error('Method not implemented.');
   }
   //#endregion

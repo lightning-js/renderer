@@ -85,6 +85,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
+        maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
+        overflowSuffix: sharedNodeStruct.overflowSuffix,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -101,6 +106,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
+        maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
+        overflowSuffix: sharedNodeStruct.overflowSuffix,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -125,6 +135,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
   declare fontWeight: TextNodeStructWritableProps['fontWeight'];
   declare fontStretch: TextNodeStructWritableProps['fontStretch'];
   declare fontStyle: TextNodeStructWritableProps['fontStyle'];
+  declare lineHeight: TextNodeStructWritableProps['lineHeight'];
+  declare maxLines: TextNodeStructWritableProps['maxLines'];
+  declare textBaseline: TextNodeStructWritableProps['textBaseline'];
+  declare verticalAlign: TextNodeStructWritableProps['verticalAlign'];
+  declare overflowSuffix: TextNodeStructWritableProps['overflowSuffix'];
   declare contain: TextNodeStructWritableProps['contain'];
   declare letterSpacing: TextNodeStructWritableProps['letterSpacing'];
   declare offsetY: TextNodeStructWritableProps['offsetY'];

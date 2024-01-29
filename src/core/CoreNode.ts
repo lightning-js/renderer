@@ -37,11 +37,7 @@ import type {
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import {
-  getNormalizedAlphaComponent,
-  intersectRect,
-  type Rect,
-} from './lib/utils.js';
+import { intersectRect, type Rect } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreNodeProps {
@@ -155,6 +151,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
   public clippingRect: Rect | null = null;
+  public isRenderable = false;
   private parentClippingRect: Rect | null = null;
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
@@ -191,6 +188,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = texture;
     this.props.textureOptions = options;
+    this.checkIsRenderable();
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -214,9 +212,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
     this.props.texture = null;
     this.props.textureOptions = null;
+    this.checkIsRenderable();
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    // Texture was loaded. In case the RAF loop has already stopped, we request
+    // a render to ensure the texture is rendered.
+    this.stage.requestRender();
     this.emit('loaded', {
       type: 'texture',
       dimensions,
@@ -240,6 +242,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
+    this.checkIsRenderable();
   }
 
   /**
@@ -307,27 +310,23 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const parent = this.props.parent;
     let childUpdateType = UpdateType.None;
     if (this.updateType & UpdateType.Global) {
+      assertTruthy(this.localTransform);
+      this.globalTransform = Matrix3d.copy(
+        parent?.globalTransform || this.localTransform,
+        this.globalTransform,
+      );
+
       if (parent) {
-        assertTruthy(this.localTransform && parent.globalTransform);
-        this.globalTransform = Matrix3d.copy(
-          parent.globalTransform,
-          this.globalTransform,
-        ).multiply(this.localTransform);
-        this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
-        childUpdateType |= UpdateType.Global;
-      } else {
-        assertTruthy(this.localTransform);
-        this.globalTransform = Matrix3d.copy(
-          this.localTransform,
-          this.globalTransform,
-        );
-        this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
-        childUpdateType |= UpdateType.Global;
+        this.globalTransform.multiply(this.localTransform);
       }
+
+      this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
+      childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
+      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.Clipping;
     }
@@ -343,33 +342,23 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
 
     if (this.updateType & UpdateType.PremultipliedColors) {
-      if (parent) {
-        this.premultipliedColorTl = mergeColorAlphaPremultiplied(
-          this.props.colorTl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorTr = mergeColorAlphaPremultiplied(
-          this.props.colorTr,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBl = mergeColorAlphaPremultiplied(
-          this.props.colorBl,
-          this.worldAlpha,
-          true,
-        );
-        this.premultipliedColorBr = mergeColorAlphaPremultiplied(
-          this.props.colorBr,
-          this.worldAlpha,
-          true,
-        );
+      this.premultipliedColorTl = mergeColorAlphaPremultiplied(
+        this.props.colorTl,
+        this.worldAlpha,
+        true,
+      );
+
+      // If all the colors are the same just sent them all to the same value
+      if (
+        this.props.colorTl === this.props.colorTr &&
+        this.props.colorBl === this.props.colorBr &&
+        this.props.colorTl === this.props.colorBl
+      ) {
+        this.premultipliedColorTr =
+          this.premultipliedColorBl =
+          this.premultipliedColorBr =
+            this.premultipliedColorTl;
       } else {
-        this.premultipliedColorTl = mergeColorAlphaPremultiplied(
-          this.props.colorTl,
-          this.worldAlpha,
-          true,
-        );
         this.premultipliedColorTr = mergeColorAlphaPremultiplied(
           this.props.colorTr,
           this.worldAlpha,
@@ -386,6 +375,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
+      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
     }
@@ -418,6 +408,66 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // reset update type
     this.updateType = 0;
+  }
+
+  // This function checks if the current node is renderable based on certain properties.
+  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
+  checkIsRenderable(): boolean {
+    if (this.props.texture) {
+      return (this.isRenderable = true);
+    }
+
+    if (!this.props.width || !this.props.height) {
+      return (this.isRenderable = false);
+    }
+
+    if (this.props.shader) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.clipping) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.color !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    // Consider removing these checks and just using the color property check above.
+    // Maybe add a forceRender prop for nodes that should always render.
+    if (this.props.colorTop !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBottom !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorLeft !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorRight !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorTl !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorTr !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBl !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    if (this.props.colorBr !== 0) {
+      return (this.isRenderable = true);
+    }
+
+    return (this.isRenderable = false);
   }
 
   /**

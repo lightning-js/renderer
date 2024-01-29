@@ -89,15 +89,22 @@ export class ImageTexture extends Texture {
       return this.handleCompressedTexture();
     }
 
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return {
-      data: await createImageBitmap(blob, {
-        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      }),
-    };
+    if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
+    } else {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+      };
+    }
   }
 
   isCompressedTexture(): boolean {

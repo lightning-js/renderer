@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
+
 /**
  * @module
  * @description
@@ -43,6 +45,8 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   devicePhysicalPixelRatio: number;
   clearColor: number;
   fpsUpdateInterval: number;
+  enableContextSpy: boolean;
+  numImageWorkers: number;
   coreExtensionModule: string | null;
 }
 
@@ -62,7 +66,7 @@ export interface ThreadXRendererReleaseTextureMessage
 export interface ThreadXRendererFpsUpdateMessage
   extends ThreadXRendererMessage {
   type: 'fpsUpdate';
-  fps: number;
+  fpsData: FpsUpdatePayload;
 }
 
 /**

@@ -18,12 +18,13 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
 export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
-  constructor(gl: WebGLRenderingContext, textureSource: SubTexture) {
-    super(gl, textureSource);
+  constructor(glw: WebGlContextWrapper, textureSource: SubTexture) {
+    super(glw, textureSource);
   }
 
   override async onLoadRequest(): Promise<Dimensions> {

@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -63,7 +63,8 @@
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.4",
-    "@protobufjs/eventemitter": "^1.1.0"
+    "@protobufjs/eventemitter": "^1.1.0",
+    "memize": "^2.1.0"
   },
   "lint-staged": {
     "*.ts": [

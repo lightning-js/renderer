@@ -25,6 +25,10 @@ import type {
   TrFontFace,
   TrFontFaceDescriptors,
 } from '../font-face-types/TrFontFace.js';
+import type {
+  TextBaseline,
+  TextVerticalAlign,
+} from './LightningTextTextureRenderer.js';
 
 /**
  * Augmentable map of text renderer type IDs to text renderer types.
@@ -244,6 +248,56 @@ export interface TrProps extends TrFontProps {
    * @default 0
    */
   letterSpacing: number;
+  /**
+   * Line height for text (in pixels)
+   *
+   * @remarks
+   * This property sets the height of each line.
+   *
+   * @default 0
+   */
+  lineHeight: number;
+  /**
+   * Max lines for text
+   *
+   * @remarks
+   * This property sets max number of lines of a text paragraph.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default 0
+   */
+  maxLines: number;
+  /**
+   * Baseline for text
+   *
+   * @remarks
+   * This property sets the text baseline used when drawing text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default alphabetic
+   */
+  textBaseline: TextBaseline;
+  /**
+   * Vertical Align for text when lineHeight > fontSize
+   *
+   * @remarks
+   * This property sets the vertical align of the text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default middle
+   */
+  verticalAlign: TextVerticalAlign;
+  /**
+   * Overflow Suffix for text
+   *
+   * @remarks
+   * The suffix to be added when text is cropped due to overflow.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default "..."
+   */
+  overflowSuffix: string;
+
   zIndex: number;
   debug: Partial<TextRendererDebugProps>;
 }
@@ -307,6 +361,21 @@ const trPropSetterDefaults: TrPropSetters = {
   letterSpacing: (state, value) => {
     state.props.letterSpacing = value;
   },
+  lineHeight: (state, value) => {
+    state.props.lineHeight = value;
+  },
+  maxLines: (state, value) => {
+    state.props.maxLines = value;
+  },
+  textBaseline: (state, value) => {
+    state.props.textBaseline = value;
+  },
+  verticalAlign: (state, value) => {
+    state.props.verticalAlign = value;
+  },
+  overflowSuffix: (state, value) => {
+    state.props.overflowSuffix = value;
+  },
   debug: (state, value) => {
     state.props.debug = value;
   },
@@ -348,6 +417,10 @@ export abstract class TextRenderer<
             (state: StateT, value: TrProps[keyof TrProps]) => {
               if (state.props[key as keyof TrProps] !== value) {
                 setter(state, value as never);
+                // Assume any prop change will require a render
+                // This is required because otherwise a paused RAF will result
+                // in renders when text props are changed.
+                this.stage.requestRender();
               }
             },
           ];

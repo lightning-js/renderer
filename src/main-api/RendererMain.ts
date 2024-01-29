@@ -211,6 +211,33 @@ export interface RendererMainSettings {
    * @defaultValue `0` (disabled)
    */
   fpsUpdateInterval?: number;
+
+  /**
+   * Include context call (i.e. WebGL) information in FPS updates
+   *
+   * @remarks
+   * When enabled the number of calls to each context method over the
+   * `fpsUpdateInterval` will be included in the FPS update payload's
+   * `contextSpyData` property.
+   *
+   * Enabling the context spy has a serious impact on performance so only use it
+   * when you need to extract context call information.
+   *
+   * @defaultValue `false` (disabled)
+   */
+  enableContextSpy?: boolean;
+
+  /**
+   * Number or Image Workers to use
+   *
+   * @remarks
+   * On devices with multiple cores, this can be used to improve image loading
+   * as well as reduce the impact of image loading on the main thread.
+   * Set to 0 to disable image workers.
+   *
+   * @defaultValue `2`
+   */
+  numImageWorkers?: number;
 }
 
 /**
@@ -278,6 +305,9 @@ export class RendererMain extends EventEmitter {
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      numImageWorkers:
+        settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
+      enableContextSpy: settings.enableContextSpy ?? false,
     };
     this.settings = resolvedSettings;
 
@@ -335,8 +365,8 @@ export class RendererMain extends EventEmitter {
       this.nodes.delete(node.id);
     };
 
-    driver.onFpsUpdate = (fps) => {
-      this.emit('fpsUpdate', fps);
+    driver.onFpsUpdate = (fpsData) => {
+      this.emit('fpsUpdate', fpsData);
     };
 
     targetEl.appendChild(canvas);
@@ -389,11 +419,12 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
-    return this.driver.createTextNode({
+    const fontSize = props.fontSize ?? 16;
+    const data = {
       ...this.resolveNodeDefaults(props),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
-      fontSize: props.fontSize ?? 16,
+      fontSize,
       fontFamily: props.fontFamily ?? 'sans-serif',
       fontStyle: props.fontStyle ?? 'normal',
       fontWeight: props.fontWeight ?? 'normal',
@@ -404,8 +435,15 @@ export class RendererMain extends EventEmitter {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight ?? fontSize,
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'top',
+      overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
-    });
+    };
+
+    return this.driver.createTextNode(data);
   }
 
   /**

@@ -23,6 +23,8 @@ import {
   type Rect,
   createBound,
   type BoundWithValid,
+  intersectRect,
+  isBoundPositive,
 } from '../../../lib/utils.js';
 import {
   TextRenderer,
@@ -35,7 +37,10 @@ import { SdfTrFontFace } from '../../font-face-types/SdfTrFontFace/SdfTrFontFace
 import { FLOATS_PER_GLYPH } from './internal/constants.js';
 import { getStartConditions } from './internal/getStartConditions.js';
 import { layoutText } from './internal/layoutText.js';
-import { makeRenderWindow } from './internal/makeRenderWindow.js';
+import {
+  setRenderWindow,
+  type SdfRenderWindow,
+} from './internal/setRenderWindow.js';
 import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
 import { TrFontManager, type FontFamilyMap } from '../../TrFontManager.js';
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
@@ -77,7 +82,7 @@ export interface SdfTextRendererState extends TextRendererState {
    */
   lineCache: LineCacheItem[];
 
-  renderWindow: Bound | undefined;
+  renderWindow: SdfRenderWindow;
 
   visibleWindow: BoundWithValid;
 
@@ -209,6 +214,26 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.letterSpacing = value;
         this.invalidateLayoutCache(state);
       },
+      lineHeight: (state, value) => {
+        state.props.lineHeight = value;
+        this.invalidateLayoutCache(state);
+      },
+      maxLines: (state, value) => {
+        state.props.maxLines = value;
+        this.invalidateLayoutCache(state);
+      },
+      textBaseline: (state, value) => {
+        state.props.textBaseline = value;
+        this.invalidateLayoutCache(state);
+      },
+      verticalAlign: (state, value) => {
+        state.props.verticalAlign = value;
+        this.invalidateLayoutCache(state);
+      },
+      overflowSuffix: (state, value) => {
+        state.props.overflowSuffix = value;
+        this.invalidateLayoutCache(state);
+      },
       debug: (state, value) => {
         state.props.debug = value;
       },
@@ -262,7 +287,23 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       emitter: new EventEmitter(),
       lineCache: [],
       forceFullLayoutCalc: false,
-      renderWindow: undefined,
+      renderWindow: {
+        screen: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: 0,
+        },
+        sdf: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: 0,
+        },
+        firstLineIdx: 0,
+        numLines: 0,
+        valid: false,
+      },
       visibleWindow: {
         x1: 0,
         y1: 0,
@@ -325,22 +366,39 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // If the font is loaded then so should the data
     assertTruthy(trFontFace.data, 'Font face data should be loaded');
 
-    const { text, fontSize, x, y, contain, width, height, scrollable } =
-      state.props;
+    const {
+      text,
+      fontSize,
+      x,
+      y,
+      contain,
+      width,
+      height,
+      lineHeight,
+      verticalAlign,
+      scrollable,
+      overflowSuffix,
+      maxLines,
+    } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
     const scrollY = contain === 'both' && scrollable ? state.props.scrollY : 0;
 
-    let { renderWindow } = state;
-
-    // Needed in renderWindow calculation
-    const sdfLineHeight = trFontFace.data.info.size;
+    const { renderWindow } = state;
 
     /**
-     * Divide screen space points by this to get the SDF space points
-     * Mulitple SDF space points by this to get screen space points
+     * The font size of the SDF font face (the basis for SDF space units)
      */
-    const fontSizeRatio = fontSize / sdfLineHeight;
+    const sdfFontSize = trFontFace.data.info.size;
+
+    /**
+     * Divide screen space units by this to get the SDF space units
+     * Mulitple SDF space units by this to get screen space units
+     */
+    const fontSizeRatio = fontSize / sdfFontSize;
+
+    // Needed in renderWindow calculation
+    const sdfLineHeight = lineHeight / fontSizeRatio;
 
     state.distanceRange =
       fontSizeRatio * trFontFace.data.distanceField.distanceRange;
@@ -373,44 +431,46 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // Return early if we're still viewing inside the established render window
     // No need to re-render what we've already rendered
     // (Only if there's an established renderWindow and we're not suppressing early exit)
-    if (!forceFullLayoutCalc && renderWindow) {
+    if (!forceFullLayoutCalc && renderWindow.valid) {
+      const rwScreen = renderWindow.screen;
       if (
-        x + renderWindow.x1 <= visibleWindow.x1 &&
-        x + renderWindow.x2 >= visibleWindow.x2 &&
-        y - scrollY + renderWindow.y1 <= visibleWindow.y1 &&
-        y - scrollY + renderWindow.y2 >= visibleWindow.y2
+        x + rwScreen.x1 <= visibleWindow.x1 &&
+        x + rwScreen.x2 >= visibleWindow.x2 &&
+        y - scrollY + rwScreen.y1 <= visibleWindow.y1 &&
+        y - scrollY + rwScreen.y2 >= visibleWindow.y2
       ) {
         this.setStatus(state, 'loaded');
         return;
       }
-      // Otherwise clear the renderWindow so it can be redone
-      renderWindow = state.renderWindow = undefined;
+      // Otherwise invalidate the renderWindow so it can be redone
+      renderWindow.valid = false;
       this.setStatus(state, 'loading');
     }
 
     const { offsetY, textAlign } = state.props;
 
     // Create a new renderWindow if needed
-    if (!renderWindow) {
-      const visibleWindowHeight = visibleWindow.y2 - visibleWindow.y1;
-      const maxLinesPerCanvasPage = Math.ceil(
-        visibleWindowHeight / sdfLineHeight,
-      );
-      renderWindow = makeRenderWindow(
+    if (!renderWindow.valid) {
+      setRenderWindow(
+        renderWindow,
         x,
         y,
         scrollY,
-        sdfLineHeight,
-        maxLinesPerCanvasPage,
+        lineHeight,
+        visibleWindow.y2 - visibleWindow.y1,
         visibleWindow,
+        fontSizeRatio,
       );
+      // console.log('newRenderWindow', renderWindow);
     }
 
     const start = getStartConditions(
-      fontSize,
+      sdfFontSize,
+      sdfLineHeight,
+      lineHeight,
+      verticalAlign,
       offsetY,
       fontSizeRatio,
-      sdfLineHeight,
       renderWindow,
       lineCache,
       textH,
@@ -427,21 +487,24 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const out2 = layoutText(
       start.lineIndex,
-      start.x,
-      start.y,
+      start.sdfX,
+      start.sdfY,
       text,
       textAlign,
       width,
       height,
       fontSize,
+      lineHeight,
       letterSpacing,
       vertexBuffer,
       contain,
       lineCache,
-      renderWindow,
+      renderWindow.sdf,
       trFontFace,
       forceFullLayoutCalc,
       scrollable,
+      overflowSuffix,
+      maxLines,
     );
 
     state.bufferUploaded = false;
@@ -476,13 +539,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       return;
     }
 
-    const drawStartTime = performance.now();
-
-    const { sdfShader } = this;
-
     const { renderer } = this.stage;
-
-    const { appWidth, appHeight } = this.stage.options;
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
@@ -501,9 +558,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     let { webGlBuffers } = state;
 
     if (!webGlBuffers) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
       const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-      const webGlBuffer = gl.createBuffer();
+      const webGlBuffer = glw.createBuffer();
       assertTruthy(webGlBuffer);
       state.webGlBuffers = new BufferCollection([
         {
@@ -512,7 +569,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_position: {
               name: 'a_position',
               size: 2, // 2 components per iteration
-              type: gl.FLOAT, // the data is 32bit floats
+              type: glw.FLOAT, // the data is 32bit floats
               normalized: false, // don't normalize the data
               stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
               offset: 0, // start at the beginning of the buffer
@@ -520,7 +577,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_textureCoordinate: {
               name: 'a_textureCoordinate',
               size: 2,
-              type: gl.FLOAT,
+              type: glw.FLOAT,
               normalized: false,
               stride,
               offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -534,18 +591,30 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     if (!bufferUploaded) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
 
       const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
+      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
     }
 
     assertTruthy(trFontFace);
 
+    if (scrollable && contain === 'both') {
+      const visibleWindowRect: Rect = {
+        x: state.visibleWindow.x1,
+        y: state.visibleWindow.y1,
+        width: state.visibleWindow.x2 - state.visibleWindow.x1,
+        height: state.visibleWindow.y2 - state.visibleWindow.y1,
+      };
+
+      clippingRect = clippingRect
+        ? intersectRect(clippingRect, visibleWindowRect)
+        : visibleWindowRect;
+    }
+
     const renderOp = new WebGlCoreRenderOp(
-      renderer.gl,
+      renderer.glw,
       renderer.options,
       webGlBuffers,
       this.sdfShader,
@@ -576,23 +645,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     renderOp.numQuads = state.bufferNumQuads;
 
     renderer.addRenderOp(renderOp);
-
-    // const elementRect = {
-    //   x: x,
-    //   y: y,
-    //   w: contain !== 'none' ? width : textW,
-    //   h: contain === 'both' ? height : textH,
-    // };
-
-    // const visibleRect = intersectRect(
-    //   {
-    //     x: 0,
-    //     y: 0,
-    //     w: renderer.w,
-    //     h: renderer.h,
-    //   },
-    //   elementRect,
-    // );
 
     // if (!debug.disableScissor) {
     //   renderer.enableScissor(
@@ -677,7 +729,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    */
   protected invalidateLayoutCache(state: SdfTextRendererState): void {
     state.visibleWindow.valid = false;
-    state.renderWindow = undefined;
+    state.renderWindow.valid = false;
     state.textH = undefined;
     state.textW = undefined;
     state.lineCache = [];

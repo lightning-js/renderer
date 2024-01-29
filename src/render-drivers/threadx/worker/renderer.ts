@@ -20,7 +20,7 @@
 import { ThreadX, BufferStruct } from '@lightningjs/threadx';
 import { NodeStruct, type NodeStructWritableProps } from '../NodeStruct.js';
 import { ThreadXRendererNode } from './ThreadXRendererNode.js';
-import { Stage } from '../../../core/Stage.js';
+import { Stage, type StageFpsUpdateHandler } from '../../../core/Stage.js';
 import { assertTruthy } from '../../../utils.js';
 import {
   isThreadXRendererMessage,
@@ -71,6 +71,8 @@ const threadx = ThreadX.init({
         clearColor: message.clearColor,
         canvas,
         fpsUpdateInterval: message.fpsUpdateInterval,
+        enableContextSpy: message.enableContextSpy,
+        numImageWorkers: message.numImageWorkers,
         debug: {
           monitorTextureCache: false,
         },
@@ -120,12 +122,12 @@ const threadx = ThreadX.init({
       }
 
       // Forward FPS updates to the main worker.
-      stage.on('fpsUpdate', (stage: Stage, fps: number) => {
+      stage.on('fpsUpdate', ((stage, fpsData) => {
         threadx.sendMessage('parent', {
           type: 'fpsUpdate',
-          fps,
+          fpsData: fpsData,
         } satisfies ThreadXRendererFpsUpdateMessage);
-      });
+      }) satisfies StageFpsUpdateHandler);
 
       // Return its ID so the main worker can retrieve it from the shared object
       // store.

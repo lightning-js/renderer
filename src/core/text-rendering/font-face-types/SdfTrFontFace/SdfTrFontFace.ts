@@ -82,24 +82,26 @@ export class SdfTrFontFace<
       },
     );
 
-    // TODO: Add texture loaded support
-    // this.texture.on('loaded', () => {
-    //   this.checkLoaded();
-    // });
+    this.texture.on('loaded', () => {
+      this.checkLoaded();
+    });
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)
       .then(async (response) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         (this.data as SdfFontData) = await response.json();
-        // We know `data` is defined here, because we just set it
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        (this.shaper as FontShaper) = new SdfFontShaper(this.data!);
         // Add all the glyphs to the glyph map
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         this.data!.chars.forEach((glyph) => {
           this.glyphMap.set(glyph.id, glyph);
         });
+        // We know `data` is defined here, because we just set it
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        (this.shaper as FontShaper) = new SdfFontShaper(
+          this.data!,
+          this.glyphMap,
+        );
         this.checkLoaded();
       })
       .catch(console.error);
@@ -120,7 +122,7 @@ export class SdfTrFontFace<
 
   private checkLoaded(): void {
     if (this.loaded) return;
-    if (/*this.texture.loaded && */ this.data) {
+    if (this.texture.state === 'loaded' && this.data) {
       (this.loaded as boolean) = true;
       this.emit('loaded');
     }

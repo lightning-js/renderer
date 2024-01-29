@@ -24,11 +24,13 @@ import {
   type ICoreDriver,
   type NodeLoadedPayload,
   type RendererMainSettings,
+  type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type { ExampleSettings } from './common/ExampleSettings.js';
+import { StatTracker } from './common/StatTracker.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -60,29 +62,13 @@ const defaultResolution = 720;
 const defaultPhysicalPixelRatio = 1;
 
 (async () => {
-  // URL params
-  // - driver: main | threadx (default: threadx)
-  // - test: <test name> (default: test)
-  // - resolution: <number> (default: 720)
-  //   - Resolution (height) of to render the test at (in logical pixels)
-  // - ppr: <number> (default: 1)
-  //   - Device physical pixel ratio
-  // - showOverlay: true | false (default: true)
-  // - fps: true | false (default: false)
-  //   - Log FPS to console every second
-  // - multiplier: <number> (default: 1)
-  //   - In tests that support it, multiply the number of objects created by
-  //     this number. Useful for performance tests.
-  // - finalizationRegistry: true | false (default: false)
-  //   - Use FinalizationRegistryTextureUsageTracker instead of
-  //     ManualCountTextureUsageTracker
-  // - automation: true | false (default: false)
-  //   - Run all tests in automation mode
+  // See README.md for details on the supported URL params
   const urlParams = new URLSearchParams(window.location.search);
   const automation = urlParams.get('automation') === 'true';
   const test = urlParams.get('test') || (automation ? null : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
   const logFps = urlParams.get('fps') === 'true';
+  const enableContextSpy = urlParams.get('contextSpy') === 'true';
   const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
   const physicalPixelRatio =
@@ -103,6 +89,7 @@ const defaultPhysicalPixelRatio = 1;
       logicalPixelRatio,
       physicalPixelRatio,
       logFps,
+      enableContextSpy,
       perfMultiplier,
     );
     return;
@@ -121,6 +108,7 @@ async function runTest(
   logicalPixelRatio: number,
   physicalPixelRatio: number,
   logFps: boolean,
+  enableContextSpy: boolean,
   perfMultiplier: number,
 ) {
   const testModule = testModules[getTestPath(test)];
@@ -139,6 +127,7 @@ async function runTest(
   const { renderer, appElement } = await initRenderer(
     driverName,
     logFps,
+    enableContextSpy,
     logicalPixelRatio,
     physicalPixelRatio,
     customSettings,
@@ -182,6 +171,7 @@ async function runTest(
 async function initRenderer(
   driverName: string,
   logFps: boolean,
+  enableContextSpy: boolean,
   logicalPixelRatio: number,
   physicalPixelRatio: number,
   customSettings?: Partial<RendererMainSettings>,
@@ -205,15 +195,95 @@ async function initRenderer(
       clearColor: 0x00000000,
       coreExtensionModule: coreExtensionModuleUrl,
       fpsUpdateInterval: logFps ? 1000 : 0,
+      enableContextSpy,
       ...customSettings,
     },
     'app',
     driver,
   );
 
-  renderer.on('fpsUpdate', (target: RendererMain, fps: number) => {
-    console.log(`FPS: ${fps}`);
-  });
+  /**
+   * Sample data captured
+   */
+  const samples: StatTracker = new StatTracker();
+  /**
+   * Number of samples to capture before calculating FPS stats
+   */
+  const fpsSampleCount = 100;
+  /**
+   * Number of samples to skip before starting to capture FPS samples.
+   */
+  const fpsSampleSkipCount = 10;
+  /**
+   * FPS sample index
+   */
+  let fpsSampleIndex = 0;
+  let fpsSamplesLeft = fpsSampleCount;
+  renderer.on(
+    'fpsUpdate',
+    (target: RendererMain, fpsData: FpsUpdatePayload) => {
+      const captureSample = fpsSampleIndex >= fpsSampleSkipCount;
+      if (captureSample) {
+        samples.add('fps', fpsData.fps);
+
+        if (fpsData.contextSpyData) {
+          let totalCalls = 0;
+          for (const key in fpsData.contextSpyData) {
+            const numCalls = fpsData.contextSpyData[key]!;
+            totalCalls += numCalls;
+            samples.add(key, numCalls);
+          }
+          samples.add('totalCalls', totalCalls);
+        }
+
+        fpsSamplesLeft--;
+        if (fpsSamplesLeft === 0) {
+          const averageFps = samples.getAverage('fps');
+          const p01Fps = samples.getPercentile('fps', 1);
+          const p05Fps = samples.getPercentile('fps', 5);
+          const p25Fps = samples.getPercentile('fps', 25);
+          const medianFps = samples.getPercentile('fps', 50);
+          const stdDevFps = samples.getStdDev('fps');
+          console.log(`---------------------------------`);
+          console.log(`Average FPS: ${averageFps}`);
+          console.log(`Median FPS: ${medianFps}`);
+          console.log(`P01 FPS: ${p01Fps}`);
+          console.log(`P05 FPS: ${p05Fps}`);
+          console.log(`P25 FPS: ${p25Fps}`);
+          console.log(`Std Dev FPS: ${stdDevFps}`);
+          console.log(`Num samples: ${samples.getCount('fps')}`);
+          console.log(`---------------------------------`);
+
+          // Print out median data for all context spy data
+          if (fpsData.contextSpyData) {
+            const contextKeys = samples
+              .getSampleGroups()
+              .filter((key) => key !== 'fps' && key !== 'totalCalls');
+            // Print out median data for all context spy data
+            for (const key of contextKeys) {
+              const median = samples.getPercentile(key, 50);
+              console.log(
+                `median(${key}) / median(fps): ${Math.round(
+                  median / medianFps,
+                )}`,
+              );
+            }
+            const medianTotalCalls = samples.getPercentile('totalCalls', 50);
+            console.log(
+              `median(totalCalls) / median(fps): ${Math.round(
+                medianTotalCalls / medianFps,
+              )}`,
+            );
+            console.log(`---------------------------------`);
+          }
+          samples.reset();
+          fpsSamplesLeft = fpsSampleCount;
+        }
+      }
+      console.log(`FPS: ${fpsData.fps} (samples left: ${fpsSamplesLeft})`);
+      fpsSampleIndex++;
+    },
+  );
 
   await renderer.init();
 
@@ -229,6 +299,7 @@ async function runAutomation(driverName: string, logFps: boolean) {
   const { renderer, appElement } = await initRenderer(
     driverName,
     logFps,
+    false,
     logicalPixelRatio,
     defaultPhysicalPixelRatio,
   );
@@ -262,8 +333,11 @@ async function runAutomation(driverName: string, logFps: boolean) {
             const snapshot = (window as any).snapshot as
               | ((testName: string) => Promise<void>)
               | undefined;
+            // Allow some time for all images to load and the RaF to unpause
+            // and render if needed.
+            await delay(200);
             if (snapshot) {
-              console.error(`Calling snapshot(${testName})`);
+              console.log(`Calling snapshot(${testName})`);
               await snapshot(testName);
             } else {
               console.error(

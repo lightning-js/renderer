@@ -25,13 +25,14 @@ import type {
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
 import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
-import { Stage } from '../../core/Stage.js';
+import { Stage, type StageFpsUpdateHandler } from '../../core/Stage.js';
 import type {
   RendererMain,
   RendererMainSettings,
 } from '../../main-api/RendererMain.js';
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
+import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
 
 export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
@@ -52,6 +53,8 @@ export class MainCoreDriver implements ICoreDriver {
       clearColor: rendererSettings.clearColor,
       canvas,
       fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
+      enableContextSpy: rendererSettings.enableContextSpy,
+      numImageWorkers: rendererSettings.numImageWorkers,
       debug: {
         monitorTextureCache: false,
       },
@@ -74,9 +77,9 @@ export class MainCoreDriver implements ICoreDriver {
     }
 
     // Forward fpsUpdate events from the stage to RendererMain
-    this.stage.on('fpsUpdate', (stage: Stage, fps: number) => {
-      this.onFpsUpdate(fps);
-    });
+    this.stage.on('fpsUpdate', ((stage, fpsData) => {
+      this.onFpsUpdate(fpsData);
+    }) satisfies StageFpsUpdateHandler);
   }
 
   createNode(props: INodeWritableProps): INode {
@@ -123,7 +126,7 @@ export class MainCoreDriver implements ICoreDriver {
     throw new Error('Method not implemented.');
   }
 
-  onFpsUpdate(fps: number) {
+  onFpsUpdate(fpsData: FpsUpdatePayload) {
     throw new Error('Method not implemented.');
   }
   //#endregion

@@ -19,6 +19,15 @@
 
 import { isBoundPositive, type Bound } from '../../../../lib/utils.js';
 import type { TrProps } from '../../TextRenderer.js';
+import { roundDownToMultiple, roundUpToMultiple } from './util.js';
+
+export interface SdfRenderWindow {
+  screen: Bound;
+  sdf: Bound;
+  firstLineIdx: number;
+  numLines: number;
+  valid: boolean;
+}
 
 /**
  * Create a render window from the given parameters.
@@ -32,33 +41,53 @@ import type { TrProps } from '../../TextRenderer.js';
  * @param x The x coordinate of the text element's top left corner relative to the screen.
  * @param y The y coordinate of the text element's top left corner relative to the screen.
  * @param scrollY The amount of pixels to scroll the text vertically.
- * @param lineHeight The height of a single line of text.
- * @param numExtraLines The number of extra lines to render above and below the visible window.
+ * @param lineHeight The number of extra lines to render above and below the visible window.
  * @param visibleWindow The visible window of the text element relative to the screen
  * @returns
  */
-export function makeRenderWindow(
+export function setRenderWindow(
+  outRenderWindow: SdfRenderWindow,
   x: TrProps['x'],
   y: TrProps['y'],
   scrollY: TrProps['scrollY'],
   lineHeight: number,
-  numExtraLines: number,
+  bufferMargin: number,
   visibleWindow: Bound,
-): Bound {
-  const bufferMargin = lineHeight * numExtraLines;
-  const x1 = visibleWindow.x1 - x;
-  const y1 = visibleWindow.y1 - y;
-  return isBoundPositive(visibleWindow)
-    ? {
-        x1: x1,
-        y1: y1 + scrollY - bufferMargin,
-        x2: x1 + (visibleWindow.x2 - visibleWindow.x1),
-        y2: y1 + scrollY + (visibleWindow.y2 - visibleWindow.y1) + bufferMargin,
-      }
-    : {
-        x1: 0,
-        y1: 0,
-        x2: 0,
-        y2: 0,
-      };
+  fontSizeRatio: number,
+): void {
+  const { screen, sdf } = outRenderWindow;
+  if (!isBoundPositive(visibleWindow)) {
+    screen.x1 = 0;
+    screen.y1 = 0;
+    screen.x2 = 0;
+    screen.y2 = 0;
+    sdf.x1 = 0;
+    sdf.y1 = 0;
+    sdf.x2 = 0;
+    sdf.y2 = 0;
+    outRenderWindow.numLines = 0;
+    outRenderWindow.firstLineIdx = 0;
+  } else {
+    const x1 = visibleWindow.x1 - x;
+    const x2 = x1 + (visibleWindow.x2 - visibleWindow.x1);
+    const y1Base = visibleWindow.y1 - y + scrollY;
+    const y1 = roundDownToMultiple(y1Base - bufferMargin, lineHeight || 1);
+    const y2 = roundUpToMultiple(
+      y1Base + (visibleWindow.y2 - visibleWindow.y1) + bufferMargin,
+      lineHeight || 1,
+    );
+
+    screen.x1 = x1;
+    screen.y1 = y1;
+    screen.x2 = x2;
+    screen.y2 = y2;
+    sdf.x1 = x1 / fontSizeRatio;
+    sdf.y1 = y1 / fontSizeRatio;
+    sdf.x2 = x2 / fontSizeRatio;
+    sdf.y2 = y2 / fontSizeRatio;
+
+    outRenderWindow.numLines = Math.ceil((y2 - y1) / lineHeight);
+    outRenderWindow.firstLineIdx = Math.floor(y1 / lineHeight);
+  }
+  outRenderWindow.valid = true;
 }
