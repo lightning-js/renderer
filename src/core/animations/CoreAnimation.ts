@@ -37,6 +37,7 @@ export class CoreAnimation extends EventEmitter {
   public propStartValues: Partial<INodeAnimatableProps> = {};
   public restoreValues: Partial<INodeAnimatableProps> = {};
   private progress = 0;
+  private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
   private propsList: Array<keyof INodeAnimatableProps>; //fixme - aint got not time for this
 
@@ -57,10 +58,12 @@ export class CoreAnimation extends EventEmitter {
     if (settings.easing && typeof settings.easing === 'string') {
       this.timingFunction = getTimingFunction(settings.easing);
     }
+    this.delayFor = settings.delay || 0;
   }
 
   reset() {
     this.progress = 0;
+    this.delayFor = this.settings.delay || 0;
     this.update(0);
   }
 
@@ -101,6 +104,11 @@ export class CoreAnimation extends EventEmitter {
     const { duration, loop, easing, stopMethod } = this.settings;
     if (!duration) {
       this.emit('finished', {});
+      return;
+    }
+
+    if (this.delayFor > 0) {
+      this.delayFor -= dt;
       return;
     }
 
