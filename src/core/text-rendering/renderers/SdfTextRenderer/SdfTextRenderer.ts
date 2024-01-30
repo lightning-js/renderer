@@ -18,15 +18,15 @@
  */
 
 import {
-  intersectBound,
   type Bound,
   type Rect,
   createBound,
   type BoundWithValid,
   intersectRect,
-  isBoundPositive,
   type RectWithValid,
   copyRect,
+  boundsOverlap,
+  convertBoundToRect,
 } from '../../../lib/utils.js';
 import {
   TextRenderer,
@@ -86,7 +86,7 @@ export interface SdfTextRendererState extends TextRendererState {
 
   renderWindow: SdfRenderWindow;
 
-  visibleWindow: BoundWithValid;
+  elementBounds: BoundWithValid;
 
   clippingRect: RectWithValid;
 
@@ -108,13 +108,14 @@ export interface SdfTextRendererState extends TextRendererState {
 }
 
 /**
- * Ephemeral bounds object used for intersection calculations
- *
- * @remarks
- * Used to avoid creating a new object every time we need to intersect
- * element bounds.
+ * Ephemeral rect object used for calculations
  */
-const tmpElementBounds = createBound(0, 0, 0, 0);
+const tmpRect: Rect = {
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+};
 
 /**
  * Singleton class for rendering text using signed distance fields.
@@ -182,11 +183,31 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       },
       x: (state, value) => {
         state.props.x = value;
-        this.invalidateVisibleWindowCache(state);
+        if (state.elementBounds.valid) {
+          this.setElementBoundsX(state);
+          // Only schedule an update if the text is not already rendered
+          // (renderWindow is invalid) and the element possibly overlaps the screen
+          // This is to avoid unnecessary updates when we know text is off-screen
+          if (
+            !state.renderWindow.valid &&
+            boundsOverlap(state.elementBounds, this.rendererBounds)
+          ) {
+            this.scheduleUpdateState(state);
+          }
+        }
       },
       y: (state, value) => {
         state.props.y = value;
-        this.invalidateVisibleWindowCache(state);
+        if (state.elementBounds.valid) {
+          this.setElementBoundsY(state);
+          // See x() for explanation
+          if (
+            !state.renderWindow.valid &&
+            boundsOverlap(state.elementBounds, this.rendererBounds)
+          ) {
+            this.scheduleUpdateState(state);
+          }
+        }
       },
       contain: (state, value) => {
         state.props.contain = value;
@@ -308,7 +329,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         numLines: 0,
         valid: false,
       },
-      visibleWindow: {
+      elementBounds: {
         x1: 0,
         y1: 0,
         x2: 0,
@@ -421,22 +442,11 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       vertexBuffer = new Float32Array(neededLength * 2);
     }
 
-    const visibleWindow = state.visibleWindow;
-    // If the visibleWindow is not valid, calculate it
-    if (!visibleWindow.valid) {
-      // Figure out whats actually in the bounds of the renderer/canvas (visibleWindow)
-      const elementBounds = createBound(
-        x,
-        y,
-        contain !== 'none' ? x + width : Infinity,
-        contain === 'both' ? y + height : Infinity,
-        tmpElementBounds, // Prevent allocation by using this temp object
-      );
-      /**
-       * Area that is visible on the screen.
-       */
-      intersectBound(this.rendererBounds, elementBounds, state.visibleWindow);
-      visibleWindow.valid = true;
+    const elementBounds = state.elementBounds;
+    if (!elementBounds.valid) {
+      this.setElementBoundsX(state);
+      this.setElementBoundsY(state);
+      elementBounds.valid = true;
     }
 
     // Return early if we're still viewing inside the established render window
@@ -445,10 +455,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     if (!forceFullLayoutCalc && renderWindow.valid) {
       const rwScreen = renderWindow.screen;
       if (
-        x + rwScreen.x1 <= visibleWindow.x1 &&
-        x + rwScreen.x2 >= visibleWindow.x2 &&
-        y - scrollY + rwScreen.y1 <= visibleWindow.y1 &&
-        y - scrollY + rwScreen.y2 >= visibleWindow.y2
+        x + rwScreen.x1 <= elementBounds.x1 &&
+        x + rwScreen.x2 >= elementBounds.x2 &&
+        y - scrollY + rwScreen.y1 <= elementBounds.y1 &&
+        y - scrollY + rwScreen.y2 >= elementBounds.y2
       ) {
         this.setStatus(state, 'loaded');
         return;
@@ -462,14 +472,24 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     // Create a new renderWindow if needed
     if (!renderWindow.valid) {
+      const isPossiblyOnScreen = boundsOverlap(
+        elementBounds,
+        this.rendererBounds,
+      );
+
+      if (!isPossiblyOnScreen) {
+        // If the element is not possibly on screen, we can skip the layout and rendering completely
+        return;
+      }
+
       setRenderWindow(
         renderWindow,
         x,
         y,
         scrollY,
         lineHeight,
-        visibleWindow.y2 - visibleWindow.y1,
-        visibleWindow,
+        contain === 'both' ? elementBounds.y2 - elementBounds.y1 : 0,
+        elementBounds,
         fontSizeRatio,
       );
       // console.log('newRenderWindow', renderWindow);
@@ -564,6 +584,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       vertexBuffer,
       bufferUploaded,
       trFontFace,
+      elementBounds,
     } = state;
 
     let { webGlBuffers } = state;
@@ -610,25 +631,20 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     assertTruthy(trFontFace);
-
     if (scrollable && contain === 'both') {
-      const visibleWindowRect: Rect = {
-        x: state.visibleWindow.x1,
-        y: state.visibleWindow.y1,
-        width: state.visibleWindow.x2 - state.visibleWindow.x1,
-        height: state.visibleWindow.y2 - state.visibleWindow.y1,
-      };
+      assertTruthy(elementBounds.valid);
+      const elementRect = convertBoundToRect(elementBounds, tmpRect);
 
       if (clippingRect.valid) {
         state.clippingRect.valid = true;
         clippingRect = intersectRect(
           clippingRect,
-          visibleWindowRect,
+          elementRect,
           state.clippingRect,
         );
       } else {
         state.clippingRect.valid = true;
-        clippingRect = copyRect(visibleWindowRect, state.clippingRect);
+        clippingRect = copyRect(elementRect, state.clippingRect);
       }
     }
 
@@ -727,17 +743,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   }
 
   /**
-   * Invalidate the visible window stored in the state. This will cause a new
-   * visible window to be calculated on the next update.
-   *
-   * @param state
-   */
-  protected invalidateVisibleWindowCache(state: SdfTextRendererState): void {
-    state.visibleWindow.valid = false;
-    this.scheduleUpdateState(state);
-  }
-
-  /**
    * Invalidate the layout cache stored in the state. This will cause the text
    * to be re-layed out on the next update.
    *
@@ -747,12 +752,26 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    * @param state
    */
   protected invalidateLayoutCache(state: SdfTextRendererState): void {
-    state.visibleWindow.valid = false;
     state.renderWindow.valid = false;
+    state.elementBounds.valid = false;
     state.textH = undefined;
     state.textW = undefined;
     state.lineCache = [];
     this.setStatus(state, 'loading');
     this.scheduleUpdateState(state);
+  }
+
+  protected setElementBoundsX(state: SdfTextRendererState): void {
+    const { x, contain, width } = state.props;
+    const { elementBounds } = state;
+    elementBounds.x1 = x;
+    elementBounds.x2 = contain !== 'none' ? x + width : Infinity;
+  }
+
+  protected setElementBoundsY(state: SdfTextRendererState): void {
+    const { y, contain, height } = state.props;
+    const { elementBounds } = state;
+    elementBounds.y1 = y;
+    elementBounds.y2 = contain === 'both' ? y + height : Infinity;
   }
 }

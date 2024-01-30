@@ -136,6 +136,31 @@ export function intersectBound<T extends Bound = Bound>(
   return createBound(0, 0, 0, 0, intersection);
 }
 
+export function boundsOverlap(a: Bound, b: Bound): boolean {
+  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+}
+
+export function convertBoundToRect(bound: Bound): Rect;
+export function convertBoundToRect<T extends Rect = Rect>(
+  bound: Bound,
+  out: T,
+): T;
+export function convertBoundToRect(bound: Bound, out?: Rect): Rect {
+  if (out) {
+    out.x = bound.x1;
+    out.y = bound.y1;
+    out.width = bound.x2 - bound.x1;
+    out.height = bound.y2 - bound.y1;
+    return out;
+  }
+  return {
+    x: bound.x1,
+    y: bound.y1,
+    width: bound.x2 - bound.x1,
+    height: bound.y2 - bound.y1,
+  };
+}
+
 export function intersectRect(a: Rect, b: Rect): Rect;
 export function intersectRect<T extends Rect = Rect>(
   a: Rect,
