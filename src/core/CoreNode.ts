@@ -37,7 +37,7 @@ import type {
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { intersectRect, type Rect } from './lib/utils.js';
+import { copyRect, intersectRect, type RectWithValid } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreNodeProps {
@@ -150,7 +150,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public globalTransform?: Matrix3d;
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
-  public clippingRect: Rect | null = null;
+  public clippingRect: RectWithValid = {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    valid: false,
+  };
   public isRenderable = false;
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
@@ -295,7 +301,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    * @todo: test for correct calculation flag
    * @param delta
    */
-  update(delta: number, parentClippingRect: Rect | null = null): void {
+  update(delta: number, parentClippingRect: RectWithValid): void {
     if (this.updateType & UpdateType.ScaleRotate) {
       this.updateScaleRotateTransform();
       this.setUpdateType(UpdateType.Local);
@@ -477,28 +483,31 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    *
    * Finally, the node's parentClippingRect and clippingRect properties are updated.
    */
-  calculateClippingRect(parentClippingRect: Rect | null = null) {
+  calculateClippingRect(parentClippingRect: RectWithValid) {
     assertTruthy(this.globalTransform);
+    const { clippingRect, props, globalTransform: gt } = this;
+    const { clipping } = props;
 
-    const gt = this.globalTransform;
     const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
-    let clippingRect: Rect | null =
-      this.props.clipping && !isRotated
-        ? {
-            x: gt.tx,
-            y: gt.ty,
-            width: this.width * gt.ta,
-            height: this.height * gt.td,
-          }
-        : null;
-    if (parentClippingRect && clippingRect) {
-      clippingRect = intersectRect(parentClippingRect, clippingRect);
-    } else if (parentClippingRect) {
-      clippingRect = parentClippingRect;
+    if (clipping && !isRotated) {
+      clippingRect.x = gt.tx;
+      clippingRect.y = gt.ty;
+      clippingRect.width = this.width * gt.ta;
+      clippingRect.height = this.height * gt.td;
+      clippingRect.valid = true;
+    } else {
+      clippingRect.valid = false;
     }
 
-    this.clippingRect = clippingRect;
+    if (parentClippingRect.valid && clippingRect.valid) {
+      // Intersect parent clipping rect with node clipping rect
+      intersectRect(parentClippingRect, clippingRect, clippingRect);
+    } else if (parentClippingRect.valid) {
+      // Copy parent clipping rect
+      copyRect(parentClippingRect, clippingRect);
+      clippingRect.valid = true;
+    }
   }
 
   calculateZIndex(): void {

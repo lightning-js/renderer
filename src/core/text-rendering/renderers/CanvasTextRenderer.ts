@@ -30,6 +30,7 @@ import {
   getNormalizedAlphaComponent,
   type BoundWithValid,
   createBound,
+  type RectWithValid,
 } from '../../lib/utils.js';
 import type { ImageTexture } from '../../textures/ImageTexture.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
@@ -524,7 +525,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   override renderQuads(
     state: CanvasTextRendererState,
     transform: Matrix3d,
-    clippingRect: Rect | null,
+    clippingRect: RectWithValid,
     alpha: number,
   ): void {
     const { stage } = this;

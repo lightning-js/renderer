@@ -25,6 +25,8 @@ import {
   type BoundWithValid,
   intersectRect,
   isBoundPositive,
+  type RectWithValid,
+  copyRect,
 } from '../../../lib/utils.js';
 import {
   TextRenderer,
@@ -85,6 +87,8 @@ export interface SdfTextRendererState extends TextRendererState {
   renderWindow: SdfRenderWindow;
 
   visibleWindow: BoundWithValid;
+
+  clippingRect: RectWithValid;
 
   bufferNumFloats: number;
 
@@ -311,6 +315,13 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         y2: 0,
         valid: false,
       },
+      clippingRect: {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        valid: false,
+      },
       bufferNumFloats: 0,
       bufferNumQuads: 0,
       vertexBuffer: undefined,
@@ -531,7 +542,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   override renderQuads(
     state: SdfTextRendererState,
     transform: Matrix3d,
-    clippingRect: Rect | null,
+    clippingRect: Readonly<RectWithValid>,
     alpha: number,
   ): void {
     if (!state.vertexBuffer) {
@@ -608,9 +619,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         height: state.visibleWindow.y2 - state.visibleWindow.y1,
       };
 
-      clippingRect = clippingRect
-        ? intersectRect(clippingRect, visibleWindowRect)
-        : visibleWindowRect;
+      if (clippingRect.valid) {
+        state.clippingRect.valid = true;
+        clippingRect = intersectRect(
+          clippingRect,
+          visibleWindowRect,
+          state.clippingRect,
+        );
+      } else {
+        state.clippingRect.valid = true;
+        clippingRect = copyRect(visibleWindowRect, state.clippingRect);
+      }
     }
 
     const renderOp = new WebGlCoreRenderOp(

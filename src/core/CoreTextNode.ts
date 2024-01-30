@@ -32,7 +32,7 @@ import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { Rect } from './lib/utils.js';
+import type { Rect, RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
@@ -318,7 +318,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.debug(this.trState, value);
   }
 
-  override update(delta: number, parentClippingRect: Rect | null = null) {
+  override update(delta: number, parentClippingRect: RectWithValid) {
     super.update(delta, parentClippingRect);
 
     assertTruthy(this.globalTransform);
