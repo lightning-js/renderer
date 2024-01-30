@@ -19,26 +19,49 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
-  const etc1Pvr = renderer.createNode({
+export async function automation(settings: ExampleSettings) {
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
+  renderer.createTextNode({
     x: 100,
     y: 100,
+    color: 0xffffffff,
+    alpha: 1.0,
+    text: 'etc1 compression in .pvr',
+    fontFamily: 'Ubuntu',
+    fontSize: 30,
+    parent: testRoot,
+  });
+
+  renderer.createNode({
+    x: 100,
+    y: 170,
     width: 550,
     height: 550,
     src: '../assets/test-etc1.pvr',
     parent: testRoot,
   });
 
-  const s3tcKtx = renderer.createNode({
+  renderer.createTextNode({
     x: 800,
     y: 100,
-    width: 250,
-    height: 250,
+    color: 0xffffffff,
+    alpha: 1.0,
+    text: 's3tc compression in .ktx',
+    fontFamily: 'Ubuntu',
+    fontSize: 30,
+    parent: testRoot,
+  });
+
+  renderer.createNode({
+    x: 800,
+    y: 170,
+    width: 400,
+    height: 400,
     src: '../assets/test-s3tc.ktx',
     parent: testRoot,
   });
-  /*
-   * End: Sprite Map Demo
-   */
-  console.log('ready!');
 }
