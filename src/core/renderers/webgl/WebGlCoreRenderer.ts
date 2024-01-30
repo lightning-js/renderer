@@ -116,6 +116,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.txManager = options.txManager;
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
+      this.stage.requestRender();
+    });
 
     const gl = createWebGLContext(canvas, options.contextSpy);
     const glw = (this.glw = new WebGlContextWrapper(gl));
