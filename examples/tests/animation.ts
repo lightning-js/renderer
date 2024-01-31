@@ -23,6 +23,7 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 interface AnimationExampleSettings {
   duration: number;
   easing: string;
+  delay: number;
   loop: boolean;
   stopMethod: 'reverse' | 'reset' | false;
 }
@@ -99,6 +100,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     easingLabel.text = `Easing demo: ${easing}`;
     const animationSettings: Partial<AnimationExampleSettings> = {
       duration: 2000,
+      delay: 500,
       loop: false,
       stopMethod: false,
       easing: 'linear',
