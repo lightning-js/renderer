@@ -19,6 +19,18 @@
 
 import type { INode, RendererMain } from '@lightningjs/renderer';
 
+/**
+ * Keep in sync with `visual-regression/src/index.ts`
+ */
+export interface SnapshotOptions {
+  clip?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
 export interface ExampleSettings {
   /**
    * Name of the test being run.
@@ -63,5 +75,5 @@ export interface ExampleSettings {
    *
    * This method will be a no-op if the test is not run in automation mode.
    */
-  snapshot(): Promise<void>;
+  snapshot(options?: SnapshotOptions): Promise<void>;
 }

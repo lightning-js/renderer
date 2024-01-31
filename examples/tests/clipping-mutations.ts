@@ -1,9 +1,6 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import robotImg from '../assets/robot/robot.png';
 
-const WIDTH = 400;
-const HEIGHT = 400;
-
 export async function automation(settings: ExampleSettings) {
   const next = await test(settings);
   // i = 0
@@ -26,32 +23,28 @@ export async function automation(settings: ExampleSettings) {
  * @returns
  */
 export default async function test(settings: ExampleSettings) {
-  const { renderer } = settings;
+  const { renderer, testRoot } = settings;
 
-  renderer.createNode({
-    x: 0,
-    y: 0,
-    width: WIDTH,
-    height: HEIGHT,
-    parent: settings.testRoot,
-    color: 0xffffffff,
-  });
+  // Set a smaller snapshot area
+  testRoot.width = 200;
+  testRoot.height = 200;
+  testRoot.color = 0xffffffff;
 
   const clippedContainer = renderer.createNode({
     x: 0,
     y: 0,
-    width: WIDTH / 2,
-    height: HEIGHT / 2,
+    width: testRoot.width / 2,
+    height: testRoot.height / 2,
     parent: settings.testRoot,
     color: 0x00ffffff,
     clipping: true,
   });
 
-  const clippedChild = renderer.createNode({
-    x: -WIDTH / 4,
-    y: -HEIGHT / 4,
-    width: WIDTH,
-    height: HEIGHT,
+  renderer.createNode({
+    x: -testRoot.width / 4,
+    y: -testRoot.height / 4,
+    width: testRoot.width,
+    height: testRoot.height,
     scale: 0.9,
     parent: clippedContainer,
     src: robotImg,
@@ -68,10 +61,10 @@ export default async function test(settings: ExampleSettings) {
       clippedContainer.x = 0;
       clippedContainer.y = 0;
     } else if (i === 1) {
-      clippedContainer.x = WIDTH / 4;
+      clippedContainer.x = testRoot.width / 4;
     } else if (i === 2) {
-      clippedContainer.x = WIDTH / 2;
-      clippedContainer.y = HEIGHT / 2;
+      clippedContainer.x = testRoot.width / 2;
+      clippedContainer.y = testRoot.height / 2;
     }
   }
 

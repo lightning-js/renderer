@@ -152,3 +152,50 @@ export async function automation(settings: ExampleSettings) {
   await (await test(settings)).snapshotPages();
 }
 ```
+
+### Defining Smaller Snapshots
+
+By default, when calling `settings.snapshot()` a snapshot will be created of
+the entire app/testRoot area at 1920x1080 (downscaled to canvas/PNG at 1280x720).
+Large snapshots like the default require more processing to load and do a diff
+on. If your test only requires a small snapshot area you can communicate this
+to the Visual Regression Test Runner in two ways:
+
+**Method 1:** Set the dimensions of the testRoot.
+
+```ts
+// Do this in the actual test itself (not the automation function) for the best
+// results.
+export default function test(settings: ExampleSettings) {
+  const { testRoot } = settings;
+  // Set a smaller snapshot area
+  testRoot.width = 200;
+  testRoot.height = 200;
+
+  // Set a color on the test root so its more obvious when running the test in
+  // the browser what the snapshot area is.
+  testRoot.color = 0xffffffff;
+}
+```
+
+**Method 2:** Provide a `clip` rectangle prop to the `settings.snapshot()` method.
+
+```ts
+export async function automation(settings: ExampleSettings) {
+  // Launch the test
+  await test(settings);
+  // Take/define a snapshot
+  await settings.snapshot({
+    clip: {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 200,
+    },
+  });
+}
+```
+
+Method 2 allows more flexibility in how snapshots are defined but should only
+be used if Method 1 does not satisfy the requirements for the snapshots to be
+taken.
