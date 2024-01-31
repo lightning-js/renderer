@@ -19,12 +19,7 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export async function automation(settings: ExampleSettings) {
-  await test(settings);
-  await settings.snapshot();
-}
-
-export default async function test({ renderer, testRoot }: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 100,
     y: 100,
