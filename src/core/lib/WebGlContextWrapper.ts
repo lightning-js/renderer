@@ -338,8 +338,9 @@ export class WebGlContextWrapper {
   /**
    * ```
    * gl.compressedTexImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, data);
+   * ```
    *
-   * * @remarks
+   * @remarks
    * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
    */
 

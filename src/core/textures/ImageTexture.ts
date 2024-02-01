@@ -19,6 +19,10 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
+import {
+  isCompressedTextureContainer,
+  loadCompressedTexture,
+} from '../lib/textureCompression.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -85,8 +89,8 @@ export class ImageTexture extends Texture {
     }
 
     // Handle compressed textures
-    if (this.isCompressedTexture()) {
-      return this.handleCompressedTexture();
+    if (isCompressedTextureContainer(src)) {
+      return loadCompressedTexture(src);
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
@@ -105,120 +109,6 @@ export class ImageTexture extends Texture {
         }),
       };
     }
-  }
-
-  isCompressedTexture(): boolean {
-    const { src } = this.props;
-    // Test if we're not using ImageData
-    if (src instanceof ImageData) {
-      return false;
-    }
-    return /\.(ktx|pvr)$/.test(src);
-  }
-
-  async handleCompressedTexture(): Promise<TextureData> {
-    const { src } = this.props;
-
-    const response = await fetch(src as string);
-    const arrayBuffer = await response.arrayBuffer();
-
-    if ((src as string).indexOf('.ktx') !== -1) {
-      return this.loadKTXData(arrayBuffer);
-    }
-
-    return this.loadPVRData(arrayBuffer);
-  }
-
-  async loadKTXData(buffer: ArrayBuffer): Promise<TextureData> {
-    const view = new DataView(buffer);
-    const littleEndian = view.getUint32(12) === 16909060 ? true : false;
-    const mipmaps = [];
-
-    const data = {
-      glInternalFormat: view.getUint32(28, littleEndian),
-      pixelWidth: view.getUint32(36, littleEndian),
-      pixelHeight: view.getUint32(40, littleEndian),
-      numberOfMipmapLevels: view.getUint32(56, littleEndian),
-      bytesOfKeyValueData: view.getUint32(60, littleEndian),
-    };
-
-    let offset = 64;
-
-    // Key Value Pairs of data start at byte offset 64
-    // But the only known kvp is the API version, so skipping parsing.
-    offset += data.bytesOfKeyValueData;
-
-    for (let i = 0; i < data.numberOfMipmapLevels; i++) {
-      const imageSize = view.getUint32(offset);
-      offset += 4;
-
-      mipmaps.push(view.buffer.slice(offset, imageSize));
-      offset += imageSize;
-    }
-
-    return {
-      data: {
-        glInternalFormat: data.glInternalFormat,
-        mipmaps,
-        width: data.pixelWidth || 0,
-        height: data.pixelHeight || 0,
-        type: 'ktx',
-      },
-      premultiplyAlpha: false,
-    };
-  }
-
-  async loadPVRData(buffer: ArrayBuffer): Promise<TextureData> {
-    // pvr header length in 32 bits
-    const pvrHeaderLength = 13;
-    // for now only we only support: COMPRESSED_RGB_ETC1_WEBGL
-    const pvrFormatEtc1 = 0x8d64;
-    const pvrWidth = 7;
-    const pvrHeight = 6;
-    const pvrMipmapCount = 11;
-    const pvrMetadata = 12;
-    const arrayBuffer = buffer;
-    const header = new Int32Array(arrayBuffer, 0, pvrHeaderLength);
-
-    // @ts-expect-error Object possibly undefined
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-    const dataOffset = header[pvrMetadata] + 52;
-    const pvrtcData = new Uint8Array(arrayBuffer, dataOffset);
-    const mipmaps = [];
-    const data = {
-      pixelWidth: header[pvrWidth],
-      pixelHeight: header[pvrHeight],
-      numberOfMipmapLevels: header[pvrMipmapCount] || 0,
-    };
-
-    let offset = 0;
-    let width = data.pixelWidth || 0;
-    let height = data.pixelHeight || 0;
-
-    for (let i = 0; i < data.numberOfMipmapLevels; i++) {
-      const level = ((width + 3) >> 2) * ((height + 3) >> 2) * 8;
-      const view = new Uint8Array(
-        arrayBuffer,
-        pvrtcData.byteOffset + offset,
-        level,
-      );
-
-      mipmaps.push(view);
-      offset += level;
-      width = width >> 1;
-      height = height >> 1;
-    }
-
-    return {
-      data: {
-        glInternalFormat: pvrFormatEtc1,
-        mipmaps: mipmaps,
-        width: data.pixelWidth || 0,
-        height: data.pixelHeight || 0,
-        type: 'pvr',
-      },
-      premultiplyAlpha: false,
-    };
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
