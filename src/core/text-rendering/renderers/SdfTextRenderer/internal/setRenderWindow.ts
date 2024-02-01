@@ -87,7 +87,7 @@ export function setRenderWindow(
     sdf.y2 = y2 / fontSizeRatio;
 
     outRenderWindow.numLines = Math.ceil((y2 - y1) / lineHeight);
-    outRenderWindow.firstLineIdx = Math.floor(y1 / lineHeight);
+    outRenderWindow.firstLineIdx = lineHeight ? Math.floor(y1 / lineHeight) : 0;
   }
   outRenderWindow.valid = true;
 }
