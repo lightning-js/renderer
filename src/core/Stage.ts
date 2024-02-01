@@ -166,6 +166,7 @@ export class Stage extends EventEmitter {
       textureOptions: null,
       shader: null,
       shaderProps: null,
+      rtt: false,
     });
 
     this.root = rootNode;

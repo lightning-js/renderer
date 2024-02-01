@@ -506,7 +506,7 @@ export class WebGlContextWrapper {
 
   /**
    * ```
-   * createBuffer();
+   * gl.createBuffer();
    * ```
    *
    * @returns
@@ -514,6 +514,18 @@ export class WebGlContextWrapper {
   createBuffer() {
     const { gl } = this;
     return gl.createBuffer();
+  }
+
+  /**
+   * ```
+   * gl.createFramebuffer();
+   * ```
+   * @returns
+   */
+
+  createFramebuffer() {
+    const { gl } = this;
+    return gl.createFramebuffer();
   }
 
   /**

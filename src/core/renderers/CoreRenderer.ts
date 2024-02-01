@@ -59,5 +59,6 @@ export abstract class CoreRenderer {
   abstract render(surface: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
+  abstract createRenderTexture(width: number, height: number): WebGLTexture;
   abstract getShaderManager(): CoreShaderManager;
 }

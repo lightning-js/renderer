@@ -57,6 +57,7 @@ import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { WebGlRenderTexture } from './WebGlRenderTexture.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -201,6 +202,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return new WebGlCoreCtxSubTexture(this.glw, textureSource);
     }
     return new WebGlCoreCtxTexture(this.glw, textureSource);
+  }
+
+  override createRenderTexture(width: number, height: number): WebGLTexture {
+    const { glw } = this;
+    return new WebGlRenderTexture(glw, width, height);
   }
 
   /**

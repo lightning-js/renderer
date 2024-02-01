@@ -67,6 +67,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         scaleX: sharedNodeStruct.scaleX,
         scaleY: sharedNodeStruct.scaleY,
         rotation: sharedNodeStruct.rotation,
+        rtt: sharedNodeStruct.rtt,
 
         // These are passed in via message handlers
         shader: null,

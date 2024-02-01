@@ -100,6 +100,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
         shaderProps: null,
         texture: null,
         textureOptions: null,
+        rtt: props.rtt,
       });
     // Forward loaded/failed events
     this.coreNode.on('loaded', this.onTextureLoaded);
@@ -400,6 +401,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
     } else {
       this.coreNode.unloadTexture();
     }
+  }
+
+  get rtt(): boolean {
+    return this.coreNode.rtt;
+  }
+
+  set rtt(value: boolean) {
+    this.coreNode.rtt = value;
   }
 
   private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {

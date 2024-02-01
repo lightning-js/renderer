@@ -75,6 +75,7 @@ export interface CoreNodeProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
+  rtt: boolean;
 }
 
 type ICoreNode = Omit<
@@ -922,5 +923,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.updateScaleRotateTransform();
   }
+
+  get rtt(): boolean {
+    return this.props.rtt;
+  }
+
+  set rtt(value: boolean) {
+    this.props.rtt = value;
+  }
+
   //#endregion Properties
 }

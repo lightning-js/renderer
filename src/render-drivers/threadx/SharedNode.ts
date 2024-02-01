@@ -62,6 +62,7 @@ export class SharedNode extends SharedObject {
       pivotX: sharedNodeStruct.pivotX,
       pivotY: sharedNodeStruct.pivotY,
       rotation: sharedNodeStruct.rotation,
+      rtt: sharedNodeStruct.rtt,
     } satisfies NodeStructWritableProps);
   }
 
@@ -94,4 +95,5 @@ export class SharedNode extends SharedObject {
   protected declare parentId: number;
   declare zIndex: number;
   declare zIndexLocked: number;
+  declare rtt: boolean;
 }

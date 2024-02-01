@@ -501,6 +501,7 @@ export class RendererMain extends EventEmitter {
       pivotX: props.pivotX ?? props.pivot ?? 0.5,
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
+      rtt: props.rtt ?? false,
     };
   }
 
