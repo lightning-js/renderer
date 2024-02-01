@@ -335,7 +335,34 @@ export class WebGlContextWrapper {
       );
     }
   }
+  /**
+   * ```
+   * gl.compressedTexImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, data);
+   * ```
+   *
+   * @remarks
+   * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
+   */
 
+  compressedTexImage2D(
+    level: GLint,
+    internalformat: GLenum,
+    width: GLsizei,
+    height: GLsizei,
+    border: GLint,
+    data?: ArrayBufferView,
+  ): void {
+    const { gl } = this;
+    gl.compressedTexImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalformat,
+      width,
+      height,
+      border,
+      data as ArrayBufferView,
+    );
+  }
   /**
    * ```
    * gl.pixelStorei(pname, param);

@@ -33,7 +33,10 @@ sdfData.chars.forEach((glyph) => {
 describe('measureText', () => {
   it('should measure text width', () => {
     const PERIOD_WIDTH = 10.332;
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData, glyphMap);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     expect(measureText('', { letterSpacing: 0 }, shaper)).toBe(0);
     expect(measureText('.', { letterSpacing: 0 }, shaper)).toBe(PERIOD_WIDTH);
     expect(measureText('..', { letterSpacing: 0 }, shaper)).toBeCloseTo(
