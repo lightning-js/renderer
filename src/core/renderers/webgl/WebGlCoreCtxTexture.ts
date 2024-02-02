@@ -168,6 +168,26 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         glw.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
+    } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
+      const {
+        mipmaps,
+        width = 0,
+        height = 0,
+        type,
+        glInternalFormat,
+      } = textureData.data;
+      const view =
+        type === 'ktx'
+          ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
+          : (mipmaps[0] as unknown as ArrayBufferView);
+
+      glw.bindTexture(this._nativeCtxTexture);
+      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
+
+      glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
+      glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
+      glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
+      glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,

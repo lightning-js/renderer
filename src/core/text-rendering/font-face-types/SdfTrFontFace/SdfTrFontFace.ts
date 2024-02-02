@@ -98,7 +98,10 @@ export class SdfTrFontFace<
         });
         // We know `data` is defined here, because we just set it
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        (this.shaper as FontShaper) = new SdfFontShaper(this.data!, this.glyphMap);
+        (this.shaper as FontShaper) = new SdfFontShaper(
+          this.data!,
+          this.glyphMap,
+        );
         this.checkLoaded();
       })
       .catch(console.error);

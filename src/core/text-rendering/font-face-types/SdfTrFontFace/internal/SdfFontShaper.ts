@@ -39,7 +39,10 @@ export class SdfFontShaper extends FontShaper {
   private readonly glyphMap: Map<number, SdfFontData['chars'][0]>;
   private readonly kernings: KerningTable;
 
-  constructor(data: SdfFontData, glyphMap: Map<number, SdfFontData['chars'][0]>) {
+  constructor(
+    data: SdfFontData,
+    glyphMap: Map<number, SdfFontData['chars'][0]>,
+  ) {
     super();
     this.data = data;
     this.glyphMap = glyphMap;

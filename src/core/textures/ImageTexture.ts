@@ -19,6 +19,10 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
+import {
+  isCompressedTextureContainer,
+  loadCompressedTexture,
+} from '../lib/textureCompression.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -82,6 +86,11 @@ export class ImageTexture extends Texture {
         data: src,
         premultiplyAlpha,
       };
+    }
+
+    // Handle compressed textures
+    if (isCompressedTextureContainer(src)) {
+      return loadCompressedTexture(src);
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {

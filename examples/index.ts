@@ -29,7 +29,10 @@ import {
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
-import type { ExampleSettings } from './common/ExampleSettings.js';
+import type {
+  ExampleSettings,
+  SnapshotOptions,
+} from './common/ExampleSettings.js';
 import { StatTracker } from './common/StatTracker.js';
 
 interface TestModule {
@@ -317,8 +320,13 @@ async function runAutomation(driverName: string, logFps: boolean) {
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {
+        assertTruthy(renderer.root);
         const testRoot = renderer.createNode({
           parent: renderer.root,
+          x: renderer.root.x,
+          y: renderer.root.y,
+          width: renderer.root.width,
+          height: renderer.root.height,
           color: 0x00000000,
         });
         const exampleSettings: ExampleSettings = {
@@ -329,16 +337,34 @@ async function runAutomation(driverName: string, logFps: boolean) {
           appElement,
           automation: true,
           perfMultiplier: 1,
-          snapshot: async () => {
+          snapshot: async (options) => {
             const snapshot = (window as any).snapshot as
-              | ((testName: string) => Promise<void>)
+              | ((testName: string, options?: SnapshotOptions) => Promise<void>)
               | undefined;
+
+            const clipRect = options?.clip || {
+              x: testRoot.x,
+              y: testRoot.y,
+              width: testRoot.width,
+              height: testRoot.height,
+            };
+
+            const adjustedOptions = {
+              ...options,
+              clip: {
+                x: Math.round(clipRect.x * logicalPixelRatio),
+                y: Math.round(clipRect.y * logicalPixelRatio),
+                width: Math.round(clipRect.width * logicalPixelRatio),
+                height: Math.round(clipRect.height * logicalPixelRatio),
+              },
+            };
+
             // Allow some time for all images to load and the RaF to unpause
             // and render if needed.
             await delay(200);
             if (snapshot) {
               console.log(`Calling snapshot(${testName})`);
-              await snapshot(testName);
+              await snapshot(testName, adjustedOptions);
             } else {
               console.error(
                 'snapshot() not defined (not running in playwright?)',

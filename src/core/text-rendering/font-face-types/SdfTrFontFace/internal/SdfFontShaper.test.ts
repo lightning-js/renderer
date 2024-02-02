@@ -34,7 +34,10 @@ sdfData.chars.forEach((glyph) => {
 
 describe('SdfFontShaper', () => {
   it('should be able to shape text.', () => {
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData, glyphMap);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('Hi!'),
     );
@@ -88,7 +91,10 @@ describe('SdfFontShaper', () => {
   });
 
   it('should be able to shape text that we know have kerning pairs.', () => {
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData, glyphMap);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('WeVo'),
     );
@@ -130,8 +136,10 @@ describe('SdfFontShaper', () => {
   });
 
   it('should be able to shape text with letterSpacing.', () => {
-
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData, glyphMap);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('We!'),
     );
