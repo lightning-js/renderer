@@ -71,7 +71,7 @@ export interface Settings {
   textBaseline: TextBaseline;
   textAlign: TextAlign;
   verticalAlign: TextVerticalAlign;
-  offsetY: number | null;
+  offsetY: number;
   maxLines: number;
   overflowSuffix: string;
   precision: number;
@@ -140,14 +140,14 @@ function calcHeight(
   fontSize: number,
   lineHeight: number,
   numLines: number,
-  offsetY: number | null,
+  offsetY: number,
 ) {
   const baselineOffset = textBaseline !== 'bottom' ? 0.5 * fontSize : 0;
   return (
     lineHeight * (numLines - 1) +
     baselineOffset +
     Math.max(lineHeight, fontSize) +
-    (offsetY || 0)
+    offsetY
   );
 }
 
@@ -234,10 +234,7 @@ export class LightningTextTextureRenderer {
     const paddingLeft = this._settings.paddingLeft * precision;
     const paddingRight = this._settings.paddingRight * precision;
     const fontSize = this._settings.fontSize * precision;
-    let offsetY =
-      this._settings.offsetY === null
-        ? null
-        : this._settings.offsetY * precision;
+    const offsetY = this._settings.offsetY * precision;
     let lineHeight = (this._settings.lineHeight || fontSize) * precision;
     const w = this._settings.w * precision;
     const h = this._settings.h * precision;
@@ -384,9 +381,7 @@ export class LightningTextTextureRenderer {
       );
     }
 
-    if (offsetY === null) {
-      offsetY = fontSize;
-    }
+    const calculatedOffsetY = offsetY + fontSize;
 
     renderInfo.w = width;
     renderInfo.h = height;
@@ -421,7 +416,7 @@ export class LightningTextTextureRenderer {
     renderInfo.cutEy = cutEy;
     renderInfo.lineHeight = lineHeight;
     renderInfo.lineWidths = lineWidths;
-    renderInfo.offsetY = offsetY;
+    renderInfo.offsetY = calculatedOffsetY;
     renderInfo.paddingLeft = paddingLeft;
     renderInfo.paddingRight = paddingRight;
     renderInfo.letterSpacing = letterSpacing;
@@ -445,9 +440,7 @@ export class LightningTextTextureRenderer {
           renderInfo.fontSize,
           renderInfo.lineHeight,
           linesOverride.lines.length,
-          this._settings.offsetY === null
-            ? null
-            : this._settings.offsetY * precision,
+          this._settings.offsetY * precision,
         )
       : renderInfo.height;
 
@@ -708,7 +701,7 @@ export class LightningTextTextureRenderer {
       textBaseline: 'alphabetic',
       textAlign: 'left',
       verticalAlign: 'top',
-      offsetY: null,
+      offsetY: 0,
       maxLines: 0,
       overflowSuffix: '...',
       textColor: [1.0, 1.0, 1.0, 1.0],
