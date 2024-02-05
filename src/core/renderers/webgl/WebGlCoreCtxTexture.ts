@@ -142,6 +142,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height = data.height;
       glw.bindTexture(this._nativeCtxTexture);
 
+      // png image loaded as expected with premultiplyAlpha set to true
+      textureData.premultiplyAlpha = true;
+      
       glw.pixelStorei(
         glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
         !!textureData.premultiplyAlpha,
