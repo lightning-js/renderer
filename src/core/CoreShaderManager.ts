@@ -43,6 +43,13 @@ import { RadialGradientEffect } from './renderers/webgl/shaders/effects/RadialGr
 import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { RadialProgressEffect } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
 
+export type { FadeOutEffectProps } from './renderers/webgl/shaders/effects/FadeOutEffect.js';
+export type { LinearGradientEffectProps } from './renderers/webgl/shaders/effects/LinearGradientEffect.js';
+export type { RadialGradientEffectProps } from './renderers/webgl/shaders/effects/RadialGradientEffect.js';
+export type { GrayscaleEffectProps } from './renderers/webgl/shaders/effects/GrayscaleEffect.js';
+export type { GlitchEffectProps } from './renderers/webgl/shaders/effects/GlitchEffect.js';
+export type { RadialProgressEffectProps } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
+
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
   DefaultShaderBatched: typeof DefaultShaderBatched;

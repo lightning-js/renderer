@@ -49,3 +49,11 @@ export * from '../src/common/CommonTypes.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
+export type {
+  FadeOutEffectProps,
+  LinearGradientEffectProps,
+  RadialGradientEffectProps,
+  GrayscaleEffectProps,
+  GlitchEffectProps,
+  RadialProgressEffectProps,
+} from '../src/core/CoreShaderManager.js';
