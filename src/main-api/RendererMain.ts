@@ -38,6 +38,7 @@ import {
 import { FinalizationRegistryTextureUsageTracker } from './texture-usage-trackers/FinalizationRegistryTextureUsageTracker.js';
 import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageTracker.js';
 import { EventEmitter } from '../common/EventEmitter.js';
+import { Inspector } from './Inspector.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -238,6 +239,18 @@ export interface RendererMainSettings {
    * @defaultValue `2`
    */
   numImageWorkers?: number;
+
+  /**
+   * Enable inspector
+   *
+   * @remarks
+   * When enabled the renderer will spawn a inspector. The inspector will
+   * replicate the state of the Nodes created in the renderer and allow
+   * inspection of the state of the nodes.
+   *
+   * @defaultValue `false` (disabled)
+   */
+  enableInspector?: boolean;
 }
 
 /**
@@ -269,6 +282,7 @@ export class RendererMain extends EventEmitter {
   readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
+  private inspector: Inspector;
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
@@ -308,6 +322,8 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
+      //enableInspector: settings.enableInspector ?? false,
+      enableInspector: true,
     };
     this.settings = resolvedSettings;
 
@@ -316,6 +332,7 @@ export class RendererMain extends EventEmitter {
       appHeight,
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
+      enableInspector,
     } = resolvedSettings;
 
     const releaseCallback = (textureId: number) => {
@@ -355,6 +372,9 @@ export class RendererMain extends EventEmitter {
     if (!targetEl) {
       throw new Error('Could not find target element');
     }
+
+    // init inspector
+    this.inspector = new Inspector(canvas, resolvedSettings);
 
     // Hook up the driver's callbacks
     driver.onCreateNode = (node) => {
@@ -401,6 +421,13 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createNode(props: Partial<INodeWritableProps>): INode {
+    if (this.inspector) {
+      return this.inspector.createNode(
+        this.driver,
+        this.resolveNodeDefaults(props),
+      );
+    }
+
     return this.driver.createNode(this.resolveNodeDefaults(props));
   }
 
@@ -442,6 +469,10 @@ export class RendererMain extends EventEmitter {
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
     };
+
+    if (this.inspector) {
+      return this.inspector.createTextNode(this.driver, data);
+    }
 
     return this.driver.createTextNode(data);
   }
@@ -514,6 +545,10 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   destroyNode(node: INode) {
+    if (this.inspector) {
+      this.inspector.destroyNode(node);
+    }
+
     return this.driver.destroyNode(node);
   }
 
