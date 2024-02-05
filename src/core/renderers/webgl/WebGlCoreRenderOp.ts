@@ -49,6 +49,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
+    readonly renderToTexture: boolean | undefined,
+    readonly parentHasRenderTexture: boolean | undefined,
   ) {
     super();
     this.maxTextures = shader.supportsIndexedTextures

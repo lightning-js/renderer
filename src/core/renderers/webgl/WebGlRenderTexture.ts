@@ -32,20 +32,31 @@ import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
  */
 export class WebGlRenderTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
-  private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
   private _w = 0;
   private _h = 0;
   private _framebuffer: WebGLFramebuffer | null = null;
   private _texture: WebGLTexture | null = null;
+  private _glw: WebGlContextWrapper;
 
   constructor(
     protected glw: WebGlContextWrapper,
     width: number,
     height: number,
   ) {
+    this._glw = glw;
     this._w = width;
     this._h = height;
 
+    // Create Framebuffer object
+    this._framebuffer = glw.createFramebuffer();
+    if (!this._framebuffer) {
+      throw new Error('Unable to create framebuffer');
+    }
+
+    // Bind the framebuffer
+    glw.bindFramebuffer(this._framebuffer);
+
+    // Create a render texture
     const texture = glw.createTexture();
     if (!texture) {
       throw new Error('Unable to create texture');
@@ -67,13 +78,18 @@ export class WebGlRenderTexture {
     glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
     glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
 
-    // Setup framebuffer
-    this._framebuffer = glw.createFramebuffer();
-    if (!this._framebuffer) {
-      throw new Error('Unable to create framebuffer');
-    }
+    // Attach the texture to the framebuffer
+    glw.framebufferTexture2D(glw.COLOR_ATTACHMENT0, texture, 0);
 
     this._texture = texture;
+  }
+
+  bind() {
+    this._glw.bindFramebuffer(this._framebuffer);
+  }
+
+  unbind() {
+    this._glw.bindFramebuffer(null);
   }
 
   get w() {

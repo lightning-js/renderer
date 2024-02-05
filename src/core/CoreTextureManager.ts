@@ -21,6 +21,7 @@ import { assertTruthy } from '../utils.js';
 import { ImageWorkerManager } from './lib/ImageWorker.js';
 import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { WebGlRenderTexture } from './renderers/webgl/WebGlRenderTexture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
@@ -321,6 +322,11 @@ export class CoreTextureManager {
     const texture = this.renderer.createCtxTexture(textureSource);
 
     this.ctxTextureCache.set(textureSource, texture);
+    return texture;
+  }
+
+  getRenderTexture(width: number, height: number): WebGlRenderTexture {
+    const texture = this.renderer.createRenderTexture(width, height);
     return texture;
   }
 }

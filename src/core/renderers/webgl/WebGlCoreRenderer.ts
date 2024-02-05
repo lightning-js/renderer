@@ -204,7 +204,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
     return new WebGlCoreCtxTexture(this.glw, textureSource);
   }
 
-  override createRenderTexture(width: number, height: number): WebGLTexture {
+  override createRenderTexture(
+    width: number,
+    height: number,
+  ): WebGlRenderTexture {
     const { glw } = this;
     return new WebGlRenderTexture(glw, width, height);
   }
@@ -241,6 +244,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       tb,
       tc,
       td,
+      rtt: renderToTexture,
+      parentHasRenderTexture,
     } = params;
     let { texture } = params;
 
@@ -267,10 +272,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const targetShader = shader || this.defaultShader;
     assertTruthy(targetShader instanceof WebGlCoreShader);
     if (curRenderOp) {
+      // If we need to render to a texture, create a new render op
       // If the current render op is not the same shader, create a new one
       // If the current render op's shader props are not compatible with the
       // the new shader props, create a new one render op.
       if (
+        renderToTexture ||
         curRenderOp.shader !== targetShader ||
         !compareRect(curRenderOp.clippingRect, clippingRect) ||
         (curRenderOp.shader !== this.defaultShader &&
@@ -295,6 +302,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
         targetDims,
         clippingRect,
         bufferIdx,
+        renderToTexture,
+        parentHasRenderTexture,
       );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
@@ -328,9 +337,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const { txManager } = this.stage;
-    const ctxTexture = txManager.getCtxTexture(texture);
+
+    const ctxTexture = renderToTexture
+      ? txManager.getRenderTexture(width, height)
+      : txManager.getCtxTexture(texture);
+
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
 
@@ -426,6 +440,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     dimensions: Dimensions,
     clippingRect: RectWithValid,
     bufferIdx: number,
+    renderToTexture?: boolean,
+    parentHasRenderTexture?: boolean,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.glw,
@@ -438,6 +454,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       dimensions,
       bufferIdx,
       0, // Z-Index is only used for explictly added Render Ops
+      renderToTexture,
+      parentHasRenderTexture,
     );
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);

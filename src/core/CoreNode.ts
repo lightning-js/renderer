@@ -76,6 +76,7 @@ export interface CoreNodeProps {
   pivotY: number;
   rotation: number;
   rtt: boolean;
+  parentHasRenderTexture?: boolean;
 }
 
 type ICoreNode = Omit<
@@ -173,6 +174,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props = {
       ...props,
       parent: null,
+      // Assign a default value to parentHasRenderTexture
+      parentHasRenderTexture: false,
     };
     // Allow for parent to be processed appropriately
     this.parent = props.parent;
@@ -524,8 +527,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, texture, textureOptions, shader, shaderProps } =
-      this.props;
+    const {
+      width,
+      height,
+      texture,
+      textureOptions,
+      shader,
+      shaderProps,
+      rtt,
+      parentHasRenderTexture,
+    } = this.props;
     const {
       premultipliedColorTl,
       premultipliedColorTr,
@@ -558,6 +569,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       tb: gt.tb,
       tc: gt.tc,
       td: gt.td,
+      rtt,
+      parentHasRenderTexture,
     });
 
     // Calculate absolute X and Y based on all ancestors
@@ -920,7 +933,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
     }
-
+    this.parentHasRenderTexture =
+      newParent?.rtt || newParent?.parentHasRenderTexture;
     this.updateScaleRotateTransform();
   }
 
@@ -929,7 +943,18 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set rtt(value: boolean) {
+    this.children.forEach((child) => {
+      child.parentHasRenderTexture = value;
+    });
     this.props.rtt = value;
+  }
+
+  set parentHasRenderTexture(value: boolean | undefined) {
+    this.props.parentHasRenderTexture = !!value;
+  }
+
+  get parentHasRenderTexture(): boolean {
+    return this.props.parentHasRenderTexture;
   }
 
   //#endregion Properties
