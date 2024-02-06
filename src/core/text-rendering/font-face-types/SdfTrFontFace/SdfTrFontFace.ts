@@ -47,6 +47,10 @@ export class SdfTrFontFace<
 > extends TrFontFace {
   public readonly type: FontTypeT;
   public readonly texture: ImageTexture;
+  /**
+   * Height of the tallest character in the font including the whitespace above it
+   */
+  public readonly maxCharHeight: number = 0;
   public readonly data: SdfFontData | undefined;
   public readonly shaper: FontShaper | undefined;
   public readonly glyphMap: Map<number, SdfFontData['chars'][0]> = new Map();
@@ -93,9 +97,16 @@ export class SdfTrFontFace<
         (this.data as SdfFontData) = await response.json();
         // Add all the glyphs to the glyph map
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        let maxCharHeight = 0;
         this.data!.chars.forEach((glyph) => {
           this.glyphMap.set(glyph.id, glyph);
+          const charHeight = glyph.yoffset + glyph.height;
+          if (charHeight > maxCharHeight) {
+            maxCharHeight = charHeight;
+          }
         });
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.maxCharHeight as number) = maxCharHeight;
         // We know `data` is defined here, because we just set it
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         (this.shaper as FontShaper) = new SdfFontShaper(
