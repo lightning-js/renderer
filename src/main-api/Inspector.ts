@@ -1,11 +1,13 @@
 import type {
   INode,
+  INodeAnimatableProps,
   INodeWritableProps,
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
 import type { ICoreDriver } from './ICoreDriver.js';
 import { type RendererMainSettings } from './RendererMain.js';
+import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 
 const stylePropertyMap: { [key: string]: string } = {
   alpha: 'opacity',
@@ -13,8 +15,8 @@ const stylePropertyMap: { [key: string]: string } = {
   y: 'top',
   width: 'width',
   height: 'height',
-  color: 'backgroundColor',
-  src: 'backgroundImage',
+  color: 'background-color',
+  src: 'background-image',
   zIndex: 'zIndex',
   fontFamily: 'font-family',
   fontSize: 'font-size',
@@ -34,6 +36,18 @@ const domPropertyMap: { [key: string]: string } = {
   id: 'id',
 };
 
+const colorPropertyList = [
+  'color',
+  'colorTop',
+  'colorBottom',
+  'colorLeft',
+  'colorRight',
+  'colorTl',
+  'colorTr',
+  'colorBl',
+  'colorBr',
+];
+
 export class Inspector {
   private root: HTMLElement;
 
@@ -48,6 +62,7 @@ export class Inspector {
     const height = Math.ceil(
       settings.appHeight ?? 1080 / (settings.deviceLogicalPixelRatio ?? 1),
     );
+
     const width = Math.ceil(
       settings.appWidth ?? 1900 / (settings.deviceLogicalPixelRatio ?? 1),
     );
@@ -64,7 +79,7 @@ export class Inspector {
       settings.deviceLogicalPixelRatio ?? 1
     },${settings.deviceLogicalPixelRatio ?? 1})`;
     this.root.style.overflow = 'hidden';
-    this.root.style.zIndex = '65535';
+    this.root.style.zIndex = '-65535';
 
     document.body.appendChild(this.root);
   }
@@ -98,12 +113,19 @@ export class Inspector {
 
     return new Proxy(node, {
       set: (target, property: keyof INodeWritableProps, value) => {
-        if (property === 'parent' && value === null) {
-          this.destroyNode(node);
-        }
-
         this.updateNodeProperty(div, property, value);
         return Reflect.set(target, property, value);
+      },
+      get: (target: INode, property: keyof INode, receiver: any): any => {
+        if (property === 'destroy') {
+          this.destroyNode(target);
+        }
+
+        if (property === 'animate') {
+          // this.animateNode();
+        }
+
+        return Reflect.get(target, property, receiver);
       },
     });
   }
@@ -135,15 +157,15 @@ export class Inspector {
   updateNodeProperty(
     div: HTMLElement,
     property: keyof INodeWritableProps | keyof ITextNodeWritableProps,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ) {
-    // dont do anything with falsey values
     if (!value) {
       return;
     }
 
     if (property === 'parent') {
-      const parentId = value.id;
+      const parentId: number = (value as INode).id;
 
       // only way to detect if the parent is the root node
       // if you are reading this and have a better way, please let me know
@@ -158,7 +180,7 @@ export class Inspector {
     }
 
     if (property === 'text') {
-      div.innerHTML = value;
+      div.innerHTML = String(value);
       return;
     }
 
@@ -168,7 +190,7 @@ export class Inspector {
     }
 
     if (property === 'rotation') {
-      div.style.transform = `rotate(${value}rad)`;
+      div.style.transform = `rotate(${value as string}rad)`;
       return;
     }
 
@@ -177,30 +199,48 @@ export class Inspector {
       property === 'scaleX' ||
       property === 'scaleY'
     ) {
-      div.style.transform = `${property}(${value})`;
+      div.style.transform = `${property}(${value as string})`;
       return;
     }
 
-    // TODO handle texture
-    // TODO handle shader
-    // TODO animations (whoa!)
+    if (property === 'src') {
+      div.style.backgroundImage = `url(${value as string})`;
+      return;
+    }
+
+    // check colors
+    if (colorPropertyList.includes(property as string)) {
+      const color = value as number;
+
+      // convert 0xRRGGBBAA to rgba
+      const a = (color & 0xff) / 255; // alpha
+      const b = (color >> 8) & 0xff; // blue channel
+      const g = (color >> 16) & 0xff; // green channel
+      const r = (color >> 24) & 0xff; // red channel
+
+      div.style.setProperty(
+        stylePropertyMap[property as string] as string,
+        `rgba(${r},${g},${b},${a})`,
+      );
+      return;
+    }
 
     // CSS mappable attribute
     if (stylePropertyMap[property]) {
       div.style.setProperty(
-        String(stylePropertyMap[property]),
-        value.toString(),
+        stylePropertyMap[property] as string,
+        String(value),
       );
       return;
     }
 
     // DOM properties
     if (domPropertyMap[property]) {
-      div.setAttribute(String(stylePropertyMap[property]), value.toString());
+      div.setAttribute(String(stylePropertyMap[property]), String(value));
       return;
     }
 
     // all else can be mapped to data-attributes
-    div.setAttribute(`data-${property}`, value);
+    // div.setAttribute(`data-${property}`, String(value));
   }
 }
