@@ -171,7 +171,10 @@ export class Inspector {
         }
 
         if (property === 'animate') {
-          // this.animateNode();
+          return (props: INodeAnimatableProps, settings: AnimationSettings) => {
+            this.animateNode(div, node, props, settings);
+            return target.animate(props, settings);
+          };
         }
 
         return Reflect.get(target, property, receiver);
@@ -266,5 +269,51 @@ export class Inspector {
       div.setAttribute(String(stylePropertyMap[property]), String(value));
       return;
     }
+  }
+
+  // simple animation handler
+  animateNode(
+    div: HTMLElement,
+    node: INode,
+    props: INodeAnimatableProps,
+    settings: AnimationSettings,
+  ) {
+    console.log('animateNode', props, settings);
+
+    const {
+      duration = 1000,
+      delay = 0,
+      // easing = 'linear',
+      // repeat = 0,
+      // loop = false,
+      // stopMethod = false,
+    } = settings;
+
+    const {
+      x,
+      y,
+      width,
+      height,
+      alpha = 1,
+      rotation = 0,
+      scale = 1,
+      color,
+    } = props;
+
+    // ignoring loops and repeats for now, as that might be a bit too much for the inspector
+    function animate() {
+      setTimeout(() => {
+        div.style.top = `${y}px`;
+        div.style.left = `${x}px`;
+        div.style.width = `${width}px`;
+        div.style.height = `${height}px`;
+        div.style.opacity = `${alpha}`;
+        div.style.rotate = `${rotation}rad`;
+        div.style.scale = `${scale}`;
+        div.style.color = convertColorToRgba(color);
+      }, duration);
+    }
+
+    setTimeout(animate, delay);
   }
 }
