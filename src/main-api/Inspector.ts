@@ -9,35 +9,84 @@ import type { ICoreDriver } from './ICoreDriver.js';
 import { type RendererMainSettings } from './RendererMain.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 
-const stylePropertyMap: { [key: string]: string } = {
-  alpha: 'opacity',
-  x: 'left',
-  y: 'top',
-  width: 'width',
-  height: 'height',
-  color: 'background-color',
-  src: 'background-image',
-  zIndex: 'zIndex',
-  fontFamily: 'font-family',
-  fontSize: 'font-size',
-  fontStyle: 'font-style',
-  fontWeight: 'font-weight',
-  fontStretch: 'font-stretch',
-  lineHeight: 'line-height',
-  letterSpacing: 'letter-spacing',
-  textAlign: 'text-align',
-  overflowSuffix: 'overflow-suffix',
-  maxLines: 'max-lines',
-  contain: 'contain',
-  verticalAlign: 'vertical-align',
+/**
+ * Inspector
+ *
+ * The inspector is a tool that allows you to inspect the state of the renderer
+ * and the nodes that are being rendered. It is a tool that is used for debugging
+ * and development purposes.
+ *
+ * The inspector will generate a DOM tree that mirrors the state of the renderer
+ */
+
+/**
+ * stylePropertyMap is a map of renderer properties that are mapped to CSS properties
+ *
+ * It can either return a string or an object with a prop and value property. Once a
+ * property is found in the map, the value is set on the style of the div element.
+ * Erik H made me do it.
+ */
+interface StyleResponse {
+  prop: string;
+  value: string;
+}
+const stylePropertyMap: {
+  [key: string]: (value: string | number | boolean) => string | StyleResponse;
+} = {
+  alpha: () => 'opacity',
+  x: () => 'left',
+  y: () => 'top',
+  width: () => 'width',
+  height: () => 'height',
+  zIndex: () => 'zIndex',
+  fontFamily: () => 'font-family',
+  fontSize: () => 'font-size',
+  fontStyle: () => 'font-style',
+  fontWeight: () => 'font-weight',
+  fontStretch: () => 'font-stretch',
+  lineHeight: () => 'line-height',
+  letterSpacing: () => 'letter-spacing',
+  textAlign: () => 'text-align',
+  overflowSuffix: () => 'overflow-suffix',
+  maxLines: () => 'max-lines',
+  contain: () => 'contain',
+  verticalAlign: () => 'vertical-align',
+  clipping: (v) => {
+    return { prop: 'overflow', value: v ? 'hidden' : 'visible' };
+  },
+  rotation: (v) => {
+    return { prop: 'transform', value: `rotate(${v}rad)` };
+  },
+  scale: (v) => {
+    return { prop: 'transform', value: `scale(${v})` };
+  },
+  scaleX: (v) => {
+    return { prop: 'transform', value: `scaleX(${v})` };
+  },
+  scaleY: (v) => {
+    return { prop: 'transform', value: `scaleY(${v})` };
+  },
+  src: (v) => {
+    return { prop: 'background-image', value: `url(${v})` };
+  },
+  color: (v) => {
+    return { prop: 'color', value: convertColorToRgba(v as number) };
+  },
+};
+
+const convertColorToRgba = (color: number) => {
+  const a = (color & 0xff) / 255;
+  const b = (color >> 8) & 0xff;
+  const g = (color >> 16) & 0xff;
+  const r = (color >> 24) & 0xff;
+  return `rgba(${r},${g},${b},${a})`;
 };
 
 const domPropertyMap: { [key: string]: string } = {
   id: 'id',
 };
 
-const colorPropertyList = [
-  'color',
+const gradientColorPropertyMap = [
   'colorTop',
   'colorBottom',
   'colorLeft',
@@ -164,6 +213,9 @@ export class Inspector {
       return;
     }
 
+    /**
+     * Special case for parent property
+     */
     if (property === 'parent') {
       const parentId: number = (value as INode).id;
 
@@ -179,58 +231,33 @@ export class Inspector {
       return;
     }
 
+    // special case for text
     if (property === 'text') {
       div.innerHTML = String(value);
       return;
     }
 
-    if (property === 'clipping') {
-      div.style.overflow = value ? 'hidden' : 'visible';
-      return;
-    }
-
-    if (property === 'rotation') {
-      div.style.transform = `rotate(${value as string}rad)`;
-      return;
-    }
-
-    if (
-      property === 'scale' ||
-      property === 'scaleX' ||
-      property === 'scaleY'
-    ) {
-      div.style.transform = `${property}(${value as string})`;
-      return;
-    }
-
-    if (property === 'src') {
-      div.style.backgroundImage = `url(${value as string})`;
-      return;
-    }
-
-    // check colors
-    if (colorPropertyList.includes(property as string)) {
-      const color = value as number;
-
-      // convert 0xRRGGBBAA to rgba
-      const a = (color & 0xff) / 255; // alpha
-      const b = (color >> 8) & 0xff; // blue channel
-      const g = (color >> 16) & 0xff; // green channel
-      const r = (color >> 24) & 0xff; // red channel
-
-      div.style.setProperty(
-        stylePropertyMap[property as string] as string,
-        `rgba(${r},${g},${b},${a})`,
-      );
-      return;
-    }
+    // special case for color gradients (normal colors are handled by the stylePropertyMap)
+    // FIXME the renderer seems to return the same number for all colors
+    // if (gradientColorPropertyMap.includes(property as string)) {
+    //   const color = convertColorToRgba(value as number);
+    //   div.setAttribute(`data-${property}`, color);
+    //   return;
+    // }
 
     // CSS mappable attribute
     if (stylePropertyMap[property]) {
-      div.style.setProperty(
-        stylePropertyMap[property] as string,
-        String(value),
-      );
+      const mappedStyleResponse = stylePropertyMap[property]?.(value);
+
+      if (typeof mappedStyleResponse === 'string') {
+        div.style.setProperty(mappedStyleResponse, String(value));
+      } else if (typeof mappedStyleResponse === 'object') {
+        div.style.setProperty(
+          mappedStyleResponse.prop,
+          mappedStyleResponse.value,
+        );
+      }
+
       return;
     }
 
@@ -239,8 +266,5 @@ export class Inspector {
       div.setAttribute(String(stylePropertyMap[property]), String(value));
       return;
     }
-
-    // all else can be mapped to data-attributes
-    // div.setAttribute(`data-${property}`, String(value));
   }
 }
