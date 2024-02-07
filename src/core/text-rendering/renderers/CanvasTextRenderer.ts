@@ -337,7 +337,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
           state.props.fontWeight,
         ].join(' '),
         textColor: getNormalizedRgbaComponents(state.props.color),
-        offsetY: state.props.fontSize + state.props.offsetY,
+        offsetY: state.props.offsetY,
         wordWrap: state.props.contain !== 'none',
         wordWrapWidth:
           state.props.contain === 'none' ? undefined : state.props.width,
@@ -355,7 +355,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       //   performance.now() - renderInfoCalculateTime,
       //   'ms',
       // );
-      state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
+      state.textH = state.renderInfo.height;
       state.textW = state.renderInfo.width;
 
       // Invalidate renderWindow because the renderInfo changed
