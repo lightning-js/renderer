@@ -31,17 +31,42 @@ import { SdfShader } from './renderers/webgl/shaders/SdfShader.js';
 
 import { RadiusEffect } from './renderers/webgl/shaders/effects/RadiusEffect.js';
 import { BorderEffect } from './renderers/webgl/shaders/effects/BorderEffect.js';
-import { LinearGradientEffect } from './renderers/webgl/shaders/effects/LinearGradientEffect.js';
-import { GrayscaleEffect } from './renderers/webgl/shaders/effects/GrayscaleEffect.js';
+import {
+  LinearGradientEffect,
+  type LinearGradientEffectProps,
+} from './renderers/webgl/shaders/effects/LinearGradientEffect.js';
+import {
+  GrayscaleEffect,
+  type GrayscaleEffectProps,
+} from './renderers/webgl/shaders/effects/GrayscaleEffect.js';
 import { BorderRightEffect } from './renderers/webgl/shaders/effects/BorderRightEffect.js';
 import { BorderTopEffect } from './renderers/webgl/shaders/effects/BorderTopEffect.js';
 import { BorderBottomEffect } from './renderers/webgl/shaders/effects/BorderBottomEffect.js';
 import { BorderLeftEffect } from './renderers/webgl/shaders/effects/BorderLeftEffect.js';
-import { GlitchEffect } from './renderers/webgl/shaders/effects/GlitchEffect.js';
-import { FadeOutEffect } from './renderers/webgl/shaders/effects/FadeOutEffect.js';
-import { RadialGradientEffect } from './renderers/webgl/shaders/effects/RadialGradientEffect.js';
+import {
+  GlitchEffect,
+  type GlitchEffectProps,
+} from './renderers/webgl/shaders/effects/GlitchEffect.js';
+import {
+  FadeOutEffect,
+  type FadeOutEffectProps,
+} from './renderers/webgl/shaders/effects/FadeOutEffect.js';
+import {
+  RadialGradientEffect,
+  type RadialGradientEffectProps,
+} from './renderers/webgl/shaders/effects/RadialGradientEffect.js';
 import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
-import { RadialProgressEffect } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
+import {
+  RadialProgressEffect,
+  type RadialProgressEffectProps,
+} from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
+
+export type { FadeOutEffectProps };
+export type { LinearGradientEffectProps };
+export type { RadialGradientEffectProps };
+export type { GrayscaleEffectProps };
+export type { GlitchEffectProps };
+export type { RadialProgressEffectProps };
 
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
@@ -70,6 +95,14 @@ export interface EffectMap {
   glitch: typeof GlitchEffect;
   radialProgress: typeof RadialProgressEffect;
 }
+
+export type EffectProps =
+  | FadeOutEffectProps
+  | LinearGradientEffectProps
+  | RadialGradientEffectProps
+  | GrayscaleEffectProps
+  | GlitchEffectProps
+  | RadialProgressEffectProps;
 
 export class CoreShaderManager {
   protected shCache: Map<string, InstanceType<ShaderMap[keyof ShaderMap]>> =
