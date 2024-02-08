@@ -8,6 +8,7 @@ import type {
 import type { ICoreDriver } from './ICoreDriver.js';
 import { type RendererMainSettings } from './RendererMain.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { IAnimationController } from '../common/IAnimationController.js';
 
 /**
  * Inspector
@@ -159,27 +160,7 @@ export class Inspector {
   createNode(driver: ICoreDriver, properties: INodeWritableProps): INode {
     const node = driver.createNode(properties);
     const div = this.createDiv(node, properties);
-
-    return new Proxy(node, {
-      set: (target, property: keyof INodeWritableProps, value) => {
-        this.updateNodeProperty(div, property, value);
-        return Reflect.set(target, property, value);
-      },
-      get: (target: INode, property: keyof INode, receiver: any): any => {
-        if (property === 'destroy') {
-          this.destroyNode(target);
-        }
-
-        if (property === 'animate') {
-          return (props: INodeAnimatableProps, settings: AnimationSettings) => {
-            this.animateNode(div, node, props, settings);
-            return target.animate(props, settings);
-          };
-        }
-
-        return Reflect.get(target, property, receiver);
-      },
-    });
+    return this.createProxy(node, div);
   }
 
   createTextNode(
@@ -188,15 +169,38 @@ export class Inspector {
   ): ITextNode {
     const node = driver.createTextNode(properties);
     const div = this.createDiv(node, properties);
+    return this.createProxy(node, div) as ITextNode;
+  }
 
+  createProxy(node: INode | ITextNode, div: HTMLElement): INode | ITextNode {
     return new Proxy(node, {
       set: (target, property: keyof INodeWritableProps, value) => {
-        if (property === 'parent' && value === null) {
-          this.destroyNode(node);
-        }
-
         this.updateNodeProperty(div, property, value);
         return Reflect.set(target, property, value);
+      },
+      get: (target, property: keyof INode, receiver: any): any => {
+        if (property === 'destroy') {
+          this.destroyNode(target);
+        }
+
+        if (property === 'animate') {
+          return (props: INodeAnimatableProps, settings: AnimationSettings) => {
+            const anim = target.animate(props, settings);
+
+            // Trap the animate start function so we can update the inspector accordingly
+            return new Proxy(anim, {
+              get: (target, property: keyof IAnimationController, receiver) => {
+                if (property === 'start') {
+                  this.animateNode(div, node, props, settings);
+                }
+
+                return Reflect.get(target, property, receiver);
+              },
+            });
+          };
+        }
+
+        return Reflect.get(target, property, receiver);
       },
     });
   }
