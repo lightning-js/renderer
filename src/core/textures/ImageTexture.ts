@@ -74,8 +74,12 @@ export class ImageTexture extends Texture {
     this.props = ImageTexture.resolveDefaults(props);
   }
 
+  hasAlphaChannel(mimeType: string) {
+    return (mimeType.indexOf("image/png") !== -1);
+  }
+
   override async getTextureData(): Promise<TextureData> {
-    const { src, premultiplyAlpha } = this.props;
+    const { src } = this.props;
     if (!src) {
       return {
         data: null,
@@ -84,7 +88,7 @@ export class ImageTexture extends Texture {
     if (src instanceof ImageData) {
       return {
         data: src,
-        premultiplyAlpha,
+        premultiplyAlpha: true,
       };
     }
 
@@ -94,20 +98,26 @@ export class ImageTexture extends Texture {
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
-      return await this.txManager.imageWorkerManager.getImage(
-        src,
+      // @ts-ignore
+      // TODO: fix typescript issue
+      const { data: {data, premultiplyAlpha} } =  await this.txManager.imageWorkerManager.getImage(src);
+      return {
+        data,
         premultiplyAlpha,
-      );
+      };
     } else {
       const response = await fetch(src);
       const blob = await response.blob();
-      return {
+      const premultiplyAlpha = this.hasAlphaChannel(blob.type);
+      const textureDate = {
         data: await createImageBitmap(blob, {
           premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         }),
+        premultiplyAlpha,
       };
+      return textureDate;
     }
   }
 

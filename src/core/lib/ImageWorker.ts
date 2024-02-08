@@ -59,22 +59,28 @@ export class ImageWorkerManager {
 
   private createWorkers(numWorkers = 1): Worker[] {
     const workerCode = `
-      async function getImage(src, premultiplyAlpha) {
+      function hasAlphaChannel(mimeType) {
+          return (mimeType.indexOf("image/png") !== -1);
+      }
+
+      async function getImage(src) {
         const response = await fetch(src);
         const blob = await response.blob();
-        return await createImageBitmap(blob, {
-          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+        const premultiplyAlpha = this.hasAlphaChannel(blob.type);
+        const data = await createImageBitmap(blob, {
+          premultiplyAlpha: 'premultiply',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         });
+        return { data, premultiplyAlpha };
       }
 
       self.onmessage = async (event) => {
-        const { src, premultiplyAlpha } = event.data;
+        const { src } = event.data;
 
         try {
-          const data = await getImage(src, premultiplyAlpha);
-          self.postMessage({ src, data }, [data]);
+          const data = await getImage(src);
+          self.postMessage({ src, data }, [data.data]);
         } catch (error) {
           self.postMessage({ src, error: error.message });
         }
@@ -105,7 +111,7 @@ export class ImageWorkerManager {
     return absoluteUrl.href;
   }
 
-  getImage(src: string, premultiplyAlpha: boolean): Promise<TextureData> {
+  getImage(src: string): Promise<TextureData> {
     return new Promise((resolve, reject) => {
       try {
         if (this.workers) {
@@ -113,7 +119,6 @@ export class ImageWorkerManager {
           this.messageManager[absoluteSrcUrl] = [resolve, reject];
           this.getNextWorker().postMessage({
             src: absoluteSrcUrl,
-            premultiplyAlpha,
           });
         }
       } catch (error) {
