@@ -102,8 +102,6 @@ export class Inspector {
   private root: HTMLElement;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
-    // create div but take the dimensions of the canvas element
-
     if (!settings) {
       throw new Error('settings is required');
     }
@@ -132,6 +130,8 @@ export class Inspector {
     this.root.style.zIndex = '-65535';
 
     document.body.appendChild(this.root);
+
+    console.warn('Inspector is enabled, this will impact performance');
   }
 
   createDiv(

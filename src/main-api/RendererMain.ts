@@ -282,7 +282,7 @@ export class RendererMain extends EventEmitter {
   readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
-  private inspector: Inspector;
+  private inspector: Inspector | null = null;
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
@@ -322,8 +322,7 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
-      //enableInspector: settings.enableInspector ?? false,
-      enableInspector: true,
+      enableInspector: settings.enableInspector ?? false,
     };
     this.settings = resolvedSettings;
 
@@ -373,8 +372,9 @@ export class RendererMain extends EventEmitter {
       throw new Error('Could not find target element');
     }
 
-    // init inspector
-    this.inspector = new Inspector(canvas, resolvedSettings);
+    if (enableInspector) {
+      this.inspector = new Inspector(canvas, resolvedSettings);
+    }
 
     // Hook up the driver's callbacks
     driver.onCreateNode = (node) => {
