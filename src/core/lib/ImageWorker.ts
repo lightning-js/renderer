@@ -68,7 +68,7 @@ export class ImageWorkerManager {
         const blob = await response.blob();
         const premultiplyAlpha = this.hasAlphaChannel(blob.type);
         const data = await createImageBitmap(blob, {
-          premultiplyAlpha: 'premultiply',
+          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         });
