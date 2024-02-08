@@ -109,7 +109,7 @@ export class ImageTexture extends Texture {
       const response = await fetch(src);
       const blob = await response.blob();
       const premultiplyAlpha = this.hasAlphaChannel(blob.type);
-      const textureDate = {
+      return {
         data: await createImageBitmap(blob, {
           premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
@@ -117,7 +117,6 @@ export class ImageTexture extends Texture {
         }),
         premultiplyAlpha,
       };
-      return textureDate;
     }
   }
 
