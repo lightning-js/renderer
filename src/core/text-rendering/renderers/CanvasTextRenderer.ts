@@ -326,6 +326,18 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     if (!state.renderInfo) {
+      const maxLines = state.props.maxLines;
+      const containedMaxLines =
+        state.props.contain === 'both'
+          ? Math.floor(
+              (state.props.height - state.props.offsetY) /
+                state.props.lineHeight,
+            )
+          : 0;
+      const calcMaxLines =
+        containedMaxLines > 0 && maxLines > 0
+          ? Math.min(containedMaxLines, maxLines)
+          : Math.max(containedMaxLines, maxLines);
       state.lightning2TextRenderer.settings = {
         text: state.props.text,
         textAlign: state.props.textAlign,
@@ -343,7 +355,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
           state.props.contain === 'none' ? undefined : state.props.width,
         letterSpacing: state.props.letterSpacing,
         lineHeight: state.props.lineHeight,
-        maxLines: state.props.maxLines,
+        maxLines: calcMaxLines,
         textBaseline: state.props.textBaseline,
         verticalAlign: state.props.verticalAlign,
         overflowSuffix: state.props.overflowSuffix,
@@ -701,6 +713,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
    */
   private invalidateLayoutCache(state: CanvasTextRendererState): void {
     state.renderInfo = undefined;
+    state.visibleWindow.valid = false;
     this.setStatus(state, 'loading');
     this.scheduleUpdateState(state);
   }

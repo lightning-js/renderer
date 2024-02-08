@@ -160,7 +160,8 @@ export function layoutText(
       (maxLines === 0 || curLineIndex + 1 < maxLines) &&
       (contain !== 'both' ||
         scrollable ||
-        curY + vertexLineHeight + vertexLineHeight <= vertexTruncateHeight);
+        curY + vertexLineHeight + trFontFace.maxCharHeight <=
+          vertexTruncateHeight);
     const lineVertexW = nextLineWillFit
       ? vertexW
       : vertexW - overflowSuffVertexWidth;
