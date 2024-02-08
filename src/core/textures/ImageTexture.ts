@@ -75,7 +75,7 @@ export class ImageTexture extends Texture {
   }
 
   hasAlphaChannel(mimeType: string) {
-    return (mimeType.indexOf("image/png") !== -1);
+    return mimeType.indexOf('image/png') !== -1;
   }
 
   override async getTextureData(): Promise<TextureData> {
@@ -98,13 +98,7 @@ export class ImageTexture extends Texture {
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
-      // @ts-ignore
-      // TODO: fix typescript issue
-      const { data: {data, premultiplyAlpha} } =  await this.txManager.imageWorkerManager.getImage(src);
-      return {
-        data,
-        premultiplyAlpha,
-      };
+      return await this.txManager.imageWorkerManager.getImage(src);
     } else {
       const response = await fetch(src);
       const blob = await response.blob();

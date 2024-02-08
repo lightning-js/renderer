@@ -52,7 +52,7 @@ export class ImageWorkerManager {
       if (error) {
         reject(new Error(error));
       } else {
-        resolve({ data: data as ImageBitmap });
+        resolve(data);
       }
     }
   }
