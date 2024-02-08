@@ -159,6 +159,11 @@ export class PageContainer extends Component {
         const newPageIndex = (this.curPageIndex + 1) % numPages;
         this.setPage(newPageIndex).catch(console.error);
       }
+      // If a number key is pressed, jump to that page
+      const numPressed = parseInt(e.key, 10);
+      if (numPressed >= 1 && numPressed <= numPages) {
+        this.setPage(numPressed - 1).catch(console.error);
+      }
     });
     // Once we've bound keys for the first time, turn this method into a noop
     this.bindWindowKeys = () => {
