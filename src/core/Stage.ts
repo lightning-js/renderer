@@ -33,7 +33,10 @@ import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfT
 import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { ContextSpy } from './lib/ContextSpy.js';
-import type { FpsUpdatePayload } from '../common/CommonTypes.js';
+import type {
+  FpsUpdatePayload,
+  FrameTickPayload,
+} from '../common/CommonTypes.js';
 
 export interface StageOptions {
   rootId: number;
@@ -57,6 +60,11 @@ export type StageFpsUpdateHandler = (
   fpsData: FpsUpdatePayload,
 ) => void;
 
+export type StageFrameTickHandler = (
+  stage: Stage,
+  frameTickData: FrameTickPayload,
+) => void;
+
 const bufferMemory = 2e6;
 const autoStart = true;
 
@@ -74,6 +82,7 @@ export class Stage extends EventEmitter {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  frameCount = 0;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
@@ -184,6 +193,7 @@ export class Stage extends EventEmitter {
     if (!this.root) {
       return;
     }
+    this.frameCount++;
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = getTimeStamp();
 
@@ -191,6 +201,11 @@ export class Stage extends EventEmitter {
       ? 100 / 6
       : this.currentFrameTime - this.lastFrameTime;
 
+    this.emit('frameTick', {
+      count: this.frameCount,
+      time: this.currentFrameTime,
+      delta: this.deltaTime,
+    });
     // step animation
     animationManager.update(this.deltaTime);
   }

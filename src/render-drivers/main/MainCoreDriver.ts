@@ -25,14 +25,21 @@ import type {
   ITextNodeWritableProps,
 } from '../../main-api/INode.js';
 import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
-import { Stage, type StageFpsUpdateHandler } from '../../core/Stage.js';
+import {
+  Stage,
+  type StageFpsUpdateHandler,
+  type StageFrameTickHandler,
+} from '../../core/Stage.js';
 import type {
   RendererMain,
   RendererMainSettings,
 } from '../../main-api/RendererMain.js';
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
-import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
+import type {
+  FpsUpdatePayload,
+  FrameTickPayload,
+} from '../../common/CommonTypes.js';
 
 export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
@@ -80,6 +87,10 @@ export class MainCoreDriver implements ICoreDriver {
     this.stage.on('fpsUpdate', ((stage, fpsData) => {
       this.onFpsUpdate(fpsData);
     }) satisfies StageFpsUpdateHandler);
+
+    this.stage.on('frameTick', ((stage, frameTickData) => {
+      this.onFrameTick(frameTickData);
+    }) satisfies StageFrameTickHandler);
   }
 
   createNode(props: INodeWritableProps): INode {
@@ -127,6 +138,10 @@ export class MainCoreDriver implements ICoreDriver {
   }
 
   onFpsUpdate(fpsData: FpsUpdatePayload) {
+    throw new Error('Method not implemented.');
+  }
+
+  onFrameTick(frameTickData: FrameTickPayload) {
     throw new Error('Method not implemented.');
   }
   //#endregion
