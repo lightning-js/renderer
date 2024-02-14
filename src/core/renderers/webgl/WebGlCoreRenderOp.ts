@@ -74,7 +74,6 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   draw() {
     const { glw, shader, shaderProps, options } = this;
-    // shaderOp.draw(this);
 
     const { shManager } = options;
     shManager.useShader(shader);

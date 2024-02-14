@@ -25,7 +25,6 @@ import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreRenderOp } from './CoreRenderOp.js';
 import type { CoreShader } from './CoreShader.js';
-import type { WebGlRenderTexture } from './webgl/WebGlRenderTexture.js';
 
 export interface QuadOptions {
   width: number;
@@ -62,9 +61,5 @@ export abstract class CoreRenderer {
   abstract render(surface: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
-  abstract createRenderTexture(
-    width: number,
-    height: number,
-  ): WebGlRenderTexture;
   abstract getShaderManager(): CoreShaderManager;
 }

@@ -22,28 +22,37 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rttNode = renderer.createNode({
     x: 30,
     y: 110,
+    width: 1500,
+    height: 1500,
+    parent: node,
+    color: 0x0000ffff,
+    rtt: true,
+  });
+
+  const rttNodeImage = renderer.createNode({
+    x: 30,
+    y: 110,
     width: 500,
     height: 500,
-    parent: node,
-    rtt: true,
+    parent: rttNode,
     src: '../assets/rocko.png',
   });
 
-  const rttChild1 = renderer.createTextNode({
-    parent: rttNode,
-    x: 120,
-    y: 510,
-    fontFamily: 'Ubuntu',
-    fontSize: 20,
-    text: 'RTT child text',
-  });
+  // const rttChild1 = renderer.createTextNode({
+  //   parent: rttNode,
+  //   x: 120,
+  //   y: 510,
+  //   fontFamily: 'Ubuntu',
+  //   fontSize: 20,
+  //   text: 'RTT child text',
+  // });
 
-  const rttChild2 = renderer.createNode({
-    parent: rttNode,
-    x: 265,
-    y: 512,
-    color: 0xffffffff,
-    width: 20,
-    height: 20,
-  });
+  // const rttChild2 = renderer.createNode({
+  //   parent: rttNode,
+  //   x: 265,
+  //   y: 512,
+  //   color: 0xffffffff,
+  //   width: 20,
+  //   height: 20,
+  // });
 }

@@ -32,6 +32,7 @@ import type {
   TextureFailedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
+import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   NodeTextureFailedPayload,
   NodeTextureLoadedPayload,
@@ -179,6 +180,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     };
     // Allow for parent to be processed appropriately
     this.parent = props.parent;
+
+    // Allow for Render Texture to be processed appropriately
+    this.rtt = props.rtt;
+
     this.updateScaleRotateTransform();
   }
 
@@ -240,6 +245,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       error,
     } satisfies NodeTextureFailedPayload);
   };
+
+  loadRenderTexture(): void {
+    const { txManager } = this.stage;
+    const { width, height } = this.props;
+
+    const texture = txManager.loadTexture('RenderTexture', { width, height });
+    this.props.texture = texture;
+    this.props.textureOptions = null;
+  }
   //#endregion Textures
 
   loadShader<Type extends keyof ShaderMap>(
@@ -572,9 +586,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       rtt,
       parentHasRenderTexture,
     });
-
-    // Calculate absolute X and Y based on all ancestors
-    // renderer.addQuad(absX, absY, w, h, color, texture, textureOptions, zIndex);
   }
 
   //#region Properties
@@ -943,10 +954,24 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set rtt(value: boolean) {
+    if (!value) {
+      return;
+    }
+
     this.children.forEach((child) => {
       child.parentHasRenderTexture = value;
     });
+
     this.props.rtt = value;
+
+    // Load render texture
+    this.loadRenderTexture();
+
+    // Add nodes to renderer
+    this.stage.renderer?.renderToTexture(
+      this,
+      this.props.texture as RenderTexture,
+    );
   }
 
   set parentHasRenderTexture(value: boolean | undefined) {

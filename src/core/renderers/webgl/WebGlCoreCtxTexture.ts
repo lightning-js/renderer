@@ -20,6 +20,7 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
@@ -125,6 +126,15 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       glw.UNSIGNED_BYTE,
       TRANSPARENT_TEXTURE_DATA,
     );
+
+    // If the texture source is a RenderTexture, we can return the width and height
+    // immediately without needing to load any data because we already rendered to the texture
+    if (this.textureSource instanceof RenderTexture) {
+      return {
+        width: this.textureSource.width,
+        height: this.textureSource.height,
+      };
+    }
 
     const textureData = await this.textureSource?.getTextureData();
     let width = 0;
