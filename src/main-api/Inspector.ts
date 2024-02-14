@@ -35,10 +35,18 @@ const stylePropertyMap: {
   [key: string]: (value: string | number | boolean) => string | StyleResponse;
 } = {
   alpha: () => 'opacity',
-  x: () => 'left',
-  y: () => 'top',
-  width: () => 'width',
-  height: () => 'height',
+  x: (x) => {
+    return { prop: 'left', value: `${x}px` };
+  },
+  y: (y) => {
+    return { prop: 'top', value: `${y}px` };
+  },
+  width: (w) => {
+    return { prop: 'width', value: `${w}px` };
+  },
+  height: (h) => {
+    return { prop: 'height', value: `${h}px` };
+  },
   zIndex: () => 'zIndex',
   fontFamily: () => 'font-family',
   fontSize: () => 'font-size',
