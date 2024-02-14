@@ -99,9 +99,11 @@ const gradientColorPropertyMap = [
 ];
 
 export class Inspector {
-  private root: HTMLElement;
+  private root: HTMLElement | null = null;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
+    if (import.meta.env.PROD) return;
+
     if (!settings) {
       throw new Error('settings is required');
     }
@@ -216,7 +218,7 @@ export class Inspector {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ) {
-    if (!value) {
+    if (!value || !this.root) {
       return;
     }
 
@@ -282,8 +284,6 @@ export class Inspector {
     props: INodeAnimatableProps,
     settings: AnimationSettings,
   ) {
-    console.log('animateNode', props, settings);
-
     const {
       duration = 1000,
       delay = 0,

@@ -372,7 +372,7 @@ export class RendererMain extends EventEmitter {
       throw new Error('Could not find target element');
     }
 
-    if (enableInspector) {
+    if (enableInspector && !import.meta.env.PROD) {
       this.inspector = new Inspector(canvas, resolvedSettings);
     }
 
