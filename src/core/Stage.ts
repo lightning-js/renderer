@@ -82,7 +82,6 @@ export class Stage extends EventEmitter {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
-  frameCount = 0;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
@@ -193,7 +192,6 @@ export class Stage extends EventEmitter {
     if (!this.root) {
       return;
     }
-    this.frameCount++;
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = getTimeStamp();
 
@@ -202,7 +200,6 @@ export class Stage extends EventEmitter {
       : this.currentFrameTime - this.lastFrameTime;
 
     this.emit('frameTick', {
-      count: this.frameCount,
       time: this.currentFrameTime,
       delta: this.deltaTime,
     });
