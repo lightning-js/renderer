@@ -10,3 +10,4 @@ build
 releases
 .tmp
 .env
+scripts

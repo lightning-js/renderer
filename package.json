@@ -1,5 +1,5 @@
 {
-  "name": "@lightningjs/renderer",
+  "name": "@ligtningjs/renderer",
   "version": "0.7.2",
   "description": "Lightning 3 Renderer",
   "type": "module",
@@ -11,6 +11,7 @@
     "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
   },
   "scripts": {
+    "preinstall": "node scripts/please-use-pnpm.js",
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
     "build": "tsc --build",
@@ -79,11 +80,12 @@
     "exports",
     "LICENSE",
     "NOTICE",
-    "README.md"
+    "README.md",
+    "scripts"
   ],
   "packageManager": "pnpm@8.9.2",
   "engines": {
-    "npm": "please-use-pnpm",
+    "npm": ">= 10.0.0",
     "pnpm": ">= 8.9.2",
     "node": ">= 20.9.0"
   }
