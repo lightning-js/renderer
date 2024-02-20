@@ -49,7 +49,7 @@ export interface ImageTextureProps {
    *
    * @default true
    */
-  premultiplyAlpha?: boolean;
+  premultiplyAlpha?: boolean | null;
 }
 
 /**
@@ -79,7 +79,7 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureData(): Promise<TextureData> {
-    const { src } = this.props;
+    const { src, premultiplyAlpha } = this.props;
     if (!src) {
       return {
         data: null,
@@ -88,7 +88,7 @@ export class ImageTexture extends Texture {
     if (src instanceof ImageData) {
       return {
         data: src,
-        premultiplyAlpha: true,
+        premultiplyAlpha,
       };
     }
 
@@ -98,18 +98,23 @@ export class ImageTexture extends Texture {
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
-      return await this.txManager.imageWorkerManager.getImage(src);
+      const textureData = await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
+      return textureData;
     } else {
       const response = await fetch(src);
       const blob = await response.blob();
-      const premultiplyAlpha = this.hasAlphaChannel(blob.type);
+      const hasAlphaChannel =
+        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
       return {
         data: await createImageBitmap(blob, {
-          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         }),
-        premultiplyAlpha,
+        premultiplyAlpha: hasAlphaChannel,
       };
     }
   }
@@ -128,7 +133,7 @@ export class ImageTexture extends Texture {
   ): Required<ImageTextureProps> {
     return {
       src: props.src ?? '',
-      premultiplyAlpha: props.premultiplyAlpha ?? true,
+      premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
     };
   }
 
