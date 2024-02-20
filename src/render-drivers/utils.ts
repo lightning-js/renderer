@@ -1,5 +1,6 @@
 import { CoreExtension } from '../../exports/core-api.js';
 import type { Stage } from '../core/Stage.js';
+import type { CustomDataMap } from '../main-api/INode.js';
 
 /**
  * Type guard that checks if a Class extends CoreExtension.
@@ -54,4 +55,30 @@ export async function loadCoreExtension(
       `The core extension at '${coreExtensionModule}' does not extend CoreExtension.`,
     );
   }
+}
+
+export function santizeCustomDataMap(d: CustomDataMap): CustomDataMap {
+  for (const key in d) {
+    const value = d[key];
+
+    if (typeof value === 'string' && value.length > 2048) {
+      console.warn(
+        `Custom Data value for ${key} is too long, it will be truncated to 2048 characters`,
+      );
+      d[key] = value.substring(0, 2048);
+    }
+
+    if (
+      typeof value !== 'boolean' &&
+      typeof value !== 'string' &&
+      typeof value !== 'number'
+    ) {
+      console.warn(
+        `Custom Data value for ${key} is not a boolean, string, or number, it will be ignored`,
+      );
+      delete d[key];
+    }
+  }
+
+  return d;
 }

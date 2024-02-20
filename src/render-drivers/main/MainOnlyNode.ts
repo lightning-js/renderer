@@ -18,6 +18,7 @@
  */
 
 import type {
+  CustomDataMap,
   INode,
   INodeAnimatableProps,
   INodeWritableProps,
@@ -39,6 +40,7 @@ import type {
   NodeLoadedEventHandler,
   NodeFailedEventHandler,
 } from '../../common/CommonTypes.js';
+import { santizeCustomDataMap } from '../utils.js';
 
 let nextId = 1;
 
@@ -56,6 +58,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureRef | null = null;
   protected _shader: ShaderRef | null = null;
+  protected _data: CustomDataMap | undefined = {};
 
   constructor(
     props: INodeWritableProps,
@@ -110,6 +113,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
+    this._data = props.data;
   }
 
   get x(): number {
@@ -423,6 +427,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
     if (shader) {
       this.coreNode.loadShader(shader.shType, shader.props);
     }
+  }
+
+  get data(): CustomDataMap | undefined {
+    return this._data;
+  }
+
+  set data(d: CustomDataMap) {
+    this._data = santizeCustomDataMap(d);
   }
 
   destroy(): void {
