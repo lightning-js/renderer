@@ -98,11 +98,10 @@ export class ImageTexture extends Texture {
     }
 
     if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
-      const textureData = await this.txManager.imageWorkerManager.getImage(
+      return await this.txManager.imageWorkerManager.getImage(
         src,
         premultiplyAlpha,
       );
-      return textureData;
     } else {
       const response = await fetch(src);
       const blob = await response.blob();
