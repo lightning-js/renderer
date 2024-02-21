@@ -261,7 +261,9 @@ export abstract class WebGlCoreShader extends CoreShader {
     if (renderOp.textures.length > 0) {
       this.bindTextures(renderOp.textures);
     }
+
     const { glw } = renderOp;
+
     // Bind standard automatic uniforms
     this.setUniform('u_resolution', [glw.canvas.width, glw.canvas.height]);
     this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);

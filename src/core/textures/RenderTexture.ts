@@ -57,7 +57,7 @@ export class RenderTexture extends Texture {
   }
 
   get height() {
-    return this.props.width;
+    return this.props.height;
   }
 
   set height(value: number) {
@@ -72,16 +72,6 @@ export class RenderTexture extends Texture {
   }
 
   create(glw: WebGlContextWrapper) {
-    // Create Framebuffer object
-    this.framebuffer = glw.createFramebuffer();
-
-    if (!this.framebuffer) {
-      throw new Error('Unable to create framebuffer');
-    }
-
-    // Bind the framebuffer
-    glw.bindFramebuffer(this.framebuffer);
-
     // Create a render texture
     const texture = glw.createTexture();
     if (!texture) {
@@ -99,13 +89,24 @@ export class RenderTexture extends Texture {
       glw.UNSIGNED_BYTE,
       null,
     );
-    glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
+
     glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
     glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
     glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
+    // Create Framebuffer object
+    this.framebuffer = glw.createFramebuffer();
+
+    if (!this.framebuffer) {
+      throw new Error('Unable to create framebuffer');
+    }
+    // Bind the framebuffer
+    glw.bindFramebuffer(this.framebuffer);
 
     // Attach the texture to the framebuffer
     glw.framebufferTexture2D(glw.COLOR_ATTACHMENT0, texture, 0);
+
+    // Unbind the framebuffer
+    glw.bindFramebuffer(null);
 
     this.nativeTexture = texture;
   }

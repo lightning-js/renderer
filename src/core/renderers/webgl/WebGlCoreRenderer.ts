@@ -101,6 +101,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   curBufferIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
   renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
+  rttNodes: CoreNode[] = [];
 
   //// Default Shader
   defaultShader: WebGlCoreShader;
@@ -110,6 +111,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * White pixel texture used by default when no texture is specified.
    */
   defaultTexture: Texture;
+
+  /**
+   * Whether the renderer is currently rendering to a texture.
+   */
+  public renderToTextureActive = false;
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options.stage);
@@ -269,6 +275,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // If the current render op's shader props are not compatible with the
       // the new shader props, create a new one render op.
       if (
+        renderToTexture ||
         curRenderOp.shader !== targetShader ||
         !compareRect(curRenderOp.clippingRect, clippingRect) ||
         (curRenderOp.shader !== this.defaultShader &&
@@ -526,7 +533,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
     this.renderOps.forEach((renderOp, i) => {
       if (doLog) {
-        console.log('renderOp', i, renderOp.numQuads);
+        console.log('renderOp', renderOp.numQuads);
       }
       renderOp.draw();
     });
@@ -545,23 +552,55 @@ export class WebGlCoreRenderer extends CoreRenderer {
         height: renderTexture.height,
       });
     }
+    this.rttNodes.push(node);
+  }
 
-    // Bind the framebuffer
-    glw.bindFramebuffer(renderTexture.framebuffer);
+  renderRTTNodes() {
+    const { glw } = this;
+    // Render all associated RTT nodes to their textures
+    for (let i = 0; i < this.rttNodes.length; i++) {
+      const node = this.rttNodes[i];
 
-    // Allow renderer to be instantiated
-    queueMicrotask(() => {
-      if (node.parent) {
-        // Force a full update
-        node.update(this.stage.deltaTime, node.parent.clippingRect);
+      // Skip nodes that don't have RTT updates
+      if (!node || !node.hasRTTupdates) {
+        continue;
       }
-      // Render all associated quads to the render texture
-      this.stage.addQuads(node);
-    });
 
-    // Bind default frameBuffer associated with HTMLCanvasElement or OffscreenCanvas
+      const texture = node?.texture as RenderTexture;
+      this.renderToTextureActive = true;
+
+      // Bind the the texture's framebuffer
+      glw.bindFramebuffer(texture.framebuffer);
+      glw.viewport(0, 0, texture.width, texture.height);
+
+      // Clear the framebuffer
+      glw.clear();
+
+      // Render all associated quads to the texture
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (!child || !child.hasRTTupdates) {
+          continue;
+        }
+        child.update(this.stage.deltaTime, {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          valid: false,
+        });
+        this.stage.addQuads(child);
+        child.hasRTTupdates = false;
+      }
+      node.hasRTTupdates = false;
+    }
+
+    // Render all associated quads to the texture
+    this.render();
+    this.renderToTextureActive = false;
+
+    // Unbind the framebuffer
+    glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
     glw.bindFramebuffer(null);
   }
 }
-
-const idx = 0;

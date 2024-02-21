@@ -75,6 +75,7 @@ export class WebGlContextWrapper {
   public readonly RGBA;
   public readonly UNSIGNED_BYTE;
   public readonly UNPACK_PREMULTIPLY_ALPHA_WEBGL;
+  public readonly UNPACK_FLIP_Y_WEBGL;
   public readonly FLOAT;
   public readonly TRIANGLES;
   public readonly UNSIGNED_SHORT;
@@ -162,6 +163,7 @@ export class WebGlContextWrapper {
     this.RGBA = gl.RGBA;
     this.UNSIGNED_BYTE = gl.UNSIGNED_BYTE;
     this.UNPACK_PREMULTIPLY_ALPHA_WEBGL = gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL;
+    this.UNPACK_FLIP_Y_WEBGL = gl.UNPACK_FLIP_Y_WEBGL;
     this.FLOAT = gl.FLOAT;
     this.TRIANGLES = gl.TRIANGLES;
     this.UNSIGNED_SHORT = gl.UNSIGNED_SHORT;

@@ -167,7 +167,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public premultipliedColorBl = 0;
   public premultipliedColorBr = 0;
   public calcZIndex = 0;
-
+  public hasRTTupdates = false;
   private isComplex = false;
 
   constructor(protected stage: Stage, props: CoreNodeProps) {
@@ -233,6 +233,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
+
+    // If parent has a render texture, flag that we need to update
+    // @todo: Reserve type for RTT updates
+    if (this.parentHasRenderTexture) {
+      this.setRTTUpdates(1);
+    }
+
     this.emit('loaded', {
       type: 'texture',
       dimensions,
@@ -252,7 +259,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     const texture = txManager.loadTexture('RenderTexture', { width, height });
     this.props.texture = texture;
-    this.props.textureOptions = null;
+    this.props.textureOptions = {
+      flipY: true,
+    };
   }
   //#endregion Textures
 
@@ -284,6 +293,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const parent = this.props.parent;
     if (parent && !(parent.updateType & UpdateType.Children)) {
       parent.setUpdateType(UpdateType.Children);
+    }
+
+    // If node is part of RTT texture
+    // Flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.setRTTUpdates(type);
     }
   }
 
@@ -410,7 +425,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
-    if (this.updateType & UpdateType.Children && this.children.length) {
+    if (
+      this.updateType & UpdateType.Children &&
+      this.children.length &&
+      !this.rtt
+    ) {
       this.children.forEach((child) => {
         // Trigger the depenedent update types on the child
         child.setUpdateType(childUpdateType);
@@ -551,6 +570,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       rtt,
       parentHasRenderTexture,
     } = this.props;
+
+    // Prevent quad rendering if parent has a render texture
+    // and this node is not the render texture
+    if (parentHasRenderTexture) {
+      if (!renderer.renderToTextureActive) {
+        return;
+      }
+    }
+
     const {
       premultipliedColorTl,
       premultipliedColorTr,
@@ -943,6 +971,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       newParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
+
+      if (newParent.rtt || newParent.parentHasRenderTexture) {
+        this.setRTTUpdates(UpdateType.All);
+      }
     }
     this.parentHasRenderTexture =
       newParent?.rtt || newParent?.parentHasRenderTexture;
@@ -958,16 +990,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return;
     }
 
-    this.children.forEach((child) => {
-      child.parentHasRenderTexture = value;
-    });
+    this.props.rtt = true;
 
-    this.props.rtt = value;
+    // Flag for initial render pass
+    this.hasRTTupdates = true;
 
     // Load render texture
     this.loadRenderTexture();
 
-    // Add nodes to renderer
+    // Store RTT nodes in a separate list
     this.stage.renderer?.renderToTexture(
       this,
       this.props.texture as RenderTexture,
@@ -982,5 +1013,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return this.props.parentHasRenderTexture;
   }
 
+  get texture(): Texture | null {
+    return this.props.texture;
+  }
+
+  setRTTUpdates(type: number) {
+    this.hasRTTupdates = !!type;
+    this.parent?.setRTTUpdates(type);
+  }
   //#endregion Properties
 }
