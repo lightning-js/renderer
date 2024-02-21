@@ -372,10 +372,6 @@ export class RendererMain extends EventEmitter {
       throw new Error('Could not find target element');
     }
 
-    if (enableInspector && !import.meta.env.PROD) {
-      this.inspector = new Inspector(canvas, resolvedSettings);
-    }
-
     // Hook up the driver's callbacks
     driver.onCreateNode = (node) => {
       this.nodes.set(node.id, node);
@@ -390,6 +386,10 @@ export class RendererMain extends EventEmitter {
     };
 
     targetEl.appendChild(canvas);
+
+    if (enableInspector && !import.meta.env.PROD) {
+      this.inspector = new Inspector(canvas, resolvedSettings);
+    }
   }
 
   /**

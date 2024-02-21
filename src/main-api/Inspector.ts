@@ -32,9 +32,17 @@ interface StyleResponse {
   value: string;
 }
 const stylePropertyMap: {
-  [key: string]: (value: string | number | boolean) => string | StyleResponse;
+  [key: string]: (
+    value: string | number | boolean,
+  ) => string | StyleResponse | null;
 } = {
-  alpha: () => 'opacity',
+  alpha: (v) => {
+    if (v === 1) {
+      return null;
+    }
+
+    return { prop: 'opacity', value: `${v}` };
+  },
   x: (x) => {
     return { prop: 'left', value: `${x}px` };
   },
@@ -42,9 +50,17 @@ const stylePropertyMap: {
     return { prop: 'top', value: `${y}px` };
   },
   width: (w) => {
+    if (w === 0) {
+      return null;
+    }
+
     return { prop: 'width', value: `${w}px` };
   },
   height: (h) => {
+    if (h === 0) {
+      return null;
+    }
+
     return { prop: 'height', value: `${h}px` };
   },
   zIndex: () => 'zIndex',
@@ -61,24 +77,52 @@ const stylePropertyMap: {
   contain: () => 'contain',
   verticalAlign: () => 'vertical-align',
   clipping: (v) => {
+    if (v === false) {
+      return null;
+    }
+
     return { prop: 'overflow', value: v ? 'hidden' : 'visible' };
   },
   rotation: (v) => {
+    if (v === 0) {
+      return null;
+    }
+
     return { prop: 'transform', value: `rotate(${v}rad)` };
   },
   scale: (v) => {
+    if (v === 1) {
+      return null;
+    }
+
     return { prop: 'transform', value: `scale(${v})` };
   },
   scaleX: (v) => {
+    if (v === 1) {
+      return null;
+    }
+
     return { prop: 'transform', value: `scaleX(${v})` };
   },
   scaleY: (v) => {
+    if (v === 1) {
+      return null;
+    }
+
     return { prop: 'transform', value: `scaleY(${v})` };
   },
   src: (v) => {
+    if (!v) {
+      return null;
+    }
+
     return { prop: 'background-image', value: `url(${v})` };
   },
   color: (v) => {
+    if (v === 0) {
+      return null;
+    }
+
     return { prop: 'color', value: convertColorToRgba(v as number) };
   },
 };
@@ -108,6 +152,11 @@ const gradientColorPropertyMap = [
 
 export class Inspector {
   private root: HTMLElement | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private height = 1080;
+  private width = 1920;
+  private scaleX = 1;
+  private scaleY = 1;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
     if (import.meta.env.PROD) return;
@@ -117,31 +166,62 @@ export class Inspector {
     }
 
     // calc dimensions based on the devicePixelRatio
-    const height = Math.ceil(
+    this.height = Math.ceil(
       settings.appHeight ?? 1080 / (settings.deviceLogicalPixelRatio ?? 1),
     );
 
-    const width = Math.ceil(
+    this.width = Math.ceil(
       settings.appWidth ?? 1900 / (settings.deviceLogicalPixelRatio ?? 1),
     );
 
-    this.root = document.createElement('div');
-    this.root.id = 'root';
-    this.root.style.left = '0';
-    this.root.style.top = '0';
-    this.root.style.width = `${width}px`;
-    this.root.style.height = `${height}px`;
-    this.root.style.position = 'absolute';
-    this.root.style.transformOrigin = '0 0 0';
-    this.root.style.transform = `scale(${
-      settings.deviceLogicalPixelRatio ?? 1
-    },${settings.deviceLogicalPixelRatio ?? 1})`;
-    this.root.style.overflow = 'hidden';
-    this.root.style.zIndex = '-65535';
+    this.scaleX = settings.deviceLogicalPixelRatio ?? 1;
+    this.scaleY = settings.deviceLogicalPixelRatio ?? 1;
 
+    this.canvas = canvas;
+    this.root = document.createElement('div');
+    this.setRootPosition();
     document.body.appendChild(this.root);
 
+    //listen for changes on canvas
+    const mutationObserver = new MutationObserver(
+      this.setRootPosition.bind(this),
+    );
+    mutationObserver.observe(canvas, {
+      attributes: true,
+      childList: false,
+      subtree: false,
+    });
+
+    // Create a ResizeObserver to watch for changes in the element's size
+    const resizeObserver = new ResizeObserver(this.setRootPosition.bind(this));
+    resizeObserver.observe(canvas);
+
+    //listen for changes on window
+    window.addEventListener('resize', this.setRootPosition.bind(this));
+
     console.warn('Inspector is enabled, this will impact performance');
+  }
+
+  setRootPosition() {
+    if (this.root === null || this.canvas === null) {
+      return;
+    }
+
+    // get the world position of the canvas object, so we can match the inspector to it
+    const rect = this.canvas.getBoundingClientRect();
+    const top = document.documentElement.scrollTop + rect.top;
+    const left = document.documentElement.scrollLeft + rect.left;
+
+    this.root.id = 'root';
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${top}px`;
+    this.root.style.width = `${this.width}px`;
+    this.root.style.height = `${this.height}px`;
+    this.root.style.position = 'absolute';
+    this.root.style.transformOrigin = '0 0 0';
+    this.root.style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
+    this.root.style.overflow = 'hidden';
+    this.root.style.zIndex = '-65534';
   }
 
   createDiv(
@@ -170,6 +250,10 @@ export class Inspector {
   createNode(driver: ICoreDriver, properties: INodeWritableProps): INode {
     const node = driver.createNode(properties);
     const div = this.createDiv(node, properties);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    (div as any).node = node;
+
     return this.createProxy(node, div);
   }
 
@@ -226,7 +310,7 @@ export class Inspector {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ) {
-    if (!value || !this.root) {
+    if (this.root === null || value === undefined || value === null) {
       return;
     }
 
@@ -266,9 +350,16 @@ export class Inspector {
     if (stylePropertyMap[property]) {
       const mappedStyleResponse = stylePropertyMap[property]?.(value);
 
+      if (mappedStyleResponse === null) {
+        return;
+      }
+
       if (typeof mappedStyleResponse === 'string') {
         div.style.setProperty(mappedStyleResponse, String(value));
-      } else if (typeof mappedStyleResponse === 'object') {
+        return;
+      }
+
+      if (typeof mappedStyleResponse === 'object') {
         div.style.setProperty(
           mappedStyleResponse.prop,
           mappedStyleResponse.value,
@@ -283,6 +374,16 @@ export class Inspector {
       div.setAttribute(String(stylePropertyMap[property]), String(value));
       return;
     }
+
+    // custom data properties
+    // Needs https://github.com/lightning-js/renderer/pull/178 to be merged
+    // if (property === 'data') {
+    //   for (const key in value) {
+    //     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    //     div.setAttribute(`data-${key}`, String(value[key]));
+    //   }
+    //   return;
+    // }
   }
 
   // simple animation handler
