@@ -112,6 +112,10 @@ export class CoreAnimation extends EventEmitter {
       return;
     }
 
+    if (this.delayFor <= 0 && this.progress === 0) {
+      this.emit('start', {});
+    }
+
     this.progress += dt / duration;
 
     if (this.progress > 1) {

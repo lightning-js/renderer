@@ -26,6 +26,12 @@ import type { CoreAnimation } from './CoreAnimation.js';
 import { assertTruthy } from '../../utils.js';
 
 export class CoreAnimationController implements IAnimationController {
+  startedPromise: Promise<void> | null = null;
+  /**
+   * If this is null, then the animation hasn't started yet.
+   */
+  startedResolve: ((scope?: any) => void) | null = null;
+
   stoppedPromise: Promise<void> | null = null;
   /**
    * If this is null, then the animation is in a finished / stopped state.
@@ -42,6 +48,9 @@ export class CoreAnimationController implements IAnimationController {
   state: AnimationControllerState;
 
   start(): IAnimationController {
+    this.makeStartedPromise();
+    this.animation.once('start', this.started.bind(this));
+
     this.makeStoppedPromise();
     this.animation.once('finished', this.finished.bind(this));
 
@@ -77,11 +86,26 @@ export class CoreAnimationController implements IAnimationController {
     return this;
   }
 
+  waitUntilStarted(): Promise<void> {
+    this.makeStartedPromise();
+    const promise = this.startedPromise;
+    assertTruthy(promise);
+    return promise;
+  }
+
   waitUntilStopped(): Promise<void> {
     this.makeStoppedPromise();
     const promise = this.stoppedPromise;
     assertTruthy(promise);
     return promise;
+  }
+
+  private makeStartedPromise(): void {
+    if (this.startedResolve === null) {
+      this.startedPromise = new Promise((resolve) => {
+        this.startedResolve = resolve;
+      });
+    }
   }
 
   private makeStoppedPromise(): void {
@@ -90,6 +114,13 @@ export class CoreAnimationController implements IAnimationController {
         this.stoppedResolve = resolve;
       });
     }
+  }
+
+  private started(): void {
+    assertTruthy(this.startedResolve);
+    // resolve promise (and pass current this to continue to the chain)
+    this.startedResolve(this);
+    this.startedResolve = null;
   }
 
   private finished(): void {
