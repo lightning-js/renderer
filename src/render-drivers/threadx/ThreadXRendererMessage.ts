@@ -17,7 +17,10 @@
  * limitations under the License.
  */
 
-import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
+import type {
+  FpsUpdatePayload,
+  FrameTickPayload,
+} from '../../common/CommonTypes.js';
 
 /**
  * @module
@@ -70,12 +73,22 @@ export interface ThreadXRendererFpsUpdateMessage
 }
 
 /**
+ * A message sent from the renderer worker to the main worker to update the FPS
+ */
+export interface ThreadXRendererFrameTickMessage
+  extends ThreadXRendererMessage {
+  type: 'frameTick';
+  frameTickData: FrameTickPayload;
+}
+
+/**
  * A map of message types to message shapes
  */
 export interface ThreadXRendererMessageMap {
   init: ThreadXRendererInitMessage;
   releaseTexture: ThreadXRendererReleaseTextureMessage;
   fpsUpdate: ThreadXRendererFpsUpdateMessage;
+  frameTick: ThreadXRendererFrameTickMessage;
 }
 
 /**

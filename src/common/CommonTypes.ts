@@ -103,3 +103,11 @@ export interface FpsUpdatePayload {
   fps: number;
   contextSpyData: Record<string, number> | null;
 }
+
+/**
+ * Event payload for when a frame tick event is emitted by the Stage
+ */
+export interface FrameTickPayload {
+  time: number;
+  delta: number;
+}

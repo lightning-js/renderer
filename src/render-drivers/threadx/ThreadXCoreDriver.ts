@@ -42,7 +42,10 @@ import {
   type TextNodeStructWritableProps,
 } from './TextNodeStruct.js';
 import { ThreadXMainTextNode } from './ThreadXMainTextNode.js';
-import type { FpsUpdatePayload } from '../../common/CommonTypes.js';
+import type {
+  FpsUpdatePayload,
+  FrameTickPayload,
+} from '../../common/CommonTypes.js';
 
 export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
@@ -81,6 +84,11 @@ export class ThreadXCoreDriver implements ICoreDriver {
         // Forward fpsUpdate events from the renderer worker's Stage to RendererMain
         if (isThreadXRendererMessage('fpsUpdate', message)) {
           this.onFpsUpdate(message.fpsData);
+        }
+
+        // Forward frameTick events from the renderer worker's Stage to RendererMain
+        if (isThreadXRendererMessage('frameTick', message)) {
+          this.onFrameTick(message.frameTickData);
         }
       },
     });
@@ -267,6 +275,10 @@ export class ThreadXCoreDriver implements ICoreDriver {
   }
 
   onFpsUpdate(fps: FpsUpdatePayload): void {
+    throw new Error('Method not implemented.');
+  }
+
+  onFrameTick(frameTickData: FrameTickPayload): void {
     throw new Error('Method not implemented.');
   }
   //#endregion

@@ -369,6 +369,10 @@ export class RendererMain extends EventEmitter {
       this.emit('fpsUpdate', fpsData);
     };
 
+    driver.onFrameTick = (frameTickData) => {
+      this.emit('frameTick', frameTickData);
+    };
+
     targetEl.appendChild(canvas);
   }
 
