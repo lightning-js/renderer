@@ -52,7 +52,6 @@ export class ImageWorkerManager {
       if (error) {
         reject(new Error(error));
       } else {
-        // resolve({ data: data as ImageBitmap });
         resolve(data);
       }
     }
@@ -67,7 +66,7 @@ export class ImageWorkerManager {
       async function getImage(src, premultiplyAlpha) {
         const response = await fetch(src);
         const blob = await response.blob();
-        const hasAlphaChannel = premultiplyAlpha ?? this.hasAlphaChannel(blob.type);  
+        const hasAlphaChannel = premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
 
         const data = await createImageBitmap(blob, {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
