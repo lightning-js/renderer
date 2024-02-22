@@ -85,7 +85,7 @@ export interface TextureData {
    *
    * @defaultValue `false`
    */
-  premultiplyAlpha?: boolean;
+  premultiplyAlpha?: boolean | null;
 }
 
 export type TextureState = 'loading' | 'loaded' | 'failed';
