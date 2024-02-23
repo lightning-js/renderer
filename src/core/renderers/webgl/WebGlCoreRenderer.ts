@@ -533,7 +533,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
     this.renderOps.forEach((renderOp, i) => {
       if (doLog) {
-        console.log('renderOp', renderOp.numQuads);
+        console.log('Quads per operation', renderOp.numQuads);
       }
       renderOp.draw();
     });

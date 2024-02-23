@@ -467,6 +467,9 @@ export class RendererMain extends EventEmitter {
     const colorBr =
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
 
+    const parentHasRenderTexture =
+      props.parent?.rtt ?? props.parent?.parentHasRenderTexture ?? false;
+
     return {
       x: props.x ?? 0,
       y: props.y ?? 0,
@@ -502,6 +505,7 @@ export class RendererMain extends EventEmitter {
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
+      parentHasRenderTexture,
     };
   }
 

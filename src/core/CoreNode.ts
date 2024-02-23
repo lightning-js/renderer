@@ -230,10 +230,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    // Texture was loaded. In case the RAF loop has already stopped, we request
-    // a render to ensure the texture is rendered.
-    this.stage.requestRender();
-
     // If parent has a render texture, flag that we need to update
     // @todo: Reserve type for RTT updates
     if (this.parentHasRenderTexture) {
@@ -244,6 +240,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       type: 'texture',
       dimensions,
     } satisfies NodeTextureLoadedPayload);
+
+    queueMicrotask(() => {
+      // Texture was loaded. In case the RAF loop has already stopped, we request
+      // a render to ensure the texture is rendered.
+      this.stage.requestRender();
+    });
   };
 
   private onTextureFailed: TextureFailedEventHandler = (target, error) => {
@@ -1018,7 +1020,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   setRTTUpdates(type: number) {
-    this.hasRTTupdates = !!type;
+    this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
   //#endregion Properties

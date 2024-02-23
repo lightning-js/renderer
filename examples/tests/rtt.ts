@@ -1,4 +1,5 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import test from './alpha-blending.js';
 interface AnimationExampleSettings {
   duration: number;
   easing: string;
@@ -40,16 +41,35 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     text: 'Render to Texture',
   });
 
+  const clippingRectangle = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 500,
+    parent: testRoot,
+    clipping: true,
+    color: 0x00000000,
+  });
+
   const rootRenderToTextureNode = renderer.createNode({
     x: 0,
     y: 0,
     width: 1920,
     height: 1080,
-    parent: testRoot,
+    parent: clippingRectangle,
     rtt: true,
     zIndex: 5,
-    colorTop: randomColor(),
-    colorBottom: randomColor(),
+    colorTop: 0xc0ffeeff,
+    colorBottom: 0xbada55ff,
+  });
+
+  const rttLabel = renderer.createTextNode({
+    parent: rootRenderToTextureNode,
+    x: 140,
+    y: 140,
+    fontFamily: 'Ubuntu',
+    fontSize: 140,
+    text: 'Render to Texture Text',
   });
 
   const rootChildRectangle = renderer.createNode({
@@ -61,7 +81,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  new Array(90).fill(0).forEach((_, i) => {
+  new Array(105).fill(0).forEach((_, i) => {
     renderer.createNode({
       parent: rootRenderToTextureNode,
       x: (i % 15) * 120 + 50,
@@ -90,15 +110,4 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     { ...animationSettings, loop: true },
   );
   rootRectRotate.start();
-
-  setInterval(() => {
-    const colorize = rootRenderToTextureNode.animate(
-      {
-        colorTop: randomColor(),
-        colorBottom: randomColor(),
-      },
-      { easing: 'ease-in', duration: 1500 },
-    );
-    colorize.start();
-  }, 5000);
 }

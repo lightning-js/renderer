@@ -101,13 +101,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
         texture: null,
         textureOptions: null,
         rtt: props.rtt,
+        parentHasRenderTexture: props.parentHasRenderTexture,
       });
     // Forward loaded/failed events
     this.coreNode.on('loaded', this.onTextureLoaded);
     this.coreNode.on('failed', this.onTextureFailed);
 
     // Assign properties to this object
-    this.parent = props.parent as MainOnlyNode;
+    this.parent = props.parent as unknown as MainOnlyNode;
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
@@ -409,6 +410,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set rtt(value: boolean) {
     this.coreNode.rtt = value;
+  }
+
+  get parentHasRenderTexture(): boolean {
+    return this.coreNode.parentHasRenderTexture;
+  }
+
+  set parentHasRenderTexture(value: boolean) {
+    this.coreNode.parentHasRenderTexture = value;
   }
 
   private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {

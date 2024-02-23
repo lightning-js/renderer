@@ -402,6 +402,11 @@ export interface INodeWritableProps {
    * @default false
    */
   rtt: boolean;
+
+  /**
+   * Whether the Node has a Render Texture as a parent
+   */
+  parentHasRenderTexture: boolean;
 }
 
 export type INodeAnimatableProps = {
