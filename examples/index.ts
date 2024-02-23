@@ -74,6 +74,7 @@ const defaultPhysicalPixelRatio = 1;
   const enableContextSpy = urlParams.get('contextSpy') === 'true';
   const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
+  const enableInspector = urlParams.get('inspector') === 'true';
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
   const logicalPixelRatio = resolution / appHeight;
@@ -94,6 +95,7 @@ const defaultPhysicalPixelRatio = 1;
       logFps,
       enableContextSpy,
       perfMultiplier,
+      enableInspector,
     );
     return;
   }
@@ -113,6 +115,7 @@ async function runTest(
   logFps: boolean,
   enableContextSpy: boolean,
   perfMultiplier: number,
+  enableInspector: boolean,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -133,6 +136,7 @@ async function runTest(
     enableContextSpy,
     logicalPixelRatio,
     physicalPixelRatio,
+    enableInspector,
     customSettings,
   );
 
@@ -177,6 +181,7 @@ async function initRenderer(
   enableContextSpy: boolean,
   logicalPixelRatio: number,
   physicalPixelRatio: number,
+  enableInspector: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let driver: ICoreDriver | null = null;
@@ -199,6 +204,7 @@ async function initRenderer(
       coreExtensionModule: coreExtensionModuleUrl,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
+      enableInspector,
       ...customSettings,
     },
     'app',
@@ -305,6 +311,7 @@ async function runAutomation(driverName: string, logFps: boolean) {
     false,
     logicalPixelRatio,
     defaultPhysicalPixelRatio,
+    false, // enableInspector
   );
 
   // Iterate through all test modules

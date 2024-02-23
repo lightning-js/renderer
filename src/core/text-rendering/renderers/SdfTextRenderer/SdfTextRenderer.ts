@@ -94,8 +94,6 @@ export interface SdfTextRendererState extends TextRendererState {
 
   bufferNumQuads: number;
 
-  // texCoordBuffer: Float32Array | undefined;
-
   vertexBuffer: Float32Array | undefined;
 
   webGlBuffers: BufferCollection | null;

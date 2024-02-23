@@ -125,6 +125,32 @@ export interface RenderInfo {
   textIndent: number;
 }
 
+/**
+ * Calculate height for the canvas
+ *
+ * @param textBaseline
+ * @param fontSize
+ * @param lineHeight
+ * @param numLines
+ * @param offsetY
+ * @returns
+ */
+function calcHeight(
+  textBaseline: TextBaseline,
+  fontSize: number,
+  lineHeight: number,
+  numLines: number,
+  offsetY: number | null,
+) {
+  const baselineOffset = textBaseline !== 'bottom' ? 0.5 * fontSize : 0;
+  return (
+    lineHeight * (numLines - 1) +
+    baselineOffset +
+    Math.max(lineHeight, fontSize) +
+    (offsetY || 0)
+  );
+}
+
 export class LightningTextTextureRenderer {
   private _canvas: OffscreenCanvas | HTMLCanvasElement;
   private _context:
@@ -349,13 +375,13 @@ export class LightningTextTextureRenderer {
     if (h) {
       height = h;
     } else {
-      const baselineOffset =
-        this._settings.textBaseline != 'bottom' ? 0.5 * fontSize : 0;
-      height =
-        lineHeight * (lines.length - 1) +
-        baselineOffset +
-        Math.max(lineHeight, fontSize) +
-        (offsetY || 0);
+      height = calcHeight(
+        this._settings.textBaseline,
+        fontSize,
+        lineHeight,
+        lines.length,
+        offsetY,
+      );
     }
 
     if (offsetY === null) {
@@ -414,7 +440,15 @@ export class LightningTextTextureRenderer {
     const lines = linesOverride?.lines || renderInfo.lines;
     const lineWidths = linesOverride?.lineWidths || renderInfo.lineWidths;
     const height = linesOverride
-      ? linesOverride.lines.length * renderInfo.lineHeight
+      ? calcHeight(
+          this._settings.textBaseline,
+          renderInfo.fontSize,
+          renderInfo.lineHeight,
+          linesOverride.lines.length,
+          this._settings.offsetY === null
+            ? null
+            : this._settings.offsetY * precision,
+        )
       : renderInfo.height;
 
     // Add extra margin to prevent issue with clipped text when scaling.
