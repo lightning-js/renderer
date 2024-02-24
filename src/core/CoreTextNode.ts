@@ -101,9 +101,12 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     } else if (contain === 'width') {
       this.props.width = setWidth;
       this.props.height = calcHeight;
+      this.trState.props.height = calcHeight;
     } else if (contain === 'none') {
       this.props.width = calcWidth;
       this.props.height = calcHeight;
+      this.trState.props.width = calcWidth;
+      this.trState.props.height = calcHeight;
     }
     this.updateLocalTransform();
 
