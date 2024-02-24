@@ -127,6 +127,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    */
   private ssdfFontFamilies: FontFamilyMap = {};
   private msdfFontFamilies: FontFamilyMap = {};
+  private fontFamilyArray: FontFamilyMap[] = [
+    this.ssdfFontFamilies,
+    this.msdfFontFamilies,
+  ];
   private sdfShader: SdfShader;
   private rendererBounds: Bound;
 
@@ -734,10 +738,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   //#endregion Overrides
 
   public resolveFontFace(props: TrFontProps): SdfTrFontFace | undefined {
-    return TrFontManager.resolveFontFace(
-      [this.msdfFontFamilies, this.ssdfFontFamilies],
-      props,
-    ) as SdfTrFontFace | undefined;
+    return TrFontManager.resolveFontFace(this.fontFamilyArray, props) as
+      | SdfTrFontFace
+      | undefined;
   }
 
   /**
