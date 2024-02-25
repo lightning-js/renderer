@@ -579,7 +579,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // Render all associated quads to the texture
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (!child || !child.hasRTTupdates) {
+        if (!child) {
           continue;
         }
         child.update(this.stage.deltaTime, {
@@ -589,9 +589,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
           height: 0,
           valid: false,
         });
+
         this.stage.addQuads(child);
+
         child.hasRTTupdates = false;
       }
+
       node.hasRTTupdates = false;
     }
 
