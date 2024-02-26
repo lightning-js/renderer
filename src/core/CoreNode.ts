@@ -236,6 +236,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setRTTUpdates(1);
     }
 
+    // If this node is RenderTexture, create the framebuffer and texture
+    if (
+      this.props.rtt &&
+      this.texture &&
+      this.texture instanceof RenderTexture
+    ) {
+      this.texture.create(this.stage.renderer.glw);
+    }
+
     this.emit('loaded', {
       type: 'texture',
       dimensions,
@@ -254,17 +263,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       error,
     } satisfies NodeTextureFailedPayload);
   };
-
-  loadRenderTexture(): void {
-    const { txManager } = this.stage;
-    const { width, height } = this.props;
-
-    const texture = txManager.loadTexture('RenderTexture', { width, height });
-    this.props.texture = texture;
-    this.props.textureOptions = {
-      flipY: true,
-    };
-  }
   //#endregion Textures
 
   loadShader<Type extends keyof ShaderMap>(
@@ -991,20 +989,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (!value) {
       return;
     }
-
     this.props.rtt = true;
-
-    // Flag for initial render pass
     this.hasRTTupdates = true;
 
-    // Load render texture
-    this.loadRenderTexture();
-
     // Store RTT nodes in a separate list
-    this.stage.renderer?.renderToTexture(
-      this,
-      this.props.texture as RenderTexture,
-    );
+    this.stage.renderer?.renderToTexture(this);
   }
 
   set parentHasRenderTexture(value: boolean | undefined) {

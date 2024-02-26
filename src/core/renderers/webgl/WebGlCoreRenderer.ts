@@ -542,16 +542,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.renderables = [];
   }
 
-  renderToTexture(node: CoreNode, renderTexture: RenderTexture) {
-    const { glw } = this;
-
-    if (renderTexture.state !== 'loaded') {
-      renderTexture.create(glw);
-      renderTexture.setState('loaded', {
-        width: renderTexture.width,
-        height: renderTexture.height,
-      });
-    }
+  renderToTexture(node: CoreNode) {
     this.rttNodes.push(node);
   }
 

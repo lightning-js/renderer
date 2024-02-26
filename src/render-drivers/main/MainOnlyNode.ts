@@ -112,6 +112,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
+    this.rtt = props.rtt;
   }
 
   get x(): number {
@@ -409,6 +410,16 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   set rtt(value: boolean) {
+    if (value) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
     this.coreNode.rtt = value;
   }
 
