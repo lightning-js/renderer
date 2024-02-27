@@ -16,16 +16,6 @@ const animationSettings: Partial<AnimationExampleSettings> = {
   easing: 'ease-in-out-back',
 };
 
-const randomColor = () => {
-  const randomInt = Math.floor(Math.random() * Math.pow(2, 32));
-  const hexString = randomInt.toString(16).padStart(8, '0');
-  return parseInt(hexString, 16);
-};
-
-const degToRad = (deg: number) => {
-  return (Math.PI / 180) * deg;
-};
-
 export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
@@ -51,13 +41,14 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     width: 1920,
     height: 1080,
     parent: clippingNode,
-    rtt: true,
+    rtt: false,
     zIndex: 5,
-    colorTop: 0xc0ffeeff,
-    colorBottom: 0xbada55ff,
+    colorTop: 0xc0ffee00,
+    colorBottom: 0xbada5500,
   });
 
-  new Array(105).fill(0).forEach((_, i) => {
+  new Array(2000).fill(0).forEach((_, i) => {
+    const image = i % 105;
     const a = renderer.createNode({
       parent: rootRenderToTextureNode,
       x: (i % 15) * 120 + 120,
@@ -66,33 +57,16 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       height: 120,
       scale: 0.85,
       // src: '../assets/rocko.png',
-      src: `https://picsum.photos/id/${i + 30}/120/120`,
-    });
-  });
-
-  new Array(20).fill(0).forEach((_, i) => {
-    const a = renderer.createNode({
-      x: (i % 1) * 1920,
-      y: Math.floor(i / 1) * 800,
-      width: 1920,
-      height: 1080,
-      parent: testRoot,
-      alpha: 1,
-      color: 0xffffffff,
-      // Copy source texture from rootRenderToTextureNode
-      texture: rootRenderToTextureNode.texture,
+      src: `https://picsum.photos/id/${image + 30}/120/120`,
     });
 
     const animation = a.animate(
       {
-        y: Math.floor(i / 1) * 800 - 15000,
+        y: Math.floor(i / 15) * 120 - 5000,
       },
       animationSettings,
     );
+
     animation.start();
   });
-
-  setTimeout(() => {
-    rootRenderToTextureNode.alpha = 0;
-  }, 2000);
 }
