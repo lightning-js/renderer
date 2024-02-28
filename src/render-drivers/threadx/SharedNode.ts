@@ -37,6 +37,7 @@ export class SharedNode extends SharedObject {
       ...extendedCurProps,
       x: sharedNodeStruct.x,
       y: sharedNodeStruct.y,
+      skipRender: sharedNodeStruct.skipRender,
       width: sharedNodeStruct.width,
       height: sharedNodeStruct.height,
       alpha: sharedNodeStruct.alpha,
@@ -69,6 +70,7 @@ export class SharedNode extends SharedObject {
   // generated on this class.
   declare x: number;
   declare y: number;
+  declare skipRender: boolean;
   declare width: number;
   declare height: number;
   declare alpha: number;

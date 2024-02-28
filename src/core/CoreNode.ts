@@ -37,8 +37,24 @@ import type {
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { copyRect, intersectRect, type RectWithValid } from './lib/utils.js';
+import {
+  copyRect,
+  intersectRect,
+  type Bound,
+  type RectWithValid,
+} from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
+
+export enum CoreNodeRenderBoundState {
+  init = 0,
+  OutOfBounds = 1,
+  InBounds = 2,
+}
+
+export interface CoreNodeRenderState {
+  renderable: boolean;
+  boundState: CoreNodeRenderBoundState;
+}
 
 export interface CoreNodeProps {
   id: number;
@@ -75,6 +91,7 @@ export interface CoreNodeProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
+  skipRender: boolean;
 }
 
 type ICoreNode = Omit<
@@ -157,13 +174,23 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     height: 0,
     valid: false,
   };
-  public isRenderable = false;
+  public renderBounds: Bound = {
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
+  };
+  public renderState: CoreNodeRenderState = {
+    renderable: false,
+    boundState: CoreNodeRenderBoundState.init,
+  };
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
   public premultipliedColorTr = 0;
   public premultipliedColorBl = 0;
   public premultipliedColorBr = 0;
   public calcZIndex = 0;
+  // public worldState = CoreNodeRenderBoundState.init;
 
   private isComplex = false;
 
@@ -193,7 +220,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = texture;
     this.props.textureOptions = options;
-    this.checkIsRenderable();
+    this.updateIsRenderable();
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -217,7 +244,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
     this.props.texture = null;
     this.props.textureOptions = null;
-    this.checkIsRenderable();
+    this.updateIsRenderable();
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
@@ -247,7 +274,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
-    this.checkIsRenderable();
+    this.updateIsRenderable();
   }
 
   /**
@@ -294,7 +321,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     )
       .multiply(this.scaleRotateTransform)
       .translate(-pivotTranslateX, -pivotTranslateY);
-    this.setUpdateType(UpdateType.Global);
   }
 
   /**
@@ -324,14 +350,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       if (parent) {
         this.globalTransform.multiply(this.localTransform);
       }
-
       this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
       childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
-      this.checkIsRenderable();
+      this.updateIsRenderable();
+      this.updateBoundingRect();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.Clipping;
     }
@@ -380,7 +406,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
-      this.checkIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
     }
@@ -415,64 +440,147 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.updateType = 0;
   }
 
-  // This function checks if the current node is renderable based on certain properties.
-  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
-  checkIsRenderable(): boolean {
+  //check if CoreNode is renderable based on props
+  checkRenderProps(): boolean {
     if (this.props.texture) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (!this.props.width || !this.props.height) {
-      return (this.isRenderable = false);
+      return false;
     }
 
     if (this.props.shader) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.clipping) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.color !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     // Consider removing these checks and just using the color property check above.
     // Maybe add a forceRender prop for nodes that should always render.
     if (this.props.colorTop !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorBottom !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorLeft !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorRight !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorTl !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorTr !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorBl !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
     if (this.props.colorBr !== 0) {
-      return (this.isRenderable = true);
+      return true;
     }
 
-    return (this.isRenderable = false);
+    return false;
+  }
+
+  checkRenderBounds(): boolean {
+    assertTruthy(this.clippingRect);
+    const rectW = this.clippingRect.width || this.stage.root.width;
+    const rectH = this.clippingRect.height || this.stage.root.height;
+
+    if (
+      this.renderBounds.y1 > rectH + this.clippingRect.y ||
+      this.clippingRect.y > this.renderBounds.y2 ||
+      this.renderBounds.x1 > rectW + this.clippingRect.x ||
+      this.clippingRect.x > this.renderBounds.x2
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  // This function checks if the current node is renderable based on certain properties.
+  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
+  updateIsRenderable() {
+    this.renderState.renderable = this.checkRenderProps();
+  }
+
+  calculateBoundingRect() {
+    const { width, height, globalTransform: transform } = this;
+    const { tx, ty, ta, tb, tc, td } = transform as Matrix3d;
+
+    let minX = tx;
+    let maxX = tx + width * ta;
+
+    let minY = ty;
+    let maxY = ty + height * td;
+
+    if (tb === 0 || tc === 0) {
+      this.renderBounds = {
+        x1: minX,
+        y1: minY,
+        x2: maxX,
+        y2: maxY,
+      };
+    } else {
+      const xCorners = [
+        tx, //top-left
+        tx + width * ta, //top-right
+        tx + width * ta + height * tb, //bottom-right
+        tx + height * tb, //bottom-left
+      ];
+
+      const yCorners = [
+        ty, //top-left
+        ty + width * tc, //top-right
+        ty + width * tc + height * td, //bottom-right
+        ty + height * td, //bottom-left
+      ];
+
+      minX = Math.min(...xCorners);
+      maxX = Math.max(...xCorners);
+      minY = Math.min(...yCorners);
+      maxY = Math.min(...yCorners);
+      this.renderBounds = {
+        x1: minX,
+        y1: minY,
+        x2: maxX,
+        y2: maxY,
+      };
+    }
+  }
+
+  updateBoundingRect() {
+    this.calculateBoundingRect();
+    const check = this.checkRenderBounds();
+    this.setBoundState(
+      check
+        ? CoreNodeRenderBoundState.InBounds
+        : CoreNodeRenderBoundState.OutOfBounds,
+    );
+  }
+
+  setBoundState(state: CoreNodeRenderBoundState) {
+    if (state !== this.renderState.boundState) {
+      this.renderState.boundState = state;
+      this.emit(CoreNodeRenderBoundState[state]);
+    }
   }
 
   /**
@@ -590,6 +698,22 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // Calculate absolute X and Y based on all ancestors
     // renderer.addQuad(absX, absY, w, h, color, texture, textureOptions, zIndex);
+  }
+
+  get skipRender() {
+    return this.props.skipRender;
+  }
+
+  set skipRender(value: boolean) {
+    this.props.skipRender = value;
+  }
+
+  get isInBounds() {
+    return this.renderState.boundState === CoreNodeRenderBoundState.InBounds;
+  }
+
+  get isRenderable() {
+    return this.renderState.renderable;
   }
 
   //#region Properties

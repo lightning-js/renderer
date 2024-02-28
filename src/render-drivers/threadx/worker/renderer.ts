@@ -85,6 +85,7 @@ const threadx = ThreadX.init({
       Object.assign(nodeStruct, {
         x: coreRootNode.x,
         y: coreRootNode.y,
+        skipRender: coreRootNode.skipRender,
         width: coreRootNode.width,
         height: coreRootNode.height,
         alpha: coreRootNode.alpha,

@@ -37,6 +37,7 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
+import type { Matrix3d } from './lib/Matrix3d.js';
 
 export interface StageOptions {
   rootId: number;
@@ -174,6 +175,7 @@ export class Stage extends EventEmitter {
       textureOptions: null,
       shader: null,
       shaderProps: null,
+      skipRender: false,
     });
 
     this.root = rootNode;
@@ -261,7 +263,7 @@ export class Stage extends EventEmitter {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer && node.globalTransform);
 
-    if (node.isRenderable) {
+    if (!node.skipRender && node.isRenderable && node.isInBounds) {
       node.renderQuads(this.renderer);
     }
 

@@ -191,6 +191,7 @@ export interface TrProps extends TrFontProps {
   color: number;
   x: number;
   y: number;
+  skipRender: boolean;
   /**
    * Contain mode for text
    *
@@ -312,6 +313,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   y: (state, value) => {
     state.props.y = value;
+  },
+  skipRender: (state, value) => {
+    state.props.skipRender = value;
   },
   width: (state, value) => {
     state.props.width = value;

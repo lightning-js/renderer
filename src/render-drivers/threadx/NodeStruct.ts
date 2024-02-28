@@ -22,6 +22,7 @@ import { BufferStruct, structProp, genTypeId } from '@lightningjs/threadx';
 export interface NodeStructWritableProps {
   x: number;
   y: number;
+  skipRender: boolean;
   width: number;
   height: number;
   alpha: number;
@@ -54,6 +55,15 @@ export class NodeStruct
   implements NodeStructWritableProps
 {
   static override readonly typeId = genTypeId('NODE');
+
+  @structProp('boolean')
+  get skipRender(): boolean {
+    return false;
+  }
+
+  set skipRender(value: boolean) {
+    // Decorator will handle this
+  }
 
   @structProp('number')
   get x(): number {

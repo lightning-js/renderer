@@ -43,6 +43,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         // ThreadXRendererNode constructor.
         x: sharedNodeStruct.x,
         y: sharedNodeStruct.y,
+        skipRender: sharedNodeStruct.skipRender,
         width: sharedNodeStruct.width,
         height: sharedNodeStruct.height,
         alpha: sharedNodeStruct.alpha,

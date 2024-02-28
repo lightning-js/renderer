@@ -146,6 +146,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       // Node specific properties
       x: props.x,
       y: props.y,
+      skipRender: props.skipRender,
       width: props.width,
       height: props.height,
       parentId: props.parent ? props.parent.id : 0,
@@ -192,6 +193,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       // Node specific properties
       x: props.x,
       y: props.y,
+      skipRender: props.skipRender,
       width: props.width,
       height: props.height,
       parentId: props.parent ? props.parent.id : 0,

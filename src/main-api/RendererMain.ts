@@ -507,6 +507,7 @@ export class RendererMain extends EventEmitter {
     return {
       x: props.x ?? 0,
       y: props.y ?? 0,
+      skipRender: props.skipRender ?? false,
       width: props.width ?? 0,
       height: props.height ?? 0,
       alpha: props.alpha ?? 1,

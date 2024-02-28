@@ -71,6 +71,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode =
       coreNode ||
       new CoreNode(this.stage, {
+        skipRender: props.skipRender,
         id: this.id,
         x: props.x,
         y: props.y,
@@ -114,6 +115,24 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.texture = props.texture;
     this.src = props.src;
     this._data = props.data;
+  }
+
+  onOutOfRenderBounds(fn: () => void) {
+    // this.oobFn = fn;
+    this.coreNode.on('OutOfBounds', fn);
+  }
+
+  onInRenderBounds(fn: () => void) {
+    // this.oobFn = fn;
+    this.coreNode.on('InBounds', fn);
+  }
+
+  get skipRender(): boolean {
+    return this.coreNode.skipRender;
+  }
+
+  set skipRender(value: boolean) {
+    this.coreNode.skipRender = value;
   }
 
   get x(): number {

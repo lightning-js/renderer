@@ -31,6 +31,10 @@ import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
  */
 export interface INodeWritableProps {
   /**
+   * Sets if the renderer should not render this node
+   */
+  skipRender: boolean;
+  /**
    * The x coordinate of the Node's Mount Point.
    *
    * @remarks
