@@ -526,7 +526,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    * Destroy the node and cleanup all resources
    */
   destroy(): void {
-    this.children.forEach((child) => child.destroy());
+    // destroy children
+    for (let i = 0; i < this.children.length; i++) {
+      this.children[i]?.destroy();
+    }
+
     this.children.length = 0;
     this.unloadTexture();
 
