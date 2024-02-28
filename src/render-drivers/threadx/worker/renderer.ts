@@ -110,6 +110,7 @@ const threadx = ThreadX.init({
         pivotX: coreRootNode.pivotX,
         pivotY: coreRootNode.pivotY,
         rotation: coreRootNode.rotation,
+        rtt: coreRootNode.rtt,
       } satisfies NodeStructWritableProps);
 
       // Share the root node that was created by the Stage with the main worker.

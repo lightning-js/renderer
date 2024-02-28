@@ -57,6 +57,8 @@ import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { RenderTexture } from '../../textures/RenderTexture.js';
+import type { CoreNode } from '../../CoreNode.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -99,6 +101,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   curBufferIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
   renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
+  rttNodes: CoreNode[] = [];
 
   //// Default Shader
   defaultShader: WebGlCoreShader;
@@ -108,6 +111,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * White pixel texture used by default when no texture is specified.
    */
   defaultTexture: Texture;
+
+  /**
+   * Whether the renderer is currently rendering to a texture.
+   */
+  public renderToTextureActive = false;
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options.stage);
@@ -235,6 +243,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       tb,
       tc,
       td,
+      rtt: renderToTexture,
+      parentHasRenderTexture,
     } = params;
     let { texture } = params;
 
@@ -265,6 +275,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // If the current render op's shader props are not compatible with the
       // the new shader props, create a new one render op.
       if (
+        renderToTexture ||
         curRenderOp.shader !== targetShader ||
         !compareRect(curRenderOp.clippingRect, clippingRect) ||
         (curRenderOp.shader !== this.defaultShader &&
@@ -277,6 +288,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
         curRenderOp = null;
       }
     }
+
     assertTruthy(targetShader instanceof WebGlCoreShader);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
@@ -289,6 +301,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
         targetDims,
         clippingRect,
         bufferIdx,
+        renderToTexture,
+        parentHasRenderTexture,
       );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
@@ -321,10 +335,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const { txManager } = this.stage;
-    const ctxTexture = txManager.getCtxTexture(texture);
-    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
-    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    let textureIdx;
+
+    if (texture instanceof RenderTexture) {
+      textureIdx = this.addTexture(texture, bufferIdx);
+    } else {
+      const { txManager } = this.stage;
+      const ctxTexture = txManager.getCtxTexture(texture);
+
+      assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+      textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    }
+
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
 
@@ -420,6 +442,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     dimensions: Dimensions,
     clippingRect: RectWithValid,
     bufferIdx: number,
+    renderToTexture?: boolean,
+    parentHasRenderTexture?: boolean,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.glw,
@@ -432,6 +456,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       dimensions,
       bufferIdx,
       0, // Z-Index is only used for explictly added Render Ops
+      renderToTexture,
+      parentHasRenderTexture,
     );
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -450,13 +476,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @returns Assigned Texture Index of the texture in the render op
    */
   private addTexture(
-    texture: WebGlCoreCtxTexture,
+    texture: WebGlCoreCtxTexture | WebGLTexture,
     bufferIdx: number,
     recursive?: boolean,
   ): number {
     const { curRenderOp } = this;
     assertTruthy(curRenderOp);
-    const textureIdx = curRenderOp.addTexture(texture);
+    const textureIdx = curRenderOp.addTexture(texture as WebGlCoreCtxTexture);
     // TODO: Refactor to be more DRY
     if (textureIdx === 0xffffffff) {
       if (recursive) {
@@ -507,7 +533,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
     this.renderOps.forEach((renderOp, i) => {
       if (doLog) {
-        console.log('renderOp', i, renderOp.numQuads);
+        console.log('Quads per operation', renderOp.numQuads);
       }
       renderOp.draw();
     });
@@ -515,6 +541,60 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // clean up
     this.renderables = [];
   }
-}
 
-const idx = 0;
+  renderToTexture(node: CoreNode) {
+    this.rttNodes.push(node);
+  }
+
+  renderRTTNodes() {
+    const { glw } = this;
+    // Render all associated RTT nodes to their textures
+    for (let i = 0; i < this.rttNodes.length; i++) {
+      const node = this.rttNodes[i];
+
+      // Skip nodes that don't have RTT updates
+      if (!node || !node.hasRTTupdates) {
+        continue;
+      }
+
+      const texture = node?.texture as RenderTexture;
+      this.renderToTextureActive = true;
+
+      // Bind the the texture's framebuffer
+      glw.bindFramebuffer(texture.framebuffer);
+      glw.viewport(0, 0, texture.width, texture.height);
+
+      // Clear the framebuffer
+      glw.clear();
+
+      // Render all associated quads to the texture
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (!child) {
+          continue;
+        }
+        child.update(this.stage.deltaTime, {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          valid: false,
+        });
+
+        this.stage.addQuads(child);
+
+        child.hasRTTupdates = false;
+      }
+
+      node.hasRTTupdates = false;
+    }
+
+    // Render all associated quads to the texture
+    this.render();
+    this.renderToTextureActive = false;
+
+    // Unbind the framebuffer
+    glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
+    glw.bindFramebuffer(null);
+  }
+}

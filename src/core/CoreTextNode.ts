@@ -342,6 +342,15 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
+
+    // Prevent quad rendering if parent has a render texture
+    // and this node is not the render texture
+    if (this.parentHasRenderTexture) {
+      if (!renderer.renderToTextureActive) {
+        return;
+      }
+    }
+
     this.textRenderer.renderQuads(
       this.trState,
       this.globalTransform,

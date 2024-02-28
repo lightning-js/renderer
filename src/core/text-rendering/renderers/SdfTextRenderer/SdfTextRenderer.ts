@@ -667,6 +667,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       { height: textH, width: textW },
       0,
       zIndex,
+      false,
+      false,
     );
 
     const texture = state.trFontFace?.texture;

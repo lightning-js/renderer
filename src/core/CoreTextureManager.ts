@@ -25,6 +25,7 @@ import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
+import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
 
 /**
@@ -40,6 +41,7 @@ export interface TextureMap {
   ImageTexture: typeof ImageTexture;
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
+  RenderTexture: typeof RenderTexture;
 }
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
@@ -162,6 +164,7 @@ export class CoreTextureManager {
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
     this.registerTextureType('SubTexture', SubTexture);
+    this.registerTextureType('RenderTexture', RenderTexture);
   }
 
   registerTextureType<Type extends keyof TextureMap>(

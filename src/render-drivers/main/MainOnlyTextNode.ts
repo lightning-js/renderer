@@ -93,6 +93,7 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         textureOptions: null,
         shader: null,
         shaderProps: null,
+        rtt: false,
       }),
     );
   }

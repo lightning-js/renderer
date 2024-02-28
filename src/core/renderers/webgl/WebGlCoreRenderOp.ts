@@ -49,6 +49,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
+    readonly renderToTexture: boolean | undefined,
+    readonly parentHasRenderTexture: boolean | undefined,
   ) {
     super();
     this.maxTextures = shader.supportsIndexedTextures
@@ -72,9 +74,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   draw() {
     const { glw, shader, shaderProps, options } = this;
-    // shaderOp.draw(this);
-
     const { shManager } = options;
+
     shManager.useShader(shader);
     shader.bindRenderOp(this, shaderProps);
 

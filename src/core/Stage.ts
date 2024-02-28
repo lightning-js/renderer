@@ -174,6 +174,7 @@ export class Stage extends EventEmitter {
       textureOptions: null,
       shader: null,
       shaderProps: null,
+      rtt: false,
     });
 
     this.root = rootNode;
@@ -228,8 +229,16 @@ export class Stage extends EventEmitter {
     // test if we need to update the scene
     renderer?.reset();
 
+    // If we have RTT nodes draw them first
+    // So we can use them as textures in the main scene
+    if (renderer.rttNodes.length > 0) {
+      renderer.renderRTTNodes();
+    }
+
+    // Fill quads buffer
     this.addQuads(this.root);
 
+    // Perform render pass
     renderer?.render();
 
     // Reset renderRequested flag if it was set

@@ -223,6 +223,7 @@ export class ThreadXRendererNode extends SharedNode {
       pivotX: sharedNodeStruct.pivotX,
       pivotY: sharedNodeStruct.pivotY,
       rotation: sharedNodeStruct.rotation,
+      rtt: sharedNodeStruct.rtt,
 
       // These are passed in via message handlers
       shader: null,

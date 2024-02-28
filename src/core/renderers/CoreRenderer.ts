@@ -46,6 +46,8 @@ export interface QuadOptions {
   tb: number;
   tc: number;
   td: number;
+  rtt?: boolean;
+  parentHasRenderTexture?: boolean;
 }
 
 export abstract class CoreRenderer {
@@ -60,4 +62,5 @@ export abstract class CoreRenderer {
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract getShaderManager(): CoreShaderManager;
+  abstract get renderToTextureActive(): boolean;
 }
