@@ -439,6 +439,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   destroy(): void {
     this.emit('beforeDestroy', {});
+    this.coreNode.destroy();
     this.parent = null;
     this.texture = null;
     this.emit('afterDestroy', {});
