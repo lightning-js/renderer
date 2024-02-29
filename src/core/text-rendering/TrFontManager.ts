@@ -44,76 +44,76 @@ function rawResolveFontToUse(
   stretch: string,
 ): TrFontFace | undefined {
   const weight = fontWeightToNumber(weightIn);
-  return familyMapsByPriority.reduce<TrFontFace | undefined>(
-    (prev, fontFamiles) => {
-      if (prev) {
-        return prev;
-      }
+  let result = undefined;
 
-      const fontFaces = fontFamiles[family];
-      if (!fontFaces) {
-        return undefined;
-      }
+  for (const fontFamiles of familyMapsByPriority) {
+    if (result) {
+      break;
+    }
 
-      if (fontFaces.size === 1) {
-        // No Exact match found, find nearest weight match
-        const msg = `TrFontManager: Only one font face found for family: '${family}' - will be used for all weights and styles`;
-        console.warn(msg);
+    const fontFaces = fontFamiles[family];
+    if (!fontFaces) {
+      continue;
+    }
 
-        return fontFaces.values().next().value;
-      }
-
-      const weightMap = new Map<number, TrFontFace>();
-      for (const fontFace of fontFaces) {
-        const fontFamilyWeight = fontWeightToNumber(
-          fontFace.descriptors.weight,
-        );
-        if (
-          fontFamilyWeight === weight &&
-          fontFace.descriptors.style === style &&
-          fontFace.descriptors.stretch === stretch
-        ) {
-          return fontFace;
-        }
-
-        weightMap.set(fontFamilyWeight, fontFace);
-      }
-
+    if (fontFaces.size === 1) {
       // No Exact match found, find nearest weight match
-      const msg = `TrFontManager: No exact match: '${family} Weight: ${weight} Style: ${style} Stretch: ${stretch}'`;
-      console.error(msg);
+      console.warn(
+        `TrFontManager: Only one font face found for family: '${family}' - will be used for all weights and styles`,
+      );
 
-      if (weight === 400 && weightMap.has(500)) {
-        return weightMap.get(500);
+      result = fontFaces.values().next().value as TrFontFace;
+      continue;
+    }
+
+    const weightMap = new Map<number, TrFontFace>();
+    for (const fontFace of fontFaces) {
+      const fontFamilyWeight = fontWeightToNumber(fontFace.descriptors.weight);
+      if (
+        fontFamilyWeight === weight &&
+        fontFace.descriptors.style === style &&
+        fontFace.descriptors.stretch === stretch
+      ) {
+        result = fontFace;
+        break;
       }
 
-      if (weight === 500 && weightMap.has(400)) {
-        return weightMap.get(400);
-      }
+      weightMap.set(fontFamilyWeight, fontFace);
+    }
 
-      if (weight < 400) {
-        const lighter =
-          weightMap.get(300) || weightMap.get(200) || weightMap.get(100);
-        if (lighter) {
-          return lighter;
-        }
-      }
+    // No Exact match found, find nearest weight match
+    const msg = `TrFontManager: No exact match: '${family} Weight: ${weight} Style: ${style} Stretch: ${stretch}'`;
+    console.error(msg);
 
-      if (weight > 500) {
-        const bolder =
-          weightMap.get(600) ||
-          weightMap.get(700) ||
-          weightMap.get(800) ||
-          weightMap.get(900);
-        if (bolder) {
-          return bolder;
-        }
-      }
+    if (!result && weight === 400 && weightMap.has(500)) {
+      result = weightMap.get(500);
+    }
 
-      return undefined;
-    },
-    undefined,
-  );
+    if (!result && weight === 500 && weightMap.has(400)) {
+      result = weightMap.get(400);
+    }
+
+    if (!result && weight < 400) {
+      const lighter =
+        weightMap.get(300) || weightMap.get(200) || weightMap.get(100);
+      if (lighter) {
+        result = lighter;
+      }
+    }
+
+    if (!result && weight > 500) {
+      const bolder =
+        weightMap.get(600) ||
+        weightMap.get(700) ||
+        weightMap.get(800) ||
+        weightMap.get(900);
+      if (bolder) {
+        result = bolder;
+      }
+    }
+  }
+
+  return result;
 }
 const resolveFontToUse = memize(rawResolveFontToUse);
 
