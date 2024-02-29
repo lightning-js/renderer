@@ -42,18 +42,17 @@ import {
   intersectRect,
   type Bound,
   type RectWithValid,
+  createBound,
+  boundInsideBound,
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
+import { RenderCoords } from './lib/RenderCoords.js';
 
-export enum CoreNodeRenderBoundState {
-  init = 0,
-  OutOfBounds = 1,
-  InBounds = 2,
-}
-
-export interface CoreNodeRenderState {
-  renderable: boolean;
-  boundState: CoreNodeRenderBoundState;
+export enum CoreNodeRenderState {
+  Init = 0,
+  OutOfBounds = 2,
+  InBounds = 4,
+  InViewport = 8,
 }
 
 export interface CoreNodeProps {
@@ -91,7 +90,6 @@ export interface CoreNodeProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
-  skipRender: boolean;
 }
 
 type ICoreNode = Omit<
@@ -164,9 +162,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   protected props: Required<CoreNodeProps>;
 
   public updateType = UpdateType.All;
+
   public globalTransform?: Matrix3d;
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
+  public renderCoords?: RenderCoords;
   public clippingRect: RectWithValid = {
     x: 0,
     y: 0,
@@ -174,25 +174,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     height: 0,
     valid: false,
   };
-  public renderBounds: Bound = {
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 0,
-  };
-  public renderState: CoreNodeRenderState = {
-    renderable: false,
-    boundState: CoreNodeRenderBoundState.init,
-  };
+  public isRenderable = false;
+  public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
+
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
   public premultipliedColorTr = 0;
   public premultipliedColorBl = 0;
   public premultipliedColorBr = 0;
   public calcZIndex = 0;
-  // public worldState = CoreNodeRenderBoundState.init;
-
-  private isComplex = false;
 
   constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
@@ -321,6 +311,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     )
       .multiply(this.scaleRotateTransform)
       .translate(-pivotTranslateX, -pivotTranslateY);
+
+    this.setUpdateType(UpdateType.Global);
   }
 
   /**
@@ -350,14 +342,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       if (parent) {
         this.globalTransform.multiply(this.localTransform);
       }
+      this.calculateRenderCoords();
       this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
       childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
-      this.updateIsRenderable();
-      this.updateBoundingRect();
+      this.updateRenderState();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.Clipping;
     }
@@ -499,87 +491,130 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return false;
   }
 
-  checkRenderBounds(): boolean {
+  checkRenderBounds(bound: Bound): CoreNodeRenderState {
     assertTruthy(this.clippingRect);
     const rectW = this.clippingRect.width || this.stage.root.width;
     const rectH = this.clippingRect.height || this.stage.root.height;
+    const strictBound = createBound(
+      this.clippingRect.x,
+      this.clippingRect.y,
+      rectW,
+      rectH,
+    );
 
-    if (
-      this.renderBounds.y1 > rectH + this.clippingRect.y ||
-      this.clippingRect.y > this.renderBounds.y2 ||
-      this.renderBounds.x1 > rectW + this.clippingRect.x ||
-      this.clippingRect.x > this.renderBounds.x2
-    ) {
-      return false;
+    if (boundInsideBound(bound, strictBound)) {
+      return CoreNodeRenderState.InViewport;
     }
-    return true;
+
+    const renderM = this.stage.boundsMargin;
+    const preloadBound = createBound(
+      this.clippingRect.x - renderM[3],
+      this.clippingRect.y - renderM[0],
+      this.clippingRect.x + rectW + renderM[1],
+      this.clippingRect.y + rectH + renderM[2],
+    );
+
+    if (boundInsideBound(bound, preloadBound)) {
+      return CoreNodeRenderState.InBounds;
+    }
+    return CoreNodeRenderState.OutOfBounds;
+  }
+
+  updateRenderState() {
+    const renderBounds = this.calculateBoundingRect();
+    const renderState = this.checkRenderBounds(renderBounds);
+    if (renderState !== this.renderState) {
+      const previous = this.renderState;
+      this.renderState = renderState;
+      if (previous === CoreNodeRenderState.InViewport) {
+        this.emit('OutOfViewport');
+      }
+      this.emit(CoreNodeRenderState[renderState], {
+        previous,
+        current: renderState,
+      });
+    }
+    this.updateIsRenderable();
+  }
+
+  setRenderState(state: CoreNodeRenderState) {
+    if (state !== this.renderState) {
+      this.renderState = state;
+      this.emit(CoreNodeRenderState[state]);
+    }
   }
 
   // This function checks if the current node is renderable based on certain properties.
   // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
   updateIsRenderable() {
-    this.renderState.renderable = this.checkRenderProps();
+    if (!this.checkRenderProps()) {
+      this.isRenderable = false;
+    }
+    this.isRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
   }
 
-  calculateBoundingRect() {
+  calculateRenderCoords() {
     const { width, height, globalTransform: transform } = this;
-    const { tx, ty, ta, tb, tc, td } = transform as Matrix3d;
+    assertTruthy(transform);
+    const { tx, ty, ta, tb, tc, td } = transform;
+    if (tb === 0 && tc === 0) {
+      const minX = tx;
+      const maxX = tx + width * ta;
 
-    let minX = tx;
-    let maxX = tx + width * ta;
-
-    let minY = ty;
-    let maxY = ty + height * td;
-
-    if (tb === 0 || tc === 0) {
-      this.renderBounds = {
-        x1: minX,
-        y1: minY,
-        x2: maxX,
-        y2: maxY,
-      };
+      const minY = ty;
+      const maxY = ty + height * td;
+      this.renderCoords = new RenderCoords([
+        //top-left
+        minX,
+        minY,
+        //top-right
+        maxX,
+        minY,
+        //bottom-right
+        maxX,
+        maxY,
+        //bottom-left
+        minX,
+        maxY,
+      ]);
     } else {
-      const xCorners = [
-        tx, //top-left
-        tx + width * ta, //top-right
-        tx + width * ta + height * tb, //bottom-right
-        tx + height * tb, //bottom-left
-      ];
-
-      const yCorners = [
-        ty, //top-left
-        ty + width * tc, //top-right
-        ty + width * tc + height * td, //bottom-right
-        ty + height * td, //bottom-left
-      ];
-
-      minX = Math.min(...xCorners);
-      maxX = Math.max(...xCorners);
-      minY = Math.min(...yCorners);
-      maxY = Math.min(...yCorners);
-      this.renderBounds = {
-        x1: minX,
-        y1: minY,
-        x2: maxX,
-        y2: maxY,
-      };
+      this.renderCoords = new RenderCoords([
+        //top-left
+        tx,
+        ty,
+        //top-right
+        tx + width * ta,
+        ty + width * tc,
+        //bottom-right
+        tx + width * ta + height * tb,
+        ty + width * tc + height * td,
+        //bottom-left
+        tx + height * tb,
+        ty + height * td,
+      ]);
     }
   }
 
-  updateBoundingRect() {
-    this.calculateBoundingRect();
-    const check = this.checkRenderBounds();
-    this.setBoundState(
-      check
-        ? CoreNodeRenderBoundState.InBounds
-        : CoreNodeRenderBoundState.OutOfBounds,
-    );
-  }
+  calculateBoundingRect(): Bound {
+    const { renderCoords, globalTransform: transform } = this;
+    assertTruthy(transform);
+    assertTruthy(renderCoords);
 
-  setBoundState(state: CoreNodeRenderBoundState) {
-    if (state !== this.renderState.boundState) {
-      this.renderState.boundState = state;
-      this.emit(CoreNodeRenderBoundState[state]);
+    const { tb, tc } = transform;
+    if (tb === 0 || tc === 0) {
+      return createBound(
+        renderCoords.x1,
+        renderCoords.y1,
+        renderCoords.x3,
+        renderCoords.y3,
+      );
+    } else {
+      return createBound(
+        Math.min(...renderCoords.xValues),
+        Math.min(...renderCoords.yValues),
+        Math.max(...renderCoords.xValues),
+        Math.max(...renderCoords.yValues),
+      );
     }
   }
 
@@ -642,9 +677,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.children.length = 0;
     this.unloadTexture();
 
-    this.isRenderable = false;
     this.clippingRect.valid = false;
 
+    this.isRenderable = false;
+
+    delete this.renderCoords;
     delete this.globalTransform;
     delete this.scaleRotateTransform;
     delete this.localTransform;
@@ -698,22 +735,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // Calculate absolute X and Y based on all ancestors
     // renderer.addQuad(absX, absY, w, h, color, texture, textureOptions, zIndex);
-  }
-
-  get skipRender() {
-    return this.props.skipRender;
-  }
-
-  set skipRender(value: boolean) {
-    this.props.skipRender = value;
-  }
-
-  get isInBounds() {
-    return this.renderState.boundState === CoreNodeRenderBoundState.InBounds;
-  }
-
-  get isRenderable() {
-    return this.renderState.renderable;
   }
 
   //#region Properties

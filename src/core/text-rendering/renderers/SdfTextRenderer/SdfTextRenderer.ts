@@ -56,6 +56,7 @@ import type {
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
+import type { RenderCoords } from '../../../lib/RenderCoords.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {

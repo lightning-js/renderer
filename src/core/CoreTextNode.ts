@@ -59,7 +59,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
         {
           x: this.absX,
           y: this.absY,
-          skipRender: props.skipRender,
           width: props.width,
           height: props.height,
           textAlign: props.textAlign,

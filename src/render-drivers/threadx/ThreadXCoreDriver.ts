@@ -112,6 +112,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
         canvas: offscreenCanvas,
         appWidth: rendererSettings.appWidth,
         appHeight: rendererSettings.appHeight,
+        boundsMargin: rendererSettings.boundsMargin,
         deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
         devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
         clearColor: rendererSettings.clearColor,
@@ -146,7 +147,6 @@ export class ThreadXCoreDriver implements ICoreDriver {
       // Node specific properties
       x: props.x,
       y: props.y,
-      skipRender: props.skipRender,
       width: props.width,
       height: props.height,
       parentId: props.parent ? props.parent.id : 0,
@@ -193,7 +193,6 @@ export class ThreadXCoreDriver implements ICoreDriver {
       // Node specific properties
       x: props.x,
       y: props.y,
-      skipRender: props.skipRender,
       width: props.width,
       height: props.height,
       parentId: props.parent ? props.parent.id : 0,

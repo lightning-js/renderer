@@ -37,12 +37,12 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
-import type { Matrix3d } from './lib/Matrix3d.js';
 
 export interface StageOptions {
   rootId: number;
   appWidth: number;
   appHeight: number;
+  boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -78,6 +78,7 @@ export class Stage extends EventEmitter {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: WebGlCoreRenderer;
   public readonly root: CoreNode;
+  public readonly boundsMargin: [number, number, number, number];
 
   /// State
   deltaTime = 0;
@@ -102,6 +103,7 @@ export class Stage extends EventEmitter {
       debug,
       appWidth,
       appHeight,
+      boundsMargin,
       enableContextSpy,
       numImageWorkers,
     } = options;
@@ -110,6 +112,14 @@ export class Stage extends EventEmitter {
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+
+    let bm = [0, 0, 0, 0] as [number, number, number, number];
+    if (boundsMargin) {
+      bm = Array.isArray(boundsMargin)
+        ? boundsMargin
+        : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
+    }
+    this.boundsMargin = bm;
 
     if (debug?.monitorTextureCache) {
       setInterval(() => {
@@ -175,7 +185,6 @@ export class Stage extends EventEmitter {
       textureOptions: null,
       shader: null,
       shaderProps: null,
-      skipRender: false,
     });
 
     this.root = rootNode;
@@ -263,7 +272,7 @@ export class Stage extends EventEmitter {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer && node.globalTransform);
 
-    if (!node.skipRender && node.isRenderable && node.isInBounds) {
+    if (node.isRenderable) {
       node.renderQuads(this.renderer);
     }
 

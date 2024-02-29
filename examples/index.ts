@@ -198,6 +198,7 @@ async function initRenderer(
     {
       appWidth,
       appHeight,
+      boundsMargin: [100, 100, 100, 100],
       deviceLogicalPixelRatio: logicalPixelRatio,
       devicePhysicalPixelRatio: physicalPixelRatio,
       clearColor: 0x00000000,

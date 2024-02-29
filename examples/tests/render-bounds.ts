@@ -1,5 +1,6 @@
 import type { IAnimationController } from '../../dist/exports/main-api.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import test from './alpha-blending.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
   const degToRad = (deg: number) => {
@@ -17,23 +18,28 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   // });
 
   const redRect = renderer.createNode({
-    skipRender: true,
-    x: -11,
+    // skipRender: true,
+    x: 0,
     y: 0,
     alpha: 1,
-    width: 0,
-    height: 0,
+    width: 200,
+    height: 200,
     color: 0xff0000ff,
     pivot: 0,
     parent: testRoot,
   });
 
-  redRect.onOutOfRenderBounds(() => {
+  redRect.onOutOfBounds(() => {
     console.log('red rect outside render bounds');
   });
 
-  redRect.onInRenderBounds(() => {
+  redRect.onInBounds(() => {
     console.log('red rect in render bounds');
+  });
+
+  const text = renderer.createTextNode({
+    text: 'moo',
+    parent: testRoot,
   });
 
   // let redRectAnimation: IAnimationController | null = null;

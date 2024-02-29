@@ -66,6 +66,7 @@ const threadx = ThreadX.init({
         rootId: nodeStruct.id,
         appWidth: message.appWidth,
         appHeight: message.appHeight,
+        boundsMargin: message.boundsMargin,
         deviceLogicalPixelRatio: message.deviceLogicalPixelRatio,
         devicePhysicalPixelRatio: message.devicePhysicalPixelRatio,
         clearColor: message.clearColor,
@@ -85,7 +86,6 @@ const threadx = ThreadX.init({
       Object.assign(nodeStruct, {
         x: coreRootNode.x,
         y: coreRootNode.y,
-        skipRender: coreRootNode.skipRender,
         width: coreRootNode.width,
         height: coreRootNode.height,
         alpha: coreRootNode.alpha,

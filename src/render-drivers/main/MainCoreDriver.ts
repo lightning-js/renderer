@@ -55,6 +55,7 @@ export class MainCoreDriver implements ICoreDriver {
       rootId: getNewId(),
       appWidth: rendererSettings.appWidth,
       appHeight: rendererSettings.appHeight,
+      boundsMargin: rendererSettings.boundsMargin,
       deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
       clearColor: rendererSettings.clearColor,

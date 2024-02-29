@@ -42,7 +42,6 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         id: getNewId(),
         x: props.x,
         y: props.y,
-        skipRender: props.skipRender,
         width: props.width,
         height: props.height,
         alpha: props.alpha,

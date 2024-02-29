@@ -199,7 +199,6 @@ export class ThreadXRendererNode extends SharedNode {
       id: sharedNodeStruct.id,
       x: sharedNodeStruct.x,
       y: sharedNodeStruct.y,
-      skipRender: sharedNodeStruct.skipRender,
       width: sharedNodeStruct.width,
       height: sharedNodeStruct.height,
       alpha: sharedNodeStruct.alpha,
