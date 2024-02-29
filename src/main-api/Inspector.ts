@@ -384,14 +384,13 @@ export class Inspector {
     }
 
     // custom data properties
-    // Needs https://github.com/lightning-js/renderer/pull/178 to be merged
-    // if (property === 'data') {
-    //   for (const key in value) {
-    //     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    //     div.setAttribute(`data-${key}`, String(value[key]));
-    //   }
-    //   return;
-    // }
+    if (property === 'data') {
+      for (const key in value) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        div.setAttribute(`data-${key}`, String(value[key]));
+      }
+      return;
+    }
   }
 
   // simple animation handler
