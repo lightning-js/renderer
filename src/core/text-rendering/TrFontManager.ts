@@ -44,13 +44,8 @@ function rawResolveFontToUse(
   stretch: string,
 ): TrFontFace | undefined {
   const weight = fontWeightToNumber(weightIn);
-  let result = undefined;
 
   for (const fontFamiles of familyMapsByPriority) {
-    if (result) {
-      break;
-    }
-
     const fontFaces = fontFamiles[family];
     if (!fontFaces) {
       continue;
@@ -62,8 +57,7 @@ function rawResolveFontToUse(
         `TrFontManager: Only one font face found for family: '${family}' - will be used for all weights and styles`,
       );
 
-      result = fontFaces.values().next().value as TrFontFace;
-      continue;
+      return fontFaces.values().next().value as TrFontFace;
     }
 
     const weightMap = new Map<number, TrFontFace>();
@@ -74,8 +68,7 @@ function rawResolveFontToUse(
         fontFace.descriptors.style === style &&
         fontFace.descriptors.stretch === stretch
       ) {
-        result = fontFace;
-        break;
+        return fontFace;
       }
 
       weightMap.set(fontFamilyWeight, fontFace);
@@ -85,35 +78,35 @@ function rawResolveFontToUse(
     const msg = `TrFontManager: No exact match: '${family} Weight: ${weight} Style: ${style} Stretch: ${stretch}'`;
     console.error(msg);
 
-    if (!result && weight === 400 && weightMap.has(500)) {
-      result = weightMap.get(500);
+    if (weight === 400 && weightMap.has(500)) {
+      return weightMap.get(500);
     }
 
-    if (!result && weight === 500 && weightMap.has(400)) {
-      result = weightMap.get(400);
+    if (weight === 500 && weightMap.has(400)) {
+      return weightMap.get(400);
     }
 
-    if (!result && weight < 400) {
+    if (weight < 400) {
       const lighter =
         weightMap.get(300) || weightMap.get(200) || weightMap.get(100);
       if (lighter) {
-        result = lighter;
+        return lighter;
       }
     }
 
-    if (!result && weight > 500) {
+    if (weight > 500) {
       const bolder =
         weightMap.get(600) ||
         weightMap.get(700) ||
         weightMap.get(800) ||
         weightMap.get(900);
       if (bolder) {
-        result = bolder;
+        return bolder;
       }
     }
   }
 
-  return result;
+  return undefined;
 }
 const resolveFontToUse = memize(rawResolveFontToUse);
 
