@@ -106,7 +106,7 @@ function rawResolveFontToUse(
     }
   }
 
-  return undefined;
+  return;
 }
 const resolveFontToUse = memize(rawResolveFontToUse);
 
