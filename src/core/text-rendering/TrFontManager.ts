@@ -43,7 +43,7 @@ function rawResolveFontToUse(
   style: string,
   stretch: string,
 ): TrFontFace | undefined {
-  const weight = fontWeightToNumber(weightIn);
+  let weight = fontWeightToNumber(weightIn);
 
   for (const fontFamiles of familyMapsByPriority) {
     const fontFaces = fontFamiles[family];
@@ -78,6 +78,9 @@ function rawResolveFontToUse(
     const msg = `TrFontManager: No exact match: '${family} Weight: ${weight} Style: ${style} Stretch: ${stretch}'`;
     console.error(msg);
 
+    // Follow the CSS font-weight algorithm to find the nearest weight match
+    // https://www.w3.org/TR/2018/REC-css-fonts-3-20180920/#font-matching-algorithm
+
     if (weight === 400 && weightMap.has(500)) {
       return weightMap.get(500);
     }
@@ -87,22 +90,21 @@ function rawResolveFontToUse(
     }
 
     if (weight < 400) {
-      const lighter =
-        weightMap.get(300) || weightMap.get(200) || weightMap.get(100);
-      if (lighter) {
-        return lighter;
+      while (weight > 0) {
+        if (weightMap.has(weight)) {
+          return weightMap.get(weight);
+        }
+        weight -= 100;
       }
+      // reset back for the next loop
+      weight = 600;
     }
 
-    if (weight > 500) {
-      const bolder =
-        weightMap.get(600) ||
-        weightMap.get(700) ||
-        weightMap.get(800) ||
-        weightMap.get(900);
-      if (bolder) {
-        return bolder;
+    while (weight < 1000) {
+      if (weightMap.has(weight)) {
+        return weightMap.get(weight);
       }
+      weight += 100;
     }
   }
 
