@@ -106,6 +106,15 @@ function rawResolveFontToUse(
       }
       weight += 100;
     }
+
+    // finally check lower again
+    weight = 500;
+    while (weight > 0) {
+      if (weightMap.has(weight)) {
+        return weightMap.get(weight);
+      }
+      weight -= 100;
+    }
   }
 
   return;
