@@ -111,13 +111,6 @@ const stylePropertyMap: {
 
     return { prop: 'transform', value: `scaleY(${v})` };
   },
-  src: (v) => {
-    if (!v) {
-      return null;
-    }
-
-    return { prop: 'background-image', value: `url(${v})` };
-  },
   color: (v) => {
     if (v === 0) {
       return null;
@@ -221,7 +214,7 @@ export class Inspector {
     this.root.style.transformOrigin = '0 0 0';
     this.root.style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
     this.root.style.overflow = 'hidden';
-    this.root.style.zIndex = '-65534';
+    this.root.style.zIndex = '65534';
   }
 
   createDiv(
@@ -253,6 +246,9 @@ export class Inspector {
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    (node as any).div = div;
 
     return this.createProxy(node, div);
   }
@@ -335,6 +331,18 @@ export class Inspector {
     // special case for text
     if (property === 'text') {
       div.innerHTML = String(value);
+
+      // hide text because we can't render SDF fonts
+      // it would look weird and obstruct the WebGL rendering
+      div.style.visibility = 'hidden';
+      return;
+    }
+
+    // special case for images
+    // we're not setting any CSS properties to avoid images getting loaded twice
+    // as the renderer will handle the loading of the image. Setting it to `data-src`
+    if (property === 'src' && value) {
+      div.setAttribute(`data-src`, String(value));
       return;
     }
 
@@ -376,14 +384,13 @@ export class Inspector {
     }
 
     // custom data properties
-    // Needs https://github.com/lightning-js/renderer/pull/178 to be merged
-    // if (property === 'data') {
-    //   for (const key in value) {
-    //     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    //     div.setAttribute(`data-${key}`, String(value[key]));
-    //   }
-    //   return;
-    // }
+    if (property === 'data') {
+      for (const key in value) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        div.setAttribute(`data-${key}`, String(value[key]));
+      }
+      return;
+    }
   }
 
   // simple animation handler

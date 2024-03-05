@@ -392,7 +392,35 @@ export interface INodeWritableProps {
    * - `2 * Math.PI`: 360 rotation clockwise
    */
   rotation: number;
+  /**
+   * Node data element for custom data storage (optional)
+   *
+   * @remarks
+   * This property is used to store custom data on the Node as a key/value data store.
+   * Data values are limited to string, numbers, booleans. Strings will be truncated
+   * to a 2048 character limit for performance reasons.
+   *
+   * This is not a data storage mechanism for large amounts of data please use a
+   * dedicated data storage mechanism for that.
+   *
+   * The custom data will be reflected in the inspector as part of `data-*` attributes
+   *
+   * @default `undefined`
+   */
+  data?: CustomDataMap;
 }
+
+/**
+ * A custom data map which can be stored on the INode
+ *
+ * @remarks
+ * This is a map of key-value pairs that can be stored on an INode. It is used
+ * to store custom data that can be used by the application.
+ * The data stored can only be of type string, number or boolean.
+ */
+export type CustomDataMap = {
+  [key: string]: string | number | boolean;
+};
 
 export type INodeAnimatableProps = {
   [Key in keyof INodeWritableProps as NonNullable<
@@ -403,6 +431,7 @@ export type INodeAnimatableProps = {
 };
 
 export interface INodeEvents {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [s: string]: (target: INode, data: any) => void;
 }
 

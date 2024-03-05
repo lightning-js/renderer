@@ -18,7 +18,11 @@
  */
 
 import type { IAnimationController } from '../../common/IAnimationController.js';
-import type { INode, INodeAnimatableProps } from '../../main-api/INode.js';
+import type {
+  CustomDataMap,
+  INode,
+  INodeAnimatableProps,
+} from '../../main-api/INode.js';
 import type {
   RendererMain,
   ShaderRef,
@@ -29,6 +33,7 @@ import type { NodeStruct } from './NodeStruct.js';
 import { SharedNode } from './SharedNode.js';
 import { ThreadXMainAnimationController } from './ThreadXMainAnimationController.js';
 import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
+import { santizeCustomDataMap } from '../utils.js';
 
 export class ThreadXMainNode extends SharedNode implements INode {
   private nextAnimationId = 1;
@@ -36,6 +41,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
   protected _children: ThreadXMainNode[] = [];
   protected _texture: TextureRef | null = null;
   protected _shader: ShaderRef | null = null;
+  protected _data: CustomDataMap | undefined = {};
   private _src = '';
 
   /**
@@ -169,6 +175,14 @@ export class ThreadXMainNode extends SharedNode implements INode {
 
   get props() {
     return this.curProps;
+  }
+
+  get data(): CustomDataMap | undefined {
+    return this._data;
+  }
+
+  set data(d: CustomDataMap) {
+    this._data = santizeCustomDataMap(d);
   }
 
   override destroy() {

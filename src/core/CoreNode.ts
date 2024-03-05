@@ -522,6 +522,35 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.calcZIndex = zIndex;
   }
 
+  /**
+   * Destroy the node and cleanup all resources
+   */
+  destroy(): void {
+    // destroy children
+    for (let i = 0; i < this.children.length; i++) {
+      this.children[i]?.destroy();
+    }
+
+    this.children.length = 0;
+    this.unloadTexture();
+
+    this.isRenderable = false;
+    this.clippingRect.valid = false;
+
+    delete this.globalTransform;
+    delete this.scaleRotateTransform;
+    delete this.localTransform;
+
+    this.props.texture = null;
+    this.props.shader = null;
+
+    if (this.parent && !(this.parent.updateType & UpdateType.Children)) {
+      this.parent.setUpdateType(UpdateType.Children);
+    }
+
+    this.parent = null;
+  }
+
   renderQuads(renderer: CoreRenderer): void {
     const { width, height, texture, textureOptions, shader, shaderProps } =
       this.props;
