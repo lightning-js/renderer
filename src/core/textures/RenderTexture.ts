@@ -18,7 +18,6 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import type { WebGlContextWrapper } from '../lib/WebGlContextWrapper.js';
 import { Texture, type TextureData } from './Texture.js';
 
 /**
@@ -40,8 +39,6 @@ export interface RenderTextureProps {
 
 export class RenderTexture extends Texture {
   props: Required<RenderTextureProps>;
-  framebuffer: WebGLFramebuffer | null = null;
-  nativeTexture: WebGLTexture | null = null;
 
   constructor(txManager: CoreTextureManager, props?: RenderTextureProps) {
     super(txManager);
@@ -64,65 +61,11 @@ export class RenderTexture extends Texture {
     this.props.height = value;
   }
 
-  get ctxTexture(): WebGLTexture {
-    if (!this.nativeTexture) {
-      throw new Error('RenderTexture not created yet');
-    }
-    return this.nativeTexture;
-  }
-
-  create(glw: WebGlContextWrapper) {
-    // Create a render texture
-    const texture = glw.createTexture();
-    if (!texture) {
-      throw new Error('Unable to create texture');
-    }
-
-    glw.bindTexture(texture);
-    glw.texImage2D(
-      0,
-      glw.RGBA,
-      this.width,
-      this.height,
-      0,
-      glw.RGBA,
-      glw.UNSIGNED_BYTE,
-      null,
-    );
-
-    glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
-    glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-    glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-    // Create Framebuffer object
-    this.framebuffer = glw.createFramebuffer();
-
-    if (!this.framebuffer) {
-      throw new Error('Unable to create framebuffer');
-    }
-    // Bind the framebuffer
-    glw.bindFramebuffer(this.framebuffer);
-
-    // Attach the texture to the framebuffer
-    glw.framebufferTexture2D(glw.COLOR_ATTACHMENT0, texture, 0);
-
-    // Unbind the framebuffer
-    glw.bindFramebuffer(null);
-
-    this.nativeTexture = texture;
-  }
-
   override async getTextureData(): Promise<TextureData> {
-    const pixelData32 = new Uint32Array([0xffffff00]);
-    const pixelData8 = new Uint8ClampedArray(pixelData32.buffer);
     return {
-      data: new ImageData(pixelData8, 1, 1),
-      premultiplyAlpha: true,
+      data: null,
+      premultiplyAlpha: null,
     };
-  }
-
-  static override makeCacheKey(props: RenderTextureProps): string {
-    const resolvedProps = RenderTexture.resolveDefaults(props);
-    return `RenderTexture,${resolvedProps.width},${resolvedProps.height}`;
   }
 
   static override resolveDefaults(

@@ -59,6 +59,7 @@ import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
+import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -207,6 +208,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
       return new WebGlCoreCtxSubTexture(this.glw, textureSource);
+    } else if (textureSource instanceof RenderTexture) {
+      return new WebGlCoreCtxRenderTexture(this.glw, textureSource);
     }
     return new WebGlCoreCtxTexture(this.glw, textureSource);
   }
@@ -335,17 +338,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    let textureIdx;
-
-    if (texture instanceof RenderTexture) {
-      textureIdx = this.addTexture(texture, bufferIdx);
-    } else {
-      const { txManager } = this.stage;
-      const ctxTexture = txManager.getCtxTexture(texture);
-
-      assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
-      textureIdx = this.addTexture(ctxTexture, bufferIdx);
-    }
+    const { txManager } = this.stage;
+    const ctxTexture = txManager.getCtxTexture(texture);
+    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
@@ -476,13 +472,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @returns Assigned Texture Index of the texture in the render op
    */
   private addTexture(
-    texture: WebGlCoreCtxTexture | WebGLTexture,
+    texture: WebGlCoreCtxTexture,
     bufferIdx: number,
     recursive?: boolean,
   ): number {
     const { curRenderOp } = this;
     assertTruthy(curRenderOp);
-    const textureIdx = curRenderOp.addTexture(texture as WebGlCoreCtxTexture);
+    const textureIdx = curRenderOp.addTexture(texture);
     // TODO: Refactor to be more DRY
     if (textureIdx === 0xffffffff) {
       if (recursive) {
@@ -548,6 +544,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   renderRTTNodes() {
     const { glw } = this;
+    const { txManager } = this.stage;
+
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
       const node = this.rttNodes[i];
@@ -557,12 +555,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
         continue;
       }
 
-      const texture = node?.texture as RenderTexture;
+      assertTruthy(node.texture, 'RTT node missing texture');
+      const ctxTexture = txManager.getCtxTexture(node.texture);
+      assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
       this.renderToTextureActive = true;
 
       // Bind the the texture's framebuffer
-      glw.bindFramebuffer(texture.framebuffer);
-      glw.viewport(0, 0, texture.width, texture.height);
+      glw.bindFramebuffer(ctxTexture.framebuffer);
+      glw.viewport(0, 0, ctxTexture.width, ctxTexture.height);
 
       // Clear the framebuffer
       glw.clear();
