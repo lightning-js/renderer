@@ -926,6 +926,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set parent(newParent: CoreNode | null) {
+    if (newParent === null) return;
     const oldParent = this.props.parent;
     if (oldParent === newParent) {
       return;

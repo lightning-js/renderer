@@ -152,6 +152,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
   }
 
   set parent(newParent: ThreadXMainNode | null) {
+    if (newParent === null) return;
     const oldParent = this._parent;
     this._parent = newParent;
     this.parentId = newParent?.id ?? 0;

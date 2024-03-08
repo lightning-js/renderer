@@ -168,6 +168,7 @@ export class ThreadXRendererNode extends SharedNode {
   }
 
   set parent(newParent: ThreadXRendererNode | null) {
+    if (newParent === null) return;
     const oldParent = this._parent;
     this._parent = newParent;
     this.coreNode.parent = newParent?.coreNode ?? null;
