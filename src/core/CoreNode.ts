@@ -55,6 +55,12 @@ export enum CoreNodeRenderState {
   InViewport = 8,
 }
 
+const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
+CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
+CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
+CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
+CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
+
 export interface CoreNodeProps {
   id: number;
   // External facing properties whose defaults are determined by
@@ -343,13 +349,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         this.globalTransform.multiply(this.localTransform);
       }
       this.calculateRenderCoords();
+      this.updateRenderState();
       this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
       childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
-      this.updateRenderState();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.Clipping;
     }
@@ -527,9 +533,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       const previous = this.renderState;
       this.renderState = renderState;
       if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('OutOfViewport');
+        this.emit('outOfViewPort', {
+          previous,
+          current: renderState,
+        });
       }
-      this.emit(CoreNodeRenderState[renderState], {
+      const event = CoreNodeRenderStateMap.get(renderState);
+      assertTruthy(event);
+      this.emit(event, {
         previous,
         current: renderState,
       });

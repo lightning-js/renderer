@@ -20,7 +20,6 @@
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
-import type { RenderCoords } from '../../lib/RenderCoords.js';
 import type { Rect, RectWithValid } from '../../lib/utils.js';
 import type {
   TrFontFace,

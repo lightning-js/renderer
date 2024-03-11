@@ -29,17 +29,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  redRect.onOutOfViewport(() => {
+  redRect.on('outOfViewport', () => {
     console.log('red rect outside view port');
   });
 
-  redRect.onInViewport(() => {
+  redRect.on('inViewport', () => {
     console.log('red rect in view port');
-  });
-
-  const text = renderer.createTextNode({
-    text: 'moo',
-    parent: testRoot,
   });
 
   let redRectAnimation: IAnimationController | null = null;
@@ -86,11 +81,11 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: greenRect,
   });
 
-  blueRect.onOutOfBounds(() => {
+  blueRect.on('outOfBounds', () => {
     console.log('blue rect outside render bounds');
   });
 
-  blueRect.onInBounds(() => {
+  blueRect.on('inBounds', () => {
     console.log('blue rect in render bounds');
   });
 

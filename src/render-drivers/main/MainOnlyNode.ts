@@ -39,6 +39,7 @@ import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   NodeLoadedEventHandler,
   NodeFailedEventHandler,
+  NodeRenderStateEventHandler,
 } from '../../common/CommonTypes.js';
 import { santizeCustomDataMap } from '../utils.js';
 
@@ -108,28 +109,17 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.on('loaded', this.onTextureLoaded);
     this.coreNode.on('failed', this.onTextureFailed);
 
+    this.coreNode.on('outOfBounds', this.onOutOfBounds);
+    this.coreNode.on('inBounds', this.onInBounds);
+    this.coreNode.on('outOfViewport', this.onOutOfViewport);
+    this.coreNode.on('inViewport', this.onInViewport);
+
     // Assign properties to this object
     this.parent = props.parent as MainOnlyNode;
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
     this._data = props.data;
-  }
-
-  onOutOfBounds(fn: () => void) {
-    this.coreNode.on('OutOfBounds', fn);
-  }
-
-  onInBounds(fn: () => void) {
-    this.coreNode.on('InBounds', fn);
-  }
-
-  onOutOfViewport(fn: () => void) {
-    this.coreNode.on('OutOfViewport', fn);
-  }
-
-  onInViewport(fn: () => void) {
-    this.coreNode.on('InViewport', fn);
   }
 
   get x(): number {
@@ -428,6 +418,22 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   private onTextureFailed: NodeFailedEventHandler = (target, payload) => {
     this.emit('failed', payload);
+  };
+
+  private onOutOfBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfBounds', payload);
+  };
+
+  private onInBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inBounds', payload);
+  };
+
+  private onOutOfViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfViewport', payload);
+  };
+
+  private onInViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inViewport', payload);
   };
   //#endregion Texture
 
