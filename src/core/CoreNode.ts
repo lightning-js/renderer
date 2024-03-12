@@ -173,6 +173,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
   public renderCoords?: RenderCoords;
+  public renderBound?: Bound;
+  public strictBound?: Bound;
+  public preloadBound?: Bound;
   public clippingRect: RectWithValid = {
     x: 0,
     y: 0,
@@ -349,6 +352,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         this.globalTransform.multiply(this.localTransform);
       }
       this.calculateRenderCoords();
+      this.updateBoundingRect();
       this.updateRenderState();
       this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
       childUpdateType |= UpdateType.Global;
@@ -497,38 +501,40 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return false;
   }
 
-  checkRenderBounds(bound: Bound): CoreNodeRenderState {
+  checkRenderBounds(): CoreNodeRenderState {
     assertTruthy(this.clippingRect);
+    assertTruthy(this.renderBound);
     const rectW = this.clippingRect.width || this.stage.root.width;
     const rectH = this.clippingRect.height || this.stage.root.height;
-    const strictBound = createBound(
+    this.strictBound = createBound(
       this.clippingRect.x,
       this.clippingRect.y,
       rectW,
       rectH,
+      this.strictBound,
     );
 
-    if (boundInsideBound(bound, strictBound)) {
-      return CoreNodeRenderState.InViewport;
-    }
-
     const renderM = this.stage.boundsMargin;
-    const preloadBound = createBound(
+    this.preloadBound = createBound(
       this.clippingRect.x - renderM[3],
       this.clippingRect.y - renderM[0],
       this.clippingRect.x + rectW + renderM[1],
       this.clippingRect.y + rectH + renderM[2],
+      this.preloadBound,
     );
 
-    if (boundInsideBound(bound, preloadBound)) {
+    if (boundInsideBound(this.renderBound, this.strictBound)) {
+      return CoreNodeRenderState.InViewport;
+    }
+
+    if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
     }
     return CoreNodeRenderState.OutOfBounds;
   }
 
   updateRenderState() {
-    const renderBounds = this.calculateBoundingRect();
-    const renderState = this.checkRenderBounds(renderBounds);
+    const renderState = this.checkRenderBounds();
     if (renderState !== this.renderState) {
       const previous = this.renderState;
       this.renderState = renderState;
@@ -574,7 +580,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
       const minY = ty;
       const maxY = ty + height * td;
-      this.renderCoords = new RenderCoords([
+      this.renderCoords = RenderCoords.translate(
         //top-left
         minX,
         minY,
@@ -587,9 +593,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         //bottom-left
         minX,
         maxY,
-      ]);
+        this.renderCoords,
+      );
     } else {
-      this.renderCoords = new RenderCoords([
+      this.renderCoords = RenderCoords.translate(
         //top-left
         tx,
         ty,
@@ -602,29 +609,28 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         //bottom-left
         tx + height * tb,
         ty + height * td,
-      ]);
+        this.renderCoords,
+      );
     }
   }
 
-  calculateBoundingRect(): Bound {
+  updateBoundingRect() {
     const { renderCoords, globalTransform: transform } = this;
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
     const { tb, tc } = transform;
+    const { x1, y1, x3, y3 } = renderCoords;
     if (tb === 0 || tc === 0) {
-      return createBound(
-        renderCoords.x1,
-        renderCoords.y1,
-        renderCoords.x3,
-        renderCoords.y3,
-      );
+      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
     } else {
-      return createBound(
-        Math.min(...renderCoords.xValues),
-        Math.min(...renderCoords.yValues),
-        Math.max(...renderCoords.xValues),
-        Math.max(...renderCoords.yValues),
+      const { x2, x4, y2, y4 } = renderCoords;
+      this.renderBound = createBound(
+        Math.min(x1, x2, x3, x4),
+        Math.min(y1, y2, y3, y4),
+        Math.max(x1, x2, x3, x4),
+        Math.max(y1, y2, y3, y4),
+        this.renderBound,
       );
     }
   }
