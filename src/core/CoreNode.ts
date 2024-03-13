@@ -82,7 +82,7 @@ type ICoreNode = Omit<
   'texture' | 'textureOptions' | 'shader' | 'shaderProps'
 >;
 
-enum UpdateType {
+export enum UpdateType {
   /**
    * Child updates
    */

@@ -25,7 +25,7 @@ import type {
   TrFailedEventHandler,
   TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
-import { CoreNode, type CoreNodeProps } from './CoreNode.js';
+import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
@@ -101,12 +101,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     } else if (contain === 'width') {
       this.props.width = setWidth;
       this.props.height = calcHeight;
-      this.trState.props.height = calcHeight;
     } else if (contain === 'none') {
       this.props.width = calcWidth;
       this.props.height = calcHeight;
-      this.trState.props.width = calcWidth;
-      this.trState.props.height = calcHeight;
     }
     this.updateLocalTransform();
 
@@ -130,19 +127,39 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   };
 
   override get width(): number {
+    // If contain is 'none', then the Node has full control over the width
+    if (this.contain === 'none') {
+      return this.props.width;
+    }
     return this.trState.props.width;
   }
 
   override set width(value: number) {
-    this.textRenderer.set.width(this.trState, value);
+    // If contain is 'none', then the Node has full control over the width
+    if (this.contain === 'none') {
+      this.props.width = value;
+      this.setUpdateType(UpdateType.Local);
+    } else {
+      this.textRenderer.set.width(this.trState, value);
+    }
   }
 
   override get height(): number {
+    // If contain is 'none' or 'width' (i.e. !== 'both'), then the Node has full control over the height
+    if (this.contain !== 'both') {
+      return this.props.height;
+    }
     return this.trState.props.height;
   }
 
   override set height(value: number) {
-    this.textRenderer.set.height(this.trState, value);
+    // If contain is 'none' or 'width' (i.e. !== 'both'), then the Node has full control over the height
+    if (this.contain !== 'both') {
+      this.props.height = value;
+      this.setUpdateType(UpdateType.Local);
+    } else {
+      this.textRenderer.set.height(this.trState, value);
+    }
   }
 
   override get color(): number {

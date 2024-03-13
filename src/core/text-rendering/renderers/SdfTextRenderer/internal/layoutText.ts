@@ -286,8 +286,8 @@ export function layoutText(
           }
 
           maxY = Math.max(maxY, quadY + glyph.height);
+          maxX = Math.max(maxX, quadX + glyph.width);
           curX += glyph.xAdvance;
-          maxX = Math.max(maxX, curX);
         }
       } else {
         // Unmapped character
