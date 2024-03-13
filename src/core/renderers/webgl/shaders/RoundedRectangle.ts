@@ -93,11 +93,11 @@ export class RoundedRectangle extends WebGlCoreShader {
 
   static override shaderSources: ShaderProgramSources = {
     vertex: `
-      # ifdef GL_FRAGMENT_PRESICISON_HIGH
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
       precision highp float;
-      # else
+      #else
       precision mediump float;
-      # endif
+      #endif
 
       attribute vec2 a_position;
       attribute vec2 a_textureCoordinate;
@@ -125,11 +125,11 @@ export class RoundedRectangle extends WebGlCoreShader {
       }
     `,
     fragment: `
-      # ifdef GL_FRAGMENT_PRESICISON_HIGH
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
       precision highp float;
-      # else
+      #else
       precision mediump float;
-      # endif
+      #endif
 
       uniform vec2 u_resolution;
       uniform vec2 u_dimensions;

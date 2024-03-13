@@ -391,11 +391,11 @@ export class DynamicShader extends WebGlCoreShader {
   static z$__type__Props: DynamicShaderProps;
 
   static vertex = () => `
-    # ifdef GL_FRAGMENT_PRESICISON_HIGH
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
-    # else
+    #else
     precision mediump float;
-    # endif
+    #endif
 
     attribute vec2 a_textureCoordinate;
     attribute vec2 a_position;
@@ -430,11 +430,11 @@ export class DynamicShader extends WebGlCoreShader {
     effectMethods: string,
     drawEffects: string,
   ) => `
-    # ifdef GL_FRAGMENT_PRESICISON_HIGH
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
-    # else
+    #else
     precision mediump float;
-    # endif
+    #endif
 
     #define PI 3.14159265359
 
