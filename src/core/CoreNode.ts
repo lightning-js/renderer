@@ -699,6 +699,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.isRenderable = false;
 
     delete this.renderCoords;
+    delete this.renderBound;
+    delete this.strictBound;
+    delete this.preloadBound;
     delete this.globalTransform;
     delete this.scaleRotateTransform;
     delete this.localTransform;
@@ -709,7 +712,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.parent && !(this.parent.updateType & UpdateType.Children)) {
       this.parent.setUpdateType(UpdateType.Children);
     }
-
+    this.removeAllListeners();
     this.parent = null;
   }
 
