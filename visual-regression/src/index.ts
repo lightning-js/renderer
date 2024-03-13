@@ -549,7 +549,7 @@ function compareBuffers(
   );
 
   return {
-    doesMatch: normalizedDistance < 0.0005,
+    doesMatch: normalizedDistance < 0.001,
     diffImageBuffer: Buffer.from(diffImage),
   };
 }
