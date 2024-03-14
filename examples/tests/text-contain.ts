@@ -27,7 +27,7 @@ export default async function test(settings: ExampleSettings) {
   testRoot.height = 400;
   testRoot.color = 0xffffffff;
 
-  const textContainBg = renderer.createNode({
+  const textSizeAfterLoadingBg = renderer.createNode({
     x: 5,
     y: 5,
     width: 0,
@@ -36,9 +36,9 @@ export default async function test(settings: ExampleSettings) {
     parent: testRoot,
   });
 
-  const textSizeBg = renderer.createNode({
-    x: textContainBg.x,
-    y: textContainBg.y,
+  const textReportedSizeBg = renderer.createNode({
+    x: textSizeAfterLoadingBg.x,
+    y: textSizeAfterLoadingBg.y,
     width: 0,
     height: 0,
     color: 0xff11117f,
@@ -46,8 +46,8 @@ export default async function test(settings: ExampleSettings) {
   });
 
   const text1 = renderer.createTextNode({
-    x: textContainBg.x,
-    y: textContainBg.y,
+    x: textSizeAfterLoadingBg.x,
+    y: textSizeAfterLoadingBg.y,
     width: 0,
     height: 0,
     color: 0x000000ff,
@@ -74,22 +74,9 @@ Vivamus consectetur ex magna, non mollis.`,
     parent: testRoot,
   });
 
-  const textSizeInfo = renderer.createTextNode({
+  const textSizeAfterLoadInfo = renderer.createTextNode({
     x: testRoot.width,
     y: testRoot.height - 20,
-    mount: 1,
-    width: 0,
-    height: 0,
-    color: 0xff0000ff,
-    fontFamily: 'Ubuntu',
-    fontSize: 20,
-    text: '',
-    parent: testRoot,
-  });
-
-  const textContainInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 40,
     mount: 1,
     width: 0,
     height: 0,
@@ -100,9 +87,35 @@ Vivamus consectetur ex magna, non mollis.`,
     parent: testRoot,
   });
 
-  const header = renderer.createTextNode({
+  const textReportedSizeInfo = renderer.createTextNode({
+    x: testRoot.width,
+    y: testRoot.height - 40,
+    mount: 1,
+    width: 0,
+    height: 0,
+    color: 0xff0000ff,
+    fontFamily: 'Ubuntu',
+    fontSize: 20,
+    text: '',
+    parent: testRoot,
+  });
+
+  const textSetDimsInfo = renderer.createTextNode({
     x: testRoot.width,
     y: testRoot.height - 60,
+    mount: 1,
+    width: 0,
+    height: 0,
+    color: 0x0000ffff,
+    fontFamily: 'Ubuntu',
+    fontSize: 20,
+    text: '',
+    parent: testRoot,
+  });
+
+  const header = renderer.createTextNode({
+    x: testRoot.width,
+    y: testRoot.height - 80,
     mount: 1,
     width: 0,
     height: 0,
@@ -126,7 +139,7 @@ Vivamus consectetur ex magna, non mollis.`,
       // SDF, contain width
       text1.contain = 'width';
       text1.width = 200;
-      text1.height = 5;
+      // text1.height = 5;
     },
     () => {
       // SDF, contain width (smaller)
@@ -186,17 +199,27 @@ Vivamus consectetur ex magna, non mollis.`,
     i = idx;
     mutations[i]?.();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    header.text = makeHeader(text1.textRendererOverride!, text1.contain);
+    header.text = makeHeader(
+      text1.textRendererOverride!,
+      text1.contain,
+      text1.width,
+      text1.height,
+    );
     indexInfo.text = (i + 1).toString();
-    textContainBg.width = text1.width;
-    textContainBg.height = text1.height;
-    textContainInfo.text = `Contain size: ${textContainBg.width}x${textContainBg.height}`;
+    textSetDimsInfo.text = `Set size: ${Math.round(text1.width)}x${Math.round(
+      text1.height,
+    )}`;
     const dimensions = await waitForTextDimensions(text1);
-    textSizeBg.width = dimensions.width;
-    textSizeBg.height = dimensions.height;
-    textSizeInfo.text = `Reported size: ${Math.round(
-      textSizeBg.width,
-    )}x${Math.round(textSizeBg.height)}`;
+    textSizeAfterLoadingBg.width = text1.width;
+    textSizeAfterLoadingBg.height = text1.height;
+    textSizeAfterLoadInfo.text = `After 'loading' size: ${Math.round(
+      textSizeAfterLoadingBg.width,
+    )}x${Math.round(textSizeAfterLoadingBg.height)}`;
+    textReportedSizeBg.width = dimensions.width;
+    textReportedSizeBg.height = dimensions.height;
+    textReportedSizeInfo.text = `'loading' event size: ${Math.round(
+      textReportedSizeBg.width,
+    )}x${Math.round(textReportedSizeBg.height)}`;
     return true;
   }
   await next(false, 0);
@@ -211,6 +234,11 @@ Vivamus consectetur ex magna, non mollis.`,
   return next;
 }
 
-function makeHeader(renderer: string, contain: string) {
+function makeHeader(
+  renderer: string,
+  contain: string,
+  width: number,
+  height: number,
+) {
   return `${renderer}, contain = ${contain}`;
 }
