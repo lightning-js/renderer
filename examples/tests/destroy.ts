@@ -56,6 +56,17 @@ export default async function test({
       x: baseX,
       y: baseY,
       src: logo,
+      color: 0xff0000ff,
+      shader: renderer.createShader('DynamicShader', {
+        effects: [
+          {
+            type: 'radius',
+            props: {
+              radius: 50,
+            },
+          },
+        ],
+      }),
       parent: bg,
     });
 
@@ -68,10 +79,10 @@ export default async function test({
       y: baseY + 25,
       text: 'Lightning 3',
       color: 0xffffffff,
-      parent: bg,
+      parent: node,
     });
 
-    nodes.push(textNode);
+    //nodes.push(textNode);
   }
 
   console.log(
