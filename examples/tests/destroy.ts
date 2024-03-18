@@ -56,7 +56,6 @@ export default async function test({
       x: baseX,
       y: baseY,
       src: logo,
-      color: 0xff0000ff,
       shader: renderer.createShader('DynamicShader', {
         effects: [
           {
@@ -79,10 +78,10 @@ export default async function test({
       y: baseY + 25,
       text: 'Lightning 3',
       color: 0xffffffff,
-      parent: node,
+      parent: bg,
     });
 
-    //nodes.push(textNode);
+    nodes.push(textNode);
   }
 
   console.log(
