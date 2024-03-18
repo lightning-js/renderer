@@ -537,11 +537,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = null;
     this.props.shader = null;
-
-    if (this.parent && !(this.parent.updateType & UpdateType.Children)) {
-      this.parent.setUpdateType(UpdateType.Children);
-    }
-
     this.parent = null;
   }
 
@@ -932,6 +927,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         "CoreNode.parent: Node not found in old parent's children!",
       );
       oldParent.children.splice(index, 1);
+      oldParent.setUpdateType(
+        UpdateType.Children | UpdateType.ZIndexSortedChildren,
+      );
     }
     if (newParent) {
       newParent.children.push(this);
