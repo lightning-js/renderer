@@ -408,6 +408,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
+      this.updateIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
     }
@@ -497,7 +498,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.colorBr !== 0) {
       return true;
     }
-
     return false;
   }
 
@@ -565,7 +565,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
   updateIsRenderable() {
     if (!this.checkRenderProps()) {
-      this.isRenderable = false;
+      return (this.isRenderable = false);
     }
     this.isRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
   }
