@@ -22,21 +22,16 @@ import { type TextureData } from '../textures/Texture.js';
 type MessageCallback = [(value: any) => void, (reason: any) => void];
 
 export class ImageWorkerManager {
-  isWorkerSupported = !!self.Worker;
   imageWorkersEnabled = true;
   messageManager: Record<string, MessageCallback> = {};
   workers: Worker[] = [];
   workerIndex = 0;
 
   constructor(numImageWorkers: number) {
-    if (this.isWorkerSupported && numImageWorkers > 0) {
-      this.workers = this.createWorkers(numImageWorkers);
-      this.workers.forEach((worker) => {
-        worker.onmessage = this.handleMessage.bind(this);
-      });
-    } else {
-      this.imageWorkersEnabled = false;
-    }
+    this.workers = this.createWorkers(numImageWorkers);
+    this.workers.forEach((worker) => {
+      worker.onmessage = this.handleMessage.bind(this);
+    });
   }
 
   private handleMessage(event: MessageEvent) {
@@ -113,9 +108,7 @@ export class ImageWorkerManager {
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
     });
-    const blobURL: string = (window.URL ? URL : webkitURL).createObjectURL(
-      blob,
-    );
+    const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
       workers.push(new Worker(blobURL));

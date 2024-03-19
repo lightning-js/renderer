@@ -23,6 +23,7 @@ import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
+import { isHTMLImageElement } from './internal/RendererUtils.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -135,7 +136,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     // upload any data to the GPU.
     if (
       textureData.data instanceof ImageBitmap ||
-      textureData.data instanceof ImageData
+      textureData.data instanceof ImageData ||
+      // not using typeof HTMLImageElement due to web worker
+      isHTMLImageElement(textureData.data)
     ) {
       const data = textureData.data;
       width = data.width;
