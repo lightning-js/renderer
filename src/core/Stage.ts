@@ -42,6 +42,7 @@ export interface StageOptions {
   rootId: number;
   appWidth: number;
   appHeight: number;
+  boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -77,6 +78,7 @@ export class Stage extends EventEmitter {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: WebGlCoreRenderer;
   public readonly root: CoreNode;
+  public readonly boundsMargin: [number, number, number, number];
 
   /// State
   deltaTime = 0;
@@ -101,6 +103,7 @@ export class Stage extends EventEmitter {
       debug,
       appWidth,
       appHeight,
+      boundsMargin,
       enableContextSpy,
       numImageWorkers,
     } = options;
@@ -109,6 +112,14 @@ export class Stage extends EventEmitter {
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+
+    let bm = [0, 0, 0, 0] as [number, number, number, number];
+    if (boundsMargin) {
+      bm = Array.isArray(boundsMargin)
+        ? boundsMargin
+        : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
+    }
+    this.boundsMargin = bm;
 
     if (debug?.monitorTextureCache) {
       setInterval(() => {
