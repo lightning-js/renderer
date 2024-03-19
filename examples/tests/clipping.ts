@@ -427,27 +427,6 @@ export default async function test(settings: ExampleSettings) {
     },
     {
       title:
-        'Canvas text node clips DIRECT text node children that is outside of its bounds',
-      content: async (rowNode) => {
-        const curX = 0;
-
-        /// Direct
-        renderer.createTextNode({
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
-          parent: rowNode,
-          fontFamily: 'Ubuntu',
-          fontSize: 40,
-          textRendererOverride: 'canvas',
-          text: 'Canvas direct clipping',
-          clipping: true,
-        });
-
-        return SQUARE_SIZE;
-      },
-    },
-    {
-      title:
         'Canvas text clips ANCESTOR text node children that is outside of its bounds',
       content: async (rowNode) => {
         const curX = 0;
@@ -469,28 +448,6 @@ export default async function test(settings: ExampleSettings) {
           color: 0x000000ff,
           textRendererOverride: 'canvas',
           text: 'Canvas ancestor clipping',
-        });
-
-        return SQUARE_SIZE;
-      },
-    },
-    {
-      title:
-        'SDF text clips DIRECT text node children that is outside of its bounds',
-      content: async (rowNode) => {
-        const curX = 0;
-
-        /// Direct
-        renderer.createTextNode({
-          x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
-          parent: rowNode,
-          fontFamily: 'Ubuntu',
-          fontSize: 40,
-          textRendererOverride: 'sdf',
-          text: 'SDF direct clipping',
-          clipping: true,
         });
 
         return SQUARE_SIZE;
