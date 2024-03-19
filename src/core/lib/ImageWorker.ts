@@ -87,9 +87,7 @@ export class ImageWorkerManager {
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
     });
-    const blobURL: string = (window.URL ? URL : webkitURL).createObjectURL(
-      blob,
-    );
+    const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
       workers.push(new Worker(blobURL));
