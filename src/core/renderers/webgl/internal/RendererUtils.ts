@@ -129,3 +129,20 @@ export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
   const buffer = glw.createBuffer();
   glw.elementArrayBufferData(buffer, indices, glw.STATIC_DRAW);
 }
+
+/**
+ * Checks if an object is of type HTMLImageElement.
+ * This is used because we cant check for HTMLImageElement directly when the
+ * renderer is running in a seperate web worker context.
+ *
+ * @param obj
+ * @returns
+ */
+export function isHTMLImageElement(obj: unknown): obj is HTMLImageElement {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    obj.constructor &&
+    obj.constructor.name === 'HTMLImageElement'
+  );
+}

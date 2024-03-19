@@ -127,6 +127,12 @@ export interface RendererMainSettings {
   appHeight?: number;
 
   /**
+   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   *
+   *
+   */
+  boundsMargin?: number | [number, number, number, number];
+  /**
    * Factor to convert app-authored logical coorindates to device logical coordinates
    *
    * @remarks
@@ -311,6 +317,7 @@ export class RendererMain extends EventEmitter {
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
+      boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,

@@ -202,6 +202,18 @@ export interface TrProps extends TrFontProps {
    * `'both'` mode will constrain the text to both the set width and height
    * wrapping lines and truncating text as necessary.
    *
+   * ## Text Auto-size Behavior
+   * Depending on the set contain mode, after the text 'loaded' event is emitted,
+   * the text node may have either its {@link width} and {@link height} updated
+   * to match the rendered size of the text.
+   *
+   * When contain mode is 'none', both the {@link width} and {@link height}
+   * properties are updated.
+   *
+   * When contain mode is 'width', only the {@link height} property is updated.
+   *
+   * When contain mode is 'both', neither property is updated.
+   *
    * @default 'none'
    */
   contain: 'none' | 'width' | 'both';

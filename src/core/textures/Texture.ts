@@ -79,7 +79,13 @@ export interface TextureData {
   /**
    * The texture data
    */
-  data: ImageBitmap | ImageData | SubTextureProps | CompressedData | null;
+  data:
+    | ImageBitmap
+    | ImageData
+    | SubTextureProps
+    | CompressedData
+    | HTMLImageElement
+    | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
    *

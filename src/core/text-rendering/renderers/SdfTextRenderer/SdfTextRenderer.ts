@@ -217,11 +217,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       },
       width: (state, value) => {
         state.props.width = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the horizontal direction
+        if (state.props.contain !== 'none') {
+          this.invalidateLayoutCache(state);
+        }
       },
       height: (state, value) => {
         state.props.height = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the vertical direction
+        if (state.props.contain === 'both') {
+          this.invalidateLayoutCache(state);
+        }
       },
       offsetY: (state, value) => {
         state.props.offsetY = value;

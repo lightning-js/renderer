@@ -25,7 +25,7 @@ import type {
   TrFailedEventHandler,
   TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
-import { CoreNode, type CoreNodeProps } from './CoreNode.js';
+import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
@@ -127,19 +127,33 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   };
 
   override get width(): number {
-    return this.trState.props.width;
+    return this.props.width;
   }
 
   override set width(value: number) {
+    this.props.width = value;
     this.textRenderer.set.width(this.trState, value);
+
+    // If not containing, we must update the local transform to account for the
+    // new width
+    if (this.contain === 'none') {
+      this.setUpdateType(UpdateType.Local);
+    }
   }
 
   override get height(): number {
-    return this.trState.props.height;
+    return this.props.height;
   }
 
   override set height(value: number) {
+    this.props.height = value;
     this.textRenderer.set.height(this.trState, value);
+
+    // If not containing in the horizontal direction, we must update the local
+    // transform to account for the new height
+    if (this.contain !== 'both') {
+      this.setUpdateType(UpdateType.Local);
+    }
   }
 
   override get color(): number {
@@ -156,7 +170,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
-    this.checkIsRenderable();
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -328,16 +341,11 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override checkIsRenderable(): boolean {
-    if (super.checkIsRenderable()) {
+  override checkRenderProps(): boolean {
+    if (this.trState.props.text !== '') {
       return true;
     }
-
-    if (this.trState.props.text !== '') {
-      return (this.isRenderable = true);
-    }
-
-    return (this.isRenderable = false);
+    return super.checkRenderProps();
   }
 
   override renderQuads(renderer: CoreRenderer) {

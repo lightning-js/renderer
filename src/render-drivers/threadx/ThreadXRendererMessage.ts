@@ -44,6 +44,7 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   canvas: OffscreenCanvas;
   appWidth: number;
   appHeight: number;
+  boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   clearColor: number;

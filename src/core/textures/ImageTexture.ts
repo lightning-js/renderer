@@ -97,12 +97,12 @@ export class ImageTexture extends Texture {
       return loadCompressedTexture(src);
     }
 
-    if (this.txManager.imageWorkerManager.imageWorkersEnabled) {
+    if (this.txManager.imageWorkerManager) {
       return await this.txManager.imageWorkerManager.getImage(
         src,
         premultiplyAlpha,
       );
-    } else {
+    } else if (this.txManager.hasCreateImageBitmap) {
       const response = await fetch(src);
       const blob = await response.blob();
       const hasAlphaChannel =
@@ -114,6 +114,20 @@ export class ImageTexture extends Texture {
           imageOrientation: 'none',
         }),
         premultiplyAlpha: hasAlphaChannel,
+      };
+    } else {
+      const img = new Image();
+      img.src = src;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image`));
+      }).catch((e) => {
+        console.error(e);
+      });
+
+      return {
+        data: img,
+        premultiplyAlpha: premultiplyAlpha ?? true,
       };
     }
   }

@@ -66,6 +66,7 @@ const threadx = ThreadX.init({
         rootId: nodeStruct.id,
         appWidth: message.appWidth,
         appHeight: message.appHeight,
+        boundsMargin: message.boundsMargin,
         deviceLogicalPixelRatio: message.deviceLogicalPixelRatio,
         devicePhysicalPixelRatio: message.devicePhysicalPixelRatio,
         clearColor: message.clearColor,
