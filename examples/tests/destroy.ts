@@ -56,6 +56,16 @@ export default async function test({
       x: baseX,
       y: baseY,
       src: logo,
+      shader: renderer.createShader('DynamicShader', {
+        effects: [
+          {
+            type: 'radius',
+            props: {
+              radius: 50,
+            },
+          },
+        ],
+      }),
       parent: bg,
     });
 

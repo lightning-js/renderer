@@ -686,12 +686,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    * Destroy the node and cleanup all resources
    */
   destroy(): void {
-    // destroy children
-    for (let i = 0; i < this.children.length; i++) {
-      this.children[i]?.destroy();
-    }
-
-    this.children.length = 0;
     this.unloadTexture();
 
     this.clippingRect.valid = false;
@@ -709,9 +703,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.texture = null;
     this.props.shader = null;
 
-    if (this.parent && !(this.parent.updateType & UpdateType.Children)) {
-      this.parent.setUpdateType(UpdateType.Children);
-    }
     this.removeAllListeners();
     this.parent = null;
   }
@@ -1103,6 +1094,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         "CoreNode.parent: Node not found in old parent's children!",
       );
       oldParent.children.splice(index, 1);
+      oldParent.setUpdateType(
+        UpdateType.Children | UpdateType.ZIndexSortedChildren,
+      );
     }
     if (newParent) {
       newParent.children.push(this);
