@@ -22,21 +22,16 @@ import { type TextureData } from '../textures/Texture.js';
 type MessageCallback = [(value: any) => void, (reason: any) => void];
 
 export class ImageWorkerManager {
-  isWorkerSupported = !!self.Worker;
   imageWorkersEnabled = true;
   messageManager: Record<string, MessageCallback> = {};
   workers: Worker[] = [];
   workerIndex = 0;
 
   constructor(numImageWorkers: number) {
-    if (this.isWorkerSupported && numImageWorkers > 0) {
-      this.workers = this.createWorkers(numImageWorkers);
-      this.workers.forEach((worker) => {
-        worker.onmessage = this.handleMessage.bind(this);
-      });
-    } else {
-      this.imageWorkersEnabled = false;
-    }
+    this.workers = this.createWorkers(numImageWorkers);
+    this.workers.forEach((worker) => {
+      worker.onmessage = this.handleMessage.bind(this);
+    });
   }
 
   private handleMessage(event: MessageEvent) {
