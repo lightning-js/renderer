@@ -236,15 +236,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setRTTUpdates(1);
     }
 
-    // If this node is RenderTexture, create the framebuffer and texture
-    if (
-      this.props.rtt &&
-      this.texture &&
-      this.texture instanceof RenderTexture
-    ) {
-      this.texture.create(this.stage.renderer.glw);
-    }
-
     this.emit('loaded', {
       type: 'texture',
       dimensions,
