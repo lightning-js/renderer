@@ -243,11 +243,15 @@ export class Stage extends EventEmitter {
 
     renderer?.render();
 
+    this.calculateFps();
+
     // Reset renderRequested flag if it was set
     if (renderRequested) {
       this.renderRequested = false;
     }
+  }
 
+  calculateFps() {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
     const { fpsUpdateInterval } = this.options;

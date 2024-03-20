@@ -27,6 +27,8 @@ export const startLoop = (stage: Stage) => {
     stage.updateAnimations();
 
     if (!stage.hasSceneUpdates()) {
+      // We still need to calculate the fps else it looks like the app is frozen
+      stage.calculateFps();
       setTimeout(runLoop, 16.666666666666668);
       return;
     }
