@@ -131,6 +131,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   override set width(value: number) {
+    if (value === undefined) {
+      return;
+    }
     this.props.width = value;
     this.textRenderer.set.width(this.trState, value);
 
@@ -146,6 +149,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   override set height(value: number) {
+    if (value === undefined) {
+      return;
+    }
     this.props.height = value;
     this.textRenderer.set.height(this.trState, value);
 
