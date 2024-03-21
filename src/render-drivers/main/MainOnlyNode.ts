@@ -461,13 +461,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   destroy(): void {
     this.emit('beforeDestroy', {});
-    this.coreNode.destroy();
-    // destroy children
-    const length = this.children.length;
-    for (let i = 0; i < length; i++) {
-      this.children[i]?.destroy();
+
+    //use while loop since setting parent to null removes it from array
+    let child = this.children[0];
+    while (child) {
+      child.destroy();
+      child = this.children[0];
     }
-    this.children.length = 0;
+    this.coreNode.destroy();
     this.parent = null;
     this.texture = null;
     this.emit('afterDestroy', {});
