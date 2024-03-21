@@ -92,6 +92,10 @@ export class MainCoreDriver implements ICoreDriver {
     this.stage.on('frameTick', ((stage, frameTickData) => {
       this.onFrameTick(frameTickData);
     }) satisfies StageFrameTickHandler);
+
+    this.stage.on('idle', () => {
+      this.onIdle();
+    });
   }
 
   createNode(props: INodeWritableProps): INode {
@@ -143,6 +147,10 @@ export class MainCoreDriver implements ICoreDriver {
   }
 
   onFrameTick(frameTickData: FrameTickPayload) {
+    throw new Error('Method not implemented.');
+  }
+
+  onIdle() {
     throw new Error('Method not implemented.');
   }
   //#endregion

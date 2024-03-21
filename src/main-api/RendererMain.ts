@@ -397,6 +397,10 @@ export class RendererMain extends EventEmitter {
       this.emit('frameTick', frameTickData);
     };
 
+    driver.onIdle = () => {
+      this.emit('idle');
+    };
+
     targetEl.appendChild(canvas);
 
     if (enableInspector && !import.meta.env.PROD) {
