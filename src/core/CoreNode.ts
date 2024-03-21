@@ -113,46 +113,98 @@ export enum UpdateType {
 
   /**
    * Scale/Rotate transform update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `scaleRotateTransform`
    */
   ScaleRotate = 2,
 
   /**
    * Translate transform update (x/y/width/height/pivot/mount)
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `localTransform`
    */
   Local = 4,
 
   /**
-   * Global transform update
+   * Global Transform update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `globalTransform`
+   * - `renderCoords`
+   * - `renderBound`
    */
   Global = 8,
 
   /**
    * Clipping rect update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `clippingRect`
    */
   Clipping = 16,
 
   /**
    * Calculated ZIndex update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `calcZIndex`
    */
   CalculatedZIndex = 32,
 
   /**
    * Z-Index Sorted Children update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `children` (sorts children by their `calcZIndex`)
    */
   ZIndexSortedChildren = 64,
 
   /**
-   * Premultiplied Colors
+   * Premultiplied Colors update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `premultipliedColorTl`
+   * - `premultipliedColorTr`
+   * - `premultipliedColorBl`
+   * - `premultipliedColorBr`
    */
   PremultipliedColors = 128,
 
   /**
-   * World Alpha
+   * World Alpha update
    *
    * @remarks
-   * World Alpha = Parent World Alpha * Alpha
+   * CoreNode Properties Updated:
+   * - `worldAlpha` = `parent.worldAlpha` * `alpha`
    */
   WorldAlpha = 256,
+
+  /**
+   * Render State update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `renderState`
+   */
+  RenderState = 512,
+
+  /**
+   * Is Renderable update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `isRenderable`
+   */
+  IsRenderable = 1024,
 
   /**
    * None
@@ -162,7 +214,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 511,
+  All = 2047,
 }
 
 export class CoreNode extends EventEmitter implements ICoreNode {
@@ -221,7 +273,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = texture;
     this.props.textureOptions = options;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -249,7 +301,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
     this.props.texture = null;
     this.props.textureOptions = null;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
@@ -285,7 +337,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   /**
@@ -365,8 +417,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       }
       this.calculateRenderCoords();
       this.updateBoundingRect();
-      this.updateRenderState();
-      this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
+      this.setUpdateType(
+        UpdateType.Clipping | UpdateType.RenderState | UpdateType.Children,
+      );
       childUpdateType |= UpdateType.Global;
     }
 
@@ -420,9 +473,17 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
-      this.updateIsRenderable();
       this.setUpdateType(UpdateType.Children);
       childUpdateType |= UpdateType.PremultipliedColors;
+    }
+
+    if (this.updateType & UpdateType.RenderState) {
+      this.updateRenderState();
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
+
+    if (this.updateType & UpdateType.IsRenderable) {
+      this.updateIsRenderable();
     }
 
     // No need to update zIndex if there is no parent
@@ -563,7 +624,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         current: renderState,
       });
     }
-    this.updateIsRenderable();
   }
 
   setRenderState(state: CoreNodeRenderState) {
@@ -573,11 +633,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
   }
 
-  // This function checks if the current node is renderable based on certain properties.
-  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
+  /**
+   * This function updates the `isRenderable` property based on certain conditions.
+   *
+   * @returns
+   */
   updateIsRenderable() {
     if (!this.checkRenderProps()) {
-      return (this.isRenderable = false);
+      this.isRenderable = false;
+      return;
     }
     this.isRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
   }
