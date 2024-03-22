@@ -409,8 +409,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         );
       }
       this.updateIsRenderable();
-      this.setUpdateType(UpdateType.Children);
-      childUpdateType |= UpdateType.PremultipliedColors;
     }
 
     // No need to update zIndex if there is no parent
