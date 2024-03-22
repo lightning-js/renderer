@@ -133,6 +133,8 @@ export interface RendererMainSettings {
    * When the amount of GPU VRAM used by textures exceeds this threshold,
    * the Renderer will free up all the textures that are current not visible
    * within the configured `boundsMargin`.
+   *
+   * When set to `0`, the threshold-based texture memory manager is disabled.
    */
   txMemByteThreshold?: number;
 

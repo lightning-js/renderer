@@ -24,11 +24,17 @@ export class TextureMemoryManager {
   private threshold: number;
 
   /**
-   *
    * @param byteThreshold Number of texture bytes to trigger garbage collection
    */
   constructor(byteThreshold: number) {
     this.threshold = byteThreshold;
+
+    // If the threshold is 0, we disable the memory manager by replacing the
+    // setTextureMemUse method with a no-op function.
+    if (byteThreshold === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      this.setTextureMemUse = () => {};
+    }
   }
 
   setTextureMemUse(ctxTexture: CoreContextTexture, byteSize: number) {

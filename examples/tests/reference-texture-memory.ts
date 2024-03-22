@@ -28,6 +28,9 @@ export function customSettings(
       textureCleanupAgeThreadholdMs: 6000,
       textureCleanupIntervalMs: 1000,
     },
+    // Disable the threshold-based memory manager. This will allow this test to
+    // focus only on the reference-based memory manager.
+    txMemByteThreshold: 0,
     experimental_FinalizationRegistryTextureUsageTracker: finalizationRegistry,
   };
 }
