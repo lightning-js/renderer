@@ -40,6 +40,7 @@ import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageT
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
+import { isProductionEnvironment } from '../utils.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -403,7 +404,7 @@ export class RendererMain extends EventEmitter {
 
     targetEl.appendChild(canvas);
 
-    if (enableInspector && !import.meta.env.PROD) {
+    if (enableInspector && !isProductionEnvironment()) {
       this.inspector = new Inspector(canvas, resolvedSettings);
     }
   }
