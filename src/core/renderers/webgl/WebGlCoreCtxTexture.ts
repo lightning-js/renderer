@@ -61,6 +61,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     return this._nativeCtxTexture;
   }
 
+  get renderable(): boolean {
+    return this.textureSource.renderable;
+  }
+
   get w() {
     return this._w;
   }

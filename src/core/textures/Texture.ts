@@ -143,8 +143,39 @@ export abstract class Texture extends EventEmitter {
 
   readonly state: TextureState = 'freed';
 
+  readonly renderableOwners = new Set<unknown>();
+
   constructor(protected txManager: CoreTextureManager) {
     super();
+  }
+
+  /**
+   * Add/remove an owner to/from the Texture based on its renderability.
+   *
+   * @remarks
+   * Any object can own a texture, be it a CoreNode or even the state object
+   * from a Text Renderer.
+   *
+   * When the reference to the texture that an owner object holds is replaced
+   * or cleared it must call this with `renderable=false` to release the owner
+   * association.
+   *
+   * @param owner
+   * @param renderable
+   */
+  setRenderableOwner(owner: unknown, renderable: boolean): void {
+    if (renderable) {
+      this.renderableOwners.add(owner);
+    } else {
+      this.renderableOwners.delete(owner);
+    }
+  }
+
+  /**
+   * Returns true if the texture is assigned to any Nodes that are renderable.
+   */
+  get renderable(): boolean {
+    return this.renderableOwners.size > 0;
   }
 
   /**

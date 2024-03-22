@@ -31,4 +31,5 @@ export abstract class CoreContextTexture {
 
   abstract load(): void;
   abstract free(): void;
+  abstract get renderable(): boolean;
 }

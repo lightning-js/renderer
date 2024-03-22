@@ -52,7 +52,9 @@ export class TextureMemoryManager {
 
   gc() {
     this.textures.forEach((byteSize, ctxTexture) => {
-      ctxTexture.free();
+      if (!ctxTexture.renderable) {
+        ctxTexture.free();
+      }
     });
   }
 }

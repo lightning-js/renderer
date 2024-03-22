@@ -295,9 +295,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   unloadTexture(): void {
     if (this.props.texture) {
-      this.props.texture.off('loaded', this.onTextureLoaded);
-      this.props.texture.off('failed', this.onTextureFailed);
-      this.props.texture.off('freed', this.onTextureFreed);
+      const { texture } = this.props;
+      texture.off('loaded', this.onTextureLoaded);
+      texture.off('failed', this.onTextureFailed);
+      texture.off('freed', this.onTextureFreed);
+      texture.setRenderableOwner(this, false);
     }
     this.props.texture = null;
     this.props.textureOptions = null;
@@ -639,11 +641,20 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    * @returns
    */
   updateIsRenderable() {
+    let newIsRenderable;
     if (!this.checkRenderProps()) {
-      this.isRenderable = false;
-      return;
+      newIsRenderable = false;
+    } else {
+      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
     }
-    this.isRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
+    if (this.isRenderable !== newIsRenderable) {
+      this.isRenderable = newIsRenderable;
+      this.onChangeIsRenderable(newIsRenderable);
+    }
+  }
+
+  onChangeIsRenderable(isRenderable: boolean) {
+    this.props.texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {

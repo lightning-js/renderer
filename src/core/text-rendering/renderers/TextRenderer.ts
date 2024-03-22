@@ -66,6 +66,8 @@ export interface TextRendererState {
   textW: number | undefined;
   textH: number | undefined;
 
+  isRenderable: boolean;
+
   debugData: {
     updateCount: number;
     layoutCount: number;
@@ -311,6 +313,7 @@ export interface TrProps extends TrFontProps {
   overflowSuffix: string;
 
   zIndex: number;
+
   debug: Partial<TextRendererDebugProps>;
 }
 
@@ -451,6 +454,17 @@ export abstract class TextRenderer<
   }
 
   /**
+   * Allows the CoreTextNode to communicate changes to the isRenderable state of
+   * the itself.
+   *
+   * @param state
+   * @param renderable
+   */
+  setIsRenderable(state: StateT, renderable: boolean) {
+    state.isRenderable = renderable;
+  }
+
+  /**
    * Called by constructor to get a map of property setter functions for this renderer.
    */
   abstract getPropertySetters(): Partial<TrPropSetters<StateT>>;
@@ -483,6 +497,24 @@ export abstract class TextRenderer<
   abstract addFontFace(fontFace: TrFontFace): void;
 
   abstract createState(props: TrProps): StateT;
+
+  /**
+   * Destroy/Clean up the state object
+   *
+   * @remarks
+   * Opposite of createState(). Frees any event listeners / resources held by
+   * the state that may not reliably get garbage collected.
+   *
+   * @param state
+   */
+  destroyState(state: StateT) {
+    const stateEvents = ['loading', 'loaded', 'failed'];
+
+    // Remove the old event listeners from previous state obj there was one
+    stateEvents.forEach((eventName) => {
+      state.emitter.off(eventName);
+    });
+  }
 
   /**
    * Schedule a state update via queueMicrotask
