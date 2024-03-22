@@ -17,14 +17,18 @@
  * limitations under the License.
  */
 
+import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { Texture } from '../textures/Texture.js';
 
 export abstract class CoreContextTexture {
+  readonly memManager: TextureMemoryManager;
   readonly textureSource: Texture;
 
-  constructor(textureSource: Texture) {
+  constructor(memManager: TextureMemoryManager, textureSource: Texture) {
+    this.memManager = memManager;
     this.textureSource = textureSource;
   }
 
   abstract load(): void;
+  abstract free(): void;
 }

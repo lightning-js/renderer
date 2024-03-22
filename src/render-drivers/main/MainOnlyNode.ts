@@ -108,6 +108,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     // Forward loaded/failed events
     this.coreNode.on('loaded', this.onTextureLoaded);
     this.coreNode.on('failed', this.onTextureFailed);
+    this.coreNode.on('freed', this.onTextureFreed);
 
     this.coreNode.on('outOfBounds', this.onOutOfBounds);
     this.coreNode.on('inBounds', this.onInBounds);
@@ -418,6 +419,10 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   private onTextureFailed: NodeFailedEventHandler = (target, payload) => {
     this.emit('failed', payload);
+  };
+
+  private onTextureFreed: NodeLoadedEventHandler = (target, payload) => {
+    this.emit('freed', payload);
   };
 
   private onOutOfBounds: NodeRenderStateEventHandler = (target, payload) => {

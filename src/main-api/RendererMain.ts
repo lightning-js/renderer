@@ -127,11 +127,20 @@ export interface RendererMainSettings {
   appHeight?: number;
 
   /**
+   * Texture Memory Byte Threshold
+   *
+   * @remarks
+   * When the amount of GPU VRAM used by textures exceeds this threshold,
+   * the Renderer will free up all the textures that are current not visible
+   * within the configured `boundsMargin`.
+   */
+  txMemByteThreshold?: number;
+
+  /**
    * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
-   *
-   *
    */
   boundsMargin?: number | [number, number, number, number];
+
   /**
    * Factor to convert app-authored logical coorindates to device logical coordinates
    *
@@ -317,6 +326,7 @@ export class RendererMain extends EventEmitter {
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
+      txMemByteThreshold: settings.txMemByteThreshold || 124e6,
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:

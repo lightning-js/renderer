@@ -37,11 +37,13 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
+import { TextureMemoryManager } from './TextureMemoryManager.js';
 
 export interface StageOptions {
   rootId: number;
   appWidth: number;
   appHeight: number;
+  txMemByteThreshold: number;
   boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
@@ -73,6 +75,7 @@ export class Stage extends EventEmitter {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
+  public readonly txMemManager: TextureMemoryManager;
   public readonly fontManager: TrFontManager;
   public readonly textRenderers: Partial<TextRendererMap>;
   public readonly shManager: CoreShaderManager;
@@ -106,9 +109,11 @@ export class Stage extends EventEmitter {
       boundsMargin,
       enableContextSpy,
       numImageWorkers,
+      txMemByteThreshold,
     } = options;
 
     this.txManager = new CoreTextureManager(numImageWorkers);
+    this.txMemManager = new TextureMemoryManager(txMemByteThreshold);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
@@ -138,6 +143,7 @@ export class Stage extends EventEmitter {
       clearColor: clearColor ?? 0xff000000,
       bufferMemory,
       txManager: this.txManager,
+      txMemManager: this.txMemManager,
       shManager: this.shManager,
       contextSpy: this.contextSpy,
     });

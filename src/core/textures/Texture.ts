@@ -23,6 +23,11 @@ import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 
 /**
+ * Event handler for when a Texture is freed
+ */
+export type TextureFreedEventHandler = (target: any) => void;
+
+/**
  * Event handler for when a Texture is loading
  */
 export type TextureLoadingEventHandler = (target: any) => void;
@@ -94,9 +99,10 @@ export interface TextureData {
   premultiplyAlpha?: boolean | null;
 }
 
-export type TextureState = 'loading' | 'loaded' | 'failed';
+export type TextureState = 'freed' | 'loading' | 'loaded' | 'failed';
 
 export interface TextureStateEventMap {
+  freed: TextureFreedEventHandler;
   loading: TextureLoadingEventHandler;
   loaded: TextureLoadedEventHandler;
   failed: TextureFailedEventHandler;
@@ -135,7 +141,7 @@ export abstract class Texture extends EventEmitter {
 
   readonly error: Error | null = null;
 
-  readonly state: TextureState = 'loading';
+  readonly state: TextureState = 'freed';
 
   constructor(protected txManager: CoreTextureManager) {
     super();

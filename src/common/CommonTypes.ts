@@ -75,6 +75,13 @@ export type NodeTextureFailedPayload = {
 };
 
 /**
+ * Payload for when texture failed to load
+ */
+export type NodeTextureFreedPayload = {
+  type: 'texture';
+};
+
+/**
  * Combined type for all failed payloads
  */
 export type NodeFailedPayload =

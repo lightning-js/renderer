@@ -45,7 +45,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 0,
     y: 0,
-    text: 'Texture Memory Stress Test',
+    text: 'Reference-based Texture Memory Management Test',
     parent: screen,
     fontFamily: 'Ubuntu',
     fontSize: 60,
@@ -56,17 +56,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     width: renderer.settings.appWidth,
     contain: 'width',
-    text: `This test will create and display a random texture every 10ms.
+    text: `This test will create and display a random NoiseTexture node every 10ms.
 
-To test that the textures are being properly disposed of, you can use the Chrome Task Manager to monitor the GPU's memory usage:
-
-1. Click Window > Task Manager
-2. Locate the "GPU Process"
-3. Observe the "Memory Footprint" column
-4. The value should eventually drop significantly toward a minimum and/or reach a
-threadhold.
-
-By default, the ManualCountTextureUsageTracker is used to track texture usage. Also test the experimental FinalizationRegistryTextureUsageTracker instead, by setting the URL param "finalizationRegistry=true".
+See docs/ManualRegressionTests.md for more information.
     `,
     parent: screen,
     fontFamily: 'Ubuntu',

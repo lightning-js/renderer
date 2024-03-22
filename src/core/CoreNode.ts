@@ -30,10 +30,12 @@ import type { Stage } from './Stage.js';
 import type {
   Texture,
   TextureFailedEventHandler,
+  TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
   NodeTextureFailedPayload,
+  NodeTextureFreedPayload,
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
@@ -230,9 +232,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         this.onTextureLoaded(texture, texture.dimensions!);
       } else if (texture.state === 'failed') {
         this.onTextureFailed(texture, texture.error!);
+      } else if (texture.state === 'freed') {
+        this.onTextureFreed(texture);
       }
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
+      texture.on('freed', this.onTextureFreed);
     });
   }
 
@@ -240,6 +245,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.texture) {
       this.props.texture.off('loaded', this.onTextureLoaded);
       this.props.texture.off('failed', this.onTextureFailed);
+      this.props.texture.off('freed', this.onTextureFreed);
     }
     this.props.texture = null;
     this.props.textureOptions = null;
@@ -261,6 +267,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       type: 'texture',
       error,
     } satisfies NodeTextureFailedPayload);
+  };
+
+  private onTextureFreed: TextureFreedEventHandler = (target: Texture) => {
+    this.emit('freed', {
+      type: 'texture',
+    } satisfies NodeTextureFreedPayload);
   };
   //#endregion Textures
 
