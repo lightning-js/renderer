@@ -55,35 +55,32 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     super(stage, props);
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState(
-        {
-          x: this.absX,
-          y: this.absY,
-          width: props.width,
-          height: props.height,
-          textAlign: props.textAlign,
-          color: props.color,
-          zIndex: props.zIndex,
-          contain: props.contain,
-          scrollable: props.scrollable,
-          scrollY: props.scrollY,
-          offsetY: props.offsetY,
-          letterSpacing: props.letterSpacing,
-          debug: props.debug,
-          fontFamily: props.fontFamily,
-          fontSize: props.fontSize,
-          fontStretch: props.fontStretch,
-          fontStyle: props.fontStyle,
-          fontWeight: props.fontWeight,
-          text: props.text,
-          lineHeight: props.lineHeight,
-          maxLines: props.maxLines,
-          textBaseline: props.textBaseline,
-          verticalAlign: props.verticalAlign,
-          overflowSuffix: props.overflowSuffix,
-        },
-        undefined,
-      );
+      this.resolveTextRendererAndState({
+        x: this.absX,
+        y: this.absY,
+        width: props.width,
+        height: props.height,
+        textAlign: props.textAlign,
+        color: props.color,
+        zIndex: props.zIndex,
+        contain: props.contain,
+        scrollable: props.scrollable,
+        scrollY: props.scrollY,
+        offsetY: props.offsetY,
+        letterSpacing: props.letterSpacing,
+        debug: props.debug,
+        fontFamily: props.fontFamily,
+        fontSize: props.fontSize,
+        fontStretch: props.fontStretch,
+        fontStyle: props.fontStyle,
+        fontWeight: props.fontWeight,
+        text: props.text,
+        lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        textBaseline: props.textBaseline,
+        verticalAlign: props.verticalAlign,
+        overflowSuffix: props.overflowSuffix,
+      });
     this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
   }
@@ -179,8 +176,10 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   set textRendererOverride(value: CoreTextNodeProps['textRendererOverride']) {
     this._textRendererOverride = value;
 
+    this.textRenderer.destroyState(this.trState);
+
     const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState(this.trState.props, this.trState);
+      this.resolveTextRendererAndState(this.trState.props);
     this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
   }
@@ -348,6 +347,11 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     return super.checkRenderProps();
   }
 
+  override onChangeIsRenderable(isRenderable: boolean) {
+    super.onChangeIsRenderable(isRenderable);
+    this.textRenderer.setIsRenderable(this.trState, isRenderable);
+  }
+
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
     this.textRenderer.renderQuads(
@@ -359,14 +363,20 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   /**
+   * Destroy the node and cleanup all resources
+   */
+  override destroy(): void {
+    super.destroy();
+
+    this.textRenderer.destroyState(this.trState);
+  }
+
+  /**
    * Resolve a text renderer and a new state based on the current text renderer props provided
    * @param props
    * @returns
    */
-  private resolveTextRendererAndState(
-    props: TrProps,
-    prevState?: TextRendererState,
-  ): {
+  private resolveTextRendererAndState(props: TrProps): {
     resolvedTextRenderer: TextRenderer;
     textRendererState: TextRendererState;
   } {
@@ -376,15 +386,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     );
 
     const textRendererState = resolvedTextRenderer.createState(props);
-
-    const stateEvents = ['loading', 'loaded', 'failed'];
-
-    if (prevState) {
-      // Remove the old event listeners from previous state obj there was one
-      stateEvents.forEach((eventName) => {
-        prevState.emitter.off(eventName);
-      });
-    }
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);

@@ -33,6 +33,7 @@ import type { AnimationSettings } from '../../../core/animations/CoreAnimation.j
 import type {
   NodeLoadedPayload,
   NodeFailedPayload,
+  NodeTextureFreedPayload,
 } from '../../../common/CommonTypes.js';
 
 export class ThreadXRendererNode extends SharedNode {
@@ -141,6 +142,12 @@ export class ThreadXRendererNode extends SharedNode {
       'failed',
       (target: CoreNode, payload: NodeFailedPayload) => {
         this.emit('failed', payload);
+      },
+    );
+    this.coreNode.on(
+      'freed',
+      (target: CoreNode, payload: NodeTextureFreedPayload) => {
+        this.emit('freed', payload);
       },
     );
   }

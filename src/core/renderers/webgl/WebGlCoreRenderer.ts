@@ -57,6 +57,7 @@ import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
 import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,6 +67,7 @@ export interface WebGlCoreRendererOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   pixelRatio: number;
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
@@ -84,6 +86,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   //// Core Managers
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
 
   //// Options
@@ -114,6 +117,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { canvas, clearColor, bufferMemory } = options;
     this.options = options;
     this.txManager = options.txManager;
+    this.txMemManager = options.txMemManager;
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
     // When the default texture is loaded, request a render in case the
@@ -198,9 +202,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
-      return new WebGlCoreCtxSubTexture(this.glw, textureSource);
+      return new WebGlCoreCtxSubTexture(
+        this.glw,
+        this.txMemManager,
+        textureSource,
+      );
     }
-    return new WebGlCoreCtxTexture(this.glw, textureSource);
+    return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
   }
 
   /**

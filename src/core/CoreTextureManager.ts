@@ -288,6 +288,8 @@ export class CoreTextureManager {
         }
       }
     }
+    // Free the ctx texture if it exists.
+    this.ctxTextureCache.get(texture)?.free();
   }
 
   /**

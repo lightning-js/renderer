@@ -81,6 +81,10 @@ Example Tests.
 
 See [visual-regression/README.md](./visual-regression/README.md) for more info.
 
+## Manual Regression Tests
+
+See [docs/ManualRegressionTests.md].
+
 ## Release Procedure
 
 See [RELEASE.md](./RELEASE.md)

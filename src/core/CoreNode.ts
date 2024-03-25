@@ -30,10 +30,12 @@ import type { Stage } from './Stage.js';
 import type {
   Texture,
   TextureFailedEventHandler,
+  TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
   NodeTextureFailedPayload,
+  NodeTextureFreedPayload,
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
@@ -111,46 +113,98 @@ export enum UpdateType {
 
   /**
    * Scale/Rotate transform update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `scaleRotateTransform`
    */
   ScaleRotate = 2,
 
   /**
    * Translate transform update (x/y/width/height/pivot/mount)
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `localTransform`
    */
   Local = 4,
 
   /**
-   * Global transform update
+   * Global Transform update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `globalTransform`
+   * - `renderCoords`
+   * - `renderBound`
    */
   Global = 8,
 
   /**
    * Clipping rect update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `clippingRect`
    */
   Clipping = 16,
 
   /**
    * Calculated ZIndex update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `calcZIndex`
    */
   CalculatedZIndex = 32,
 
   /**
    * Z-Index Sorted Children update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `children` (sorts children by their `calcZIndex`)
    */
   ZIndexSortedChildren = 64,
 
   /**
-   * Premultiplied Colors
+   * Premultiplied Colors update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `premultipliedColorTl`
+   * - `premultipliedColorTr`
+   * - `premultipliedColorBl`
+   * - `premultipliedColorBr`
    */
   PremultipliedColors = 128,
 
   /**
-   * World Alpha
+   * World Alpha update
    *
    * @remarks
-   * World Alpha = Parent World Alpha * Alpha
+   * CoreNode Properties Updated:
+   * - `worldAlpha` = `parent.worldAlpha` * `alpha`
    */
   WorldAlpha = 256,
+
+  /**
+   * Render State update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `renderState`
+   */
+  RenderState = 512,
+
+  /**
+   * Is Renderable update
+   *
+   * @remarks
+   * CoreNode Properties Updated:
+   * - `isRenderable`
+   */
+  IsRenderable = 1024,
 
   /**
    * None
@@ -160,7 +214,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 511,
+  All = 2047,
 }
 
 export class CoreNode extends EventEmitter implements ICoreNode {
@@ -219,7 +273,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = texture;
     this.props.textureOptions = options;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -230,20 +284,26 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         this.onTextureLoaded(texture, texture.dimensions!);
       } else if (texture.state === 'failed') {
         this.onTextureFailed(texture, texture.error!);
+      } else if (texture.state === 'freed') {
+        this.onTextureFreed(texture);
       }
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
+      texture.on('freed', this.onTextureFreed);
     });
   }
 
   unloadTexture(): void {
     if (this.props.texture) {
-      this.props.texture.off('loaded', this.onTextureLoaded);
-      this.props.texture.off('failed', this.onTextureFailed);
+      const { texture } = this.props;
+      texture.off('loaded', this.onTextureLoaded);
+      texture.off('failed', this.onTextureFailed);
+      texture.off('freed', this.onTextureFreed);
+      texture.setRenderableOwner(this, false);
     }
     this.props.texture = null;
     this.props.textureOptions = null;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
@@ -262,6 +322,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       error,
     } satisfies NodeTextureFailedPayload);
   };
+
+  private onTextureFreed: TextureFreedEventHandler = (target: Texture) => {
+    this.emit('freed', {
+      type: 'texture',
+    } satisfies NodeTextureFreedPayload);
+  };
   //#endregion Textures
 
   loadShader<Type extends keyof ShaderMap>(
@@ -273,7 +339,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
-    this.updateIsRenderable();
+    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   /**
@@ -353,8 +419,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       }
       this.calculateRenderCoords();
       this.updateBoundingRect();
-      this.updateRenderState();
-      this.setUpdateType(UpdateType.Clipping | UpdateType.Children);
+      this.setUpdateType(
+        UpdateType.Clipping | UpdateType.RenderState | UpdateType.Children,
+      );
       childUpdateType |= UpdateType.Global;
     }
 
@@ -408,6 +475,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
+    }
+
+    if (this.updateType & UpdateType.RenderState) {
+      this.updateRenderState();
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
+
+    if (this.updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
     }
 
@@ -549,7 +624,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         current: renderState,
       });
     }
-    this.updateIsRenderable();
   }
 
   setRenderState(state: CoreNodeRenderState) {
@@ -559,13 +633,26 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
   }
 
-  // This function checks if the current node is renderable based on certain properties.
-  // It returns true if any of the specified properties are truthy or if any color property is not 0, otherwise it returns false.
+  /**
+   * This function updates the `isRenderable` property based on certain conditions.
+   *
+   * @returns
+   */
   updateIsRenderable() {
+    let newIsRenderable;
     if (!this.checkRenderProps()) {
-      return (this.isRenderable = false);
+      newIsRenderable = false;
+    } else {
+      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
     }
-    this.isRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
+    if (this.isRenderable !== newIsRenderable) {
+      this.isRenderable = newIsRenderable;
+      this.onChangeIsRenderable(newIsRenderable);
+    }
+  }
+
+  onChangeIsRenderable(isRenderable: boolean) {
+    this.props.texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {
