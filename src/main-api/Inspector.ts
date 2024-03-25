@@ -9,6 +9,7 @@ import type { ICoreDriver } from './ICoreDriver.js';
 import { type RendererMainSettings } from './RendererMain.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
+import { isProductionEnvironment } from '../utils.js';
 
 /**
  * Inspector
@@ -152,7 +153,7 @@ export class Inspector {
   private scaleY = 1;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
-    if (import.meta.env.PROD) return;
+    if (isProductionEnvironment()) return;
 
     if (!settings) {
       throw new Error('settings is required');

@@ -475,8 +475,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
           true,
         );
       }
-      this.setUpdateType(UpdateType.Children);
-      childUpdateType |= UpdateType.PremultipliedColors;
     }
 
     if (this.updateType & UpdateType.RenderState) {
