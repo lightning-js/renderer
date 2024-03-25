@@ -79,7 +79,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
-  if (import.meta.env.PROD) return;
+  if (isProductionEnvironment()) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
@@ -204,4 +204,13 @@ export function hasOwn(obj: object, prop: string | number | symbol): boolean {
  */
 export function deg2Rad(degrees: number): number {
   return (degrees * Math.PI) / 180;
+}
+
+/**
+ * Checks import.meta if env is production
+ *
+ * @returns
+ */
+export function isProductionEnvironment(): boolean {
+  return import.meta.env && import.meta.env.PROD;
 }
