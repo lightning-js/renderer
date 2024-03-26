@@ -367,6 +367,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         verticalAlign: state.props.verticalAlign,
         overflowSuffix: state.props.overflowSuffix,
       };
+      if (state.props.contain !== 'none')
+        state.lightning2TextRenderer.settings.w = state.props.width;
       // const renderInfoCalculateTime = performance.now();
       state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
       // console.log(
