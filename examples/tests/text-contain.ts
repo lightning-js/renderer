@@ -54,7 +54,7 @@ export default async function test(settings: ExampleSettings) {
     fontFamily: 'Ubuntu',
     textRendererOverride: 'sdf',
     fontSize: 20,
-    text: `Lorem ipsum dolor sit amet
+    text: `Lorem ipsum dolor sit e
 Consectetur adipiscing elit. Vivamus id.
 Suspendisse sollicitudin posuere felis.
 Vivamus consectetur ex magna, non mollis.`,

@@ -212,8 +212,6 @@ export function layoutText(
           charEndX >= lineVertexW &&
           // There is a last word that we can break to the next line
           lastWord.codepointIndex !== -1 &&
-          // We have advanced at least one character since the last word started
-          lastWord.codepointIndex < glyph.cluster &&
           // Prevents infinite loop when a single word is longer than the width
           lastWord.xStart > 0
         ) {
@@ -286,8 +284,8 @@ export function layoutText(
           }
 
           maxY = Math.max(maxY, quadY + glyph.height);
+          maxX = Math.max(maxX, quadX + glyph.width);
           curX += glyph.xAdvance;
-          maxX = Math.max(maxX, curX);
         }
       } else {
         // Unmapped character
