@@ -62,7 +62,7 @@ export interface HolePunchEffectProps extends DefaultEffectProps {
    * number:
    * 30 -> [30, 30, 30, 30]
    *
-   * @default 10
+   * @default 0
    */
   radius?: number | number[];
 }
@@ -129,7 +129,7 @@ export class HolePunchEffect extends ShaderEffect {
       y: props.y || 0,
       width: props.width || 50,
       height: props.height || 50,
-      radius: props.radius ?? 10,
+      radius: props.radius ?? 0,
     };
   }
 
