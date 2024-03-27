@@ -34,6 +34,7 @@ import type {
 } from './textures/Texture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type {
+  Dimensions,
   NodeTextureFailedPayload,
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
@@ -613,6 +614,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       td: gt.td,
       rtt,
       parentHasRenderTexture,
+      framebufferDimensions: this.framebufferDimensions,
     });
   }
 
@@ -1002,6 +1004,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   get parentHasRenderTexture(): boolean {
     return this.props.parentHasRenderTexture;
+  }
+
+  get framebufferDimensions(): Dimensions | undefined {
+    if (this.parentHasRenderTexture) {
+      return this.parent?.framebufferDimensions;
+    }
+    return { width: this.width, height: this.height };
   }
 
   get texture(): Texture | null {

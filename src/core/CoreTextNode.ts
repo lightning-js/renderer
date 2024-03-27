@@ -350,12 +350,13 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
         return;
       }
     }
-
     this.textRenderer.renderQuads(
       this.trState,
       this.globalTransform,
       this.clippingRect,
       this.worldAlpha,
+      this.parentHasRenderTexture,
+      this.framebufferDimensions,
     );
   }
 
