@@ -612,7 +612,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       const previous = this.renderState;
       this.renderState = renderState;
       if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('outOfViewPort', {
+        this.emit('outOfViewport', {
           previous,
           current: renderState,
         });
