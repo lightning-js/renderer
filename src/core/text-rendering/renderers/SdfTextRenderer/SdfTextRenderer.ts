@@ -56,6 +56,7 @@ import type {
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
+import type { Dimensions } from '../../../../common/CommonTypes.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -562,6 +563,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     transform: Matrix3d,
     clippingRect: Readonly<RectWithValid>,
     alpha: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions,
   ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
@@ -668,7 +671,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       0,
       zIndex,
       false,
-      false,
+      parentHasRenderTexture,
+      framebufferDimensions,
     );
 
     const texture = state.trFontFace?.texture;
