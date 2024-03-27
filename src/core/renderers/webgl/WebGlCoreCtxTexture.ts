@@ -20,12 +20,9 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
-
-const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
 /**
  * A wrapper around a WebGLTexture that handles loading the texture data
@@ -41,8 +38,8 @@ const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 export class WebGlCoreCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
   private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
-  private _w = 0;
-  private _h = 0;
+  private _width = 0;
+  private _height = 0;
 
   constructor(protected glw: WebGlContextWrapper, textureSource: Texture) {
     super(textureSource);
@@ -56,12 +53,12 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     return this._nativeCtxTexture;
   }
 
-  get w() {
-    return this._w;
+  get width() {
+    return this._width;
   }
 
-  get h() {
-    return this._h;
+  get height() {
+    return this._height;
   }
 
   /**
@@ -83,8 +80,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this.onLoadRequest()
       .then(({ width, height }) => {
         this._state = 'loaded';
-        this._w = width;
-        this._h = height;
+        this._width = width;
+        this._height = height;
         // Update the texture source's width and height so that it can be used
         // for rendering.
         this.textureSource.setState('loaded', { width, height });
@@ -100,41 +97,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    * Called when the texture data needs to be loaded and uploaded to a texture
    */
   async onLoadRequest(): Promise<Dimensions> {
-    this._nativeCtxTexture = this.createNativeCtxTexture();
     const { glw } = this;
+    this._nativeCtxTexture = this.createNativeCtxTexture();
 
-    // On initial load request, create a 1x1 transparent texture to use until
-    // the texture data is finally loaded.
-    glw.activeTexture(0);
-    glw.bindTexture(this._nativeCtxTexture);
-
-    // linear texture filtering
-    glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-    glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
-
-    // texture wrapping method
-    glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-    glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-
-    glw.texImage2D(
-      0,
-      glw.RGBA,
-      1,
-      1,
-      0,
-      glw.RGBA,
-      glw.UNSIGNED_BYTE,
-      TRANSPARENT_TEXTURE_DATA,
-    );
-
-    // If the texture source is a RenderTexture, we can return the width and height
-    // immediately without needing to load any data because we already rendered to the texture
-    if (this.textureSource instanceof RenderTexture) {
-      return {
-        width: this.textureSource.width,
-        height: this.textureSource.height,
-      };
-    }
+    // Set to a 1x1 transparent texture
+    glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
 
     const textureData = await this.textureSource?.getTextureData();
     let width = 0;
@@ -167,16 +134,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height = 0;
       // Reset to a 1x1 transparent texture
       glw.bindTexture(this._nativeCtxTexture);
-      glw.texImage2D(
-        0,
-        glw.RGBA,
-        1,
-        1,
-        0,
-        glw.RGBA,
-        glw.UNSIGNED_BYTE,
-        TRANSPARENT_TEXTURE_DATA,
-      );
+      glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
     } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
       const {
         mipmaps,
@@ -219,8 +177,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       return;
     }
     this._state = 'freed';
-    this._w = 0;
-    this._h = 0;
+    this._width = 0;
+    this._height = 0;
     if (!this._nativeCtxTexture) {
       return;
     }
@@ -229,12 +187,35 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = null;
   }
 
-  private createNativeCtxTexture() {
+  /**
+   * Create native context texture
+   *
+   * @remarks
+   * When this method returns the returned texture will be bound to the GL context state.
+   *
+   * @param width
+   * @param height
+   * @returns
+   */
+  protected createNativeCtxTexture() {
     const { glw } = this;
     const nativeTexture = glw.createTexture();
     if (!nativeTexture) {
       throw new Error('Could not create WebGL Texture');
     }
+
+    // On initial load request, create a 1x1 transparent texture to use until
+    // the texture data is finally loaded.
+    glw.activeTexture(0);
+    glw.bindTexture(nativeTexture);
+
+    // linear texture filtering
+    glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
+    glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+
+    // texture wrapping method
+    glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
+    glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
     return nativeTexture;
   }
 }
