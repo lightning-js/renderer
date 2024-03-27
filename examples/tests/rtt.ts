@@ -35,22 +35,13 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     color: 0x000000ff,
     parent: testRoot,
   });
-  const clippingNode = renderer.createNode({
-    x: 0,
-    y: 0,
-    width: 1920,
-    height: 1080,
-    parent: node,
-    clipping: true,
-    color: 0x00000000,
-  });
 
   const rootRenderToTextureNode = renderer.createNode({
     x: 0,
     y: 0,
     width: 1920,
     height: 1080,
-    parent: clippingNode,
+    parent: node,
     rtt: true,
     zIndex: 5,
     colorTop: 0xc0ffeeff,
@@ -64,7 +55,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       y: Math.floor(i / 15) * 120 + 150,
       width: 120,
       height: 120,
-      scale: 0.85,
+      scale: 1,
       // src: '../assets/rocko.png',
       src: `https://picsum.photos/id/${i + 30}/120/120`,
     });
