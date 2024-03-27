@@ -245,6 +245,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       td,
       rtt: renderToTexture,
       parentHasRenderTexture,
+      framebufferDimensions,
     } = params;
     let { texture } = params;
 
@@ -266,43 +267,22 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const targetDims = {
       width,
       height,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     };
     const targetShader = shader || this.defaultShader;
     assertTruthy(targetShader instanceof WebGlCoreShader);
-    if (curRenderOp) {
-      // If the current render op is not the same shader, create a new one
-      // If the current render op's shader props are not compatible with the
-      // the new shader props, create a new one render op.
-      if (
-        renderToTexture ||
-        curRenderOp.shader !== targetShader ||
-        !compareRect(curRenderOp.clippingRect, clippingRect) ||
-        (curRenderOp.shader !== this.defaultShader &&
-          (!shaderProps ||
-            !curRenderOp.shader.canBatchShaderProps(
-              curRenderOp.shaderProps,
-              shaderProps,
-            )))
-      ) {
-        curRenderOp = null;
-      }
-    }
 
-    assertTruthy(targetShader instanceof WebGlCoreShader);
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    if (!curRenderOp) {
+    if (!this.reuseRenderOp(params)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.newRenderOp(
         targetShader,
-        shaderProps as any,
+        shaderProps as Record<string, unknown>,
         alpha,
         targetDims,
         clippingRect,
         bufferIdx,
         renderToTexture,
         parentHasRenderTexture,
+        framebufferDimensions,
       );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
@@ -444,6 +424,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     bufferIdx: number,
     renderToTexture?: boolean,
     parentHasRenderTexture?: boolean,
+    framebufferDimensions?: Dimensions,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.glw,
@@ -458,6 +439,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       0, // Z-Index is only used for explictly added Render Ops
       renderToTexture,
       parentHasRenderTexture,
+      framebufferDimensions,
     );
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -502,6 +484,50 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
+  }
+
+  reuseRenderOp(params: QuadOptions) {
+    const {
+      shader,
+      shaderProps,
+      rtt: renderToTexture,
+      parentHasRenderTexture,
+      clippingRect,
+    } = params;
+
+    const targetShader = shader || this.defaultShader; // 0000 0001
+
+    // Force new render operation on RTT nodes
+    // or when parent has a render texture
+    if (renderToTexture || parentHasRenderTexture) {
+      // 0000 0010
+      return false;
+    }
+
+    // Switching shader program will require a new render operation
+    if (this.curRenderOp?.shader !== targetShader) {
+      return false;
+    }
+
+    // Switching clipping rect will require a new render operation
+    if (!compareRect(this.curRenderOp.clippingRect, clippingRect)) {
+      return false;
+    }
+
+    // Check if the shader can batch the shader properties
+    if (
+      this.curRenderOp.shader !== this.defaultShader &&
+      (!shaderProps ||
+        !this.curRenderOp.shader.canBatchShaderProps(
+          this.curRenderOp.shaderProps,
+          shaderProps,
+        ))
+    ) {
+      return false;
+    }
+
+    // Render operation can be reused
+    return true;
   }
 
   /**
@@ -582,7 +608,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
         });
 
         this.stage.addQuads(child);
-
         child.hasRTTupdates = false;
       }
 
@@ -594,7 +619,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.renderToTextureActive = false;
 
     // Unbind the framebuffer
-    glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
     glw.bindFramebuffer(null);
+    glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
 }

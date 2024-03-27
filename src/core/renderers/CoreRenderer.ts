@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { Dimensions } from '../../common/CommonTypes.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
@@ -48,6 +49,7 @@ export interface QuadOptions {
   td: number;
   rtt?: boolean;
   parentHasRenderTexture?: boolean;
+  framebufferDimensions?: Dimensions;
 }
 
 export abstract class CoreRenderer {
