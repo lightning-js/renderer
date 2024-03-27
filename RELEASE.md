@@ -13,6 +13,9 @@ git checkout main
 # Stash any untracked + uncomitted changes
 git stash -u
 
+# Pull any new commits from GitHub
+git pull
+
 # Run the unit tests
 pnpm test
 
