@@ -18,6 +18,7 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import elevatorImg from '../assets/elevator.png';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
@@ -119,17 +120,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  const noiseTexture = renderer.createTexture('NoiseTexture', {
-    width: 666,
-    height: 333,
-  });
-
   const t4 = renderer.createNode({
     x: 960,
     y: 540,
     width: 960,
     height: 540,
-    texture: noiseTexture,
+    src: elevatorImg,
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
