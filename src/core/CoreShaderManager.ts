@@ -60,6 +60,7 @@ import {
   RadialProgressEffect,
   type RadialProgressEffectProps,
 } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
+import { HolePunchEffect } from './renderers/webgl/shaders/effects/HolePunchEffect.js';
 
 export type { FadeOutEffectProps };
 export type { LinearGradientEffectProps };
@@ -94,6 +95,7 @@ export interface EffectMap {
   grayscale: typeof GrayscaleEffect;
   glitch: typeof GlitchEffect;
   radialProgress: typeof RadialProgressEffect;
+  holePunch: typeof HolePunchEffect;
 }
 
 export type EffectProps =
@@ -131,6 +133,7 @@ export class CoreShaderManager {
     this.registerEffectType('glitch', GlitchEffect);
     this.registerEffectType('radius', RadiusEffect);
     this.registerEffectType('radialProgress', RadialProgressEffect);
+    this.registerEffectType('holePunch', HolePunchEffect);
   }
 
   registerShaderType<Type extends keyof ShaderMap>(
