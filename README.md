@@ -40,6 +40,14 @@ pnpm start
 pnpm start:prod
 ```
 
+## Browser Targets
+
+The Lightning 3 Renderer's goal is to work with the following browser versions and above:
+
+- Chrome v38 (Released October 7, 2014)
+
+Any JavaScript language features or browser APIs that cannot be automatically transpiled or polyfilled by industry standard transpilers (such as Babel) to target these versions must be carefully considered before use.
+
 ## Example Tests
 
 The Example Tests sub-project define a set of tests for various Renderer
@@ -72,6 +80,10 @@ The captured Snapshots of these tests are optionally defined in the individual
 Example Tests.
 
 See [visual-regression/README.md](./visual-regression/README.md) for more info.
+
+## Manual Regression Tests
+
+See [docs/ManualRegressionTests.md].
 
 ## Release Procedure
 

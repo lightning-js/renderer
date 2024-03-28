@@ -128,6 +128,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    */
   private ssdfFontFamilies: FontFamilyMap = {};
   private msdfFontFamilies: FontFamilyMap = {};
+  private fontFamilyArray: FontFamilyMap[] = [
+    this.ssdfFontFamilies,
+    this.msdfFontFamilies,
+  ];
   private sdfShader: SdfShader;
   private rendererBounds: Bound;
 
@@ -147,22 +151,22 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     return {
       fontFamily: (state, value) => {
         state.props.fontFamily = value;
-        state.trFontFace = undefined;
+        this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },
       fontWeight: (state, value) => {
         state.props.fontWeight = value;
-        state.trFontFace = undefined;
+        this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },
       fontStyle: (state, value) => {
         state.props.fontStyle = value;
-        state.trFontFace = undefined;
+        this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },
       fontStretch: (state, value) => {
         state.props.fontStretch = value;
-        state.trFontFace = undefined;
+        this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },
       fontSize: (state, value) => {
@@ -214,11 +218,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       },
       width: (state, value) => {
         state.props.width = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the horizontal direction
+        if (state.props.contain !== 'none') {
+          this.invalidateLayoutCache(state);
+        }
       },
       height: (state, value) => {
         state.props.height = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the vertical direction
+        if (state.props.contain === 'both') {
+          this.invalidateLayoutCache(state);
+        }
       },
       offsetY: (state, value) => {
         state.props.offsetY = value;
@@ -351,6 +361,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       textW: undefined,
       distanceRange: 0,
       trFontFace: undefined,
+      isRenderable: false,
       debugData: {
         updateCount: 0,
         layoutCount: 0,
@@ -383,6 +394,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         this.setStatus(state, 'failed', new Error(msg));
         return;
       }
+      trFontFace.texture.setRenderableOwner(state, state.isRenderable);
     }
 
     // If the font hasn't been loaded yet, stop here.
@@ -737,13 +749,38 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     //   debugData.drawCount++;
     // }
   }
+
+  override setIsRenderable(
+    state: SdfTextRendererState,
+    renderable: boolean,
+  ): void {
+    super.setIsRenderable(state, renderable);
+    state.trFontFace?.texture.setRenderableOwner(state, renderable);
+  }
+
+  override destroyState(state: SdfTextRendererState): void {
+    super.destroyState(state);
+    // If there's a Font Face assigned we must free the owner relation to its texture
+    state.trFontFace?.texture.setRenderableOwner(state, false);
+  }
   //#endregion Overrides
 
   public resolveFontFace(props: TrFontProps): SdfTrFontFace | undefined {
-    return TrFontManager.resolveFontFace(
-      [this.msdfFontFamilies, this.ssdfFontFamilies],
-      props,
-    ) as SdfTrFontFace | undefined;
+    return TrFontManager.resolveFontFace(this.fontFamilyArray, props) as
+      | SdfTrFontFace
+      | undefined;
+  }
+
+  /**
+   * Release the loaded SDF font face
+   *
+   * @param state
+   */
+  protected releaseFontFace(state: SdfTextRendererState) {
+    if (state.trFontFace) {
+      state.trFontFace.texture.setRenderableOwner(state, false);
+      state.trFontFace = undefined;
+    }
   }
 
   /**

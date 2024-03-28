@@ -39,6 +39,8 @@ import { FinalizationRegistryTextureUsageTracker } from './texture-usage-tracker
 import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageTracker.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
+import { santizeCustomDataMap } from '../render-drivers/utils.js';
+import { isProductionEnvironment } from '../utils.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -124,6 +126,23 @@ export interface RendererMainSettings {
    * @defaultValue `1080`
    */
   appHeight?: number;
+
+  /**
+   * Texture Memory Byte Threshold
+   *
+   * @remarks
+   * When the amount of GPU VRAM used by textures exceeds this threshold,
+   * the Renderer will free up all the textures that are current not visible
+   * within the configured `boundsMargin`.
+   *
+   * When set to `0`, the threshold-based texture memory manager is disabled.
+   */
+  txMemByteThreshold?: number;
+
+  /**
+   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   */
+  boundsMargin?: number | [number, number, number, number];
 
   /**
    * Factor to convert app-authored logical coorindates to device logical coordinates
@@ -310,6 +329,8 @@ export class RendererMain extends EventEmitter {
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
+      txMemByteThreshold: settings.txMemByteThreshold || 124e6,
+      boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,
@@ -389,9 +410,13 @@ export class RendererMain extends EventEmitter {
       this.emit('frameTick', frameTickData);
     };
 
+    driver.onIdle = () => {
+      this.emit('idle');
+    };
+
     targetEl.appendChild(canvas);
 
-    if (enableInspector && !import.meta.env.PROD) {
+    if (enableInspector && !isProductionEnvironment()) {
       this.inspector = new Inspector(canvas, resolvedSettings);
     }
   }
@@ -501,6 +526,7 @@ export class RendererMain extends EventEmitter {
       props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
     const colorBr =
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const data = santizeCustomDataMap(props.data ?? {});
 
     const parentHasRenderTexture =
       props.parent?.rtt ?? props.parent?.parentHasRenderTexture ?? false;
@@ -541,6 +567,7 @@ export class RendererMain extends EventEmitter {
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
       parentHasRenderTexture,
+      data: data,
     };
   }
 

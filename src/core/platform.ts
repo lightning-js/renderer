@@ -23,14 +23,22 @@ import type { Stage } from './Stage.js';
  * Platform render loop initiator
  */
 export const startLoop = (stage: Stage) => {
+  let isIdle = false;
   const runLoop = () => {
     stage.updateAnimations();
 
     if (!stage.hasSceneUpdates()) {
+      // We still need to calculate the fps else it looks like the app is frozen
+      stage.calculateFps();
       setTimeout(runLoop, 16.666666666666668);
+      if (!isIdle) {
+        stage.emit('idle');
+        isIdle = true;
+      }
       return;
     }
 
+    isIdle = false;
     stage.drawFrame();
     requestAnimationFrame(runLoop);
   };

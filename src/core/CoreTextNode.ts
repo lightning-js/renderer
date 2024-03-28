@@ -25,7 +25,7 @@ import type {
   TrFailedEventHandler,
   TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
-import { CoreNode, type CoreNodeProps } from './CoreNode.js';
+import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
@@ -55,35 +55,32 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     super(stage, props);
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState(
-        {
-          x: this.absX,
-          y: this.absY,
-          width: props.width,
-          height: props.height,
-          textAlign: props.textAlign,
-          color: props.color,
-          zIndex: props.zIndex,
-          contain: props.contain,
-          scrollable: props.scrollable,
-          scrollY: props.scrollY,
-          offsetY: props.offsetY,
-          letterSpacing: props.letterSpacing,
-          debug: props.debug,
-          fontFamily: props.fontFamily,
-          fontSize: props.fontSize,
-          fontStretch: props.fontStretch,
-          fontStyle: props.fontStyle,
-          fontWeight: props.fontWeight,
-          text: props.text,
-          lineHeight: props.lineHeight,
-          maxLines: props.maxLines,
-          textBaseline: props.textBaseline,
-          verticalAlign: props.verticalAlign,
-          overflowSuffix: props.overflowSuffix,
-        },
-        undefined,
-      );
+      this.resolveTextRendererAndState({
+        x: this.absX,
+        y: this.absY,
+        width: props.width,
+        height: props.height,
+        textAlign: props.textAlign,
+        color: props.color,
+        zIndex: props.zIndex,
+        contain: props.contain,
+        scrollable: props.scrollable,
+        scrollY: props.scrollY,
+        offsetY: props.offsetY,
+        letterSpacing: props.letterSpacing,
+        debug: props.debug,
+        fontFamily: props.fontFamily,
+        fontSize: props.fontSize,
+        fontStretch: props.fontStretch,
+        fontStyle: props.fontStyle,
+        fontWeight: props.fontWeight,
+        text: props.text,
+        lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        textBaseline: props.textBaseline,
+        verticalAlign: props.verticalAlign,
+        overflowSuffix: props.overflowSuffix,
+      });
     this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
   }
@@ -127,19 +124,33 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   };
 
   override get width(): number {
-    return this.trState.props.width;
+    return this.props.width;
   }
 
   override set width(value: number) {
+    this.props.width = value;
     this.textRenderer.set.width(this.trState, value);
+
+    // If not containing, we must update the local transform to account for the
+    // new width
+    if (this.contain === 'none') {
+      this.setUpdateType(UpdateType.Local);
+    }
   }
 
   override get height(): number {
-    return this.trState.props.height;
+    return this.props.height;
   }
 
   override set height(value: number) {
+    this.props.height = value;
     this.textRenderer.set.height(this.trState, value);
+
+    // If not containing in the horizontal direction, we must update the local
+    // transform to account for the new height
+    if (this.contain !== 'both') {
+      this.setUpdateType(UpdateType.Local);
+    }
   }
 
   override get color(): number {
@@ -156,7 +167,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
-    this.checkIsRenderable();
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -166,8 +176,10 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   set textRendererOverride(value: CoreTextNodeProps['textRendererOverride']) {
     this._textRendererOverride = value;
 
+    this.textRenderer.destroyState(this.trState);
+
     const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState(this.trState.props, this.trState);
+      this.resolveTextRendererAndState(this.trState.props);
     this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
   }
@@ -328,16 +340,16 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override checkIsRenderable(): boolean {
-    if (super.checkIsRenderable()) {
+  override checkRenderProps(): boolean {
+    if (this.trState.props.text !== '') {
       return true;
     }
+    return super.checkRenderProps();
+  }
 
-    if (this.trState.props.text !== '') {
-      return (this.isRenderable = true);
-    }
-
-    return (this.isRenderable = false);
+  override onChangeIsRenderable(isRenderable: boolean) {
+    super.onChangeIsRenderable(isRenderable);
+    this.textRenderer.setIsRenderable(this.trState, isRenderable);
   }
 
   override renderQuads(renderer: CoreRenderer) {
@@ -361,14 +373,20 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   }
 
   /**
+   * Destroy the node and cleanup all resources
+   */
+  override destroy(): void {
+    super.destroy();
+
+    this.textRenderer.destroyState(this.trState);
+  }
+
+  /**
    * Resolve a text renderer and a new state based on the current text renderer props provided
    * @param props
    * @returns
    */
-  private resolveTextRendererAndState(
-    props: TrProps,
-    prevState?: TextRendererState,
-  ): {
+  private resolveTextRendererAndState(props: TrProps): {
     resolvedTextRenderer: TextRenderer;
     textRendererState: TextRendererState;
   } {
@@ -378,15 +396,6 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
     );
 
     const textRendererState = resolvedTextRenderer.createState(props);
-
-    const stateEvents = ['loading', 'loaded', 'failed'];
-
-    if (prevState) {
-      // Remove the old event listeners from previous state obj there was one
-      stateEvents.forEach((eventName) => {
-        prevState.emitter.off(eventName);
-      });
-    }
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);

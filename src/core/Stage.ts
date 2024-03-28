@@ -37,11 +37,14 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
+import { TextureMemoryManager } from './TextureMemoryManager.js';
 
 export interface StageOptions {
   rootId: number;
   appWidth: number;
   appHeight: number;
+  txMemByteThreshold: number;
+  boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -72,11 +75,13 @@ export class Stage extends EventEmitter {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
+  public readonly txMemManager: TextureMemoryManager;
   public readonly fontManager: TrFontManager;
   public readonly textRenderers: Partial<TextRendererMap>;
   public readonly shManager: CoreShaderManager;
   public readonly renderer: WebGlCoreRenderer;
   public readonly root: CoreNode;
+  public readonly boundsMargin: [number, number, number, number];
 
   /// State
   deltaTime = 0;
@@ -101,14 +106,25 @@ export class Stage extends EventEmitter {
       debug,
       appWidth,
       appHeight,
+      boundsMargin,
       enableContextSpy,
       numImageWorkers,
+      txMemByteThreshold,
     } = options;
 
     this.txManager = new CoreTextureManager(numImageWorkers);
+    this.txMemManager = new TextureMemoryManager(txMemByteThreshold);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+
+    let bm = [0, 0, 0, 0] as [number, number, number, number];
+    if (boundsMargin) {
+      bm = Array.isArray(boundsMargin)
+        ? boundsMargin
+        : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
+    }
+    this.boundsMargin = bm;
 
     if (debug?.monitorTextureCache) {
       setInterval(() => {
@@ -127,6 +143,7 @@ export class Stage extends EventEmitter {
       clearColor: clearColor ?? 0xff000000,
       bufferMemory,
       txManager: this.txManager,
+      txMemManager: this.txMemManager,
       shManager: this.shManager,
       contextSpy: this.contextSpy,
     });
@@ -241,11 +258,15 @@ export class Stage extends EventEmitter {
     // Perform render pass
     renderer?.render();
 
+    this.calculateFps();
+
     // Reset renderRequested flag if it was set
     if (renderRequested) {
       this.renderRequested = false;
     }
+  }
 
+  calculateFps() {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
     const { fpsUpdateInterval } = this.options;

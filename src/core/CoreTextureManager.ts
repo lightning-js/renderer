@@ -147,7 +147,9 @@ export class CoreTextureManager {
     Texture,
     { cacheKey: string | false; count: number }
   > = new WeakMap();
-  imageWorkerManager: ImageWorkerManager;
+  imageWorkerManager: ImageWorkerManager | null = null;
+  hasCreateImageBitmap = !!self.createImageBitmap;
+  hasWorker = !!self.Worker;
   /**
    * Renderer that this texture manager is associated with
    *
@@ -159,7 +161,16 @@ export class CoreTextureManager {
 
   constructor(numImageWorkers: number) {
     // Register default known texture types
-    this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
+    if (this.hasCreateImageBitmap && this.hasWorker) {
+      this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
+    }
+
+    if (!this.hasCreateImageBitmap) {
+      console.warn(
+        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+      );
+    }
+
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
@@ -280,6 +291,8 @@ export class CoreTextureManager {
         }
       }
     }
+    // Free the ctx texture if it exists.
+    this.ctxTextureCache.get(texture)?.free();
   }
 
   /**

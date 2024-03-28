@@ -17,10 +17,109 @@
  * limitations under the License.
  */
 
-import { SdfTrFontFace } from './font-face-types/SdfTrFontFace/SdfTrFontFace.js';
 import type { TrFontFace } from './font-face-types/TrFontFace.js';
-import { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
 import type { TextRendererMap, TrFontProps } from './renderers/TextRenderer.js';
+import memize from 'memize';
+
+const weightConversions: { [key: string]: number } = {
+  normal: 400,
+  bold: 700,
+  bolder: 900,
+  lighter: 100,
+};
+
+const fontWeightToNumber = (weight: string | number): number => {
+  if (typeof weight === 'number') {
+    return weight;
+  }
+
+  return weightConversions[weight] || 400;
+};
+
+function rawResolveFontToUse(
+  familyMapsByPriority: FontFamilyMap[],
+  family: string,
+  weightIn: string | number,
+  style: string,
+  stretch: string,
+): TrFontFace | undefined {
+  let weight = fontWeightToNumber(weightIn);
+
+  for (const fontFamiles of familyMapsByPriority) {
+    const fontFaces = fontFamiles[family];
+    if (!fontFaces) {
+      continue;
+    }
+
+    if (fontFaces.size === 1) {
+      // No Exact match found, find nearest weight match
+      console.warn(
+        `TrFontManager: Only one font face found for family: '${family}' - will be used for all weights and styles`,
+      );
+
+      return fontFaces.values().next().value as TrFontFace;
+    }
+
+    const weightMap = new Map<number, TrFontFace>();
+    for (const fontFace of fontFaces) {
+      const fontFamilyWeight = fontWeightToNumber(fontFace.descriptors.weight);
+      if (
+        fontFamilyWeight === weight &&
+        fontFace.descriptors.style === style &&
+        fontFace.descriptors.stretch === stretch
+      ) {
+        return fontFace;
+      }
+
+      weightMap.set(fontFamilyWeight, fontFace);
+    }
+
+    // No Exact match found, find nearest weight match
+    const msg = `TrFontManager: No exact match: '${family} Weight: ${weight} Style: ${style} Stretch: ${stretch}'`;
+    console.error(msg);
+
+    // Follow the CSS font-weight algorithm to find the nearest weight match
+    // https://www.w3.org/TR/2018/REC-css-fonts-3-20180920/#font-matching-algorithm
+
+    if (weight === 400 && weightMap.has(500)) {
+      return weightMap.get(500);
+    }
+
+    if (weight === 500 && weightMap.has(400)) {
+      return weightMap.get(400);
+    }
+
+    if (weight < 400) {
+      while (weight > 0) {
+        if (weightMap.has(weight)) {
+          return weightMap.get(weight);
+        }
+        weight -= 100;
+      }
+      // reset back for the next loop
+      weight = 600;
+    }
+
+    while (weight < 1000) {
+      if (weightMap.has(weight)) {
+        return weightMap.get(weight);
+      }
+      weight += 100;
+    }
+
+    // finally check lower again
+    weight = 500;
+    while (weight > 0) {
+      if (weightMap.has(weight)) {
+        return weightMap.get(weight);
+      }
+      weight -= 100;
+    }
+  }
+
+  return;
+}
+const resolveFontToUse = memize(rawResolveFontToUse);
 
 /**
  * Structure mapping font family names to a set of font faces.
@@ -59,38 +158,13 @@ export class TrFontManager {
     familyMapsByPriority: FontFamilyMap[],
     props: TrFontProps,
   ): TrFontFace | undefined {
-    const closeFaces: WebTrFontFace[] = [];
-    const exactMatch = familyMapsByPriority.reduce<TrFontFace | undefined>(
-      (prev, fontFamiles) => {
-        if (prev) {
-          return prev;
-        }
-        const fontFaces = fontFamiles[props.fontFamily];
-        if (!fontFaces) {
-          return undefined;
-        }
-        const fontFacesCopy = new Set(fontFaces);
-
-        // Remove any font faces that don't match the style exactly
-        // TODO: In the future we may enhance this to find the best match
-        // based on font weight, style, etc.
-        // See https://www.w3.org/TR/2018/REC-css-fonts-3-20180920/#font-matching-algorithm
-        for (const fontFace of fontFacesCopy) {
-          if (
-            fontFace.descriptors.stretch !== props.fontStretch ||
-            fontFace.descriptors.style !== props.fontStyle ||
-            fontFace.descriptors.weight !== props.fontWeight
-          ) {
-            fontFacesCopy.delete(fontFace);
-          }
-        }
-
-        // Return the first font face that matches the style exactly
-        return fontFacesCopy.values().next().value;
-      },
-      undefined,
+    const { fontFamily, fontWeight, fontStyle, fontStretch } = props;
+    return resolveFontToUse(
+      familyMapsByPriority,
+      fontFamily,
+      fontWeight,
+      fontStyle,
+      fontStretch,
     );
-
-    return exactMatch || closeFaces[0];
   }
 }

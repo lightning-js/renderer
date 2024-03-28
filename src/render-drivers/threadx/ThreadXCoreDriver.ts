@@ -112,6 +112,8 @@ export class ThreadXCoreDriver implements ICoreDriver {
         canvas: offscreenCanvas,
         appWidth: rendererSettings.appWidth,
         appHeight: rendererSettings.appHeight,
+        txMemByteThreshold: rendererSettings.txMemByteThreshold,
+        boundsMargin: rendererSettings.boundsMargin,
         deviceLogicalPixelRatio: rendererSettings.deviceLogicalPixelRatio,
         devicePhysicalPixelRatio: rendererSettings.devicePhysicalPixelRatio,
         clearColor: rendererSettings.clearColor,

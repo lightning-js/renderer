@@ -22,21 +22,16 @@ import { type TextureData } from '../textures/Texture.js';
 type MessageCallback = [(value: any) => void, (reason: any) => void];
 
 export class ImageWorkerManager {
-  isWorkerSupported = !!self.Worker;
   imageWorkersEnabled = true;
   messageManager: Record<string, MessageCallback> = {};
   workers: Worker[] = [];
   workerIndex = 0;
 
   constructor(numImageWorkers: number) {
-    if (this.isWorkerSupported && numImageWorkers > 0) {
-      this.workers = this.createWorkers(numImageWorkers);
-      this.workers.forEach((worker) => {
-        worker.onmessage = this.handleMessage.bind(this);
-      });
-    } else {
-      this.imageWorkersEnabled = false;
-    }
+    this.workers = this.createWorkers(numImageWorkers);
+    this.workers.forEach((worker) => {
+      worker.onmessage = this.handleMessage.bind(this);
+    });
   }
 
   private handleMessage(event: MessageEvent) {
@@ -64,37 +59,56 @@ export class ImageWorkerManager {
       }
 
       async function getImage(src, premultiplyAlpha) {
-        const response = await fetch(src);
-        const blob = await response.blob();
-        const hasAlphaChannel = premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+        return new Promise(function(resolve, reject) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', src, true);
+          xhr.responseType = 'blob';
 
-        const data = await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
+          xhr.onload = function() {
+            if (xhr.status === 200) {
+              var blob = xhr.response;
+              var hasAlphaChannel = premultiplyAlpha !== undefined ? premultiplyAlpha : hasAlphaChannel(blob.type);
+
+              createImageBitmap(blob, {
+                premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+                colorSpaceConversion: 'none',
+                imageOrientation: 'none'
+              }).then(function(data) {
+                resolve({ data: data, premultiplyAlpha: premultiplyAlpha });
+              }).catch(function(error) {
+                reject(error);
+              });
+            } else {
+              reject(new Error('Failed to load image: ' + xhr.statusText));
+            }
+          };
+
+          xhr.onerror = function() {
+            reject(new Error('Network error occurred while trying to fetch the image.'));
+          };
+
+          xhr.send();
         });
-
-        return { data, premultiplyAlpha };
       }
 
       self.onmessage = async (event) => {
-        const { src, premultiplyAlpha } = event.data;
+        var src = event.data.src;
+        var premultiplyAlpha = event.data.premultiplyAlpha;
 
-        try {
-          const data = await getImage(src, premultiplyAlpha);
-          self.postMessage({ src, data }, [data.data]);
-        } catch (error) {
-          self.postMessage({ src, error: error.message });
-        }
+        getImage(src, premultiplyAlpha)
+          .then(function(data) {
+              self.postMessage({ src: src, data: data }, [data.data]);
+          })
+          .catch(function(error) {
+              self.postMessage({ src: src, error: error.message });
+          });
       };
     `;
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
     });
-    const blobURL: string = (window.URL ? URL : webkitURL).createObjectURL(
-      blob,
-    );
+    const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
       workers.push(new Worker(blobURL));

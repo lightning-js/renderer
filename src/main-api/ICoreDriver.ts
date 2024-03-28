@@ -63,4 +63,6 @@ export interface ICoreDriver {
   onFpsUpdate(fpsData: FpsUpdatePayload): void;
 
   onFrameTick(frameTickData: FrameTickPayload): void;
+
+  onIdle?(): void;
 }

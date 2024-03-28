@@ -193,11 +193,17 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       },
       width: (state, value) => {
         state.props.width = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the horizontal direction
+        if (state.props.contain !== 'none') {
+          this.invalidateLayoutCache(state);
+        }
       },
       height: (state, value) => {
         state.props.height = value;
-        this.invalidateLayoutCache(state);
+        // Only invalidate layout cache if we're containing in the vertical direction
+        if (state.props.contain === 'both') {
+          this.invalidateLayoutCache(state);
+        }
       },
       offsetY: (state, value) => {
         state.props.offsetY = value;
@@ -284,6 +290,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       textH: 0,
       fontInfo: undefined,
       fontFaceLoadedHandler: undefined,
+      isRenderable: false,
       debugData: {
         updateCount: 0,
         layoutCount: 0,
@@ -494,9 +501,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     for (const pageInfo of canvasPages) {
       if (pageInfo.valid) continue;
       if (pageInfo.lineNumStart < 0) {
+        pageInfo.texture?.setRenderableOwner(state, false);
         pageInfo.texture = this.stage.txManager.loadTexture('ImageTexture', {
           src: '',
         });
+        pageInfo.texture.setRenderableOwner(state, state.isRenderable);
         pageInfo.valid = true;
         continue;
       }
@@ -511,6 +520,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         ),
       });
       if (!(this.canvas.width === 0 || this.canvas.height === 0)) {
+        pageInfo.texture?.setRenderableOwner(state, false);
         pageInfo.texture = this.stage.txManager.loadTexture(
           'ImageTexture',
           {
@@ -525,6 +535,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
             preload: true,
           },
         );
+        pageInfo.texture.setRenderableOwner(state, state.isRenderable);
       }
       pageInfo.valid = true;
     }
@@ -687,6 +698,24 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     //     y + renderWindow.y2 - scrollY - (y + renderWindow.y1 - scrollY),
     //   );
     // }
+  }
+
+  override setIsRenderable(
+    state: CanvasTextRendererState,
+    renderable: boolean,
+  ): void {
+    super.setIsRenderable(state, renderable);
+    // Set state object owner from any canvas page textures
+    state.canvasPages?.forEach((pageInfo) => {
+      pageInfo.texture?.setRenderableOwner(state, renderable);
+    });
+  }
+
+  override destroyState(state: CanvasTextRendererState): void {
+    // Remove state object owner from any canvas page textures
+    state.canvasPages?.forEach((pageInfo) => {
+      pageInfo.texture?.setRenderableOwner(state, false);
+    });
   }
   //#endregion Overrides
 

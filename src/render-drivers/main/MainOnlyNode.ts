@@ -18,6 +18,7 @@
  */
 
 import type {
+  CustomDataMap,
   INode,
   INodeAnimatableProps,
   INodeWritableProps,
@@ -38,7 +39,9 @@ import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   NodeLoadedEventHandler,
   NodeFailedEventHandler,
+  NodeRenderStateEventHandler,
 } from '../../common/CommonTypes.js';
+import { santizeCustomDataMap } from '../utils.js';
 
 let nextId = 1;
 
@@ -56,6 +59,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureRef | null = null;
   protected _shader: ShaderRef | null = null;
+  protected _data: CustomDataMap | undefined = {};
 
   constructor(
     props: INodeWritableProps,
@@ -106,6 +110,12 @@ export class MainOnlyNode extends EventEmitter implements INode {
     // Forward loaded/failed events
     this.coreNode.on('loaded', this.onTextureLoaded);
     this.coreNode.on('failed', this.onTextureFailed);
+    this.coreNode.on('freed', this.onTextureFreed);
+
+    this.coreNode.on('outOfBounds', this.onOutOfBounds);
+    this.coreNode.on('inBounds', this.onInBounds);
+    this.coreNode.on('outOfViewport', this.onOutOfViewport);
+    this.coreNode.on('inViewport', this.onInViewport);
 
     // Assign properties to this object
     this.parent = props.parent as unknown as MainOnlyNode;
@@ -113,6 +123,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
+    this._data = props.data;
   }
 
   get x(): number {
@@ -438,6 +449,26 @@ export class MainOnlyNode extends EventEmitter implements INode {
   private onTextureFailed: NodeFailedEventHandler = (target, payload) => {
     this.emit('failed', payload);
   };
+
+  private onTextureFreed: NodeLoadedEventHandler = (target, payload) => {
+    this.emit('freed', payload);
+  };
+
+  private onOutOfBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfBounds', payload);
+  };
+
+  private onInBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inBounds', payload);
+  };
+
+  private onOutOfViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfViewport', payload);
+  };
+
+  private onInViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inViewport', payload);
+  };
   //#endregion Texture
 
   get shader(): ShaderRef | null {
@@ -454,8 +485,24 @@ export class MainOnlyNode extends EventEmitter implements INode {
     }
   }
 
+  get data(): CustomDataMap | undefined {
+    return this._data;
+  }
+
+  set data(d: CustomDataMap) {
+    this._data = santizeCustomDataMap(d);
+  }
+
   destroy(): void {
     this.emit('beforeDestroy', {});
+
+    //use while loop since setting parent to null removes it from array
+    let child = this.children[0];
+    while (child) {
+      child.destroy();
+      child = this.children[0];
+    }
+    this.coreNode.destroy();
     this.parent = null;
     this.texture = null;
     this.emit('afterDestroy', {});

@@ -19,10 +19,14 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
+import { isHTMLImageElement } from './internal/RendererUtils.js';
+
+const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
 /**
  * A wrapper around a WebGLTexture that handles loading the texture data
@@ -38,11 +42,15 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
 export class WebGlCoreCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
   private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
-  private _width = 0;
-  private _height = 0;
+  private _w = 0;
+  private _h = 0;
 
-  constructor(protected glw: WebGlContextWrapper, textureSource: Texture) {
-    super(textureSource);
+  constructor(
+    protected glw: WebGlContextWrapper,
+    memManager: TextureMemoryManager,
+    textureSource: Texture,
+  ) {
+    super(memManager, textureSource);
   }
 
   get ctxTexture(): WebGLTexture {
@@ -53,12 +61,16 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     return this._nativeCtxTexture;
   }
 
-  get width() {
-    return this._width;
+  get renderable(): boolean {
+    return this.textureSource.renderable;
   }
 
-  get height() {
-    return this._height;
+  get w() {
+    return this._w;
+  }
+
+  get h() {
+    return this._h;
   }
 
   /**
@@ -77,11 +89,15 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     }
     this._state = 'loading';
     this.textureSource.setState('loading');
+    this._nativeCtxTexture = this.createNativeCtxTexture();
     this.onLoadRequest()
       .then(({ width, height }) => {
+        if (this._state === 'freed') {
+          return;
+        }
         this._state = 'loaded';
-        this._width = width;
-        this._height = height;
+        this._w = width;
+        this._h = height;
         // Update the texture source's width and height so that it can be used
         // for rendering.
         this.textureSource.setState('loaded', { width, height });
@@ -97,22 +113,30 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    * Called when the texture data needs to be loaded and uploaded to a texture
    */
   async onLoadRequest(): Promise<Dimensions> {
-    const { glw } = this;
-    this._nativeCtxTexture = this.createNativeCtxTexture();
+    const { glw, memManager } = this;
 
     // Set to a 1x1 transparent texture
     glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
+    memManager.setTextureMemUse(this, TRANSPARENT_TEXTURE_DATA.byteLength);
 
     const textureData = await this.textureSource?.getTextureData();
+    // If the texture has been freed while loading, return early.
+    if (!this._nativeCtxTexture) {
+      assertTruthy(this._state === 'freed');
+      return { width: 0, height: 0 };
+    }
     let width = 0;
     let height = 0;
+
     assertTruthy(this._nativeCtxTexture);
     glw.activeTexture(0);
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
       textureData.data instanceof ImageBitmap ||
-      textureData.data instanceof ImageData
+      textureData.data instanceof ImageData ||
+      // not using typeof HTMLImageElement due to web worker
+      isHTMLImageElement(textureData.data)
     ) {
       const data = textureData.data;
       width = data.width;
@@ -124,6 +148,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       );
 
       glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
+      memManager.setTextureMemUse(this, width * height * 4);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
       if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
@@ -134,7 +159,18 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height = 0;
       // Reset to a 1x1 transparent texture
       glw.bindTexture(this._nativeCtxTexture);
-      glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
+
+      glw.texImage2D(
+        0,
+        glw.RGBA,
+        1,
+        1,
+        0,
+        glw.RGBA,
+        glw.UNSIGNED_BYTE,
+        TRANSPARENT_TEXTURE_DATA,
+      );
+      memManager.setTextureMemUse(this, TRANSPARENT_TEXTURE_DATA.byteLength);
     } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
       const {
         mipmaps,
@@ -149,12 +185,14 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           : (mipmaps[0] as unknown as ArrayBufferView);
 
       glw.bindTexture(this._nativeCtxTexture);
-      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
 
+      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
       glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
       glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+
+      memManager.setTextureMemUse(this, view.byteLength);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
@@ -167,6 +205,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height,
     };
   }
+
   /**
    * Free the WebGLTexture from the GPU
    *
@@ -177,13 +216,16 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       return;
     }
     this._state = 'freed';
-    this._width = 0;
-    this._height = 0;
+    this.textureSource.setState('freed');
+    this._w = 0;
+    this._h = 0;
     if (!this._nativeCtxTexture) {
       return;
     }
-    const { glw } = this;
+    const { glw, memManager } = this;
+
     glw.deleteTexture(this._nativeCtxTexture);
+    memManager.setTextureMemUse(this, 0);
     this._nativeCtxTexture = null;
   }
 

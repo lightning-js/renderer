@@ -60,6 +60,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -69,6 +70,7 @@ export interface WebGlCoreRendererOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   pixelRatio: number;
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
@@ -87,6 +89,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   //// Core Managers
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
 
   //// Options
@@ -123,6 +126,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { canvas, clearColor, bufferMemory } = options;
     this.options = options;
     this.txManager = options.txManager;
+    this.txMemManager = options.txMemManager;
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
     // When the default texture is loaded, request a render in case the
@@ -207,11 +211,15 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
-      return new WebGlCoreCtxSubTexture(this.glw, textureSource);
+      return new WebGlCoreCtxSubTexture(
+        this.glw,
+        this.txMemManager,
+        textureSource,
+      );
     } else if (textureSource instanceof RenderTexture) {
       return new WebGlCoreCtxRenderTexture(this.glw, textureSource);
     }
-    return new WebGlCoreCtxTexture(this.glw, textureSource);
+    return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
   }
 
   /**
@@ -588,7 +596,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Bind the the texture's framebuffer
       glw.bindFramebuffer(ctxTexture.framebuffer);
-      glw.viewport(0, 0, ctxTexture.width, ctxTexture.height);
+      glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
 
       // Clear the framebuffer
       glw.clear();

@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { CoreNodeRenderState } from '../core/CoreNode.js';
+
 /**
  * Types shared between Main Space and Core Space
  *
@@ -73,6 +75,13 @@ export type NodeTextureFailedPayload = {
 };
 
 /**
+ * Payload for when texture failed to load
+ */
+export type NodeTextureFreedPayload = {
+  type: 'texture';
+};
+
+/**
  * Combined type for all failed payloads
  */
 export type NodeFailedPayload =
@@ -93,6 +102,16 @@ export type NodeLoadedEventHandler = (
 export type NodeFailedEventHandler = (
   target: any,
   payload: NodeFailedPayload,
+) => void;
+
+export type NodeRenderStatePayload = {
+  type: 'renderState';
+  payload: CoreNodeRenderState;
+};
+
+export type NodeRenderStateEventHandler = (
+  target: any,
+  payload: NodeRenderStatePayload,
 ) => void;
 
 /**
