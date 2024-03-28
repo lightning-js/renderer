@@ -478,7 +478,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
 
     if (this.updateType & UpdateType.RenderState) {
-      this.updateRenderState();
+      this.updateRenderState(parentClippingRect);
       this.setUpdateType(UpdateType.IsRenderable);
     }
 
@@ -574,25 +574,24 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return false;
   }
 
-  checkRenderBounds(): CoreNodeRenderState {
-    assertTruthy(this.clippingRect);
+  checkRenderBounds(parentClippingRect: RectWithValid): CoreNodeRenderState {
     assertTruthy(this.renderBound);
-    const rectW = this.clippingRect.width || this.stage.root.width;
-    const rectH = this.clippingRect.height || this.stage.root.height;
+    const rectW = parentClippingRect.width || this.stage.root.width;
+    const rectH = parentClippingRect.height || this.stage.root.height;
     this.strictBound = createBound(
-      this.clippingRect.x,
-      this.clippingRect.y,
-      rectW,
-      rectH,
+      parentClippingRect.x,
+      parentClippingRect.y,
+      parentClippingRect.x + rectW,
+      parentClippingRect.y + rectH,
       this.strictBound,
     );
 
     const renderM = this.stage.boundsMargin;
     this.preloadBound = createBound(
-      this.clippingRect.x - renderM[3],
-      this.clippingRect.y - renderM[0],
-      this.clippingRect.x + rectW + renderM[1],
-      this.clippingRect.y + rectH + renderM[2],
+      parentClippingRect.x - renderM[3],
+      parentClippingRect.y - renderM[0],
+      parentClippingRect.x + rectW + renderM[1],
+      parentClippingRect.y + rectH + renderM[2],
       this.preloadBound,
     );
 
@@ -606,8 +605,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return CoreNodeRenderState.OutOfBounds;
   }
 
-  updateRenderState() {
-    const renderState = this.checkRenderBounds();
+  updateRenderState(parentClippingRect: RectWithValid) {
+    const renderState = this.checkRenderBounds(parentClippingRect);
     if (renderState !== this.renderState) {
       const previous = this.renderState;
       this.renderState = renderState;
