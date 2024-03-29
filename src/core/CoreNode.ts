@@ -834,7 +834,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     } = this.props;
 
     // Prevent quad rendering if parent has a render texture
-    // and this node is not the render texture
+    // and renderer is not currently rendering to a texture
     if (parentHasRenderTexture) {
       if (!renderer.renderToTextureActive) {
         return;

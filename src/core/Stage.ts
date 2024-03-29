@@ -243,7 +243,7 @@ export class Stage extends EventEmitter {
       this.root.update(this.deltaTime, this.root.clippingRect);
     }
 
-    // test if we need to update the scene
+    // Reset render operations and clear the canvas
     renderer?.reset();
 
     // If we have RTT nodes draw them first

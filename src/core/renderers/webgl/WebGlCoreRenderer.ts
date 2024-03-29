@@ -494,23 +494,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
     return textureIdx;
   }
 
+  /**
+   * Test if the current Render operation can be reused for the specified parameters.
+   * @param params
+   * @returns
+   */
   reuseRenderOp(params: QuadOptions) {
-    const {
-      shader,
-      shaderProps,
-      rtt: renderToTexture,
-      parentHasRenderTexture,
-      clippingRect,
-    } = params;
+    const { shader, shaderProps, parentHasRenderTexture, clippingRect } =
+      params;
 
-    const targetShader = shader || this.defaultShader; // 0000 0001
-
-    // Force new render operation on RTT nodes
-    // or when parent has a render texture
-    if (renderToTexture || parentHasRenderTexture) {
-      // 0000 0010
-      return false;
-    }
+    const targetShader = shader || this.defaultShader;
 
     // Switching shader program will require a new render operation
     if (this.curRenderOp?.shader !== targetShader) {
@@ -519,6 +512,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     // Switching clipping rect will require a new render operation
     if (!compareRect(this.curRenderOp.clippingRect, clippingRect)) {
+      return false;
+    }
+
+    // Force new render operation if rendering to texture
+    if (parentHasRenderTexture) {
       return false;
     }
 
@@ -577,6 +575,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   renderToTexture(node: CoreNode) {
+    for (let i = 0; i < this.rttNodes.length; i++) {
+      if (this.rttNodes[i] === node) {
+        return;
+      }
+    }
     this.rttNodes.push(node);
   }
 
@@ -629,6 +632,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // Render all associated quads to the texture
     this.render();
     this.renderToTextureActive = false;
+
+    // Reset render operations
+    this.renderOps.length = 0;
 
     // Unbind the framebuffer
     glw.bindFramebuffer(null);
