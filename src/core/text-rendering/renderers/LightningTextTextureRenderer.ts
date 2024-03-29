@@ -73,7 +73,7 @@ export interface Settings {
   verticalAlign: TextVerticalAlign;
   offsetY: number | null;
   maxLines: number;
-  maxLinesSuffix: string;
+  overflowSuffix: string;
   precision: number;
   textColor: RGBA;
   paddingLeft: number;
@@ -123,6 +123,32 @@ export interface RenderInfo {
   paddingRight: number;
   letterSpacing: number;
   textIndent: number;
+}
+
+/**
+ * Calculate height for the canvas
+ *
+ * @param textBaseline
+ * @param fontSize
+ * @param lineHeight
+ * @param numLines
+ * @param offsetY
+ * @returns
+ */
+function calcHeight(
+  textBaseline: TextBaseline,
+  fontSize: number,
+  lineHeight: number,
+  numLines: number,
+  offsetY: number | null,
+) {
+  const baselineOffset = textBaseline !== 'bottom' ? 0.5 * fontSize : 0;
+  return (
+    lineHeight * (numLines - 1) +
+    baselineOffset +
+    Math.max(lineHeight, fontSize) +
+    (offsetY || 0)
+  );
 }
 
 export class LightningTextTextureRenderer {
@@ -248,7 +274,7 @@ export class LightningTextTextureRenderer {
           suffix = '';
           break;
         case 'ellipsis':
-          suffix = this._settings.maxLinesSuffix;
+          suffix = this._settings.overflowSuffix;
           break;
         default:
           suffix = this._settings.textOverflow;
@@ -283,10 +309,10 @@ export class LightningTextTextureRenderer {
       const usedLines = lines.slice(0, this._settings.maxLines);
 
       let otherLines = null;
-      if (this._settings.maxLinesSuffix) {
+      if (this._settings.overflowSuffix) {
         // Wrap again with max lines suffix enabled.
-        const w = this._settings.maxLinesSuffix
-          ? this.measureText(this._settings.maxLinesSuffix)
+        const w = this._settings.overflowSuffix
+          ? this.measureText(this._settings.overflowSuffix)
           : 0;
         const al = this.wrapText(
           usedLines[usedLines.length - 1]!,
@@ -295,7 +321,7 @@ export class LightningTextTextureRenderer {
           textIndent,
         );
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
-          this._settings.maxLinesSuffix
+          this._settings.overflowSuffix
         }`;
         otherLines = [al.l.length > 1 ? al.l[1] : ''];
       } else {
@@ -349,13 +375,13 @@ export class LightningTextTextureRenderer {
     if (h) {
       height = h;
     } else {
-      const baselineOffset =
-        this._settings.textBaseline != 'bottom' ? 0.5 * fontSize : 0;
-      height =
-        lineHeight * (lines.length - 1) +
-        baselineOffset +
-        Math.max(lineHeight, fontSize) +
-        (offsetY || 0);
+      height = calcHeight(
+        this._settings.textBaseline,
+        fontSize,
+        lineHeight,
+        lines.length,
+        offsetY,
+      );
     }
 
     if (offsetY === null) {
@@ -414,7 +440,15 @@ export class LightningTextTextureRenderer {
     const lines = linesOverride?.lines || renderInfo.lines;
     const lineWidths = linesOverride?.lineWidths || renderInfo.lineWidths;
     const height = linesOverride
-      ? linesOverride.lines.length * renderInfo.lineHeight
+      ? calcHeight(
+          this._settings.textBaseline,
+          renderInfo.fontSize,
+          renderInfo.lineHeight,
+          linesOverride.lines.length,
+          this._settings.offsetY === null
+            ? null
+            : this._settings.offsetY * precision,
+        )
       : renderInfo.height;
 
     // Add extra margin to prevent issue with clipped text when scaling.
@@ -676,7 +710,7 @@ export class LightningTextTextureRenderer {
       verticalAlign: 'top',
       offsetY: null,
       maxLines: 0,
-      maxLinesSuffix: '..',
+      overflowSuffix: '...',
       textColor: [1.0, 1.0, 1.0, 1.0],
       paddingLeft: 0,
       paddingRight: 0,

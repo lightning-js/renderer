@@ -17,13 +17,22 @@
  * limitations under the License.
  */
 
-import { type INode, type Dimensions } from '@lightningjs/renderer';
+import {
+  type INode,
+  type Dimensions,
+  type NodeLoadedEventHandler,
+  type NodeFailedEventHandler,
+} from '@lightningjs/renderer';
 import rockoImg from '../assets/rocko.png';
 import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, driverName }: ExampleSettings) {
+export default async function ({
+  renderer,
+  driverName,
+  testRoot,
+}: ExampleSettings) {
   const FONT_SIZE = 45;
   const BEGIN_Y = FONT_SIZE;
 
@@ -31,7 +40,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     text: `Texture Test (${driverName})`,
     fontSize: FONT_SIZE,
     offsetY: -5,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   let curX = 0;
@@ -42,7 +51,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     src: rockoImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(rocko, 181, 218);
@@ -54,7 +63,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     src: rockoImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(rocko2, 181, 218);
@@ -63,7 +72,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     src: elevatorImg,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(elevator, 200, 268);
@@ -73,7 +82,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     src: 'does-not-exist.png',
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execFailureTest(failure);
@@ -83,7 +92,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     src: 'does-not-exist.png',
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execFailureTest(failure2);
@@ -102,7 +111,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: noiseTexture,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(noise, 100, 100);
@@ -112,7 +121,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: noiseTexture,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(noise2, 100, 100);
@@ -138,7 +147,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: frames[0],
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(subTextureNode, 100, 150);
@@ -148,7 +157,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: frames[0],
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execLoadingTest(subTextureNode2, 100, 150);
@@ -174,7 +183,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: failureFrames[0],
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execFailureTest(subTxFailure);
@@ -185,19 +194,19 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
     x: curX,
     y: curY,
     texture: failureFrames[0],
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   await execFailureTest(subTxFailure2);
 
   function waitForTxLoaded(imgNode: INode) {
-    return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    return new Promise<Dimensions>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
       }, 1000);
-      imgNode.once('txLoaded', (target, dimensions) => {
-        resolve(dimensions);
-      });
+      imgNode.once('loaded', ((target, payload) => {
+        resolve(payload.dimensions);
+      }) satisfies NodeLoadedEventHandler);
     });
   }
 
@@ -206,9 +215,9 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
       }, 1000);
-      imgNode.once('txFailed', () => {
+      imgNode.once('failed', (() => {
         resolve(true);
-      });
+      }) satisfies NodeFailedEventHandler);
     });
   }
 
@@ -222,7 +231,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       text: '',
       fontSize: FONT_SIZE,
       offsetY: -5,
-      parent: renderer.root,
+      parent: testRoot,
     });
 
     let exception: string | false = false;
@@ -266,7 +275,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       text: '',
       fontSize: FONT_SIZE,
       offsetY: -5,
-      parent: renderer.root,
+      parent: testRoot,
     });
 
     let failureTestPass = false;

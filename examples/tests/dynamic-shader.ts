@@ -18,9 +18,14 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import robot from '../assets/robot/robot.png';
 
-export default async function ({ renderer }: ExampleSettings) {
+export async function automation(settings: ExampleSettings) {
+  // Snapshot single page
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const degToRad = (deg: number) => {
     return (Math.PI / 180) * deg;
   };
@@ -67,7 +72,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t2 = renderer.createNode({
@@ -94,7 +99,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t3 = renderer.createNode({
@@ -123,7 +128,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t4 = renderer.createNode({
@@ -150,7 +155,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t5 = renderer.createNode({
@@ -179,7 +184,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t6 = renderer.createNode({
@@ -204,7 +209,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const t7 = renderer.createNode({
@@ -226,7 +231,7 @@ export default async function ({ renderer }: ExampleSettings) {
         },
       ],
     }),
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   /*

@@ -30,7 +30,11 @@ import type { Texture } from '../../../core/textures/Texture.js';
 import { CoreNode } from '../../../core/CoreNode.js';
 import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
 import type { AnimationSettings } from '../../../core/animations/CoreAnimation.js';
-import type { Dimensions } from '../../../common/CommonTypes.js';
+import type {
+  NodeLoadedPayload,
+  NodeFailedPayload,
+  NodeTextureFreedPayload,
+} from '../../../common/CommonTypes.js';
 
 export class ThreadXRendererNode extends SharedNode {
   protected coreNode: CoreNode;
@@ -128,12 +132,24 @@ export class ThreadXRendererNode extends SharedNode {
       this.coreNode.unloadTexture();
     });
     // Forward on CoreNode events
-    this.coreNode.on('txLoaded', (target: CoreNode, dimensions: Dimensions) => {
-      this.emit('txLoaded', dimensions as unknown as Record<string, unknown>);
-    });
-    this.coreNode.on('txFailed', (target: CoreNode, error: Error) => {
-      this.emit('txFailed', error as unknown as Record<string, unknown>);
-    });
+    this.coreNode.on(
+      'loaded',
+      (target: CoreNode, payload: NodeLoadedPayload) => {
+        this.emit('loaded', payload);
+      },
+    );
+    this.coreNode.on(
+      'failed',
+      (target: CoreNode, payload: NodeFailedPayload) => {
+        this.emit('failed', payload);
+      },
+    );
+    this.coreNode.on(
+      'freed',
+      (target: CoreNode, payload: NodeTextureFreedPayload) => {
+        this.emit('freed', payload);
+      },
+    );
   }
 
   override onPropertyChange<Key extends keyof this['z$__type__Props']>(
@@ -206,7 +222,8 @@ export class ThreadXRendererNode extends SharedNode {
       colorBr: sharedNodeStruct.colorBr,
       zIndex: sharedNodeStruct.zIndex,
       zIndexLocked: sharedNodeStruct.zIndexLocked,
-      scale: sharedNodeStruct.scale,
+      scaleX: sharedNodeStruct.scaleX,
+      scaleY: sharedNodeStruct.scaleY,
       mount: sharedNodeStruct.mount,
       mountX: sharedNodeStruct.mountX,
       mountY: sharedNodeStruct.mountY,

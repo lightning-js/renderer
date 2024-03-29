@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 
 //#region Types
@@ -93,43 +94,43 @@ export interface ShaderProgramSources {
 //#endregion Types
 
 export function createShader(
-  gl: WebGLRenderingContext,
+  glw: WebGlContextWrapper,
   type: number,
   source: string,
 ) {
-  const shader = gl.createShader(type);
+  const shader = glw.createShader(type);
   if (!shader) {
     throw new Error();
   }
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+  glw.shaderSource(shader, source);
+  glw.compileShader(shader);
+  const success = glw.getShaderParameter(shader, glw.COMPILE_STATUS);
   if (success) {
     return shader;
   }
 
-  console.log(gl.getShaderInfoLog(shader));
-  gl.deleteShader(shader);
+  console.log(glw.getShaderInfoLog(shader));
+  glw.deleteShader(shader);
 }
 
 export function createProgram(
-  gl: WebGLRenderingContext,
+  glw: WebGlContextWrapper,
   vertexShader: WebGLShader,
   fragmentShader: WebGLShader,
 ) {
-  const program = gl.createProgram();
+  const program = glw.createProgram();
   if (!program) {
     throw new Error();
   }
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  const success = gl.getProgramParameter(program, gl.LINK_STATUS);
+  glw.attachShader(program, vertexShader);
+  glw.attachShader(program, fragmentShader);
+  glw.linkProgram(program);
+  const success = glw.getProgramParameter(program, glw.LINK_STATUS);
   if (success) {
     return program;
   }
 
-  console.log(gl.getProgramInfoLog(program));
-  gl.deleteProgram(program);
+  console.log(glw.getProgramInfoLog(program));
+  glw.deleteProgram(program);
   return undefined;
 }

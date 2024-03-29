@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "0.4.1",
+  "version": "0.8.0",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -11,11 +11,14 @@
     "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
   },
   "scripts": {
+    "preinstall": "node scripts/please-use-pnpm.js",
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
     "build": "tsc --build",
+    "build:docker": "docker build -t visual-regression .",
     "watch": "tsc --build --watch",
     "test": "vitest",
+    "test:visual": "cd visual-regression && pnpm test:visual",
     "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
     "lint:fix": "pnpm run lint:fix:prettier && pnpm run lint:fix:eslint",
     "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
@@ -24,12 +27,14 @@
     "lint:fix:eslint": "eslint --fix .",
     "typedoc": "typedoc",
     "prepare": "husky install",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "node-version": "node --version"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lightning-js/renderer.git"
   },
+  "sideEffects": false,
   "keywords": [
     "Lightning",
     "LightningJS",
@@ -59,7 +64,8 @@
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.4",
-    "@protobufjs/eventemitter": "^1.1.0"
+    "@protobufjs/eventemitter": "^1.1.0",
+    "memize": "^2.1.0"
   },
   "lint-staged": {
     "*.ts": [
@@ -74,11 +80,13 @@
     "exports",
     "LICENSE",
     "NOTICE",
-    "README.md"
+    "README.md",
+    "scripts"
   ],
   "packageManager": "pnpm@8.9.2",
   "engines": {
-    "npm": "please-use-pnpm",
-    "pnpm": ">= 8.9.2"
+    "npm": ">= 10.0.0",
+    "pnpm": ">= 8.9.2",
+    "node": ">= 20.9.0"
   }
 }

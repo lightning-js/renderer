@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, TextureLoadedEventHandler } from '@lightningjs/renderer';
+import type { INode, NodeLoadedEventHandler } from '@lightningjs/renderer';
 import { mergeColorAlpha } from '@lightningjs/renderer/utils';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import red25 from '../assets/red-25.png';
@@ -34,12 +34,23 @@ interface LocalStorageData {
   curPage: number;
 }
 
-export default async function ({
-  testName,
-  renderer,
-  canvas,
-}: ExampleSettings) {
-  const savedState = loadStorage<LocalStorageData>(testName);
+export async function automation(settings: ExampleSettings) {
+  const { appElement } = settings;
+  // Preserve and restore old background because this test manipulates it
+  const oldBackground = appElement.style.background;
+  try {
+    // Snapshot all the pages
+    await (await test(settings)).snapshotPages();
+  } finally {
+    appElement.style.background = oldBackground;
+  }
+}
+
+export default async function test(settings: ExampleSettings) {
+  const { testName, renderer, appElement, automation, testRoot } = settings;
+  const savedState = automation
+    ? null
+    : loadStorage<LocalStorageData>(testName);
 
   const leftSideBg = 'red' satisfies 'red' | 'green' as 'red' | 'green';
   const rightSideBg: 'red' | 'green' = leftSideBg === 'red' ? 'green' : 'red';
@@ -48,7 +59,7 @@ export default async function ({
 
   // Set the canvas background to 'red'
   // We will test WebGL -> Browser alpha over this background
-  canvas.style.background = leftSideBg === 'red' ? '#ff0000' : '#00ff00';
+  appElement.style.background = leftSideBg === 'red' ? '#ff0000' : '#00ff00';
 
   // Also create a node with a green background but only covering up
   // the right half of the canvas
@@ -59,7 +70,7 @@ export default async function ({
     width: renderer.settings.appWidth / 2,
     height: renderer.settings.appHeight,
     color: rightSideBg === 'red' ? 0xff0000ff : 0x00ff00ff,
-    parent: renderer.root,
+    parent: testRoot,
     zIndex: 0,
     alpha: 1,
   });
@@ -78,7 +89,7 @@ export default async function ({
     width: renderer.settings.appWidth / 2,
     y: PADDING,
     textAlign: 'center',
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const rightHeader = renderer.createTextNode({
@@ -91,7 +102,7 @@ export default async function ({
     x: renderer.settings.appWidth / 2,
     y: PADDING,
     textAlign: 'center',
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   const pageNumberNode = renderer.createTextNode({
@@ -100,7 +111,7 @@ export default async function ({
     color: 0xffffffff,
     x: PADDING,
     y: renderer.settings.appHeight - 30 - PADDING,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   function buildSidePg0(bgColorName: 'red' | 'green', parent: INode) {
@@ -445,9 +456,10 @@ export default async function ({
 
     curY += 30 + PADDING;
 
-    const sizeToTexture: TextureLoadedEventHandler = (target, dimensions) => {
-      target.width = dimensions.width;
-      target.height = dimensions.height;
+    const sizeToTexture: NodeLoadedEventHandler = (target, payload) => {
+      const { width, height } = payload.dimensions;
+      target.width = width;
+      target.height = height;
     };
 
     renderer
@@ -460,7 +472,7 @@ export default async function ({
         alpha: 1,
         parent: sideContainer,
       })
-      .once('txLoaded', sizeToTexture);
+      .once('loaded', sizeToTexture);
 
     curX += RECT_SIZE + PADDING;
 
@@ -472,7 +484,7 @@ export default async function ({
         alpha: 1.0,
         parent: sideContainer,
       })
-      .once('txLoaded', sizeToTexture);
+      .once('loaded', sizeToTexture);
 
     curX += RECT_SIZE + PADDING;
 
@@ -495,29 +507,45 @@ export default async function ({
     }
 
     if (pageNumber === 0) {
-      curLeftSide = buildSidePg0(leftSideBg, renderer.root!);
+      curLeftSide = buildSidePg0(leftSideBg, testRoot);
       curRightSide = buildSidePg0(rightSideBg, rightBackground);
     } else if (pageNumber === 1) {
-      curLeftSide = buildSidePg1(leftSideBg, renderer.root!);
+      curLeftSide = buildSidePg1(leftSideBg, testRoot);
       curRightSide = buildSidePg1(rightSideBg, rightBackground);
     }
 
     pageNumberNode.text = `Page ${pageNumber + 1}/${NUM_PAGES}`;
-    saveStorage<LocalStorageData>(testName, { curPage: pageNumber });
+    if (!automation) {
+      saveStorage<LocalStorageData>(testName, { curPage: pageNumber });
+    }
   }
 
   const NUM_PAGES = 2;
 
   buildPage(curPage);
 
-  // When user presses left and right arrow keys switch through pages
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
-      curPage = (curPage + NUM_PAGES - 1) % NUM_PAGES;
-      buildPage(curPage);
-    } else if (e.key === 'ArrowRight') {
-      curPage = (curPage + 1) % NUM_PAGES;
-      buildPage(curPage);
-    }
-  });
+  if (!automation) {
+    // When user presses left and right arrow keys switch through pages
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        curPage = (curPage + NUM_PAGES - 1) % NUM_PAGES;
+        buildPage(curPage);
+      } else if (e.key === 'ArrowRight') {
+        curPage = (curPage + 1) % NUM_PAGES;
+        buildPage(curPage);
+      }
+    });
+  }
+
+  return {
+    snapshotPages: async () => {
+      if (!automation) {
+        throw new Error('Cannot snapshot pages when not in automation mode');
+      }
+      for (let i = 0; i < NUM_PAGES; i++) {
+        buildPage(i);
+        await settings.snapshot();
+      }
+    },
+  };
 }

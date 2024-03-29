@@ -37,10 +37,10 @@
  * @module
  */
 export * from '../src/main-api/INode.js';
-export * from '../src/main-api/IRenderDriver.js';
+export * from '../src/main-api/ICoreDriver.js';
 export * from '../src/main-api/RendererMain.js';
-export * from '../src/render-drivers/main/MainRenderDriver.js';
-export * from '../src/render-drivers/threadx/ThreadXRenderDriver.js';
+export * from '../src/render-drivers/main/MainCoreDriver.js';
+export * from '../src/render-drivers/threadx/ThreadXCoreDriver.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 
@@ -49,3 +49,12 @@ export * from '../src/common/CommonTypes.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
+export type {
+  EffectProps,
+  FadeOutEffectProps,
+  LinearGradientEffectProps,
+  RadialGradientEffectProps,
+  GrayscaleEffectProps,
+  GlitchEffectProps,
+  RadialProgressEffectProps,
+} from '../src/core/CoreShaderManager.js';

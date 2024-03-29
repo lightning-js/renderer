@@ -19,13 +19,63 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import type { SubTextureProps } from './SubTexture.js';
-import type {
-  Dimensions,
-  TextureFailedEventHandler,
-  TextureLoadedEventHandler,
-  TextureLoadingEventHandler,
-} from '../../common/CommonTypes.js';
+import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+
+/**
+ * Event handler for when a Texture is freed
+ */
+export type TextureFreedEventHandler = (target: any) => void;
+
+/**
+ * Event handler for when a Texture is loading
+ */
+export type TextureLoadingEventHandler = (target: any) => void;
+
+/**
+ * Event handler for when a Texture is loaded
+ */
+export type TextureLoadedEventHandler = (
+  target: any,
+  dimensions: Readonly<Dimensions>,
+) => void;
+
+/**
+ * Represents compressed texture data.
+ */
+interface CompressedData {
+  /**
+   * GLenum spcifying compression format
+   */
+  glInternalFormat: number;
+
+  /**
+   * All mipmap levels
+   */
+  mipmaps?: ArrayBuffer[];
+
+  /**
+   * Supported container types ('pvr' or 'ktx').
+   */
+  type: 'pvr' | 'ktx';
+
+  /**
+   * The width of the compressed texture in pixels. Defaults to 0.
+   *
+   * @default 0
+   */
+  width: number;
+
+  /**
+   * The height of the compressed texture in pixels.
+   **/
+  height: number;
+}
+
+/**
+ * Event handler for when a Texture fails to load
+ */
+export type TextureFailedEventHandler = (target: any, error: Error) => void;
 
 /**
  * TextureData that is used to populate a CoreContextTexture
@@ -34,18 +84,25 @@ export interface TextureData {
   /**
    * The texture data
    */
-  data: ImageBitmap | ImageData | SubTextureProps | null;
+  data:
+    | ImageBitmap
+    | ImageData
+    | SubTextureProps
+    | CompressedData
+    | HTMLImageElement
+    | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
    *
    * @defaultValue `false`
    */
-  premultiplyAlpha?: boolean;
+  premultiplyAlpha?: boolean | null;
 }
 
-export type TextureState = 'loading' | 'loaded' | 'failed';
+export type TextureState = 'freed' | 'loading' | 'loaded' | 'failed';
 
 export interface TextureStateEventMap {
+  freed: TextureFreedEventHandler;
   loading: TextureLoadingEventHandler;
   loaded: TextureLoadedEventHandler;
   failed: TextureFailedEventHandler;
@@ -84,10 +141,41 @@ export abstract class Texture extends EventEmitter {
 
   readonly error: Error | null = null;
 
-  readonly state: TextureState = 'loading';
+  readonly state: TextureState = 'freed';
+
+  readonly renderableOwners = new Set<unknown>();
 
   constructor(protected txManager: CoreTextureManager) {
     super();
+  }
+
+  /**
+   * Add/remove an owner to/from the Texture based on its renderability.
+   *
+   * @remarks
+   * Any object can own a texture, be it a CoreNode or even the state object
+   * from a Text Renderer.
+   *
+   * When the reference to the texture that an owner object holds is replaced
+   * or cleared it must call this with `renderable=false` to release the owner
+   * association.
+   *
+   * @param owner
+   * @param renderable
+   */
+  setRenderableOwner(owner: unknown, renderable: boolean): void {
+    if (renderable) {
+      this.renderableOwners.add(owner);
+    } else {
+      this.renderableOwners.delete(owner);
+    }
+  }
+
+  /**
+   * Returns true if the texture is assigned to any Nodes that are renderable.
+   */
+  get renderable(): boolean {
+    return this.renderableOwners.size > 0;
   }
 
   /**

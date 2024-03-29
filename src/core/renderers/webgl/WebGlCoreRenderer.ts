@@ -23,10 +23,7 @@ import {
   hasOwn,
   mergeColorAlphaPremultiplied,
 } from '../../../utils.js';
-import {
-  CoreRenderer,
-  type QuadOptions as QuadOptions,
-} from '../CoreRenderer.js';
+import { CoreRenderer, type QuadOptions } from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
@@ -53,10 +50,14 @@ import {
   compareRect,
   getNormalizedRgbaComponents,
   type Rect,
+  type RectWithValid,
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { RoundedRectangle } from './shaders/RoundedRectangle.js';
+import { ContextSpy } from '../../lib/ContextSpy.js';
+import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 
 const WORDS_PER_QUAD = 24;
 const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,9 +67,11 @@ export interface WebGlCoreRendererOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   pixelRatio: number;
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
   clearColor: number;
   bufferMemory: number;
+  contextSpy: ContextSpy | null;
 }
 
 interface CoreWebGlSystem {
@@ -78,11 +81,12 @@ interface CoreWebGlSystem {
 
 export class WebGlCoreRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  gl: WebGLRenderingContext;
+  glw: WebGlContextWrapper;
   system: CoreWebGlSystem;
 
   //// Core Managers
   txManager: CoreTextureManager;
+  txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
 
   //// Options
@@ -113,30 +117,33 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { canvas, clearColor, bufferMemory } = options;
     this.options = options;
     this.txManager = options.txManager;
+    this.txMemManager = options.txMemManager;
     this.shManager = options.shManager;
     this.defaultTexture = new ColorTexture(this.txManager);
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
+      this.stage.requestRender();
+    });
 
-    const gl = createWebGLContext(canvas);
-    if (!gl) {
-      throw new Error('Unable to create WebGL context');
-    }
-    this.gl = gl;
+    const gl = createWebGLContext(canvas, options.contextSpy);
+    const glw = (this.glw = new WebGlContextWrapper(gl));
 
     const color = getNormalizedRgbaComponents(clearColor);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.viewport(0, 0, canvas.width, canvas.height);
+    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.setBlend(true);
+    glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(gl, bufferMemory);
+    createIndexBuffer(glw, bufferMemory);
 
     this.system = {
-      parameters: getWebGlParameters(gl),
-      extensions: getWebGlExtensions(gl),
+      parameters: getWebGlParameters(this.glw),
+      extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader(
-      'DefaultShaderBatched',
-    ).shader;
-    const quadBuffer = gl.createBuffer();
+    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
+    const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
@@ -146,7 +153,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_position: {
             name: 'a_position',
             size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
+            type: glw.FLOAT, // the data is 32bit floats
             normalized: false, // don't normalize the data
             stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
             offset: 0, // start at the beginning of the buffer
@@ -154,7 +161,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureCoordinate: {
             name: 'a_textureCoordinate',
             size: 2,
-            type: gl.FLOAT,
+            type: glw.FLOAT,
             normalized: false,
             stride,
             offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -162,7 +169,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_color: {
             name: 'a_color',
             size: 4,
-            type: gl.UNSIGNED_BYTE,
+            type: glw.UNSIGNED_BYTE,
             normalized: true,
             stride,
             offset: 4 * Float32Array.BYTES_PER_ELEMENT,
@@ -170,7 +177,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureIndex: {
             name: 'a_textureIndex',
             size: 1,
-            type: gl.FLOAT,
+            type: glw.FLOAT,
             normalized: false,
             stride,
             offset: 5 * Float32Array.BYTES_PER_ELEMENT,
@@ -181,10 +188,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   reset() {
+    const { glw } = this;
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    glw.setScissorTest(false);
+    glw.clear();
   }
 
   override getShaderManager(): CoreShaderManager {
@@ -193,34 +202,32 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   override createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
-      return new WebGlCoreCtxSubTexture(this.gl, textureSource);
+      return new WebGlCoreCtxSubTexture(
+        this.glw,
+        this.txMemManager,
+        textureSource,
+      );
     }
-    return new WebGlCoreCtxTexture(this.gl, textureSource);
+    return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
   }
 
   /**
-   * Add a renderable to the current set of renderables.
+   * This function adds a quad (a rectangle composed of two triangles) to the WebGL rendering pipeline.
    *
-   * @remarks
-   * If a {@link QuadOptions} structure is provided, this will ultimately result
-   * in a render ops being created, merged and added to the render ops list.
+   * It takes a set of options that define the quad's properties, such as its dimensions, colors, texture, shader, and transformation matrix.
+   * The function first updates the shader properties with the current dimensions if necessary, then sets the default texture if none is provided.
+   * It then checks if a new render operation is needed, based on the current shader and clipping rectangle.
+   * If a new render operation is needed, it creates one and updates the current render operation.
+   * The function then adjusts the texture coordinates based on the texture options and adds the texture to the texture manager.
    *
-   * If a direct {@link WebGlCoreRenderOp} instance is provided, it will be
-   * added to the render ops list as-is. Be sure to set the zIndex correctly of
-   * the render op to ensure proper rendering order.
-   *
-   * @param renderable
+   * Finally, it calculates the vertices for the quad, taking into account any transformations, and adds them to the quad buffer.
+   * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
-  override addRenderable(renderable: QuadOptions | WebGlCoreRenderOp) {
-    this.renderables?.push(renderable);
-  }
-
-  private addQuad(params: QuadOptions) {
+  addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
     const {
       width,
       height,
-      clippingRect,
       colorTl,
       colorTr,
       colorBl,
@@ -229,8 +236,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       shader,
       shaderProps,
       alpha,
-      wpx,
-      wpy,
+      clippingRect,
+      tx,
+      ty,
       ta,
       tb,
       tc,
@@ -331,92 +339,64 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // render quad advanced
     if (tb !== 0 || tc !== 0) {
       // Upper-Left
-      fQuadBuffer[bufferIdx++] = wpx; // vertexX
-      fQuadBuffer[bufferIdx++] = wpy; // vertexY
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTl,
-        alpha,
-        true,
-      ); // color
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
-      fQuadBuffer[bufferIdx++] = wpx + width * ta;
-      fQuadBuffer[bufferIdx++] = wpy + width * tc;
+      fQuadBuffer[bufferIdx++] = tx + width * ta;
+      fQuadBuffer[bufferIdx++] = ty + width * tc;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
-      fQuadBuffer[bufferIdx++] = wpx + height * tb;
-      fQuadBuffer[bufferIdx++] = wpy + height * td;
+      fQuadBuffer[bufferIdx++] = tx + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBl,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
-      fQuadBuffer[bufferIdx++] = wpx + width * ta + height * tb;
-      fQuadBuffer[bufferIdx++] = wpy + width * tc + height * td;
+      fQuadBuffer[bufferIdx++] = tx + width * ta + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + width * tc + height * td;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     } else {
       // Calculate the right corner of the quad
       // multiplied by the scale
-      const rightCornerX = wpx + width * ta;
-      const rightCornerY = wpy + height * td;
+      const rightCornerX = tx + width * ta;
+      const rightCornerY = ty + height * td;
 
       // Upper-Left
-      fQuadBuffer[bufferIdx++] = wpx; // vertexX
-      fQuadBuffer[bufferIdx++] = wpy; // vertexY
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
       fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTl,
-        alpha,
-        true,
-      ); // color
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
-      fQuadBuffer[bufferIdx++] = wpy;
+      fQuadBuffer[bufferIdx++] = ty;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorTr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Left
-      fQuadBuffer[bufferIdx++] = wpx;
+      fQuadBuffer[bufferIdx++] = tx;
       fQuadBuffer[bufferIdx++] = rightCornerY;
       fQuadBuffer[bufferIdx++] = texCoordX1;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBl,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
 
       // Lower-Right
@@ -424,11 +404,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = rightCornerY;
       fQuadBuffer[bufferIdx++] = texCoordX2;
       fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = mergeColorAlphaPremultiplied(
-        colorBr,
-        alpha,
-        true,
-      );
+      uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     }
 
@@ -450,11 +426,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
     shaderProps: Record<string, unknown>,
     alpha: number,
     dimensions: Dimensions,
-    clippingRect: Rect | null,
+    clippingRect: RectWithValid,
     bufferIdx: number,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
-      this.gl,
+      this.glw,
       this.options,
       this.quadBufferCollection,
       shader,
@@ -511,25 +487,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
-   * Sort renderable children and add them to the render ops.
-   * @todo:
-   * - move to merge sort to keep relative order
-   * - support z-index parent locking
-   *
+   * add RenderOp to the render pipeline
    */
-
-  sortRenderables() {
-    const { renderables } = this;
-    renderables.sort((a, b) => a.zIndex - b.zIndex);
-
-    renderables.forEach((renderable) => {
-      if (renderable instanceof WebGlCoreRenderOp) {
-        this.renderOps.push(renderable);
-        this.curRenderOp = null;
-      } else {
-        this.addQuad(renderable);
-      }
-    });
+  addRenderOp(renderable: WebGlCoreRenderOp) {
+    this.renderOps.push(renderable);
+    this.curRenderOp = null;
   }
 
   /**
@@ -540,13 +502,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param surface
    */
   render(surface: 'screen' | CoreContextTexture = 'screen'): void {
-    const { gl, quadBuffer } = this;
+    const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
 
     const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
+    glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
     const doLog = false; // idx++ % 100 === 0;
     if (doLog) {

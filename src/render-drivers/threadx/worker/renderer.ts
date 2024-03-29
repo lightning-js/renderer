@@ -20,10 +20,11 @@
 import { ThreadX, BufferStruct } from '@lightningjs/threadx';
 import { NodeStruct, type NodeStructWritableProps } from '../NodeStruct.js';
 import { ThreadXRendererNode } from './ThreadXRendererNode.js';
-import { Stage } from '../../../core/Stage.js';
+import { Stage, type StageFpsUpdateHandler } from '../../../core/Stage.js';
 import { assertTruthy } from '../../../utils.js';
 import {
   isThreadXRendererMessage,
+  type ThreadXRendererFpsUpdateMessage,
   type ThreadXRendererMessage,
 } from '../ThreadXRendererMessage.js';
 import { TextNodeStruct } from '../TextNodeStruct.js';
@@ -65,10 +66,15 @@ const threadx = ThreadX.init({
         rootId: nodeStruct.id,
         appWidth: message.appWidth,
         appHeight: message.appHeight,
+        txMemByteThreshold: message.txMemByteThreshold,
+        boundsMargin: message.boundsMargin,
         deviceLogicalPixelRatio: message.deviceLogicalPixelRatio,
         devicePhysicalPixelRatio: message.devicePhysicalPixelRatio,
         clearColor: message.clearColor,
         canvas,
+        fpsUpdateInterval: message.fpsUpdateInterval,
+        enableContextSpy: message.enableContextSpy,
+        numImageWorkers: message.numImageWorkers,
         debug: {
           monitorTextureCache: false,
         },
@@ -98,7 +104,8 @@ const threadx = ThreadX.init({
         parentId: coreRootNode.parent?.id ?? 0,
         zIndex: coreRootNode.zIndex,
         zIndexLocked: coreRootNode.zIndexLocked,
-        scale: coreRootNode.scale,
+        scaleX: coreRootNode.scaleX,
+        scaleY: coreRootNode.scaleY,
         mount: coreRootNode.mount,
         mountX: coreRootNode.mountX,
         mountY: coreRootNode.mountY,
@@ -116,6 +123,14 @@ const threadx = ThreadX.init({
       if (message.coreExtensionModule) {
         await loadCoreExtension(message.coreExtensionModule, stage);
       }
+
+      // Forward FPS updates to the main worker.
+      stage.on('fpsUpdate', ((stage, fpsData) => {
+        threadx.sendMessage('parent', {
+          type: 'fpsUpdate',
+          fpsData: fpsData,
+        } satisfies ThreadXRendererFpsUpdateMessage);
+      }) satisfies StageFpsUpdateHandler);
 
       // Return its ID so the main worker can retrieve it from the shared object
       // store.

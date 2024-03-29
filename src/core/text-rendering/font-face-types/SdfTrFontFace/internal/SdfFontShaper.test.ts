@@ -24,12 +24,20 @@ import { SdfFontShaper, type SdfFontData } from './SdfFontShaper.js';
 import { getUnicodeCodepoints } from '../../../renderers/SdfTextRenderer/internal/getUnicodeCodepoints.js';
 import sdfData from 'test/mockdata/Ubuntu-Bold.msdf.json';
 
+const glyphMap = new Map<number, SdfFontData['chars'][0]>();
+sdfData.chars.forEach((glyph) => {
+  glyphMap.set(glyph.id, glyph);
+});
+
 // TODO: Need tests for
 // - mapped = false
 
 describe('SdfFontShaper', () => {
   it('should be able to shape text.', () => {
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('Hi!'),
     );
@@ -83,7 +91,10 @@ describe('SdfFontShaper', () => {
   });
 
   it('should be able to shape text that we know have kerning pairs.', () => {
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('WeVo'),
     );
@@ -125,7 +136,10 @@ describe('SdfFontShaper', () => {
   });
 
   it('should be able to shape text with letterSpacing.', () => {
-    const shaper = new SdfFontShaper(sdfData as unknown as SdfFontData);
+    const shaper = new SdfFontShaper(
+      sdfData as unknown as SdfFontData,
+      glyphMap,
+    );
     const peekableCodepoints = new PeekableIterator(
       getUnicodeCodepoints('We!'),
     );

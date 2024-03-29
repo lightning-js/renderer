@@ -15,4 +15,4 @@
 
 packages:
   - "examples"
-
+  - "visual-regression"

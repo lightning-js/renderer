@@ -37,7 +37,9 @@ export class CoreAnimation extends EventEmitter {
   public propStartValues: Partial<INodeAnimatableProps> = {};
   public restoreValues: Partial<INodeAnimatableProps> = {};
   private progress = 0;
+  private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
+  private propsList: Array<keyof INodeAnimatableProps>; //fixme - aint got not time for this
 
   constructor(
     private node: CoreNode,
@@ -46,21 +48,22 @@ export class CoreAnimation extends EventEmitter {
   ) {
     super();
     this.propStartValues = {};
-    (Object.keys(props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        this.propStartValues[propName] = node[propName];
-      },
-    );
+    this.propsList = Object.keys(props) as Array<keyof INodeAnimatableProps>;
+    this.propsList.forEach((propName) => {
+      this.propStartValues[propName] = node[propName];
+    });
 
     this.timingFunction = (t: number) => t;
 
     if (settings.easing && typeof settings.easing === 'string') {
       this.timingFunction = getTimingFunction(settings.easing);
     }
+    this.delayFor = settings.delay || 0;
   }
 
   reset() {
     this.progress = 0;
+    this.delayFor = this.settings.delay || 0;
     this.update(0);
   }
 
@@ -98,43 +101,81 @@ export class CoreAnimation extends EventEmitter {
   }
 
   update(dt: number) {
-    const { duration, loop, easing } = this.settings;
+    const { duration, loop, easing, stopMethod } = this.settings;
     if (!duration) {
       this.emit('finished', {});
       return;
+    }
+
+    if (this.delayFor > 0) {
+      this.delayFor -= dt;
+      return;
+    }
+
+    if (this.delayFor <= 0 && this.progress === 0) {
+      this.emit('start', {});
     }
 
     this.progress += dt / duration;
 
     if (this.progress > 1) {
       this.progress = loop ? 0 : 1;
-      this.emit('finished', {});
+      if (stopMethod) {
+        // If there's a stop method emit finished so the stop method can be applied.
+        // TODO: We should probably reevaluate how stopMethod is implemented as currently
+        // stop method 'reset' does not work when looping.
+        this.emit('finished', {});
+        return;
+      }
     }
 
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        const propValue = this.props[propName] as number;
-        const startValue = this.propStartValues[propName] as number;
-        const endValue = propValue;
+    for (let i = 0; i < this.propsList.length; i++) {
+      const propName = this.propsList[i] as keyof INodeAnimatableProps;
+      const propValue = this.props[propName] as number;
+      const startValue = this.propStartValues[propName] as number;
+      const endValue = propValue;
 
-        if (propName.indexOf('color') !== -1) {
-          const progressValue = easing
-            ? this.timingFunction(this.progress) || this.progress
-            : this.progress;
-          const colorValue = mergeColorProgress(
+      if (propName.indexOf('color') !== -1) {
+        // check if we have to change the color to begin with
+        if (startValue === endValue) {
+          this.node[propName] = startValue;
+          continue;
+        }
+
+        if (easing) {
+          const easingProgressValue =
+            this.timingFunction(this.progress) || this.progress;
+          const easingColorValue = mergeColorProgress(
             startValue,
             endValue,
-            progressValue,
+            easingProgressValue,
           );
-          this.node[propName] = easing
-            ? colorValue
-            : mergeColorProgress(startValue, endValue, this.progress);
-        } else {
-          this.node[propName] = easing
-            ? this.applyEasing(this.progress, startValue, endValue)
-            : startValue + (endValue - startValue) * this.progress;
+          this.node[propName] = easingColorValue;
+          continue;
         }
-      },
-    );
+
+        this.node[propName] = mergeColorProgress(
+          startValue,
+          endValue,
+          this.progress,
+        );
+        continue;
+      }
+
+      if (easing) {
+        this.node[propName] = this.applyEasing(
+          this.progress,
+          startValue,
+          endValue,
+        );
+        continue;
+      }
+
+      this.node[propName] =
+        startValue + (endValue - startValue) * this.progress;
+    }
+    if (this.progress === 1) {
+      this.emit('finished', {});
+    }
   }
 }

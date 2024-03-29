@@ -54,7 +54,8 @@ export class SharedNode extends SharedObject {
       parentId: sharedNodeStruct.parentId,
       zIndex: sharedNodeStruct.zIndex,
       zIndexLocked: sharedNodeStruct.zIndexLocked,
-      scale: sharedNodeStruct.scale,
+      scaleX: sharedNodeStruct.scaleX,
+      scaleY: sharedNodeStruct.scaleY,
       mount: sharedNodeStruct.mount,
       mountX: sharedNodeStruct.mountX,
       mountY: sharedNodeStruct.mountY,
@@ -83,7 +84,8 @@ export class SharedNode extends SharedObject {
   declare colorTr: number;
   declare colorBl: number;
   declare colorBr: number;
-  declare scale: number;
+  declare scaleX: number;
+  declare scaleY: number;
   declare mountX: number;
   declare mountY: number;
   declare mount: number;

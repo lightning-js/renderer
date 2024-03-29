@@ -255,12 +255,39 @@ export interface INodeWritableProps {
    *
    * @remarks
    * The scale value multiplies the provided {@link width} and {@link height}
-   * of the Node around the Node's Mount Point (defined by the {@link mount}
+   * of the Node around the Node's Pivot Point (defined by the {@link pivot}
    * props).
+   *
+   * Behind the scenes, setting this property sets both the {@link scaleX} and
+   * {@link scaleY} props to the same value.
+   *
+   * NOTE: When the scaleX and scaleY props are explicitly set to different values,
+   * this property returns `null`. Setting `null` on this property will have no
+   * effect.
    *
    * @default 1.0
    */
-  scale: number;
+  scale: number | null;
+  /**
+   * Scale to render the Node at (X-Axis)
+   *
+   * @remarks
+   * The scaleX value multiplies the provided {@link width} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleX: number;
+  /**
+   * Scale to render the Node at (Y-Axis)
+   *
+   * @remarks
+   * The scaleY value multiplies the provided {@link height} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleY: number;
   /**
    * Combined position of the Node's Mount Point
    *
@@ -374,17 +401,46 @@ export interface INodeWritableProps {
    * - `2 * Math.PI`: 360 rotation clockwise
    */
   rotation: number;
-  worldX?: number;
-  worldY?: number;
+  /**
+   * Node data element for custom data storage (optional)
+   *
+   * @remarks
+   * This property is used to store custom data on the Node as a key/value data store.
+   * Data values are limited to string, numbers, booleans. Strings will be truncated
+   * to a 2048 character limit for performance reasons.
+   *
+   * This is not a data storage mechanism for large amounts of data please use a
+   * dedicated data storage mechanism for that.
+   *
+   * The custom data will be reflected in the inspector as part of `data-*` attributes
+   *
+   * @default `undefined`
+   */
+  data?: CustomDataMap;
 }
 
+/**
+ * A custom data map which can be stored on the INode
+ *
+ * @remarks
+ * This is a map of key-value pairs that can be stored on an INode. It is used
+ * to store custom data that can be used by the application.
+ * The data stored can only be of type string, number or boolean.
+ */
+export type CustomDataMap = {
+  [key: string]: string | number | boolean;
+};
+
 export type INodeAnimatableProps = {
-  [Key in keyof INodeWritableProps as INodeWritableProps[Key] extends number
+  [Key in keyof INodeWritableProps as NonNullable<
+    INodeWritableProps[Key]
+  > extends number
     ? Key
     : never]: number;
 };
 
 export interface INodeEvents {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [s: string]: (target: INode, data: any) => void;
 }
 
@@ -399,8 +455,8 @@ export interface INodeEvents {
  * For text rendering, see {@link ITextNode}.
  *
  * Nodes are represented by an interface since they may be implemented in
- * different ways depending on the Core Driver. For example, the MainRenderDriver
- * implements it with it's `MainOnlyNode` while the ThreadXRenderDriver implements
+ * different ways depending on the Core Driver. For example, the MainCoreDriver
+ * implements it with it's `MainOnlyNode` while the ThreadXCoreDriver implements
  * it with it's `ThreadXMainNode`.
  */
 export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {

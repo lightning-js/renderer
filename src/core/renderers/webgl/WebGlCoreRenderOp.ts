@@ -23,7 +23,8 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { Rect } from '../../lib/utils.js';
+import type { Rect, RectWithValid } from '../../lib/utils.js';
+import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -38,21 +39,20 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   readonly maxTextures: number;
 
   constructor(
-    readonly gl: WebGLRenderingContext | WebGL2RenderingContext,
+    readonly glw: WebGlContextWrapper,
     readonly options: WebGlCoreRendererOptions,
     readonly buffers: BufferCollection,
     readonly shader: WebGlCoreShader,
     readonly shaderProps: Record<string, unknown>,
     readonly alpha: number,
-    readonly clippingRect: Rect | null,
+    readonly clippingRect: RectWithValid,
     readonly dimensions: Dimensions,
     readonly bufferIdx: number,
     readonly zIndex: number,
   ) {
     super();
-    this.gl = gl;
     this.maxTextures = shader.supportsIndexedTextures
-      ? (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) as number)
+      ? (glw.getParameter(glw.MAX_VERTEX_TEXTURE_IMAGE_UNITS) as number)
       : 1;
   }
 
@@ -71,7 +71,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   }
 
   draw() {
-    const { gl, shader, shaderProps, options } = this;
+    const { glw, shader, shaderProps, options } = this;
     // shaderOp.draw(this);
 
     const { shManager } = options;
@@ -81,12 +81,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;
 
-    // TODO: Move these somewhere else?
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-
     // Clipping
-    if (this.clippingRect) {
+    if (this.clippingRect.valid) {
       const { x, y, width, height } = this.clippingRect;
       const pixelRatio = options.pixelRatio;
       const canvasHeight = options.canvas.height;
@@ -95,16 +91,16 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
       const clipWidth = Math.round(width * pixelRatio);
       const clipHeight = Math.round(height * pixelRatio);
       const clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
-      gl.enable(gl.SCISSOR_TEST);
-      gl.scissor(clipX, clipY, clipWidth, clipHeight);
+      glw.setScissorTest(true);
+      glw.scissor(clipX, clipY, clipWidth, clipHeight);
     } else {
-      gl.disable(gl.SCISSOR_TEST);
+      glw.setScissorTest(false);
     }
 
-    gl.drawElements(
-      gl.TRIANGLES,
+    glw.drawElements(
+      glw.TRIANGLES,
       6 * this.numQuads,
-      gl.UNSIGNED_SHORT,
+      glw.UNSIGNED_SHORT,
       quadIdx,
     );
   }

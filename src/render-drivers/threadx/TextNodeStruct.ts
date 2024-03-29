@@ -163,4 +163,49 @@ export class TextNodeStruct
   set letterSpacing(value: TextNodeStructWritableProps['letterSpacing']) {
     // Decorator will handle this
   }
+
+  @structProp('number')
+  get lineHeight(): TextNodeStructWritableProps['lineHeight'] {
+    return 0;
+  }
+
+  set lineHeight(value: TextNodeStructWritableProps['lineHeight']) {
+    // Decorator will handle this
+  }
+
+  @structProp('number')
+  get maxLines(): TextNodeStructWritableProps['maxLines'] {
+    return 0;
+  }
+
+  set maxLines(value: TextNodeStructWritableProps['maxLines']) {
+    // Decorator will handle this
+  }
+
+  @structProp('string')
+  get textBaseline(): TextNodeStructWritableProps['textBaseline'] {
+    return 'alphabetic';
+  }
+
+  set textBaseline(value: TextNodeStructWritableProps['textBaseline']) {
+    // Decorator will handle this
+  }
+
+  @structProp('string')
+  get verticalAlign(): TextNodeStructWritableProps['verticalAlign'] {
+    return 'middle';
+  }
+
+  set verticalAlign(value: TextNodeStructWritableProps['verticalAlign']) {
+    // Decorator will handle this
+  }
+
+  @structProp('string')
+  get overflowSuffix(): TextNodeStructWritableProps['overflowSuffix'] {
+    return '...';
+  }
+
+  set overflowSuffix(value: TextNodeStructWritableProps['overflowSuffix']) {
+    // Decorator will handle this
+  }
 }

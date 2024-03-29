@@ -19,6 +19,10 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, type TextureData } from './Texture.js';
+import {
+  isCompressedTextureContainer,
+  loadCompressedTexture,
+} from '../lib/textureCompression.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -45,7 +49,7 @@ export interface ImageTextureProps {
    *
    * @default true
    */
-  premultiplyAlpha?: boolean;
+  premultiplyAlpha?: boolean | null;
 }
 
 /**
@@ -70,6 +74,10 @@ export class ImageTexture extends Texture {
     this.props = ImageTexture.resolveDefaults(props);
   }
 
+  hasAlphaChannel(mimeType: string) {
+    return mimeType.indexOf('image/png') !== -1;
+  }
+
   override async getTextureData(): Promise<TextureData> {
     const { src, premultiplyAlpha } = this.props;
     if (!src) {
@@ -83,15 +91,45 @@ export class ImageTexture extends Texture {
         premultiplyAlpha,
       };
     }
-    const response = await fetch(src);
-    const blob = await response.blob();
-    return {
-      data: await createImageBitmap(blob, {
-        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      }),
-    };
+
+    // Handle compressed textures
+    if (isCompressedTextureContainer(src)) {
+      return loadCompressedTexture(src);
+    }
+
+    if (this.txManager.imageWorkerManager) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
+    } else if (this.txManager.hasCreateImageBitmap) {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const hasAlphaChannel =
+        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+        premultiplyAlpha: hasAlphaChannel,
+      };
+    } else {
+      const img = new Image();
+      img.src = src;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image`));
+      }).catch((e) => {
+        console.error(e);
+      });
+
+      return {
+        data: img,
+        premultiplyAlpha: premultiplyAlpha ?? true,
+      };
+    }
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
@@ -108,7 +146,7 @@ export class ImageTexture extends Texture {
   ): Required<ImageTextureProps> {
     return {
       src: props.src ?? '',
-      premultiplyAlpha: props.premultiplyAlpha ?? true,
+      premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
     };
   }
 

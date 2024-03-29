@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { CoreNodeRenderState } from '../core/CoreNode.js';
+
 /**
  * Types shared between Main Space and Core Space
  *
@@ -34,37 +36,97 @@ export interface Dimensions {
 }
 
 /**
- * Event handler for when a texture is loading
+ * Payload for when text is loaded
  */
-export type TextureLoadingEventHandler = (target: any) => void;
+export type NodeTextLoadedPayload = {
+  type: 'text';
+  dimensions: Dimensions;
+};
 
 /**
- * Event handler for when a texture is loaded
+ * Payload for when texture is loaded
  */
-export type TextureLoadedEventHandler = (
+export type NodeTextureLoadedPayload = {
+  type: 'texture';
+  dimensions: Dimensions;
+};
+
+/**
+ * Combined type for all loaded payloads
+ */
+export type NodeLoadedPayload =
+  | NodeTextLoadedPayload
+  | NodeTextureLoadedPayload;
+
+/**
+ * Payload for when text failed to load
+ */
+export type NodeTextFailedPayload = {
+  type: 'text';
+  error: Error;
+};
+
+/**
+ * Payload for when texture failed to load
+ */
+export type NodeTextureFailedPayload = {
+  type: 'texture';
+  error: Error;
+};
+
+/**
+ * Payload for when texture failed to load
+ */
+export type NodeTextureFreedPayload = {
+  type: 'texture';
+};
+
+/**
+ * Combined type for all failed payloads
+ */
+export type NodeFailedPayload =
+  | NodeTextFailedPayload
+  | NodeTextureFailedPayload;
+
+/**
+ * Event handler for when the texture/text of a node has loaded
+ */
+export type NodeLoadedEventHandler = (
   target: any,
-  dimensions: Readonly<Dimensions>,
+  payload: NodeLoadedPayload,
 ) => void;
 
 /**
- * Event handler for when a texture fails to load
+ * Event handler for when the texture/text of a node has failed to load
  */
-export type TextureFailedEventHandler = (target: any, error: Error) => void;
-
-/**
- * Event handler for when text is loading
- */
-export type TextLoadingEventHandler = (target: any) => void;
-
-/**
- * Event handler for when text is loaded
- */
-export type TextLoadedEventHandler = (
+export type NodeFailedEventHandler = (
   target: any,
-  dimensions: Dimensions,
+  payload: NodeFailedPayload,
+) => void;
+
+export type NodeRenderStatePayload = {
+  type: 'renderState';
+  payload: CoreNodeRenderState;
+};
+
+export type NodeRenderStateEventHandler = (
+  target: any,
+  payload: NodeRenderStatePayload,
 ) => void;
 
 /**
- * Event handler for when text fails to load
+ * Event payload for when an FpsUpdate event is emitted by either the Stage or
+ * MainRenderer
  */
-export type TextFailedEventHandler = (target: any, error: Error) => void;
+export interface FpsUpdatePayload {
+  fps: number;
+  contextSpyData: Record<string, number> | null;
+}
+
+/**
+ * Event payload for when a frame tick event is emitted by the Stage
+ */
+export interface FrameTickPayload {
+  time: number;
+  delta: number;
+}

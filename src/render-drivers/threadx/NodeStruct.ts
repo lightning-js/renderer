@@ -39,7 +39,8 @@ export interface NodeStructWritableProps {
   parentId: number;
   zIndex: number;
   zIndexLocked: number;
-  scale: number;
+  scaleX: number;
+  scaleY: number;
   mount: number;
   mountX: number;
   mountY: number;
@@ -200,11 +201,20 @@ export class NodeStruct
   }
 
   @structProp('number')
-  get scale(): number {
+  get scaleX(): number {
     return 1;
   }
 
-  set scale(value: number) {
+  set scaleX(value: number) {
+    // Decorator will handle this
+  }
+
+  @structProp('number')
+  get scaleY(): number {
+    return 1;
+  }
+
+  set scaleY(value: number) {
     // Decorator will handle this
   }
 

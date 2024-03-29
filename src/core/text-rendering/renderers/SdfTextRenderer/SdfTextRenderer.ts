@@ -17,7 +17,17 @@
  * limitations under the License.
  */
 
-import { intersectBound, type Bound, type Rect } from '../../../lib/utils.js';
+import {
+  type Bound,
+  type Rect,
+  createBound,
+  type BoundWithValid,
+  intersectRect,
+  type RectWithValid,
+  copyRect,
+  boundsOverlap,
+  convertBoundToRect,
+} from '../../../lib/utils.js';
 import {
   TextRenderer,
   type TrProps,
@@ -29,7 +39,10 @@ import { SdfTrFontFace } from '../../font-face-types/SdfTrFontFace/SdfTrFontFace
 import { FLOATS_PER_GLYPH } from './internal/constants.js';
 import { getStartConditions } from './internal/getStartConditions.js';
 import { layoutText } from './internal/layoutText.js';
-import { makeRenderWindow } from './internal/makeRenderWindow.js';
+import {
+  setRenderWindow,
+  type SdfRenderWindow,
+} from './internal/setRenderWindow.js';
 import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
 import { TrFontManager, type FontFamilyMap } from '../../TrFontManager.js';
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
@@ -42,6 +55,7 @@ import type {
 } from '../../../renderers/webgl/shaders/SdfShader.js';
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
+import type { Matrix3d } from '../../../lib/Matrix3d.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -70,13 +84,15 @@ export interface SdfTextRendererState extends TextRendererState {
    */
   lineCache: LineCacheItem[];
 
-  renderWindow: Bound | undefined;
+  renderWindow: SdfRenderWindow;
+
+  elementBounds: BoundWithValid;
+
+  clippingRect: RectWithValid;
 
   bufferNumFloats: number;
 
   bufferNumQuads: number;
-
-  // texCoordBuffer: Float32Array | undefined;
 
   vertexBuffer: Float32Array | undefined;
 
@@ -90,6 +106,16 @@ export interface SdfTextRendererState extends TextRendererState {
 }
 
 /**
+ * Ephemeral rect object used for calculations
+ */
+const tmpRect: Rect = {
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+};
+
+/**
  * Singleton class for rendering text using signed distance fields.
  *
  * @remarks
@@ -101,11 +127,22 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    */
   private ssdfFontFamilies: FontFamilyMap = {};
   private msdfFontFamilies: FontFamilyMap = {};
+  private fontFamilyArray: FontFamilyMap[] = [
+    this.ssdfFontFamilies,
+    this.msdfFontFamilies,
+  ];
   private sdfShader: SdfShader;
+  private rendererBounds: Bound;
 
   constructor(stage: Stage) {
     super(stage);
     this.sdfShader = this.stage.shManager.loadShader('SdfShader').shader;
+    this.rendererBounds = {
+      x1: 0,
+      y1: 0,
+      x2: this.stage.options.appWidth,
+      y2: this.stage.options.appHeight,
+    };
   }
 
   //#region Overrides
@@ -113,74 +150,122 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     return {
       fontFamily: (state, value) => {
         state.props.fontFamily = value;
-        state.trFontFace = undefined;
-        this.invalidateCache(state);
+        this.releaseFontFace(state);
+        this.invalidateLayoutCache(state);
       },
       fontWeight: (state, value) => {
         state.props.fontWeight = value;
-        state.trFontFace = undefined;
-        this.invalidateCache(state);
+        this.releaseFontFace(state);
+        this.invalidateLayoutCache(state);
       },
       fontStyle: (state, value) => {
         state.props.fontStyle = value;
-        state.trFontFace = undefined;
-        this.invalidateCache(state);
+        this.releaseFontFace(state);
+        this.invalidateLayoutCache(state);
       },
       fontStretch: (state, value) => {
         state.props.fontStretch = value;
-        state.trFontFace = undefined;
-        this.invalidateCache(state);
+        this.releaseFontFace(state);
+        this.invalidateLayoutCache(state);
       },
       fontSize: (state, value) => {
         state.props.fontSize = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       text: (state, value) => {
         state.props.text = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       textAlign: (state, value) => {
         state.props.textAlign = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       color: (state, value) => {
         state.props.color = value;
       },
-      alpha: (state, value) => {
-        state.props.alpha = value;
-      },
       x: (state, value) => {
         state.props.x = value;
+        if (state.elementBounds.valid) {
+          this.setElementBoundsX(state);
+          // Only schedule an update if the text is not already rendered
+          // (renderWindow is invalid) and the element possibly overlaps the screen
+          // This is to avoid unnecessary updates when we know text is off-screen
+          if (
+            !state.renderWindow.valid &&
+            boundsOverlap(state.elementBounds, this.rendererBounds)
+          ) {
+            this.scheduleUpdateState(state);
+          }
+        }
       },
       y: (state, value) => {
         state.props.y = value;
+        if (state.elementBounds.valid) {
+          this.setElementBoundsY(state);
+          // See x() for explanation
+          if (
+            !state.renderWindow.valid &&
+            boundsOverlap(state.elementBounds, this.rendererBounds)
+          ) {
+            this.scheduleUpdateState(state);
+          }
+        }
       },
       contain: (state, value) => {
         state.props.contain = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       width: (state, value) => {
         state.props.width = value;
-        this.invalidateCache(state);
+        // Only invalidate layout cache if we're containing in the horizontal direction
+        if (state.props.contain !== 'none') {
+          this.invalidateLayoutCache(state);
+        }
       },
       height: (state, value) => {
         state.props.height = value;
-        this.invalidateCache(state);
+        // Only invalidate layout cache if we're containing in the vertical direction
+        if (state.props.contain === 'both') {
+          this.invalidateLayoutCache(state);
+        }
       },
       offsetY: (state, value) => {
         state.props.offsetY = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       scrollable: (state, value) => {
         state.props.scrollable = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
       },
       scrollY: (state, value) => {
         state.props.scrollY = value;
+        // Scrolling doesn't need to invalidate any caches, but it does need to
+        // schedule an update
+        this.scheduleUpdateState(state);
       },
       letterSpacing: (state, value) => {
         state.props.letterSpacing = value;
-        this.invalidateCache(state);
+        this.invalidateLayoutCache(state);
+      },
+      lineHeight: (state, value) => {
+        state.props.lineHeight = value;
+        this.invalidateLayoutCache(state);
+      },
+      maxLines: (state, value) => {
+        state.props.maxLines = value;
+        this.invalidateLayoutCache(state);
+      },
+      textBaseline: (state, value) => {
+        state.props.textBaseline = value;
+        this.invalidateLayoutCache(state);
+      },
+      verticalAlign: (state, value) => {
+        state.props.verticalAlign = value;
+        this.invalidateLayoutCache(state);
+      },
+      overflowSuffix: (state, value) => {
+        state.props.overflowSuffix = value;
+        this.invalidateLayoutCache(state);
       },
       debug: (state, value) => {
         state.props.debug = value;
@@ -231,10 +316,41 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     return {
       props,
       status: 'initialState',
+      updateScheduled: false,
       emitter: new EventEmitter(),
       lineCache: [],
       forceFullLayoutCalc: false,
-      renderWindow: undefined,
+      renderWindow: {
+        screen: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: 0,
+        },
+        sdf: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: 0,
+        },
+        firstLineIdx: 0,
+        numLines: 0,
+        valid: false,
+      },
+      elementBounds: {
+        x1: 0,
+        y1: 0,
+        x2: 0,
+        y2: 0,
+        valid: false,
+      },
+      clippingRect: {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        valid: false,
+      },
       bufferNumFloats: 0,
       bufferNumQuads: 0,
       vertexBuffer: undefined,
@@ -244,6 +360,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       textW: undefined,
       distanceRange: 0,
       trFontFace: undefined,
+      isRenderable: false,
       debugData: {
         updateCount: 0,
         layoutCount: 0,
@@ -257,7 +374,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   }
 
   override updateState(state: SdfTextRendererState): void {
-    const updateStartTime = performance.now();
     let { trFontFace } = state;
     const { textH, lineCache, debugData, forceFullLayoutCalc } = state;
     debugData.updateCount++;
@@ -267,6 +383,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       this.setStatus(state, 'loading');
     }
 
+    // Resolve font face if we haven't yet
     if (!trFontFace) {
       trFontFace = this.resolveFontFace(state.props);
       state.trFontFace = trFontFace;
@@ -276,13 +393,14 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         this.setStatus(state, 'failed', new Error(msg));
         return;
       }
+      trFontFace.texture.setRenderableOwner(state, state.isRenderable);
     }
 
-    // If the font hasn't been loaded yet, don't do anything
+    // If the font hasn't been loaded yet, stop here.
+    // Listen for the 'loaded' event and forward fontLoaded event
     if (!trFontFace.loaded) {
-      trFontFace.on('loaded', function loadedHandler() {
-        state.emitter.emit('fontLoaded', {});
-        trFontFace?.off('fontLoaded', loadedHandler);
+      trFontFace.once('loaded', () => {
+        this.scheduleUpdateState(state);
       });
       return;
     }
@@ -290,22 +408,39 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // If the font is loaded then so should the data
     assertTruthy(trFontFace.data, 'Font face data should be loaded');
 
-    const { text, fontSize, x, y, contain, width, height, scrollable } =
-      state.props;
+    const {
+      text,
+      fontSize,
+      x,
+      y,
+      contain,
+      width,
+      height,
+      lineHeight,
+      verticalAlign,
+      scrollable,
+      overflowSuffix,
+      maxLines,
+    } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
     const scrollY = contain === 'both' && scrollable ? state.props.scrollY : 0;
 
-    let { renderWindow } = state;
-
-    // Needed in renderWindow calculation
-    const sdfLineHeight = trFontFace.data.info.size;
+    const { renderWindow } = state;
 
     /**
-     * Divide screen space points by this to get the SDF space points
-     * Mulitple SDF space points by this to get screen space points
+     * The font size of the SDF font face (the basis for SDF space units)
      */
-    const fontSizeRatio = fontSize / sdfLineHeight;
+    const sdfFontSize = trFontFace.data.info.size;
+
+    /**
+     * Divide screen space units by this to get the SDF space units
+     * Mulitple SDF space units by this to get screen space units
+     */
+    const fontSizeRatio = fontSize / sdfFontSize;
+
+    // Needed in renderWindow calculation
+    const sdfLineHeight = lineHeight / fontSizeRatio;
 
     state.distanceRange =
       fontSizeRatio * trFontFace.data.distanceField.distanceRange;
@@ -317,62 +452,66 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       vertexBuffer = new Float32Array(neededLength * 2);
     }
 
-    // Figure out whats actually in the bounds of the renderer/canvas (visibleWindow)
-    const rendererBounds: Bound = {
-      x1: 0,
-      y1: 0,
-      x2: this.stage.options.appWidth,
-      y2: this.stage.options.appHeight,
-    };
-    const elementBounds: Bound = {
-      x1: x,
-      y1: y,
-      x2: contain !== 'none' ? x + width : Infinity,
-      y2: contain === 'both' ? y + height : Infinity,
-    };
-    /**
-     * Area that is visible on the screen.
-     */
-    const visibleWindow: Bound = intersectBound(rendererBounds, elementBounds);
+    const elementBounds = state.elementBounds;
+    if (!elementBounds.valid) {
+      this.setElementBoundsX(state);
+      this.setElementBoundsY(state);
+      elementBounds.valid = true;
+    }
 
     // Return early if we're still viewing inside the established render window
     // No need to re-render what we've already rendered
     // (Only if there's an established renderWindow and we're not suppressing early exit)
-    if (!forceFullLayoutCalc && renderWindow) {
+    if (!forceFullLayoutCalc && renderWindow.valid) {
+      const rwScreen = renderWindow.screen;
       if (
-        x + renderWindow.x1 <= visibleWindow.x1 &&
-        x + renderWindow.x2 >= visibleWindow.x2 &&
-        y - scrollY + renderWindow.y1 <= visibleWindow.y1 &&
-        y - scrollY + renderWindow.y2 >= visibleWindow.y2
-      )
+        x + rwScreen.x1 <= elementBounds.x1 &&
+        x + rwScreen.x2 >= elementBounds.x2 &&
+        y - scrollY + rwScreen.y1 <= elementBounds.y1 &&
+        y - scrollY + rwScreen.y2 >= elementBounds.y2
+      ) {
+        this.setStatus(state, 'loaded');
         return;
-      // Otherwise clear the renderWindow so it can be redone
-      state.renderWindow = renderWindow = undefined;
+      }
+      // Otherwise invalidate the renderWindow so it can be redone
+      renderWindow.valid = false;
+      this.setStatus(state, 'loading');
     }
 
     const { offsetY, textAlign } = state.props;
 
     // Create a new renderWindow if needed
-    if (!renderWindow) {
-      const visibleWindowHeight = visibleWindow.y2 - visibleWindow.y1;
-      const maxLinesPerCanvasPage = Math.ceil(
-        visibleWindowHeight / sdfLineHeight,
+    if (!renderWindow.valid) {
+      const isPossiblyOnScreen = boundsOverlap(
+        elementBounds,
+        this.rendererBounds,
       );
-      renderWindow = makeRenderWindow(
+
+      if (!isPossiblyOnScreen) {
+        // If the element is not possibly on screen, we can skip the layout and rendering completely
+        return;
+      }
+
+      setRenderWindow(
+        renderWindow,
         x,
         y,
         scrollY,
-        sdfLineHeight,
-        maxLinesPerCanvasPage,
-        visibleWindow,
+        lineHeight,
+        contain === 'both' ? elementBounds.y2 - elementBounds.y1 : 0,
+        elementBounds,
+        fontSizeRatio,
       );
+      // console.log('newRenderWindow', renderWindow);
     }
 
     const start = getStartConditions(
-      fontSize,
+      sdfFontSize,
+      sdfLineHeight,
+      lineHeight,
+      verticalAlign,
       offsetY,
       fontSizeRatio,
-      sdfLineHeight,
       renderWindow,
       lineCache,
       textH,
@@ -389,21 +528,24 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const out2 = layoutText(
       start.lineIndex,
-      start.x,
-      start.y,
+      start.sdfX,
+      start.sdfY,
       text,
       textAlign,
       width,
       height,
       fontSize,
+      lineHeight,
       letterSpacing,
       vertexBuffer,
       contain,
       lineCache,
-      renderWindow,
+      renderWindow.sdf,
       trFontFace,
       forceFullLayoutCalc,
       scrollable,
+      overflowSuffix,
+      maxLines,
     );
 
     state.bufferUploaded = false;
@@ -429,34 +571,18 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
   override renderQuads(
     state: SdfTextRendererState,
-    clippingRect: Rect | null,
+    transform: Matrix3d,
+    clippingRect: Readonly<RectWithValid>,
+    alpha: number,
   ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
     }
 
-    const drawStartTime = performance.now();
-
-    const { sdfShader } = this;
-
     const { renderer } = this.stage;
 
-    const { appWidth, appHeight } = this.stage.options;
-
-    const {
-      fontSize,
-      color,
-      alpha,
-      x,
-      y,
-      contain,
-      width,
-      height,
-      scrollable,
-      zIndex,
-      debug,
-    } = state.props;
+    const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
     const scrollY = contain === 'both' && scrollable ? state.props.scrollY : 0;
@@ -466,19 +592,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       textH = 0,
       distanceRange,
       vertexBuffer,
-      bufferNumFloats,
       bufferUploaded,
-      renderWindow,
-      debugData,
       trFontFace,
+      elementBounds,
     } = state;
 
     let { webGlBuffers } = state;
 
     if (!webGlBuffers) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
       const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-      const webGlBuffer = gl.createBuffer();
+      const webGlBuffer = glw.createBuffer();
       assertTruthy(webGlBuffer);
       state.webGlBuffers = new BufferCollection([
         {
@@ -487,7 +611,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_position: {
               name: 'a_position',
               size: 2, // 2 components per iteration
-              type: gl.FLOAT, // the data is 32bit floats
+              type: glw.FLOAT, // the data is 32bit floats
               normalized: false, // don't normalize the data
               stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
               offset: 0, // start at the beginning of the buffer
@@ -495,7 +619,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
             a_textureCoordinate: {
               name: 'a_textureCoordinate',
               size: 2,
-              type: gl.FLOAT,
+              type: glw.FLOAT,
               normalized: false,
               stride,
               offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -509,28 +633,44 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     if (!bufferUploaded) {
-      const gl = renderer.gl;
+      const glw = renderer.glw;
 
       const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
+      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
     }
 
     assertTruthy(trFontFace);
+    if (scrollable && contain === 'both') {
+      assertTruthy(elementBounds.valid);
+      const elementRect = convertBoundToRect(elementBounds, tmpRect);
+
+      if (clippingRect.valid) {
+        state.clippingRect.valid = true;
+        clippingRect = intersectRect(
+          clippingRect,
+          elementRect,
+          state.clippingRect,
+        );
+      } else {
+        state.clippingRect.valid = true;
+        clippingRect = copyRect(elementRect, state.clippingRect);
+      }
+    }
 
     const renderOp = new WebGlCoreRenderOp(
-      renderer.gl,
+      renderer.glw,
       renderer.options,
       webGlBuffers,
       this.sdfShader,
       {
+        transform: transform.data,
         // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
         // for the best blending results. Which is why we use `mergeColorAlpha`
         // instead of `mergeColorAlphaPremultiplied` here.
         color: mergeColorAlpha(color, alpha),
         size: fontSize / (trFontFace.data?.info.size || 0),
-        offset: [x, y - scrollY],
+        scrollY,
         distanceRange,
         debug: debug.sdfShaderDebug,
       } satisfies SdfShaderProps,
@@ -549,24 +689,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 
-    renderer.addRenderable(renderOp);
-
-    // const elementRect = {
-    //   x: x,
-    //   y: y,
-    //   w: contain !== 'none' ? width : textW,
-    //   h: contain === 'both' ? height : textH,
-    // };
-
-    // const visibleRect = intersectRect(
-    //   {
-    //     x: 0,
-    //     y: 0,
-    //     w: renderer.w,
-    //     h: renderer.h,
-    //   },
-    //   elementRect,
-    // );
+    renderer.addRenderOp(renderOp);
 
     // if (!debug.disableScissor) {
     //   renderer.enableScissor(
@@ -620,26 +743,70 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     //   debugData.drawCount++;
     // }
   }
+
+  override setIsRenderable(
+    state: SdfTextRendererState,
+    renderable: boolean,
+  ): void {
+    super.setIsRenderable(state, renderable);
+    state.trFontFace?.texture.setRenderableOwner(state, renderable);
+  }
+
+  override destroyState(state: SdfTextRendererState): void {
+    super.destroyState(state);
+    // If there's a Font Face assigned we must free the owner relation to its texture
+    state.trFontFace?.texture.setRenderableOwner(state, false);
+  }
   //#endregion Overrides
 
   public resolveFontFace(props: TrFontProps): SdfTrFontFace | undefined {
-    return TrFontManager.resolveFontFace(
-      [this.msdfFontFamilies, this.ssdfFontFamilies],
-      props,
-    ) as SdfTrFontFace | undefined;
+    return TrFontManager.resolveFontFace(this.fontFamilyArray, props) as
+      | SdfTrFontFace
+      | undefined;
   }
 
   /**
-   * Invalidate the cache stored in the state. This will cause the text to be
-   * re-layed out on the next update.
+   * Release the loaded SDF font face
    *
    * @param state
    */
-  protected invalidateCache(state: SdfTextRendererState): void {
-    state.renderWindow = undefined;
+  protected releaseFontFace(state: SdfTextRendererState) {
+    if (state.trFontFace) {
+      state.trFontFace.texture.setRenderableOwner(state, false);
+      state.trFontFace = undefined;
+    }
+  }
+
+  /**
+   * Invalidate the layout cache stored in the state. This will cause the text
+   * to be re-layed out on the next update.
+   *
+   * @remarks
+   * This also invalidates the visible window cache.
+   *
+   * @param state
+   */
+  protected invalidateLayoutCache(state: SdfTextRendererState): void {
+    state.renderWindow.valid = false;
+    state.elementBounds.valid = false;
     state.textH = undefined;
     state.textW = undefined;
     state.lineCache = [];
     this.setStatus(state, 'loading');
+    this.scheduleUpdateState(state);
+  }
+
+  protected setElementBoundsX(state: SdfTextRendererState): void {
+    const { x, contain, width } = state.props;
+    const { elementBounds } = state;
+    elementBounds.x1 = x;
+    elementBounds.x2 = contain !== 'none' ? x + width : Infinity;
+  }
+
+  protected setElementBoundsY(state: SdfTextRendererState): void {
+    const { y, contain, height } = state.props;
+    const { elementBounds } = state;
+    elementBounds.y1 = y;
+    elementBounds.y2 = contain === 'both' ? y + height : Infinity;
   }
 }

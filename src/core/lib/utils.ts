@@ -56,6 +56,10 @@ export const norm = (rgba: number): number => {
   return v;
 };
 
+export function getNormalizedAlphaComponent(rgba: number): number {
+  return (rgba & 0xff) / 255.0;
+}
+
 /**
  * Get a CSS color string from a RGBA color
  *
@@ -77,6 +81,10 @@ export interface Rect {
   height: number;
 }
 
+export interface RectWithValid extends Rect {
+  valid: boolean;
+}
+
 export interface Bound {
   x1: number;
   y1: number;
@@ -84,30 +92,94 @@ export interface Bound {
   y2: number;
 }
 
-export function intersectBound(a: Bound, b: Bound): Bound {
-  const intersection = {
-    x1: Math.max(a.x1, b.x1),
-    y1: Math.max(a.y1, b.y1),
-    x2: Math.min(a.x2, b.x2),
-    y2: Math.min(a.y2, b.y2),
-  };
+export interface BoundWithValid extends Bound {
+  valid: boolean;
+}
+
+export function createBound<T extends Bound = Bound>(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  out?: T,
+): T {
+  if (out) {
+    out.x1 = x1;
+    out.y1 = y1;
+    out.x2 = x2;
+    out.y2 = y2;
+    return out;
+  }
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+  } as T;
+}
+
+export function intersectBound<T extends Bound = Bound>(
+  a: Bound,
+  b: Bound,
+  out?: T,
+): T {
+  const intersection = createBound(
+    Math.max(a.x1, b.x1),
+    Math.max(a.y1, b.y1),
+    Math.min(a.x2, b.x2),
+    Math.min(a.y2, b.y2),
+    out,
+  );
   if (intersection.x1 < intersection.x2 && intersection.y1 < intersection.y2) {
     return intersection;
   }
+  return createBound(0, 0, 0, 0, intersection);
+}
+
+export function boundsOverlap(a: Bound, b: Bound): boolean {
+  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+}
+
+export function convertBoundToRect(bound: Bound): Rect;
+export function convertBoundToRect<T extends Rect = Rect>(
+  bound: Bound,
+  out: T,
+): T;
+export function convertBoundToRect(bound: Bound, out?: Rect): Rect {
+  if (out) {
+    out.x = bound.x1;
+    out.y = bound.y1;
+    out.width = bound.x2 - bound.x1;
+    out.height = bound.y2 - bound.y1;
+    return out;
+  }
   return {
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 0,
+    x: bound.x1,
+    y: bound.y1,
+    width: bound.x2 - bound.x1,
+    height: bound.y2 - bound.y1,
   };
 }
 
-export function intersectRect(a: Rect, b: Rect): Rect {
+export function intersectRect(a: Rect, b: Rect): Rect;
+export function intersectRect<T extends Rect = Rect>(
+  a: Rect,
+  b: Rect,
+  out: T,
+): T;
+export function intersectRect(a: Rect, b: Rect, out?: Rect): Rect {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);
   const width = Math.min(a.x + a.width, b.x + b.width) - x;
   const height = Math.min(a.y + a.height, b.y + b.height) - y;
   if (width > 0 && height > 0) {
+    if (out) {
+      out.x = x;
+      out.y = y;
+      out.width = width;
+      out.height = height;
+      return out;
+    }
     return {
       x,
       y,
@@ -115,11 +187,36 @@ export function intersectRect(a: Rect, b: Rect): Rect {
       height,
     };
   }
+  if (out) {
+    out.x = 0;
+    out.y = 0;
+    out.width = 0;
+    out.height = 0;
+    return out;
+  }
   return {
     x: 0,
     y: 0,
     width: 0,
     height: 0,
+  };
+}
+
+export function copyRect(a: Rect): Rect;
+export function copyRect<T extends Rect = Rect>(a: Rect, out: T): T;
+export function copyRect(a: Rect, out?: Rect): Rect {
+  if (out) {
+    out.x = a.x;
+    out.y = a.y;
+    out.width = a.width;
+    out.height = a.height;
+    return out;
+  }
+  return {
+    x: a.x,
+    y: a.y,
+    width: a.width,
+    height: a.height,
   };
 }
 
@@ -132,6 +229,15 @@ export function compareRect(a: Rect | null, b: Rect | null): boolean {
   }
   return (
     a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  );
+}
+
+export function boundInsideBound(bound1: Bound, bound2: Bound) {
+  return (
+    bound1.x1 <= bound2.x2 &&
+    bound1.y1 <= bound2.y2 &&
+    bound1.x2 >= bound2.x1 &&
+    bound1.y2 >= bound2.y1
   );
 }
 

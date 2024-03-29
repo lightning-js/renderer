@@ -61,13 +61,22 @@ export class LinearGradientEffect extends ShaderEffect {
   ): Required<LinearGradientEffectProps> {
     const colors = props.colors ?? [0xff000000, 0xffffffff];
 
-    let stops = props.stops;
-    if (!stops) {
-      stops = [];
-      const calc = colors.length - 1;
-      for (let i = 0; i < colors.length; i++) {
-        stops.push(i * (1 / calc));
+    let stops = props.stops || [];
+    if (stops.length === 0 || stops.length !== colors.length) {
+      const colorsL = colors.length;
+      let i = 0;
+      const tmp = stops;
+      for (; i < colorsL; i++) {
+        if (stops[i]) {
+          tmp[i] = stops[i]!;
+          if (stops[i - 1] === undefined && tmp[i - 2] !== undefined) {
+            tmp[i - 1] = tmp[i - 2]! + (stops[i]! - tmp[i - 2]!) / 2;
+          }
+        } else {
+          tmp[i] = i * (1 / (colors.length - 1));
+        }
       }
+      stops = tmp;
     }
     return {
       colors,
@@ -94,28 +103,6 @@ export class LinearGradientEffect extends ShaderEffect {
     },
     stops: {
       value: [],
-      validator: (
-        value: number[],
-        props: LinearGradientEffectProps,
-      ): number[] => {
-        const colors = props.colors ?? [];
-        let stops = value;
-        const tmp: number[] = value;
-        if (stops.length === 0 || (stops && stops.length !== colors.length)) {
-          for (let i = 0; i < colors.length; i++) {
-            if (stops[i]) {
-              tmp[i] = stops[i]!;
-              if (stops[i - 1] === undefined && tmp[i - 2] !== undefined) {
-                tmp[i - 1] = tmp[i - 2]! + (stops[i]! - tmp[i - 2]!) / 2;
-              }
-            } else {
-              tmp[i] = i * (1 / (colors.length - 1));
-            }
-          }
-          stops = tmp;
-        }
-        return tmp;
-      },
       size: (props: LinearGradientEffectProps) => props.colors!.length,
       method: 'uniform1fv',
       type: 'float',
@@ -166,10 +153,7 @@ export class LinearGradientEffect extends ShaderEffect {
 
       float stopCalc = (dist - stops[0]) / (stops[1] - stops[0]);
       vec4 colorOut = $fromLinear(mix($toLinear(colors[0]), $toLinear(colors[1]), stopCalc));
-      for(int i = 1; i < ${colors}-1; i++) {
-        stopCalc = (dist - stops[i]) / (stops[i + 1] - stops[i]);
-        colorOut = mix(colorOut, colors[i + 1], clamp(stopCalc, 0.0, 1.0));
-      }
+      ${this.ColorLoop(colors)}
       return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
     `;
   };

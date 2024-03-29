@@ -25,10 +25,6 @@ import type { Stage } from '../../core/Stage.js';
 import type { RendererMain } from '../../main-api/RendererMain.js';
 import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
 import { CoreTextNode } from '../../core/CoreTextNode.js';
-import type {
-  TextFailedEventHandler,
-  TextLoadedEventHandler,
-} from '../../common/CommonTypes.js';
 
 export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
   protected declare coreNode: CoreTextNode;
@@ -62,7 +58,8 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         colorBr: props.colorBr,
         zIndex: props.zIndex,
         zIndexLocked: props.zIndexLocked,
-        scale: props.scale,
+        scaleX: props.scaleX,
+        scaleY: props.scaleY,
         mountX: props.mountX,
         mountY: props.mountY,
         mount: props.mount,
@@ -85,8 +82,12 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         scrollY: props.scrollY,
         offsetY: props.offsetY,
         textRendererOverride: props.textRendererOverride,
+        lineHeight: props.lineHeight,
+        maxLines: props.maxLines,
+        textBaseline: props.textBaseline,
+        verticalAlign: props.verticalAlign,
+        overflowSuffix: props.overflowSuffix,
         debug: props.debug,
-
         // These properties will get set appropriately in the base MainOnlyNode class
         parent: null,
         texture: null,
@@ -95,17 +96,7 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
         shaderProps: null,
       }),
     );
-    this.coreNode.on('textLoaded', this.onTextLoaded);
-    this.coreNode.on('textFailed', this.onTextFailed);
   }
-
-  private onTextLoaded: TextLoadedEventHandler = (target, dimensions) => {
-    this.emit('textLoaded', dimensions);
-  };
-
-  private onTextFailed: TextFailedEventHandler = (target, error) => {
-    this.emit('textFailed', error);
-  };
 
   get text(): string {
     return this.coreNode.text;
@@ -209,6 +200,56 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
 
   set letterSpacing(value: ITextNode['letterSpacing']) {
     this.coreNode.letterSpacing = value;
+  }
+
+  get lineHeight(): ITextNode['lineHeight'] {
+    return this.coreNode.lineHeight;
+  }
+
+  set lineHeight(value: ITextNode['lineHeight']) {
+    if (value) {
+      this.coreNode.lineHeight = value;
+    }
+  }
+
+  get maxLines(): ITextNode['maxLines'] {
+    return this.coreNode.maxLines;
+  }
+
+  set maxLines(value: ITextNode['maxLines']) {
+    if (value) {
+      this.coreNode.maxLines = value;
+    }
+  }
+
+  get textBaseline(): ITextNode['textBaseline'] {
+    return this.coreNode.textBaseline;
+  }
+
+  set textBaseline(value: ITextNode['textBaseline']) {
+    if (value) {
+      this.coreNode.textBaseline = value;
+    }
+  }
+
+  get verticalAlign(): ITextNode['verticalAlign'] {
+    return this.coreNode.verticalAlign;
+  }
+
+  set verticalAlign(value: ITextNode['verticalAlign']) {
+    if (value) {
+      this.coreNode.verticalAlign = value;
+    }
+  }
+
+  get overflowSuffix(): ITextNode['overflowSuffix'] {
+    return this.coreNode.overflowSuffix;
+  }
+
+  set overflowSuffix(value: ITextNode['overflowSuffix']) {
+    if (value) {
+      this.coreNode.overflowSuffix = value;
+    }
   }
 
   get debug(): ITextNode['debug'] {

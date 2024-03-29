@@ -20,7 +20,7 @@
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
-import type { Rect } from '../lib/utils.js';
+import type { Rect, RectWithValid } from '../lib/utils.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreRenderOp } from './CoreRenderOp.js';
@@ -39,15 +39,13 @@ export interface QuadOptions {
   shader: CoreShader | null;
   shaderProps: Record<string, unknown> | null;
   alpha: number;
-  scale: number;
-  clippingRect: Rect | null;
-  wpx: number;
-  wpy: number;
+  clippingRect: RectWithValid;
+  tx: number;
+  ty: number;
   ta: number;
   tb: number;
   tc: number;
   td: number;
-  worldScale: number;
 }
 
 export abstract class CoreRenderer {
@@ -58,9 +56,8 @@ export abstract class CoreRenderer {
   }
 
   abstract reset(): void;
-  abstract sortRenderables(): void;
   abstract render(surface: 'screen' | CoreContextTexture): void;
-  abstract addRenderable(params: QuadOptions | CoreRenderOp): void;
+  abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract getShaderManager(): CoreShaderManager;
 }

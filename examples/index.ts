@@ -18,71 +18,127 @@
  */
 
 import {
-  MainRenderDriver,
+  MainCoreDriver,
   RendererMain,
-  ThreadXRenderDriver,
-  type IRenderDriver,
-  type Dimensions,
+  ThreadXCoreDriver,
+  type ICoreDriver,
+  type NodeLoadedPayload,
   type RendererMainSettings,
+  type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
-import type { ExampleSettings } from './common/ExampleSettings.js';
+import type {
+  ExampleSettings,
+  SnapshotOptions,
+} from './common/ExampleSettings.js';
+import { StatTracker } from './common/StatTracker.js';
+
+interface TestModule {
+  default: (settings: ExampleSettings) => Promise<void>;
+  customSettings?: (
+    urlParams: URLSearchParams,
+  ) => Partial<RendererMainSettings>;
+  automation?: (settings: ExampleSettings) => Promise<void>;
+}
+
+const getTestPath = (testName: string) => `./tests/${testName}.ts`;
+const testRegex = /\/tests\/(.*)\.ts$/;
+const getTestName = (path: string) => {
+  const match = path.match(testRegex);
+  if (!match) {
+    throw new Error(`Invalid test path: ${path}`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return match[1]!;
+};
+
+const testModules = import.meta.glob('./tests/*.ts') as Record<
+  string,
+  () => Promise<TestModule>
+>;
+
+const appWidth = 1920;
+const appHeight = 1080;
+const defaultResolution = 720;
+const defaultPhysicalPixelRatio = 1;
 
 (async () => {
-  // URL params
-  // - driver: main | threadx (default: threadx)
-  // - test: <test name> (default: test)
-  // - showOverlay: true | false (default: true)
-  // - finalizationRegistry: true | false (default: false)
-  //   - Use FinalizationRegistryTextureUsageTracker instead of
-  //     ManualCountTextureUsageTracker
+  // See README.md for details on the supported URL params
   const urlParams = new URLSearchParams(window.location.search);
-  let driverName = urlParams.get('driver');
-  const test = urlParams.get('test') || 'test';
+  const automation = urlParams.get('automation') === 'true';
+  const test = urlParams.get('test') || (automation ? null : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const module = await import(`./tests/${test}.ts`);
+  const logFps = urlParams.get('fps') === 'true';
+  const enableContextSpy = urlParams.get('contextSpy') === 'true';
+  const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
+  const resolution = Number(urlParams.get('resolution')) || 720;
+  const enableInspector = urlParams.get('inspector') === 'true';
+  const physicalPixelRatio =
+    Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
+  const logicalPixelRatio = resolution / appHeight;
+
+  let driverName = urlParams.get('driver');
+  if (driverName !== 'main' && driverName !== 'threadx') {
+    driverName = 'main';
+  }
+
+  if (test) {
+    await runTest(
+      test,
+      driverName,
+      urlParams,
+      showOverlay,
+      logicalPixelRatio,
+      physicalPixelRatio,
+      logFps,
+      enableContextSpy,
+      perfMultiplier,
+      enableInspector,
+    );
+    return;
+  }
+  assertTruthy(automation);
+  await runAutomation(driverName, logFps);
+})().catch((err) => {
+  console.error(err);
+});
+
+async function runTest(
+  test: string,
+  driverName: string,
+  urlParams: URLSearchParams,
+  showOverlay: boolean,
+  logicalPixelRatio: number,
+  physicalPixelRatio: number,
+  logFps: boolean,
+  enableContextSpy: boolean,
+  perfMultiplier: number,
+  enableInspector: boolean,
+) {
+  const testModule = testModules[getTestPath(test)];
+  if (!testModule) {
+    throw new Error(`Test "${test}" not found`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  const module = await testModule();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   const customSettings: Partial<RendererMainSettings> =
     typeof module.customSettings === 'function'
       ? module.customSettings(urlParams)
       : {};
 
-  if (driverName !== 'main' && driverName !== 'threadx') {
-    driverName = 'main';
-  }
-
-  let driver: IRenderDriver | null = null;
-
-  if (driverName === 'main') {
-    driver = new MainRenderDriver();
-  } else {
-    driver = new ThreadXRenderDriver({
-      coreWorkerUrl,
-    });
-  }
-
-  const renderer = new RendererMain(
-    {
-      appWidth: 1920,
-      appHeight: 1080,
-      deviceLogicalPixelRatio: 0.6666667,
-      devicePhysicalPixelRatio: 1,
-      clearColor: 0x00000000,
-      coreExtensionModule: coreExtensionModuleUrl,
-      ...customSettings,
-    },
-    'app',
-    driver,
+  const { renderer, appElement } = await initRenderer(
+    driverName,
+    logFps,
+    enableContextSpy,
+    logicalPixelRatio,
+    physicalPixelRatio,
+    enableInspector,
+    customSettings,
   );
-
-  await renderer.init();
-
-  const canvas = document.querySelector('#app>canvas');
-
-  assertTruthy(canvas instanceof HTMLCanvasElement);
 
   if (showOverlay) {
     const overlayText = renderer.createTextNode({
@@ -93,10 +149,10 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
       fontSize: 50,
     });
     overlayText.once(
-      'textLoaded',
-      (target: any, { width, height }: Dimensions) => {
-        overlayText.x = renderer.settings.appWidth - width - 20;
-        overlayText.y = renderer.settings.appHeight - height - 20;
+      'loaded',
+      (target: any, { dimensions }: NodeLoadedPayload) => {
+        overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
+        overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
       },
     );
   }
@@ -105,11 +161,242 @@ import type { ExampleSettings } from './common/ExampleSettings.js';
     testName: test,
     renderer,
     driverName: driverName as 'main' | 'threadx',
-    canvas,
+    appElement,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    testRoot: renderer.root!,
+    automation: false,
+    perfMultiplier: perfMultiplier,
+    snapshot: async () => {
+      // No-op
+    },
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   await module.default(exampleSettings);
-})().catch((err) => {
-  console.error(err);
-});
+}
+
+async function initRenderer(
+  driverName: string,
+  logFps: boolean,
+  enableContextSpy: boolean,
+  logicalPixelRatio: number,
+  physicalPixelRatio: number,
+  enableInspector: boolean,
+  customSettings?: Partial<RendererMainSettings>,
+) {
+  let driver: ICoreDriver | null = null;
+
+  if (driverName === 'main') {
+    driver = new MainCoreDriver();
+  } else {
+    driver = new ThreadXCoreDriver({
+      coreWorkerUrl,
+    });
+  }
+
+  const renderer = new RendererMain(
+    {
+      appWidth,
+      appHeight,
+      boundsMargin: [100, 100, 100, 100],
+      deviceLogicalPixelRatio: logicalPixelRatio,
+      devicePhysicalPixelRatio: physicalPixelRatio,
+      clearColor: 0x00000000,
+      coreExtensionModule: coreExtensionModuleUrl,
+      fpsUpdateInterval: logFps ? 1000 : 0,
+      enableContextSpy,
+      enableInspector,
+      ...customSettings,
+    },
+    'app',
+    driver,
+  );
+
+  /**
+   * Sample data captured
+   */
+  const samples: StatTracker = new StatTracker();
+  /**
+   * Number of samples to capture before calculating FPS stats
+   */
+  const fpsSampleCount = 100;
+  /**
+   * Number of samples to skip before starting to capture FPS samples.
+   */
+  const fpsSampleSkipCount = 10;
+  /**
+   * FPS sample index
+   */
+  let fpsSampleIndex = 0;
+  let fpsSamplesLeft = fpsSampleCount;
+  renderer.on(
+    'fpsUpdate',
+    (target: RendererMain, fpsData: FpsUpdatePayload) => {
+      const captureSample = fpsSampleIndex >= fpsSampleSkipCount;
+      if (captureSample) {
+        samples.add('fps', fpsData.fps);
+
+        if (fpsData.contextSpyData) {
+          let totalCalls = 0;
+          for (const key in fpsData.contextSpyData) {
+            const numCalls = fpsData.contextSpyData[key]!;
+            totalCalls += numCalls;
+            samples.add(key, numCalls);
+          }
+          samples.add('totalCalls', totalCalls);
+        }
+
+        fpsSamplesLeft--;
+        if (fpsSamplesLeft === 0) {
+          const averageFps = samples.getAverage('fps');
+          const p01Fps = samples.getPercentile('fps', 1);
+          const p05Fps = samples.getPercentile('fps', 5);
+          const p25Fps = samples.getPercentile('fps', 25);
+          const medianFps = samples.getPercentile('fps', 50);
+          const stdDevFps = samples.getStdDev('fps');
+          console.log(`---------------------------------`);
+          console.log(`Average FPS: ${averageFps}`);
+          console.log(`Median FPS: ${medianFps}`);
+          console.log(`P01 FPS: ${p01Fps}`);
+          console.log(`P05 FPS: ${p05Fps}`);
+          console.log(`P25 FPS: ${p25Fps}`);
+          console.log(`Std Dev FPS: ${stdDevFps}`);
+          console.log(`Num samples: ${samples.getCount('fps')}`);
+          console.log(`---------------------------------`);
+
+          // Print out median data for all context spy data
+          if (fpsData.contextSpyData) {
+            const contextKeys = samples
+              .getSampleGroups()
+              .filter((key) => key !== 'fps' && key !== 'totalCalls');
+            // Print out median data for all context spy data
+            for (const key of contextKeys) {
+              const median = samples.getPercentile(key, 50);
+              console.log(
+                `median(${key}) / median(fps): ${Math.round(
+                  median / medianFps,
+                )}`,
+              );
+            }
+            const medianTotalCalls = samples.getPercentile('totalCalls', 50);
+            console.log(
+              `median(totalCalls) / median(fps): ${Math.round(
+                medianTotalCalls / medianFps,
+              )}`,
+            );
+            console.log(`---------------------------------`);
+          }
+          samples.reset();
+          fpsSamplesLeft = fpsSampleCount;
+        }
+      }
+      console.log(`FPS: ${fpsData.fps} (samples left: ${fpsSamplesLeft})`);
+      fpsSampleIndex++;
+    },
+  );
+
+  await renderer.init();
+
+  const appElement = document.querySelector('#app');
+
+  assertTruthy(appElement instanceof HTMLDivElement);
+
+  return { renderer, appElement };
+}
+
+async function runAutomation(driverName: string, logFps: boolean) {
+  const logicalPixelRatio = defaultResolution / appHeight;
+  const { renderer, appElement } = await initRenderer(
+    driverName,
+    logFps,
+    false,
+    logicalPixelRatio,
+    defaultPhysicalPixelRatio,
+    false, // enableInspector
+  );
+
+  // Iterate through all test modules
+  for (const testPath in testModules) {
+    const testModule = testModules[testPath];
+    const testName = getTestName(testPath);
+    assertTruthy(testModule);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const { automation, customSettings } = await testModule();
+    console.log(`Attempting to run automation for ${testName}...`);
+    if (automation) {
+      console.log(`Running automation for ${testName}...`);
+      if (customSettings) {
+        console.error('customSettings not supported for automation');
+      } else {
+        assertTruthy(renderer.root);
+        const testRoot = renderer.createNode({
+          parent: renderer.root,
+          x: renderer.root.x,
+          y: renderer.root.y,
+          width: renderer.root.width,
+          height: renderer.root.height,
+          color: 0x00000000,
+        });
+        const exampleSettings: ExampleSettings = {
+          testName,
+          renderer,
+          testRoot,
+          driverName: driverName as 'main' | 'threadx',
+          appElement,
+          automation: true,
+          perfMultiplier: 1,
+          snapshot: async (options) => {
+            const snapshot = (window as any).snapshot as
+              | ((testName: string, options?: SnapshotOptions) => Promise<void>)
+              | undefined;
+
+            const clipRect = options?.clip || {
+              x: testRoot.x,
+              y: testRoot.y,
+              width: testRoot.width,
+              height: testRoot.height,
+            };
+
+            const adjustedOptions = {
+              ...options,
+              clip: {
+                x: Math.round(clipRect.x * logicalPixelRatio),
+                y: Math.round(clipRect.y * logicalPixelRatio),
+                width: Math.round(clipRect.width * logicalPixelRatio),
+                height: Math.round(clipRect.height * logicalPixelRatio),
+              },
+            };
+
+            // Allow some time for all images to load and the RaF to unpause
+            // and render if needed.
+            await delay(200);
+            if (snapshot) {
+              console.log(`Calling snapshot(${testName})`);
+              await snapshot(testName, adjustedOptions);
+            } else {
+              console.error(
+                'snapshot() not defined (not running in playwright?)',
+              );
+            }
+          },
+        };
+        await automation(exampleSettings);
+        testRoot.parent = null;
+        testRoot.destroy();
+      }
+    }
+  }
+  const doneTests = (window as any).doneTests as
+    | (() => Promise<void>)
+    | undefined;
+  if (doneTests) {
+    console.error('Calling doneTests()');
+    await doneTests();
+  } else {
+    console.error('doneTests() not defined (not running in playwright?)');
+  }
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

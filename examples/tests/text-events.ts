@@ -22,7 +22,8 @@ import {
   type ITextNode,
   type RendererMain,
   type Dimensions,
-  type TextLoadedEventHandler,
+  type NodeLoadedEventHandler,
+  type NodeFailedEventHandler,
 } from '@lightningjs/renderer';
 import { EventEmitter } from '@lightningjs/renderer/utils';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -32,19 +33,23 @@ const FONT_SIZE = 60;
 const BUTTON_PADDING = 10;
 const BEGIN_Y = HEADER_SIZE;
 
-export default async function ({ renderer, driverName }: ExampleSettings) {
+export default async function ({
+  renderer,
+  driverName,
+  testRoot,
+}: ExampleSettings) {
   const header = renderer.createTextNode({
     text: `Text Event Test (${driverName})`,
     fontSize: HEADER_SIZE,
     offsetY: -5,
-    parent: renderer.root,
+    parent: testRoot,
   });
 
   // Poor man's marquee
   const sdfLabel = renderer.createTextNode({
     text: 'SDF:',
     fontSize: 45,
-    parent: renderer.root,
+    parent: testRoot,
     x: 100,
     y: (renderer.settings.appHeight * 1) / 4 - 45 / 2,
   });
@@ -57,7 +62,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       boxColor2: 0x00aaaaff,
       textColor: 0xffffffff,
       fontFamily: 'Ubuntu',
-      parent: renderer.root,
+      parent: testRoot,
     },
     renderer,
   );
@@ -71,7 +76,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
   const canvasLabel = renderer.createTextNode({
     text: 'Canvas:',
     fontSize: 45,
-    parent: renderer.root,
+    parent: testRoot,
     x: 100,
     y: (renderer.settings.appHeight * 3) / 4 - 45 / 2,
   });
@@ -84,7 +89,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       boxColor2: 0x9f6dffff,
       textColor: 0xffffffff,
       fontFamily: 'NotoSans',
-      parent: renderer.root,
+      parent: testRoot,
     },
     renderer,
   );
@@ -96,7 +101,7 @@ export default async function ({ renderer, driverName }: ExampleSettings) {
       (renderer.settings.appHeight * 3) / 4 - marqueeCanvas.node.height / 2;
   });
 
-  const marqueeText = `The following is a test of the textLoaded event...
+  const marqueeText = `The following is a test of the text loaded event...
 From Philly's streets to Dutch canal's grace,
 A code symphony spanned time and space.
 Lightning 3 emerged, open and free,
@@ -153,7 +158,7 @@ Uniting two lands, a powerful stream.`;
     y: 50,
     fontFamily: '$$SDF_FAILURE_TEST$$',
     textRendererOverride: 'sdf',
-    parent: renderer.root,
+    parent: testRoot,
     fontSize: 50,
   });
 
@@ -214,11 +219,11 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
       parent: this.node,
     });
 
-    this.textNode.on('textLoaded', this.onTextLoaded);
+    this.textNode.on('loaded', this.onTextLoaded);
   }
 
-  private onTextLoaded: TextLoadedEventHandler = (target, dimensions) => {
-    this.layout(dimensions);
+  private onTextLoaded: NodeLoadedEventHandler = (target, payload) => {
+    this.layout(payload.dimensions);
   };
 
   private layout(textDimensions: Dimensions) {
@@ -300,8 +305,8 @@ function waitForTextFailed(textNode: ITextNode) {
     setTimeout(() => {
       reject(new Error('TIMEOUT'));
     }, 1000);
-    textNode.once('textFailed', (target, error: Error) => {
-      resolve(error);
-    });
+    textNode.once('failed', ((target, payload) => {
+      resolve(payload.error);
+    }) satisfies NodeFailedEventHandler);
   });
 }

@@ -17,6 +17,11 @@
  * limitations under the License.
  */
 
+import type {
+  FpsUpdatePayload,
+  FrameTickPayload,
+} from '../../common/CommonTypes.js';
+
 /**
  * @module
  * @description
@@ -39,9 +44,14 @@ export interface ThreadXRendererInitMessage extends ThreadXRendererMessage {
   canvas: OffscreenCanvas;
   appWidth: number;
   appHeight: number;
+  txMemByteThreshold: number;
+  boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
   clearColor: number;
+  fpsUpdateInterval: number;
+  enableContextSpy: boolean;
+  numImageWorkers: number;
   coreExtensionModule: string | null;
 }
 
@@ -56,11 +66,31 @@ export interface ThreadXRendererReleaseTextureMessage
 }
 
 /**
+ * A message sent from the renderer worker to the main worker to update the FPS
+ */
+export interface ThreadXRendererFpsUpdateMessage
+  extends ThreadXRendererMessage {
+  type: 'fpsUpdate';
+  fpsData: FpsUpdatePayload;
+}
+
+/**
+ * A message sent from the renderer worker to the main worker to update the FPS
+ */
+export interface ThreadXRendererFrameTickMessage
+  extends ThreadXRendererMessage {
+  type: 'frameTick';
+  frameTickData: FrameTickPayload;
+}
+
+/**
  * A map of message types to message shapes
  */
 export interface ThreadXRendererMessageMap {
   init: ThreadXRendererInitMessage;
   releaseTexture: ThreadXRendererReleaseTextureMessage;
+  fpsUpdate: ThreadXRendererFpsUpdateMessage;
+  frameTick: ThreadXRendererFrameTickMessage;
 }
 
 /**

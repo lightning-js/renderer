@@ -18,6 +18,7 @@
  */
 
 import type {
+  CustomDataMap,
   INode,
   INodeAnimatableProps,
   INodeWritableProps,
@@ -36,9 +37,11 @@ import type {
 import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
-  TextureFailedEventHandler,
-  TextureLoadedEventHandler,
+  NodeLoadedEventHandler,
+  NodeFailedEventHandler,
+  NodeRenderStateEventHandler,
 } from '../../common/CommonTypes.js';
+import { santizeCustomDataMap } from '../utils.js';
 
 let nextId = 1;
 
@@ -56,6 +59,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureRef | null = null;
   protected _shader: ShaderRef | null = null;
+  protected _data: CustomDataMap | undefined = {};
 
   constructor(
     props: INodeWritableProps,
@@ -87,7 +91,8 @@ export class MainOnlyNode extends EventEmitter implements INode {
         colorBr: props.colorBr,
         zIndex: props.zIndex,
         zIndexLocked: props.zIndexLocked,
-        scale: props.scale,
+        scaleX: props.scaleX,
+        scaleY: props.scaleY,
         mountX: props.mountX,
         mountY: props.mountY,
         mount: props.mount,
@@ -101,15 +106,22 @@ export class MainOnlyNode extends EventEmitter implements INode {
         texture: null,
         textureOptions: null,
       });
-    // Forward texture events
-    this.coreNode.on('txLoaded', this.onTextureLoaded);
-    this.coreNode.on('txFailed', this.onTextureFailed);
+    // Forward loaded/failed events
+    this.coreNode.on('loaded', this.onTextureLoaded);
+    this.coreNode.on('failed', this.onTextureFailed);
+    this.coreNode.on('freed', this.onTextureFreed);
+
+    this.coreNode.on('outOfBounds', this.onOutOfBounds);
+    this.coreNode.on('inBounds', this.onInBounds);
+    this.coreNode.on('outOfViewport', this.onOutOfViewport);
+    this.coreNode.on('inViewport', this.onInViewport);
 
     // Assign properties to this object
     this.parent = props.parent as MainOnlyNode;
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
+    this._data = props.data;
   }
 
   get x(): number {
@@ -126,14 +138,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set y(value: number) {
     this.coreNode.y = value;
-  }
-
-  get worldX(): number {
-    return this.coreNode.worldX;
-  }
-
-  get worldY(): number {
-    return this.coreNode.worldY;
   }
 
   get width(): number {
@@ -248,12 +252,36 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.colorBr = value;
   }
 
-  get scale(): number {
-    return this.coreNode.scale;
+  get scale(): number | null {
+    if (this.scaleX !== this.scaleY) {
+      return null;
+    }
+    return this.coreNode.scaleX;
   }
 
-  set scale(value: number) {
-    this.coreNode.scale = value;
+  set scale(value: number | null) {
+    // We ignore `null` when it's set.
+    if (value === null) {
+      return;
+    }
+    this.coreNode.scaleX = value;
+    this.coreNode.scaleY = value;
+  }
+
+  get scaleX(): number {
+    return this.coreNode.scaleX;
+  }
+
+  set scaleX(value: number) {
+    this.coreNode.scaleX = value;
+  }
+
+  get scaleY(): number {
+    return this.coreNode.scaleY;
+  }
+
+  set scaleY(value: number) {
+    this.coreNode.scaleY = value;
   }
 
   get mount(): number {
@@ -398,12 +426,32 @@ export class MainOnlyNode extends EventEmitter implements INode {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
-    this.emit('txLoaded', dimensions);
+  private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {
+    this.emit('loaded', payload);
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (target, error) => {
-    this.emit('txFailed', error);
+  private onTextureFailed: NodeFailedEventHandler = (target, payload) => {
+    this.emit('failed', payload);
+  };
+
+  private onTextureFreed: NodeLoadedEventHandler = (target, payload) => {
+    this.emit('freed', payload);
+  };
+
+  private onOutOfBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfBounds', payload);
+  };
+
+  private onInBounds: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inBounds', payload);
+  };
+
+  private onOutOfViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('outOfViewport', payload);
+  };
+
+  private onInViewport: NodeRenderStateEventHandler = (target, payload) => {
+    this.emit('inViewport', payload);
   };
   //#endregion Texture
 
@@ -421,8 +469,24 @@ export class MainOnlyNode extends EventEmitter implements INode {
     }
   }
 
+  get data(): CustomDataMap | undefined {
+    return this._data;
+  }
+
+  set data(d: CustomDataMap) {
+    this._data = santizeCustomDataMap(d);
+  }
+
   destroy(): void {
     this.emit('beforeDestroy', {});
+
+    //use while loop since setting parent to null removes it from array
+    let child = this.children[0];
+    while (child) {
+      child.destroy();
+      child = this.children[0];
+    }
+    this.coreNode.destroy();
     this.parent = null;
     this.texture = null;
     this.emit('afterDestroy', {});

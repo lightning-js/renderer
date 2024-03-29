@@ -17,29 +17,50 @@
  * limitations under the License.
  */
 
+import type { ContextSpy } from './core/lib/ContextSpy.js';
+
 export function createWebGLContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
-): WebGLRenderingContext | null {
+  contextSpy: ContextSpy | null,
+): WebGLRenderingContext {
   const config: WebGLContextAttributes = {
     alpha: true,
     antialias: false,
     depth: false,
     stencil: true,
     desynchronized: false,
-    failIfMajorPerformanceCaveat: true,
+    // Disabled because it prevents Visual Regression Tests from working
+    // failIfMajorPerformanceCaveat: true,
     powerPreference: 'high-performance',
     premultipliedAlpha: true,
     preserveDrawingBuffer: false,
   };
-  return (
+  const gl =
     // TODO: Remove this assertion once this issue is fixed in TypeScript
     // https://github.com/microsoft/TypeScript/issues/53614
     (canvas.getContext('webgl', config) ||
       canvas.getContext(
         'experimental-webgl' as 'webgl',
         config,
-      )) as unknown as WebGLRenderingContext | null
-  );
+      )) as unknown as WebGLRenderingContext | null;
+  if (!gl) {
+    throw new Error('Unable to create WebGL context');
+  }
+  if (contextSpy) {
+    // Proxy the GL context to log all GL calls
+    return new Proxy(gl, {
+      get(target, prop) {
+        const value = target[prop as never] as unknown;
+        if (typeof value === 'function') {
+          contextSpy.increment(String(prop));
+          return value.bind(target);
+        }
+        return value;
+      },
+    });
+  }
+
+  return gl;
 }
 
 /**
@@ -58,6 +79,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
+  if (isProductionEnvironment()) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
@@ -193,4 +215,13 @@ export function deg2Rad(degrees: number): number {
  */
 export function getImageAspectRatio(width: number, height: number): number {
   return width / height;
+}
+
+/**
+ * Checks import.meta if env is production
+ *
+ * @returns
+ */
+export function isProductionEnvironment(): boolean {
+  return import.meta.env && import.meta.env.PROD;
 }

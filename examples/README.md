@@ -1,13 +1,15 @@
-# Lightning 3 Renderer Test Examples
+# Example Tests
 
-This directory contains a set of independent examples which can be selected via
-URL parameters.
+This directory contains a set of independent Example Tests which can be selected
+via URL parameters for manual testing.
+
+Many of these Example Tests also define Snapshots for the Visual Regression Test
+Runner. See [visual-regression/README.md](../visual-regression/README.md) for
+more information on how those tests are run and how their Snapshots are defined.
 
 ## Setup
 
 ```
-pnpm install
-
 # Run code in dev mode (includes building Renderer in watch mode)
 pnpm start
 
@@ -33,10 +35,41 @@ pnpm watch
 
 ## URL Params
 
-- `test` - Test example to run
+- `test` (string, default: "test")
+  - Test example to run.
   - Can be any of the file names (minus extension) in the `tests` directory.
-- `driver` - Core driver to use
+- `driver` (string, default: "main")
+  - Core driver to use
   - Either `main` or `threadx`
+- `overlay` (boolean, default: "true")
+  - Whether or not to show the text overlay in the bottom-right corner that
+    displays the current test and driver being used.
+- `resolution` (number, default: 720)
+  - Resolution (height) of to render the test at (in logical pixels)
+- `fps` (boolean, default: "false")
+  - Whether or not to log the latest FPS sample to the console every 1 second.
+  - After skipping the first 10 samples, every 100 samples after that will result
+    in a statistics summary printed to the console.
+- `contextSpy` (boolean, default: "false")
+  - Whether or not to turn on the context spy and reporting
+  - The context spy intercepts all calls to the (WebGL) context and reports
+    how many calls to each function occurred during the last FPS sampling period
+    (1 second for these tests).
+  - Statistical results of every context call will be reported along with the
+    FPS statistics summary.
+  - `fps` must be enabled in order to see any reporting.
+  - Enabling the context spy has a serious impact on performance so only use it
+    when you need to extract context call information.
+- `ppr` (number, default: 1)
+  - Device physical pixel ratio.
+- `multiplier` (number, default: 1)
+  - In tests that support it, multiply the number of objects created by this number. Useful for performance tests.
+- `automation` (boolean, default: "false")
+  - Automation mode.
+  - Executes the exported `automation()` function for every Example Test
+    that defines one, one after the other.
+  - This is used by the Visual Regression Test Runner.
+  - See [visual-regression/README.md](../visual-regression/README.md) for more info.
 
 ## Note on imports
 

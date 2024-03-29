@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from '../../../common/CommonTypes.js';
 import { CoreTextNode } from '../../../core/CoreTextNode.js';
 import type { Stage } from '../../../core/Stage.js';
 import type { TrProps } from '../../../core/text-rendering/renderers/TextRenderer.js';
@@ -66,7 +65,8 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         pivot: sharedNodeStruct.pivot,
         pivotX: sharedNodeStruct.pivotX,
         pivotY: sharedNodeStruct.pivotY,
-        scale: sharedNodeStruct.scale,
+        scaleX: sharedNodeStruct.scaleX,
+        scaleY: sharedNodeStruct.scaleY,
         rotation: sharedNodeStruct.rotation,
 
         // These are passed in via message handlers
@@ -86,6 +86,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
+        maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
+        overflowSuffix: sharedNodeStruct.overflowSuffix,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -102,6 +107,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         fontWeight: sharedNodeStruct.fontWeight,
         fontStretch: sharedNodeStruct.fontStretch,
         fontStyle: sharedNodeStruct.fontStyle,
+        lineHeight: sharedNodeStruct.lineHeight,
+        maxLines: sharedNodeStruct.maxLines,
+        textBaseline: sharedNodeStruct.textBaseline,
+        verticalAlign: sharedNodeStruct.verticalAlign,
+        overflowSuffix: sharedNodeStruct.overflowSuffix,
         contain: sharedNodeStruct.contain,
         letterSpacing: sharedNodeStruct.letterSpacing,
         offsetY: sharedNodeStruct.offsetY,
@@ -114,18 +124,6 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
       >,
     );
     // Forward on CoreNode events
-    this.coreNode.on(
-      'textLoaded',
-      (target: CoreTextNode, dimensions: Dimensions) => {
-        this.emit(
-          'textLoaded',
-          dimensions as unknown as Record<string, unknown>,
-        );
-      },
-    );
-    this.coreNode.on('textFailed', (target: CoreTextNode, error: Error) => {
-      this.emit('textFailed', error as unknown as Record<string, unknown>);
-    });
     this.on('debug', (target: ThreadXRendererNode, debug: TrProps['debug']) => {
       this.coreNode.debug = debug;
     });
@@ -138,6 +136,11 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
   declare fontWeight: TextNodeStructWritableProps['fontWeight'];
   declare fontStretch: TextNodeStructWritableProps['fontStretch'];
   declare fontStyle: TextNodeStructWritableProps['fontStyle'];
+  declare lineHeight: TextNodeStructWritableProps['lineHeight'];
+  declare maxLines: TextNodeStructWritableProps['maxLines'];
+  declare textBaseline: TextNodeStructWritableProps['textBaseline'];
+  declare verticalAlign: TextNodeStructWritableProps['verticalAlign'];
+  declare overflowSuffix: TextNodeStructWritableProps['overflowSuffix'];
   declare contain: TextNodeStructWritableProps['contain'];
   declare letterSpacing: TextNodeStructWritableProps['letterSpacing'];
   declare offsetY: TextNodeStructWritableProps['offsetY'];

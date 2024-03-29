@@ -4,16 +4,18 @@
   "description": "",
   "type": "module",
   "main": "index.js",
+  "private": true,
   "scripts": {
-    "start": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:dev\"",
-    "start:prod": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
-    "dev": "vite --open",
+    "start": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:dev\"",
+    "start:prod": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
+    "dev": "vite --open --host",
     "build": "vite build",
     "watch": "vite build --watch",
-    "watch-all": "concurrently -c \"auto\" \"pnpm:watch-renderer\" \"pnpm:watch\"",
+    "watch-all": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\"",
     "preview": "vite preview --host --open",
-    "build-renderer": "cd .. && pnpm build",
-    "watch-renderer": "cd .. && pnpm watch"
+    "preview:automation": "vite preview",
+    "build:renderer": "cd .. && pnpm build",
+    "watch:renderer": "cd .. && pnpm watch"
   },
   "author": "Frank Weindel",
   "license": "Apache-2.0",
@@ -23,5 +25,8 @@
   "devDependencies": {
     "@lightningjs/vite-plugin-import-chunk-url": "^0.3.0",
     "vite": "^4.4.9"
+  },
+  "engines": {
+    "npm": "please-use-pnpm"
   }
 }

@@ -30,13 +30,17 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { IRenderDriver } from './IRenderDriver.js';
+import type { ICoreDriver } from './ICoreDriver.js';
 import {
   ManualCountTextureUsageTracker,
   type ManualCountTextureUsageTrackerOptions,
 } from './texture-usage-trackers/ManualCountTextureUsageTracker.js';
 import { FinalizationRegistryTextureUsageTracker } from './texture-usage-trackers/FinalizationRegistryTextureUsageTracker.js';
 import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageTracker.js';
+import { EventEmitter } from '../common/EventEmitter.js';
+import { Inspector } from './Inspector.js';
+import { santizeCustomDataMap } from '../render-drivers/utils.js';
+import { isProductionEnvironment } from '../utils.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -124,6 +128,23 @@ export interface RendererMainSettings {
   appHeight?: number;
 
   /**
+   * Texture Memory Byte Threshold
+   *
+   * @remarks
+   * When the amount of GPU VRAM used by textures exceeds this threshold,
+   * the Renderer will free up all the textures that are current not visible
+   * within the configured `boundsMargin`.
+   *
+   * When set to `0`, the threshold-based texture memory manager is disabled.
+   */
+  txMemByteThreshold?: number;
+
+  /**
+   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   */
+  boundsMargin?: number | [number, number, number, number];
+
+  /**
    * Factor to convert app-authored logical coorindates to device logical coordinates
    *
    * @remarks
@@ -200,6 +221,55 @@ export interface RendererMainSettings {
   experimental_FinalizationRegistryTextureUsageTracker?: boolean;
 
   textureCleanupOptions?: ManualCountTextureUsageTrackerOptions;
+
+  /**
+   * Interval in milliseconds to receive FPS updates
+   *
+   * @remarks
+   * If set to `0`, FPS updates will be disabled.
+   *
+   * @defaultValue `0` (disabled)
+   */
+  fpsUpdateInterval?: number;
+
+  /**
+   * Include context call (i.e. WebGL) information in FPS updates
+   *
+   * @remarks
+   * When enabled the number of calls to each context method over the
+   * `fpsUpdateInterval` will be included in the FPS update payload's
+   * `contextSpyData` property.
+   *
+   * Enabling the context spy has a serious impact on performance so only use it
+   * when you need to extract context call information.
+   *
+   * @defaultValue `false` (disabled)
+   */
+  enableContextSpy?: boolean;
+
+  /**
+   * Number or Image Workers to use
+   *
+   * @remarks
+   * On devices with multiple cores, this can be used to improve image loading
+   * as well as reduce the impact of image loading on the main thread.
+   * Set to 0 to disable image workers.
+   *
+   * @defaultValue `2`
+   */
+  numImageWorkers?: number;
+
+  /**
+   * Enable inspector
+   *
+   * @remarks
+   * When enabled the renderer will spawn a inspector. The inspector will
+   * replicate the state of the Nodes created in the renderer and allow
+   * inspection of the state of the nodes.
+   *
+   * @defaultValue `false` (disabled)
+   */
+  enableInspector?: boolean;
 }
 
 /**
@@ -213,7 +283,7 @@ export interface RendererMainSettings {
  *
  * Example:
  * ```ts
- * import { RendererMain, MainRenderDriver } from '@lightningjs/renderer';
+ * import { RendererMain, MainCoreDriver } from '@lightningjs/renderer';
  *
  * // Initialize the Renderer
  * const renderer = new RendererMain(
@@ -222,15 +292,16 @@ export interface RendererMainSettings {
  *     appHeight: 1080
  *   },
  *   'app',
- *   new MainRenderDriver(),
+ *   new MainCoreDriver(),
  * );
  * ```
  */
-export class RendererMain {
+export class RendererMain extends EventEmitter {
   readonly root: INode | null = null;
-  readonly driver: IRenderDriver;
+  readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
+  private inspector: Inspector | null = null;
   private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
@@ -252,11 +323,14 @@ export class RendererMain {
   constructor(
     settings: RendererMainSettings,
     target: string | HTMLElement,
-    driver: IRenderDriver,
+    driver: ICoreDriver,
   ) {
+    super();
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
+      txMemByteThreshold: settings.txMemByteThreshold || 124e6,
+      boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,
@@ -265,6 +339,11 @@ export class RendererMain {
       experimental_FinalizationRegistryTextureUsageTracker:
         settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
       textureCleanupOptions: settings.textureCleanupOptions || {},
+      fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      numImageWorkers:
+        settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
+      enableContextSpy: settings.enableContextSpy ?? false,
+      enableInspector: settings.enableInspector ?? false,
     };
     this.settings = resolvedSettings;
 
@@ -273,6 +352,7 @@ export class RendererMain {
       appHeight,
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
+      enableInspector,
     } = resolvedSettings;
 
     const releaseCallback = (textureId: number) => {
@@ -322,7 +402,23 @@ export class RendererMain {
       this.nodes.delete(node.id);
     };
 
+    driver.onFpsUpdate = (fpsData) => {
+      this.emit('fpsUpdate', fpsData);
+    };
+
+    driver.onFrameTick = (frameTickData) => {
+      this.emit('frameTick', frameTickData);
+    };
+
+    driver.onIdle = () => {
+      this.emit('idle');
+    };
+
     targetEl.appendChild(canvas);
+
+    if (enableInspector && !isProductionEnvironment()) {
+      this.inspector = new Inspector(canvas, resolvedSettings);
+    }
   }
 
   /**
@@ -354,6 +450,13 @@ export class RendererMain {
    * @returns
    */
   createNode(props: Partial<INodeWritableProps>): INode {
+    if (this.inspector) {
+      return this.inspector.createNode(
+        this.driver,
+        this.resolveNodeDefaults(props),
+      );
+    }
+
     return this.driver.createNode(this.resolveNodeDefaults(props));
   }
 
@@ -372,11 +475,12 @@ export class RendererMain {
    * @returns
    */
   createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
-    return this.driver.createTextNode({
+    const fontSize = props.fontSize ?? 16;
+    const data = {
       ...this.resolveNodeDefaults(props),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
-      fontSize: props.fontSize ?? 16,
+      fontSize,
       fontFamily: props.fontFamily ?? 'sans-serif',
       fontStyle: props.fontStyle ?? 'normal',
       fontWeight: props.fontWeight ?? 'normal',
@@ -387,8 +491,19 @@ export class RendererMain {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight ?? fontSize,
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'top',
+      overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
-    });
+    };
+
+    if (this.inspector) {
+      return this.inspector.createTextNode(this.driver, data);
+    }
+
+    return this.driver.createTextNode(data);
   }
 
   /**
@@ -411,6 +526,7 @@ export class RendererMain {
       props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
     const colorBr =
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const data = santizeCustomDataMap(props.data ?? {});
 
     return {
       x: props.x ?? 0,
@@ -437,7 +553,9 @@ export class RendererMain {
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',
-      scale: props.scale ?? 1,
+      scale: props.scale ?? null,
+      scaleX: props.scaleX ?? props.scale ?? 1,
+      scaleY: props.scaleY ?? props.scale ?? 1,
       mount: props.mount ?? 0,
       mountX: props.mountX ?? props.mount ?? 0,
       mountY: props.mountY ?? props.mount ?? 0,
@@ -445,6 +563,7 @@ export class RendererMain {
       pivotX: props.pivotX ?? props.pivot ?? 0.5,
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
+      data: data,
     };
   }
 
@@ -458,6 +577,10 @@ export class RendererMain {
    * @returns
    */
   destroyNode(node: INode) {
+    if (this.inspector) {
+      this.inspector.destroyNode(node);
+    }
+
     return this.driver.destroyNode(node);
   }
 

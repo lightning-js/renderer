@@ -13,8 +13,17 @@ git checkout main
 # Stash any untracked + uncomitted changes
 git stash -u
 
-# Run the build once to make sure it completes without errors
-pnpm run build
+# Pull any new commits from GitHub
+git pull
+
+# Run the unit tests
+pnpm test
+
+# Run the Visual Regression Tests in CI mode
+pnpm test:visual --ci
+
+# Review changes in order to decide which release-increment to use
+git log --first-parent main...v<last-version-number>
 
 # Mark the version update
 # This creates a new tagged commit for the version
@@ -27,7 +36,7 @@ pnpm publish --access public
 git push
 
 # Push version tag to github
-git push vX.X.X
+git push origin vX.X.X
 
 # Pop the stash (if one was created)
 git stash pop
@@ -40,6 +49,10 @@ git stash pop
 3. Target: _main_
 4. Name the release with the same name as the tag: vX.X.X
 5. Click "Generate release notes"
-6. Edit the release notes as appropriate.
+6. Edit the release notes as appropriate:
+   - User facing changes should go under the main "What's Changed" heading
+   - Mark all breaking changes with: :warning: **Breaking Change:** (Description)
+   - Move any changes specific to performance to a new level 3 heading called: **Performance**
+   - If there are other non-user facing changes move them to a new level 3 heading called: **Non-User Facing**.
 7. Set as the latest release: _Check_
 8. Click "Publish release"

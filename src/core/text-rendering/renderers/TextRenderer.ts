@@ -19,11 +19,16 @@
 
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
-import type { Rect } from '../../lib/utils.js';
+import type { Matrix3d } from '../../lib/Matrix3d.js';
+import type { Rect, RectWithValid } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
 } from '../font-face-types/TrFontFace.js';
+import type {
+  TextBaseline,
+  TextVerticalAlign,
+} from './LightningTextTextureRenderer.js';
 
 /**
  * Augmentable map of text renderer type IDs to text renderer types.
@@ -42,6 +47,11 @@ export interface TextRendererMap {}
 
 export interface TextRendererState {
   props: TrProps;
+  /**
+   * Whether or not the text renderer state is scheduled to be updated
+   * via queueMicrotask.
+   */
+  updateScheduled: boolean;
   status: 'initialState' | 'loading' | 'loaded' | 'failed';
   /**
    * Event emitter for the text renderer
@@ -55,6 +65,8 @@ export interface TextRendererState {
   forceFullLayoutCalc: boolean;
   textW: number | undefined;
   textH: number | undefined;
+
+  isRenderable: boolean;
 
   debugData: {
     updateCount: number;
@@ -179,7 +191,6 @@ export interface TrProps extends TrFontProps {
    * @default 0xffffffff (opaque white)
    */
   color: number;
-  alpha: number;
   x: number;
   y: number;
   /**
@@ -192,6 +203,18 @@ export interface TrProps extends TrFontProps {
    * constrain the text to the set width wrapping lines as necessary, and
    * `'both'` mode will constrain the text to both the set width and height
    * wrapping lines and truncating text as necessary.
+   *
+   * ## Text Auto-size Behavior
+   * Depending on the set contain mode, after the text 'loaded' event is emitted,
+   * the text node may have either its {@link width} and {@link height} updated
+   * to match the rendered size of the text.
+   *
+   * When contain mode is 'none', both the {@link width} and {@link height}
+   * properties are updated.
+   *
+   * When contain mode is 'width', only the {@link height} property is updated.
+   *
+   * When contain mode is 'both', neither property is updated.
    *
    * @default 'none'
    */
@@ -239,7 +262,58 @@ export interface TrProps extends TrFontProps {
    * @default 0
    */
   letterSpacing: number;
+  /**
+   * Line height for text (in pixels)
+   *
+   * @remarks
+   * This property sets the height of each line.
+   *
+   * @default 0
+   */
+  lineHeight: number;
+  /**
+   * Max lines for text
+   *
+   * @remarks
+   * This property sets max number of lines of a text paragraph.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default 0
+   */
+  maxLines: number;
+  /**
+   * Baseline for text
+   *
+   * @remarks
+   * This property sets the text baseline used when drawing text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default alphabetic
+   */
+  textBaseline: TextBaseline;
+  /**
+   * Vertical Align for text when lineHeight > fontSize
+   *
+   * @remarks
+   * This property sets the vertical align of the text.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default middle
+   */
+  verticalAlign: TextVerticalAlign;
+  /**
+   * Overflow Suffix for text
+   *
+   * @remarks
+   * The suffix to be added when text is cropped due to overflow.
+   * Not yet implemented in the SDF renderer.
+   *
+   * @default "..."
+   */
+  overflowSuffix: string;
+
   zIndex: number;
+
   debug: Partial<TextRendererDebugProps>;
 }
 
@@ -262,9 +336,6 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   color: (state, value) => {
     state.props.color = value;
-  },
-  alpha: (state, value) => {
-    state.props.alpha = value;
   },
   zIndex: (state, value) => {
     state.props.zIndex = value;
@@ -305,10 +376,41 @@ const trPropSetterDefaults: TrPropSetters = {
   letterSpacing: (state, value) => {
     state.props.letterSpacing = value;
   },
+  lineHeight: (state, value) => {
+    state.props.lineHeight = value;
+  },
+  maxLines: (state, value) => {
+    state.props.maxLines = value;
+  },
+  textBaseline: (state, value) => {
+    state.props.textBaseline = value;
+  },
+  verticalAlign: (state, value) => {
+    state.props.verticalAlign = value;
+  },
+  overflowSuffix: (state, value) => {
+    state.props.overflowSuffix = value;
+  },
   debug: (state, value) => {
     state.props.debug = value;
   },
 };
+
+/**
+ * Event handler for when text is loaded
+ *
+ * @remarks
+ * Emitted by state.emitter
+ */
+export type TrLoadedEventHandler = (target: any) => void;
+
+/**
+ * Event handler for when text failed to load
+ *
+ * @remarks
+ * Emitted by state.emitter
+ */
+export type TrFailedEventHandler = (target: any, error: Error) => void;
 
 export abstract class TextRenderer<
   StateT extends TextRendererState = TextRendererState,
@@ -316,10 +418,30 @@ export abstract class TextRenderer<
   readonly set: Readonly<TrPropSetters<StateT>>;
 
   constructor(protected stage: Stage) {
-    this.set = Object.freeze({
+    const propSetters = {
       ...trPropSetterDefaults,
       ...this.getPropertySetters(),
-    });
+    };
+    // For each prop setter add a wrapper method that checks if the prop is
+    // different before calling the setter
+    this.set = Object.freeze(
+      Object.fromEntries(
+        Object.entries(propSetters).map(([key, setter]) => {
+          return [
+            key as keyof TrProps,
+            (state: StateT, value: TrProps[keyof TrProps]) => {
+              if (state.props[key as keyof TrProps] !== value) {
+                setter(state, value as never);
+                // Assume any prop change will require a render
+                // This is required because otherwise a paused RAF will result
+                // in renders when text props are changed.
+                this.stage.requestRender();
+              }
+            },
+          ];
+        }),
+      ),
+    ) as typeof this.set;
   }
 
   setStatus(state: StateT, status: StateT['status'], error?: Error) {
@@ -329,6 +451,17 @@ export abstract class TextRenderer<
     }
     state.status = status;
     state.emitter.emit(status, error);
+  }
+
+  /**
+   * Allows the CoreTextNode to communicate changes to the isRenderable state of
+   * the itself.
+   *
+   * @param state
+   * @param renderable
+   */
+  setIsRenderable(state: StateT, renderable: boolean) {
+    state.isRenderable = renderable;
   }
 
   /**
@@ -365,7 +498,51 @@ export abstract class TextRenderer<
 
   abstract createState(props: TrProps): StateT;
 
+  /**
+   * Destroy/Clean up the state object
+   *
+   * @remarks
+   * Opposite of createState(). Frees any event listeners / resources held by
+   * the state that may not reliably get garbage collected.
+   *
+   * @param state
+   */
+  destroyState(state: StateT) {
+    const stateEvents = ['loading', 'loaded', 'failed'];
+
+    // Remove the old event listeners from previous state obj there was one
+    stateEvents.forEach((eventName) => {
+      state.emitter.off(eventName);
+    });
+  }
+
+  /**
+   * Schedule a state update via queueMicrotask
+   *
+   * @remarks
+   * This method is used to schedule a state update via queueMicrotask. This
+   * method should be called whenever a state update is needed, and it will
+   * ensure that the state is only updated once per microtask.
+   * @param state
+   * @returns
+   */
+  scheduleUpdateState(state: StateT): void {
+    if (state.updateScheduled) {
+      return;
+    }
+    state.updateScheduled = true;
+    queueMicrotask(() => {
+      state.updateScheduled = false;
+      this.updateState(state);
+    });
+  }
+
   abstract updateState(state: StateT): void;
 
-  abstract renderQuads(state: StateT, clippingRect: Rect | null): void;
+  abstract renderQuads(
+    state: StateT,
+    transform: Matrix3d,
+    clippingRect: RectWithValid,
+    alpha: number,
+  ): void;
 }

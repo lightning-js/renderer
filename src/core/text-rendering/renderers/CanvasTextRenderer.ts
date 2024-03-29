@@ -18,14 +18,19 @@
  */
 
 import { EventEmitter } from '../../../common/EventEmitter.js';
-import { assertTruthy } from '../../../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../../../utils.js';
 import type { Stage } from '../../Stage.js';
+import type { Matrix3d } from '../../lib/Matrix3d.js';
 import {
   intersectRect,
   type Bound,
   intersectBound,
   getNormalizedRgbaComponents,
   type Rect,
+  getNormalizedAlphaComponent,
+  type BoundWithValid,
+  createBound,
+  type RectWithValid,
 } from '../../lib/utils.js';
 import type { ImageTexture } from '../../textures/ImageTexture.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
@@ -84,13 +89,24 @@ export interface CanvasTextRendererState extends TextRendererState {
   lightning2TextRenderer: LightningTextTextureRenderer;
   renderInfo: RenderInfo | undefined;
   renderWindow: Bound | undefined;
+  visibleWindow: BoundWithValid;
 }
+
+/**
+ * Ephemeral bounds object used for intersection calculations
+ *
+ * @remarks
+ * Used to avoid creating a new object every time we need to intersect
+ * element bounds.
+ */
+const tmpElementBounds = createBound(0, 0, 0, 0);
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   protected canvas: OffscreenCanvas | HTMLCanvasElement;
   protected context:
     | OffscreenCanvasRenderingContext2D
     | CanvasRenderingContext2D;
+  private rendererBounds: Bound;
 
   constructor(stage: Stage) {
     super(stage);
@@ -99,7 +115,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    let context = this.canvas.getContext('2d');
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    let context = this.canvas.getContext('2d') as
+      | OffscreenCanvasRenderingContext2D
+      | CanvasRenderingContext2D
+      | null;
     if (!context) {
       // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
       // Here we try getting the context again after falling back to an HTMLCanvasElement.
@@ -109,6 +129,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
     assertTruthy(context);
     this.context = context;
+    this.rendererBounds = {
+      x1: 0,
+      y1: 0,
+      x2: this.stage.options.appWidth,
+      y2: this.stage.options.appHeight,
+    };
   }
 
   //#region Overrides
@@ -119,68 +145,96 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       fontFamily: (state, value) => {
         state.props.fontFamily = value;
         state.fontInfo = undefined;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       fontWeight: (state, value) => {
         state.props.fontWeight = value;
         state.fontInfo = undefined;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       fontStyle: (state, value) => {
         state.props.fontStyle = value;
         state.fontInfo = undefined;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       fontStretch: (state, value) => {
         state.props.fontStretch = value;
         state.fontInfo = undefined;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       fontSize: (state, value) => {
         state.props.fontSize = value;
         state.fontInfo = undefined;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       text: (state, value) => {
         state.props.text = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       textAlign: (state, value) => {
         state.props.textAlign = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       color: (state, value) => {
         state.props.color = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       x: (state, value) => {
         state.props.x = value;
+        this.invalidateVisibleWindowCache(state);
       },
       y: (state, value) => {
         state.props.y = value;
+        this.invalidateVisibleWindowCache(state);
       },
       contain: (state, value) => {
         state.props.contain = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       width: (state, value) => {
         state.props.width = value;
-        this.markForReload(state);
+        // Only invalidate layout cache if we're containing in the horizontal direction
+        if (state.props.contain !== 'none') {
+          this.invalidateLayoutCache(state);
+        }
       },
       height: (state, value) => {
         state.props.height = value;
-        this.markForReload(state);
+        // Only invalidate layout cache if we're containing in the vertical direction
+        if (state.props.contain === 'both') {
+          this.invalidateLayoutCache(state);
+        }
       },
       offsetY: (state, value) => {
         state.props.offsetY = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
       },
       scrollY: (state, value) => {
         state.props.scrollY = value;
       },
       letterSpacing: (state, value) => {
         state.props.letterSpacing = value;
-        this.markForReload(state);
+        this.invalidateLayoutCache(state);
+      },
+      lineHeight: (state, value) => {
+        state.props.lineHeight = value;
+        this.invalidateLayoutCache(state);
+      },
+      maxLines: (state, value) => {
+        state.props.maxLines = value;
+        this.invalidateLayoutCache(state);
+      },
+      textBaseline: (state, value) => {
+        state.props.textBaseline = value;
+        this.invalidateLayoutCache(state);
+      },
+      verticalAlign: (state, value) => {
+        state.props.verticalAlign = value;
+        this.invalidateLayoutCache(state);
+      },
+      overflowSuffix: (state, value) => {
+        state.props.overflowSuffix = value;
+        this.invalidateLayoutCache(state);
       },
       // debug: (state, value) => {
       //   state.props.debug = value;
@@ -215,6 +269,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     return {
       props,
       status: 'initialState',
+      updateScheduled: false,
       emitter: new EventEmitter(),
       canvasPages: undefined,
       lightning2TextRenderer: new LightningTextTextureRenderer(
@@ -222,12 +277,20 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         this.context,
       ),
       renderWindow: undefined,
+      visibleWindow: {
+        x1: 0,
+        y1: 0,
+        x2: 0,
+        y2: 0,
+        valid: false,
+      },
       renderInfo: undefined,
       forceFullLayoutCalc: false,
       textW: 0,
       textH: 0,
       fontInfo: undefined,
       fontFaceLoadedHandler: undefined,
+      isRenderable: false,
       debugData: {
         updateCount: 0,
         layoutCount: 0,
@@ -270,6 +333,18 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     if (!state.renderInfo) {
+      const maxLines = state.props.maxLines;
+      const containedMaxLines =
+        state.props.contain === 'both'
+          ? Math.floor(
+              (state.props.height - state.props.offsetY) /
+                state.props.lineHeight,
+            )
+          : 0;
+      const calcMaxLines =
+        containedMaxLines > 0 && maxLines > 0
+          ? Math.min(containedMaxLines, maxLines)
+          : Math.max(containedMaxLines, maxLines);
       state.lightning2TextRenderer.settings = {
         text: state.props.text,
         textAlign: state.props.textAlign,
@@ -286,14 +361,19 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         wordWrapWidth:
           state.props.contain === 'none' ? undefined : state.props.width,
         letterSpacing: state.props.letterSpacing,
+        lineHeight: state.props.lineHeight,
+        maxLines: calcMaxLines,
+        textBaseline: state.props.textBaseline,
+        verticalAlign: state.props.verticalAlign,
+        overflowSuffix: state.props.overflowSuffix,
       };
-      const renderInfoCalculateTime = performance.now();
+      // const renderInfoCalculateTime = performance.now();
       state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
-      console.log(
-        'Render info calculated in',
-        performance.now() - renderInfoCalculateTime,
-        'ms',
-      );
+      // console.log(
+      //   'Render info calculated in',
+      //   performance.now() - renderInfoCalculateTime,
+      //   'ms',
+      // );
       state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
       state.textW = state.renderInfo.width;
 
@@ -302,26 +382,24 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     const { x, y, width, height, scrollY, contain } = state.props;
-
+    const { visibleWindow } = state;
     let { renderWindow, canvasPages } = state;
 
-    // Figure out whats actually in the bounds of the renderer/canvas (visibleWindow)
-    const rendererBounds: Bound = {
-      x1: 0,
-      y1: 0,
-      x2: this.stage.options.appWidth,
-      y2: this.stage.options.appHeight,
-    };
-    const elementBounds: Bound = {
-      x1: x,
-      y1: y,
-      x2: contain !== 'none' ? x + width : Infinity,
-      y2: contain === 'both' ? y + height : Infinity,
-    };
-    /**
-     * Area that is visible on the screen.
-     */
-    const visibleWindow: Bound = intersectBound(rendererBounds, elementBounds);
+    if (!visibleWindow.valid) {
+      // Figure out whats actually in the bounds of the renderer/canvas (visibleWindow)
+      const elementBounds = createBound(
+        x,
+        y,
+        contain !== 'none' ? x + width : Infinity,
+        contain === 'both' ? y + height : Infinity,
+        tmpElementBounds,
+      );
+      /**
+       * Area that is visible on the screen.
+       */
+      intersectBound(this.rendererBounds, elementBounds, visibleWindow);
+      visibleWindow.valid = true;
+    }
 
     const visibleWindowHeight = visibleWindow.y2 - visibleWindow.y1;
 
@@ -329,9 +407,16 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       visibleWindowHeight / state.renderInfo.lineHeight,
     );
 
-    // Return early if we're still viewing inside the established render window
-    // No need to re-render what we've already rendered
-    if (renderWindow && canvasPages) {
+    if (visibleWindowHeight === 0) {
+      // Nothing to render. Clear any canvasPages and existing renderWindow
+      // Return early.
+      canvasPages = undefined;
+      renderWindow = undefined;
+      this.setStatus(state, 'loaded');
+      return;
+    } else if (renderWindow && canvasPages) {
+      // Return early if we're still viewing inside the established render window
+      // No need to re-render what we've already rendered
       const renderWindowScreenX1 = x + renderWindow.x1;
       const renderWindowScreenY1 = y - scrollY + renderWindow.y1;
       const renderWindowScreenX2 = x + renderWindow.x2;
@@ -342,8 +427,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         renderWindowScreenX2 >= visibleWindow.x2 &&
         renderWindowScreenY1 <= visibleWindow.y1 &&
         renderWindowScreenY2 >= visibleWindow.y2
-      )
+      ) {
+        this.setStatus(state, 'loaded');
         return;
+      }
       if (renderWindowScreenY2 < visibleWindow.y2) {
         // We've scrolled up, so we need to render the next page
         renderWindow.y1 += maxLinesPerCanvasPage * state.renderInfo.lineHeight;
@@ -398,7 +485,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       ];
       state.canvasPages = canvasPages;
 
-      const scrollYNearestPage = Math.ceil(scrollY / pageHeight) * pageHeight;
+      const scrollYNearestPage = page1Block * pageHeight;
 
       renderWindow = {
         x1: 0,
@@ -414,9 +501,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     for (const pageInfo of canvasPages) {
       if (pageInfo.valid) continue;
       if (pageInfo.lineNumStart < 0) {
+        pageInfo.texture?.setRenderableOwner(state, false);
         pageInfo.texture = this.stage.txManager.loadTexture('ImageTexture', {
           src: '',
         });
+        pageInfo.texture.setRenderableOwner(state, state.isRenderable);
         pageInfo.valid = true;
         continue;
       }
@@ -431,6 +520,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         ),
       });
       if (!(this.canvas.width === 0 || this.canvas.height === 0)) {
+        pageInfo.texture?.setRenderableOwner(state, false);
         pageInfo.texture = this.stage.txManager.loadTexture(
           'ImageTexture',
           {
@@ -445,10 +535,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
             preload: true,
           },
         );
+        pageInfo.texture.setRenderableOwner(state, state.isRenderable);
       }
       pageInfo.valid = true;
     }
-    console.log('pageDrawTime', performance.now() - pageDrawTime, 'ms');
+    // console.log('pageDrawTime', performance.now() - pageDrawTime, 'ms');
 
     // Report final status
     this.setStatus(state, 'loaded');
@@ -456,7 +547,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   override renderQuads(
     state: CanvasTextRendererState,
-    clippingRect: Rect | null,
+    transform: Matrix3d,
+    clippingRect: RectWithValid,
+    alpha: number,
   ): void {
     const { stage } = this;
 
@@ -498,16 +591,20 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const renderWindowHeight = renderWindow.y2 - renderWindow.y1;
     const pageSize = renderWindowHeight / 3.0;
 
-    const { zIndex, alpha } = state.props;
+    const { zIndex, color } = state.props;
 
+    // Color alpha of text is not properly rendered to the Canvas texture, so we
+    // need to apply it here.
+    const combinedAlpha = alpha * getNormalizedAlphaComponent(color);
+    const quadColor = mergeColorAlphaPremultiplied(0xffffffff, combinedAlpha);
     if (canvasPages[0].valid) {
-      this.stage.renderer.addRenderable({
-        alpha,
+      this.stage.renderer.addQuad({
+        alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[0].texture?.dimensions?.width || 0,
         height: canvasPages[0].texture?.dimensions?.height || 0,
         texture: canvasPages[0].texture!,
@@ -515,24 +612,22 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
     if (canvasPages[1].valid) {
-      this.stage.renderer.addRenderable({
-        alpha,
+      this.stage.renderer.addQuad({
+        alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[1].texture?.dimensions?.width || 0,
         height: canvasPages[1].texture?.dimensions?.height || 0,
         texture: canvasPages[1].texture!,
@@ -540,24 +635,22 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1 + pageSize,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
     if (canvasPages[2].valid) {
-      this.stage.renderer.addRenderable({
-        alpha,
+      this.stage.renderer.addQuad({
+        alpha: combinedAlpha,
         clippingRect,
-        colorBl: 0xffffffff,
-        colorBr: 0xffffffff,
-        colorTl: 0xffffffff,
-        colorTr: 0xffffffff,
+        colorBl: quadColor,
+        colorBr: quadColor,
+        colorTl: quadColor,
+        colorTr: quadColor,
         width: canvasPages[2].texture?.dimensions?.width || 0,
         height: canvasPages[2].texture?.dimensions?.height || 0,
         texture: canvasPages[2].texture!,
@@ -565,14 +658,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        worldScale: 1,
-        scale: 1,
-        wpx: x,
-        wpy: y - scrollY + renderWindow.y1 + pageSize + pageSize,
-        ta: 1,
-        tb: 0,
-        tc: 0,
-        td: 1,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
       });
     }
 
@@ -608,11 +699,52 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     //   );
     // }
   }
+
+  override setIsRenderable(
+    state: CanvasTextRendererState,
+    renderable: boolean,
+  ): void {
+    super.setIsRenderable(state, renderable);
+    // Set state object owner from any canvas page textures
+    state.canvasPages?.forEach((pageInfo) => {
+      pageInfo.texture?.setRenderableOwner(state, renderable);
+    });
+  }
+
+  override destroyState(state: CanvasTextRendererState): void {
+    // Remove state object owner from any canvas page textures
+    state.canvasPages?.forEach((pageInfo) => {
+      pageInfo.texture?.setRenderableOwner(state, false);
+    });
+  }
   //#endregion Overrides
 
-  private markForReload(state: CanvasTextRendererState): void {
-    state.renderInfo = undefined;
+  /**
+   * Invalidate the visible window stored in the state. This will cause a new
+   * visible window to be calculated on the next update.
+   *
+   * @param state
+   */
+  protected invalidateVisibleWindowCache(state: CanvasTextRendererState): void {
+    state.visibleWindow.valid = false;
     this.setStatus(state, 'loading');
+    this.scheduleUpdateState(state);
+  }
+
+  /**
+   * Invalidate the layout cache stored in the state. This will cause the text
+   * to be re-layed out on the next update.
+   *
+   * @remarks
+   * This also invalidates the visible window cache.
+   *
+   * @param state
+   */
+  private invalidateLayoutCache(state: CanvasTextRendererState): void {
+    state.renderInfo = undefined;
+    state.visibleWindow.valid = false;
+    this.setStatus(state, 'loading');
+    this.scheduleUpdateState(state);
   }
 
   private onFontLoaded(
@@ -623,7 +755,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       return;
     }
     state.fontInfo.loaded = true;
-    this.updateState(state);
+    this.scheduleUpdateState(state);
   }
 
   private onFontLoadError(
@@ -643,7 +775,6 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       `CanvasTextRenderer: Error loading font '${state.fontInfo.cssString}'`,
       error,
     );
-
-    this.updateState(state);
+    this.scheduleUpdateState(state);
   }
 }
