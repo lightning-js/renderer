@@ -217,7 +217,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
         textureSource,
       );
     } else if (textureSource instanceof RenderTexture) {
-      return new WebGlCoreCtxRenderTexture(this.glw, textureSource);
+      return new WebGlCoreCtxRenderTexture(
+        this.glw,
+        this.txMemManager,
+        textureSource,
+      );
     }
     return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
   }

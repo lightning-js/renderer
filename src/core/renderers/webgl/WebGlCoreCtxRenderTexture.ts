@@ -19,6 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
@@ -28,8 +29,12 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
 
   readonly framebuffer: WebGLFramebuffer;
 
-  constructor(glw: WebGlContextWrapper, textureSource: RenderTexture) {
-    super(glw, textureSource);
+  constructor(
+    glw: WebGlContextWrapper,
+    memManager: TextureMemoryManager,
+    textureSource: RenderTexture,
+  ) {
+    super(glw, memManager, textureSource);
     // Create Framebuffer object
     const framebuffer = glw.createFramebuffer();
     assertTruthy(framebuffer, 'Unable to create framebuffer');
@@ -37,7 +42,7 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
   }
 
   override async onLoadRequest(): Promise<Dimensions> {
-    const { glw } = this;
+    const { glw, memManager } = this;
     const nativeTexture = (this._nativeCtxTexture =
       this.createNativeCtxTexture());
     const { width, height } = this.textureSource;
@@ -53,6 +58,9 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
       glw.UNSIGNED_BYTE,
       null,
     );
+
+    // Update the texture memory manager
+    memManager.setTextureMemUse(this, width * height * 4);
 
     // Bind the framebuffer
     glw.bindFramebuffer(this.framebuffer);
