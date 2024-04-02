@@ -608,13 +608,32 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
     if (renderState !== this.renderState) {
-      const previous = this.renderState;
+      let previous = this.renderState;
       this.renderState = renderState;
       if (previous === CoreNodeRenderState.InViewport) {
         this.emit('outOfViewport', {
           previous,
           current: renderState,
         });
+      }
+      if (
+        previous < CoreNodeRenderState.InBounds &&
+        renderState === CoreNodeRenderState.InViewport
+      ) {
+        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
+          previous,
+          current: renderState,
+        });
+        previous = CoreNodeRenderState.InBounds;
+      } else if (
+        previous > CoreNodeRenderState.InBounds &&
+        renderState === CoreNodeRenderState.OutOfBounds
+      ) {
+        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
+          previous,
+          current: renderState,
+        });
+        previous = CoreNodeRenderState.InBounds;
       }
       const event = CoreNodeRenderStateMap.get(renderState);
       assertTruthy(event);
