@@ -77,7 +77,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
-  autosize: boolean | null;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -1031,7 +1031,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
   }
 
-  get autosize(): boolean | null {
+  get autosize(): boolean {
     return this.props.autosize;
   }
 

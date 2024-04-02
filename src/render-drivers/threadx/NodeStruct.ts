@@ -25,7 +25,7 @@ export interface NodeStructWritableProps {
   width: number;
   height: number;
   alpha: number;
-  autosize: boolean | null;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;

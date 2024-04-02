@@ -73,14 +73,18 @@ export interface INodeWritableProps {
    */
   alpha: number;
   /**
-   * The autosize toggle of the Node.
+   * Autosize mode
    *
    * @remarks
-   * The autosize to true let the image node to be resized with the original size of the image.
+   * When enabled, when a texture is loaded into the Node, the Node will
+   * automatically resize to the dimensions of the texture.
    *
-   * @default `null`
+   * For Text Nodes, this mode is always enabled, regardless of the value of
+   * this property.
+   *
+   * @default `false`
    */
-  autosize: boolean | null;
+  autosize: boolean;
   /**
    * Clipping Mode
    *
