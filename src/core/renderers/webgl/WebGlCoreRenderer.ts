@@ -104,8 +104,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
-  renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
   rttNodes: CoreNode[] = [];
+  activeRttNode: CoreNode | null = null;
 
   //// Default Shader
   defaultShader: WebGlCoreShader;
@@ -500,7 +500,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @returns
    */
   reuseRenderOp(params: QuadOptions) {
-    const { shader, shaderProps, parentHasRenderTexture, clippingRect } =
+    const { shader, shaderProps, parentHasRenderTexture, rtt, clippingRect } =
       params;
 
     const targetShader = shader || this.defaultShader;
@@ -516,7 +516,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     // Force new render operation if rendering to texture
-    if (parentHasRenderTexture) {
+    // @todo: This needs to be improved, render operations could also be reused
+    // for rendering to texture
+    if (parentHasRenderTexture || rtt) {
       return false;
     }
 
@@ -563,15 +565,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
     if (doLog) {
       console.log('renderOps', this.renderOps.length);
     }
+
     this.renderOps.forEach((renderOp, i) => {
       if (doLog) {
         console.log('Quads per operation', renderOp.numQuads);
       }
       renderOp.draw();
     });
-
-    // clean up
-    this.renderables = [];
   }
 
   renderToTexture(node: CoreNode) {
@@ -580,13 +580,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
         return;
       }
     }
-    this.rttNodes.push(node);
+
+    // @todo: Better bottom up rendering order
+    this.rttNodes.unshift(node);
   }
 
   renderRTTNodes() {
     const { glw } = this;
     const { txManager } = this.stage;
-
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
       const node = this.rttNodes[i];
@@ -596,6 +597,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
         continue;
       }
 
+      // Set the active RTT node to the current node
+      // So we can prevent rendering children of nested RTT nodes
+      this.activeRttNode = node;
+
       assertTruthy(node.texture, 'RTT node missing texture');
       const ctxTexture = txManager.getCtxTexture(node.texture);
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
@@ -603,9 +608,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Bind the the texture's framebuffer
       glw.bindFramebuffer(ctxTexture.framebuffer);
-      glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
 
-      // Clear the framebuffer
+      glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
       glw.clear();
 
       // Render all associated quads to the texture
@@ -626,18 +630,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
         child.hasRTTupdates = false;
       }
 
+      // Render all associated quads to the texture
+      this.render();
+
+      // Reset render operations
+      this.renderOps.length = 0;
       node.hasRTTupdates = false;
     }
 
-    // Render all associated quads to the texture
-    this.render();
-    this.renderToTextureActive = false;
-
-    // Reset render operations
-    this.renderOps.length = 0;
-
-    // Unbind the framebuffer
+    // Bind the default framebuffer
     glw.bindFramebuffer(null);
+
     glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
+    this.renderToTextureActive = false;
   }
 }

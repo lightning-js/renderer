@@ -267,16 +267,18 @@ export abstract class WebGlCoreShader extends CoreShader {
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
     if (renderOp.parentHasRenderTexture) {
-      const { width, height } = renderOp.framebufferDimensions || {};
-      // Force pixel ratio to 1.0 for render textures since they are always 1:1
-      // the final render texture will be rendered to the screen with the correct pixel ratio
-      this.setUniform('u_pixelRatio', 1.0);
+      if (!renderOp.renderToTexture) {
+        const { width, height } = renderOp.framebufferDimensions || {};
+        // Force pixel ratio to 1.0 for render textures since they are always 1:1
+        // the final render texture will be rendered to the screen with the correct pixel ratio
+        this.setUniform('u_pixelRatio', 1.0);
 
-      // Set resolution to the framebuffer dimensions
-      this.setUniform(
-        'u_resolution',
-        new Float32Array([width ?? 0, height ?? 0]),
-      );
+        // Set resolution to the framebuffer dimensions
+        this.setUniform(
+          'u_resolution',
+          new Float32Array([width ?? 0, height ?? 0]),
+        );
+      }
     } else {
       this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
       this.setUniform(

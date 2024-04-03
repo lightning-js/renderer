@@ -18,6 +18,7 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
+import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
@@ -65,4 +66,5 @@ export abstract class CoreRenderer {
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract getShaderManager(): CoreShaderManager;
   abstract get renderToTextureActive(): boolean;
+  abstract get activeRttNode(): CoreNode | null;
 }

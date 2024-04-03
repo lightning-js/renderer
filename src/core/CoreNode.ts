@@ -839,6 +839,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       if (!renderer.renderToTextureActive) {
         return;
       }
+      // Prevent quad rendering if parent render texture is not the active render texture
+      if (this.parentRenderTexture !== renderer.activeRttNode) {
+        return;
+      }
     }
 
     const {
@@ -1270,11 +1274,31 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return this.props.parentHasRenderTexture;
   }
 
+  /**
+   * Returns the framebuffer dimensions of the node.
+   * If the node has a render texture, the dimensions are the same as the node's dimensions.
+   * If the node does not have a render texture, the dimensions are inherited from the parent.
+   * If the node parent has a render texture and the node is a render texture, the nodes dimensions are used.
+   */
   get framebufferDimensions(): Dimensions | undefined {
-    if (this.parentHasRenderTexture) {
+    if (this.parentHasRenderTexture && !this.rtt) {
       return this.parent?.framebufferDimensions;
     }
     return { width: this.width, height: this.height };
+  }
+
+  /**
+   * Returns the parent render texture node if it exists.
+   */
+  get parentRenderTexture(): CoreNode | null {
+    let parent = this.parent;
+    while (parent) {
+      if (parent.rtt) {
+        return parent;
+      }
+      parent = parent.parent;
+    }
+    return null;
   }
 
   get texture(): Texture | null {

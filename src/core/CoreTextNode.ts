@@ -361,6 +361,10 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
       if (!renderer.renderToTextureActive) {
         return;
       }
+      // Prevent quad rendering if parent render texture is not the active render texture
+      if (this.parentRenderTexture !== renderer.activeRttNode) {
+        return;
+      }
     }
     this.textRenderer.renderQuads(
       this.trState,
