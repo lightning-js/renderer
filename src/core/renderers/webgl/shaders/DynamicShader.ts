@@ -170,6 +170,37 @@ export class DynamicShader extends WebGlCoreShader {
     });
   }
 
+  override canBatchShaderProps(
+    propsA: Required<DynamicShaderProps>,
+    propsB: Required<DynamicShaderProps>,
+  ): boolean {
+    if (
+      propsA.$dimensions.width !== propsB.$dimensions.width ||
+      propsA.$dimensions.height !== propsB.$dimensions.height ||
+      propsA.effects.length !== propsB.effects.length
+    ) {
+      return false;
+    }
+    const propsEffectsLen = propsA.effects.length;
+    let i = 0;
+    for (; i < propsEffectsLen; i++) {
+      const effectA = propsA.effects[i]!;
+      const effectB = propsB.effects[i]!;
+      if (effectA.type !== effectB.type) {
+        return false;
+      }
+      for (const key in effectA.props) {
+        if (
+          (effectB.props && !effectB.props[key]) ||
+          effectA.props[key] !== effectB.props![key]
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   static createShader(
     props: DynamicShaderProps,
     effectContructors: Partial<EffectMap>,
