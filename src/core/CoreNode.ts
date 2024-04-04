@@ -451,7 +451,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       } else {
         this.worldAlpha = this.props.alpha;
       }
-      this.setUpdateType(UpdateType.Children | UpdateType.PremultipliedColors);
+      this.setUpdateType(
+        UpdateType.Children |
+          UpdateType.PremultipliedColors |
+          UpdateType.IsRenderable,
+      );
       childUpdateType |= UpdateType.WorldAlpha;
     }
 
@@ -672,7 +676,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    */
   updateIsRenderable() {
     let newIsRenderable;
-    if (!this.checkRenderProps()) {
+    if (this.worldAlpha === 0 || !this.checkRenderProps()) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
