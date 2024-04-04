@@ -80,7 +80,7 @@ export class ThreadXRendererNode extends SharedNode {
       'createAnimation',
       (target: ThreadXRendererNode, { id, props, settings }) => {
         const animation = new CoreAnimation(
-          this.coreNode,
+          this.coreNode as unknown as Record<string, unknown>,
           props as Partial<INodeAnimatableProps>,
           settings as Partial<AnimationSettings>,
         );

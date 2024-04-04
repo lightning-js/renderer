@@ -17,11 +17,10 @@
  * limitations under the License.
  */
 
-import type { CoreNode } from '../CoreNode.js';
-import type { INodeAnimatableProps } from '../../main-api/INode.js';
 import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+import type { CoreNode } from '../CoreNode.js';
 
 export interface AnimationSettings {
   duration: number;
@@ -34,23 +33,23 @@ export interface AnimationSettings {
 }
 
 export class CoreAnimation extends EventEmitter {
-  public propStartValues: Partial<INodeAnimatableProps> = {};
-  public restoreValues: Partial<INodeAnimatableProps> = {};
+  public propStartValues: Record<string, number> = {};
+  public restoreValues: Record<string, number> = {};
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
-  private propsList: Array<keyof INodeAnimatableProps>; //fixme - aint got not time for this
+  private propsList: Array<string>; //fixme - aint got not time for this
 
   constructor(
-    private node: CoreNode,
-    private props: Partial<INodeAnimatableProps>,
+    private node: Record<string, unknown>,
+    private props: Record<string, number>,
     public settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};
-    this.propsList = Object.keys(props) as Array<keyof INodeAnimatableProps>;
+    this.propsList = Object.keys(props);
     this.propsList.forEach((propName) => {
-      this.propStartValues[propName] = node[propName];
+      this.propStartValues[propName] = node[propName] as number;
     });
 
     this.timingFunction = (t: number) => t;
@@ -69,26 +68,22 @@ export class CoreAnimation extends EventEmitter {
 
   restore() {
     this.reset();
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        this.node[propName] = this.propStartValues[propName] as number;
-      },
-    );
+    Object.keys(this.props).forEach((propName) => {
+      this.node[propName] = this.propStartValues[propName] as number;
+    });
   }
 
   reverse() {
     this.progress = 0;
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        // set the start value to the current value
-        const startValue = this.props[propName];
-        const endValue = this.propStartValues[propName] as number;
+    Object.keys(this.props).forEach((propName) => {
+      // set the start value to the current value
+      const startValue = this.props[propName] as number;
+      const endValue = this.propStartValues[propName] as number;
 
-        // swap the start and end values
-        this.props[propName] = endValue;
-        this.propStartValues[propName] = startValue;
-      },
-    );
+      // swap the start and end values
+      this.props[propName] = endValue;
+      this.propStartValues[propName] = startValue;
+    });
 
     // restore stop method if we are not looping
     if (!this.settings.loop) {
@@ -130,7 +125,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     for (let i = 0; i < this.propsList.length; i++) {
-      const propName = this.propsList[i] as keyof INodeAnimatableProps;
+      const propName = this.propsList[i] as string;
       const propValue = this.props[propName] as number;
       const startValue = this.propStartValues[propName] as number;
       const endValue = propValue;

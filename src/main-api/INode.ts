@@ -19,12 +19,13 @@
 
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { IAnimationController } from '../common/IAnimationController.js';
-import type { ShaderRef, TextureRef } from './RendererMain.js';
+import type { TextureRef } from './RendererMain.js';
 import type {
   TextRendererMap,
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { IShaderNode } from './IShaderNode.js';
 
 /**
  * Writable properties of a Node.
@@ -230,7 +231,7 @@ export interface INodeWritableProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: ShaderRef | null;
+  shader: IShaderNode | null;
   /**
    * Image URL
    *

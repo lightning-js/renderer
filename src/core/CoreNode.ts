@@ -1194,5 +1194,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.updateScaleRotateTransform();
   }
+
+  set shaderProps(props: Record<string, unknown>) {
+    this.props.shaderProps = props;
+  }
+
+  get shaderProps(): Record<string, unknown> | null {
+    return this.props.shaderProps;
+  }
   //#endregion Properties
 }

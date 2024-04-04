@@ -40,6 +40,8 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../../common/CommonTypes.js';
+import { MainOnlyShaderNode } from './MainOnlyShaderNode.js';
+import type { ShaderMap } from '../../core/CoreShaderManager.js';
 
 export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
@@ -114,6 +116,15 @@ export class MainCoreDriver implements ICoreDriver {
     const node = new MainOnlyTextNode(props, this.rendererMain, this.stage);
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.onCreateNode(node);
+    return node;
+  }
+
+  createShaderNode<ShType extends keyof ShaderMap>(
+    shaderType: ShType,
+    props: Record<string, number>,
+  ) {
+    assertTruthy(this.stage);
+    const node = new MainOnlyShaderNode(shaderType, props);
     return node;
   }
 

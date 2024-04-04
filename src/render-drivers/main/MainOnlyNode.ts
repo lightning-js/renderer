@@ -42,6 +42,7 @@ import type {
   NodeRenderStateEventHandler,
 } from '../../common/CommonTypes.js';
 import { santizeCustomDataMap } from '../utils.js';
+import { MainOnlyShaderNode } from './MainOnlyShaderNode.js';
 
 let nextId = 1;
 
@@ -51,20 +52,21 @@ export function getNewId(): number {
 
 export class MainOnlyNode extends EventEmitter implements INode {
   readonly id;
-  protected coreNode: CoreNode;
+  public readonly coreNode: CoreNode;
 
   // Prop stores
   protected _children: MainOnlyNode[] = [];
   protected _src = '';
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureRef | null = null;
-  protected _shader: ShaderRef | null = null;
+  protected _shader: MainOnlyShaderNode | null = null;
+  protected _shaderRef: ShaderRef | null = null;
   protected _data: CustomDataMap | undefined = {};
 
   constructor(
     props: INodeWritableProps,
     private rendererMain: RendererMain,
-    private stage: Stage,
+    public readonly stage: Stage,
     coreNode?: CoreNode,
   ) {
     super();
@@ -117,7 +119,9 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
     // Assign properties to this object
     this.parent = props.parent as MainOnlyNode;
+
     this.shader = props.shader;
+
     this.texture = props.texture;
     this.src = props.src;
     this._data = props.data;
@@ -442,17 +446,17 @@ export class MainOnlyNode extends EventEmitter implements INode {
   };
   //#endregion Texture
 
-  get shader(): ShaderRef | null {
+  get shader(): MainOnlyShaderNode | null {
     return this._shader;
   }
 
-  set shader(shader: ShaderRef | null) {
+  set shader(shader: MainOnlyShaderNode | null) {
     if (this._shader === shader) {
       return;
     }
     this._shader = shader;
     if (shader) {
-      this.coreNode.loadShader(shader.shType, shader.props);
+      shader.connectNode(this);
     }
   }
 
@@ -488,7 +492,11 @@ export class MainOnlyNode extends EventEmitter implements INode {
     props: Partial<INodeAnimatableProps>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
-    const animation = new CoreAnimation(this.coreNode, props, settings);
+    const animation = new CoreAnimation(
+      this.coreNode as unknown as Record<string, unknown>,
+      props,
+      settings,
+    );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const controller = new CoreAnimationController(
       this.stage.animationManager,

@@ -46,6 +46,9 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../../common/CommonTypes.js';
+import type { IShaderNode } from '../../main-api/IShaderNode.js';
+import { ThreadXMainShaderNode } from './ThreadXMainShaderNode.js';
+import type { ShaderMap } from '../../core/CoreShaderManager.js';
 
 export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
@@ -252,6 +255,13 @@ export class ThreadXCoreDriver implements ICoreDriver {
 
     this.onCreateNode(node);
     return node;
+  }
+
+  createShaderNode(
+    shaderType: keyof ShaderMap,
+    props: Record<string, number>,
+  ): IShaderNode {
+    return new ThreadXMainShaderNode(shaderType, props);
   }
 
   // TODO: Remove?
