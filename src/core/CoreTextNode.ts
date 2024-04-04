@@ -366,14 +366,19 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
         return;
       }
     }
-    this.textRenderer.renderQuads(
-      this.trState,
-      this.globalTransform,
-      this.clippingRect,
-      this.worldAlpha,
-      this.parentHasRenderTexture,
-      this.framebufferDimensions,
-    );
+    const transform = renderer.renderToTextureActive
+      ? this.localTransform
+      : this.globalTransform;
+    if (transform) {
+      this.textRenderer.renderQuads(
+        this.trState,
+        transform,
+        this.clippingRect,
+        this.worldAlpha,
+        this.parentHasRenderTexture,
+        this.framebufferDimensions,
+      );
+    }
   }
 
   /**

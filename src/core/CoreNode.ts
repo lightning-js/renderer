@@ -852,7 +852,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       premultipliedColorBr,
     } = this;
 
-    const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
+    const {
+      zIndex,
+      worldAlpha,
+      globalTransform: gt,
+      localTransform: lt,
+      clippingRect,
+    } = this;
+
+    const rta = renderer.renderToTextureActive;
 
     assertTruthy(gt);
 
@@ -871,12 +879,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       shaderProps,
       alpha: worldAlpha,
       clippingRect,
-      tx: gt.tx,
-      ty: gt.ty,
-      ta: gt.ta,
-      tb: gt.tb,
-      tc: gt.tc,
-      td: gt.td,
+      tx: rta ? lt?.tx ?? 0 : gt.tx,
+      ty: rta ? lt?.ty ?? 0 : gt.ty,
+      ta: rta ? lt?.ta ?? gt.ta : gt.ta,
+      tb: rta ? lt?.tb ?? gt.tb : gt.tb,
+      tc: rta ? lt?.tc ?? gt.tc : gt.tc,
+      td: rta ? lt?.td ?? gt.td : gt.td,
       rtt,
       parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
