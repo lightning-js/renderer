@@ -46,6 +46,7 @@ export class ThreadXRendererTextNode extends ThreadXRendererNode {
         width: sharedNodeStruct.width,
         height: sharedNodeStruct.height,
         alpha: sharedNodeStruct.alpha,
+        autosize: sharedNodeStruct.autosize,
         clipping: sharedNodeStruct.clipping,
         color: sharedNodeStruct.color,
         colorTop: sharedNodeStruct.colorTop,

@@ -1,5 +1,5 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { waitForTextDimensions } from '../common/utils.js';
+import { waitForLoadedDimensions } from '../common/utils.js';
 
 export async function automation(settings: ExampleSettings) {
   const next = await test(settings);
@@ -209,7 +209,7 @@ Vivamus consectetur ex magna, non mollis.`,
     textSetDimsInfo.text = `Set size: ${Math.round(text1.width)}x${Math.round(
       text1.height,
     )}`;
-    const dimensions = await waitForTextDimensions(text1);
+    const dimensions = await waitForLoadedDimensions(text1);
     textSizeAfterLoadingBg.width = text1.width;
     textSizeAfterLoadingBg.height = text1.height;
     textSizeAfterLoadInfo.text = `After 'loading' size: ${Math.round(

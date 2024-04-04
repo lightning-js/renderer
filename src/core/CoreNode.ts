@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
+import {
+  assertTruthy,
+  mergeColorAlphaPremultiplied,
+  getImageAspectRatio,
+} from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -34,6 +38,7 @@ import type {
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
+  Dimensions,
   NodeTextureFailedPayload,
   NodeTextureFreedPayload,
   NodeTextureLoadedPayload,
@@ -72,6 +77,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -306,7 +312,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
+  autosizeNode(dimensions: Dimensions) {
+    if (this.autosize) {
+      this.width = dimensions.width;
+      this.height = dimensions.height;
+    }
+  }
+
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    this.autosizeNode(dimensions);
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
@@ -1015,6 +1029,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set alpha(value: number) {
     this.props.alpha = value;
     this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
+  }
+
+  get autosize(): boolean {
+    return this.props.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.props.autosize = value;
   }
 
   get clipping(): boolean {

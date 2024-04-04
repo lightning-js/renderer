@@ -18,7 +18,7 @@
  */
 
 import type { INode, RendererMain } from '../../dist/exports/main-api.js';
-import { waitForTextDimensions } from './utils.js';
+import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;
 const PADDING = 20;
@@ -44,7 +44,7 @@ export async function constructTestRow(
   const curY = 0;
   for (const testNode of testNodes) {
     if (typeof testNode === 'string') {
-      const dimensions = await waitForTextDimensions(
+      const dimensions = await waitForLoadedDimensions(
         renderer.createTextNode({
           mountY: 0.5,
           x: curX,

@@ -207,6 +207,17 @@ export function deg2Rad(degrees: number): number {
 }
 
 /**
+ * Returns image aspect ratio
+ *
+ * @param width
+ * @param height
+ * @returns
+ */
+export function getImageAspectRatio(width: number, height: number): number {
+  return width / height;
+}
+
+/**
  * Checks import.meta if env is production
  *
  * @returns

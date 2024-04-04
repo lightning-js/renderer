@@ -24,8 +24,8 @@ import type {
   NodeTextLoadedPayload,
 } from '@lightningjs/renderer';
 
-export async function waitForTextDimensions(
-  node: ITextNode,
+export async function waitForLoadedDimensions(
+  node: INode | ITextNode,
 ): Promise<Dimensions> {
   return new Promise((resolve) => {
     node.once('loaded', (_node: INode, payload: NodeTextLoadedPayload) => {

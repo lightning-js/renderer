@@ -78,6 +78,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
         width: props.width,
         height: props.height,
         alpha: props.alpha,
+        autosize: props.autosize,
         clipping: props.clipping,
         color: props.color,
         colorTop: props.colorTop,
@@ -161,6 +162,14 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set alpha(value: number) {
     this.coreNode.alpha = value;
+  }
+
+  get autosize(): boolean {
+    return this.coreNode.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.coreNode.autosize = value;
   }
 
   get clipping(): boolean {
