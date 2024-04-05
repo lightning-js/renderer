@@ -17,6 +17,9 @@
  * limitations under the License.
  */
 
+import type { NormalizedFontMetrics } from './font-face-types/TrFontFace.js';
+import type { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
+
 /**
  * Returns CSS font setting string for use in canvas context.
  *
@@ -118,6 +121,66 @@ export function measureText(
     }
     return acc + context.measureText(char).width + space;
   }, 0);
+}
+
+/**
+ * Get the font metrics for a font face.
+ *
+ * @remarks
+ * This function will attempt to grab the explicitly defined metrics from the
+ * font face first. If the font face does not have metrics defined, it will
+ * attempt to calculate the metrics using the browser's measureText method.
+ *
+ * If the browser does not support the font metrics API, it will use some
+ * default values.
+ *
+ * @param context
+ * @param fontFace
+ * @param fontSize
+ * @returns
+ */
+export function getWebFontMetrics(
+  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  fontFace: WebTrFontFace,
+  fontSize: number,
+): NormalizedFontMetrics {
+  if (fontFace.metrics) {
+    return fontFace.metrics;
+  }
+  const browserMetrics = context.measureText(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+  );
+  let metrics: NormalizedFontMetrics;
+  if (
+    browserMetrics.fontBoundingBoxDescent &&
+    browserMetrics.fontBoundingBoxAscent
+  ) {
+    metrics = {
+      ascender: browserMetrics.fontBoundingBoxAscent / fontSize,
+      descender: browserMetrics.fontBoundingBoxDescent / fontSize,
+      lineGap: 0.2,
+    };
+  } else if (
+    browserMetrics.actualBoundingBoxDescent &&
+    browserMetrics.actualBoundingBoxAscent
+  ) {
+    metrics = {
+      ascender: browserMetrics.actualBoundingBoxAscent / fontSize,
+      descender: browserMetrics.actualBoundingBoxDescent / fontSize,
+      lineGap: 0.2,
+    };
+  } else {
+    // If the browser doesn't support the font metrics API, we'll use some
+    // default values.
+    metrics = {
+      ascender: 0.8,
+      descender: 0.2,
+      lineGap: 0.2,
+    };
+  }
+  // Save the calculated metrics to the font face for future use.
+  (fontFace.metrics as NormalizedFontMetrics | null) = metrics;
+  return metrics;
 }
 
 export interface WrapTextResult {

@@ -63,7 +63,7 @@
     "vitest": "^0.34.2"
   },
   "dependencies": {
-    "@lightningjs/threadx": "^0.3.4",
+    "@lightningjs/threadx": "^0.3.5",
     "@protobufjs/eventemitter": "^1.1.0",
     "memize": "^2.1.0"
   },

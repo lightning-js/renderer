@@ -208,9 +208,7 @@ export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
   }
 
   set lineHeight(value: ITextNode['lineHeight']) {
-    if (value) {
-      this.coreNode.lineHeight = value;
-    }
+    this.coreNode.lineHeight = value;
   }
 
   get maxLines(): ITextNode['maxLines'] {

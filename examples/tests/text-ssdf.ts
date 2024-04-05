@@ -29,5 +29,6 @@ export default async function test(settings: ExampleSettings) {
     fontFamily: 'Ubuntu-ssdf',
     parent: testRoot,
     fontSize: 80,
+    lineHeight: 80 * 1.2,
   });
 }
