@@ -91,7 +91,7 @@ export class ImageWorkerManager {
         });
       }
 
-      self.onmessage = async (event) => {
+      self.onmessage = (event) => {
         var src = event.data.src;
         var premultiplyAlpha = event.data.premultiplyAlpha;
 
