@@ -58,7 +58,7 @@ export async function loadCoreExtension(
 }
 
 export function santizeCustomDataMap(d: CustomDataMap): CustomDataMap {
-  const validTypes = { boolean: true, string: true, number: true };
+  const validTypes = { boolean: true, string: true, number: true, undefined: true };
 
   const keys = Object.keys(d);
   for (let i = 0; i < keys.length; i++) {
