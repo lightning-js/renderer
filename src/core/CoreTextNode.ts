@@ -34,6 +34,7 @@ import type {
 } from '../common/CommonTypes.js';
 import type { Rect, RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
+import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   text: string;
@@ -366,19 +367,22 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
         return;
       }
     }
-    const transform = renderer.renderToTextureActive
-      ? this.localTransform
-      : this.globalTransform;
-    if (transform) {
-      this.textRenderer.renderQuads(
-        this.trState,
-        transform,
-        this.clippingRect,
-        this.worldAlpha,
-        this.parentHasRenderTexture,
-        this.framebufferDimensions,
-      );
+
+    if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+      this.globalTransform = Matrix3d.identity();
+      this.globalTransform.multiply(this.localTransform ?? Matrix3d.identity());
     }
+
+    assertTruthy(this.globalTransform);
+
+    this.textRenderer.renderQuads(
+      this.trState,
+      this.globalTransform,
+      this.clippingRect,
+      this.worldAlpha,
+      this.parentHasRenderTexture,
+      this.framebufferDimensions,
+    );
   }
 
   /**
