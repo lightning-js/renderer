@@ -67,7 +67,7 @@ export class CoreAnimationController implements IAnimationController {
     this.manager.unregisterAnimation(this.animation);
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
-      this.stoppedResolve = null;
+      this.cleanupStoppedResolve();
     }
     this.animation.reset();
     this.state = 'stopped';
@@ -81,7 +81,7 @@ export class CoreAnimationController implements IAnimationController {
   }
 
   restore(): IAnimationController {
-    this.stoppedResolve = null;
+    this.cleanupStoppedResolve();
     this.animation.restore();
     return this;
   }
@@ -136,7 +136,7 @@ export class CoreAnimationController implements IAnimationController {
 
     // resolve promise
     this.stoppedResolve();
-    this.stoppedResolve = null;
+    this.cleanupStoppedResolve();
 
     if (loop) {
       return;
@@ -144,5 +144,11 @@ export class CoreAnimationController implements IAnimationController {
 
     // unregister animation
     this.manager.unregisterAnimation(this.animation);
+  }
+
+  // null the stoppedResolve function in the next tick, to prevent race conditions
+  // on lower powered devices, causing the stop callback to never be called
+  private cleanupStoppedResolve(): void {
+    setTimeout(() => (this.stoppedResolve = null));
   }
 }
