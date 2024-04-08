@@ -153,7 +153,8 @@ export class Inspector {
   private scaleY = 1;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
-    if (isProductionEnvironment()) return;
+    if (isProductionEnvironment() || (import.meta.env && import.meta.env.PROD))
+      return;
 
     if (!settings) {
       throw new Error('settings is required');

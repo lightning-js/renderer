@@ -275,7 +275,8 @@ export interface RendererMainSettings {
    * Production environment
    *
    * @remarks
-   * Sets the renderer to run in production mode
+   * Sets the renderer to run in production mode as an override variable for cases the `import.meta.env.PROD`
+   * environment variable isn't available
    *
    * When set to `true` assertTruthy checks are skipped and ensures that
    * the inspector will not be attached, regardless of the `enableInspector` setting
@@ -432,7 +433,9 @@ export class RendererMain extends EventEmitter {
 
     targetEl.appendChild(canvas);
 
-    if (enableInspector && !isProductionEnvironment()) {
+    if (isProductionEnvironment() || (import.meta.env && import.meta.env.PROD))
+      return;
+    if (enableInspector) {
       this.inspector = new Inspector(canvas, resolvedSettings);
     }
   }
