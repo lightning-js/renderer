@@ -217,11 +217,21 @@ export function getImageAspectRatio(width: number, height: number): number {
   return width / height;
 }
 
+let productionEnvironment = false;
+
 /**
- * Checks import.meta if env is production
+ * Checks environment is set to production
  *
  * @returns
  */
 export function isProductionEnvironment(): boolean {
-  return import.meta.env && import.meta.env.PROD;
+  return productionEnvironment;
+}
+
+/**
+ * Sets the production environment
+ * @param environment
+ */
+export function setProductionEnvironment(environment: boolean): void {
+  productionEnvironment = environment;
 }

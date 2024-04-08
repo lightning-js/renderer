@@ -40,7 +40,7 @@ import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageT
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
-import { isProductionEnvironment } from '../utils.js';
+import { isProductionEnvironment, setProductionEnvironment } from '../utils.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -270,6 +270,19 @@ export interface RendererMainSettings {
    * @defaultValue `false` (disabled)
    */
   enableInspector?: boolean;
+  /**
+   *
+   * Production environment
+   *
+   * @remarks
+   * Sets the renderer to run in production mode
+   *
+   * When set to `true` assertTruthy checks are skipped and ensures that
+   * the inspector will not be attached, regardless of the `enableInspector` setting
+   *
+   * @defaultValue `false`
+   */
+  production?: boolean;
 }
 
 /**
@@ -344,8 +357,11 @@ export class RendererMain extends EventEmitter {
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
+      production: settings.production ?? false,
     };
     this.settings = resolvedSettings;
+
+    setProductionEnvironment(this.settings.production);
 
     const {
       appWidth,
