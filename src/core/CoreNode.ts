@@ -638,19 +638,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         previous < CoreNodeRenderState.InBounds &&
         renderState === CoreNodeRenderState.InViewport
       ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
-        previous = CoreNodeRenderState.InBounds;
-      } else if (
-        previous > CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.OutOfBounds
-      ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
+        this.emit(
+          CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds) as string,
+          {
+            previous,
+            current: renderState,
+          },
+        );
         previous = CoreNodeRenderState.InBounds;
       }
       const event = CoreNodeRenderStateMap.get(renderState);
