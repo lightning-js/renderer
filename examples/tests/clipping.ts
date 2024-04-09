@@ -20,7 +20,7 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForTextDimensions } from '../common/utils.js';
+import { waitForLoadedDimensions } from '../common/utils.js';
 import { deg2Rad } from '@lightningjs/renderer/utils';
 import type { INodeWritableProps } from '@lightningjs/renderer';
 import robotImg from '../assets/robot/robot.png';
@@ -528,7 +528,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        const dim = await waitForTextDimensions(
+        const dim = await waitForLoadedDimensions(
           renderer.createTextNode({
             mountY: 0.5,
             x: curX,
@@ -558,7 +558,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        const dim2 = await waitForTextDimensions(
+        const dim2 = await waitForLoadedDimensions(
           renderer.createTextNode({
             mountY: 0.5,
             x: curX,
@@ -589,7 +589,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        const dim3 = await waitForTextDimensions(
+        const dim3 = await waitForLoadedDimensions(
           renderer.createTextNode({
             mountY: 0.5,
             x: curX,
@@ -667,7 +667,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        const dimensions = await waitForTextDimensions(
+        const dimensions = await waitForLoadedDimensions(
           renderer.createTextNode({
             mountY: 0.5,
             x: curX,

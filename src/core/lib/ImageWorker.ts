@@ -58,7 +58,7 @@ export class ImageWorkerManager {
           return (mimeType.indexOf("image/png") !== -1);
       }
 
-      async function getImage(src, premultiplyAlpha) {
+      function getImage(src, premultiplyAlpha) {
         return new Promise(function(resolve, reject) {
           var xhr = new XMLHttpRequest();
           xhr.open('GET', src, true);
@@ -91,7 +91,7 @@ export class ImageWorkerManager {
         });
       }
 
-      self.onmessage = async (event) => {
+      self.onmessage = (event) => {
         var src = event.data.src;
         var premultiplyAlpha = event.data.premultiplyAlpha;
 

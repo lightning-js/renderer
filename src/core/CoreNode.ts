@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
+import {
+  assertTruthy,
+  mergeColorAlphaPremultiplied,
+  getImageAspectRatio,
+} from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -74,6 +78,7 @@ export interface CoreNodeProps {
   width: number;
   height: number;
   alpha: number;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -317,7 +322,15 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
+  autosizeNode(dimensions: Dimensions) {
+    if (this.autosize) {
+      this.width = dimensions.width;
+      this.height = dimensions.height;
+    }
+  }
+
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+    this.autosizeNode(dimensions);
     // If parent has a render texture, flag that we need to update
     // @todo: Reserve type for RTT updates
     if (this.parentHasRenderTexture) {
@@ -469,7 +482,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       } else {
         this.worldAlpha = this.props.alpha;
       }
-      this.setUpdateType(UpdateType.Children | UpdateType.PremultipliedColors);
+      this.setUpdateType(
+        UpdateType.Children |
+          UpdateType.PremultipliedColors |
+          UpdateType.IsRenderable,
+      );
       childUpdateType |= UpdateType.WorldAlpha;
     }
 
@@ -644,13 +661,32 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
     if (renderState !== this.renderState) {
-      const previous = this.renderState;
+      let previous = this.renderState;
       this.renderState = renderState;
       if (previous === CoreNodeRenderState.InViewport) {
         this.emit('outOfViewport', {
           previous,
           current: renderState,
         });
+      }
+      if (
+        previous < CoreNodeRenderState.InBounds &&
+        renderState === CoreNodeRenderState.InViewport
+      ) {
+        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
+          previous,
+          current: renderState,
+        });
+        previous = CoreNodeRenderState.InBounds;
+      } else if (
+        previous > CoreNodeRenderState.InBounds &&
+        renderState === CoreNodeRenderState.OutOfBounds
+      ) {
+        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
+          previous,
+          current: renderState,
+        });
+        previous = CoreNodeRenderState.InBounds;
       }
       const event = CoreNodeRenderStateMap.get(renderState);
       assertTruthy(event);
@@ -675,7 +711,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
    */
   updateIsRenderable() {
     let newIsRenderable;
-    if (!this.checkRenderProps()) {
+    if (this.worldAlpha === 0 || !this.checkRenderProps()) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
@@ -1072,6 +1108,14 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set alpha(value: number) {
     this.props.alpha = value;
     this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
+  }
+
+  get autosize(): boolean {
+    return this.props.autosize;
+  }
+
+  set autosize(value: boolean) {
+    this.props.autosize = value;
   }
 
   get clipping(): boolean {

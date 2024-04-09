@@ -260,6 +260,11 @@ export class Inspector {
   ): ITextNode {
     const node = driver.createTextNode(properties);
     const div = this.createDiv(node, properties);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    (div as any).node = node;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    (node as any).div = div;
     return this.createProxy(node, div) as ITextNode;
   }
 

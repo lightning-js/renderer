@@ -73,6 +73,19 @@ export interface INodeWritableProps {
    */
   alpha: number;
   /**
+   * Autosize mode
+   *
+   * @remarks
+   * When enabled, when a texture is loaded into the Node, the Node will
+   * automatically resize to the dimensions of the texture.
+   *
+   * Text Nodes are always autosized based on their text content regardless
+   * of this mode setting.
+   *
+   * @default `false`
+   */
+  autosize: boolean;
+  /**
    * Clipping Mode
    *
    * @remarks

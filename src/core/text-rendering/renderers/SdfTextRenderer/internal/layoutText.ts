@@ -235,6 +235,9 @@ export function layoutText(
             );
             curX = lastWord.xStart;
             bufferOffset = lastWord.bufferOffset;
+            // HACK: For the rest of the line when inserting the overflow suffix,
+            // set contain = 'none' to prevent an infinite loop.
+            contain = 'none';
           }
         } else {
           // This glyph fits, so we can add it to the buffer

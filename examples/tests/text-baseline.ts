@@ -20,7 +20,7 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForTextDimensions } from '../common/utils.js';
+import { waitForLoadedDimensions } from '../common/utils.js';
 import type {
   ITextNodeWritableProps,
   RendererMain,
@@ -77,7 +77,7 @@ function generateBaselineTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForTextDimensions(baselineNode);
+        const dimensions = await waitForLoadedDimensions(baselineNode);
 
         // Get the position for the center of the container based on mount = 0
         const position = {

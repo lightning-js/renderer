@@ -25,6 +25,7 @@ export interface NodeStructWritableProps {
   width: number;
   height: number;
   alpha: number;
+  autosize: boolean;
   clipping: boolean;
   color: number;
   colorTop: number;
@@ -98,6 +99,15 @@ export class NodeStruct
   }
 
   set alpha(value: number) {
+    // Decorator will handle this
+  }
+
+  @structProp('boolean')
+  get autosize(): boolean {
+    return false;
+  }
+
+  set autosize(value: boolean) {
     // Decorator will handle this
   }
 
