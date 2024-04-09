@@ -24,211 +24,222 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  const rootRenderToTextureNode = renderer.createNode({
-    x: 0,
-    y: 0,
-    width: 960,
-    height: 540,
+  // RTT Node 1
+  const rttNode = renderer.createNode({
+    x: 100,
+    y: 200,
+    width: 300,
+    height: 300,
     parent: node,
     rtt: true,
     zIndex: 5,
-    colorTop: 0xffffffff,
-    colorBottom: 0xffffffff,
+    colorTop: 0xfff00fff,
+    colorBottom: 0x00ffffff,
   });
 
   const rect = renderer.createNode({
-    parent: rootRenderToTextureNode,
     x: 0,
-    y: 530,
-    width: 960,
-    height: 100,
-    color: 0xffca12ff,
-    zIndex: 3,
-  });
-
-  const image1 = renderer.createNode({
-    parent: rootRenderToTextureNode,
-    x: -100,
     y: 0,
-    width: 400,
-    height: 400,
-    src: '../assets/rocko.png',
-  });
-
-  const image2 = renderer.createNode({
-    parent: rootRenderToTextureNode,
-    x: 250,
-    y: 0,
-    width: 200,
-    height: 200,
-    src: '../assets/rocko.png',
-  });
-
-  const image3 = renderer.createNode({
-    parent: rootRenderToTextureNode,
-    x: 120,
-    y: 100,
-    width: 200,
-    height: 200,
-    src: '../assets/rocko.png',
-  });
-
-  const rect1 = renderer.createNode({
-    parent: rootRenderToTextureNode,
-    x: 300,
-    y: 300,
-    width: 100,
-    height: 100,
-    color: 0xffca12ff,
-    zIndex: 3,
-  });
-
-  const rect2 = renderer.createNode({
-    parent: rootRenderToTextureNode,
-    x: 100,
-    y: 100,
-    width: 20,
-    height: 20,
-    color: 0xffca12ff,
-    zIndex: 3,
-  });
-
-  const label = renderer.createTextNode({
-    parent: rootRenderToTextureNode,
-    fontFamily: 'Ubuntu',
-    fontSize: 37,
-    text: 'Render to texture',
-    color: 0xc0ff33ff,
-    zIndex: 20,
+    width: 300,
+    height: 300,
+    parent: rttNode,
+    color: 0xff0000ff,
   });
 
   const label1 = renderer.createTextNode({
-    parent: node,
-    fontFamily: 'Ubuntu',
-    fontSize: 234,
-    text: 'Render to texture',
-    color: 0xc0ff33ff,
-    zIndex: 20,
-    y: 700,
-    clipping: true,
-  });
-
-  const animation = image1.animate(
-    {
-      x: 100,
-      y: 100,
-      scale: 3,
-    },
-    {
-      duration: 5000,
-      easing: 'ease-in-out',
-      delay: 0,
-      loop: true,
-      stopMethod: 'reverse',
-    },
-  );
-
-  const animation1 = rect1.animate(
-    {
-      x: 20,
-      y: 20,
-      scale: 2,
-    },
-    {
-      duration: 5000,
-      easing: 'ease-in-out',
-      delay: 0,
-      loop: true,
-      stopMethod: 'reverse',
-    },
-  );
-
-  // Trigger changes in RTT children
-  // animation.start();
-  // animation1.start();
-
-  /* Copy nodes */
-  const copyNode = renderer.createNode({
-    x: 961,
-    y: 0,
-    width: 960,
-    height: 540,
-    parent: node,
-    texture: rootRenderToTextureNode.texture,
-    zIndex: 5,
-    scaleX: -1,
-    alpha: 0.5,
-    colorTop: randomColor(),
-    colorBottom: randomColor(),
-  });
-
-  const copyNode1 = renderer.createNode({
     x: 0,
-    y: 541,
-    width: 960,
-    height: 540,
-    parent: node,
-    texture: rootRenderToTextureNode.texture,
-    zIndex: 5,
-    scaleY: -1,
-    alpha: 0.5,
-    colorTop: randomColor(),
-    colorBottom: randomColor(),
+    y: 0,
+    text: 'Render to texture',
+    parent: rttNode,
+    fontSize: 48,
+    color: 0xffffffff,
+    fontFamily: 'Ubuntu',
   });
 
-  const copyNode2 = renderer.createNode({
-    x: 961,
-    y: 541,
-    width: 960,
-    height: 540,
-    parent: node,
-    texture: rootRenderToTextureNode.texture,
-    zIndex: 5,
-    scaleY: -1,
-    scaleX: -1,
-    alpha: 0.5,
-    colorTop: randomColor(),
-    colorBottom: randomColor(),
+  const rocko1 = renderer.createNode({
+    x: 50,
+    y: 100,
+    width: 300,
+    height: 300,
+    parent: rttNode,
+    src: '../assets/rocko.png',
   });
-  const c1Anim = copyNode.animate(
+
+  // RTT Node 2
+  const rttNode2 = renderer.createNode({
+    x: 500,
+    y: 200,
+    width: 300,
+    height: 300,
+    parent: node,
+    rtt: true,
+    colorTop: 0xfff00fff,
+    colorBottom: 0x00ffffff,
+  });
+
+  const rect2 = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 300,
+    height: 300,
+    parent: rttNode2,
+    color: 0xc0ff33ff,
+  });
+
+  const label2 = renderer.createTextNode({
+    x: 0,
+    y: 0,
+    text: 'Render to texture',
+    parent: rttNode2,
+    fontSize: 22,
+    color: 0xff00ffff,
+    fontFamily: 'Ubuntu',
+  });
+
+  const rocko2 = renderer.createNode({
+    x: 50,
+    y: 100,
+    width: 300,
+    height: 300,
+    parent: rttNode2,
+    src: '../assets/rocko.png',
+  });
+
+  // RTT Node 2
+  const rttNode3 = renderer.createNode({
+    x: 900,
+    y: 200,
+    width: 800,
+    height: 300,
+    parent: node,
+    rtt: true,
+    colorTop: 0x67378dff,
+    colorBottom: 0x9cbd61ff,
+  });
+
+  const rect3 = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 300,
+    height: 300,
+    parent: rttNode3,
+    color: 0xc0ff33ff,
+  });
+
+  const label3 = renderer.createTextNode({
+    x: 0,
+    y: 0,
+    text: 'Render to texture',
+    parent: rttNode3,
+    fontSize: 22,
+    color: 0xff00ffff,
+    fontFamily: 'Ubuntu',
+  });
+
+  const rocko3 = renderer.createNode({
+    x: 50,
+    y: 100,
+    width: 300,
+    height: 300,
+    parent: rttNode3,
+    src: '../assets/rocko.png',
+  });
+
+  const nestedRTTNode1 = renderer.createNode({
+    x: 400,
+    y: 0,
+    width: 150,
+    height: 150,
+    parent: rttNode3,
+    rtt: true,
+    colorTop: 0x26f1e0ff,
+    colorBottom: 0xffffffff,
+  });
+
+  const rect4 = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 150,
+    height: 150,
+    parent: nestedRTTNode1,
+    color: 0xc0ff33ff,
+  });
+
+  const label4 = renderer.createTextNode({
+    x: 0,
+    y: 0,
+    text: 'Nested',
+    parent: nestedRTTNode1,
+    fontSize: 22,
+    color: 0xff00ffff,
+    fontFamily: 'Ubuntu',
+  });
+
+  const rocko4 = renderer.createNode({
+    x: -120,
+    y: 50,
+    width: 300,
+    height: 300,
+    parent: nestedRTTNode1,
+    src: '../assets/rocko.png',
+  });
+
+  // Copy source texture from rootRenderToTextureNode
+  for (let i = 0; i < 50; i++) {
+    const a = renderer.createNode({
+      parent: node,
+      x: (i % 15) * 120 + 100,
+      y: Math.floor(i / 15) * 120 + 600,
+      width: 100,
+      height: 100,
+      texture: nestedRTTNode1.texture,
+    });
+  }
+
+  const animation = rocko4.animate(
     {
-      x: 800,
+      rotation: 0.3,
+      scale: 1.5,
+      y: 110,
+      x: -50,
     },
     {
-      duration: 1000,
-      easing: 'ease-in-out',
-      delay: 0,
+      duration: Math.random() * 4000 + 3000,
       loop: true,
       stopMethod: 'reverse',
-    },
-  );
-  const c2Anim = copyNode1.animate(
-    {
-      y: 600,
-    },
-    {
-      duration: 1000,
       easing: 'ease-in-out',
-      delay: 0,
-      loop: true,
-      stopMethod: 'reverse',
     },
   );
 
-  const c3Anim = copyNode2.animate(
-    {
-      x: 800,
-      y: 600,
-    },
-    {
-      duration: 1000,
-      easing: 'ease-in-out',
-      delay: 0,
-      loop: true,
-      stopMethod: 'reverse',
-    },
-  );
-  c1Anim.start();
-  c2Anim.start();
-  c3Anim.start();
+  animation.start();
+
+  renderer.createTextNode({
+    x: 100,
+    y: 160,
+    text: 'RTT Dimension',
+    parent: node,
+    fontSize: 22,
+    color: 0xffffffff,
+    fontFamily: 'Ubuntu',
+  });
+
+  renderer.createTextNode({
+    x: 900,
+    y: 160,
+    text: 'Nested RTT',
+    parent: node,
+    fontSize: 22,
+    color: 0xffffffff,
+    fontFamily: 'Ubuntu',
+  });
+
+  renderer.createTextNode({
+    x: 100,
+    y: 560,
+    text: 'Nested RTT copies',
+    parent: node,
+    fontSize: 22,
+    color: 0xffffffff,
+    fontFamily: 'Ubuntu',
+  });
 }
