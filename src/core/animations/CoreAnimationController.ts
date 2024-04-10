@@ -48,10 +48,16 @@ export class CoreAnimationController implements IAnimationController {
   state: AnimationControllerState;
 
   start(): IAnimationController {
-    this.makeStartedPromise();
+    this.startedPromise = new Promise((resolve) => {
+      this.startedResolve = resolve;
+    });
+
     this.animation.once('start', this.started.bind(this));
 
-    this.makeStoppedPromise();
+    this.stoppedPromise = new Promise((resolve) => {
+      this.stoppedResolve = resolve;
+    });
+
     this.animation.once('finished', this.finished.bind(this));
 
     // prevent registering the same animation twice
@@ -87,33 +93,13 @@ export class CoreAnimationController implements IAnimationController {
   }
 
   waitUntilStarted(): Promise<void> {
-    this.makeStartedPromise();
-    const promise = this.startedPromise;
-    assertTruthy(promise);
-    return promise;
+    assertTruthy(this.startedPromise);
+    return this.startedPromise;
   }
 
   waitUntilStopped(): Promise<void> {
-    this.makeStoppedPromise();
-    const promise = this.stoppedPromise;
-    assertTruthy(promise);
-    return promise;
-  }
-
-  private makeStartedPromise(): void {
-    if (this.startedResolve === null) {
-      this.startedPromise = new Promise((resolve) => {
-        this.startedResolve = resolve;
-      });
-    }
-  }
-
-  private makeStoppedPromise(): void {
-    if (this.stoppedResolve === null) {
-      this.stoppedPromise = new Promise((resolve) => {
-        this.stoppedResolve = resolve;
-      });
-    }
+    assertTruthy(this.stoppedPromise);
+    return this.stoppedPromise;
   }
 
   private started(): void {
@@ -139,6 +125,11 @@ export class CoreAnimationController implements IAnimationController {
     this.stoppedResolve = null;
 
     if (loop) {
+      // generate new promise and resolve function
+      this.stoppedPromise = new Promise((resolve) => {
+        this.stoppedResolve = resolve;
+      });
+
       return;
     }
 
