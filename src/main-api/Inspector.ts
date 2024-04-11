@@ -393,7 +393,12 @@ export class Inspector {
     if (property === 'data') {
       for (const key in value) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        div.setAttribute(`data-${key}`, String(value[key]));
+        const keyValue: unknown = value[key];
+        if (keyValue === undefined) {
+          div.removeAttribute(`data-${key}`);
+        } else {
+          div.setAttribute(`data-${key}`, String(keyValue));
+        }
       }
       return;
     }
