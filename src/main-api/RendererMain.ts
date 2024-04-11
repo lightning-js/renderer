@@ -528,9 +528,6 @@ export class RendererMain extends EventEmitter {
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
     const data = santizeCustomDataMap(props.data ?? {});
 
-    const parentHasRenderTexture =
-      props.parent?.rtt ?? props.parent?.parentHasRenderTexture ?? false;
-
     return {
       x: props.x ?? 0,
       y: props.y ?? 0,
@@ -567,7 +564,6 @@ export class RendererMain extends EventEmitter {
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
-      parentHasRenderTexture,
       data: data,
     };
   }

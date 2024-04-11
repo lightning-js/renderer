@@ -417,10 +417,6 @@ export interface INodeWritableProps {
   rtt: boolean;
 
   /**
-   * Whether the Node has a Render Texture as a parent
-   */
-  parentHasRenderTexture: boolean;
-  /**
    * Node data element for custom data storage (optional)
    *
    * @remarks
