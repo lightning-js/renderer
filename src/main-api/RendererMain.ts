@@ -41,6 +41,7 @@ import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
 import { isProductionEnvironment } from '../utils.js';
+import type { IShaderController } from './IShaderController.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -636,12 +637,12 @@ export class RendererMain extends EventEmitter {
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
     props?: SpecificShaderRef<ShType>['props'],
-  ): SpecificShaderRef<ShType> {
-    return {
+  ): IShaderController {
+    return this.driver.createShaderController<ShType>({
       descType: 'shader',
       shType: shaderType,
       props: props as SpecificShaderRef<ShType>['props'],
-    };
+    }) as IShaderController & SpecificShaderRef<ShType>['props'];
   }
 
   /**

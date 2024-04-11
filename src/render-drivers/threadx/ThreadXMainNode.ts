@@ -34,13 +34,14 @@ import { SharedNode } from './SharedNode.js';
 import { ThreadXMainAnimationController } from './ThreadXMainAnimationController.js';
 import type { AnimationSettings } from '../../core/animations/CoreAnimation.js';
 import { santizeCustomDataMap } from '../utils.js';
+import type { ThreadXMainShaderController } from './ThreadXMainShaderController.js';
 
 export class ThreadXMainNode extends SharedNode implements INode {
   private nextAnimationId = 1;
   protected _parent: ThreadXMainNode | null = null;
   protected _children: ThreadXMainNode[] = [];
   protected _texture: TextureRef | null = null;
-  protected _shader: ShaderRef | null = null;
+  protected _shader: ThreadXMainShaderController | null = null;
   protected _data: CustomDataMap | undefined = {};
   private _src = '';
 
@@ -87,17 +88,18 @@ export class ThreadXMainNode extends SharedNode implements INode {
     }
   }
 
-  get shader(): ShaderRef | null {
+  get shader(): ThreadXMainShaderController | null {
     return this._shader;
   }
 
-  set shader(shader: ShaderRef | null) {
+  set shader(shader: ThreadXMainShaderController | null) {
     if (this._shader === shader) {
       return;
     }
     this._shader = shader;
     if (shader) {
-      this.emit('loadShader', shader as unknown as Record<string, unknown>);
+      shader.attachNode(this);
+      // this.emit('loadShader', shader as unknown as Record<string, unknown>);
     }
   }
 

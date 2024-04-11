@@ -33,6 +33,7 @@ import {
 import type {
   RendererMain,
   RendererMainSettings,
+  SpecificShaderRef,
 } from '../../main-api/RendererMain.js';
 import { MainOnlyTextNode } from './MainOnlyTextNode.js';
 import { loadCoreExtension } from '../utils.js';
@@ -40,6 +41,9 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../../common/CommonTypes.js';
+import type { ShaderMap } from '../../core/CoreShaderManager.js';
+import type { IShaderController } from '../../main-api/IShaderController.js';
+import { MainOnlyShaderController } from './MainOnlyShaderController.js';
 
 export class MainCoreDriver implements ICoreDriver {
   private root: MainOnlyNode | null = null;
@@ -115,6 +119,12 @@ export class MainCoreDriver implements ICoreDriver {
     node.once('beforeDestroy', this.onBeforeDestroyNode.bind(this, node));
     this.onCreateNode(node);
     return node;
+  }
+
+  createShaderController<ShType extends keyof ShaderMap>(
+    shaderRef: SpecificShaderRef<ShType>,
+  ): IShaderController {
+    return new MainOnlyShaderController(shaderRef);
   }
 
   // TODO: Remove?

@@ -223,9 +223,11 @@ export enum UpdateType {
   All = 2047,
 }
 
-export class CoreNode extends EventEmitter implements ICoreNode {
+export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected props: Required<CoreNodeProps>;
+
+  private _shaderProps: Record<string, unknown> | null = null;
 
   public updateType = UpdateType.All;
 
@@ -348,11 +350,30 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     shaderType: Type,
     props: ExtractProps<ShaderMap[Type]>,
   ): void {
+    if (this.props.shader !== null) {
+      this.props.shader = null;
+      this.props.shaderProps = null;
+      this._shaderProps = null;
+    }
     const shManager = this.stage.renderer.getShaderManager();
     assertTruthy(shManager);
     const { shader, props: p } = shManager.loadShader(shaderType, props);
     this.props.shader = shader;
     this.props.shaderProps = p;
+    this._shaderProps = {};
+    for (const key in p) {
+      Object.defineProperty(this._shaderProps, key, {
+        get: () => {
+          return this.props.shaderProps![key];
+        },
+        set: (value) => {
+          this.props.shaderProps![key] = value;
+          this.setUpdateType(UpdateType.Local);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    }
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
@@ -1238,6 +1259,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
 
     this.updateScaleRotateTransform();
+  }
+
+  get shaderProps(): Record<string, unknown> | null {
+    return this._shaderProps;
   }
   //#endregion Properties
 }

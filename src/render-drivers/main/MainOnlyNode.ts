@@ -42,6 +42,7 @@ import type {
   NodeRenderStateEventHandler,
 } from '../../common/CommonTypes.js';
 import { santizeCustomDataMap } from '../utils.js';
+import type { MainOnlyShaderController } from './MainOnlyShaderController.js';
 
 let nextId = 1;
 
@@ -51,14 +52,14 @@ export function getNewId(): number {
 
 export class MainOnlyNode extends EventEmitter implements INode {
   readonly id;
-  protected coreNode: CoreNode;
+  readonly coreNode: CoreNode;
 
   // Prop stores
   protected _children: MainOnlyNode[] = [];
   protected _src = '';
   protected _parent: MainOnlyNode | null = null;
   protected _texture: TextureRef | null = null;
-  protected _shader: ShaderRef | null = null;
+  protected _shader: MainOnlyShaderController | null = null;
   protected _data: CustomDataMap | undefined = {};
 
   constructor(
@@ -451,17 +452,17 @@ export class MainOnlyNode extends EventEmitter implements INode {
   };
   //#endregion Texture
 
-  get shader(): ShaderRef | null {
+  get shader(): MainOnlyShaderController | null {
     return this._shader;
   }
 
-  set shader(shader: ShaderRef | null) {
+  set shader(shader: MainOnlyShaderController | null) {
     if (this._shader === shader) {
       return;
     }
     this._shader = shader;
     if (shader) {
-      this.coreNode.loadShader(shader.shType, shader.props);
+      shader.attachNode(this);
     }
   }
 

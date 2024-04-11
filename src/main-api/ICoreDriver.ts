@@ -21,13 +21,19 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
+import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   INode,
   INodeWritableProps,
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { RendererMain, RendererMainSettings } from './RendererMain.js';
+import type { IShaderController } from './IShaderController.js';
+import type {
+  RendererMain,
+  RendererMainSettings,
+  SpecificShaderRef,
+} from './RendererMain.js';
 
 /**
  * This interface is to be implemented by Core Drivers
@@ -47,6 +53,10 @@ export interface ICoreDriver {
   createNode(props: INodeWritableProps): INode;
 
   createTextNode(props: ITextNodeWritableProps): ITextNode;
+
+  createShaderController<ShType extends keyof ShaderMap>(
+    shaderRef: SpecificShaderRef<ShType>,
+  ): IShaderController;
 
   // TODO: Nodes can be destroyed from the INode directly. Do we need this method
   // on this interface? All it does is call the destroy() method on the node.

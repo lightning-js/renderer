@@ -35,11 +35,14 @@ export interface AnimationSettings {
 
 export class CoreAnimation extends EventEmitter {
   public propStartValues: Partial<INodeAnimatableProps> = {};
+  public shaderPropStartValues: Record<string, number> = {};
+
   public restoreValues: Partial<INodeAnimatableProps> = {};
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
-  private propsList: Array<keyof INodeAnimatableProps>; //fixme - aint got not time for this
+  private propsList: string[]; //fixme - aint got not time for this
+  private shaderPropList: string[] | null = null;
 
   constructor(
     private node: CoreNode,
@@ -48,10 +51,23 @@ export class CoreAnimation extends EventEmitter {
   ) {
     super();
     this.propStartValues = {};
-    this.propsList = Object.keys(props) as Array<keyof INodeAnimatableProps>;
-    this.propsList.forEach((propName) => {
-      this.propStartValues[propName] = node[propName];
-    });
+
+    this.propsList = [];
+    for (const key in props) {
+      if (key !== 'shader') {
+        this.propsList.push(key);
+        this.propStartValues[
+          key as keyof Omit<INodeAnimatableProps, 'shader'>
+        ] = node[key as keyof Omit<INodeAnimatableProps, 'shader'>];
+      }
+    }
+    if (props.shader) {
+      this.shaderPropList = [];
+      for (const key in props.shader) {
+        this.shaderPropList.push(key);
+        this.shaderPropStartValues[key] = node.shaderProps![key] as number;
+      }
+    }
 
     this.timingFunction = (t: number) => t;
 
@@ -69,27 +85,53 @@ export class CoreAnimation extends EventEmitter {
 
   restore() {
     this.reset();
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        this.node[propName] = this.propStartValues[propName] as number;
-      },
-    );
+    (
+      this.propsList as Array<keyof Omit<INodeAnimatableProps, 'shader'>>
+    ).forEach((propName) => {
+      this.node[propName] = this.propStartValues[propName] as number;
+    });
+
+    if (this.props.shader) {
+      this.shaderPropList?.forEach((propName) => {
+        this.node.shaderProps![propName] = this.shaderPropStartValues[propName];
+      });
+    }
+  }
+
+  reverseValues(
+    propName: string,
+    props: Record<string, number>,
+    startValues: Record<string, number>,
+  ) {
+    // set the start value to the current value
+    const startValue = props[propName]!;
+    const endValue = startValues[propName]!;
+    // swap the start and end values
+    props[propName] = endValue;
+    startValues[propName] = startValue;
   }
 
   reverse() {
     this.progress = 0;
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
-      (propName) => {
-        // set the start value to the current value
-        const startValue = this.props[propName];
-        const endValue = this.propStartValues[propName] as number;
+    (
+      this.propsList as Array<keyof Omit<INodeAnimatableProps, 'shader'>>
+    ).forEach((propName) => {
+      this.reverseValues(
+        propName,
+        this.props as Record<string, number>,
+        this.propStartValues as Record<string, number>,
+      );
+    });
 
-        // swap the start and end values
-        this.props[propName] = endValue;
-        this.propStartValues[propName] = startValue;
-      },
-    );
-
+    if (this.props.shader) {
+      this.shaderPropList?.forEach((propName) => {
+        this.reverseValues(
+          propName,
+          this.node.shaderProps as Record<string, number>,
+          this.shaderPropStartValues,
+        );
+      });
+    }
     // restore stop method if we are not looping
     if (!this.settings.loop) {
       this.settings.stopMethod = false;
@@ -98,6 +140,52 @@ export class CoreAnimation extends EventEmitter {
 
   applyEasing(p: number, s: number, e: number): number {
     return (this.timingFunction(p) || p) * (e - s) + s;
+  }
+
+  updateValue(
+    propName: string,
+    propValue: number,
+    startValue: number,
+    easing: string | undefined,
+  ): number {
+    const endValue = propValue;
+    if (propName.indexOf('color') !== -1) {
+      if (startValue === endValue) {
+        return startValue;
+      }
+
+      if (easing) {
+        const easingProgressValue =
+          this.timingFunction(this.progress) || this.progress;
+        return mergeColorProgress(startValue, endValue, easingProgressValue);
+      }
+      return mergeColorProgress(startValue, endValue, this.progress);
+    }
+
+    if (easing) {
+      return this.applyEasing(this.progress, startValue, endValue);
+    }
+    return startValue + (endValue - startValue) * this.progress;
+  }
+
+  updateValues(
+    target: Record<string, number>,
+    list: string[],
+    props: Record<string, number>,
+    startValues: Record<string, number>,
+    easing: string | undefined,
+  ) {
+    for (let i = 0; i < list.length; i++) {
+      const propName = list[i]!;
+      const propValue = props[propName]!;
+      const startValue = startValues[propName]!;
+      target[propName] = this.updateValue(
+        propName,
+        propValue,
+        startValue,
+        easing,
+      );
+    }
   }
 
   update(dt: number) {
@@ -129,51 +217,24 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    for (let i = 0; i < this.propsList.length; i++) {
-      const propName = this.propsList[i] as keyof INodeAnimatableProps;
-      const propValue = this.props[propName] as number;
-      const startValue = this.propStartValues[propName] as number;
-      const endValue = propValue;
+    this.updateValues(
+      this.node as unknown as Record<string, number>,
+      this.propsList,
+      this.props as Record<string, number>,
+      this.propStartValues as Record<string, number>,
+      easing,
+    );
 
-      if (propName.indexOf('color') !== -1) {
-        // check if we have to change the color to begin with
-        if (startValue === endValue) {
-          this.node[propName] = startValue;
-          continue;
-        }
-
-        if (easing) {
-          const easingProgressValue =
-            this.timingFunction(this.progress) || this.progress;
-          const easingColorValue = mergeColorProgress(
-            startValue,
-            endValue,
-            easingProgressValue,
-          );
-          this.node[propName] = easingColorValue;
-          continue;
-        }
-
-        this.node[propName] = mergeColorProgress(
-          startValue,
-          endValue,
-          this.progress,
-        );
-        continue;
-      }
-
-      if (easing) {
-        this.node[propName] = this.applyEasing(
-          this.progress,
-          startValue,
-          endValue,
-        );
-        continue;
-      }
-
-      this.node[propName] =
-        startValue + (endValue - startValue) * this.progress;
+    if (this.props.shader) {
+      this.updateValues(
+        this.node.shaderProps as Record<string, number>,
+        this.shaderPropList!,
+        this.props.shader,
+        this.shaderPropStartValues,
+        easing,
+      );
     }
+
     if (this.progress === 1) {
       this.emit('finished', {});
     }

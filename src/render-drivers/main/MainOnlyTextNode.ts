@@ -27,7 +27,7 @@ import { MainOnlyNode, getNewId } from './MainOnlyNode.js';
 import { CoreTextNode } from '../../core/CoreTextNode.js';
 
 export class MainOnlyTextNode extends MainOnlyNode implements ITextNode {
-  protected declare coreNode: CoreTextNode;
+  declare readonly coreNode: CoreTextNode;
 
   constructor(
     props: ITextNodeWritableProps,

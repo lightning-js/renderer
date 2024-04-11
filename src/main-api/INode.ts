@@ -25,6 +25,7 @@ import type {
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { IShaderController } from './IShaderController.js';
 
 /**
  * Writable properties of a Node.
@@ -243,7 +244,7 @@ export interface INodeWritableProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: ShaderRef | null;
+  shader: IShaderController | null;
   /**
    * Image URL
    *
@@ -441,6 +442,8 @@ export type INodeAnimatableProps = {
   > extends number
     ? Key
     : never]: number;
+} & {
+  shader: Record<string, number>;
 };
 
 export interface INodeEvents {

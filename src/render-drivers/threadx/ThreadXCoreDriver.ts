@@ -31,6 +31,7 @@ import { assertTruthy } from '../../utils.js';
 import type {
   RendererMain,
   RendererMainSettings,
+  SpecificShaderRef,
 } from '../../main-api/RendererMain.js';
 import {
   isThreadXRendererMessage,
@@ -46,6 +47,9 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../../common/CommonTypes.js';
+import type { IShaderController } from '../../main-api/IShaderController.js';
+import type { ShaderMap } from '../../core/CoreShaderManager.js';
+import { ThreadXMainShaderController } from './ThreadXMainShaderController.js';
 
 export interface ThreadXRendererSettings {
   coreWorkerUrl: string;
@@ -254,6 +258,12 @@ export class ThreadXCoreDriver implements ICoreDriver {
 
     this.onCreateNode(node);
     return node;
+  }
+
+  createShaderController<ShType extends keyof ShaderMap>(
+    shaderRef: SpecificShaderRef<ShType>,
+  ): IShaderController {
+    return new ThreadXMainShaderController(shaderRef);
   }
 
   // TODO: Remove?
