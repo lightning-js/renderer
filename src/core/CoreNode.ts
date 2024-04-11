@@ -842,6 +842,7 @@ export class CoreNode extends EventEmitter {
     delete this.scaleRotateTransform;
     delete this.localTransform;
 
+    this._shaderProps = null;
     this.props.texture = null;
     this.props.shader = null;
 

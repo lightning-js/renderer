@@ -18,7 +18,6 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import elevatorImg from '../assets/elevator.png';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
