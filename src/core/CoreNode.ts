@@ -392,7 +392,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (parent && !(parent.updateType & UpdateType.Children)) {
       parent.setUpdateType(UpdateType.Children);
     }
-
     // If node is part of RTT texture
     // Flag that we need to update
     if (this.parentHasRenderTexture) {
@@ -858,6 +857,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = null;
     this.props.shader = null;
+
+    if (this.rtt) {
+      this.stage.renderer.removeRTTNode(this);
+    }
 
     this.removeAllListeners();
     this.parent = null;

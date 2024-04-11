@@ -644,4 +644,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
     this.renderToTextureActive = false;
   }
+
+  removeRTTNode(node: CoreNode) {
+    const index = this.rttNodes.indexOf(node);
+    if (index === -1) {
+      return;
+    }
+    this.rttNodes.splice(index, 1);
+  }
 }
