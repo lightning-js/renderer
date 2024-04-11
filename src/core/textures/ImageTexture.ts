@@ -117,8 +117,7 @@ export class ImageTexture extends Texture {
       };
     } else {
       const img = new Image();
-      if (!(src.substr(0, 5) == 'data:')) {
-        // Base64.
+      if (!(src.substr(0, 5) === 'data:')) {
         img.crossOrigin = 'Anonymous';
       }
       img.src = src;
