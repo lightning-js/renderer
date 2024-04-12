@@ -20,6 +20,65 @@
 import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
+interface getImageReturn {
+  data: ImageBitmap;
+  premultiplyAlpha: boolean | null
+}
+
+function createImageWorker() {
+  function hasAlphaChannel(mimeType: string) {
+      return (mimeType.indexOf("image/png") !== -1);
+  }
+
+  function getImage(src: string, premultiplyAlpha: boolean | null) : Promise<getImageReturn> {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', src, true);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var blob = xhr.response;
+          var withAlphaChannel = premultiplyAlpha !== undefined ? premultiplyAlpha : hasAlphaChannel(blob.type);
+
+          createImageBitmap(blob, {
+            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none'
+          }).then(function(data) {
+            resolve({ data, premultiplyAlpha: premultiplyAlpha });
+          }).catch(function(error) {
+            reject(error);
+          });
+        } else {
+          reject(new Error('Failed to load image: ' + xhr.statusText));
+        }
+      };
+
+      xhr.onerror = function() {
+        reject(new Error('Network error occurred while trying to fetch the image.'));
+      };
+
+      xhr.send();
+      console.log('workerCode', 'xhr.send()');
+    });
+  }
+
+  self.onmessage = (event) => {    
+    var src = event.data.src;
+    var premultiplyAlpha = event.data.premultiplyAlpha;
+
+    getImage(src, premultiplyAlpha)
+      .then(function(data) {
+          self.postMessage([{ src: src, data: data }, { transfert: data }]);
+      })
+      .catch(function(error) {
+          self.postMessage({ src: src, error: error.message });
+      });
+  };
+
+  return { getImage };
+}
 
 export class ImageWorkerManager {
   imageWorkersEnabled = true;
@@ -53,57 +112,7 @@ export class ImageWorkerManager {
   }
 
   private createWorkers(numWorkers = 1): Worker[] {
-    const workerCode = `
-      function hasAlphaChannel(mimeType) {
-          return (mimeType.indexOf("image/png") !== -1);
-      }
-
-      function getImage(src, premultiplyAlpha) {
-        return new Promise(function(resolve, reject) {
-          var xhr = new XMLHttpRequest();
-          xhr.open('GET', src, true);
-          xhr.responseType = 'blob';
-
-          xhr.onload = function() {
-            if (xhr.status === 200) {
-              var blob = xhr.response;
-              var hasAlphaChannel = premultiplyAlpha !== undefined ? premultiplyAlpha : hasAlphaChannel(blob.type);
-
-              createImageBitmap(blob, {
-                premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-                colorSpaceConversion: 'none',
-                imageOrientation: 'none'
-              }).then(function(data) {
-                resolve({ data: data, premultiplyAlpha: premultiplyAlpha });
-              }).catch(function(error) {
-                reject(error);
-              });
-            } else {
-              reject(new Error('Failed to load image: ' + xhr.statusText));
-            }
-          };
-
-          xhr.onerror = function() {
-            reject(new Error('Network error occurred while trying to fetch the image.'));
-          };
-
-          xhr.send();
-        });
-      }
-
-      self.onmessage = (event) => {
-        var src = event.data.src;
-        var premultiplyAlpha = event.data.premultiplyAlpha;
-
-        getImage(src, premultiplyAlpha)
-          .then(function(data) {
-              self.postMessage({ src: src, data: data }, [data.data]);
-          })
-          .catch(function(error) {
-              self.postMessage({ src: src, error: error.message });
-          });
-      };
-    `;
+    const workerCode = `${createImageWorker.toString()}()`;
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
@@ -133,13 +142,16 @@ export class ImageWorkerManager {
   ): Promise<TextureData> {
     return new Promise((resolve, reject) => {
       try {
-        if (this.workers) {
+        if (this.workers.length) {
           const absoluteSrcUrl = this.convertUrlToAbsolute(src);
           this.messageManager[absoluteSrcUrl] = [resolve, reject];
-          this.getNextWorker().postMessage({
+          const nextWorker = this.getNextWorker();
+          nextWorker.postMessage({
             src: absoluteSrcUrl,
             premultiplyAlpha,
           });
+        } else {
+          createImageWorker().getImage(src, premultiplyAlpha).then(resolve);
         }
       } catch (error) {
         reject(error);

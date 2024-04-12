@@ -425,7 +425,6 @@ export abstract class TextRenderer<
     // For each prop setter add a wrapper method that checks if the prop is
     // different before calling the setter
     this.set = Object.freeze(
-      Object.fromEntries(
         Object.entries(propSetters).map(([key, setter]) => {
           return [
             key as keyof TrProps,
@@ -439,8 +438,16 @@ export abstract class TextRenderer<
               }
             },
           ];
-        }),
-      ),
+        }).reduce(
+          (obj, [attr, value]) => { 
+            if (attr) { 
+              // @ts-ignore
+              obj[attr] = value;
+            }
+            return obj; 
+          },
+          {}
+        ),
     ) as typeof this.set;
   }
 
