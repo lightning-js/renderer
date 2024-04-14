@@ -36,14 +36,14 @@ const WHITE: IParsedColor = {
 /**
  * Extract color components
  */
-export function parseColor(value: number): IParsedColor {
-  if (value === 0xffffffff) {
+export function parseColor(abgr: number): IParsedColor {
+  if (abgr === 0xffffffff) {
     return WHITE;
   }
-  const a = ((value >>> 24) & 0xff) / 255;
-  const b = ((value >>> 16) & 0xff) & 0xff;
-  const g = ((value >>> 8) & 0xff) & 0xff;
-  const r = (value & 0xff) & 0xff;
+  const a = ((abgr >>> 24) & 0xff) / 255;
+  const b = ((abgr >>> 16) & 0xff) & 0xff;
+  const g = ((abgr >>> 8) & 0xff) & 0xff;
+  const r = (abgr & 0xff) & 0xff;
   return { isWhite: false, a, r, g, b }
 }
 

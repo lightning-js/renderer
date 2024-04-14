@@ -18,6 +18,7 @@
  */
 
 import type { CoreShaderManager } from "../../CoreShaderManager.js";
+import { getRgbaComponents, type RGBA } from "../../lib/utils.js";
 import { SubTexture } from "../../textures/SubTexture.js";
 import type { Texture } from "../../textures/Texture.js";
 import type { CoreContextTexture } from "../CoreContextTexture.js";
@@ -30,6 +31,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private pixelRatio: number;
+  private clearColor: RGBA | undefined;
 
   constructor(options: CoreRendererOptions) {
     super(options);
@@ -37,16 +39,25 @@ export class CanvasCoreRenderer extends CoreRenderer {
     this.mode = 'canvas';
     this.shManager.renderer = this;
 
-    const { canvas, pixelRatio} = options;
+    const { canvas, pixelRatio, clearColor } = options;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = pixelRatio;
+    this.clearColor = clearColor ? getRgbaComponents(clearColor) : undefined;
   }
 
   reset(): void {
     // quick reset canvas
     this.canvas.width = this.canvas.width ?? 1920;
-    this.context.scale(this.pixelRatio, this.pixelRatio);
+    const ctx = this.context;
+
+    if (this.clearColor) {
+      const [r, g, b, a] = this.clearColor;
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    ctx.scale(this.pixelRatio, this.pixelRatio);
   }
 
   render(): void {
