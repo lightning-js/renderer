@@ -24,6 +24,7 @@ import type { Texture } from "../../textures/Texture.js";
 import type { CoreContextTexture } from "../CoreContextTexture.js";
 import { CoreRenderer, type CoreRendererOptions, type QuadOptions } from "../CoreRenderer.js";
 import { CanvasCoreTexture } from "./CanvasCoreTexture.js";
+import { getRadius } from "./internal/C2DShaderUtils.js";
 import { formatRgba, parseColor, type IParsedColor } from "./internal/ColorUtils.js";
 
 export class CanvasCoreRenderer extends CoreRenderer {
@@ -93,20 +94,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
     const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
+    const radius = quad.shader ? getRadius(quad) : 0;
 
-    if (hasTransform || hasClipping) {
+    if (hasTransform || hasClipping || radius) {
       ctx.save();
     }
 
     if (hasClipping) {
-      const { x, y, width, height } = quad.clippingRect;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + width, y);
-      ctx.lineTo(x + width, y + height);
-      ctx.lineTo(x, y + height);
-      ctx.closePath();
-      ctx.clip();
+      const path = new Path2D();
+      const { x, y, width, height } = clippingRect;
+      path.rect(x, y, width, height);
+      ctx.clip(path);
     }
 
     if (hasTransform) {
@@ -122,6 +120,12 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.setTransform(ta, tc, tb, td, tx * scale, ty * scale);
       ctx.scale(scale, scale);
       ctx.translate(-tx, -ty);
+    }
+
+    if (radius) {
+      const path = new Path2D();
+      path.roundRect(tx, ty, width, height, radius);
+      ctx.clip(path);
     }
 
     if (ctxTexture) {
@@ -158,7 +162,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.fillRect(tx, ty, width, height);
     }
 
-    if (hasTransform || hasClipping) {
+    if (hasTransform || hasClipping || radius) {
       ctx.restore();
     }
   }

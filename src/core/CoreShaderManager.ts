@@ -176,7 +176,7 @@ export class CoreShaderManager {
     if (this.renderer.mode === 'canvas' && ShaderClass.prototype instanceof WebGlCoreShader) {
       return {
         shader: new UnsupportedShader(shType) as InstanceType<ShaderMap[Type]>,
-        props: {}
+        props: props as Record<string, unknown>
       }
     }
 
