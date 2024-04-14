@@ -35,7 +35,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
     this.textureSource.setState('loading');
     this.onLoadRequest().then((size) => {
       this.textureSource.setState('loaded', size);
-      this.memManager.setTextureMemUse(this, size.width * size.height * 4);
+      this.updateMemSize();
     }).catch((err) => {
       this.textureSource.setState('failed', err as Error);
     });
@@ -48,6 +48,18 @@ export class CanvasCoreTexture extends CoreContextTexture {
     this.memManager.setTextureMemUse(this, 0);
   }
 
+  updateMemSize(): void {
+    // Counting memory usage for:
+    // - main image
+    // - tinted image
+    // - should we count the source texture in addition?
+    const mult = this.tintCache ? 8 : 4;
+    if (this.textureSource.dimensions) {
+      const { width, height } = this.textureSource.dimensions;
+      this.memManager.setTextureMemUse(this, width * height * mult);
+    }
+  }
+
   hasImage(): boolean {
     return this.image !== undefined;
   }
@@ -57,6 +69,10 @@ export class CanvasCoreTexture extends CoreContextTexture {
     assertTruthy(image, 'Attempt to get unloaded image texture');
 
     if (color.isWhite) {
+      if (this.tintCache) {
+        this.tintCache = undefined;
+        this.updateMemSize();
+      }
       return image;
     }
     const key = formatRgba(color);
@@ -64,11 +80,13 @@ export class CanvasCoreTexture extends CoreContextTexture {
       return this.tintCache.image;
     }
 
+    const tintedImage = this.tintTexture(image, key);
     this.tintCache = {
       key,
-      image: this.tintTexture(image, key)
+      image: tintedImage
     }
-    return this.tintCache.image;
+    this.updateMemSize();
+    return tintedImage;
   }
 
   protected tintTexture(source: ImageBitmap | HTMLCanvasElement, color: string) {
@@ -100,6 +118,8 @@ export class CanvasCoreTexture extends CoreContextTexture {
 
   private async onLoadRequest(): Promise<Dimensions> {
     const { data } = await this.textureSource.getTextureData();
+    // TODO: canvas from text renderer should be able to provide the canvas directly
+    // instead of having to re-draw it into a new canvas...
     if (data instanceof ImageData) {
       const canvas = document.createElement('canvas');
       canvas.width = data.width;
