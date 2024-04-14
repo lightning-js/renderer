@@ -24,7 +24,7 @@ import type { Texture } from "../../textures/Texture.js";
 import type { CoreContextTexture } from "../CoreContextTexture.js";
 import { CoreRenderer, type CoreRendererOptions, type QuadOptions } from "../CoreRenderer.js";
 import { CanvasCoreTexture } from "./CanvasCoreTexture.js";
-import { formatRgba, parseColor } from "./internal/ColorUtils.js";
+import { formatRgba, parseColor, type IParsedColor } from "./internal/ColorUtils.js";
 
 export class CanvasCoreRenderer extends CoreRenderer {
 
@@ -67,7 +67,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   addQuad(quad: QuadOptions): void {
     const ctx = this.context;
     const {
-      tx, ty, width, height, alpha, colorTl, ta, tb, tc, td, clippingRect
+      tx, ty, width, height, alpha, colorTl, colorTr, colorBr, ta, tb, tc, td, clippingRect
     } = quad;
     let texture = quad.texture;
     let ctxTexture: CanvasCoreTexture | undefined = undefined;
@@ -92,6 +92,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const color = parseColor(colorTl);
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
+    const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
 
     if (hasTransform || hasClipping) {
       ctx.save();
@@ -132,6 +133,26 @@ export class CanvasCoreRenderer extends CoreRenderer {
         ctx.drawImage(image, tx, ty, width, height);
       }
       ctx.globalAlpha = 1;
+    } else if (hasGradient) {
+      let endX: number = tx;
+      let endY: number = ty;
+      let endColor: IParsedColor;
+      if (colorTl === colorTr) {
+        // vertical
+        endX = tx;
+        endY = ty + height;
+        endColor = parseColor(colorBr);
+      } else {
+        // horizontal
+        endX = tx + width;
+        endY = ty;
+        endColor = parseColor(colorTr);
+      }
+      const gradient = ctx.createLinearGradient(tx, ty, endX, endY);
+      gradient.addColorStop(0, formatRgba(color));
+      gradient.addColorStop(1, formatRgba(endColor));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(tx, ty, width, height);
     } else {
       ctx.fillStyle = formatRgba(color);
       ctx.fillRect(tx, ty, width, height);
