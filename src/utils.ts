@@ -143,6 +143,16 @@ export function mergeColorAlpha(rgba: number, alpha: number): number {
   return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
 }
 
+let premultiplyRGB = true;
+
+/**
+ * RGB components should not be premultiplied when using Canvas renderer
+ * @param mode  Renderer mode
+ */
+export function setPremultiplyMode(mode: 'webgl' | 'canvas'): void {
+  premultiplyRGB = mode === 'webgl';
+}
+
 /**
  * Given an RGBA encoded number, returns back the RGBA number with it's alpha
  * component multiplied by the passed `alpha` parameter. Before returning, the
@@ -173,9 +183,10 @@ export function mergeColorAlphaPremultiplied(
   flipEndianess = false,
 ): number {
   const newAlpha = ((rgba & 0xff) / 255) * alpha;
-  const r = Math.trunc((rgba >>> 24) * newAlpha);
-  const g = Math.trunc(((rgba >>> 16) & 0xff) * newAlpha);
-  const b = Math.trunc(((rgba >>> 8) & 0xff) * newAlpha);
+  const rgbAlpha = premultiplyRGB ? newAlpha : 1;
+  const r = Math.trunc((rgba >>> 24) * rgbAlpha);
+  const g = Math.trunc(((rgba >>> 16) & 0xff) * rgbAlpha);
+  const b = Math.trunc(((rgba >>> 8) & 0xff) * rgbAlpha);
   const a = Math.trunc(newAlpha * 255);
 
   if (flipEndianess) {

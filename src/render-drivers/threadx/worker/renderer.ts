@@ -75,6 +75,7 @@ const threadx = ThreadX.init({
         fpsUpdateInterval: message.fpsUpdateInterval,
         enableContextSpy: message.enableContextSpy,
         numImageWorkers: message.numImageWorkers,
+        renderMode: 'webgl',
         debug: {
           monitorTextureCache: false,
         },

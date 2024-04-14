@@ -41,6 +41,7 @@ import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
 import { isProductionEnvironment } from '../utils.js';
+import type { StageOptions } from '../core/Stage.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -270,6 +271,11 @@ export interface RendererMainSettings {
    * @defaultValue `false` (disabled)
    */
   enableInspector?: boolean;
+
+  /**
+   * Renderer mode
+   */
+  renderMode?: 'webgl' | 'canvas';
 }
 
 /**
@@ -344,6 +350,7 @@ export class RendererMain extends EventEmitter {
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
+      renderMode: settings.renderMode ?? 'webgl'
     };
     this.settings = resolvedSettings;
 

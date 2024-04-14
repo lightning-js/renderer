@@ -61,6 +61,8 @@ import {
   type RadialProgressEffectProps,
 } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
 import { HolePunchEffect } from './renderers/webgl/shaders/effects/HolePunchEffect.js';
+import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
+import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
 
 export type { FadeOutEffectProps };
 export type { LinearGradientEffectProps };
@@ -75,6 +77,7 @@ export interface ShaderMap {
   RoundedRectangle: typeof RoundedRectangle;
   DynamicShader: typeof DynamicShader;
   SdfShader: typeof SdfShader;
+  UnsupportedShader: typeof UnsupportedShader;
 }
 
 export type ShaderNode<Type extends keyof ShaderMap> = {
@@ -168,6 +171,13 @@ export class CoreShaderManager {
     const ShaderClass = this.shConstructors[shType];
     if (!ShaderClass) {
       throw new Error(`Shader type "${shType as string}" is not registered`);
+    }
+
+    if (this.renderer.mode === 'canvas' && ShaderClass.prototype instanceof WebGlCoreShader) {
+      return {
+        shader: new UnsupportedShader(shType) as InstanceType<ShaderMap[Type]>,
+        props: {}
+      }
     }
 
     if (shType === 'DynamicShader') {
