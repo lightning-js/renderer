@@ -369,18 +369,15 @@ export class RendererMain extends EventEmitter {
           this.settings.textureCleanupOptions,
         );
 
-    const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
-    const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
-
     this.driver = driver;
 
     const canvas = document.createElement('canvas');
     this.canvas = canvas;
-    canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
-    canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+    canvas.width = appWidth * devicePhysicalPixelRatio;
+    canvas.height = appHeight * devicePhysicalPixelRatio;
 
-    canvas.style.width = `${deviceLogicalWidth}px`;
-    canvas.style.height = `${deviceLogicalHeight}px`;
+    canvas.style.width = `${appWidth}px`;
+    canvas.style.height = `${appHeight}px`;
 
     let targetEl: HTMLElement | null;
     if (typeof target === 'string') {
