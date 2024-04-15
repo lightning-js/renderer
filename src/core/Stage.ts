@@ -110,6 +110,8 @@ export class Stage extends EventEmitter {
       enableContextSpy,
       numImageWorkers,
       txMemByteThreshold,
+      devicePhysicalPixelRatio,
+      deviceLogicalPixelRatio
     } = options;
 
     this.txManager = new CoreTextureManager(numImageWorkers);
@@ -138,8 +140,7 @@ export class Stage extends EventEmitter {
     this.renderer = new WebGlCoreRenderer({
       stage: this,
       canvas,
-      pixelRatio:
-        options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio,
+      pixelRatio: devicePhysicalPixelRatio * deviceLogicalPixelRatio,
       clearColor: clearColor ?? 0xff000000,
       bufferMemory,
       txManager: this.txManager,
@@ -162,8 +163,8 @@ export class Stage extends EventEmitter {
       id: rootId,
       x: 0,
       y: 0,
-      width: appWidth / options.deviceLogicalPixelRatio,
-      height: appHeight / options.deviceLogicalPixelRatio,
+      width: appWidth / deviceLogicalPixelRatio,
+      height: appHeight / deviceLogicalPixelRatio,
       alpha: 1,
       autosize: false,
       clipping: false,
