@@ -117,6 +117,9 @@ export class ImageTexture extends Texture {
       };
     } else {
       const img = new Image();
+      if (!(src.substr(0, 5) === 'data:')) {
+        img.crossOrigin = 'Anonymous';
+      }
       img.src = src;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
