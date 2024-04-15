@@ -446,10 +446,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
     return this.coreNode.parentHasRenderTexture;
   }
 
-  set parentHasRenderTexture(value: boolean) {
-    this.coreNode.parentHasRenderTexture = value;
-  }
-
   private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {
     this.emit('loaded', payload);
   };

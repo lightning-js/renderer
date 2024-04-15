@@ -370,7 +370,9 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
     if (this.parentHasRenderTexture && this.props.parent?.rtt) {
       this.globalTransform = Matrix3d.identity();
-      this.globalTransform.multiply(this.localTransform ?? Matrix3d.identity());
+      if (this.localTransform) {
+        this.globalTransform.multiply(this.localTransform);
+      }
     }
 
     assertTruthy(this.globalTransform);
