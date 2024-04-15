@@ -48,8 +48,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   reset(): void {
-    // quick reset canvas
-    this.canvas.width = this.canvas.width ?? 1920;
+    // eslint-disable-next-line no-self-assign
+    this.canvas.width = this.canvas.width; // quick reset canvas
+
     const ctx = this.context;
 
     if (this.clearColor) {

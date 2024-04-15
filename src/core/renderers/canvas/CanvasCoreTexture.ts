@@ -52,7 +52,6 @@ export class CanvasCoreTexture extends CoreContextTexture {
     // Counting memory usage for:
     // - main image
     // - tinted image
-    // - should we count the source texture in addition?
     const mult = this.tintCache ? 8 : 4;
     if (this.textureSource.dimensions) {
       const { width, height } = this.textureSource.dimensions;

@@ -155,17 +155,18 @@ export function setPremultiplyMode(mode: 'webgl' | 'canvas'): void {
 
 /**
  * Given an RGBA encoded number, returns back the RGBA number with it's alpha
- * component multiplied by the passed `alpha` parameter. Before returning, the
- * final alpha value is multiplied into the color channels.
+ * component multiplied by the passed `alpha` parameter.
+ *
+ * For the webGl renderer, each color channel is premultiplied by the final alpha value.
  *
  * @remarks
  * If `flipEndianess` is set to true, the function will returned an ABGR encoded number
  * which is useful when the color value needs to be passed into a shader attribute.
  *
- * NOTE: This method returns a PREMULTIPLIED alpha color which is generally only useful
- * in the context of the internal rendering process. Use {@link mergeColorAlpha} if you
- * need to blend an alpha value into a color in the context of the Renderer's
- * main API.
+ * NOTE: Depending on the mode set by {@link setPremultiplyMode}, this method returns
+ * a PREMULTIPLIED alpha color which is generally only useful in the context of the
+ * internal rendering process. Use {@link mergeColorAlpha} if you need to blend an alpha
+ * value into a color in the context of the Renderer's main API.
  *
  * @internalRemarks
  * Do not expose this method in the main API because Renderer users should instead use
