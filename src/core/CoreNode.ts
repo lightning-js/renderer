@@ -339,6 +339,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
     this.autosizeNode(dimensions);
+    // Texture was loaded. In case the RAF loop has already stopped, we request
+    // a render to ensure the texture is rendered.
+    this.stage.requestRender();
+
     // If parent has a render texture, flag that we need to update
     // @todo: Reserve type for RTT updates
     if (this.parentHasRenderTexture) {
@@ -456,6 +460,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         }
         p = p.parent;
       }
+    }
+
+    // If we have render texture updates and not already running a full update
+    if (
+      this.updateType ^ UpdateType.All &&
+      this.updateType & UpdateType.RenderTexture
+    ) {
+      this.children.forEach((child) => {
+        child.setUpdateType(UpdateType.All);
+      });
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -978,6 +992,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.width !== value) {
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt) {
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
     }
   }
 
@@ -989,6 +1007,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.height !== value) {
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt) {
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
     }
   }
 
@@ -1312,10 +1334,27 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   set rtt(value: boolean) {
     if (!value) {
+      if (this.props.rtt) {
+        this.props.rtt = false;
+        this.unloadTexture();
+        this.setUpdateType(UpdateType.All);
+
+        this.children.forEach((child) => {
+          child.parentHasRenderTexture = false;
+        });
+
+        this.stage.renderer?.removeRTTNode(this);
+      }
       return;
     }
+
     this.props.rtt = true;
     this.hasRTTupdates = true;
+    this.setUpdateType(UpdateType.All);
+
+    this.children.forEach((child) => {
+      child.setUpdateType(UpdateType.All);
+    });
 
     // Store RTT nodes in a separate list
     this.stage.renderer?.renderToTexture(this);

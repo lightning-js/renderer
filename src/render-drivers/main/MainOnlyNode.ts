@@ -147,6 +147,16 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   set width(value: number) {
+    if (value !== this.coreNode.width && this.coreNode.rtt) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
     this.coreNode.width = value;
   }
 
@@ -155,6 +165,16 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   set height(value: number) {
+    if (value !== this.coreNode.height && this.coreNode.rtt) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
     this.coreNode.height = value;
   }
 
