@@ -19,6 +19,8 @@
 
 import { CoreShader } from "../../CoreShader.js";
 
+export const ROUNDED_RECTANGLE_SHADER_TYPE = "RoundedRectangle"
+
 export class UnsupportedShader extends CoreShader {
 
   public shType: string;
@@ -26,7 +28,9 @@ export class UnsupportedShader extends CoreShader {
   constructor(shType: string) {
     super();
     this.shType = shType;
-    console.warn('Unsupported shader:', shType);
+    if (shType !== ROUNDED_RECTANGLE_SHADER_TYPE) {
+      console.warn('Unsupported shader:', shType);
+    }
   }
 
   bindRenderOp(): void {
