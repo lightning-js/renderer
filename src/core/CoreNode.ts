@@ -319,8 +319,39 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
   }
 
+  applyResizeMode(dimensions: Dimensions) {
+    const resizeMode = this.props.textureOptions?.resizeMode ?? { type: false };
+    if (resizeMode.type === 'contain') {
+      const scale = Math.min(
+        resizeMode.width / dimensions.width,
+        resizeMode.height / dimensions.height,
+      );
+      this.width = Math.round(dimensions.width * scale);
+      this.height = Math.round(dimensions.height * scale);
+    } else if (resizeMode.type === 'cover') {
+      const scaleX = resizeMode.width / dimensions.width;
+      const scaleY = resizeMode.height / dimensions.height;
+      const scale = Math.max(scaleX, scaleY);
+      if (!scale) return;
+
+      this.width = Math.round(dimensions.width * scale);
+      this.height = Math.round(dimensions.height * scale);
+      this.y = (resizeMode.height - this.height) * (resizeMode.clipY ?? 0.5);
+      this.x = (resizeMode.width - this.width) * (resizeMode.clipX ?? 0.5);
+      if (this.parent)
+        this.parent.clipping = !!(
+          this.x ||
+          this.y ||
+          this.width ||
+          this.height
+        );
+    }
+  }
+
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
     this.autosizeNode(dimensions);
+    this.applyResizeMode(dimensions);
+
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();

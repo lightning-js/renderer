@@ -55,6 +55,20 @@ export interface TextureManagerDebugInfo {
   idCacheSize: number;
 }
 
+export type resizeModeOptions =
+  | {
+      type: 'cover';
+      width: number;
+      height: number;
+      clipX?: number;
+      clipY?: number;
+    }
+  | {
+      type: 'contain';
+      width: number;
+      height: number;
+    };
+
 /**
  * Universal options for all texture types
  *
@@ -127,6 +141,33 @@ export interface TextureOptions {
    * @defaultValue `false`
    */
   flipY?: boolean;
+
+  /**
+   * You can use resizeMode to determine the clipping automatically from the width
+   * and height of the source texture. This can be convenient if you are unsure about
+   * the exact image sizes but want the image to cover a specific area.
+   *
+   * The resize modes cover and contain are supported
+   *
+   * When the texture is loaded, the clipping is automatically defined.
+   *
+   * Resize mode 'cover' ensures that a texture covers a specific rectangular area.
+   * You can clip part of a texture with clipX and clipY which are values from 0 to 1.
+   *
+   * To clip the top, set clipY to 0. To clip the bottom, set clipY to 1.
+   * By default, (clipX, clipY) is set to (0.5, 0.5). This causes an equal amount to
+   * be clipped away from left/right or top/bottom.
+   *
+   * Resize mode 'contain' ensures that an image fits in a specific rectangular area.
+   * One axis will fit to the specified size, while the other will be less than specified.
+   * @param {Object} props
+   * @param {string} props.type - The type of resize mode to use
+   * @param {number} props.width - The width of the area to fit the texture in
+   * @param {number} props.height - The height of the area to fit the texture in
+   * @param {number} [props.clipX=0.5] - The horizontal clipping position
+   * @param {number} [props.clipY=0.5] - The vertical clipping position
+   */
+  resizeMode?: resizeModeOptions;
 }
 
 export class CoreTextureManager {
