@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
-} from '../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -57,14 +53,14 @@ import { RenderCoords } from './lib/RenderCoords.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
-  OutOfBounds = 2,
+  OutOfViewport = 2,
   InBounds = 4,
   InViewport = 8,
 }
 
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
-CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
+CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfViewport, 'outOfViewport');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
@@ -620,40 +616,24 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
     }
-    return CoreNodeRenderState.OutOfBounds;
+    return CoreNodeRenderState.OutOfViewport;
   }
 
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
-    if (renderState !== this.renderState) {
-      let previous = this.renderState;
-      this.renderState = renderState;
-      if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('outOfViewport', {
-          previous,
-          current: renderState,
-        });
-      }
-      if (
-        previous < CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.InViewport
-      ) {
-        this.emit(
-          CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds) as string,
-          {
-            previous,
-            current: renderState,
-          },
-        );
-        previous = CoreNodeRenderState.InBounds;
-      }
-      const event = CoreNodeRenderStateMap.get(renderState);
-      assertTruthy(event);
-      this.emit(event, {
-        previous,
-        current: renderState,
-      });
+    if (renderState === this.renderState) {
+      return;
     }
+
+    this.renderState = renderState;
+    const previous = this.renderState;
+    const event = CoreNodeRenderStateMap.get(renderState);
+    assertTruthy(event);
+
+    this.emit(event, {
+      previous,
+      current: renderState,
+    });
   }
 
   setRenderState(state: CoreNodeRenderState) {
@@ -673,7 +653,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.worldAlpha === 0 || !this.checkRenderProps()) {
       newIsRenderable = false;
     } else {
-      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
+      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfViewport;
     }
     if (this.isRenderable !== newIsRenderable) {
       this.isRenderable = newIsRenderable;

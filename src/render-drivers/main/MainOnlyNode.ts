@@ -111,7 +111,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.on('failed', this.onTextureFailed);
     this.coreNode.on('freed', this.onTextureFreed);
 
-    this.coreNode.on('outOfBounds', this.onOutOfBounds);
     this.coreNode.on('inBounds', this.onInBounds);
     this.coreNode.on('outOfViewport', this.onOutOfViewport);
     this.coreNode.on('inViewport', this.onInViewport);
