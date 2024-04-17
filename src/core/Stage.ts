@@ -18,7 +18,7 @@
  */
 import { startLoop, getTimeStamp } from './platform.js';
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
-import { assertTruthy } from '../utils.js';
+import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import { CoreNode } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
@@ -38,6 +38,8 @@ import type {
   FrameTickPayload,
 } from '../common/CommonTypes.js';
 import { TextureMemoryManager } from './TextureMemoryManager.js';
+import type { CoreRenderer, CoreRendererOptions } from './renderers/CoreRenderer.js';
+import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 
 export interface StageOptions {
   rootId: number;
@@ -52,6 +54,7 @@ export interface StageOptions {
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
   numImageWorkers: number;
+  renderMode: 'webgl' | 'canvas';
 
   debug?: {
     monitorTextureCache?: boolean;
@@ -79,7 +82,7 @@ export class Stage extends EventEmitter {
   public readonly fontManager: TrFontManager;
   public readonly textRenderers: Partial<TextRendererMap>;
   public readonly shManager: CoreShaderManager;
-  public readonly renderer: WebGlCoreRenderer;
+  public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
 
@@ -110,6 +113,7 @@ export class Stage extends EventEmitter {
       enableContextSpy,
       numImageWorkers,
       txMemByteThreshold,
+      renderMode
     } = options;
 
     this.txManager = new CoreTextureManager(numImageWorkers);
@@ -135,7 +139,7 @@ export class Stage extends EventEmitter {
       }, 1000);
     }
 
-    this.renderer = new WebGlCoreRenderer({
+    const rendererOptions: CoreRendererOptions = {
       stage: this,
       canvas,
       pixelRatio:
@@ -146,14 +150,23 @@ export class Stage extends EventEmitter {
       txMemManager: this.txMemManager,
       shManager: this.shManager,
       contextSpy: this.contextSpy,
-    });
+    }
+
+    if (renderMode === 'canvas') {
+      this.renderer = new CanvasCoreRenderer(rendererOptions);
+    } else {
+      this.renderer = new WebGlCoreRenderer(rendererOptions);
+    }
+    setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    this.textRenderers = {
+    this.textRenderers = renderMode === 'webgl' ? {
       canvas: new CanvasTextRenderer(this),
       sdf: new SdfTextRenderer(this),
+    } : {
+      canvas: new CanvasTextRenderer(this),
     };
     this.fontManager = new TrFontManager(this.textRenderers);
 

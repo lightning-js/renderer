@@ -56,6 +56,7 @@ import type {
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
+import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -580,7 +581,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       return;
     }
 
-    const { renderer } = this.stage;
+    const renderer: WebGlCoreRenderer = this.stage.renderer as WebGlCoreRenderer;
+    assertTruthy(renderer instanceof WebGlCoreRenderer);
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
