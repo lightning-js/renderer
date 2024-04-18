@@ -53,21 +53,21 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: boundaryRect,
   });
 
-  redRect.on('outOfViewport', () => {
-    console.log('rect outside view port');
-    redStatus.text = 'Red Status: rect outside view port';
+  redRect.on('outOfBounds', () => {
+    console.log('red rect out of bounds');
+    redStatus.text = 'Red Status: rect out of bounds';
     redStatus.color = 0xff0000ff;
   });
 
   redRect.on('inViewport', () => {
-    console.log('rect in view port');
+    console.log('red rect in view port');
     redStatus.text = 'Red Status: rect in view port';
     redStatus.color = 0x00ff00ff;
   });
 
   redRect.on('inBounds', () => {
-    console.log('rect inside render bounds');
-    redStatus.text = 'Red Status: rect outside render bounds';
+    console.log('red rect inside render bounds');
+    redStatus.text = 'Red Status: rect in bounds';
     redStatus.color = 0xffff00ff;
   });
 
@@ -82,9 +82,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  blueRect.on('outOfViewport', () => {
-    console.log('blue rect outside view port');
-    blueStatus.text = 'Blue Status: blue rect outside view port';
+  blueRect.on('outOfBounds', () => {
+    console.log('blue rect ouf ot bounds');
+    blueStatus.text = 'Blue Status: blue rect out of bounds';
     blueStatus.color = 0xff0000ff;
   });
 
@@ -96,7 +96,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   blueRect.on('inBounds', () => {
     console.log('blue rect inside render bounds');
-    blueStatus.text = 'Blue Status: blue rect outside render bounds';
+    blueStatus.text = 'Blue Status: blue rect in bounds';
     blueStatus.color = 0xffff00ff;
   });
 

@@ -112,7 +112,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.coreNode.on('freed', this.onTextureFreed);
 
     this.coreNode.on('inBounds', this.onInBounds);
-    this.coreNode.on('outOfViewport', this.onOutOfViewport);
+    this.coreNode.on('outOfBounds', this.onOutOfBounds);
     this.coreNode.on('inViewport', this.onInViewport);
 
     // Assign properties to this object
@@ -439,10 +439,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   private onInBounds: NodeRenderStateEventHandler = (target, payload) => {
     this.emit('inBounds', payload);
-  };
-
-  private onOutOfViewport: NodeRenderStateEventHandler = (target, payload) => {
-    this.emit('outOfViewport', payload);
   };
 
   private onInViewport: NodeRenderStateEventHandler = (target, payload) => {

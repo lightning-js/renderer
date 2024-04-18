@@ -53,14 +53,14 @@ import { RenderCoords } from './lib/RenderCoords.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
-  OutOfViewport = 2,
+  OutOfBounds = 2,
   InBounds = 4,
   InViewport = 8,
 }
 
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
-CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfViewport, 'outOfViewport');
+CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
@@ -616,7 +616,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
     }
-    return CoreNodeRenderState.OutOfViewport;
+    return CoreNodeRenderState.OutOfBounds;
   }
 
   updateRenderState(parentClippingRect: RectWithValid) {
@@ -653,7 +653,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.worldAlpha === 0 || !this.checkRenderProps()) {
       newIsRenderable = false;
     } else {
-      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfViewport;
+      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
     }
     if (this.isRenderable !== newIsRenderable) {
       this.isRenderable = newIsRenderable;
