@@ -64,6 +64,7 @@ export class MainCoreDriver implements ICoreDriver {
       fpsUpdateInterval: rendererSettings.fpsUpdateInterval,
       enableContextSpy: rendererSettings.enableContextSpy,
       numImageWorkers: rendererSettings.numImageWorkers,
+      renderMode: rendererSettings.renderMode,
       debug: {
         monitorTextureCache: false,
       },

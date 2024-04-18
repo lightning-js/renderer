@@ -84,10 +84,19 @@ const defaultPhysicalPixelRatio = 1;
     driverName = 'main';
   }
 
+  let renderMode = urlParams.get('renderMode');
+  if (
+    driverName === 'threadx' ||
+    (renderMode !== 'webgl' && renderMode !== 'canvas')
+  ) {
+    renderMode = 'webgl';
+  }
+
   if (test) {
     await runTest(
       test,
       driverName,
+      renderMode,
       urlParams,
       showOverlay,
       logicalPixelRatio,
@@ -100,7 +109,7 @@ const defaultPhysicalPixelRatio = 1;
     return;
   }
   assertTruthy(automation);
-  await runAutomation(driverName, logFps);
+  await runAutomation(driverName, renderMode, logFps);
 })().catch((err) => {
   console.error(err);
 });
@@ -108,6 +117,7 @@ const defaultPhysicalPixelRatio = 1;
 async function runTest(
   test: string,
   driverName: string,
+  renderMode: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
   logicalPixelRatio: number,
@@ -132,6 +142,7 @@ async function runTest(
 
   const { renderer, appElement } = await initRenderer(
     driverName,
+    renderMode,
     logFps,
     enableContextSpy,
     logicalPixelRatio,
@@ -177,6 +188,7 @@ async function runTest(
 
 async function initRenderer(
   driverName: string,
+  renderMode: string,
   logFps: boolean,
   enableContextSpy: boolean,
   logicalPixelRatio: number,
@@ -206,6 +218,7 @@ async function initRenderer(
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
+      renderMode: renderMode as 'webgl' | 'canvas',
       ...customSettings,
     },
     'app',
@@ -304,10 +317,15 @@ async function initRenderer(
   return { renderer, appElement };
 }
 
-async function runAutomation(driverName: string, logFps: boolean) {
+async function runAutomation(
+  driverName: string,
+  renderMode: string,
+  logFps: boolean,
+) {
   const logicalPixelRatio = defaultResolution / appHeight;
   const { renderer, appElement } = await initRenderer(
     driverName,
+    renderMode,
     logFps,
     false,
     logicalPixelRatio,

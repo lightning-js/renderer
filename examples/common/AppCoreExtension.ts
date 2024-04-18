@@ -34,26 +34,28 @@ export default class AppCoreExtension extends CoreExtension {
       new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
     );
 
-    stage.fontManager.addFontFace(
-      new SdfTrFontFace(
-        'Ubuntu',
-        {},
-        'msdf',
-        stage,
-        '/fonts/Ubuntu-Regular.msdf.png',
-        '/fonts/Ubuntu-Regular.msdf.json',
-      ),
-    );
+    if (stage.renderer.mode === 'webgl') {
+      stage.fontManager.addFontFace(
+        new SdfTrFontFace(
+          'Ubuntu',
+          {},
+          'msdf',
+          stage,
+          '/fonts/Ubuntu-Regular.msdf.png',
+          '/fonts/Ubuntu-Regular.msdf.json',
+        ),
+      );
 
-    stage.fontManager.addFontFace(
-      new SdfTrFontFace(
-        'Ubuntu-ssdf',
-        {},
-        'ssdf',
-        stage,
-        '/fonts/Ubuntu-Regular.ssdf.png',
-        '/fonts/Ubuntu-Regular.ssdf.json',
-      ),
-    );
+      stage.fontManager.addFontFace(
+        new SdfTrFontFace(
+          'Ubuntu-ssdf',
+          {},
+          'ssdf',
+          stage,
+          '/fonts/Ubuntu-Regular.ssdf.png',
+          '/fonts/Ubuntu-Regular.ssdf.json',
+        ),
+      );
+    }
   }
 }

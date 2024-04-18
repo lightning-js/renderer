@@ -17,13 +17,12 @@
  * limitations under the License.
  */
 
+import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import {
-  assertTruthy,
-  createWebGLContext,
-  hasOwn,
-  mergeColorAlphaPremultiplied,
-} from '../../../utils.js';
-import { CoreRenderer, type QuadOptions } from '../CoreRenderer.js';
+  CoreRenderer,
+  type CoreRendererOptions,
+  type QuadOptions,
+} from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
@@ -36,46 +35,26 @@ import {
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { Texture } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
-import type { Stage } from '../../Stage.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
-import type {
-  CoreTextureManager,
-  TextureOptions,
-} from '../../CoreTextureManager.js';
 import { CoreShaderManager } from '../../CoreShaderManager.js';
-import type { CoreShader } from '../CoreShader.js';
 import { BufferCollection } from './internal/BufferCollection.js';
 import {
   compareRect,
   getNormalizedRgbaComponents,
-  type Rect,
   type RectWithValid,
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import { RoundedRectangle } from './shaders/RoundedRectangle.js';
-import { ContextSpy } from '../../lib/ContextSpy.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
-import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 
 const WORDS_PER_QUAD = 24;
-const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
+// const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
-export interface WebGlCoreRendererOptions {
-  stage: Stage;
-  canvas: HTMLCanvasElement | OffscreenCanvas;
-  pixelRatio: number;
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
-  clearColor: number;
-  bufferMemory: number;
-  contextSpy: ContextSpy | null;
-}
+export type WebGlCoreRendererOptions = CoreRendererOptions;
 
 interface CoreWebGlSystem {
   parameters: CoreWebGlParameters;
@@ -87,14 +66,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   glw: WebGlContextWrapper;
   system: CoreWebGlSystem;
 
-  //// Core Managers
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
-
-  //// Options
-  options: Required<WebGlCoreRendererOptions>;
-
   //// Persistent data
   quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
   fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
@@ -104,7 +75,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
-  rttNodes: CoreNode[] = [];
+  override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
@@ -122,12 +93,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   public renderToTextureActive = false;
 
   constructor(options: WebGlCoreRendererOptions) {
-    super(options.stage);
+    super(options);
+    this.mode = 'webgl';
+
     const { canvas, clearColor, bufferMemory } = options;
-    this.options = options;
-    this.txManager = options.txManager;
-    this.txMemManager = options.txMemManager;
-    this.shManager = options.shManager;
+
     this.defaultTexture = new ColorTexture(this.txManager);
     // When the default texture is loaded, request a render in case the
     // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
