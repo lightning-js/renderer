@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
-} from '../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -625,35 +621,19 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
-    if (renderState !== this.renderState) {
-      let previous = this.renderState;
-      this.renderState = renderState;
-      if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('outOfViewport', {
-          previous,
-          current: renderState,
-        });
-      }
-      if (
-        previous < CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.InViewport
-      ) {
-        this.emit(
-          CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds) as string,
-          {
-            previous,
-            current: renderState,
-          },
-        );
-        previous = CoreNodeRenderState.InBounds;
-      }
-      const event = CoreNodeRenderStateMap.get(renderState);
-      assertTruthy(event);
-      this.emit(event, {
-        previous,
-        current: renderState,
-      });
+    if (renderState === this.renderState) {
+      return;
     }
+
+    this.renderState = renderState;
+    const previous = this.renderState;
+    const event = CoreNodeRenderStateMap.get(renderState);
+    assertTruthy(event);
+
+    this.emit(event, {
+      previous,
+      current: renderState,
+    });
   }
 
   setRenderState(state: CoreNodeRenderState) {
