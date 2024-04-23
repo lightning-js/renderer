@@ -38,7 +38,10 @@ import type {
   FrameTickPayload,
 } from '../common/CommonTypes.js';
 import { TextureMemoryManager } from './TextureMemoryManager.js';
-import type { CoreRenderer, CoreRendererOptions } from './renderers/CoreRenderer.js';
+import type {
+  CoreRenderer,
+  CoreRendererOptions,
+} from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 
 export interface StageOptions {
@@ -113,7 +116,7 @@ export class Stage extends EventEmitter {
       enableContextSpy,
       numImageWorkers,
       txMemByteThreshold,
-      renderMode
+      renderMode,
     } = options;
 
     this.txManager = new CoreTextureManager(numImageWorkers);
@@ -150,7 +153,7 @@ export class Stage extends EventEmitter {
       txMemManager: this.txMemManager,
       shManager: this.shManager,
       contextSpy: this.contextSpy,
-    }
+    };
 
     if (renderMode === 'canvas') {
       this.renderer = new CanvasCoreRenderer(rendererOptions);
@@ -162,12 +165,15 @@ export class Stage extends EventEmitter {
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    this.textRenderers = renderMode === 'webgl' ? {
-      canvas: new CanvasTextRenderer(this),
-      sdf: new SdfTextRenderer(this),
-    } : {
-      canvas: new CanvasTextRenderer(this),
-    };
+    this.textRenderers =
+      renderMode === 'webgl'
+        ? {
+            canvas: new CanvasTextRenderer(this),
+            sdf: new SdfTextRenderer(this),
+          }
+        : {
+            canvas: new CanvasTextRenderer(this),
+          };
     this.fontManager = new TrFontManager(this.textRenderers);
 
     // create root node
@@ -205,6 +211,7 @@ export class Stage extends EventEmitter {
       textureOptions: null,
       shader: null,
       shaderProps: null,
+      rtt: false,
     });
 
     this.root = rootNode;
@@ -256,11 +263,19 @@ export class Stage extends EventEmitter {
       this.root.update(this.deltaTime, this.root.clippingRect);
     }
 
-    // test if we need to update the scene
+    // Reset render operations and clear the canvas
     renderer?.reset();
 
+    // If we have RTT nodes draw them first
+    // So we can use them as textures in the main scene
+    if (renderer.rttNodes.length > 0) {
+      renderer.renderRTTNodes();
+    }
+
+    // Fill quads buffer
     this.addQuads(this.root);
 
+    // Perform render pass
     renderer?.render();
 
     this.calculateFps();

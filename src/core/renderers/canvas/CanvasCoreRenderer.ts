@@ -17,23 +17,32 @@
  * limitations under the License.
  */
 
-import type { CoreShaderManager } from "../../CoreShaderManager.js";
-import { getRgbaComponents, type RGBA } from "../../lib/utils.js";
-import { SubTexture } from "../../textures/SubTexture.js";
-import type { Texture } from "../../textures/Texture.js";
-import type { CoreContextTexture } from "../CoreContextTexture.js";
-import { CoreRenderer, type CoreRendererOptions, type QuadOptions } from "../CoreRenderer.js";
-import { CanvasCoreTexture } from "./CanvasCoreTexture.js";
-import { getRadius } from "./internal/C2DShaderUtils.js";
-import { formatRgba, parseColor, type IParsedColor } from "./internal/ColorUtils.js";
+import type { CoreNode } from '../../CoreNode.js';
+import type { CoreShaderManager } from '../../CoreShaderManager.js';
+import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
+import { SubTexture } from '../../textures/SubTexture.js';
+import type { Texture } from '../../textures/Texture.js';
+import type { CoreContextTexture } from '../CoreContextTexture.js';
+import {
+  CoreRenderer,
+  type CoreRendererOptions,
+  type QuadOptions,
+} from '../CoreRenderer.js';
+import { CanvasCoreTexture } from './CanvasCoreTexture.js';
+import { getRadius } from './internal/C2DShaderUtils.js';
+import {
+  formatRgba,
+  parseColor,
+  type IParsedColor,
+} from './internal/ColorUtils.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
-
   private context: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private pixelRatio: number;
   private clearColor: RGBA | undefined;
-
+  public renderToTextureActive = false;
+  activeRttNode: CoreNode | null = null;
   constructor(options: CoreRendererOptions) {
     super(options);
 
@@ -69,11 +78,25 @@ export class CanvasCoreRenderer extends CoreRenderer {
   addQuad(quad: QuadOptions): void {
     const ctx = this.context;
     const {
-      tx, ty, width, height, alpha, colorTl, colorTr, colorBr, ta, tb, tc, td, clippingRect
+      tx,
+      ty,
+      width,
+      height,
+      alpha,
+      colorTl,
+      colorTr,
+      colorBr,
+      ta,
+      tb,
+      tc,
+      td,
+      clippingRect,
     } = quad;
     let texture = quad.texture;
     let ctxTexture: CanvasCoreTexture | undefined = undefined;
-    let frame: { x: number, y: number, width: number, height: number } | undefined;
+    let frame:
+      | { x: number; y: number; width: number; height: number }
+      | undefined;
 
     if (texture) {
       if (texture instanceof SubTexture) {
@@ -133,7 +156,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
       const image = ctxTexture.getImage(color);
       ctx.globalAlpha = alpha;
       if (frame) {
-        ctx.drawImage(image, frame.x, frame.y, frame.width, frame.height, tx, ty, width, height);
+        ctx.drawImage(
+          image,
+          frame.x,
+          frame.y,
+          frame.width,
+          frame.height,
+          tx,
+          ty,
+          width,
+          height,
+        );
       } else {
         ctx.drawImage(image, tx, ty, width, height);
       }
@@ -174,5 +207,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
   getShaderManager(): CoreShaderManager {
     return this.shManager;
+  }
+
+  renderRTTNodes(): void {
+    // noop
+  }
+
+  removeRTTNode(node: CoreNode): void {
+    // noop
+  }
+
+  renderToTexture(node: CoreNode): void {
+    // noop
   }
 }

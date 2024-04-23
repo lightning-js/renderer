@@ -405,6 +405,17 @@ export interface INodeWritableProps {
    * - `2 * Math.PI`: 360 rotation clockwise
    */
   rotation: number;
+
+  /**
+   * Whether the Node is rendered to a texture
+   *
+   * @remarks
+   * TBD
+   *
+   * @default false
+   */
+  rtt: boolean;
+
   /**
    * Node data element for custom data storage (optional)
    *

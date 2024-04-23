@@ -173,11 +173,14 @@ export class CoreShaderManager {
       throw new Error(`Shader type "${shType as string}" is not registered`);
     }
 
-    if (this.renderer.mode === 'canvas' && ShaderClass.prototype instanceof WebGlCoreShader) {
+    if (
+      this.renderer.mode === 'canvas' &&
+      ShaderClass.prototype instanceof WebGlCoreShader
+    ) {
       return {
         shader: new UnsupportedShader(shType) as InstanceType<ShaderMap[Type]>,
-        props: props as Record<string, unknown>
-      }
+        props: props as Record<string, unknown>,
+      };
     }
 
     if (shType === 'DynamicShader') {

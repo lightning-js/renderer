@@ -34,6 +34,7 @@ import type {
 } from '../common/CommonTypes.js';
 import type { Rect, RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
+import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   text: string;
@@ -354,11 +355,35 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
 
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
+
+    // Prevent quad rendering if parent has a render texture
+    // and this node is not the render texture
+    if (this.parentHasRenderTexture) {
+      if (!renderer.renderToTextureActive) {
+        return;
+      }
+      // Prevent quad rendering if parent render texture is not the active render texture
+      if (this.parentRenderTexture !== renderer.activeRttNode) {
+        return;
+      }
+    }
+
+    if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+      this.globalTransform = Matrix3d.identity();
+      if (this.localTransform) {
+        this.globalTransform.multiply(this.localTransform);
+      }
+    }
+
+    assertTruthy(this.globalTransform);
+
     this.textRenderer.renderQuads(
       this.trState,
       this.globalTransform,
       this.clippingRect,
       this.worldAlpha,
+      this.parentHasRenderTexture,
+      this.framebufferDimensions,
     );
   }
 

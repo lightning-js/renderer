@@ -17,8 +17,11 @@
  * limitations under the License.
  */
 
-import type { QuadOptions } from "../../CoreRenderer.js";
-import { ROUNDED_RECTANGLE_SHADER_TYPE, UnsupportedShader } from "../shaders/UnsupportedShader.js";
+import type { QuadOptions } from '../../CoreRenderer.js';
+import {
+  ROUNDED_RECTANGLE_SHADER_TYPE,
+  UnsupportedShader,
+} from '../shaders/UnsupportedShader.js';
 
 /**
  * Extract `RoundedRectangle` shader radius to apply as a clipping
@@ -27,7 +30,7 @@ export function getRadius(quad: QuadOptions): number {
   if (quad.shader instanceof UnsupportedShader) {
     const shType = quad.shader.shType;
     if (shType === ROUNDED_RECTANGLE_SHADER_TYPE) {
-      return quad.shaderProps?.radius as number ?? 0;
+      return (quad.shaderProps?.radius as number) ?? 0;
     }
   }
   return 0;

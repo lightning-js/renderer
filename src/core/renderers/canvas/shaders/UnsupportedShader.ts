@@ -17,12 +17,11 @@
  * limitations under the License.
  */
 
-import { CoreShader } from "../../CoreShader.js";
+import { CoreShader } from '../../CoreShader.js';
 
-export const ROUNDED_RECTANGLE_SHADER_TYPE = "RoundedRectangle"
+export const ROUNDED_RECTANGLE_SHADER_TYPE = 'RoundedRectangle';
 
 export class UnsupportedShader extends CoreShader {
-
   public shType: string;
 
   constructor(shType: string) {

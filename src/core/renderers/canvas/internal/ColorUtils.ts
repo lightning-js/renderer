@@ -30,8 +30,8 @@ const WHITE: IParsedColor = {
   a: 1,
   r: 0xff,
   g: 0xff,
-  b: 0xff
-}
+  b: 0xff,
+};
 
 /**
  * Extract color components
@@ -41,10 +41,10 @@ export function parseColor(abgr: number): IParsedColor {
     return WHITE;
   }
   const a = ((abgr >>> 24) & 0xff) / 255;
-  const b = ((abgr >>> 16) & 0xff) & 0xff;
-  const g = ((abgr >>> 8) & 0xff) & 0xff;
-  const r = (abgr & 0xff) & 0xff;
-  return { isWhite: false, a, r, g, b }
+  const b = (abgr >>> 16) & 0xff & 0xff;
+  const g = (abgr >>> 8) & 0xff & 0xff;
+  const r = abgr & 0xff & 0xff;
+  return { isWhite: false, a, r, g, b };
 }
 
 /**

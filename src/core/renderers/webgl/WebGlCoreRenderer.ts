@@ -17,12 +17,12 @@
  * limitations under the License.
  */
 
+import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import {
-  assertTruthy,
-  createWebGLContext,
-  hasOwn,
-} from '../../../utils.js';
-import { CoreRenderer, type CoreRendererOptions, type QuadOptions } from '../CoreRenderer.js';
+  CoreRenderer,
+  type CoreRendererOptions,
+  type QuadOptions,
+} from '../CoreRenderer.js';
 import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
@@ -47,6 +47,9 @@ import {
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { RenderTexture } from '../../textures/RenderTexture.js';
+import type { CoreNode } from '../../CoreNode.js';
+import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -72,7 +75,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
   curRenderOp: WebGlCoreRenderOp | null = null;
-  renderables: Array<QuadOptions | WebGlCoreRenderOp> = [];
+  override rttNodes: CoreNode[] = [];
+  activeRttNode: CoreNode | null = null;
 
   //// Default Shader
   defaultShader: WebGlCoreShader;
@@ -82,6 +86,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * White pixel texture used by default when no texture is specified.
    */
   defaultTexture: Texture;
+
+  /**
+   * Whether the renderer is currently rendering to a texture.
+   */
+  public renderToTextureActive = false;
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options);
@@ -177,6 +186,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
         this.txMemManager,
         textureSource,
       );
+    } else if (textureSource instanceof RenderTexture) {
+      return new WebGlCoreCtxRenderTexture(
+        this.glw,
+        this.txMemManager,
+        textureSource,
+      );
     }
     return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
   }
@@ -213,6 +228,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       tb,
       tc,
       td,
+      rtt: renderToTexture,
+      parentHasRenderTexture,
+      framebufferDimensions,
     } = params;
     let { texture } = params;
 
@@ -234,39 +252,22 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const targetDims = {
       width,
       height,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     };
     const targetShader = shader || this.defaultShader;
     assertTruthy(targetShader instanceof WebGlCoreShader);
-    if (curRenderOp) {
-      // If the current render op is not the same shader, create a new one
-      // If the current render op's shader props are not compatible with the
-      // the new shader props, create a new one render op.
-      if (
-        curRenderOp.shader !== targetShader ||
-        !compareRect(curRenderOp.clippingRect, clippingRect) ||
-        (curRenderOp.shader !== this.defaultShader &&
-          (!shaderProps ||
-            !curRenderOp.shader.canBatchShaderProps(
-              curRenderOp.shaderProps,
-              shaderProps,
-            )))
-      ) {
-        curRenderOp = null;
-      }
-    }
-    assertTruthy(targetShader instanceof WebGlCoreShader);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    if (!curRenderOp) {
+    if (!this.reuseRenderOp(params)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.newRenderOp(
         targetShader,
-        shaderProps as any,
+        shaderProps as Record<string, unknown>,
         alpha,
         targetDims,
         clippingRect,
         bufferIdx,
+        renderToTexture,
+        parentHasRenderTexture,
+        framebufferDimensions,
       );
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
@@ -303,6 +304,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const ctxTexture = txManager.getCtxTexture(texture);
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
 
@@ -398,6 +400,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
     dimensions: Dimensions,
     clippingRect: RectWithValid,
     bufferIdx: number,
+    renderToTexture?: boolean,
+    parentHasRenderTexture?: boolean,
+    framebufferDimensions?: Dimensions,
   ) {
     const curRenderOp = new WebGlCoreRenderOp(
       this.glw,
@@ -410,6 +415,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       dimensions,
       bufferIdx,
       0, // Z-Index is only used for explictly added Render Ops
+      renderToTexture,
+      parentHasRenderTexture,
+      framebufferDimensions,
     );
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -457,6 +465,50 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   /**
+   * Test if the current Render operation can be reused for the specified parameters.
+   * @param params
+   * @returns
+   */
+  reuseRenderOp(params: QuadOptions) {
+    const { shader, shaderProps, parentHasRenderTexture, rtt, clippingRect } =
+      params;
+
+    const targetShader = shader || this.defaultShader;
+
+    // Switching shader program will require a new render operation
+    if (this.curRenderOp?.shader !== targetShader) {
+      return false;
+    }
+
+    // Switching clipping rect will require a new render operation
+    if (!compareRect(this.curRenderOp.clippingRect, clippingRect)) {
+      return false;
+    }
+
+    // Force new render operation if rendering to texture
+    // @todo: This needs to be improved, render operations could also be reused
+    // for rendering to texture
+    if (parentHasRenderTexture || rtt) {
+      return false;
+    }
+
+    // Check if the shader can batch the shader properties
+    if (
+      this.curRenderOp.shader !== this.defaultShader &&
+      (!shaderProps ||
+        !this.curRenderOp.shader.canBatchShaderProps(
+          this.curRenderOp.shaderProps,
+          shaderProps,
+        ))
+    ) {
+      return false;
+    }
+
+    // Render operation can be reused
+    return true;
+  }
+
+  /**
    * add RenderOp to the render pipeline
    */
   addRenderOp(renderable: WebGlCoreRenderOp) {
@@ -483,16 +535,91 @@ export class WebGlCoreRenderer extends CoreRenderer {
     if (doLog) {
       console.log('renderOps', this.renderOps.length);
     }
+
     this.renderOps.forEach((renderOp, i) => {
       if (doLog) {
-        console.log('renderOp', i, renderOp.numQuads);
+        console.log('Quads per operation', renderOp.numQuads);
       }
       renderOp.draw();
     });
+  }
 
-    // clean up
-    this.renderables = [];
+  renderToTexture(node: CoreNode) {
+    for (let i = 0; i < this.rttNodes.length; i++) {
+      if (this.rttNodes[i] === node) {
+        return;
+      }
+    }
+
+    // @todo: Better bottom up rendering order
+    this.rttNodes.unshift(node);
+  }
+
+  renderRTTNodes() {
+    const { glw } = this;
+    const { txManager } = this.stage;
+    // Render all associated RTT nodes to their textures
+    for (let i = 0; i < this.rttNodes.length; i++) {
+      const node = this.rttNodes[i];
+
+      // Skip nodes that don't have RTT updates
+      if (!node || !node.hasRTTupdates) {
+        continue;
+      }
+
+      // Set the active RTT node to the current node
+      // So we can prevent rendering children of nested RTT nodes
+      this.activeRttNode = node;
+
+      assertTruthy(node.texture, 'RTT node missing texture');
+      const ctxTexture = txManager.getCtxTexture(node.texture);
+      assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
+      this.renderToTextureActive = true;
+
+      // Bind the the texture's framebuffer
+      glw.bindFramebuffer(ctxTexture.framebuffer);
+
+      glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
+      glw.clear();
+
+      // Render all associated quads to the texture
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (!child) {
+          continue;
+        }
+        child.update(this.stage.deltaTime, {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          valid: false,
+        });
+
+        this.stage.addQuads(child);
+        child.hasRTTupdates = false;
+      }
+
+      // Render all associated quads to the texture
+      this.render();
+
+      // Reset render operations
+      this.renderOps.length = 0;
+      node.hasRTTupdates = false;
+    }
+
+    // Bind the default framebuffer
+    glw.bindFramebuffer(null);
+
+    glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
+    this.renderToTextureActive = false;
+  }
+
+  removeRTTNode(node: CoreNode) {
+    const index = this.rttNodes.indexOf(node);
+    if (index === -1) {
+      return;
+    }
+    this.rttNodes.splice(index, 1);
   }
 }
-
-const idx = 0;

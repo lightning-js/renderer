@@ -350,7 +350,7 @@ export class RendererMain extends EventEmitter {
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
-      renderMode: settings.renderMode ?? 'webgl'
+      renderMode: settings.renderMode ?? 'webgl',
     };
     this.settings = resolvedSettings;
 
@@ -570,6 +570,7 @@ export class RendererMain extends EventEmitter {
       pivotX: props.pivotX ?? props.pivot ?? 0.5,
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
+      rtt: props.rtt ?? false,
       data: data,
     };
   }

@@ -17,30 +17,33 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from "../../../common/CommonTypes.js";
-import { assertTruthy } from "../../../utils.js";
-import { CoreContextTexture } from "../CoreContextTexture.js";
-import { formatRgba, type IParsedColor } from "./internal/ColorUtils.js";
+import type { Dimensions } from '../../../common/CommonTypes.js';
+import { assertTruthy } from '../../../utils.js';
+import { CoreContextTexture } from '../CoreContextTexture.js';
+import { formatRgba, type IParsedColor } from './internal/ColorUtils.js';
 
 export class CanvasCoreTexture extends CoreContextTexture {
-
   protected image: ImageBitmap | HTMLCanvasElement | undefined;
-  protected tintCache: {
-    key: string;
-    image: HTMLCanvasElement
-  } | undefined;
+  protected tintCache:
+    | {
+        key: string;
+        image: HTMLCanvasElement;
+      }
+    | undefined;
 
   load(): void {
     if (this.textureSource.state !== 'freed') {
       return;
     }
     this.textureSource.setState('loading');
-    this.onLoadRequest().then((size) => {
-      this.textureSource.setState('loaded', size);
-      this.updateMemSize();
-    }).catch((err) => {
-      this.textureSource.setState('failed', err as Error);
-    });
+    this.onLoadRequest()
+      .then((size) => {
+        this.textureSource.setState('loaded', size);
+        this.updateMemSize();
+      })
+      .catch((err) => {
+        this.textureSource.setState('failed', err as Error);
+      });
   }
 
   free(): void {
@@ -84,13 +87,16 @@ export class CanvasCoreTexture extends CoreContextTexture {
     const tintedImage = this.tintTexture(image, key);
     this.tintCache = {
       key,
-      image: tintedImage
-    }
+      image: tintedImage,
+    };
     this.updateMemSize();
     return tintedImage;
   }
 
-  protected tintTexture(source: ImageBitmap | HTMLCanvasElement, color: string) {
+  protected tintTexture(
+    source: ImageBitmap | HTMLCanvasElement,
+    color: string,
+  ) {
     const { width, height } = source;
     const canvas = document.createElement('canvas');
     canvas.width = width;

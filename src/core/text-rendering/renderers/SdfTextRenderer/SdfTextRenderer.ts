@@ -56,6 +56,7 @@ import type {
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
+import type { Dimensions } from '../../../../common/CommonTypes.js';
 import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
 
 declare module '../TextRenderer.js' {
@@ -575,13 +576,16 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     transform: Matrix3d,
     clippingRect: Readonly<RectWithValid>,
     alpha: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions,
   ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
     }
 
-    const renderer: WebGlCoreRenderer = this.stage.renderer as WebGlCoreRenderer;
+    const renderer: WebGlCoreRenderer = this.stage
+      .renderer as WebGlCoreRenderer;
     assertTruthy(renderer instanceof WebGlCoreRenderer);
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
@@ -681,6 +685,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       { height: textH, width: textW },
       0,
       zIndex,
+      false,
+      parentHasRenderTexture,
+      framebufferDimensions,
     );
 
     const texture = state.trFontFace?.texture;

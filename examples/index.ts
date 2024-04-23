@@ -85,7 +85,10 @@ const defaultPhysicalPixelRatio = 1;
   }
 
   let renderMode = urlParams.get('renderMode');
-  if (driverName === 'threadx' || (renderMode !== 'webgl' && renderMode !== 'canvas')) {
+  if (
+    driverName === 'threadx' ||
+    (renderMode !== 'webgl' && renderMode !== 'canvas')
+  ) {
     renderMode = 'webgl';
   }
 
@@ -215,7 +218,7 @@ async function initRenderer(
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
-      renderMode: renderMode as ('webgl' | 'canvas'),
+      renderMode: renderMode as 'webgl' | 'canvas',
       ...customSettings,
     },
     'app',
@@ -314,7 +317,11 @@ async function initRenderer(
   return { renderer, appElement };
 }
 
-async function runAutomation(driverName: string, renderMode: string, logFps: boolean) {
+async function runAutomation(
+  driverName: string,
+  renderMode: string,
+  logFps: boolean,
+) {
   const logicalPixelRatio = defaultResolution / appHeight;
   const { renderer, appElement } = await initRenderer(
     driverName,

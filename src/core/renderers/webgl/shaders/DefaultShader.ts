@@ -61,16 +61,14 @@ export class DefaultShader extends WebGlCoreShader {
       varying vec2 v_textureCoordinate;
 
       void main() {
-        vec2 normalized = a_position * u_pixelRatio / u_resolution;
-        vec2 zero_two = normalized * 2.0;
-        vec2 clip_space = zero_two - 1.0;
+        vec2 normalized = a_position * u_pixelRatio;
+        vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
 
-        // pass to fragment
         v_color = a_color;
         v_textureCoordinate = a_textureCoordinate;
 
-        // flip y
-        gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
+        gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
+        gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
       }
     `,
     fragment: `

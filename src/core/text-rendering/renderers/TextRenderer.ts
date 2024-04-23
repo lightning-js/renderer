@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
@@ -544,5 +545,7 @@ export abstract class TextRenderer<
     transform: Matrix3d,
     clippingRect: RectWithValid,
     alpha: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | undefined,
   ): void;
 }

@@ -105,6 +105,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
         shaderProps: null,
         texture: null,
         textureOptions: null,
+        rtt: props.rtt,
       });
     // Forward loaded/failed events
     this.coreNode.on('loaded', this.onTextureLoaded);
@@ -121,6 +122,7 @@ export class MainOnlyNode extends EventEmitter implements INode {
     this.shader = props.shader;
     this.texture = props.texture;
     this.src = props.src;
+    this.rtt = props.rtt;
     this._data = props.data;
   }
 
@@ -145,6 +147,16 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   set width(value: number) {
+    if (value !== this.coreNode.width && this.coreNode.rtt) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
     this.coreNode.width = value;
   }
 
@@ -153,6 +165,16 @@ export class MainOnlyNode extends EventEmitter implements INode {
   }
 
   set height(value: number) {
+    if (value !== this.coreNode.height && this.coreNode.rtt) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
     this.coreNode.height = value;
   }
 
@@ -420,6 +442,28 @@ export class MainOnlyNode extends EventEmitter implements INode {
     } else {
       this.coreNode.unloadTexture();
     }
+  }
+
+  get rtt(): boolean {
+    return this.coreNode.rtt;
+  }
+
+  set rtt(value: boolean) {
+    if (value) {
+      this.texture = this.rendererMain.createTexture(
+        'RenderTexture',
+        {
+          width: this.width,
+          height: this.height,
+        },
+        { preload: true, flipY: true },
+      );
+    }
+    this.coreNode.rtt = value;
+  }
+
+  get parentHasRenderTexture(): boolean {
+    return this.coreNode.parentHasRenderTexture;
   }
 
   private onTextureLoaded: NodeLoadedEventHandler = (target, payload) => {

@@ -261,10 +261,35 @@ export abstract class WebGlCoreShader extends CoreShader {
     if (renderOp.textures.length > 0) {
       this.bindTextures(renderOp.textures);
     }
-    const { glw } = renderOp;
-    // Bind standard automatic uniforms
-    this.setUniform('u_resolution', [glw.canvas.width, glw.canvas.height]);
-    this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
+
+    const { glw, parentHasRenderTexture, renderToTexture } = renderOp;
+
+    // Skip if the parent and current operation both have render textures
+    if (renderToTexture && parentHasRenderTexture) {
+      return;
+    }
+
+    // Bind render texture framebuffer dimensions as resolution
+    // if the parent has a render texture
+    if (parentHasRenderTexture) {
+      const { width, height } = renderOp.framebufferDimensions || {};
+      // Force pixel ratio to 1.0 for render textures since they are always 1:1
+      // the final render texture will be rendered to the screen with the correct pixel ratio
+      this.setUniform('u_pixelRatio', 1.0);
+
+      // Set resolution to the framebuffer dimensions
+      this.setUniform(
+        'u_resolution',
+        new Float32Array([width ?? 0, height ?? 0]),
+      );
+    } else {
+      this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
+      this.setUniform(
+        'u_resolution',
+        new Float32Array([glw.canvas.width, glw.canvas.height]),
+      );
+    }
+
     if (props) {
       // Bind optional automatic uniforms
       // These are only bound if their keys are present in the props.

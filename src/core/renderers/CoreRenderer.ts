@@ -17,8 +17,13 @@
  * limitations under the License.
  */
 
+import type { Dimensions } from '../../common/CommonTypes.js';
+import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
-import type { CoreTextureManager, TextureOptions } from '../CoreTextureManager.js';
+import type {
+  CoreTextureManager,
+  TextureOptions,
+} from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
 import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
@@ -48,6 +53,9 @@ export interface QuadOptions {
   tb: number;
   tc: number;
   td: number;
+  rtt?: boolean;
+  parentHasRenderTexture?: boolean;
+  framebufferDimensions?: Dimensions;
 }
 
 export interface CoreRendererOptions {
@@ -72,6 +80,7 @@ export abstract class CoreRenderer {
   txManager: CoreTextureManager;
   txMemManager: TextureMemoryManager;
   shManager: CoreShaderManager;
+  rttNodes: CoreNode[] = [];
 
   constructor(options: CoreRendererOptions) {
     this.options = options;
@@ -86,4 +95,9 @@ export abstract class CoreRenderer {
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract getShaderManager(): CoreShaderManager;
+  abstract get renderToTextureActive(): boolean;
+  abstract get activeRttNode(): CoreNode | null;
+  abstract renderRTTNodes(): void;
+  abstract removeRTTNode(node: CoreNode): void;
+  abstract renderToTexture(node: CoreNode): void;
 }
