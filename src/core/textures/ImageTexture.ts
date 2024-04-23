@@ -148,9 +148,9 @@ export class ImageTexture extends Texture {
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
     const resolvedProps = ImageTexture.resolveDefaults(props);
-    // Only cache key-able textures
-    const key = typeof resolvedProps.src === 'string' ? resolvedProps.src : resolvedProps.key;
-    if (key === null) {
+    // Only cache key-able textures; prioritise key
+    const key = resolvedProps.key ?? resolvedProps.src;
+    if (typeof key !== 'string') {
       return false;
     }
     return `ImageTexture,${key},${resolvedProps.premultiplyAlpha ?? 'true'}`;
