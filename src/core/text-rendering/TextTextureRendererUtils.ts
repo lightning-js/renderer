@@ -147,26 +147,37 @@ export function getWebFontMetrics(
   if (fontFace.metrics) {
     return fontFace.metrics;
   }
+  // If the font face doesn't have metrics defined, we fallback to using the
+  // browser's measureText method to calculate take a best guess at the font
+  // actual font's metrics.
+  // - fontBoundingBox[Ascent|Descent] is the best estimate but only supported
+  //   in Chrome 87+ (2020), Firefox 116+ (2023), and Safari 11.1+ (2018).
+  //   - It is an estimate as it can vary between browsers.
+  // - actualBoundingBox[Ascent|Descent] is less accurate and supported in
+  //   Chrome 77+ (2019), Firefox 74+ (2020), and Safari 11.1+ (2018).
+  // - If neither are supported, we'll use some default values which will
+  //   get text on the screen but likely not be great.
+  // NOTE: It's been decided not to rely on fontBoundingBox[Ascent|Descent]
+  // as it's browser support is limited and it also tends to produce higher than
+  // expected values. It is instead HIGHLY RECOMMENDED that developers provide
+  // explicit metrics in the font face definition.
   const browserMetrics = context.measureText(
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
   );
+  console.warn(
+    `Font metrics not provided for Canvas Web font ${fontFace.fontFamily}. ` +
+      'Using fallback values. It is HIGHLY recommended you use the latest ' +
+      'version of the Lightning 3 `msdf-generator` tool to extract the default ' +
+      'metrics for the font and provide them in the Canvas Web font definition.',
+  );
   let metrics: NormalizedFontMetrics;
   if (
-    browserMetrics.fontBoundingBoxDescent &&
-    browserMetrics.fontBoundingBoxAscent
-  ) {
-    metrics = {
-      ascender: browserMetrics.fontBoundingBoxAscent / fontSize,
-      descender: browserMetrics.fontBoundingBoxDescent / fontSize,
-      lineGap: 0.2,
-    };
-  } else if (
     browserMetrics.actualBoundingBoxDescent &&
     browserMetrics.actualBoundingBoxAscent
   ) {
     metrics = {
       ascender: browserMetrics.actualBoundingBoxAscent / fontSize,
-      descender: browserMetrics.actualBoundingBoxDescent / fontSize,
+      descender: -browserMetrics.actualBoundingBoxDescent / fontSize,
       lineGap: 0.2,
     };
   } else {
@@ -174,7 +185,7 @@ export function getWebFontMetrics(
     // default values.
     metrics = {
       ascender: 0.8,
-      descender: 0.2,
+      descender: -0.2,
       lineGap: 0.2,
     };
   }

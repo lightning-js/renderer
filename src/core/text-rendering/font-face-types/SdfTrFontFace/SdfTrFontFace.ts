@@ -136,7 +136,8 @@ export class SdfTrFontFace<
           } else {
             throw new Error(
               `Font metrics not found in ${this.type} font ${this.fontFamily}. ` +
-                'Make sure you are using the latest version of the Lighting 3 msdf-generator tool to generate your SDF fonts.',
+                'Make sure you are using the latest version of the Lightning ' +
+                '3 `msdf-generator` tool to generate your SDF fonts.',
             );
           }
         }

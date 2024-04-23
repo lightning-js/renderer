@@ -55,6 +55,14 @@ export default class AppCoreExtension extends CoreExtension {
       }),
     );
 
+    stage.fontManager.addFontFace(
+      new WebTrFontFace({
+        fontFamily: 'Ubuntu-No-Metrics',
+        descriptors: {},
+        fontUrl: '/fonts/Ubuntu-Regular.ttf',
+      }),
+    );
+
     const ubuntuModifiedMetrics: FontMetrics = {
       ascender: 850,
       descender: -250,
