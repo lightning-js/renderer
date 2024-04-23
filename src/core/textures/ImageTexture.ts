@@ -37,7 +37,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData;
+  src?: string | ImageData | (() => ImageData);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -50,6 +50,10 @@ export interface ImageTextureProps {
    * @default true
    */
   premultiplyAlpha?: boolean | null;
+  /**
+   * `ImageData` textures are not cached unless a `key` is provided
+   */
+  key?: string | null;
 }
 
 /**
@@ -85,9 +89,16 @@ export class ImageTexture extends Texture {
         data: null,
       };
     }
-    if (src instanceof ImageData) {
+
+    if (typeof src !== 'string') {
+      if (src instanceof ImageData) {
+        return {
+          data: src,
+          premultiplyAlpha,
+        };
+      }
       return {
-        data: src,
+        data: src(),
         premultiplyAlpha,
       };
     }
@@ -137,11 +148,12 @@ export class ImageTexture extends Texture {
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
     const resolvedProps = ImageTexture.resolveDefaults(props);
-    // ImageTextures sourced by ImageData are non-cacheable
-    if (resolvedProps.src instanceof ImageData) {
+    // Only cache key-able textures
+    const key = typeof resolvedProps.src === 'string' ? resolvedProps.src : resolvedProps.key;
+    if (key === null) {
       return false;
     }
-    return `ImageTexture,${resolvedProps.src},${resolvedProps.premultiplyAlpha}`;
+    return `ImageTexture,${key},${resolvedProps.premultiplyAlpha ?? 'true'}`;
   }
 
   static override resolveDefaults(
@@ -150,6 +162,7 @@ export class ImageTexture extends Texture {
     return {
       src: props.src ?? '',
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
+      key: props.key ?? null
     };
   }
 
