@@ -267,7 +267,7 @@ export class Stage extends EventEmitter {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    //
+    // Check if we need to garbage collect
     if (renderer.txMemManager.gcRequested) {
       renderer.txMemManager.gc();
     }
