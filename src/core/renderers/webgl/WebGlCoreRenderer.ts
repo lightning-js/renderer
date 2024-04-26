@@ -99,6 +99,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { canvas, clearColor, bufferMemory } = options;
 
     this.defaultTexture = new ColorTexture(this.txManager);
+
+    // Mark the default texture as ALWAYS renderable
+    // This prevents it from ever being garbage collected.
+    // Fixes https://github.com/lightning-js/renderer/issues/262
+    this.defaultTexture.setRenderableOwner(this, true);
+
     // When the default texture is loaded, request a render in case the
     // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
     this.defaultTexture.once('loaded', () => {
