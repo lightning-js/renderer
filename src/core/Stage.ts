@@ -257,6 +257,7 @@ export class Stage extends EventEmitter {
    */
   drawFrame() {
     const { renderer, renderRequested } = this;
+    assertTruthy(renderer);
 
     // Update tree if needed
     if (this.root.updateType !== 0) {
@@ -264,7 +265,12 @@ export class Stage extends EventEmitter {
     }
 
     // Reset render operations and clear the canvas
-    renderer?.reset();
+    renderer.reset();
+
+    // Check if we need to garbage collect
+    if (renderer.txMemManager.gcRequested) {
+      renderer.txMemManager.gc();
+    }
 
     // If we have RTT nodes draw them first
     // So we can use them as textures in the main scene
