@@ -18,6 +18,7 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { getLoremIpsum } from '../common/LoremIpsum.js';
 
 export async function automation(settings: ExampleSettings) {
   const next = await test(settings);
@@ -32,8 +33,11 @@ export async function automation(settings: ExampleSettings) {
  * the canvas text renderer and the sdf text renderer when using a font with
  * modified metrics.
  *
- * Expected results: The two text nodes should overlap precisely and the text
- * should appear as one purple block.
+ * Acceptable results: The baselines of the two text nodes overlap precisely.
+ * Horizontal layout may vary.
+ *
+ * Ideal results: All text appears purple because both the horizontal and
+ * vertical layout are consistent.
  *
  * Press the right arrow key to cycle through the different widths
  *
@@ -44,12 +48,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const fontFamily = 'Ubuntu';
   const fontFamilyModified = 'Ubuntu-Modified-Metrics';
 
-  const text =
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
-  const fontSize = 100;
+  const text = getLoremIpsum(1200);
+  const fontSize = 20;
   const yPos = 0;
-  testRoot.width = 1000;
-  testRoot.height = 1000;
+  testRoot.width = 500;
+  testRoot.height = 500;
+  testRoot.clipping = true;
   testRoot.color = 0xffffffff;
 
   const canvasText = renderer.createTextNode({
@@ -91,17 +95,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const mutations = [
     () => {
       canvasText.fontFamily = sdfText.fontFamily = fontFamily;
-      canvasText.width = sdfText.width = 500;
     },
     () => {
       canvasText.fontFamily = sdfText.fontFamily = fontFamilyModified;
-    },
-    () => {
-      canvasText.fontFamily = sdfText.fontFamily = fontFamily;
-    },
-    () => {
-      canvasText.fontFamily = sdfText.fontFamily = fontFamilyModified;
-      canvasText.width = sdfText.width = 1000;
     },
     () => {
       canvasText.fontFamily = sdfText.fontFamily = fontFamily;

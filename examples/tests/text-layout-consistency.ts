@@ -18,6 +18,7 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { getLoremIpsum } from '../common/LoremIpsum.js';
 
 export async function automation(settings: ExampleSettings) {
   const next = await test(settings);
@@ -28,14 +29,22 @@ export async function automation(settings: ExampleSettings) {
 }
 
 /**
- * This test is to ensure that the canvas text renderer and the sdf text renderer
- * are consistent in their layout. Two text nodes are created with the same text,
- * font size, and font family. The only difference is that one uses the canvas text
- * renderer and the other uses the sdf text renderer. The width of the text nodes
+ * This test is to ensure that the canvas text renderer and the sdf text
+ * renderer are as consistent as possible in their layout. Two text nodes are
+ * created with the same text, font size, and font family. The only difference
+ * is that one uses the canvas text renderer (red text) and the other uses the
+ * sdf text renderer (blue text). The width of the text nodes
  * are changed during each step.
  *
- * Expected results: The two text nodes should overlap precisely and the text
- * should appear as one purple block.
+ * Unfortunately, the canvas text renderer horitzonal layout will vary between
+ * browsers and platforms. The only thing the Renderer can guarantee is that
+ * the vertical baseline layout will be consistent.
+ *
+ * Acceptable results: The baselines of the two text nodes overlap precisely.
+ * Horizontal layout may vary.
+ *
+ * Ideal results: All text appears purple because both the horizontal and
+ * vertical layout are consistent.
  *
  * Press the right arrow key to cycle through the different widths
  *
@@ -44,14 +53,25 @@ export async function automation(settings: ExampleSettings) {
  */
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   const fontFamily = 'Ubuntu';
-  const text =
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
-  const fontSize = 100;
+  const text = getLoremIpsum(1200);
+  const fontSize = 20;
   const yPos = 0;
-  testRoot.width = 1000;
-  testRoot.height = 1000;
+  testRoot.width = 500;
+  testRoot.height = 500;
+  testRoot.clipping = true;
   testRoot.color = 0xffffffff;
 
+  /**
+   * Light Green Background
+   */
+  const background = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: testRoot.width,
+    height: testRoot.height,
+    color: 0x00ff0020,
+    parent: testRoot,
+  });
   const canvasText = renderer.createTextNode({
     y: yPos,
     width: testRoot.width,
@@ -90,22 +110,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   let i = 0;
   const mutations = [
     () => {
-      canvasText.width = sdfText.width = 500;
+      canvasText.width = sdfText.width = background.width = 250;
     },
     () => {
-      canvasText.width = sdfText.width = 600;
+      canvasText.width = sdfText.width = background.width = 350;
     },
     () => {
-      canvasText.width = sdfText.width = 700;
-    },
-    () => {
-      canvasText.width = sdfText.width = 800;
-    },
-    () => {
-      canvasText.width = sdfText.width = 900;
-    },
-    () => {
-      canvasText.width = sdfText.width = 1000;
+      canvasText.width = sdfText.width = background.width = 500;
     },
   ];
 
