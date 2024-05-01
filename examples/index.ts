@@ -68,7 +68,11 @@ const defaultPhysicalPixelRatio = 1;
   // See README.md for details on the supported URL params
   const urlParams = new URLSearchParams(window.location.search);
   const automation = urlParams.get('automation') === 'true';
-  const test = urlParams.get('test') || (automation ? null : 'test');
+  /**
+   * In automation mode this is a wildcard string of tests to run.
+   * In manual mode this is the name of the test to run.
+   */
+  const test = urlParams.get('test') || (automation ? '*' : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
   const logFps = urlParams.get('fps') === 'true';
   const enableContextSpy = urlParams.get('contextSpy') === 'true';
@@ -92,7 +96,7 @@ const defaultPhysicalPixelRatio = 1;
     renderMode = 'webgl';
   }
 
-  if (test) {
+  if (!automation) {
     await runTest(
       test,
       driverName,
@@ -109,7 +113,7 @@ const defaultPhysicalPixelRatio = 1;
     return;
   }
   assertTruthy(automation);
-  await runAutomation(driverName, renderMode, logFps);
+  await runAutomation(driverName, renderMode, test, logFps);
 })().catch((err) => {
   console.error(err);
 });
@@ -317,9 +321,17 @@ async function initRenderer(
   return { renderer, appElement };
 }
 
+function wildcardMatch(string: string, wildcardString: string) {
+  const escapeRegex = (s: string) => s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  return new RegExp(
+    `^${wildcardString.split('*').map(escapeRegex).join('.*')}$`,
+  ).test(string);
+}
+
 async function runAutomation(
   driverName: string,
   renderMode: string,
+  filter: string | null,
   logFps: boolean,
 ) {
   const logicalPixelRatio = defaultResolution / appHeight;
@@ -337,6 +349,10 @@ async function runAutomation(
   for (const testPath in testModules) {
     const testModule = testModules[testPath];
     const testName = getTestName(testPath);
+    // Skip tests that don't match the filter (if provided)
+    if (filter && !wildcardMatch(testName, filter)) {
+      continue;
+    }
     assertTruthy(testModule);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { automation, customSettings } = await testModule();
