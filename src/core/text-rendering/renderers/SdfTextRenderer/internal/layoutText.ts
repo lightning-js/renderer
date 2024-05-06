@@ -39,7 +39,7 @@ export function layoutText(
   width: TrProps['width'],
   height: TrProps['height'],
   fontSize: TrProps['fontSize'],
-  lineHeight: TrProps['lineHeight'],
+  lineHeight: number,
   letterSpacing: TrProps['letterSpacing'],
   /**
    * Mutated
@@ -63,6 +63,7 @@ export function layoutText(
   fullyProcessed: boolean;
   maxX: number;
   maxY: number;
+  numLines: number;
 } {
   assertTruthy(trFontFace, 'Font face must be loaded');
   assertTruthy(trFontFace.loaded, 'Font face must be loaded');
@@ -82,6 +83,7 @@ export function layoutText(
    * See above
    */
   const fontSizeRatio = fontSize / trFontFace.data.info.size;
+
   /**
    * `lineHeight` in vertex coordinates
    */
@@ -170,7 +172,7 @@ export function layoutText(
      */
     let xStartLastWordBoundary = 0;
 
-    const lineIsBelowWindowTop = curY + vertexLineHeight >= rwSdf.y1;
+    const lineIsBelowWindowTop = curY + trFontFace.maxCharHeight >= rwSdf.y1;
     const lineIsAboveWindowBottom = curY <= rwSdf.y2;
     const lineIsWithinWindow = lineIsBelowWindowTop && lineIsAboveWindowBottom;
     // Layout glyphs in this line
@@ -390,5 +392,6 @@ export function layoutText(
     fullyProcessed: !!glyphResult.done,
     maxX,
     maxY,
+    numLines: lineCache.length,
   };
 }

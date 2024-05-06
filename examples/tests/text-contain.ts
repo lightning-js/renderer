@@ -139,7 +139,6 @@ Vivamus consectetur ex magna, non mollis.`,
       // SDF, contain width
       text1.contain = 'width';
       text1.width = 200;
-      // text1.height = 5;
     },
     () => {
       // SDF, contain width (smaller)
@@ -148,11 +147,11 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // SDF, contain both
       text1.contain = 'both';
-      text1.height = 202;
+      text1.height = 203;
     },
     () => {
       // SDF, contain both (1 pixel larger to show another line)
-      text1.height = 203;
+      text1.height = 204;
     },
     () => {
       // Canvas, contain none
@@ -165,7 +164,6 @@ Vivamus consectetur ex magna, non mollis.`,
       // Canvas, contain width
       text1.contain = 'width';
       text1.width = 200;
-      text1.height = 5;
     },
     () => {
       // Canvas, contain width (smaller)
@@ -176,11 +174,11 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // Canvas, contain both
       text1.contain = 'both';
-      text1.height = 199;
+      text1.height = 203;
     },
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
-      text1.height = 200;
+      text1.height = 204;
     },
   ];
   /**

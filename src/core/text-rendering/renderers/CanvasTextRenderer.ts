@@ -33,6 +33,7 @@ import {
   type RectWithValid,
 } from '../../lib/utils.js';
 import type { ImageTexture } from '../../textures/ImageTexture.js';
+import { TrFontManager, type FontFamilyMap } from '../TrFontManager.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 import { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 import {
@@ -81,6 +82,7 @@ export interface CanvasTextRendererState extends TextRendererState {
   fontFaceLoadedHandler: (() => void) | undefined;
   fontInfo:
     | {
+        fontFace: WebTrFontFace;
         cssString: string;
         loaded: boolean;
       }
@@ -107,6 +109,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     | OffscreenCanvasRenderingContext2D
     | CanvasRenderingContext2D;
   private rendererBounds: Bound;
+  /**
+   * Font family map used to store web font faces that were added to the
+   * canvas text renderer.
+   */
+  private fontFamilies: FontFamilyMap = {};
+  private fontFamilyArray: FontFamilyMap[] = [this.fontFamilies];
 
   constructor(stage: Stage) {
     super(stage);
@@ -135,6 +143,14 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       x2: this.stage.options.appWidth,
       y2: this.stage.options.appHeight,
     };
+    // Install the default 'san-serif' font face
+    this.addFontFace(
+      new WebTrFontFace({
+        fontFamily: 'sans-serif',
+        descriptors: {},
+        fontUrl: '',
+      }),
+    );
   }
 
   //#region Overrides
@@ -259,10 +275,25 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     // the `isFontFaceSupported` check)
     assertTruthy(fontFace instanceof WebTrFontFace);
 
-    // We simply add the font face to the document
-    // @ts-expect-error `add()` method should be available from a FontFaceSet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    globalFontSet.add(fontFace.fontFace);
+    // Add the font face to the document
+    // Except for the 'sans-serif' font family, which the Renderer provides
+    // as a special default fallback.
+    if (fontFace.fontFamily !== 'sans-serif') {
+      // @ts-expect-error `add()` method should be available from a FontFaceSet
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      globalFontSet.add(fontFace.fontFace);
+    }
+
+    const { fontFamilies } = this;
+    const familyName = fontFace.fontFace.family;
+
+    let faceSet = fontFamilies[familyName];
+    if (!faceSet) {
+      faceSet = new Set();
+      fontFamilies[familyName] = faceSet;
+    }
+
+    faceSet.add(fontFace);
   }
 
   override createState(props: TrProps): CanvasTextRendererState {
@@ -312,7 +343,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     // If fontInfo is invalid, we need to establish it
     if (!state.fontInfo) {
       const cssString = getFontCssString(state.props);
+      const trFontFace = TrFontManager.resolveFontFace(
+        this.fontFamilyArray,
+        state.props,
+      ) as WebTrFontFace | undefined;
+      assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
       state.fontInfo = {
+        fontFace: trFontFace,
         cssString: cssString,
         // TODO: For efficiency we would use this here but it's not reliable on WPE -> document.fonts.check(cssString),
         loaded: false,
@@ -333,22 +370,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     if (!state.renderInfo) {
-      const maxLines = state.props.maxLines;
-      const containedMaxLines =
-        state.props.contain === 'both'
-          ? Math.floor(
-              (state.props.height - state.props.offsetY) /
-                state.props.lineHeight,
-            )
-          : 0;
-      const calcMaxLines =
-        containedMaxLines > 0 && maxLines > 0
-          ? Math.min(containedMaxLines, maxLines)
-          : Math.max(containedMaxLines, maxLines);
       state.lightning2TextRenderer.settings = {
         text: state.props.text,
         textAlign: state.props.textAlign,
-        fontFace: state.props.fontFamily,
+        fontFamily: state.props.fontFamily,
+        trFontFace: state.fontInfo.fontFace,
         fontSize: state.props.fontSize,
         fontStyle: [
           state.props.fontStretch,
@@ -356,13 +382,17 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
           state.props.fontWeight,
         ].join(' '),
         textColor: getNormalizedRgbaComponents(state.props.color),
-        offsetY: state.props.fontSize + state.props.offsetY,
+        offsetY: state.props.offsetY,
         wordWrap: state.props.contain !== 'none',
         wordWrapWidth:
           state.props.contain === 'none' ? undefined : state.props.width,
         letterSpacing: state.props.letterSpacing,
-        lineHeight: state.props.lineHeight,
-        maxLines: calcMaxLines,
+        lineHeight: state.props.lineHeight ?? null,
+        maxLines: state.props.maxLines,
+        maxHeight:
+          state.props.contain === 'both'
+            ? state.props.height - state.props.offsetY
+            : null,
         textBaseline: state.props.textBaseline,
         verticalAlign: state.props.verticalAlign,
         overflowSuffix: state.props.overflowSuffix,
@@ -712,6 +742,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   }
 
   override destroyState(state: CanvasTextRendererState): void {
+    super.destroyState(state);
     // Remove state object owner from any canvas page textures
     state.canvasPages?.forEach((pageInfo) => {
       pageInfo.texture?.setRenderableOwner(state, false);

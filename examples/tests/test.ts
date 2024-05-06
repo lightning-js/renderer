@@ -428,10 +428,11 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const noChangeText = renderer.createTextNode({
-    x: renderer.settings.appWidth - 300,
-    y: renderer.settings.appHeight - 200,
+    x: renderer.settings.appWidth,
+    y: renderer.settings.appHeight,
+    mount: 1,
     width: 300,
-    height: 200,
+    height: 1,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'Rocko Test',

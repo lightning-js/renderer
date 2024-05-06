@@ -498,10 +498,10 @@ export class RendererMain extends EventEmitter {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight ?? fontSize,
+      lineHeight: props.lineHeight, // `undefined` is a valid value
       maxLines: props.maxLines ?? 0,
       textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'top',
+      verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
     };

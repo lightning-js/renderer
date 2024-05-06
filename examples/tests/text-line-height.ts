@@ -89,7 +89,7 @@ function generateLineHeightTest(
         return await constructTestRow(
           { renderer, rowNode, containerSize: 180 },
           [
-            'lineHeight: fontSize\n(default)\n->',
+            'lineHeight: (default)\n->',
             baselineNode,
             '60 ->',
             renderer.createTextNode({
@@ -111,10 +111,10 @@ function generateLineHeightTest(
               ...nodeProps,
               lineHeight: 10,
             }),
-            '0 ->',
+            '1 ->',
             renderer.createTextNode({
               ...nodeProps,
-              lineHeight: 0,
+              lineHeight: 1,
             }),
           ],
         );

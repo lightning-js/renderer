@@ -22,7 +22,12 @@ import { assertTruthy } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
 import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
 import { ImageTexture } from '../../../textures/ImageTexture.js';
-import { TrFontFace, type TrFontFaceDescriptors } from '../TrFontFace.js';
+import {
+  TrFontFace,
+  type NormalizedFontMetrics,
+  type TrFontFaceDescriptors,
+  type TrFontFaceOptions,
+} from '../TrFontFace.js';
 import type { FontShaper } from './internal/FontShaper.js';
 import { SdfFontShaper, type SdfFontData } from './internal/SdfFontShaper.js';
 
@@ -42,6 +47,12 @@ interface GlyphAtlasEntry {
   height: number;
 }
 
+export interface SdfTrFontFaceOptions extends TrFontFaceOptions {
+  atlasUrl: string;
+  atlasDataUrl: string;
+  stage: Stage;
+}
+
 export class SdfTrFontFace<
   FontTypeT extends SdfFontType = SdfFontType,
 > extends TrFontFace {
@@ -49,21 +60,16 @@ export class SdfTrFontFace<
   public readonly texture: ImageTexture;
   /**
    * Height of the tallest character in the font including the whitespace above it
+   * in SDF/vertex units.
    */
   public readonly maxCharHeight: number = 0;
   public readonly data: SdfFontData | undefined;
   public readonly shaper: FontShaper | undefined;
   public readonly glyphMap: Map<number, SdfFontData['chars'][0]> = new Map();
 
-  constructor(
-    fontFamily: string,
-    descriptors: Partial<TrFontFaceDescriptors>,
-    type: FontTypeT,
-    stage: Stage,
-    atlasUrl: string,
-    atlasDataUrl: string,
-  ) {
-    super(fontFamily, descriptors);
+  constructor(type: FontTypeT, options: SdfTrFontFaceOptions) {
+    super(options);
+    const { atlasUrl, atlasDataUrl, stage } = options;
     this.type = type;
     const renderer = stage.renderer;
     assertTruthy(
@@ -95,10 +101,11 @@ export class SdfTrFontFace<
       .then(async (response) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         (this.data as SdfFontData) = await response.json();
+        assertTruthy(this.data);
         // Add all the glyphs to the glyph map
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         let maxCharHeight = 0;
-        this.data!.chars.forEach((glyph) => {
+        this.data.chars.forEach((glyph) => {
           this.glyphMap.set(glyph.id, glyph);
           const charHeight = glyph.yoffset + glyph.height;
           if (charHeight > maxCharHeight) {
@@ -110,9 +117,31 @@ export class SdfTrFontFace<
         // We know `data` is defined here, because we just set it
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         (this.shaper as FontShaper) = new SdfFontShaper(
-          this.data!,
+          this.data,
           this.glyphMap,
         );
+
+        // If the metrics aren't provided explicitly in the font face options,
+        // Gather them from the metrics added by the msdf-generator tool ()
+        // If they are missing then we throw an error.
+        if (!this.metrics) {
+          if (this.data?.lightningMetrics) {
+            const { ascender, descender, lineGap, unitsPerEm } =
+              this.data.lightningMetrics;
+            (this.metrics as NormalizedFontMetrics | null) = {
+              ascender: ascender / unitsPerEm,
+              descender: descender / unitsPerEm,
+              lineGap: lineGap / unitsPerEm,
+            };
+          } else {
+            throw new Error(
+              `Font metrics not found in ${this.type} font ${this.fontFamily}. ` +
+                'Make sure you are using the latest version of the Lightning ' +
+                '3 `msdf-generator` tool to generate your SDF fonts.',
+            );
+          }
+        }
+
         this.checkLoaded();
       })
       .catch(console.error);

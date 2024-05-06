@@ -22,39 +22,117 @@ import {
   WebTrFontFace,
   type Stage,
   SdfTrFontFace,
+  type FontMetrics,
 } from '@lightningjs/renderer/core';
 
 export default class AppCoreExtension extends CoreExtension {
   override async run(stage: Stage) {
     stage.fontManager.addFontFace(
-      new WebTrFontFace('NotoSans', {}, '/fonts/NotoSans-Regular.ttf'),
+      new WebTrFontFace({
+        fontFamily: 'NotoSans',
+        descriptors: {},
+        fontUrl: '/fonts/NotoSans-Regular.ttf',
+        metrics: {
+          ascender: 1069,
+          descender: -293,
+          lineGap: 0,
+          unitsPerEm: 1000,
+        },
+      }),
     );
 
     stage.fontManager.addFontFace(
-      new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
+      new WebTrFontFace({
+        fontFamily: 'Ubuntu',
+        descriptors: {},
+        fontUrl: '/fonts/Ubuntu-Regular.ttf',
+        metrics: {
+          ascender: 776,
+          descender: -185,
+          lineGap: 56,
+          unitsPerEm: 1000,
+        },
+      }),
+    );
+
+    stage.fontManager.addFontFace(
+      new WebTrFontFace({
+        fontFamily: 'Ubuntu-No-Metrics',
+        descriptors: {},
+        fontUrl: '/fonts/Ubuntu-Regular.ttf',
+      }),
+    );
+
+    const ubuntuModifiedMetrics: FontMetrics = {
+      ascender: 850,
+      descender: -250,
+      lineGap: 60,
+      unitsPerEm: 1000,
+    };
+
+    stage.fontManager.addFontFace(
+      new WebTrFontFace({
+        fontFamily: 'Ubuntu-Modified-Metrics',
+        descriptors: {},
+        fontUrl: '/fonts/Ubuntu-Regular.ttf',
+        metrics: ubuntuModifiedMetrics,
+      }),
     );
 
     if (stage.renderer.mode === 'webgl') {
       stage.fontManager.addFontFace(
-        new SdfTrFontFace(
-          'Ubuntu',
-          {},
-          'msdf',
+        new SdfTrFontFace('ssdf', {
+          fontFamily: 'NotoSans',
+          descriptors: {},
+          atlasUrl: '/fonts/NotoSans-Regular.ssdf.png',
+          atlasDataUrl: '/fonts/NotoSans-Regular.ssdf.json',
           stage,
-          '/fonts/Ubuntu-Regular.msdf.png',
-          '/fonts/Ubuntu-Regular.msdf.json',
-        ),
+          metrics: {
+            ascender: 1000,
+            descender: -200,
+            lineGap: 0,
+            unitsPerEm: 1000,
+          },
+        }),
       );
 
       stage.fontManager.addFontFace(
-        new SdfTrFontFace(
-          'Ubuntu-ssdf',
-          {},
-          'ssdf',
+        new SdfTrFontFace('msdf', {
+          fontFamily: 'Ubuntu',
+          descriptors: {},
+          atlasUrl: '/fonts/Ubuntu-Regular.msdf.png',
+          atlasDataUrl: '/fonts/Ubuntu-Regular.msdf.json',
           stage,
-          '/fonts/Ubuntu-Regular.ssdf.png',
-          '/fonts/Ubuntu-Regular.ssdf.json',
-        ),
+          // Instead of suppling `metrics` this font will rely on the ones
+          // encoded in the json file under `lightningMetrics`.
+        }),
+      );
+
+      stage.fontManager.addFontFace(
+        new SdfTrFontFace('msdf', {
+          fontFamily: 'Ubuntu-Modified-Metrics',
+          descriptors: {},
+          atlasUrl: '/fonts/Ubuntu-Regular.msdf.png',
+          atlasDataUrl: '/fonts/Ubuntu-Regular.msdf.json',
+          stage,
+          metrics: ubuntuModifiedMetrics,
+        }),
+      );
+
+      stage.fontManager.addFontFace(
+        new SdfTrFontFace('ssdf', {
+          fontFamily: 'Ubuntu-ssdf',
+          descriptors: {},
+          atlasUrl: '/fonts/Ubuntu-Regular.ssdf.png',
+          atlasDataUrl: '/fonts/Ubuntu-Regular.ssdf.json',
+          stage,
+          metrics: {
+            ascender: 776,
+            descender: -185,
+            lineGap: 56,
+            unitsPerEm: 1000,
+          },
+        }),
       );
     }
   }
