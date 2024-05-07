@@ -154,8 +154,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
 
   set parent(newParent: ThreadXMainNode | null) {
     const oldParent = this._parent;
-    this._parent = newParent;
-    this.parentId = newParent?.id ?? 0;
+
     if (oldParent) {
       const index = oldParent.children.indexOf(this);
       assertTruthy(
@@ -165,7 +164,21 @@ export class ThreadXMainNode extends SharedNode implements INode {
       oldParent.children.splice(index, 1);
     }
     if (newParent) {
-      newParent.children.push(this);
+      newParent.insert(this);
+    }
+  }
+
+  insert(node: ThreadXMainNode, beforeNode?: ThreadXMainNode) {
+    node.parent = this;
+    node.parentId = this?.id ?? 0;
+
+    if (beforeNode) {
+      const index = this.children.indexOf(beforeNode);
+      assertTruthy(
+        index !== -1,
+        'ThreadXMainNode.beforeNode: Node not found in children!',
+      );
+      this.children.splice(index, 0, node);
     }
   }
 

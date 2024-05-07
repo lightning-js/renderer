@@ -368,8 +368,6 @@ export class MainOnlyNode extends EventEmitter implements INode {
 
   set parent(newParent: MainOnlyNode | null) {
     const oldParent = this._parent;
-    this._parent = newParent;
-    this.coreNode.parent = newParent?.coreNode ?? null;
     if (oldParent) {
       const index = oldParent.children.indexOf(this);
       assertTruthy(
@@ -379,12 +377,26 @@ export class MainOnlyNode extends EventEmitter implements INode {
       oldParent.children.splice(index, 1);
     }
     if (newParent) {
-      newParent.children.push(this);
+      newParent.insert(this);
     }
   }
 
   get children(): MainOnlyNode[] {
     return this._children;
+  }
+
+  insert(node: MainOnlyNode, beforeNode?: MainOnlyNode) {
+    node.parent = this;
+    node.coreNode.parent = this?.coreNode ?? null;
+
+    if (beforeNode) {
+      const index = this.children.indexOf(beforeNode);
+      assertTruthy(
+        index !== -1,
+        'MainOnlyNode.beforeNode: Node not found in children!',
+      );
+      this.children.splice(index, 0, node);
+    }
   }
 
   get zIndex(): number {
