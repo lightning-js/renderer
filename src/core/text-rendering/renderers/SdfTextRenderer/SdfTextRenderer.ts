@@ -690,7 +690,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       webGlBuffers,
       this.sdfShader,
       {
-        transform: transform.data,
+        transform: transform.getFloatArr(),
         // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
         // for the best blending results. Which is why we use `mergeColorAlpha`
         // instead of `mergeColorAlphaPremultiplied` here.
