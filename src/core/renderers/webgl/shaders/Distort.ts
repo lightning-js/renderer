@@ -32,21 +32,25 @@ import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 export interface DistortProps extends DimensionsShaderProp {
   /**
    * x & y coordinates of the top left point
+   * @default { x: 0, y: 0 }
    */
   topLeft?: Point;
 
   /**
    * x & y coordinates of the top right point
+   * @default { x: 1920, y: 0 }
    */
   topRight?: Point;
 
   /**
    * x & y coordinates of the bottom right point
+   * @default { x: 1920, y: 1080 }
    */
   bottomRight?: Point;
 
   /**
    * x & y coordinates of the bottom left point
+   * @default { x: 0, y: 1080 }
    */
   bottomLeft?: Point;
 }
