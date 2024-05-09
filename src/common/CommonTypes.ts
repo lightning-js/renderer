@@ -28,6 +28,14 @@ import type { CoreNodeRenderState } from '../core/CoreNode.js';
  */
 
 /**
+ * Represents a x and y.
+ */
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
  * Represents a width and height.
  */
 export interface Dimensions {

@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { Point } from '../../../../common/CommonTypes.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
@@ -30,24 +31,24 @@ import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
  */
 export interface DistortProps extends DimensionsShaderProp {
   /**
-   * X & Y coordinates of the top left point
+   * x & y coordinates of the top left point
    */
-  topLeft?: number[];
+  topLeft?: Point;
 
   /**
-   * X & Y coordinates of the top right point
+   * x & y coordinates of the top right point
    */
-  topRight?: number[];
+  topRight?: Point;
 
   /**
-   * X & Y coordinates of the bottom right point
+   * x & y coordinates of the bottom right point
    */
-  bottomRight?: number[];
+  bottomRight?: Point;
 
   /**
-   * X & Y coordinates of the bottom left point
+   * x & y coordinates of the bottom left point
    */
-  bottomLeft?: number[];
+  bottomLeft?: Point;
 }
 
 export class Distort extends WebGlCoreShader {
@@ -72,10 +73,10 @@ export class Distort extends WebGlCoreShader {
 
   static override resolveDefaults(props: DistortProps): Required<DistortProps> {
     return {
-      topLeft: props.topLeft || [0, 0],
-      topRight: props.topRight || [1920, 0],
-      bottomRight: props.bottomRight || [1920, 1080],
-      bottomLeft: props.bottomLeft || [0, 1080],
+      topLeft: props.topLeft || { x: 0, y: 0 },
+      topRight: props.topRight || { x: 1920, y: 0 },
+      bottomRight: props.bottomRight || { x: 1920, y: 1080 },
+      bottomLeft: props.bottomLeft || { x: 0, y: 1080 },
       $dimensions: {
         width: 0,
         height: 0,
@@ -90,10 +91,22 @@ export class Distort extends WebGlCoreShader {
   }
 
   protected override bindProps(props: Required<DistortProps>): void {
-    this.setUniform('u_topLeft', new Float32Array(props.topLeft));
-    this.setUniform('u_topRight', new Float32Array(props.topRight));
-    this.setUniform('u_bottomRight', new Float32Array(props.bottomRight));
-    this.setUniform('u_bottomLeft', new Float32Array(props.bottomLeft));
+    this.setUniform(
+      'u_topLeft',
+      new Float32Array([props.topLeft.x, props.topLeft.y]),
+    );
+    this.setUniform(
+      'u_topRight',
+      new Float32Array([props.topRight.x, props.topRight.y]),
+    );
+    this.setUniform(
+      'u_bottomRight',
+      new Float32Array([props.bottomRight.x, props.bottomRight.y]),
+    );
+    this.setUniform(
+      'u_bottomLeft',
+      new Float32Array([props.bottomLeft.x, props.bottomLeft.y]),
+    );
   }
 
   override canBatchShaderProps(

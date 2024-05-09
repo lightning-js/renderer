@@ -28,10 +28,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent,
     src: `https://picsum.photos/900/900`,
     shader: renderer.createShader('Distort', {
-      topLeft: [50, 50],
-      topRight: [900, 0],
-      bottomRight: [750, 700],
-      bottomLeft: [100, 850],
+      topLeft: { x: 50, y: 50 },
+      topRight: { x: 900, y: 0 },
+      bottomRight: { x: 750, y: 700 },
+      bottomLeft: { x: 100, y: 850 },
     }),
   });
 
