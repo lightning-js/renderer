@@ -8,9 +8,8 @@ export async function automation(settings: ExampleSettings) {
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   /*
-   * redRect will persist and change color every frame
-   * greenRect will persist and be detached and reattached to the root every second
-   * blueRect will be created and destroyed every 500 ms
+   * redRect shown to illustrate original dimensions
+   * image is distorted
    */
 
   const parent = renderer.createNode({
