@@ -26,6 +26,8 @@ import {
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 
+// Based on https://www.shadertoy.com/view/lsVSWW
+
 /**
  * Properties of the {@link DistortProps} shader
  */
