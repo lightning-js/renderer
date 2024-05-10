@@ -7,17 +7,13 @@ export async function automation(settings: ExampleSettings) {
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
-  /*
-   * redRect shown to illustrate original dimensions
-   * image is distorted
-   */
-
   const size = 500;
 
   const parent = renderer.createNode({
     parent: testRoot,
   });
 
+  // shown to illustrate original dimensions
   const bg1 = renderer.createNode({
     x: 100,
     y: 100,
@@ -28,6 +24,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent,
   });
 
+  // distorted using pixel values
   const pixels = renderer.createNode({
     x: 100,
     y: 100,
@@ -43,6 +40,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }),
   });
 
+  // shown to illustrate original dimensions
   const bg2 = renderer.createNode({
     x: 700,
     y: 100,
@@ -53,6 +51,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent,
   });
 
+  // distorted using normalized values
   const normalized = renderer.createNode({
     x: 700,
     y: 100,
