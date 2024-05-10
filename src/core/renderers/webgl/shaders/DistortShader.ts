@@ -40,27 +40,27 @@ export interface DistortShaderProps extends DimensionsShaderProp {
 
   /**
    * x & y coordinates of the top left point
-   * @default { x: null, y: null }
+   * @default null
    */
-  topLeft?: Point;
+  topLeft?: Point | null;
 
   /**
    * x & y coordinates of the top right point
-   * @default { x: null, y: null }
+   * @default null
    */
-  topRight?: Point;
+  topRight?: Point | null;
 
   /**
    * x & y coordinates of the bottom right point
-   * @default { x: null, y: null }
+   * @default null
    */
-  bottomRight?: Point;
+  bottomRight?: Point | null;
 
   /**
    * x & y coordinates of the bottom left point
-   * @default { x: null, y: null }
+   * @default null
    */
-  bottomLeft?: Point;
+  bottomLeft?: Point | null;
 }
 
 export class DistortShader extends WebGlCoreShader {
@@ -88,10 +88,10 @@ export class DistortShader extends WebGlCoreShader {
   ): Required<DistortShaderProps> {
     return {
       normalized: props.normalized || false,
-      topLeft: props.topLeft || { x: null, y: null },
-      topRight: props.topRight || { x: null, y: null },
-      bottomRight: props.bottomRight || { x: null, y: null },
-      bottomLeft: props.bottomLeft || { x: null, y: null },
+      topLeft: props.topLeft || null,
+      topRight: props.topRight || null,
+      bottomRight: props.bottomRight || null,
+      bottomLeft: props.bottomLeft || null,
       $dimensions: {
         width: 0,
         height: 0,
@@ -110,23 +110,23 @@ export class DistortShader extends WebGlCoreShader {
     const height = props.normalized ? 1 : props.$dimensions.height;
 
     const topLeft = [
-      (props.topLeft.x || 0) / width,
-      (props.topLeft.y || 0) / height,
+      (props.topLeft?.x || 0) / width,
+      (props.topLeft?.y || 0) / height,
     ];
 
     const topRight = [
-      (props.topRight.x || width) / width,
-      (props.topRight.y || 0) / height,
+      (props.topRight?.x || width) / width,
+      (props.topRight?.y || 0) / height,
     ];
 
     const bottomRight = [
-      (props.bottomRight.x || width) / width,
-      (props.bottomRight.y || height) / height,
+      (props.bottomRight?.x || width) / width,
+      (props.bottomRight?.y || height) / height,
     ];
 
     const bottomLeft = [
-      (props.bottomLeft.x || 0) / width,
-      (props.bottomLeft.y || height) / height,
+      (props.bottomLeft?.x || 0) / width,
+      (props.bottomLeft?.y || height) / height,
     ];
 
     // strange bug
