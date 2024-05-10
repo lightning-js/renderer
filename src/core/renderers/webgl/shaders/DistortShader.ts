@@ -29,35 +29,41 @@ import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
 // Based on https://www.shadertoy.com/view/lsVSWW
 
 /**
- * Properties of the {@link DistortProps} shader
+ * Properties of the {@link DistortShaderProps} shader
  */
-export interface DistortProps extends DimensionsShaderProp {
+export interface DistortShaderProps extends DimensionsShaderProp {
+  /**
+   * Use normalized values rather than pixle values
+   * @default false
+   */
+  normalized?: boolean;
+
   /**
    * x & y coordinates of the top left point
-   * @default { x: 0, y: 0 }
+   * @default { x: null, y: null }
    */
   topLeft?: Point;
 
   /**
    * x & y coordinates of the top right point
-   * @default { x: 1920, y: 0 }
+   * @default { x: null, y: null }
    */
   topRight?: Point;
 
   /**
    * x & y coordinates of the bottom right point
-   * @default { x: 1920, y: 1080 }
+   * @default { x: null, y: null }
    */
   bottomRight?: Point;
 
   /**
    * x & y coordinates of the bottom left point
-   * @default { x: 0, y: 1080 }
+   * @default { x: null, y: null }
    */
   bottomLeft?: Point;
 }
 
-export class Distort extends WebGlCoreShader {
+export class DistortShader extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
@@ -75,14 +81,17 @@ export class Distort extends WebGlCoreShader {
     });
   }
 
-  static z$__type__Props: DistortProps;
+  static z$__type__Props: DistortShaderProps;
 
-  static override resolveDefaults(props: DistortProps): Required<DistortProps> {
+  static override resolveDefaults(
+    props: DistortShaderProps,
+  ): Required<DistortShaderProps> {
     return {
-      topLeft: props.topLeft || { x: 0, y: 0 },
-      topRight: props.topRight || { x: 1920, y: 0 },
-      bottomRight: props.bottomRight || { x: 1920, y: 1080 },
-      bottomLeft: props.bottomLeft || { x: 0, y: 1080 },
+      normalized: props.normalized || false,
+      topLeft: props.topLeft || { x: null, y: null },
+      topRight: props.topRight || { x: null, y: null },
+      bottomRight: props.bottomRight || { x: null, y: null },
+      bottomLeft: props.bottomLeft || { x: null, y: null },
       $dimensions: {
         width: 0,
         height: 0,
@@ -96,28 +105,46 @@ export class Distort extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  protected override bindProps(props: Required<DistortProps>): void {
-    this.setUniform(
-      'u_topLeft',
-      new Float32Array([props.topLeft.x, props.topLeft.y]),
-    );
-    this.setUniform(
-      'u_topRight',
-      new Float32Array([props.topRight.x, props.topRight.y]),
-    );
-    this.setUniform(
-      'u_bottomRight',
-      new Float32Array([props.bottomRight.x, props.bottomRight.y]),
-    );
-    this.setUniform(
-      'u_bottomLeft',
-      new Float32Array([props.bottomLeft.x, props.bottomLeft.y]),
-    );
+  protected override bindProps(props: Required<DistortShaderProps>): void {
+    const width = props.normalized ? 1 : props.$dimensions.width;
+    const height = props.normalized ? 1 : props.$dimensions.height;
+
+    const topLeft = [
+      (props.topLeft.x || 0) / width,
+      (props.topLeft.y || 0) / height,
+    ];
+
+    const topRight = [
+      (props.topRight.x || width) / width,
+      (props.topRight.y || 0) / height,
+    ];
+
+    const bottomRight = [
+      (props.bottomRight.x || width) / width,
+      (props.bottomRight.y || height) / height,
+    ];
+
+    const bottomLeft = [
+      (props.bottomLeft.x || 0) / width,
+      (props.bottomLeft.y || height) / height,
+    ];
+
+    // strange bug
+    // if the dimensions create a rectangle, nothing is rendered
+    // adding a small amount to one of the x values resolves this
+    if (topLeft[0] === bottomLeft[0] && topRight[0] === bottomRight[0]) {
+      topLeft[0] = +0.0001;
+    }
+
+    this.setUniform('u_topLeft', new Float32Array(topLeft));
+    this.setUniform('u_topRight', new Float32Array(topRight));
+    this.setUniform('u_bottomRight', new Float32Array(bottomRight));
+    this.setUniform('u_bottomLeft', new Float32Array(bottomLeft));
   }
 
   override canBatchShaderProps(
-    propsA: Required<DistortProps>,
-    propsB: Required<DistortProps>,
+    propsA: Required<DistortShaderProps>,
+    propsB: Required<DistortShaderProps>,
   ): boolean {
     return JSON.stringify(propsA) === JSON.stringify(propsB);
   }
@@ -133,8 +160,6 @@ export class Distort extends WebGlCoreShader {
       attribute vec2 a_position;
       attribute vec2 a_textureCoordinate;
       attribute vec4 a_color;
-      attribute float a_textureIndex;
-      attribute float a_depth;
 
       uniform vec2 u_resolution;
       uniform float u_pixelRatio;
@@ -156,27 +181,26 @@ export class Distort extends WebGlCoreShader {
       }
     `,
     fragment: `
-    # ifdef GL_FRAGMENT_PRESICISON_HIGH
-    precision highp float;
-    # else
-    precision mediump float;
-    # endif
+      # ifdef GL_FRAGMENT_PRESICISON_HIGH
+      precision highp float;
+      # else
+      precision mediump float;
+      # endif
 
-    uniform sampler2D u_texture;
-    uniform vec2 u_dimensions;
-    uniform vec2 u_topLeft;
-    uniform vec2 u_topRight;
-    uniform vec2 u_bottomLeft;
-    uniform vec2 u_bottomRight;
+      uniform sampler2D u_texture;
+      uniform vec2 u_topLeft;
+      uniform vec2 u_topRight;
+      uniform vec2 u_bottomLeft;
+      uniform vec2 u_bottomRight;
 
-    varying vec2 v_textureCoordinate;
-    varying vec4 v_color;
+      varying vec2 v_textureCoordinate;
+      varying vec4 v_color;
 
-    float xross(in vec2 a, in vec2 b) {
+      float xross(in vec2 a, in vec2 b) {
         return a.x * b.y - a.y * b.x;
-    }
+      }
 
-    vec2 invBilinear(in vec2 p, in vec2 a, in vec2 b, in vec2 c, in vec2 d ){
+      vec2 invBilinear(in vec2 p, in vec2 a, in vec2 b, in vec2 c, in vec2 d ){
         vec2 e = b-a;
         vec2 f = d-a;
         vec2 g = a-b+c-d;
@@ -208,19 +232,14 @@ export class Distort extends WebGlCoreShader {
       }
 
       void main(void){
-          vec4 color = vec4(0.0);
-          vec2 topLeft = u_topLeft / u_dimensions;
-          vec2 topRight = u_topRight / u_dimensions;
-          vec2 bottomRight = u_bottomRight / u_dimensions;
-          vec2 bottomLeft = u_bottomLeft / u_dimensions;
+        vec4 color = vec4(0.0);
+        vec2 texUv = invBilinear(v_textureCoordinate, u_topLeft, u_topRight, u_bottomRight, u_bottomLeft);
 
-          vec2 texUv = invBilinear(v_textureCoordinate, topLeft, topRight, bottomRight, bottomLeft);
+        if (texUv.x > -0.5) {
+          color = texture2D(u_texture, texUv) * v_color;
+        }
 
-          if (texUv.x > -0.5) {
-              color = texture2D(u_texture, texUv) * v_color;
-          }
-
-          gl_FragColor = color;
+        gl_FragColor = color;
       }
     `,
   };
