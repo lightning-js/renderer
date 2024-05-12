@@ -96,24 +96,40 @@ export class CoreAnimation extends EventEmitter {
     }
   }
 
-  applyEasing(p: number, s: number, e: number): number {
+  private applyEasing(p: number, s: number, e: number): number {
     return (this.timingFunction(p) || p) * (e - s) + s;
   }
 
   update(dt: number) {
     const { duration, loop, easing, stopMethod } = this.settings;
-    if (!duration) {
+    const { delayFor } = this;
+    if (!duration && !delayFor) {
       this.emit('finished', {});
       return;
     }
 
     if (this.delayFor > 0) {
       this.delayFor -= dt;
+      if (this.delayFor >= 0) {
+        // Either no or more delay left. Exit.
+        return;
+      } else {
+        // We went beyond the delay time, add it back to dt so we can continue
+        // with the animation.
+        dt = -this.delayFor;
+        this.delayFor = 0;
+      }
+    }
+
+    if (!duration) {
+      // No duration, we are done.
+      this.emit('finished', {});
       return;
     }
 
-    if (this.delayFor <= 0 && this.progress === 0) {
-      this.emit('start', {});
+    if (this.progress === 0) {
+      // Progress is 0, we are starting the post-delay part of the animation.
+      this.emit('animating', {});
     }
 
     this.progress += dt / duration;
