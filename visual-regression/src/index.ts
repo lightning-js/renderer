@@ -43,6 +43,7 @@ import { fileURLToPath } from 'url';
  * Keep in sync with `examples/common/ExampleSettings.ts`
  */
 export interface SnapshotOptions {
+  name?: string;
   clip?: {
     x: number;
     y: number;
@@ -314,16 +315,17 @@ async function runTest(browserType: 'chromium') {
           height: Math.round(options.clip.height),
         };
       }
-      const snapshotIndex = (testCounters[test] =
-        (testCounters[test] || 0) + 1);
+      const subtestName = options.name ? `${test}_${options.name}` : test;
+      const snapshotIndex = (testCounters[subtestName] =
+        (testCounters[subtestName] || 0) + 1);
       const makeFilename = (postfix?: string) =>
-        `${test}-${snapshotIndex}${postfix ? `-${postfix}` : ''}.png`;
+        `${subtestName}-${snapshotIndex}${postfix ? `-${postfix}` : ''}.png`;
       const snapshotPath = path.join(snapshotSubDir, makeFilename());
       if (argv.capture) {
         process.stdout.write(
           chalk.gray(
             `Saving snapshot for ${chalk.white(
-              `${test}-${snapshotIndex}`,
+              `${subtestName}-${snapshotIndex}`,
             )}... `,
           ),
         );
@@ -342,7 +344,9 @@ async function runTest(browserType: 'chromium') {
         }
       } else {
         process.stdout.write(
-          chalk.gray(`Running ${chalk.white(`${test}-${snapshotIndex}`)}... `),
+          chalk.gray(
+            `Running ${chalk.white(`${subtestName}-${snapshotIndex}`)}... `,
+          ),
         );
         const actualPng = await page.screenshot({ clip: options?.clip });
         const actualImage = upng.decode(actualPng);

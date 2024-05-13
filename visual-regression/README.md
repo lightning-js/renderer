@@ -141,6 +141,16 @@ Test. Addtional snapshots can be defined by calling `settings.snapshot()`
 additional times, while of course making changes to the Renderer state in
 between calls.
 
+A name may be optionally provided in the snapshot call:
+
+```typescript
+settings.snapshot({ name: 'myname' });
+```
+
+This name will be appended to the name of the Example Test. For example, if
+run in the `alpha` Example Test, the name of Snapshot will be `alpha_myname-1`.
+The same name may be used multiple times.
+
 Example Tests that utilize the `PageContainer` class to define separate pages
 of static content may use the `pageContainer.snapshotPages()` helper method
 to automatically take snapshots of each of the pages defined in the container.
