@@ -62,14 +62,6 @@ export type ResizeModeOptions =
        */
       type: 'cover';
       /**
-       * The desired width of the rectangular area.
-       */
-      width: number;
-      /**
-       * The desired height of the rectangular area
-       */
-      height: number;
-      /**
        * The horizontal clipping position
        * To clip the left, set clipX to 0. To clip the right, set clipX to 1.
        * clipX 0.5 will clip a equal amount from left and right
@@ -91,14 +83,6 @@ export type ResizeModeOptions =
        * Specifies that the image should be resized to fit within the specified dimensions.
        */
       type: 'contain';
-      /**
-       * The desired width of the rectangular area.
-       */
-      width: number;
-      /**
-       * The desired height of the rectangular area
-       */
-      height: number;
     };
 
 /**
@@ -180,8 +164,6 @@ export interface TextureOptions {
    * the exact image sizes but want the image to cover a specific area.
    *
    * The resize modes cover and contain are supported
-   *
-   * When the texture is loaded, the clipping is automatically defined.
    */
   resizeMode?: ResizeModeOptions;
 }

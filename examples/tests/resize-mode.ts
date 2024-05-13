@@ -17,175 +17,214 @@
  * limitations under the License.
  */
 
-import {
-  type INode,
-  type Dimensions,
-  type NodeLoadedEventHandler,
-} from '@lightningjs/renderer';
-import rockoImg from '../assets/rocko.png';
-import environmentImg from '../assets/robot/environment.png';
+import testscreenImg from '../assets/testscreen.png';
+import testscreenRImg from '../assets/testscreen_rotated.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
-  const FONT_SIZE = 45;
-  const BEGIN_Y = FONT_SIZE;
+import { paginateTestRows } from '../common/paginateTestRows.js';
+import { PageContainer } from '../common/PageContainer.js';
 
-  // Header
-  renderer.createTextNode({
-    text: `Resizemode Test (${driverName})`,
-    fontSize: FONT_SIZE,
-    offsetY: -5,
-    parent: testRoot,
+const SQUARE_SIZE = 600;
+const PADDING = 20;
+
+export default async function test(settings: ExampleSettings) {
+  const { renderer } = settings;
+  const pageContainer = new PageContainer(settings, {
+    width: renderer.settings.appWidth,
+    height: renderer.settings.appHeight,
+    title: 'Resizemode Tests',
   });
 
-  const curX = 0;
-  let curY = BEGIN_Y;
-  let curTest = 1;
+  await paginateTestRows(pageContainer, [
+    {
+      title:
+        'Texture Width > Height - resizeMode cover maximum width of node and clipY - 0, 0.5, 1',
+      content: async (rowNode) => {
+        let curX = 0;
 
-  // Wrapper for contain resizeMode
-  const wrapperContain = renderer.createNode({
-    x: curX,
-    y: curY,
-    width: 200,
-    height: 200,
-    color: 0xaaaaaaff,
-    parent: testRoot,
-  });
+        for (let i = 0; i < 3; i++) {
+          renderer.createNode({
+            x: curX,
+            width: SQUARE_SIZE,
+            height: SQUARE_SIZE - 300,
+            texture: renderer.createTexture(
+              'ImageTexture',
+              { src: testscreenImg },
+              {
+                resizeMode: {
+                  type: 'cover',
+                  clipY: [0, 0.5, 1][i],
+                  clipX: [0, 0.5, 1][i],
+                },
+              },
+            ),
+            parent: rowNode,
+          });
+          curX += SQUARE_SIZE + PADDING;
+        }
 
-  const nodeContain = renderer.createNode({
-    x: 100,
-    y: 100,
-    mount: 0.5,
-    texture: renderer.createTexture(
-      'ImageTexture',
-      { src: rockoImg },
-      {
-        resizeMode: {
-          type: 'contain',
-          width: 180,
-          height: 180,
-        },
+        rowNode.height = SQUARE_SIZE - 300;
+        return rowNode.height;
       },
-    ),
-    parent: wrapperContain,
-  });
+    },
+    {
+      title:
+        'Texture Width > Height - resizeMode cover maximum height of node and clipX - 0, 0.5, 1',
+      content: async (rowNode) => {
+        let curX = 0;
 
-  await execLoadingTest(wrapperContain, nodeContain, 149, 180);
+        for (let i = 0; i < 3; i++) {
+          renderer.createNode({
+            x: curX,
+            width: SQUARE_SIZE,
+            height: SQUARE_SIZE - 200,
+            texture: renderer.createTexture(
+              'ImageTexture',
+              { src: testscreenImg },
+              {
+                resizeMode: {
+                  type: 'cover',
+                  clipY: [0, 0.5, 1][i],
+                  clipX: [0, 0.5, 1][i],
+                },
+              },
+            ),
+            parent: rowNode,
+          });
+          curX += SQUARE_SIZE + PADDING;
+        }
 
-  // Wrapper for cover resizeMode
-  const wrapperCover = renderer.createNode({
-    x: curX,
-    y: curY,
-    width: 200,
-    height: 200,
-    color: 0xaaaaaaff,
-    parent: testRoot,
-  });
-
-  const nodeCover = renderer.createNode({
-    texture: renderer.createTexture(
-      'ImageTexture',
-      { src: rockoImg },
-      {
-        preload: true,
-        resizeMode: {
-          type: 'cover',
-          width: 200,
-          height: 200,
-          clipY: 1,
-        },
+        rowNode.height = SQUARE_SIZE - 200;
+        return rowNode.height;
       },
-    ),
-    parent: wrapperCover,
-  });
+    },
+    {
+      title:
+        'Texture Width < Height - resizeMode cover maximum width of node and clipY - 0, 0.5, 1',
+      content: async (rowNode) => {
+        let curX = 0;
 
-  await execLoadingTest(wrapperCover, nodeCover, 200, 241);
+        for (let i = 0; i < 3; i++) {
+          renderer.createNode({
+            x: curX,
+            width: SQUARE_SIZE,
+            height: SQUARE_SIZE - 300,
+            texture: renderer.createTexture(
+              'ImageTexture',
+              { src: testscreenRImg },
+              {
+                resizeMode: {
+                  type: 'cover',
+                  clipY: [0, 0.5, 1][i],
+                  clipX: [0, 0.5, 1][i],
+                },
+              },
+            ),
+            parent: rowNode,
+          });
+          curX += SQUARE_SIZE + PADDING;
+        }
 
-  //
-  const wrapperCover1 = renderer.createNode({
-    x: curX,
-    y: curY,
-    width: 200,
-    height: 200,
-    color: 0xaaaaaaff,
-    parent: testRoot,
-  });
-
-  const nodeCover1 = renderer.createNode({
-    texture: renderer.createTexture(
-      'ImageTexture',
-      { src: environmentImg },
-      {
-        resizeMode: {
-          type: 'cover',
-          width: 200,
-          height: 200,
-          clipX: 0.3,
-        },
+        rowNode.height = SQUARE_SIZE - 300;
+        return rowNode.height;
       },
-    ),
-    parent: wrapperCover1,
-  });
+    },
+    {
+      title:
+        'Texture Width < Height - resizeMode cover maximum height of node and clipX - 0,0.25,0.5,0.75,1',
+      content: async (rowNode) => {
+        let curX = 0;
 
-  await execLoadingTest(wrapperCover1, nodeCover1, 356, 200);
+        for (let i = 0; i < 5; i++) {
+          renderer.createNode({
+            x: curX,
+            width: SQUARE_SIZE - 400,
+            height: SQUARE_SIZE - 100,
+            texture: renderer.createTexture(
+              'ImageTexture',
+              { src: testscreenRImg },
+              {
+                resizeMode: {
+                  type: 'cover',
+                  clipX: [0, 0.25, 0.5, 0.75, 1][i],
+                  clipY: [0, 0.25, 0.5, 0.75, 1][i],
+                },
+              },
+            ),
+            parent: rowNode,
+          });
+          curX += SQUARE_SIZE + PADDING - 330;
+        }
 
-  function waitForTxLoaded(imgNode: INode) {
-    return new Promise<Dimensions>((resolve, reject) => {
-      setTimeout(() => {
-        reject(new Error('TIMEOUT'));
-      }, 1000);
-      imgNode.once('loaded', ((target, payload) => {
-        resolve(payload.dimensions);
-      }) satisfies NodeLoadedEventHandler);
-    });
-  }
+        rowNode.height = SQUARE_SIZE - 200;
+        return rowNode.height;
+      },
+    },
 
-  async function execLoadingTest(
-    wrapperNode: INode,
-    imgNode: INode,
-    expectedWidth: number,
-    expectedHeight: number,
-  ) {
-    const textNode = renderer.createTextNode({
-      x: curX,
-      text: '',
-      fontSize: FONT_SIZE,
-      offsetY: -5,
-      parent: testRoot,
-    });
+    {
+      title:
+        'Texture Width > Height resizeMode contain, maximimum width of node',
+      content: async (rowNode) => {
+        let curX = 0;
+        const mountPosition = 0.5;
+        const container1 = renderer.createNode({
+          x: curX,
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          color: 0x333333ff,
+          parent: rowNode,
+        });
 
-    let exception: string | false = false;
-    try {
-      await waitForTxLoaded(imgNode);
-    } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      exception = (e as any)?.message ?? 'Unknown';
-    }
+        renderer.createNode({
+          x: curX,
+          y: SQUARE_SIZE / 2,
+          mountY: mountPosition,
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          texture: renderer.createTexture(
+            'ImageTexture',
+            { src: testscreenImg },
+            {
+              resizeMode: {
+                type: 'contain',
+              },
+            },
+          ),
+          parent: container1,
+        });
 
-    textNode.y = wrapperNode.y + wrapperNode.height;
-    let result = 'Fail';
-    let expectedPostfix = '';
-    if (
-      !exception &&
-      imgNode.width === expectedWidth &&
-      imgNode.height === expectedHeight
-    ) {
-      textNode.color = 0x00ff00ff;
-      result = 'Pass';
-    } else {
-      textNode.color = 0xff0000ff;
-      if (exception) {
-        expectedPostfix = ` (exception: ${exception})`;
-      } else {
-        expectedPostfix = ` (expected ${expectedWidth}x${expectedHeight})`;
-      }
-    }
-    textNode.text = `${curTest}. Resize Mode Test: ${result} (${imgNode.width}x${imgNode.height})${expectedPostfix}`;
-    curY = textNode.y + FONT_SIZE;
-    curTest++;
-  }
+        curX += SQUARE_SIZE + PADDING;
+
+        const container2 = renderer.createNode({
+          x: curX,
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          color: 0x333333ff,
+          parent: rowNode,
+        });
+
+        renderer.createNode({
+          x: SQUARE_SIZE / 2,
+          mountX: mountPosition,
+          width: SQUARE_SIZE,
+          height: SQUARE_SIZE,
+          texture: renderer.createTexture(
+            'ImageTexture',
+            { src: testscreenRImg },
+            {
+              resizeMode: {
+                type: 'contain',
+              },
+            },
+          ),
+          parent: container2,
+        });
+
+        rowNode.height = SQUARE_SIZE;
+        return rowNode.height;
+      },
+    },
+  ]);
+
+  return pageContainer;
 }

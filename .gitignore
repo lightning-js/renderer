@@ -16,3 +16,4 @@ releases
 .pnpm-store
 # This project uses `pnpm` for package management
 package-lock.json
+.vscode/launch.json
