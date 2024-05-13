@@ -18,6 +18,7 @@
  */
 
 /* eslint-disable @typescript-eslint/unbound-method */
+import { EventEmitter } from '../../common/EventEmitter.js';
 import type {
   AnimationControllerState,
   IAnimationController,
@@ -25,37 +26,48 @@ import type {
 import { assertTruthy } from '../../utils.js';
 import type { ThreadXMainNode } from './ThreadXMainNode.js';
 
-export class ThreadXMainAnimationController implements IAnimationController {
-  stoppedPromise: Promise<void> | null = null;
+export class ThreadXMainAnimationController
+  extends EventEmitter
+  implements IAnimationController
+{
+  stoppedPromise: Promise<void>;
   /**
    * If this is null, then the animation is in a finished / stopped state.
    */
   stoppedResolve: (() => void) | null = null;
-
-  constructor(private node: ThreadXMainNode, private id: number) {
-    this.onAnimationFinished = this.onAnimationFinished.bind(this);
-    this.state = 'stopped';
-  }
-
   state: AnimationControllerState;
 
+  constructor(private node: ThreadXMainNode, private id: number) {
+    super();
+    this.state = 'stopped';
+
+    // Initial stopped promise is resolved (since the animation is stopped)
+    this.stoppedPromise = Promise.resolve();
+
+    // Bind event handlers
+    this.onAnimating = this.onAnimating.bind(this);
+    this.onFinished = this.onFinished.bind(this);
+  }
+
   start(): IAnimationController {
-    if (this.stoppedResolve === null) {
+    if (this.state !== 'running') {
       this.makeStoppedPromise();
-      this.node.on('animationFinished', this.onAnimationFinished);
+      this.sendStart();
+      this.state = 'running';
     }
-    this.state = 'running';
-    this.node.emit('startAnimation', { id: this.id });
     return this;
   }
 
   stop(): IAnimationController {
-    this.node.emit('stopAnimation', { id: this.id });
-    this.node.off('animationFinished', this.onAnimationFinished);
-    if (this.stoppedResolve !== null) {
-      this.stoppedResolve();
-      this.stoppedResolve = null;
+    if (this.state === 'stopped') {
+      return this;
     }
+    this.sendStop();
+    // if (this.stoppedResolve !== null) {
+    //   this.stoppedResolve();
+    //   this.stoppedResolve = null;
+    //   this.emit('stopped', this);
+    // }
     this.state = 'stopped';
     return this;
   }
@@ -71,22 +83,23 @@ export class ThreadXMainAnimationController implements IAnimationController {
   }
 
   waitUntilStopped(): Promise<void> {
-    this.makeStoppedPromise();
-    const promise = this.stoppedPromise;
-    assertTruthy(promise);
-    return promise;
+    return this.stoppedPromise;
   }
 
-  private onAnimationFinished(
-    target: ThreadXMainNode,
-    { id, loop }: { id: number; loop: boolean },
-  ) {
-    if (id === this.id) {
-      this.node.off('animationFinished', this.onAnimationFinished);
-      this.stoppedResolve?.();
-      this.stoppedResolve = null;
-      this.state = 'stopped';
-    }
+  private sendStart(): void {
+    // Hook up event listeners
+    this.node.on('animationFinished', this.onFinished);
+    this.node.on('animationAnimating', this.onAnimating);
+    // Then register the animation
+    this.node.emit('startAnimation', { id: this.id });
+  }
+
+  private sendStop(): void {
+    // First unregister the animation
+    this.node.emit('stopAnimation', { id: this.id });
+    // Then unhook event listeners
+    this.node.off('animationFinished', this.onFinished);
+    this.node.off('animationAnimating', this.onAnimating);
   }
 
   private makeStoppedPromise(): void {
@@ -94,6 +107,29 @@ export class ThreadXMainAnimationController implements IAnimationController {
       this.stoppedPromise = new Promise((resolve) => {
         this.stoppedResolve = resolve;
       });
+    }
+  }
+
+  private onFinished(
+    target: ThreadXMainNode,
+    { id }: { id: number; loop: boolean },
+  ) {
+    if (id === this.id) {
+      assertTruthy(this.stoppedResolve);
+      this.node.off('animationFinished', this.onFinished);
+      this.node.off('animationAnimating', this.onAnimating);
+
+      // resolve promise
+      this.stoppedResolve();
+      this.stoppedResolve = null;
+      this.emit('stopped', this);
+      this.state = 'stopped';
+    }
+  }
+
+  private onAnimating(target: ThreadXMainNode, { id }: { id: number }) {
+    if (id === this.id) {
+      this.emit('animating', this);
     }
   }
 }
