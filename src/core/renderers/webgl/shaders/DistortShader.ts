@@ -133,7 +133,7 @@ export class DistortShader extends WebGlCoreShader {
     // if the dimensions create a rectangle, nothing is rendered
     // adding a small amount to one of the x values resolves this
     if (topLeft[0] === bottomLeft[0] && topRight[0] === bottomRight[0]) {
-      topLeft[0] = +0.0001;
+      topLeft[0] += 0.0001;
     }
 
     this.setUniform('u_topLeft', new Float32Array(topLeft));
