@@ -129,13 +129,6 @@ export class DistortShader extends WebGlCoreShader {
       (props.bottomLeft?.y || height) / height,
     ];
 
-    // strange bug
-    // if the dimensions create a rectangle, nothing is rendered
-    // adding a small amount to one of the x values resolves this
-    if (topLeft[0] === bottomLeft[0] && topRight[0] === bottomRight[0]) {
-      topLeft[0] += 0.0001;
-    }
-
     this.setUniform('u_topLeft', new Float32Array(topLeft));
     this.setUniform('u_topRight', new Float32Array(topRight));
     this.setUniform('u_bottomRight', new Float32Array(bottomRight));
@@ -216,19 +209,13 @@ export class DistortShader extends WebGlCoreShader {
 
         w = sqrt(w);
 
-        float v1 = (-k1 - w)/(2.0*k2);
-        float v2 = (-k1 + w)/(2.0*k2);
-        float u1 = (h.x - f.x*v1)/(e.x + g.x*v1);
-        float u2 = (h.x - f.x*v2)/(e.x + g.x*v2);
-        bool b1 = v1>0.0 && v1<1.0 && u1>0.0 && u1<1.0;
-        bool b2 = v2>0.0 && v2<1.0 && u2>0.0 && u2<1.0;
+        // will fail for k0=0, which is only on the ba edge
+        float v = 2.0*k0/(-k1 - w);
+        if( v<0.0 || v>1.0 ) v = 2.0*k0/(-k1 + w);
 
-        vec2 res = vec2(-1.0);
-
-        if(b1 && !b2) res = vec2(u1, v1);
-        if(!b1 &&  b2) res = vec2(u2, v2);
-
-        return res;
+        float u = (h.x - f.x*v)/(e.x + g.x*v);
+        if( u<0.0 || u>1.0 || v<0.0 || v>1.0 ) return vec2(-1.0);
+        return vec2( u, v );
       }
 
       void main(void){
