@@ -36,6 +36,7 @@ export interface AnimationSettings {
 export class CoreAnimation extends EventEmitter {
   public propStartValues: Partial<INodeAnimatableProps> = {};
   public restoreValues: Partial<INodeAnimatableProps> = {};
+  public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
@@ -44,7 +45,7 @@ export class CoreAnimation extends EventEmitter {
   constructor(
     private node: CoreNode,
     private props: Partial<INodeAnimatableProps>,
-    public settings: Partial<AnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};
@@ -53,12 +54,19 @@ export class CoreAnimation extends EventEmitter {
       this.propStartValues[propName] = node[propName];
     });
 
-    this.timingFunction = (t: number) => t;
-
-    if (settings.easing && typeof settings.easing === 'string') {
-      this.timingFunction = getTimingFunction(settings.easing);
-    }
-    this.delayFor = settings.delay || 0;
+    const easing = settings.easing || 'linear';
+    const delay = settings.delay ?? 0;
+    this.settings = {
+      duration: settings.duration ?? 0,
+      delay,
+      easing,
+      loop: settings.loop ?? false,
+      repeat: settings.repeat ?? 0,
+      repeatDelay: settings.repeatDelay ?? 0,
+      stopMethod: settings.stopMethod ?? false,
+    };
+    this.timingFunction = getTimingFunction(easing);
+    this.delayFor = delay;
   }
 
   reset() {
@@ -103,7 +111,7 @@ export class CoreAnimation extends EventEmitter {
   update(dt: number) {
     const { duration, loop, easing, stopMethod } = this.settings;
     const { delayFor } = this;
-    if (!duration && !delayFor) {
+    if (duration === 0 && delayFor === 0) {
       this.emit('finished', {});
       return;
     }
@@ -121,7 +129,7 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (!duration) {
+    if (duration === 0) {
       // No duration, we are done.
       this.emit('finished', {});
       return;
