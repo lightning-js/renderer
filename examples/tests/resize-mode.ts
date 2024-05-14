@@ -23,6 +23,7 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
+import { deg2Rad } from '../../dist/src/utils.js';
 
 const SQUARE_SIZE = 600;
 const PADDING = 20;
@@ -166,21 +167,25 @@ export default async function test(settings: ExampleSettings) {
         'Texture Width > Height resizeMode contain, maximimum width of node',
       content: async (rowNode) => {
         let curX = 0;
-        const mountPosition = 0.5;
+        const mountPosition = 0;
         const container1 = renderer.createNode({
           x: curX,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
+          pivot: 0,
+          rotation: deg2Rad(0),
           color: 0x333333ff,
           parent: rowNode,
         });
 
         renderer.createNode({
           x: curX,
-          y: SQUARE_SIZE / 2,
+          y: 0,
           mountY: mountPosition,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
+          pivot: 0,
+          rotation: deg2Rad(0),
           texture: renderer.createTexture(
             'ImageTexture',
             { src: testscreenImg },
@@ -204,7 +209,7 @@ export default async function test(settings: ExampleSettings) {
         });
 
         renderer.createNode({
-          x: SQUARE_SIZE / 2,
+          x: 0,
           mountX: mountPosition,
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,

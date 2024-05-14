@@ -326,10 +326,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     if (texture instanceof ImageTexture) {
       if (resizeMode && texture.dimensions) {
-        const { width: tw = 0, height: th = 0 } = texture.dimensions || {
-          width: 0,
-          height: 0,
-        };
+        const { width: tw, height: th } = texture.dimensions;
         if (resizeMode.type === 'cover') {
           const scaleX = width / tw;
           const scaleY = height / th;
@@ -346,16 +343,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
             const desiredSize = precision * height;
             texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
             texCoordY2 = texCoordY1 + desiredSize / th;
-          }
-        } else if (resizeMode.type === 'contain') {
-          const imageAspectRatio = tw / th;
-          const boxAspectRatio = width / height;
-          if (imageAspectRatio > boxAspectRatio) {
-            const aspectRatioRatio = imageAspectRatio / boxAspectRatio;
-            texCoordY2 = texCoordY1 + aspectRatioRatio;
-          } else {
-            const aspectRatioRatio = boxAspectRatio / imageAspectRatio;
-            texCoordX2 = texCoordX1 + aspectRatioRatio;
           }
         }
       }
