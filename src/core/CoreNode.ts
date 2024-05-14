@@ -428,7 +428,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         // Scale the node vertically to maintain original aspect ratio
         const scaleX = width / tw;
         const scaledTxHeight = th * scaleX;
-        extraY = (height - scaledTxHeight) / 2;
+        extraY = (height - scaledTxHeight) * this.props.mountY;
         resizeModeScaleY = scaledTxHeight / height;
       } else {
         // Texture is taller than node (or equal)
@@ -436,7 +436,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         // Scale the node horizontally to maintain original aspect ratio
         const scaleY = height / th;
         const scaledTxWidth = tw * scaleY;
-        extraX = (width - scaledTxWidth) / 2;
+        extraX = (width - scaledTxWidth) * this.props.mountX;
         resizeModeScaleX = scaledTxWidth / width;
       }
 

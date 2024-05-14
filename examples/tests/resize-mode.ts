@@ -20,10 +20,15 @@
 import testscreenImg from '../assets/testscreen.png';
 import testscreenRImg from '../assets/testscreen_rotated.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-
+import type { INodeWritableProps } from '@lightningjs/renderer';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
 import { deg2Rad } from '../../dist/src/utils.js';
+
+export async function automation(settings: ExampleSettings) {
+  // Snapshot all the pages
+  await (await test(settings)).snapshotPages();
+}
 
 const SQUARE_SIZE = 600;
 const PADDING = 20;
@@ -161,31 +166,23 @@ export default async function test(settings: ExampleSettings) {
         return rowNode.height;
       },
     },
-
     {
       title:
-        'Texture Width > Height resizeMode contain, maximimum width of node',
+        'Texture Width > Height - resizeMode contain maximum height of node',
       content: async (rowNode) => {
         let curX = 0;
-        const mountPosition = 0;
-        const container1 = renderer.createNode({
-          x: curX,
+        const containerProps = {
           width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
-          pivot: 0,
-          rotation: deg2Rad(0),
-          color: 0x333333ff,
+          height: SQUARE_SIZE - 300,
           parent: rowNode,
-        });
+          color: 0x333333ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
 
-        renderer.createNode({
-          x: curX,
-          y: 0,
-          mountY: mountPosition,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
-          pivot: 0,
-          rotation: deg2Rad(0),
+        const textureNodeProps = {
+          width: containerProps.width,
+          height: containerProps.height,
+          clipping: true,
           texture: renderer.createTexture(
             'ImageTexture',
             { src: testscreenImg },
@@ -195,24 +192,141 @@ export default async function test(settings: ExampleSettings) {
               },
             },
           ),
-          parent: container1,
-        });
+        } satisfies Partial<INodeWritableProps>;
 
-        curX += SQUARE_SIZE + PADDING;
-
-        const container2 = renderer.createNode({
+        const container1 = renderer.createNode({
+          ...containerProps,
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
-          color: 0x333333ff,
-          parent: rowNode,
         });
 
         renderer.createNode({
-          x: 0,
-          mountX: mountPosition,
+          ...textureNodeProps,
+          parent: container1,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
+          parent: container2,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container3 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 1,
+          x: containerProps.width,
+          y: containerProps.height,
+          parent: container3,
+        });
+
+        rowNode.height = containerProps.height;
+        return rowNode.height;
+      },
+    },
+    {
+      title:
+        'Texture Width > Height - resizeMode contain maximum width of node',
+      content: async (rowNode) => {
+        let curX = 0;
+        const containerProps = {
           width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          height: SQUARE_SIZE - 200,
+          parent: rowNode,
+          color: 0x333333ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const textureNodeProps = {
+          width: containerProps.width,
+          height: containerProps.height,
+          clipping: true,
+          texture: renderer.createTexture(
+            'ImageTexture',
+            { src: testscreenImg },
+            {
+              resizeMode: {
+                type: 'contain',
+              },
+            },
+          ),
+        } satisfies Partial<INodeWritableProps>;
+
+        const container1 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          parent: container1,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
+          parent: container2,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container3 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 1,
+          x: containerProps.width,
+          y: containerProps.height,
+          parent: container3,
+        });
+
+        rowNode.height = containerProps.height;
+        return rowNode.height;
+      },
+    },
+    {
+      title:
+        'Texture Width < Height - resizeMode contain maximum width of node',
+      content: async (rowNode) => {
+        let curX = 0;
+        const containerProps = {
+          width: SQUARE_SIZE - 400,
+          height: SQUARE_SIZE - 200,
+          parent: rowNode,
+          color: 0x333333ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const textureNodeProps = {
+          width: containerProps.width,
+          height: containerProps.height,
+          clipping: true,
           texture: renderer.createTexture(
             'ImageTexture',
             { src: testscreenRImg },
@@ -222,10 +336,155 @@ export default async function test(settings: ExampleSettings) {
               },
             },
           ),
+        } satisfies Partial<INodeWritableProps>;
+
+        const container1 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          parent: container1,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
           parent: container2,
         });
 
-        rowNode.height = SQUARE_SIZE;
+        curX += containerProps.width + PADDING;
+
+        const container3 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 1,
+          x: containerProps.width,
+          y: containerProps.height,
+          parent: container3,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container4 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
+          pivotX: 0.5,
+          rotation: deg2Rad(45),
+          parent: container4,
+        });
+
+        rowNode.height = containerProps.height;
+        return rowNode.height;
+      },
+    },
+    {
+      title:
+        'Texture Width < Height - resizeMode contain maximum height of node',
+      content: async (rowNode) => {
+        let curX = 0;
+        const containerProps = {
+          width: SQUARE_SIZE - 150,
+          height: SQUARE_SIZE - 200,
+          parent: rowNode,
+          color: 0x333333ff,
+          clipping: true,
+        } satisfies Partial<INodeWritableProps>;
+
+        const textureNodeProps = {
+          width: containerProps.width,
+          height: containerProps.height,
+          clipping: true,
+          texture: renderer.createTexture(
+            'ImageTexture',
+            { src: testscreenRImg },
+            {
+              resizeMode: {
+                type: 'contain',
+              },
+            },
+          ),
+        } satisfies Partial<INodeWritableProps>;
+
+        const container1 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          parent: container1,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container2 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
+          parent: container2,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container3 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 1,
+          x: containerProps.width,
+          y: containerProps.height,
+          parent: container3,
+        });
+
+        curX += containerProps.width + PADDING;
+
+        const container4 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        renderer.createNode({
+          ...textureNodeProps,
+          mount: 0.5,
+          x: containerProps.width / 2,
+          y: containerProps.height / 2,
+          pivotX: 0.5,
+          rotation: deg2Rad(45),
+          parent: container4,
+        });
+
+        rowNode.height = containerProps.height;
         return rowNode.height;
       },
     },
