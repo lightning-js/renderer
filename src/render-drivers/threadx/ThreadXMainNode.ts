@@ -96,10 +96,13 @@ export class ThreadXMainNode extends SharedNode implements INode {
     if (this._shader === shader) {
       return;
     }
-    this._shader = shader;
     if (shader) {
-      shader.attachNode(this);
-      // this.emit('loadShader', shader as unknown as Record<string, unknown>);
+      this.emit('loadShader', shader as unknown as Record<string, unknown>);
+      this._shader = this.rendererMain.createShader(
+        shader.shaderRef.shType,
+        shader.shaderRef.props,
+      );
+      this._shader.attachNode(this);
     }
   }
 

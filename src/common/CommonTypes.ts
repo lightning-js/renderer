@@ -130,3 +130,8 @@ export interface FrameTickPayload {
   time: number;
   delta: number;
 }
+
+export type NodeShaderPropertyPayload = {
+  propName: string;
+  value: unknown;
+};

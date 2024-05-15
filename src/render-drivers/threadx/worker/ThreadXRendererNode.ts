@@ -27,14 +27,16 @@ import type { INodeAnimatableProps } from '../../../main-api/INode.js';
 import { CoreAnimation } from '../../../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../../../core/animations/CoreAnimationController.js';
 import type { Texture } from '../../../core/textures/Texture.js';
-import { CoreNode } from '../../../core/CoreNode.js';
+import { CoreNode, UpdateType } from '../../../core/CoreNode.js';
 import type { ShaderRef, TextureRef } from '../../../main-api/RendererMain.js';
 import type { AnimationSettings } from '../../../core/animations/CoreAnimation.js';
 import type {
   NodeLoadedPayload,
   NodeFailedPayload,
   NodeTextureFreedPayload,
+  NodeShaderPropertyPayload,
 } from '../../../common/CommonTypes.js';
+import type { ThreadXMainShaderController } from '../ThreadXMainShaderController.js';
 
 export class ThreadXRendererNode extends SharedNode {
   protected coreNode: CoreNode;
@@ -123,8 +125,15 @@ export class ThreadXRendererNode extends SharedNode {
     );
     this.on(
       'loadShader',
-      (target: ThreadXRendererNode, shaderDesc: ShaderRef) => {
-        this.coreNode.loadShader(shaderDesc.shType, shaderDesc.props);
+      (target: ThreadXRendererNode, obj: ThreadXMainShaderController) => {
+        this.coreNode.loadShader(obj.shaderRef.shType, obj.shaderRef.props);
+      },
+    );
+    this.on(
+      'setShaderProperty',
+      (target: ThreadXRendererNode, payload: NodeShaderPropertyPayload) => {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.coreNode.shaderProps![payload.propName] = payload.value;
       },
     );
     this.on('unloadTexture', (target: ThreadXRendererNode) => {

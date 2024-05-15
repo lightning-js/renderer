@@ -55,17 +55,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     },
   );
 
-  /*const shaderAnimation = t1.shader?.animate(
-    {
-      radius: 50,
-    },
-    {
-      delay: 400,
-      duration: 5000,
-    },
-  );*/
-
   shaderAnimation?.start();
+
+  document.addEventListener('click', () => {
+    if (t1.shader) {
+      t1.shader.radius = 10;
+    }
+  });
 
   console.log('ready!');
 }
