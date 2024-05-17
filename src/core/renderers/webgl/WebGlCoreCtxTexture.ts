@@ -92,6 +92,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = this.createNativeCtxTexture();
     this.onLoadRequest()
       .then(({ width, height }) => {
+        // If the texture has been freed while loading, return early.
         if (this._state === 'freed') {
           return;
         }
@@ -103,6 +104,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         this.textureSource.setState('loaded', { width, height });
       })
       .catch((err) => {
+        // If the texture has been freed while loading, return early.
+        if (this._state === 'freed') {
+          return;
+        }
         this._state = 'failed';
         this.textureSource.setState('failed', err);
         console.error(err);
