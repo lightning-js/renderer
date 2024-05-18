@@ -179,6 +179,13 @@ export abstract class Texture extends EventEmitter {
   }
 
   /**
+   * Free the texture
+   */
+  free(): void {
+    this.setState('freed');
+  }
+
+  /**
    * Set the state of the texture
    *
    * @remark

@@ -88,10 +88,12 @@ export interface CanvasTextRendererState extends TextRendererState {
       }
     | undefined;
   canvasPages: [CanvasPageInfo, CanvasPageInfo, CanvasPageInfo] | undefined;
+  canvasPage: CanvasPageInfo | undefined;
   lightning2TextRenderer: LightningTextTextureRenderer;
   renderInfo: RenderInfo | undefined;
   renderWindow: Bound | undefined;
   visibleWindow: BoundWithValid;
+  isScrollable: boolean;
 }
 
 /**
@@ -303,6 +305,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       updateScheduled: false,
       emitter: new EventEmitter(),
       canvasPages: undefined,
+      canvasPage: undefined,
       lightning2TextRenderer: new LightningTextTextureRenderer(
         this.canvas,
         this.context,
@@ -331,6 +334,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         drawSum: 0,
         bufferSize: 0,
       },
+      isScrollable: props.scrollable === true,
     };
   }
 
@@ -340,28 +344,14 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       this.setStatus(state, 'loading');
     }
 
+    if (state.status === 'loaded') {
+      // If we're loaded, we don't need to do anything
+      return;
+    }
+
     // If fontInfo is invalid, we need to establish it
     if (!state.fontInfo) {
-      const cssString = getFontCssString(state.props);
-      const trFontFace = TrFontManager.resolveFontFace(
-        this.fontFamilyArray,
-        state.props,
-      ) as WebTrFontFace | undefined;
-      assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
-      state.fontInfo = {
-        fontFace: trFontFace,
-        cssString: cssString,
-        // TODO: For efficiency we would use this here but it's not reliable on WPE -> document.fonts.check(cssString),
-        loaded: false,
-      };
-      // If font is not loaded, set up a handler to update the font info when the font loads
-      if (!state.fontInfo.loaded) {
-        globalFontSet
-          .load(cssString)
-          .then(this.onFontLoaded.bind(this, state, cssString))
-          .catch(this.onFontLoadError.bind(this, state, cssString));
-        return;
-      }
+      return this.loadFont(state);
     }
 
     // If we're waiting for a font face to load, don't render anything
@@ -370,48 +360,90 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     if (!state.renderInfo) {
-      state.lightning2TextRenderer.settings = {
-        text: state.props.text,
-        textAlign: state.props.textAlign,
-        fontFamily: state.props.fontFamily,
-        trFontFace: state.fontInfo.fontFace,
-        fontSize: state.props.fontSize,
-        fontStyle: [
-          state.props.fontStretch,
-          state.props.fontStyle,
-          state.props.fontWeight,
-        ].join(' '),
-        textColor: getNormalizedRgbaComponents(state.props.color),
-        offsetY: state.props.offsetY,
-        wordWrap: state.props.contain !== 'none',
-        wordWrapWidth:
-          state.props.contain === 'none' ? undefined : state.props.width,
-        letterSpacing: state.props.letterSpacing,
-        lineHeight: state.props.lineHeight ?? null,
-        maxLines: state.props.maxLines,
-        maxHeight:
-          state.props.contain === 'both'
-            ? state.props.height - state.props.offsetY
-            : null,
-        textBaseline: state.props.textBaseline,
-        verticalAlign: state.props.verticalAlign,
-        overflowSuffix: state.props.overflowSuffix,
-        w: state.props.contain !== 'none' ? state.props.width : undefined,
-      };
-      // const renderInfoCalculateTime = performance.now();
-      state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
-      // console.log(
-      //   'Render info calculated in',
-      //   performance.now() - renderInfoCalculateTime,
-      //   'ms',
-      // );
-      state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
-      state.textW = state.renderInfo.width;
-
-      // Invalidate renderWindow because the renderInfo changed
-      state.renderWindow = undefined;
+      state.renderInfo = this.calculateRenderInfo(state);
     }
 
+    // handle scrollable text
+    if (state.isScrollable === true) {
+      return this.renderScrollableCanvasPages(state);
+    }
+
+    // handle single page text
+    return this.renderSingleCanvasPage(state);
+  }
+
+  renderSingleCanvasPage(state: CanvasTextRendererState): void {
+    if (!state.renderInfo) {
+      state.renderInfo = this.calculateRenderInfo(state);
+      state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
+      state.textW = state.renderInfo.width;
+    }
+
+    const visibleWindow = this.getAndCalculateVisibleWindow(state);
+    const visibleWindowHeight = visibleWindow.y2 - visibleWindow.y1;
+    if (visibleWindowHeight === 0) {
+      // Nothing to render. Clear any canvasPages and existing renderWindow
+      // Return early.
+      state.canvasPage = undefined;
+      state.renderWindow = undefined;
+      this.setStatus(state, 'loaded');
+      return;
+    }
+
+    // if our canvasPage texture is still valid, return early
+    if (state.canvasPage?.valid) {
+      this.setStatus(state, 'loaded');
+      return;
+    }
+
+    if (state.canvasPage === undefined) {
+      state.canvasPage = {
+        texture: undefined,
+        lineNumStart: 0,
+        lineNumEnd: 0,
+        valid: false,
+      };
+    }
+
+    // render the text in the canvas
+    state.lightning2TextRenderer.draw(state.renderInfo, {
+      lines: state.renderInfo.lines,
+      lineWidths: state.renderInfo.lineWidths,
+    });
+
+    // load the canvas texture
+    const src = this.context.getImageData(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
+    );
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      return;
+    }
+
+    // add texture to texture manager
+    state.canvasPage?.texture?.setRenderableOwner(state, false);
+    state.canvasPage.texture = this.stage.txManager.loadTexture(
+      'ImageTexture',
+      { src: src },
+      { preload: true },
+    );
+    state.canvasPage.valid = true;
+
+    if (state.canvasPage.texture.state === 'loaded') {
+      state.canvasPage.texture.setRenderableOwner(state, state.isRenderable);
+      this.setStatus(state, 'loaded');
+      return;
+    }
+
+    state.canvasPage.texture.once('loaded', () => {
+      state.canvasPage?.texture?.setRenderableOwner(state, state.isRenderable);
+      this.setStatus(state, 'loaded');
+    });
+  }
+
+  renderScrollableCanvasPages(state: CanvasTextRendererState): void {
     const { x, y, width, height, scrollY, contain } = state.props;
     const { visibleWindow } = state;
     let { renderWindow, canvasPages } = state;
@@ -433,6 +465,15 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     const visibleWindowHeight = visibleWindow.y2 - visibleWindow.y1;
+
+    if (!state.renderInfo) {
+      state.renderInfo = this.calculateRenderInfo(state);
+      state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
+      state.textW = state.renderInfo.width;
+
+      // Invalidate renderWindow because the renderInfo changed
+      state.renderWindow = undefined;
+    }
 
     const maxLinesPerCanvasPage = Math.ceil(
       visibleWindowHeight / state.renderInfo.lineHeight,
@@ -576,7 +617,142 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
+  loadFont = (state: CanvasTextRendererState): void => {
+    const cssString = getFontCssString(state.props);
+    const trFontFace = TrFontManager.resolveFontFace(
+      this.fontFamilyArray,
+      state.props,
+    ) as WebTrFontFace | undefined;
+    assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
+    state.fontInfo = {
+      fontFace: trFontFace,
+      cssString: cssString,
+      // TODO: For efficiency we would use this here but it's not reliable on WPE -> document.fonts.check(cssString),
+      loaded: false,
+    };
+    // If font is not loaded, set up a handler to update the font info when the font loads
+    if (!state.fontInfo.loaded) {
+      globalFontSet
+        .load(cssString)
+        .then(this.onFontLoaded.bind(this, state, cssString))
+        .catch(this.onFontLoadError.bind(this, state, cssString));
+      return;
+    }
+  };
+
+  calculateRenderInfo(state: CanvasTextRendererState): RenderInfo {
+    state.lightning2TextRenderer.settings = {
+      text: state.props.text,
+      textAlign: state.props.textAlign,
+      fontFamily: state.props.fontFamily,
+      trFontFace: state.fontInfo?.fontFace,
+      fontSize: state.props.fontSize,
+      fontStyle: [
+        state.props.fontStretch,
+        state.props.fontStyle,
+        state.props.fontWeight,
+      ].join(' '),
+      textColor: getNormalizedRgbaComponents(state.props.color),
+      offsetY: state.props.offsetY,
+      wordWrap: state.props.contain !== 'none',
+      wordWrapWidth:
+        state.props.contain === 'none' ? undefined : state.props.width,
+      letterSpacing: state.props.letterSpacing,
+      lineHeight: state.props.lineHeight ?? null,
+      maxLines: state.props.maxLines,
+      maxHeight:
+        state.props.contain === 'both'
+          ? state.props.height - state.props.offsetY
+          : null,
+      textBaseline: state.props.textBaseline,
+      verticalAlign: state.props.verticalAlign,
+      overflowSuffix: state.props.overflowSuffix,
+      w: state.props.contain !== 'none' ? state.props.width : undefined,
+    };
+    // const renderInfoCalculateTime = performance.now();
+    state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
+    // console.log(
+    //   'Render info calculated in',
+    //   performance.now() - renderInfoCalculateTime,
+    //   'ms',
+    // );
+    state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
+    state.textW = state.renderInfo.width;
+
+    // Invalidate renderWindow because the renderInfo changed
+    state.renderWindow = undefined;
+
+    const renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
+    return renderInfo;
+  }
+
+  getAndCalculateVisibleWindow(state: CanvasTextRendererState): BoundWithValid {
+    const { x, y, width, height, contain } = state.props;
+    const { visibleWindow } = state;
+
+    if (!visibleWindow.valid) {
+      // Figure out whats actually in the bounds of the renderer/canvas (visibleWindow)
+      const elementBounds = createBound(
+        x,
+        y,
+        contain !== 'none' ? x + width : Infinity,
+        contain === 'both' ? y + height : Infinity,
+        tmpElementBounds,
+      );
+      /**
+       * Area that is visible on the screen.
+       */
+      intersectBound(this.rendererBounds, elementBounds, visibleWindow);
+      visibleWindow.valid = true;
+    }
+
+    return visibleWindow;
+  }
+
   override renderQuads(
+    state: CanvasTextRendererState,
+    transform: Matrix3d,
+    clippingRect: RectWithValid,
+    alpha: number,
+  ): void {
+    if (state.props.scrollable === true) {
+      return this.renderQuadsScrollable(state, transform, clippingRect, alpha);
+    }
+
+    const { canvasPage } = state;
+    if (!canvasPage) return;
+
+    const { zIndex, color } = state.props;
+
+    // Color alpha of text is not properly rendered to the Canvas texture, so we
+    // need to apply it here.
+    const combinedAlpha = alpha * getNormalizedAlphaComponent(color);
+    const quadColor = mergeColorAlphaPremultiplied(0xffffffff, combinedAlpha);
+
+    this.stage.renderer.addQuad({
+      alpha: combinedAlpha,
+      clippingRect,
+      colorBl: quadColor,
+      colorBr: quadColor,
+      colorTl: quadColor,
+      colorTr: quadColor,
+      width: canvasPage.texture?.dimensions?.width || 0,
+      height: canvasPage.texture?.dimensions?.height || 0,
+      texture: canvasPage.texture!,
+      textureOptions: {},
+      shader: null,
+      shaderProps: null,
+      zIndex,
+      tx: transform.tx,
+      ty: transform.ty,
+      ta: transform.ta,
+      tb: transform.tb,
+      tc: transform.tc,
+      td: transform.td,
+    });
+  }
+
+  renderQuadsScrollable(
     state: CanvasTextRendererState,
     transform: Matrix3d,
     clippingRect: RectWithValid,
@@ -746,8 +922,23 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     super.destroyState(state);
     // Remove state object owner from any canvas page textures
     state.canvasPages?.forEach((pageInfo) => {
-      pageInfo.texture?.setRenderableOwner(state, false);
+      const { texture } = pageInfo;
+      if (texture) {
+        texture.setRenderableOwner(state, false);
+        texture.free();
+      }
     });
+
+    const { texture } = state.canvasPage || {};
+    if (texture) {
+      texture.setRenderableOwner(state, false);
+      texture.free();
+    }
+
+    delete state.renderInfo;
+    delete state.canvasPage;
+    delete state.canvasPages;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
   //#endregion Overrides
 
@@ -773,8 +964,19 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
    * @param state
    */
   private invalidateLayoutCache(state: CanvasTextRendererState): void {
+    state.canvasPage?.texture?.free();
+
+    if (state.canvasPages) {
+      state.canvasPages.forEach((pageInfo) => {
+        pageInfo.texture?.free();
+      });
+    }
+
+    state.canvasPage = undefined;
+    state.canvasPages = undefined;
     state.renderInfo = undefined;
     state.visibleWindow.valid = false;
+
     this.setStatus(state, 'loading');
     this.scheduleUpdateState(state);
   }
