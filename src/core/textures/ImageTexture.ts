@@ -160,6 +160,18 @@ export class ImageTexture extends Texture {
     return `ImageTexture,${key},${resolvedProps.premultiplyAlpha ?? 'true'}`;
   }
 
+  override free(): void {
+    if (this.props.src instanceof ImageData) {
+      // ImageData is a non-cacheable texture, so we need to free it manually
+      const texture = this.txManager.getCtxTexture(this);
+      texture?.free();
+
+      this.props.src = '';
+    }
+
+    this.setState('freed');
+  }
+
   static override resolveDefaults(
     props: ImageTextureProps,
   ): Required<ImageTextureProps> {
