@@ -44,6 +44,7 @@ export class ThreadXMainNode extends SharedNode implements INode {
   protected _shader: ThreadXMainShaderController | null = null;
   protected _data: CustomDataMap | undefined = {};
   private _src = '';
+  private _parentHasRenderTexture = false;
 
   /**
    * FinalizationRegistry for animation controllers. When an animation
@@ -171,6 +172,14 @@ export class ThreadXMainNode extends SharedNode implements INode {
     if (newParent) {
       newParent.children.push(this);
     }
+  }
+
+  set parentHasRenderTexture(hasRenderTexture: boolean) {
+    this._parentHasRenderTexture = hasRenderTexture;
+  }
+
+  get parentHasRenderTexture(): boolean {
+    return this._parentHasRenderTexture;
   }
 
   get children(): ThreadXMainNode[] {

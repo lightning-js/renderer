@@ -1,71 +1,69 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
-// Matrix3d is a 3x3 matrix in column-major order because that's how WebGL likes it.
-// The matrix is stored in a Float32Array in the following order:
-// | 0 3 6 |
-// | 1 4 7 |
-// | 2 5 8 |
-// The following constants are used to index into the array in a row-major way.
-const m0 = 0;
-const m1 = 3;
-const m2 = 6;
-const m3 = 1;
-const m4 = 4;
-const m5 = 7;
-const m6 = 2;
-const m7 = 5;
-const m8 = 8;
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2023 Comcast Cable Communications Management, LLC.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 /**
- * A 3x3 matrix representing a 2D transformation.
+ * A 3D matrix representing a 2D graphics transformation
  *
  * @remarks
- * The matrix is stored in column-major order in the `data` property which can
- * be passed directly to a WebGL shader uniform.
- *
- * The matrix is stored in a Float32Array in the following index order:
- * | 0 3 6 |
- * | 1 4 7 |
- * | 2 5 8 |
- *
- * Only the first two rows are really used for the transformation. The last row is
- * generally always `[0, 0, 1]` if you only use the 2D transformation methods
- * provided by this class.
- *
  * For convenience, entries in the first two rows can be accessed by the following
- * getter properties:
+ * properties:
  * | ta tb tx |
  * | tc td ty |
  * | 0  0  1  |
+ *
+ * This matrix is optimized for 2D transformations and hence the last row will
+ * always be considered [0, 0 ,1].
+ *
+ * To access a column major array for WebGL, use the {@link getFloatArr} method.
  */
 export class Matrix3d {
-  public data: Float32Array;
+  public ta: number;
+  public tb: number;
+  public tx: number;
+  public tc: number;
+  public td: number;
+  public ty: number;
+  private _floatArr: Float32Array | null = null;
+  /**
+   * Potential Mutation Flag
+   *
+   * @remarks
+   * This flag is set to true whenever the matrix is potentially modified.
+   * We don't waste CPU trying to identify if each operation actually modifies
+   * the matrix. Instead, we set this flag to true whenever we think the matrix
+   * is modified. This signals that the `floatArr` should to be updated.
+   */
+  private mutation: boolean;
 
   /**
    * Creates a new 3x3 matrix.
    *
    * @param entries Row-major 3x3 matrix
    */
-  public constructor(
-    entries?:
-      | [number, number, number, number, number, number, number, number, number]
-      | Float32Array,
-  ) {
-    if (entries) {
-      // Transpose the input matrix so that it's in column-major order.
-      this.data = new Float32Array(9);
-      this.data[m0] = entries[0]!;
-      this.data[m1] = entries[3]!;
-      this.data[m2] = entries[6]!;
-      this.data[m3] = entries[1]!;
-      this.data[m4] = entries[4]!;
-      this.data[m5] = entries[7]!;
-      this.data[m6] = entries[2]!;
-      this.data[m7] = entries[5]!;
-      this.data[m8] = entries[8]!;
-    } else {
-      this.data = new Float32Array(9);
-    }
+  public constructor() {
+    this.ta = 0;
+    this.tb = 0;
+    this.tx = 0;
+    this.tc = 0;
+    this.td = 0;
+    this.ty = 0;
+    this.mutation = true;
   }
 
   /**
@@ -83,54 +81,22 @@ export class Matrix3d {
   }
 
   public static multiply(a: Matrix3d, b: Matrix3d, out?: Matrix3d): Matrix3d {
-    const e0 =
-      a.data[m0]! * b.data[m0]! +
-      a.data[m1]! * b.data[m3]! +
-      a.data[m2]! * b.data[m6]!;
-    const e1 =
-      a.data[m0]! * b.data[m1]! +
-      a.data[m1]! * b.data[m4]! +
-      a.data[m2]! * b.data[m7]!;
-    const e2 =
-      a.data[m0]! * b.data[m2]! +
-      a.data[m1]! * b.data[m5]! +
-      a.data[m2]! * b.data[m8]!;
-    const e3 =
-      a.data[m3]! * b.data[m0]! +
-      a.data[m4]! * b.data[m3]! +
-      a.data[m5]! * b.data[m6]!;
-    const e4 =
-      a.data[m3]! * b.data[m1]! +
-      a.data[m4]! * b.data[m4]! +
-      a.data[m5]! * b.data[m7]!;
-    const e5 =
-      a.data[m3]! * b.data[m2]! +
-      a.data[m4]! * b.data[m5]! +
-      a.data[m5]! * b.data[m8]!;
-    const e6 =
-      a.data[m6]! * b.data[m0]! +
-      a.data[m7]! * b.data[m3]! +
-      a.data[m8]! * b.data[m6]!;
-    const e7 =
-      a.data[m6]! * b.data[m1]! +
-      a.data[m7]! * b.data[m4]! +
-      a.data[m8]! * b.data[m7]!;
-    const e8 =
-      a.data[m6]! * b.data[m2]! +
-      a.data[m7]! * b.data[m5]! +
-      a.data[m8]! * b.data[m8]!;
+    const e0 = a.ta * b.ta + a.tb * b.tc;
+    const e1 = a.ta * b.tb + a.tb * b.td;
+    const e2 = a.ta * b.tx + a.tb * b.ty + a.tx;
+    const e3 = a.tc * b.ta + a.td * b.tc;
+    const e4 = a.tc * b.tb + a.td * b.td;
+    const e5 = a.tc * b.tx + a.td * b.ty + a.ty;
     if (!out) {
       out = new Matrix3d();
     }
-    out.data[m0] = e0;
-    out.data[m1] = e1;
-    out.data[m2] = e2;
-    out.data[m3] = e3;
-    out.data[m4] = e4;
-    out.data[m5] = e5;
-    out.data[m6] = e6;
-    out.data[m7] = e7;
-    out.data[m8] = e8;
+    out.ta = e0;
+    out.tb = e1;
+    out.tx = e2;
+    out.tc = e3;
+    out.td = e4;
+    out.ty = e5;
+    out.mutation = true;
     return out;
   }
 
@@ -138,15 +104,13 @@ export class Matrix3d {
     if (!out) {
       out = new Matrix3d();
     }
-    out.data[m0] = 1;
-    out.data[m1] = 0;
-    out.data[m2] = 0;
-    out.data[m3] = 0;
-    out.data[m4] = 1;
-    out.data[m5] = 0;
-    out.data[m6] = 0;
-    out.data[m7] = 0;
-    out.data[m8] = 1;
+    out.ta = 1;
+    out.tb = 0;
+    out.tx = 0;
+    out.tc = 0;
+    out.td = 1;
+    out.ty = 0;
+    out.mutation = true;
     return out;
   }
 
@@ -154,15 +118,13 @@ export class Matrix3d {
     if (!out) {
       out = new Matrix3d();
     }
-    out.data[m0] = 1;
-    out.data[m1] = 0;
-    out.data[m2] = x;
-    out.data[m3] = 0;
-    out.data[m4] = 1;
-    out.data[m5] = y;
-    out.data[m6] = 0;
-    out.data[m7] = 0;
-    out.data[m8] = 1;
+    out.ta = 1;
+    out.tb = 0;
+    out.tx = x;
+    out.tc = 0;
+    out.td = 1;
+    out.ty = y;
+    out.mutation = true;
     return out;
   }
 
@@ -170,15 +132,13 @@ export class Matrix3d {
     if (!out) {
       out = new Matrix3d();
     }
-    out.data[m0] = sx;
-    out.data[m1] = 0;
-    out.data[m2] = 0;
-    out.data[m3] = 0;
-    out.data[m4] = sy;
-    out.data[m5] = 0;
-    out.data[m6] = 0;
-    out.data[m7] = 0;
-    out.data[m8] = 1;
+    out.ta = sx;
+    out.tb = 0;
+    out.tx = 0;
+    out.tc = 0;
+    out.td = sy;
+    out.ty = 0;
+    out.mutation = true;
     return out;
   }
 
@@ -188,49 +148,43 @@ export class Matrix3d {
     if (!out) {
       out = new Matrix3d();
     }
-    out.data[m0] = cos;
-    out.data[m1] = -sin;
-    out.data[m2] = 0;
-    out.data[m3] = sin;
-    out.data[m4] = cos;
-    out.data[m5] = 0;
-    out.data[m6] = 0;
-    out.data[m7] = 0;
-    out.data[m8] = 1;
+    out.ta = cos;
+    out.tb = -sin;
+    out.tx = 0;
+    out.tc = sin;
+    out.td = cos;
+    out.ty = 0;
+    out.mutation = true;
     return out;
   }
 
-  public static copy(
-    src: Matrix3d,
-    dst?: Matrix3d,
-    transpose?: boolean,
-  ): Matrix3d {
+  public static copy(src: Matrix3d, dst?: Matrix3d): Matrix3d {
     if (!dst) {
       dst = new Matrix3d();
     }
-    dst.data[0] = src.data[0]!;
-    dst.data[1] = src.data[1]!;
-    dst.data[2] = src.data[2]!;
-    dst.data[3] = src.data[3]!;
-    dst.data[4] = src.data[4]!;
-    dst.data[5] = src.data[5]!;
-    dst.data[6] = src.data[6]!;
-    dst.data[7] = src.data[7]!;
-    dst.data[8] = src.data[8]!;
+    dst.ta = src.ta;
+    dst.tc = src.tc;
+    dst.tb = src.tb;
+    dst.td = src.td;
+    dst.tx = src.tx;
+    dst.ty = src.ty;
+    dst.mutation = true;
     return dst;
   }
 
   public translate(x: number, y: number): Matrix3d {
-    this.data[m2] = this.data[m0]! * x + this.data[m1]! * y + this.data[m2]!;
-    this.data[m5] = this.data[m3]! * x + this.data[m4]! * y + this.data[m5]!;
+    this.tx = this.ta * x + this.tb * y + this.tx;
+    this.ty = this.tc * x + this.td * y + this.ty;
+    this.mutation = true;
     return this;
   }
 
   public scale(sx: number, sy: number): Matrix3d {
-    this.data[m0] = this.data[m0]! * sx;
-    this.data[m1] = this.data[m1]! * sy;
-    this.data[m3] = this.data[m3]! * sx;
-    this.data[m4] = this.data[m4]! * sy;
+    this.ta = this.ta * sx;
+    this.tb = this.tb * sy;
+    this.tc = this.tc * sx;
+    this.td = this.td * sy;
+    this.mutation = true;
     return this;
   }
 
@@ -240,14 +194,15 @@ export class Matrix3d {
     }
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
-    const e0 = this.data[m0]! * cos + this.data[m1]! * sin;
-    const e1 = this.data[m1]! * cos - this.data[m0]! * sin;
-    const e3 = this.data[m3]! * cos + this.data[m4]! * sin;
-    const e4 = this.data[m4]! * cos - this.data[m3]! * sin;
-    this.data[m0] = e0;
-    this.data[m1] = e1;
-    this.data[m3] = e3;
-    this.data[m4] = e4;
+    const e0 = this.ta * cos + this.tb * sin;
+    const e1 = this.tb * cos - this.ta * sin;
+    const e3 = this.tc * cos + this.td * sin;
+    const e4 = this.td * cos - this.tc * sin;
+    this.ta = e0;
+    this.tb = e1;
+    this.tc = e3;
+    this.td = e4;
+    this.mutation = true;
     return this;
   }
 
@@ -255,35 +210,34 @@ export class Matrix3d {
     return Matrix3d.multiply(this, other, this);
   }
 
-  get tx(): number {
-    return this.data[m2]!;
-  }
-
-  get ty(): number {
-    return this.data[m5]!;
-  }
-
-  get ta(): number {
-    return this.data[m0]!;
-  }
-
-  get tb(): number {
-    return this.data[m1]!;
-  }
-
-  get tc(): number {
-    return this.data[m3]!;
-  }
-
-  get td(): number {
-    return this.data[m4]!;
-  }
-
-  transformPoint(x: number, y: number): [number, number] {
-    return [
-      this.data[m0]! * x + this.data[m1]! * y + this.data[m2]!,
-      this.data[m3]! * x + this.data[m4]! * y + this.data[m3]!,
-    ];
+  /**
+   * Returns the matrix as a Float32Array in column-major order.
+   *
+   * @remarks
+   * This method is optimized to avoid unnecessary allocations. The same array
+   * is returned every time this method is called, and is updated in place.
+   *
+   * WARNING: Use the array only for passing directly to a WebGL shader uniform
+   * during a frame render. Do not modify or hold onto the array for longer than
+   * a frame.
+   */
+  getFloatArr(): Float32Array {
+    if (!this._floatArr) {
+      this._floatArr = new Float32Array(9);
+    }
+    if (this.mutation) {
+      this._floatArr[0] = this.ta;
+      this._floatArr[1] = this.tc;
+      this._floatArr[2] = 0;
+      this._floatArr[3] = this.tb;
+      this._floatArr[4] = this.td;
+      this._floatArr[5] = 0;
+      this._floatArr[6] = this.tx;
+      this._floatArr[7] = this.ty;
+      this._floatArr[8] = 1;
+      this.mutation = false;
+    }
+    return this._floatArr;
   }
 }
 

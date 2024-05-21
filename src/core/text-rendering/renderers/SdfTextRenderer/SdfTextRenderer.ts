@@ -56,6 +56,9 @@ import type {
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
+import type { Dimensions } from '../../../../common/CommonTypes.js';
+import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
+import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -103,6 +106,11 @@ export interface SdfTextRendererState extends TextRendererState {
   distanceRange: number;
 
   trFontFace: SdfTrFontFace | undefined;
+
+  /**
+   * Resolved line height in logical screen pixel units
+   */
+  resLineHeight: number | undefined;
 }
 
 /**
@@ -249,6 +257,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       },
       lineHeight: (state, value) => {
         state.props.lineHeight = value;
+        state.resLineHeight = undefined;
         this.invalidateLayoutCache(state);
       },
       maxLines: (state, value) => {
@@ -361,6 +370,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       distanceRange: 0,
       trFontFace: undefined,
       isRenderable: false,
+      resLineHeight: undefined,
       debugData: {
         updateCount: 0,
         layoutCount: 0,
@@ -407,6 +417,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     // If the font is loaded then so should the data
     assertTruthy(trFontFace.data, 'Font face data should be loaded');
+    assertTruthy(trFontFace.metrics, 'Font face metrics should be loaded');
 
     const {
       text,
@@ -416,7 +427,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       contain,
       width,
       height,
-      lineHeight,
       verticalAlign,
       scrollable,
       overflowSuffix,
@@ -439,8 +449,21 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
      */
     const fontSizeRatio = fontSize / sdfFontSize;
 
+    // If not already resolved, resolve the line height and store it in the state
+    let resLineHeight = state.resLineHeight;
+    if (resLineHeight === undefined) {
+      const lineHeight = state.props.lineHeight;
+      // If lineHeight is undefined, use the maxCharHeight from the font face
+      if (lineHeight === undefined) {
+        resLineHeight = calcDefaultLineHeight(trFontFace.metrics, fontSize);
+      } else {
+        resLineHeight = lineHeight;
+      }
+      state.resLineHeight = resLineHeight;
+    }
+
     // Needed in renderWindow calculation
-    const sdfLineHeight = lineHeight / fontSizeRatio;
+    const sdfLineHeight = resLineHeight / fontSizeRatio;
 
     state.distanceRange =
       fontSizeRatio * trFontFace.data.distanceField.distanceRange;
@@ -497,7 +520,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         x,
         y,
         scrollY,
-        lineHeight,
+        resLineHeight,
         contain === 'both' ? elementBounds.y2 - elementBounds.y1 : 0,
         elementBounds,
         fontSizeRatio,
@@ -508,7 +531,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     const start = getStartConditions(
       sdfFontSize,
       sdfLineHeight,
-      lineHeight,
+      trFontFace,
       verticalAlign,
       offsetY,
       fontSizeRatio,
@@ -535,7 +558,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       width,
       height,
       fontSize,
-      lineHeight,
+      resLineHeight,
       letterSpacing,
       vertexBuffer,
       contain,
@@ -559,7 +582,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // If we didn't exit early, we know we have completely computed w/h
     if (out2.fullyProcessed) {
       state.textW = out2.maxX * fontSizeRatio;
-      state.textH = out2.maxY * fontSizeRatio;
+      state.textH = out2.numLines * sdfLineHeight * fontSizeRatio;
     }
 
     // if (state.props.debug.printLayoutTime) {
@@ -574,13 +597,16 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     transform: Matrix3d,
     clippingRect: Readonly<RectWithValid>,
     alpha: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions,
   ): void {
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
     }
 
-    const { renderer } = this.stage;
+    const renderer = this.stage.renderer;
+    assertTruthy(renderer instanceof WebGlCoreRenderer);
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
@@ -664,7 +690,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       webGlBuffers,
       this.sdfShader,
       {
-        transform: transform.data,
+        transform: transform.getFloatArr(),
         // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
         // for the best blending results. Which is why we use `mergeColorAlpha`
         // instead of `mergeColorAlphaPremultiplied` here.
@@ -679,6 +705,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       { height: textH, width: textW },
       0,
       zIndex,
+      false,
+      parentHasRenderTexture,
+      framebufferDimensions,
     );
 
     const texture = state.trFontFace?.texture;
@@ -771,6 +800,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
    * @param state
    */
   protected releaseFontFace(state: SdfTextRendererState) {
+    state.resLineHeight = undefined;
     if (state.trFontFace) {
       state.trFontFace.texture.setRenderableOwner(state, false);
       state.trFontFace = undefined;

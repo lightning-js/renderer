@@ -23,8 +23,6 @@
  * @module
  */
 
-import memo from 'memize';
-
 export const EPSILON = 0.000001;
 export let ARRAY_TYPE =
   typeof Float32Array !== 'undefined' ? Float32Array : Array;
@@ -121,97 +119,107 @@ const getTimingBezier = (
   };
 };
 
-export const getTimingFunction = memo(
-  (str: string): ((time: number) => number | undefined) => {
-    switch (str) {
-      case 'linear':
-        return function (time: number) {
-          return time;
-        };
-      case 'ease':
-        return getTimingBezier(0.25, 0.1, 0.25, 1.0);
+interface TimingFunctionMap {
+  [key: string]: (time: number) => number | undefined;
+}
 
-      case 'ease-in':
-        return getTimingBezier(0.42, 0, 1.0, 1.0);
-      case 'ease-out':
-        return getTimingBezier(0, 0, 0.58, 1.0);
-      case 'ease-in-out':
-        return getTimingBezier(0.42, 0, 0.58, 1.0);
+type TimingLookupArray = number[];
+interface TimingLookup {
+  [key: string]: TimingLookupArray;
+}
 
-      case 'ease-in-sine':
-        return getTimingBezier(0.12, 0, 0.39, 0);
-      case 'ease-out-sine':
-        return getTimingBezier(0.12, 0, 0.39, 0);
-      case 'ease-in-out-sine':
-        return getTimingBezier(0.37, 0, 0.63, 1);
+const timingMapping: TimingFunctionMap = {};
 
-      case 'ease-in-cubic':
-        return getTimingBezier(0.32, 0, 0.67, 0);
-      case 'ease-out-cubic':
-        return getTimingBezier(0.33, 1, 0.68, 1);
-      case 'ease-in-out-cubic':
-        return getTimingBezier(0.65, 0, 0.35, 1);
+const timingLookup: TimingLookup = {
+  ease: [0.25, 0.1, 0.25, 1.0],
+  'ease-in': [0.42, 0, 1.0, 1.0],
+  'ease-out': [0, 0, 0.58, 1.0],
+  'ease-in-out': [0.42, 0, 0.58, 1.0],
+  'ease-in-sine': [0.12, 0, 0.39, 0],
+  'ease-out-sine': [0.12, 0, 0.39, 0],
+  'ease-in-out-sine': [0.37, 0, 0.63, 1],
+  'ease-in-cubic': [0.32, 0, 0.67, 0],
+  'ease-out-cubic': [0.33, 1, 0.68, 1],
+  'ease-in-out-cubic': [0.65, 0, 0.35, 1],
+  'ease-in-circ': [0.55, 0, 1, 0.45],
+  'ease-out-circ': [0, 0.55, 0.45, 1],
+  'ease-in-out-circ': [0.85, 0, 0.15, 1],
+  'ease-in-back': [0.36, 0, 0.66, -0.56],
+  'ease-out-back': [0.34, 1.56, 0.64, 1],
+  'ease-in-out-back': [0.68, -0.6, 0.32, 1.6],
+};
 
-      case 'ease-in-circ':
-        return getTimingBezier(0.55, 0, 1, 0.45);
-      case 'ease-out-circ':
-        return getTimingBezier(0, 0.55, 0.45, 1);
-      case 'ease-in-out-circ':
-        return getTimingBezier(0.85, 0, 0.15, 1);
+const defaultTiming = (t: number): number => t;
 
-      case 'ease-in-back':
-        return getTimingBezier(0.36, 0, 0.66, -0.56);
-      case 'ease-out-back':
-        return getTimingBezier(0.34, 1.56, 0.64, 1);
-      case 'ease-in-out-back':
-        return getTimingBezier(0.68, -0.6, 0.32, 1.6);
+const parseCubicBezier = (str: string) => {
+  //cubic-bezier(0.84, 0.52, 0.56, 0.6)
+  const regex = /-?\d*\.?\d+/g;
+  const match = str.match(regex);
 
-      case 'step-start':
-        return function () {
-          return 1;
-        };
-      case 'step-end':
-        return function (time: number) {
-          return time === 1 ? 1 : 0;
-        };
-      default:
-        // eslint-disable-next-line no-case-declarations
-        const s = 'cubic-bezier(';
-        if (str && str.indexOf(s) === 0) {
-          const parts = str
-            .substr(s.length, str.length - s.length - 1)
-            .split(',');
-          if (parts.length !== 4) {
-            console.warn('Unknown timing function: ' + str);
-            // Fallback: use linear.
-            return function (time) {
-              return time;
-            };
-          }
-          const a = parseFloat(parts[0] || '0.42');
-          const b = parseFloat(parts[1] || '0');
-          const c = parseFloat(parts[2] || '1');
-          const d = parseFloat(parts[3] || '1');
+  if (match) {
+    const [num1, num2, num3, num4] = match;
+    const a = parseFloat(num1 || '0.42');
+    const b = parseFloat(num2 || '0');
+    const c = parseFloat(num3 || '1');
+    const d = parseFloat(num4 || '1');
 
-          if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d)) {
-            console.warn(' Unknown timing function: ' + str);
-            // Fallback: use linear.
-            return function (time) {
-              return time;
-            };
-          }
+    const timing = getTimingBezier(a, b, c, d);
+    timingMapping[str] = timing;
 
-          return getTimingBezier(a, b, c, d);
-        } else {
-          console.warn('Unknown timing function: ' + str);
-          // Fallback: use linear.
-          return function (time) {
-            return time;
-          };
-        }
-    }
-  },
-);
+    return timing;
+  }
+
+  // parse failed, return linear
+  console.warn('Unknown cubic-bezier timing: ' + str);
+  return defaultTiming;
+};
+
+export const getTimingFunction = (
+  str: string,
+): ((time: number) => number | undefined) => {
+  if (str === '') {
+    return defaultTiming;
+  }
+
+  if (timingMapping[str] !== undefined) {
+    return timingMapping[str] || defaultTiming;
+  }
+
+  if (str === 'linear') {
+    return (time: number) => {
+      return time;
+    };
+  }
+
+  if (str === 'step-start') {
+    return () => {
+      return 1;
+    };
+  }
+
+  if (str === 'step-end') {
+    return (time: number) => {
+      return time === 1 ? 1 : 0;
+    };
+  }
+
+  if (timingLookup[str] !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - TS doesn't understand that we've checked for undefined
+    const [a, b, c, d] = timingLookup[str];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const timing = getTimingBezier(a, b, c, d);
+    timingMapping[str] = timing;
+    return timing;
+  }
+
+  if (str.startsWith('cubic-bezier')) {
+    return parseCubicBezier(str);
+  }
+
+  console.warn('Unknown timing function: ' + str);
+  return defaultTiming;
+};
 
 if (!Math.hypot)
   Math.hypot = (...args: number[]) => {

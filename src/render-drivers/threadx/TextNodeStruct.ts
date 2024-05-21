@@ -164,7 +164,9 @@ export class TextNodeStruct
     // Decorator will handle this
   }
 
-  @structProp('number')
+  @structProp('number', {
+    allowUndefined: true,
+  })
   get lineHeight(): TextNodeStructWritableProps['lineHeight'] {
     return 0;
   }
