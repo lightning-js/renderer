@@ -25,6 +25,7 @@ import {
   intersectRect,
   type Bound,
   intersectBound,
+  boundsOverlap,
   getNormalizedRgbaComponents,
   getNormalizedAlphaComponent,
   type BoundWithValid,
@@ -198,11 +199,17 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       },
       x: (state, value) => {
         state.props.x = value;
-        this.invalidateVisibleWindowCache(state);
+
+        if (this.isValidOnScreen(state) === true) {
+          this.invalidateVisibleWindowCache(state);
+        }
       },
       y: (state, value) => {
         state.props.y = value;
-        this.invalidateVisibleWindowCache(state);
+
+        if (this.isValidOnScreen(state) === true) {
+          this.invalidateVisibleWindowCache(state);
+        }
       },
       contain: (state, value) => {
         state.props.contain = value;
@@ -340,10 +347,27 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   override updateState(state: CanvasTextRendererState): void {
     // On the first update call we need to set the status to loading
     if (state.status === 'initialState') {
-      this.setStatus(state, 'loading');
+      // check if we're on screen
+      if (this.isValidOnScreen(state) === true) {
+        this.setStatus(state, 'loading');
+      }
     }
 
-    if (state.status === 'loaded') {
+    // If the state is not renderable, we don't want to keep the texture
+    if (state.isRenderable === false && state.status === 'loaded') {
+      return this.destroyState(state);
+    }
+
+    if (
+      state.isRenderable === false &&
+      (state.status === 'initialState' || state.status === 'destroyed')
+    ) {
+      // If the state is not renderable and we're in the initial or destroyed state
+      // we don't need to do anything else.
+      return;
+    }
+
+    if (state.status === 'loaded' && state.visibleWindow.valid === true) {
       // If we're loaded, we don't need to do anything
       return;
     }
@@ -676,9 +700,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
     // Invalidate renderWindow because the renderInfo changed
     state.renderWindow = undefined;
-
-    const renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
-    return renderInfo;
+    return state.renderInfo;
   }
 
   getAndCalculateVisibleWindow(state: CanvasTextRendererState): BoundWithValid {
@@ -756,11 +778,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const { stage } = this;
 
     const { canvasPages, textW = 0, textH = 0, renderWindow } = state;
-
     if (!canvasPages || !renderWindow) return;
 
     const { x, y, scrollY, contain, width, height /*, debug*/ } = state.props;
-
     const elementRect = {
       x: x,
       y: y,
@@ -902,19 +922,43 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     // }
   }
 
+  isValidOnScreen(state: CanvasTextRendererState): boolean {
+    // if we dont have a valid render window, we can't be on screen
+    if (!state.visibleWindow.valid === false) {
+      return false;
+    }
+
+    const { x, y, width, height, contain } = state.props;
+    const elementBounds = createBound(
+      x,
+      y,
+      contain !== 'none' ? x + width : Infinity,
+      contain === 'both' ? y + height : Infinity,
+      tmpElementBounds,
+    );
+
+    const isPossiblyOnScreen = boundsOverlap(
+      elementBounds,
+      this.rendererBounds,
+    );
+
+    return isPossiblyOnScreen;
+  }
+
   override setIsRenderable(
     state: CanvasTextRendererState,
     renderable: boolean,
   ): void {
     super.setIsRenderable(state, renderable);
-    // Set state object owner from any canvas page textures
-    state.canvasPages?.forEach((pageInfo) => {
-      pageInfo.texture?.setRenderableOwner(state, renderable);
-    });
+    this.updateState(state);
   }
 
   override destroyState(state: CanvasTextRendererState): void {
+    if (state.status === 'destroyed') {
+      return;
+    }
     super.destroyState(state);
+
     // Remove state object owner from any canvas page textures
     state.canvasPages?.forEach((pageInfo) => {
       const { texture } = pageInfo;
@@ -951,7 +995,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   /**
    * Invalidate the layout cache stored in the state. This will cause the text
-   * to be re-layed out on the next update.
+   * to be re-rendered on the next update.
    *
    * @remarks
    * This also invalidates the visible window cache.
