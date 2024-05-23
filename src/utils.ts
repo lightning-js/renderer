@@ -237,3 +237,11 @@ export function getImageAspectRatio(width: number, height: number): number {
 export function isProductionEnvironment(): boolean {
   return import.meta.env && import.meta.env.PROD;
 }
+
+/**
+ * Returns a new unique ID
+ */
+let nextId = 1;
+export function getNewId(): number {
+  return nextId++;
+}

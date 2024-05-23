@@ -30,7 +30,7 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { ICoreDriver } from './ICoreDriver.js';
+
 import {
   ManualCountTextureUsageTracker,
   type ManualCountTextureUsageTrackerOptions,
@@ -40,8 +40,15 @@ import type { TextureUsageTracker } from './texture-usage-trackers/TextureUsageT
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
-import { isProductionEnvironment } from '../utils.js';
-import type { StageOptions } from '../core/Stage.js';
+import { assertTruthy, isProductionEnvironment } from '../utils.js';
+import {
+  Stage,
+  type StageFpsUpdateHandler,
+  type StageFrameTickHandler,
+} from '../core/Stage.js';
+import { getNewId } from '../utils.js';
+import { CoreNode } from '../core/CoreNode.js';
+import { CoreTextNode } from '../core/CoreTextNode.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -304,11 +311,10 @@ export interface RendererMainSettings {
  */
 export class RendererMain extends EventEmitter {
   readonly root: INode | null = null;
-  readonly driver: ICoreDriver;
   readonly canvas: HTMLCanvasElement;
+  private stage: Stage | null = null;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   private inspector: Inspector | null = null;
-  private nodes: Map<number, INode> = new Map();
   private nextTextureId = 1;
 
   /**
@@ -326,11 +332,7 @@ export class RendererMain extends EventEmitter {
    * @param target Element ID or HTMLElement to insert the canvas into
    * @param driver Core Driver to use
    */
-  constructor(
-    settings: RendererMainSettings,
-    target: string | HTMLElement,
-    driver: ICoreDriver,
-  ) {
+  constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
@@ -363,7 +365,9 @@ export class RendererMain extends EventEmitter {
     } = resolvedSettings;
 
     const releaseCallback = (textureId: number) => {
-      this.driver.releaseTexture(textureId);
+      const { stage } = this;
+      assertTruthy(stage);
+      stage.txManager.removeTextureIdFromCache(textureId);
     };
 
     const useFinalizationRegistryTracker =
@@ -378,8 +382,6 @@ export class RendererMain extends EventEmitter {
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
-
-    this.driver = driver;
 
     const canvas = document.createElement('canvas');
     this.canvas = canvas;
@@ -401,25 +403,26 @@ export class RendererMain extends EventEmitter {
     }
 
     // Hook up the driver's callbacks
-    driver.onCreateNode = (node) => {
-      this.nodes.set(node.id, node);
-    };
+    // WVB FIXME: Implement these
+    // driver.onCreateNode = (node) => {
+    //   this.nodes.set(node.id, node);
+    // };
 
-    driver.onBeforeDestroyNode = (node) => {
-      this.nodes.delete(node.id);
-    };
+    // driver.onBeforeDestroyNode = (node) => {
+    //   this.nodes.delete(node.id);
+    // };
 
-    driver.onFpsUpdate = (fpsData) => {
-      this.emit('fpsUpdate', fpsData);
-    };
+    // driver.onFpsUpdate = (fpsData) => {
+    //   this.emit('fpsUpdate', fpsData);
+    // };
 
-    driver.onFrameTick = (frameTickData) => {
-      this.emit('frameTick', frameTickData);
-    };
+    // driver.onFrameTick = (frameTickData) => {
+    //   this.emit('frameTick', frameTickData);
+    // };
 
-    driver.onIdle = () => {
-      this.emit('idle');
-    };
+    // driver.onIdle = () => {
+    //   this.emit('idle');
+    // };
 
     targetEl.appendChild(canvas);
 
@@ -436,9 +439,24 @@ export class RendererMain extends EventEmitter {
    * methods are called.
    */
   async init(): Promise<void> {
-    await this.driver.init(this, this.settings, this.canvas);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    (this.root as INode) = this.driver.getRootNode();
+    this.stage = new Stage({
+      rootId: getNewId(),
+      appWidth: this.settings.appWidth,
+      appHeight: this.settings.appHeight,
+      txMemByteThreshold: this.settings.txMemByteThreshold,
+      boundsMargin: this.settings.boundsMargin,
+      deviceLogicalPixelRatio: this.settings.deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio: this.settings.devicePhysicalPixelRatio,
+      clearColor: this.settings.clearColor,
+      canvas: this.canvas,
+      fpsUpdateInterval: this.settings.fpsUpdateInterval,
+      enableContextSpy: this.settings.enableContextSpy,
+      numImageWorkers: this.settings.numImageWorkers,
+      renderMode: this.settings.renderMode,
+      debug: {
+        monitorTextureCache: false,
+      },
+    });
   }
 
   /**
@@ -457,14 +475,46 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createNode(props: Partial<INodeWritableProps>): INode {
-    if (this.inspector) {
-      return this.inspector.createNode(
-        this.driver,
-        this.resolveNodeDefaults(props),
-      );
-    }
+    // FIXME
+    // if (this.inspector) {
+    //   return this.inspector.createNode(
+    //     this.resolveNodeDefaults(props),
+    //   );
+    // }
 
-    return this.driver.createNode(this.resolveNodeDefaults(props));
+    assertTruthy(this.stage);
+    const resolvedProps = this.resolveNodeDefaults(props);
+    const node = new CoreNode(this.stage, {
+      ...resolvedProps,
+      id: getNewId(),
+      shaderProps: null,
+      textureOptions: null,
+    });
+
+    // FIXME onDestroy event? node.once('beforeDestroy'
+    // FIXME onCreate event?
+
+    // assign src setter to node, because we need to use the texture tracker
+    Object.defineProperty(node, 'src', {
+      get() {
+        return node.src;
+      },
+      set(this: RendererMain, imageUrl: string) {
+        if (node.src === imageUrl) {
+          return;
+        }
+        node.src = imageUrl;
+        if (!imageUrl) {
+          node.texture = null;
+          return;
+        }
+        node.texture = this.createTexture('ImageTexture', {
+          src: imageUrl,
+        });
+      },
+    });
+
+    return node;
   }
 
   /**
@@ -485,6 +535,7 @@ export class RendererMain extends EventEmitter {
     const fontSize = props.fontSize ?? 16;
     const data = {
       ...this.resolveNodeDefaults(props),
+      id: getNewId(),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -504,13 +555,17 @@ export class RendererMain extends EventEmitter {
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
+      shaderProps: null,
+      textureOptions: null,
     };
 
-    if (this.inspector) {
-      return this.inspector.createTextNode(this.driver, data);
-    }
+    // FIXME
+    // if (this.inspector) {
+    //   return this.inspector.createTextNode(data);
+    // }
 
-    return this.driver.createTextNode(data);
+    assertTruthy(this.stage);
+    return new CoreTextNode(this.stage, data);
   }
 
   /**
@@ -579,17 +634,17 @@ export class RendererMain extends EventEmitter {
    * Destroy a node
    *
    * @remarks
-   * This method destroys a node but does not destroy its children.
+   * This method destroys a node
    *
    * @param node
    * @returns
    */
-  destroyNode(node: INode) {
+  destroyNode(node: CoreNode) {
     if (this.inspector) {
       this.inspector.destroyNode(node);
     }
 
-    return this.driver.destroyNode(node);
+    return node.destroy();
   }
 
   /**
@@ -658,8 +713,28 @@ export class RendererMain extends EventEmitter {
    * @param id
    * @returns
    */
-  getNodeById(id: number): INode | null {
-    return this.nodes.get(id) || null;
+  getNodeById(id: number): CoreNode | null {
+    const root = this.stage?.root;
+    if (!root) {
+      return null;
+    }
+
+    const findNode = (node: CoreNode): CoreNode | null => {
+      if (node.id === id) {
+        return node;
+      }
+
+      for (const child of node.children) {
+        const found = findNode(child);
+        if (found) {
+          return found;
+        }
+      }
+
+      return null;
+    };
+
+    return findNode(root);
   }
 
   toggleFreeze() {

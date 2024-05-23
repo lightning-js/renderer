@@ -25,6 +25,7 @@ import type {
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { CoreNode } from '../core/CoreNode.js';
 
 /**
  * Writable properties of a Node.
@@ -197,7 +198,7 @@ export interface INodeWritableProps {
    *
    * @default `null`
    */
-  parent: INode | null;
+  parent: CoreNode | null;
   /**
    * The Node's z-index.
    *
@@ -482,7 +483,6 @@ export interface INode extends INodeWritableProps, IEventEmitter<INodeEvents> {
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
   destroy(): void;
-  flush(): void;
 }
 
 export interface ITextNodeWritableProps extends INodeWritableProps, TrProps {

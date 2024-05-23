@@ -55,6 +55,16 @@ import {
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
+import type {
+  INodeAnimatableProps,
+  INodeWritableProps,
+  INode,
+} from '../main-api/INode.js';
+import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { IAnimationController } from '../common/IAnimationController.js';
+import { CoreAnimation } from '../core/animations/CoreAnimation.js';
+import { CoreAnimationController } from '../core/animations/CoreAnimationController.js';
+import type { ShaderRef, TextureRef } from '../main-api/RendererMain.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -69,43 +79,10 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
-export interface CoreNodeProps {
+export interface CoreNodeProps
+  extends INodeWritableProps,
+    INodeAnimatableProps {
   id: number;
-  // External facing properties whose defaults are determined by
-  // RendererMain's resolveNodeDefaults() method
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  alpha: number;
-  autosize: boolean;
-  clipping: boolean;
-  color: number;
-  colorTop: number;
-  colorBottom: number;
-  colorLeft: number;
-  colorRight: number;
-  colorTl: number;
-  colorTr: number;
-  colorBl: number;
-  colorBr: number;
-  parent: CoreNode | null;
-  zIndex: number;
-  texture: Texture | null;
-  textureOptions: TextureOptions | null;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
-  zIndexLocked: number;
-  scaleX: number;
-  scaleY: number;
-  mount: number;
-  mountX: number;
-  mountY: number;
-  pivot: number;
-  pivotX: number;
-  pivotY: number;
-  rotation: number;
-  rtt: boolean;
 }
 
 type ICoreNode = Omit<
@@ -267,6 +244,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
 
+  private _shader: CoreShader | null = null;
+  private _src = '';
+  public _texture: Texture | null = null;
+
   constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
     this.props = {
@@ -295,7 +276,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const { txManager } = this.stage;
     const texture = txManager.loadTexture(textureType, props, options);
 
-    this.props.texture = texture;
+    this._texture = texture;
     this.props.textureOptions = options;
     this.setUpdateType(UpdateType.IsRenderable);
 
@@ -318,13 +299,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   unloadTexture(): void {
-    if (this.props.texture) {
-      const { texture } = this.props;
-      texture.off('loaded', this.onTextureLoaded);
-      texture.off('failed', this.onTextureFailed);
-      texture.off('freed', this.onTextureFreed);
-      texture.setRenderableOwner(this, false);
+    if (this._texture) {
+      this._texture.off('loaded', this.onTextureLoaded);
+      this._texture.off('failed', this.onTextureFailed);
+      this._texture.off('freed', this.onTextureFreed);
+      this._texture.setRenderableOwner(this, false);
     }
+    this._shader = null;
     this.props.texture = null;
     this.props.textureOptions = null;
     this.setUpdateType(UpdateType.IsRenderable);
@@ -376,7 +357,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const shManager = this.stage.renderer.getShaderManager();
     assertTruthy(shManager);
     const { shader, props: p } = shManager.loadShader(shaderType, props);
-    this.props.shader = shader;
+    this._shader = shader;
     this.props.shaderProps = p;
     this.setUpdateType(UpdateType.IsRenderable);
   }
@@ -605,7 +586,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return false;
     }
 
-    if (this.props.shader) {
+    if (this._shader) {
       return true;
     }
 
@@ -749,7 +730,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   onChangeIsRenderable(isRenderable: boolean) {
-    this.props.texture?.setRenderableOwner(this, isRenderable);
+    this._texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {
@@ -883,6 +864,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = null;
     this.props.shader = null;
+    this.props.shaderProps = null;
+    this._shader = null;
 
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
@@ -893,8 +876,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, texture, textureOptions, shader, shaderProps, rtt } =
-      this.props;
+    const { width, height, textureOptions, shaderProps, rtt } = this.props;
+    const texture = this._texture;
+    const shader = this._shader;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
@@ -1360,6 +1344,24 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.stage.renderer?.renderToTexture(this);
   }
 
+  get shader(): ShaderRef | null {
+    return this.props.shader;
+  }
+
+  set shader(value: ShaderRef | null) {
+    this.props.shader = value;
+    assertTruthy(value);
+    this.loadShader(value.shType, value.props);
+  }
+
+  get src(): string {
+    return this._src;
+  }
+
+  set src(value: string) {
+    this._src = value;
+  }
+
   /**
    * Returns the framebuffer dimensions of the node.
    * If the node has a render texture, the dimensions are the same as the node's dimensions.
@@ -1387,13 +1389,34 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return null;
   }
 
-  get texture(): Texture | null {
+  get texture(): TextureRef | null {
     return this.props.texture;
+  }
+
+  set texture(value: TextureRef | null) {
+    this.props.texture = value;
+    // FIXME?
+    //this.loadTexture(value.txType, value.props, value.options);
   }
 
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
+
+  animate(
+    props: Partial<INodeAnimatableProps>,
+    settings: Partial<AnimationSettings>,
+  ): IAnimationController {
+    const animation = new CoreAnimation(this, props, settings);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const controller = new CoreAnimationController(
+      this.stage.animationManager,
+      animation,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return controller;
+  }
+
   //#endregion Properties
 }

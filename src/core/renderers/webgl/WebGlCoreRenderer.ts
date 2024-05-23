@@ -577,8 +577,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
 
-      assertTruthy(node.texture, 'RTT node missing texture');
-      const ctxTexture = txManager.getCtxTexture(node.texture);
+      assertTruthy(node._texture, 'RTT node missing texture');
+      const ctxTexture = txManager.getCtxTexture(node._texture);
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
       this.renderToTextureActive = true;
 
