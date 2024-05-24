@@ -161,7 +161,7 @@ export class CoreTextureManager {
 
   constructor(numImageWorkers: number) {
     // Register default known texture types
-    if (this.hasCreateImageBitmap && this.hasWorker) {
+    if (this.hasCreateImageBitmap && this.hasWorker && numImageWorkers > 0) {
       this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
     }
 
