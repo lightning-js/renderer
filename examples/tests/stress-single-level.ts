@@ -30,7 +30,7 @@ export default async function ({
   perfMultiplier,
 }: ExampleSettings) {
   // create 100 nodes
-  const numOuterNodes = 100 * perfMultiplier;
+  const numOuterNodes = 1 * perfMultiplier;
   const nodes: INode[] = [];
 
   const bg = renderer.createNode({
@@ -46,9 +46,11 @@ export default async function ({
       height: 101,
       x: Math.random() * 1920,
       y: Math.random() * 1080,
-      src: logo,
+      // src: logo,
       parent: bg,
     });
+
+    node.src = logo;
 
     nodes.push(node);
   }

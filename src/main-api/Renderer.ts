@@ -402,10 +402,8 @@ export class RendererMain extends EventEmitter {
       textureCleanupOptions: this.settings.textureCleanupOptions,
     });
 
-    //FIXME add these back
     // Forward fpsUpdate events from the stage to RendererMain
     this.stage.on('fpsUpdate', ((stage, fpsData) => {
-      // this.onFpsUpdate(fpsData);
       this.emit('fpsUpdate', fpsData);
     }) satisfies StageFpsUpdateHandler);
 
@@ -434,26 +432,25 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createNode(props: Partial<INodeWritableProps>): CoreNode {
-    // FIXME
-    // if (this.inspector) {
-    //   return this.inspector.createNode(
-    //     this.resolveNodeDefaults(props),
-    //   );
-    // }
-
     assertTruthy(this.stage, 'Stage is not initialized');
     assertTruthy(this.textureTracker, 'TextureTracker is not initialized');
 
     const resolvedProps = this.resolveNodeDefaults(props);
-    return new CoreNode(this.stage, this.textureTracker, {
+    const node = new CoreNode(this.stage, this.textureTracker, {
       ...resolvedProps,
       id: getNewId(),
       shaderProps: null,
       textureOptions: null,
     });
 
+    if (this.inspector) {
+      return this.inspector.createNode(node, resolvedProps);
+    }
+
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
+
+    return node;
   }
 
   /**
@@ -498,14 +495,15 @@ export class RendererMain extends EventEmitter {
       textureOptions: null,
     };
 
-    // FIXME
-    // if (this.inspector) {
-    //   return this.inspector.createTextNode(data);
-    // }
-
     assertTruthy(this.stage);
     assertTruthy(this.textureTracker);
-    return new CoreTextNode(this.stage, this.textureTracker, data);
+    const textNode = new CoreTextNode(this.stage, this.textureTracker, data);
+
+    if (this.inspector) {
+      return this.inspector.createTextNode(textNode, data);
+    }
+
+    return textNode;
   }
 
   /**
@@ -581,7 +579,7 @@ export class RendererMain extends EventEmitter {
    */
   destroyNode(node: CoreNode) {
     if (this.inspector) {
-      this.inspector.destroyNode(node);
+      this.inspector.destroyNode(node.id);
     }
 
     return node.destroy();

@@ -265,10 +265,14 @@ export class CoreNode extends EventEmitter {
       parent: null,
       data: props.data || {},
     };
-    // Allow for parent to be processed appropriately
-    this.parent = props.parent;
 
-    // Allow for Render Texture to be processed appropriately
+    // Assign props to instance
+    this.parent = props.parent;
+    this.shader = props.shader;
+    this.texture = props.texture;
+    this.src = props.src || '';
+    // FIXME
+    // this.data = props.data;
     this.rtt = props.rtt;
 
     this.updateScaleRotateTransform();
@@ -1348,18 +1352,21 @@ export class CoreNode extends EventEmitter {
   }
 
   set rtt(value: boolean) {
-    if (!value) {
-      if (this.props.rtt) {
-        this.props.rtt = false;
-        this.unloadTexture();
-        this.setUpdateType(UpdateType.All);
+    if (value === false && this._texture === null) {
+      this.props.rtt = false;
+      return;
+    }
 
-        this.children.forEach((child) => {
-          child.parentHasRenderTexture = false;
-        });
+    if (value === false && this._texture !== null) {
+      this.props.rtt = false;
+      this.unloadTexture();
+      this.setUpdateType(UpdateType.All);
 
-        this.stage.renderer?.removeRTTNode(this);
-      }
+      this.children.forEach((child) => {
+        child.parentHasRenderTexture = false;
+      });
+
+      this.stage.renderer?.removeRTTNode(this);
       return;
     }
 
@@ -1371,6 +1378,7 @@ export class CoreNode extends EventEmitter {
       },
       { preload: true, flipY: true },
     );
+
     this.texture = textureRef || null;
 
     this.props.rtt = true;
@@ -1390,6 +1398,17 @@ export class CoreNode extends EventEmitter {
   }
 
   set shader(value: ShaderRef | null) {
+    if (value === null && this._shader === null) {
+      return;
+    }
+
+    if (value === null) {
+      this._shader = null;
+      this.props.shader = null;
+      this.setUpdateType(UpdateType.IsRenderable);
+      return;
+    }
+
     this.props.shader = value;
     assertTruthy(value);
     this.loadShader(value.shType, value.props);
@@ -1415,9 +1434,11 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    this.texture = this.textureTracker.createTexture('ImageTexture', {
+    const textureRef = this.textureTracker.createTexture('ImageTexture', {
       src: imageUrl,
     });
+
+    this.texture = textureRef;
   }
 
   /**
@@ -1457,7 +1478,7 @@ export class CoreNode extends EventEmitter {
     }
 
     // unload old texture
-    if (this.texture) {
+    if (this.texture !== null) {
       this.textureTracker?.decrementTextureRefCount(this.texture);
     }
 
