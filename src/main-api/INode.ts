@@ -443,7 +443,7 @@ export interface INodeWritableProps {
  * The data stored can only be of type string, number or boolean.
  */
 export type CustomDataMap = {
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | undefined;
 };
 
 export type INodeAnimatableProps = {
