@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { TextureRef } from '../../main-api/RendererMain.js';
+import type { TextureRef } from '../../main-api/texture-usage-trackers/TextureTrackerMain.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import {
   Texture,

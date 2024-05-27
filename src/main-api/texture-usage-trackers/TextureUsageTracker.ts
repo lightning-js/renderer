@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { TextureRef } from '../RendererMain.js';
+import type { TextureRef } from './TextureTrackerMain.js';
 
 /**
  * Texture Usage Tracker for Usage Based Texture Garbage Collection

@@ -18,28 +18,8 @@
  */
 
 import { assertTruthy } from '../../utils.js';
-import type { TextureRef } from '../RendererMain.js';
+import type { TextureRef } from './TextureTrackerMain.js';
 import { TextureUsageTracker } from './TextureUsageTracker.js';
-
-interface TextureRefInfo {
-  /**
-   * Texture Reference ID
-   */
-  id: number;
-  /**
-   * The number of references to this texture that are currently assigned to
-   * Nodes.
-   */
-  nodeRefCount: number;
-  /**
-   * The last time the texture reference count was updated.
-   *
-   * @remarks
-   * This is used to determine when a texture is no longer referenced by any
-   * Nodes and can be removed from the GPU.
-   */
-  lastUpdate: number;
-}
 
 export interface ManualCountTextureUsageTrackerOptions {
   /**
@@ -62,6 +42,26 @@ export interface ManualCountTextureUsageTrackerOptions {
    * @defaultValue 60000 (1 minute)
    */
   textureCleanupAgeThreadholdMs?: number;
+}
+
+interface TextureRefInfo {
+  /**
+   * Texture Reference ID
+   */
+  id: number;
+  /**
+   * The number of references to this texture that are currently assigned to
+   * Nodes.
+   */
+  nodeRefCount: number;
+  /**
+   * The last time the texture reference count was updated.
+   *
+   * @remarks
+   * This is used to determine when a texture is no longer referenced by any
+   * Nodes and can be removed from the GPU.
+   */
+  lastUpdate: number;
 }
 
 /**

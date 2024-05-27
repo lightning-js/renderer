@@ -177,7 +177,7 @@ export class Stage extends EventEmitter {
     this.fontManager = new TrFontManager(this.textRenderers);
 
     // create root node
-    const rootNode = new CoreNode(this, {
+    const rootNode = new CoreNode(this, null, {
       id: rootId,
       x: 0,
       y: 0,
@@ -212,6 +212,8 @@ export class Stage extends EventEmitter {
       shader: null,
       shaderProps: null,
       rtt: false,
+      src: null,
+      scale: 1,
     });
 
     this.root = rootNode;

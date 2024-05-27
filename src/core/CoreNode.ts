@@ -58,13 +58,16 @@ import { RenderCoords } from './lib/RenderCoords.js';
 import type {
   INodeAnimatableProps,
   INodeWritableProps,
-  INode,
 } from '../main-api/INode.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from '../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../core/animations/CoreAnimationController.js';
-import type { ShaderRef, TextureRef } from '../main-api/RendererMain.js';
+import type { ShaderRef } from '../main-api/Renderer.js';
+import type {
+  TextureRef,
+  TextureTrackerMain,
+} from '../main-api/texture-usage-trackers/TextureTrackerMain.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -79,16 +82,16 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
-export interface CoreNodeProps
-  extends INodeWritableProps,
-    INodeAnimatableProps {
+export interface CoreNodeProps extends INodeWritableProps {
   id: number;
+  textureOptions: TextureOptions | null; // these should be moved to INodeWritableProps?
+  shaderProps: Record<string, unknown> | null; // these should be moved to INodeWritableProps?
 }
 
-type ICoreNode = Omit<
-  CoreNodeProps,
-  'texture' | 'textureOptions' | 'shader' | 'shaderProps'
->;
+// type ICoreNode = Omit<
+//   CoreNodeProps,
+//   'texture' | 'textureOptions' | 'shader' | 'shaderProps'
+// >;
 
 export enum UpdateType {
   /**
@@ -212,9 +215,10 @@ export enum UpdateType {
   All = 8191,
 }
 
-export class CoreNode extends EventEmitter implements ICoreNode {
+export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected props: Required<CoreNodeProps>;
+  protected textureTracker: TextureTrackerMain | null;
 
   public updateType = UpdateType.All;
 
@@ -244,15 +248,22 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
 
-  private _shader: CoreShader | null = null;
-  private _src = '';
+  public _shader: CoreShader | null = null;
+  public _src = '';
   public _texture: Texture | null = null;
 
-  constructor(protected stage: Stage, props: CoreNodeProps) {
+  constructor(
+    protected stage: Stage,
+    protected txTracker: TextureTrackerMain | null,
+    props: CoreNodeProps,
+  ) {
     super();
+    this.textureTracker = txTracker;
+
     this.props = {
       ...props,
       parent: null,
+      data: props.data || {},
     };
     // Allow for parent to be processed appropriately
     this.parent = props.parent;
@@ -978,6 +989,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        const textureRef = this.textureTracker?.createTexture(
+          'RenderTexture',
+          {
+            width: this.width,
+            height: this.height,
+          },
+          { preload: true, flipY: true },
+        );
+
+        this.texture = textureRef || null;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -993,6 +1014,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        const textureRef = this.textureTracker?.createTexture(
+          'RenderTexture',
+          {
+            width: this.width,
+            height: this.height,
+          },
+          { preload: true, flipY: true },
+        );
+
+        this.texture = textureRef || null;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1332,6 +1363,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return;
     }
 
+    const textureRef = this.textureTracker?.createTexture(
+      'RenderTexture',
+      {
+        width: this.width,
+        height: this.height,
+      },
+      { preload: true, flipY: true },
+    );
+    this.texture = textureRef || null;
+
     this.props.rtt = true;
     this.hasRTTupdates = true;
     this.setUpdateType(UpdateType.All);
@@ -1358,8 +1399,25 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return this._src;
   }
 
-  set src(value: string) {
-    this._src = value;
+  set src(imageUrl: string) {
+    if (this._src === imageUrl) {
+      return;
+    }
+
+    this._src = imageUrl;
+
+    if (!imageUrl) {
+      this.texture = null;
+      return;
+    }
+
+    if (this.textureTracker === null) {
+      return;
+    }
+
+    this.texture = this.textureTracker.createTexture('ImageTexture', {
+      src: imageUrl,
+    });
   }
 
   /**
@@ -1394,9 +1452,24 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set texture(value: TextureRef | null) {
+    if (this.props.texture === value) {
+      return;
+    }
+
+    // unload old texture
+    if (this.texture) {
+      this.textureTracker?.decrementTextureRefCount(this.texture);
+    }
+
+    if (value === null) {
+      this.unloadTexture();
+      this.props.texture = null;
+      return;
+    }
+
     this.props.texture = value;
-    // FIXME?
-    //this.loadTexture(value.txType, value.props, value.options);
+    this.textureTracker?.incrementTextureRefCount(value);
+    this.loadTexture(value.txType, value.props, value.options);
   }
 
   setRTTUpdates(type: number) {
@@ -1416,6 +1489,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return controller;
+  }
+
+  flush() {
+    // no-op
   }
 
   //#endregion Properties

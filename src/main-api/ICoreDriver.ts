@@ -27,7 +27,7 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import type { RendererMain, RendererMainSettings } from './RendererMain.js';
+import type { RendererMain, RendererMainSettings } from './Renderer.js';
 
 /**
  * This interface is to be implemented by Core Drivers

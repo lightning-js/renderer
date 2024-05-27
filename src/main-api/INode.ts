@@ -19,7 +19,8 @@
 
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { IAnimationController } from '../common/IAnimationController.js';
-import type { ShaderRef, TextureRef } from './RendererMain.js';
+import type { ShaderRef } from './Renderer.js';
+import type { TextureRef } from './texture-usage-trackers/TextureTrackerMain.js';
 import type {
   TextRendererMap,
   TrProps,
@@ -253,7 +254,7 @@ export interface INodeWritableProps {
    * {@link ImageTexture} using the source image URL provided (with all other
    * settings being defaults)
    */
-  src: string;
+  src: string | null;
   zIndexLocked: number;
   /**
    * Scale to render the Node at

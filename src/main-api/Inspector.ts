@@ -6,7 +6,7 @@ import type {
   ITextNodeWritableProps,
 } from './INode.js';
 import type { ICoreDriver } from './ICoreDriver.js';
-import { type RendererMainSettings } from './RendererMain.js';
+import { type RendererMainSettings } from './Renderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';

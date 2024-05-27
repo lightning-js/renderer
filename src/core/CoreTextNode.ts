@@ -28,6 +28,7 @@ import type {
 import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { TextureTrackerMain } from '../main-api/texture-usage-trackers/TextureTrackerMain.js';
 import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
@@ -52,8 +53,12 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
     null;
 
-  constructor(stage: Stage, props: CoreTextNodeProps) {
-    super(stage, props);
+  constructor(
+    stage: Stage,
+    txTracker: TextureTrackerMain,
+    props: CoreTextNodeProps,
+  ) {
+    super(stage, txTracker, props);
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
       this.resolveTextRendererAndState({

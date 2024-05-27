@@ -18,7 +18,7 @@
  */
 
 import { assertTruthy } from '../../utils.js';
-import type { TextureRef } from '../RendererMain.js';
+import type { TextureRef } from './TextureTrackerMain.js';
 import { TextureUsageTracker } from './TextureUsageTracker.js';
 
 export class FinalizationRegistryTextureUsageTracker extends TextureUsageTracker {

@@ -18,10 +18,7 @@
  */
 
 import {
-  MainCoreDriver,
   RendererMain,
-  ThreadXCoreDriver,
-  type ICoreDriver,
   type NodeLoadedPayload,
   type RendererMainSettings,
   type FpsUpdatePayload,
@@ -200,16 +197,6 @@ async function initRenderer(
   enableInspector: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
-  let driver: ICoreDriver | null = null;
-
-  if (driverName === 'main') {
-    driver = new MainCoreDriver();
-  } else {
-    driver = new ThreadXCoreDriver({
-      coreWorkerUrl,
-    });
-  }
-
   const renderer = new RendererMain(
     {
       appWidth,
@@ -226,7 +213,6 @@ async function initRenderer(
       ...customSettings,
     },
     'app',
-    driver,
   );
 
   /**
