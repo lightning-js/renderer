@@ -320,7 +320,6 @@ export class CoreNode extends EventEmitter {
       this._texture.off('freed', this.onTextureFreed);
       this._texture.setRenderableOwner(this, false);
     }
-    this._shader = null;
     this.props.texture = null;
     this.props.textureOptions = null;
     this.setUpdateType(UpdateType.IsRenderable);
