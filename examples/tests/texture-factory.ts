@@ -19,7 +19,13 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({
+export async function automation(settings: ExampleSettings) {
+  // Snapshot single page
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({
   renderer,
   driverName,
   testRoot,
