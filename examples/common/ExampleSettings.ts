@@ -52,10 +52,6 @@ export interface ExampleSettings {
    */
   renderer: RendererMain;
   /**
-   * Core Driver being used by the test.
-   */
-  driverName: 'main' | 'threadx';
-  /**
    * The HTML Element that the Renderer's canvas is a child of
    */
   appElement: HTMLDivElement;

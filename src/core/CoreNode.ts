@@ -964,7 +964,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions = { preload: true, flipY: true };
+        this.textureOptions = { preload: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -984,7 +984,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions = { preload: true, flipY: true };
+        this.textureOptions = { preload: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1309,29 +1309,34 @@ export class CoreNode extends EventEmitter {
   }
 
   set rtt(value: boolean) {
-    if (value === false && this.texture === null) {
-      this.props.rtt = false;
+    if (this.props.rtt === true) {
+      this.props.rtt = value;
+
+      // unload texture if we used to have a render texture
+      if (value === false && this.texture !== null) {
+        this.unloadTexture();
+        this.setUpdateType(UpdateType.All);
+
+        this.children.forEach((child) => {
+          child.parentHasRenderTexture = false;
+        });
+
+        this.stage.renderer?.removeRTTNode(this);
+        return;
+      }
+    }
+
+    // if the new value is false and we didnt have rtt previously, we don't need to do anything
+    if (value === false) {
       return;
     }
 
-    if (value === false && this.texture !== null) {
-      this.props.rtt = false;
-      this.unloadTexture();
-      this.setUpdateType(UpdateType.All);
-
-      this.children.forEach((child) => {
-        child.parentHasRenderTexture = false;
-      });
-
-      this.stage.renderer?.removeRTTNode(this);
-      return;
-    }
-
+    // load texture
     this.texture = this.stage.txManager.loadTexture('RenderTexture', {
       width: this.width,
       height: this.height,
     });
-    this.textureOptions = { preload: true, flipY: true };
+    this.textureOptions = { preload: true };
 
     this.props.rtt = true;
     this.hasRTTupdates = true;
