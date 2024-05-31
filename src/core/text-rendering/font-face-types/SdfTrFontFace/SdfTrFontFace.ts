@@ -25,7 +25,6 @@ import { ImageTexture } from '../../../textures/ImageTexture.js';
 import {
   TrFontFace,
   type NormalizedFontMetrics,
-  type TrFontFaceDescriptors,
   type TrFontFaceOptions,
 } from '../TrFontFace.js';
 import type { FontShaper } from './internal/FontShaper.js';
@@ -77,20 +76,18 @@ export class SdfTrFontFace<
       'SDF Font Faces can only be used with the WebGL Renderer',
     );
 
-    this.texture = stage.txManager.loadTexture(
-      'ImageTexture',
-      {
-        src: atlasUrl,
-        // IMPORTANT: The SDF shader requires the alpha channel to NOT be
-        // premultiplied on the atlas texture. If it is premultiplied, the
-        // rendering of SDF glyphs (especially single-channel SDF fonts) will
-        // be very jagged.
-        premultiplyAlpha: false,
-      },
-      {
-        preload: true,
-      },
-    );
+    // Load image
+    this.texture = stage.txManager.loadTexture('ImageTexture', {
+      src: atlasUrl,
+      // IMPORTANT: The SDF shader requires the alpha channel to NOT be
+      // premultiplied on the atlas texture. If it is premultiplied, the
+      // rendering of SDF glyphs (especially single-channel SDF fonts) will
+      // be very jagged.
+      premultiplyAlpha: false,
+    });
+
+    // Pre-load it
+    stage.txManager.getCtxTexture(this.texture).load();
 
     this.texture.on('loaded', () => {
       this.checkLoaded();

@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../utils.js';
 import { ImageWorkerManager } from './lib/ImageWorker.js';
 import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
@@ -29,20 +28,27 @@ import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
 
 /**
- * Augmentable map of texture types
+ * Augmentable map of texture class types
  *
  * @remarks
  * This interface can be augmented by other modules/apps to add additional
  * texture types. The ones included directly here are the ones that are
  * included in the core library.
  */
-export interface TextureMap {
+export interface TextureTypeMap {
   ColorTexture: typeof ColorTexture;
   ImageTexture: typeof ImageTexture;
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
   RenderTexture: typeof RenderTexture;
 }
+
+/**
+ * Map of texture instance types
+ */
+export type TextureMap = {
+  [K in keyof TextureTypeMap]: InstanceType<TextureTypeMap[K]>;
+};
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
   ? Props
@@ -54,7 +60,6 @@ export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
  */
 export interface TextureManagerDebugInfo {
   keyCacheSize: number;
-  idCacheSize: number;
 }
 
 /**
@@ -88,35 +93,6 @@ export interface TextureOptions {
   preload?: boolean;
 
   /**
-   * ID to use for this texture.
-   *
-   * @remarks
-   * This is for internal use only as an optimization.
-   *
-   * @privateRemarks
-   * This is used to avoid having to look up the texture in the texture cache
-   * by its cache key. Theoretically this should be faster.
-   *
-   * @defaultValue Automatically generated
-   */
-  id?: number;
-
-  /**
-   * Cache key to use for this texture
-   *
-   * @remarks
-   * If this is set, the texture will be cached using this key. If a texture
-   * with the same key is already cached, it will be returned instead of
-   * creating a new texture.
-   *
-   * If this is not set (undefined), it will be automatically generated via
-   * the specified `Texture`'s `makeCacheKey()` method.
-   *
-   * @defaultValue Automatically generated via `Texture.makeCacheKey()`
-   */
-  cacheKey?: string | false;
-
-  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
@@ -131,22 +107,43 @@ export interface TextureOptions {
   flipY?: boolean;
 }
 
+/**
+ * {@link CoreTextureManager.refCountMap}
+ */
+interface RefCountObj {
+  cacheKey: string | false;
+  count: number;
+}
+
 export class CoreTextureManager {
   /**
    * Amount of used memory defined in pixels
    */
   usedMemory = 0;
 
-  txConstructors: Partial<TextureMap> = {};
-
-  textureKeyCache: Map<string, Texture> = new Map();
-  textureIdCache: Map<number, Texture> = new Map();
+  /**
+   * Cache of textures by their Cache Key
+   */
+  keyCache: Map<string, Texture> = new Map();
+  /**
+   * This map keeps track of the number of renderable owners that are using a
+   * Texture that is in the {@link keyCache}. This is used to determine when a
+   * Texture is no longer being used and can be removed from the cache.
+   */
+  refCountMap: WeakMap<Texture, RefCountObj> = new WeakMap();
+  /**
+   * The Textures in the set have a renderable owner count of 0. This means
+   * their entries in the {@link keyCache} can be removed.
+   */
+  zeroRefSet: Set<Texture> = new Set();
 
   ctxTextureCache: WeakMap<Texture, CoreContextTexture> = new WeakMap();
-  textureRefCountMap: WeakMap<
-    Texture,
-    { cacheKey: string | false; count: number }
-  > = new WeakMap();
+
+  /**
+   * Map of texture constructors by their type name
+   */
+  txConstructors: Partial<TextureTypeMap> = {};
+
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
   hasWorker = !!self.Worker;
@@ -178,121 +175,122 @@ export class CoreTextureManager {
     this.registerTextureType('RenderTexture', RenderTexture);
   }
 
-  registerTextureType<Type extends keyof TextureMap>(
+  registerTextureType<Type extends keyof TextureTypeMap>(
     textureType: Type,
-    textureClass: TextureMap[Type],
+    textureClass: TextureTypeMap[Type],
   ): void {
     this.txConstructors[textureType] = textureClass;
   }
 
-  loadTexture<Type extends keyof TextureMap>(
+  loadTexture<Type extends keyof TextureTypeMap>(
     textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
-    options: TextureOptions | null = null,
-  ): InstanceType<TextureMap[Type]> {
+    props: ExtractProps<TextureTypeMap[Type]>,
+  ): InstanceType<TextureTypeMap[Type]> {
+    let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
-    let texture: Texture | undefined;
-    // If an ID is specified, try to get the texture from the ID cache first
-    if (options?.id !== undefined && this.textureIdCache.has(options.id)) {
-      // console.log('Getting texture by texture desc ID', options.id);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      texture = this.textureIdCache.get(options.id)!;
-    }
-    // If the texture is not found in the ID cache, try to get it from the key cache
+
     if (!texture) {
-      const descId = options?.id;
-      const cacheKey =
-        options?.cacheKey ?? TextureClass.makeCacheKey(props as any);
-      if (cacheKey && this.textureKeyCache.has(cacheKey)) {
+      const cacheKey = TextureClass.makeCacheKey(props as any);
+      if (cacheKey && this.keyCache.has(cacheKey)) {
         // console.log('Getting texture by cache key', cacheKey);
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        texture = this.textureKeyCache.get(cacheKey)!;
+        texture = this.keyCache.get(cacheKey)!;
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         texture = new TextureClass(this, props as any);
-      }
-      if (descId) {
-        this.addTextureIdToCache(descId, cacheKey, texture);
-      }
-    }
-    if (options?.preload) {
-      const ctxTx = this.getCtxTexture(texture);
-      ctxTx.load();
-    }
-    return texture as InstanceType<TextureMap[Type]>;
-  }
-
-  /**
-   * Add a `Texture` to the texture cache by its texture desc ID and cache key
-   *
-   * @remarks
-   * This is used internally by the `CoreTextureManager` to cache textures
-   * when they are created.
-   *
-   * It handles updating the texture ID cache, texture key cache, and texture
-   * reference count map.
-   *
-   * @param textureDescId
-   * @param cacheKey
-   * @param texture
-   */
-  private addTextureIdToCache(
-    textureDescId: number,
-    cacheKey: string | false,
-    texture: Texture,
-  ): void {
-    const { textureIdCache, textureRefCountMap } = this;
-    textureIdCache.set(textureDescId, texture);
-    if (textureRefCountMap.has(texture)) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      textureRefCountMap.get(texture)!.count++;
-    } else {
-      textureRefCountMap.set(texture, { cacheKey, count: 1 });
-      if (cacheKey) {
-        this.textureKeyCache.set(cacheKey, texture);
-      }
-    }
-  }
-
-  /**
-   * Remove a `Texture` from the texture cache by its texture desc ID
-   *
-   * @remarks
-   * This is called externally by when we know (at least reasonably well) that
-   * the `TextureRef` in the Main API space has been is no longer used. This
-   * allows us to remove the `Texture` from the Usage Cache so that it can be
-   * garbage collected as well.
-   *
-   * @param textureDescId
-   */
-  removeTextureIdFromCache(textureDescId: number): void {
-    const { textureIdCache, textureRefCountMap } = this;
-    const texture = textureIdCache.get(textureDescId);
-    if (!texture) {
-      // Sometimes a texture is removed from the cache before it ever gets
-      // added to the cache. This is fine and not an error.
-      return;
-    }
-    textureIdCache.delete(textureDescId);
-    if (textureRefCountMap.has(texture)) {
-      const refCountObj = textureRefCountMap.get(texture);
-      assertTruthy(refCountObj);
-      refCountObj.count--;
-      if (refCountObj.count === 0) {
-        textureRefCountMap.delete(texture);
-        // If the texture is not referenced anywhere else, remove it from the key cache
-        // as well.
-        // This should allow the `Texture` instance to be garbage collected.
-        if (refCountObj.cacheKey) {
-          this.textureKeyCache.delete(refCountObj.cacheKey);
+        if (cacheKey) {
+          this.initTextureToCache(texture, cacheKey);
         }
       }
     }
-    // Free the ctx texture if it exists.
-    this.ctxTextureCache.get(texture)?.free();
+    return texture as InstanceType<TextureTypeMap[Type]>;
+  }
+
+  private initTextureToCache(
+    texture: Texture,
+    cacheKey: string | false,
+  ): RefCountObj {
+    const { keyCache, refCountMap, zeroRefSet } = this;
+    if (cacheKey) {
+      keyCache.set(cacheKey, texture);
+    }
+    const refCountObj = { cacheKey, count: 0 };
+    refCountMap.set(texture, refCountObj);
+    zeroRefSet.add(texture);
+    return refCountObj;
+  }
+
+  /**
+   * Increment the renderable owner count for a Texture in the {@link keyCache}.
+   *
+   * @remarks
+   * If the Texture is not in the {@link keyCache}, this method does nothing.
+   *
+   * @param texture
+   */
+  incTextureRenderable(texture: Texture): void {
+    const { refCountMap } = this;
+    const refCountObj = refCountMap.get(texture);
+    if (!refCountObj) {
+      this.initTextureToCache(texture, false);
+    }
+    if (refCountObj) {
+      const oldCount = refCountObj.count;
+      refCountObj.count = oldCount + 1;
+      // If the texture was in the zero reference set, which was
+      // is if the count was 0, remove it.
+      if (oldCount === 0) {
+        this.zeroRefSet.delete(texture);
+      }
+    }
+  }
+
+  /**
+   * Decrement the renderable owner count for a Texture in the {@link keyCache}.
+   *
+   * @remarks
+   * If the Texture is not in the {@link keyCache}, this method does nothing.
+   *
+   * @param texture
+   */
+  decTextureRenderable(texture: Texture): void {
+    const { refCountMap } = this;
+    const refCountObj = refCountMap.get(texture);
+    if (refCountObj) {
+      const oldCount = refCountObj.count;
+      refCountObj.count = oldCount - 1;
+      // New count is now 0, add to the zero reference set.
+      if (oldCount === 1) {
+        this.zeroRefSet.add(texture);
+      }
+    }
+  }
+
+  /**
+   * Flush out all textures that have a renderable owner count of 0
+   *
+   * @remarks
+   * Each Texture flushed will be removed from the {@link keyCache} (if it's in
+   * there) and also have its associated CoreContextTexture freed.
+   */
+  flushUnusedTextures(): void {
+    const { keyCache, zeroRefSet, refCountMap } = this;
+    for (const texture of zeroRefSet) {
+      const refCountObj = refCountMap.get(texture);
+      if (refCountObj) {
+        const { cacheKey } = refCountObj;
+        if (cacheKey) {
+          keyCache.delete(cacheKey);
+        }
+        refCountMap.delete(texture);
+        // Free the ctx texture if it exists.
+        this.ctxTextureCache.get(texture)?.free();
+      }
+    }
+    zeroRefSet.clear();
   }
 
   /**
@@ -310,8 +308,7 @@ export class CoreTextureManager {
     // }
     // TODO: Output number of bytes used by textures
     return {
-      keyCacheSize: this.textureKeyCache.size,
-      idCacheSize: this.textureIdCache.size,
+      keyCacheSize: this.keyCache.size,
     };
   }
 

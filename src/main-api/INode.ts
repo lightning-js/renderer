@@ -20,13 +20,14 @@
 import type { IEventEmitter } from '@lightningjs/threadx';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import type { ShaderRef } from './Renderer.js';
-import type { TextureRef } from './texture-usage-trackers/TextureTrackerMain.js';
 import type {
   TextRendererMap,
   TrProps,
 } from '../core/text-rendering/renderers/TextRenderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { CoreNode } from '../core/CoreNode.js';
+import type { Texture } from '../core/textures/Texture.js';
+import type { TextureOptions } from '../core/CoreTextureManager.js';
 
 /**
  * Writable properties of a Node.
@@ -230,7 +231,13 @@ export interface INodeWritableProps {
    * Note: If this is a Text Node, the Texture will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  texture: TextureRef | null;
+  texture: Texture | null;
+
+  /**
+   * Options to associate with the Node's Texture
+   */
+  textureOptions: TextureOptions;
+
   /**
    * The Node's shader
    *
@@ -510,7 +517,7 @@ export interface ITextNodeWritableProps extends INodeWritableProps, TrProps {
  * A Text Node is the second graphical building block of the Renderer scene
  * graph. It renders text using a specific text renderer that is automatically
  * chosen based on the font requested and what type of fonts are installed
- * into an app via a CoreExtension.
+ * into an app.
  *
  * The text renderer can be overridden by setting the `textRendererOverride`
  *

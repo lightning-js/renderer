@@ -5,10 +5,8 @@
   "type": "module",
   "main": "./dist/exports/index.js",
   "exports": {
-    ".": "./dist/exports/main-api.js",
-    "./core": "./dist/exports/core-api.js",
-    "./utils": "./dist/exports/utils.js",
-    "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
+    ".": "./dist/exports/index.js",
+    "./utils": "./dist/exports/utils.js"
   },
   "scripts": {
     "preinstall": "node scripts/please-use-pnpm.js",

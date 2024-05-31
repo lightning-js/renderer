@@ -18,13 +18,13 @@
  */
 
 import type {
-  INode,
+  CoreNode,
   INodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 
 export class Component {
-  readonly node: INode;
+  readonly node: CoreNode;
 
   constructor(
     readonly renderer: RendererMain,

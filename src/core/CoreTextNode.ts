@@ -28,12 +28,11 @@ import type {
 import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { TextureTrackerMain } from '../main-api/texture-usage-trackers/TextureTrackerMain.js';
 import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { Rect, RectWithValid } from './lib/utils.js';
+import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
@@ -53,12 +52,8 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
     null;
 
-  constructor(
-    stage: Stage,
-    txTracker: TextureTrackerMain,
-    props: CoreTextNodeProps,
-  ) {
-    super(stage, txTracker, props);
+  constructor(stage: Stage, props: CoreTextNodeProps) {
+    super(stage, props);
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
       this.resolveTextRendererAndState({

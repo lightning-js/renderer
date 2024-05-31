@@ -16,69 +16,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- * Lightning 3 Renderer Core API
+ * Lightning 3 Renderer API
  *
  * @remarks
- * ```
- * import * from '@lightning/renderer/core';
- * ```
- *
- * The Core API is used by developers to extend the capabilities of the Renderer
- * by writing custom Shaders, Dynamic Shader Effects, Textures, Text Renderers,
- * etc.
- *
- * Custom capabilities as well as fonts can be loaded via Core Extensions.
- *
- * A core extension module is structured like so:
+ * This module exports the API for the Lightning 3 Renderer. You
+ * can import the exports from this module like so:
  * ```ts
- * import {
- *   CoreExtension,
- *   WebTrFontFace,
- *   SdfTrFontFace,
- *   type Stage
- * } from '@lightning/renderer/core';
- *
- * export default class MyCoreExtension extends CoreExtension {
- *   async run(stage: Stage) {
- *     stage.fontManager.addFontFace(
- *       new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
- *     );
- *
- *     stage.fontManager.addFontFace(
- *       new SdfTrFontFace(
- *         'Ubuntu',
- *         {},
- *         'msdf',
- *         stage,
- *         '/fonts/Ubuntu-Regular.msdf.png',
- *         '/fonts/Ubuntu-Regular.msdf.json',
- *       ),
- *     );
- *   }
- * }
+ * import { Renderer } from '@lightning/renderer';
  * ```
  *
- * And then imported and registered in the application's entry point
- * using the `@lightningjs/vite-plugin-import-chunk-url` plugin:
- * ```ts
- * import coreExtensionModuleUrl from './MyCoreExtension.js?importChunkUrl';
+ * Generally developers/frameworks using the Renderer will use the Main API to
+ * render applications.
  *
- * // Set up driver, etc.
- *
- * // Initialize the Renderer
- * const renderer = new RendererMain(
- *   {
- *     // Other Renderer Config...
- *     coreExtensionModule: coreExtensionModuleUrl,
- *   },
- *   'app',
- *   driver,
- * );
- * ```
+ * Do not confuse the Main API with the Core API which is used to extend
+ * capabilities of the Renderer. The Main API code always runs from the main
+ * thread.
  *
  * @module
  */
+
+export * from '../src/main-api/INode.js';
+export * from '../src/core/CoreNode.js';
+export * from '../src/main-api/Renderer.js';
+export * from '../src/common/IAnimationController.js';
+export * from '../src/common/CommonTypes.js';
+
+// Selected types exported from the Core Renderer that can be used in the
+// context of the main API.
+export type { TextureMap } from '../src/core/CoreTextureManager.js';
+export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
+export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
+export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
+export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
+export type {
+  EffectProps,
+  FadeOutEffectProps,
+  LinearGradientEffectProps,
+  RadialGradientEffectProps,
+  GrayscaleEffectProps,
+  GlitchEffectProps,
+  RadialProgressEffectProps,
+} from '../src/core/CoreShaderManager.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
@@ -94,9 +74,6 @@ export * from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRende
 export * from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export * from '../src/core/text-rendering/font-face-types/WebTrFontFace.js';
 export * from '../src/core/text-rendering/font-face-types/SdfTrFontFace/SdfTrFontFace.js';
-
-// Core Extensions
-export * from '../src/core/CoreExtension.js';
 
 // Stage (type only for Core Extensions)
 export type * from '../src/core/Stage.js';

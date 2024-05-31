@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
+import type { CoreNode, ITextNode } from '@lightningjs/renderer';
 import { Component } from './Component.js';
 import { loadStorage, saveStorage } from '../common/LocalStorage.js';
 import type { ExampleSettings } from './ExampleSettings.js';
@@ -34,7 +34,7 @@ interface PageContainerProps {
   y?: number;
   width?: number;
   height?: number;
-  parent?: INode | null;
+  parent?: CoreNode | null;
   color?: number;
 
   //
@@ -44,9 +44,9 @@ interface PageContainerProps {
 export class PageContainer extends Component {
   private titleNode: ITextNode;
   private pageNumberNode: ITextNode;
-  private curPageNode: INode | null = null;
+  private curPageNode: CoreNode | null = null;
   private curPageIndex = -1;
-  private pageConstructors: ((page: INode) => Promise<void>)[] = [];
+  private pageConstructors: ((page: CoreNode) => Promise<void>)[] = [];
   private settings: ExampleSettings;
 
   constructor(settings: ExampleSettings, props: PageContainerProps) {
@@ -80,7 +80,7 @@ export class PageContainer extends Component {
     });
   }
 
-  pushPage(pageConstructor: (page: INode) => Promise<void>) {
+  pushPage(pageConstructor: (page: CoreNode) => Promise<void>) {
     this.pageConstructors.push(pageConstructor);
   }
 

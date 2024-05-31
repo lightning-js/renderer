@@ -21,8 +21,9 @@
 import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
-  TextureMap,
+  TextureTypeMap,
   TextureOptions,
+  TextureMap,
 } from '../core/CoreTextureManager.js';
 import type {
   INode,
@@ -30,10 +31,9 @@ import type {
   ITextNode,
   ITextNodeWritableProps,
 } from './INode.js';
-import { type ManualCountTextureUsageTrackerOptions } from './texture-usage-trackers/ManualCountTextureUsageTracker.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
-import { loadCoreExtension, santizeCustomDataMap } from './utils.js';
+import { santizeCustomDataMap } from './utils.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import {
   Stage,
@@ -43,10 +43,6 @@ import {
 import { getNewId } from '../utils.js';
 import { CoreNode } from '../core/CoreNode.js';
 import { CoreTextNode } from '../core/CoreTextNode.js';
-import {
-  TextureTrackerMain,
-  type SpecificTextureRef,
-} from './texture-usage-trackers/TextureTrackerMain.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -158,43 +154,6 @@ export interface RendererMainSettings {
   clearColor?: number;
 
   /**
-   * Path to a custom core module to use
-   *
-   * @defaultValue `null`
-   */
-  coreExtensionModule?: string | null;
-
-  /**
-   * Enable experimental FinalizationRegistry-based texture usage tracking
-   * for texture garbage collection
-   *
-   * @remarks
-   * By default, the Renderer uses a manual reference counting system to track
-   * texture usage. Textures are eventually released from the Core Texture
-   * Manager's Usage Cache when they are no longer referenced by any Nodes (or
-   * SubTextures that are referenced by nodes). This works well enough, but has
-   * the consequence of textures being removed from Usage Cache even if their
-   * references are still alive in memory. This can require a texture to be
-   * reloaded from the source when it is used again after being removed from
-   * cache.
-   *
-   * This is an experimental feature that uses a FinalizationRegistry to track
-   * texture usage. This causes textures to be removed from the Usage Cache only
-   * when their references are no longer alive in memory. Meaning a loaded texture
-   * will remain in the Usage Cache until it's reference is garbage collected.
-   *
-   * This feature is not enabled by default because browser support for the
-   * FinalizationRegistry is limited. It should NOT be enabled in production apps
-   * as this behavior is not guaranteed to be supported in the future. Developer
-   * feedback on this feature, however, is welcome.
-   *
-   * @defaultValue `false`
-   */
-  experimental_FinalizationRegistryTextureUsageTracker?: boolean;
-
-  textureCleanupOptions?: ManualCountTextureUsageTrackerOptions;
-
-  /**
    * Interval in milliseconds to receive FPS updates
    *
    * @remarks
@@ -274,12 +233,11 @@ export interface RendererMainSettings {
  * ```
  */
 export class RendererMain extends EventEmitter {
-  public root: CoreNode | null = null;
+  readonly root: CoreNode;
   readonly canvas: HTMLCanvasElement;
-  private stage: Stage | null = null;
   readonly settings: Readonly<Required<RendererMainSettings>>;
+  readonly stage: Stage;
   private inspector: Inspector | null = null;
-  private textureTracker: TextureTrackerMain | null = null;
 
   /**
    * Constructs a new Renderer instance
@@ -299,10 +257,6 @@ export class RendererMain extends EventEmitter {
       devicePhysicalPixelRatio:
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,
       clearColor: settings.clearColor ?? 0x00000000,
-      coreExtensionModule: settings.coreExtensionModule || null,
-      experimental_FinalizationRegistryTextureUsageTracker:
-        settings.experimental_FinalizationRegistryTextureUsageTracker ?? false,
-      textureCleanupOptions: settings.textureCleanupOptions || {},
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
@@ -320,17 +274,6 @@ export class RendererMain extends EventEmitter {
       enableInspector,
     } = resolvedSettings;
 
-    // const useFinalizationRegistryTracker =
-    //   resolvedSettings.experimental_FinalizationRegistryTextureUsageTracker &&
-    //   typeof FinalizationRegistry === 'function';
-    // });
-    // this.textureTracker = useFinalizationRegistryTracker
-    //   ? new FinalizationRegistryTextureUsageTracker(releaseCallback)
-    //   : new ManualCountTextureUsageTracker(
-    //       releaseCallback,
-    //       this.settings.textureCleanupOptions,
-    //     );
-
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
@@ -342,32 +285,7 @@ export class RendererMain extends EventEmitter {
     canvas.style.width = `${deviceLogicalWidth}px`;
     canvas.style.height = `${deviceLogicalHeight}px`;
 
-    let targetEl: HTMLElement | null;
-    if (typeof target === 'string') {
-      targetEl = document.getElementById(target);
-    } else {
-      targetEl = target;
-    }
-
-    if (!targetEl) {
-      throw new Error('Could not find target element');
-    }
-
-    targetEl.appendChild(canvas);
-
-    if (enableInspector && !isProductionEnvironment()) {
-      this.inspector = new Inspector(canvas, resolvedSettings);
-    }
-  }
-
-  /**
-   * Initialize the renderer
-   *
-   * @remarks
-   * This method must be called and resolved asyncronously before any other
-   * methods are called.
-   */
-  async init(): Promise<void> {
+    // Initialize the stage
     this.stage = new Stage({
       rootId: getNewId(),
       appWidth: this.settings.appWidth,
@@ -387,21 +305,6 @@ export class RendererMain extends EventEmitter {
       txMemByteThreshold: this.settings.txMemByteThreshold,
     });
 
-    assertTruthy(this.stage);
-
-    this.root = this.stage.root;
-
-    // Load the Core Extension Module if one was specified.
-    if (this.settings.coreExtensionModule) {
-      await loadCoreExtension(this.settings.coreExtensionModule, this.stage);
-    }
-
-    this.textureTracker = new TextureTrackerMain(this.stage, {
-      useFinalizationRegistryTracker:
-        this.settings.experimental_FinalizationRegistryTextureUsageTracker,
-      textureCleanupOptions: this.settings.textureCleanupOptions,
-    });
-
     // Forward fpsUpdate events from the stage to RendererMain
     this.stage.on('fpsUpdate', ((stage, fpsData) => {
       this.emit('fpsUpdate', fpsData);
@@ -414,6 +317,28 @@ export class RendererMain extends EventEmitter {
     this.stage.on('idle', () => {
       this.emit('idle');
     });
+
+    // Extract the root node
+    this.root = this.stage.root;
+
+    // Get the target element and attach the canvas to it
+    let targetEl: HTMLElement | null;
+    if (typeof target === 'string') {
+      targetEl = document.getElementById(target);
+    } else {
+      targetEl = target;
+    }
+
+    if (!targetEl) {
+      throw new Error('Could not find target element');
+    }
+
+    targetEl.appendChild(canvas);
+
+    // Initialize inspector (if enabled)
+    if (enableInspector && !isProductionEnvironment()) {
+      this.inspector = new Inspector(canvas, resolvedSettings);
+    }
   }
 
   /**
@@ -433,14 +358,12 @@ export class RendererMain extends EventEmitter {
    */
   createNode(props: Partial<INodeWritableProps>): CoreNode {
     assertTruthy(this.stage, 'Stage is not initialized');
-    assertTruthy(this.textureTracker, 'TextureTracker is not initialized');
 
     const resolvedProps = this.resolveNodeDefaults(props);
-    const node = new CoreNode(this.stage, this.textureTracker, {
+    const node = new CoreNode(this.stage, {
       ...resolvedProps,
       id: getNewId(),
       shaderProps: null,
-      textureOptions: null,
     });
 
     if (this.inspector) {
@@ -460,7 +383,7 @@ export class RendererMain extends EventEmitter {
    * A text node is the second graphical building block of the Renderer scene
    * graph. It renders text using a specific text renderer that is automatically
    * chosen based on the font requested and what type of fonts are installed
-   * into an app via a CoreExtension.
+   * into an app.
    *
    * See {@link ITextNode} for more details.
    *
@@ -492,12 +415,10 @@ export class RendererMain extends EventEmitter {
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
       shaderProps: null,
-      textureOptions: null,
     };
 
     assertTruthy(this.stage);
-    assertTruthy(this.textureTracker);
-    const textNode = new CoreTextNode(this.stage, this.textureTracker, data);
+    const textNode = new CoreTextNode(this.stage, data);
 
     if (this.inspector) {
       return this.inspector.createTextNode(textNode, data);
@@ -549,6 +470,7 @@ export class RendererMain extends EventEmitter {
       zIndexLocked: props.zIndexLocked ?? 0,
       parent: props.parent ?? null,
       texture: props.texture ?? null,
+      textureOptions: props.textureOptions ?? {},
       shader: props.shader ?? null,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
@@ -600,13 +522,14 @@ export class RendererMain extends EventEmitter {
    * @param options
    * @returns
    */
-  createTexture<TxType extends keyof TextureMap>(
+  createTexture<TxType extends keyof TextureTypeMap>(
     textureType: TxType,
-    props: SpecificTextureRef<TxType>['props'],
-    options?: TextureOptions,
-  ): SpecificTextureRef<TxType> {
-    assertTruthy(this.textureTracker);
-    return this.textureTracker.createTexture(textureType, props, options);
+    props: ExtractProps<TextureTypeMap[TxType]>,
+  ): TextureMap[TxType] {
+    return this.stage.txManager.loadTexture(
+      textureType,
+      props,
+    ) as TextureMap[TxType];
   }
 
   /**
@@ -624,7 +547,7 @@ export class RendererMain extends EventEmitter {
    */
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
-    props?: SpecificShaderRef<ShType>['props'],
+    props?: ExtractProps<ShaderMap[ShType]>,
   ): SpecificShaderRef<ShType> {
     return {
       descType: 'shader',

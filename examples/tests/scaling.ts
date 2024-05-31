@@ -16,11 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import type { INodeWritableProps } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import type { INodeWritableProps } from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 import robotImg from '../assets/robot/robot.png';
 

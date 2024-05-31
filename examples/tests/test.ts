@@ -169,17 +169,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   setInterval(() => {
-    shaft.texture = renderer.createTexture(
-      'NoiseTexture',
-      {
-        width: 210,
-        height: renderer.settings.appHeight,
-        cacheId: Math.floor(Math.random() * 100000),
-      },
-      {
-        preload: true,
-      },
-    );
+    shaft.texture = renderer.createTexture('NoiseTexture', {
+      width: 210,
+      height: renderer.settings.appHeight,
+      cacheId: Math.floor(Math.random() * 100000),
+    });
+    shaft.textureOptions.preload = true;
   }, 1000);
 
   // setTimeout required for ThreadX right now because the emit() that sends

@@ -17,17 +17,9 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
-} from '../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
-import type {
-  ExtractProps,
-  TextureMap,
-  TextureOptions,
-} from './CoreTextureManager.js';
+import type { ExtractProps, TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
@@ -37,7 +29,6 @@ import type {
   TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
-import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -64,10 +55,6 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from '../core/animations/CoreAnimation.js';
 import { CoreAnimationController } from '../core/animations/CoreAnimationController.js';
 import type { ShaderRef } from '../main-api/Renderer.js';
-import type {
-  TextureRef,
-  TextureTrackerMain,
-} from '../main-api/texture-usage-trackers/TextureTrackerMain.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -84,7 +71,6 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
 export interface CoreNodeProps extends INodeWritableProps {
   id: number;
-  textureOptions: TextureOptions | null; // these should be moved to INodeWritableProps?
   shaderProps: Record<string, unknown> | null; // these should be moved to INodeWritableProps?
 }
 
@@ -218,7 +204,6 @@ export enum UpdateType {
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected props: Required<CoreNodeProps>;
-  protected textureTracker: TextureTrackerMain | null;
 
   public updateType = UpdateType.All;
 
@@ -250,15 +235,9 @@ export class CoreNode extends EventEmitter {
 
   public _shader: CoreShader | null = null;
   public _src = '';
-  public _texture: Texture | null = null;
 
-  constructor(
-    protected stage: Stage,
-    protected txTracker: TextureTrackerMain | null,
-    props: CoreNodeProps,
-  ) {
+  constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
-    this.textureTracker = txTracker;
 
     this.props = {
       ...props,
@@ -279,27 +258,19 @@ export class CoreNode extends EventEmitter {
   }
 
   //#region Textures
-  loadTexture<Type extends keyof TextureMap>(
-    textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
-    options: TextureOptions | null = null,
-  ): void {
-    // First unload any existing texture
-    if (this.props.texture) {
-      this.unloadTexture();
-    }
-    const { txManager } = this.stage;
-    const texture = txManager.loadTexture(textureType, props, options);
-
-    this._texture = texture;
-    this.props.textureOptions = options;
-    this.setUpdateType(UpdateType.IsRenderable);
+  loadTexture(): void {
+    const { texture } = this.props;
+    assertTruthy(texture);
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
+      // Preload texture if required
+      if (this.textureOptions.preload) {
+        this.stage.txManager.getCtxTexture(texture).load();
+      }
       if (texture.state === 'loaded') {
         this.onTextureLoaded(texture, texture.dimensions!);
       } else if (texture.state === 'failed') {
@@ -314,15 +285,12 @@ export class CoreNode extends EventEmitter {
   }
 
   unloadTexture(): void {
-    if (this._texture) {
-      this._texture.off('loaded', this.onTextureLoaded);
-      this._texture.off('failed', this.onTextureFailed);
-      this._texture.off('freed', this.onTextureFreed);
-      this._texture.setRenderableOwner(this, false);
+    if (this.texture) {
+      this.texture.off('loaded', this.onTextureLoaded);
+      this.texture.off('failed', this.onTextureFailed);
+      this.texture.off('freed', this.onTextureFreed);
+      this.texture.setRenderableOwner(this, false);
     }
-    this.props.texture = null;
-    this.props.textureOptions = null;
-    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   autosizeNode(dimensions: Dimensions) {
@@ -744,7 +712,7 @@ export class CoreNode extends EventEmitter {
   }
 
   onChangeIsRenderable(isRenderable: boolean) {
-    this._texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {
@@ -890,8 +858,8 @@ export class CoreNode extends EventEmitter {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, textureOptions, shaderProps, rtt } = this.props;
-    const texture = this._texture;
+    const { texture, width, height, textureOptions, shaderProps, rtt } =
+      this.props;
     const shader = this._shader;
 
     // Prevent quad rendering if parent has a render texture
@@ -992,16 +960,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        const textureRef = this.textureTracker?.createTexture(
-          'RenderTexture',
-          {
-            width: this.width,
-            height: this.height,
-          },
-          { preload: true, flipY: true },
-        );
-
-        this.texture = textureRef || null;
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions = { preload: true, flipY: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1017,16 +980,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        const textureRef = this.textureTracker?.createTexture(
-          'RenderTexture',
-          {
-            width: this.width,
-            height: this.height,
-          },
-          { preload: true, flipY: true },
-        );
-
-        this.texture = textureRef || null;
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions = { preload: true, flipY: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1351,12 +1309,12 @@ export class CoreNode extends EventEmitter {
   }
 
   set rtt(value: boolean) {
-    if (value === false && this._texture === null) {
+    if (value === false && this.texture === null) {
       this.props.rtt = false;
       return;
     }
 
-    if (value === false && this._texture !== null) {
+    if (value === false && this.texture !== null) {
       this.props.rtt = false;
       this.unloadTexture();
       this.setUpdateType(UpdateType.All);
@@ -1369,16 +1327,11 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    const textureRef = this.textureTracker?.createTexture(
-      'RenderTexture',
-      {
-        width: this.width,
-        height: this.height,
-      },
-      { preload: true, flipY: true },
-    );
-
-    this.texture = textureRef || null;
+    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+      width: this.width,
+      height: this.height,
+    });
+    this.textureOptions = { preload: true, flipY: true };
 
     this.props.rtt = true;
     this.hasRTTupdates = true;
@@ -1429,15 +1382,9 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    if (this.textureTracker === null) {
-      return;
-    }
-
-    const textureRef = this.textureTracker.createTexture('ImageTexture', {
+    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
       src: imageUrl,
     });
-
-    this.texture = textureRef;
   }
 
   /**
@@ -1467,29 +1414,34 @@ export class CoreNode extends EventEmitter {
     return null;
   }
 
-  get texture(): TextureRef | null {
+  get texture(): Texture | null {
     return this.props.texture;
   }
 
-  set texture(value: TextureRef | null) {
+  set texture(value: Texture | null) {
     if (this.props.texture === value) {
       return;
     }
-
-    // unload old texture
-    if (this.texture !== null) {
-      this.textureTracker?.decrementTextureRefCount(this.texture);
-    }
-
-    if (value === null) {
+    const oldTexture = this.props.texture;
+    if (oldTexture) {
+      oldTexture.setRenderableOwner(this, false);
       this.unloadTexture();
-      this.props.texture = null;
-      return;
     }
-
     this.props.texture = value;
-    this.textureTracker?.incrementTextureRefCount(value);
-    this.loadTexture(value.txType, value.props, value.options);
+    if (value) {
+      value.setRenderableOwner(this, this.isRenderable);
+      this.loadTexture();
+    } else {
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
+  }
+
+  set textureOptions(value: TextureOptions) {
+    this.props.textureOptions = value;
+  }
+
+  get textureOptions(): TextureOptions {
+    return this.props.textureOptions;
   }
 
   setRTTUpdates(type: number) {

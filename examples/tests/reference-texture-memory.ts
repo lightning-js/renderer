@@ -18,20 +18,11 @@
  */
 import type { RendererMainSettings } from '../../dist/exports/main-api.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-
-export function customSettings(
-  urlParams: URLSearchParams,
-): Partial<RendererMainSettings> {
-  const finalizationRegistry = urlParams.get('finalizationRegistry') === 'true';
+export function customSettings(): Partial<RendererMainSettings> {
   return {
-    textureCleanupOptions: {
-      textureCleanupAgeThreadholdMs: 6000,
-      textureCleanupIntervalMs: 1000,
-    },
     // Disable the threshold-based memory manager. This will allow this test to
     // focus only on the reference-based memory manager.
     txMemByteThreshold: 0,
-    experimental_FinalizationRegistryTextureUsageTracker: finalizationRegistry,
   };
 }
 
@@ -70,16 +61,11 @@ See docs/ManualRegressionTests.md for more information.
 
   // Create a new random texture every 10ms
   setInterval(() => {
-    screen.texture = renderer.createTexture(
-      'NoiseTexture',
-      {
-        width: 500,
-        height: 500,
-        cacheId: Math.floor(Math.random() * 100000),
-      },
-      {
-        preload: true,
-      },
-    );
+    screen.texture = renderer.createTexture('NoiseTexture', {
+      width: 500,
+      height: 500,
+      cacheId: Math.floor(Math.random() * 100000),
+    });
+    screen.textureOptions.preload = true;
   }, 10);
 }

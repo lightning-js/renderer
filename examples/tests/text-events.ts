@@ -18,7 +18,7 @@
  */
 
 import {
-  type INode,
+  type CoreNode,
   type ITextNode,
   type RendererMain,
   type Dimensions,
@@ -186,11 +186,11 @@ interface BoxedTextProps {
   boxColor2: number;
   textColor: number;
   fontFamily: string;
-  parent: INode | null;
+  parent: CoreNode | null;
 }
 
 class BoxedText extends EventEmitter implements BoxedTextProps {
-  readonly node: INode;
+  readonly node: CoreNode;
   readonly textNode: ITextNode;
   constructor(
     private props: Partial<BoxedTextProps>,
@@ -295,7 +295,7 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
     return this.node.parent;
   }
 
-  set parent(v: INode | null) {
+  set parent(v: CoreNode | null) {
     this.node.parent = v;
   }
 }

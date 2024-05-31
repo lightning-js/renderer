@@ -24,13 +24,12 @@ import {
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
-import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
-import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type {
   ExampleSettings,
   SnapshotOptions,
 } from './common/ExampleSettings.js';
 import { StatTracker } from './common/StatTracker.js';
+import { installFonts } from './common/installFonts.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -175,7 +174,7 @@ async function runTest(
     driverName: driverName as 'main' | 'threadx',
     appElement,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    testRoot: renderer.root!,
+    testRoot: renderer.root,
     automation: false,
     perfMultiplier: perfMultiplier,
     snapshot: async () => {
@@ -205,7 +204,6 @@ async function initRenderer(
       deviceLogicalPixelRatio: logicalPixelRatio,
       devicePhysicalPixelRatio: physicalPixelRatio,
       clearColor: 0x00000000,
-      coreExtensionModule: coreExtensionModuleUrl,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
@@ -214,6 +212,7 @@ async function initRenderer(
     },
     'app',
   );
+  installFonts(renderer.stage);
 
   /**
    * Sample data captured
@@ -297,8 +296,6 @@ async function initRenderer(
       fpsSampleIndex++;
     },
   );
-
-  await renderer.init();
 
   const appElement = document.querySelector('#app');
 

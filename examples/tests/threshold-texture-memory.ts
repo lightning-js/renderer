@@ -16,23 +16,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import type { INode, RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export function customSettings(
   urlParams: URLSearchParams,
 ): Partial<RendererMainSettings> {
-  const finalizationRegistry = urlParams.get('finalizationRegistry') === 'true';
   const txMemByteThreshold = urlParams.get('txMemByteThreshold');
   return {
-    textureCleanupOptions: {
-      textureCleanupAgeThreadholdMs: 6000,
-      textureCleanupIntervalMs: 1000,
-    },
     txMemByteThreshold: txMemByteThreshold
       ? Number(txMemByteThreshold)
       : 100000000 /* 100MB */,
-    experimental_FinalizationRegistryTextureUsageTracker: finalizationRegistry,
   };
 }
 
@@ -103,17 +98,14 @@ See docs/ManualRegressionTests.md for more information.
           height: nodeHeight,
           parent: testRoot,
           color: randomColor(),
-          texture: renderer.createTexture(
-            'NoiseTexture',
-            {
-              width: nodeWidth,
-              height: nodeHeight,
-              cacheId: Math.floor(Math.random() * 100000),
-            },
-            {
-              preload: true,
-            },
-          ),
+          texture: renderer.createTexture('NoiseTexture', {
+            width: nodeWidth,
+            height: nodeHeight,
+            cacheId: Math.floor(Math.random() * 100000),
+          }),
+          textureOptions: {
+            preload: true,
+          },
         });
         curNodes.push(node);
       }

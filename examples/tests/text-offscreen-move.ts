@@ -18,7 +18,7 @@
  */
 
 import type {
-  INode,
+  CoreNode,
   ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
@@ -75,7 +75,7 @@ function createTestCase(
   textRenderer: 'canvas' | 'sdf',
   contain: ITextNodeWritableProps['contain'],
 ) {
-  return async function (page: INode) {
+  return async function (page: CoreNode) {
     const subheader = renderer.createTextNode({
       x: 0,
       y: 10,
