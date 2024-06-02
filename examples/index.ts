@@ -27,6 +27,7 @@ import {
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
+import * as mt19937 from '@stdlib/random-base-mt19937';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type {
@@ -359,6 +360,13 @@ async function runAutomation(
     console.log(`Attempting to run automation for ${testName}...`);
     if (automation) {
       console.log(`Running automation for ${testName}...`);
+      // Override Math.random() as stable random number generator
+      // - Each test gets the same sequence of random numbers
+      // - This only is in effect when tests are run in automation mode
+      const rand = mt19937.factory({ seed: 1234 });
+      Math.random = function () {
+        return rand() / rand.MAX;
+      };
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {

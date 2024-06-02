@@ -177,18 +177,12 @@ const parseCubicBezier = (str: string) => {
 export const getTimingFunction = (
   str: string,
 ): ((time: number) => number | undefined) => {
-  if (str === '') {
+  if (str === 'linear') {
     return defaultTiming;
   }
 
   if (timingMapping[str] !== undefined) {
     return timingMapping[str] || defaultTiming;
-  }
-
-  if (str === 'linear') {
-    return (time: number) => {
-      return time;
-    };
   }
 
   if (str === 'step-start') {
