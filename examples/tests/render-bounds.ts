@@ -1,6 +1,5 @@
-import type { IAnimationController } from '../../dist/exports/main-api.js';
+import type { IAnimationController } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import test from './alpha-blending.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
   const degToRad = (deg: number) => {

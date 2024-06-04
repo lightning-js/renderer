@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { RendererMainSettings } from '../../dist/exports/main-api.js';
+import type { RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 export function customSettings(): Partial<RendererMainSettings> {
   return {

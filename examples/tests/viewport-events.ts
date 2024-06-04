@@ -1,4 +1,3 @@
-import type { IAnimationController } from '../../dist/exports/main-api.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
