@@ -292,11 +292,6 @@ async function runTest(browserType: 'chromium') {
     page.on('console', (msg) => console.log(`console: ${msg.text()}`));
   }
 
-  // Go to the examples page
-  await page.goto(
-    `http://localhost:${argv.port}/?automation=true&test=${argv.filter}`,
-  );
-
   /**
    * Keeps track of the latest snapshot index for each test
    */
@@ -503,6 +498,11 @@ async function runTest(browserType: 'chromium') {
       resolveDonePromise(0);
     }
   });
+
+  // Go to the examples page
+  await page.goto(
+    `http://localhost:${argv.port}/?automation=true&test=${argv.filter}`,
+  );
 
   return donePromise;
 }
