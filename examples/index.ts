@@ -18,22 +18,18 @@
  */
 
 import {
-  MainCoreDriver,
   RendererMain,
-  ThreadXCoreDriver,
-  type ICoreDriver,
   type NodeLoadedPayload,
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
-import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
-import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type {
   ExampleSettings,
   SnapshotOptions,
 } from './common/ExampleSettings.js';
 import { StatTracker } from './common/StatTracker.js';
+import { installFonts } from './common/installFonts.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -83,23 +79,14 @@ const defaultPhysicalPixelRatio = 1;
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
   const logicalPixelRatio = resolution / appHeight;
 
-  let driverName = urlParams.get('driver');
-  if (driverName !== 'main' && driverName !== 'threadx') {
-    driverName = 'main';
-  }
-
   let renderMode = urlParams.get('renderMode');
-  if (
-    driverName === 'threadx' ||
-    (renderMode !== 'webgl' && renderMode !== 'canvas')
-  ) {
+  if (renderMode !== 'webgl' && renderMode !== 'canvas') {
     renderMode = 'webgl';
   }
 
   if (!automation) {
     await runTest(
       test,
-      driverName,
       renderMode,
       urlParams,
       showOverlay,
@@ -113,14 +100,13 @@ const defaultPhysicalPixelRatio = 1;
     return;
   }
   assertTruthy(automation);
-  await runAutomation(driverName, renderMode, test, logFps);
+  await runAutomation(renderMode, test, logFps);
 })().catch((err) => {
   console.error(err);
 });
 
 async function runTest(
   test: string,
-  driverName: string,
   renderMode: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
@@ -145,7 +131,6 @@ async function runTest(
       : {};
 
   const { renderer, appElement } = await initRenderer(
-    driverName,
     renderMode,
     logFps,
     enableContextSpy,
@@ -158,7 +143,7 @@ async function runTest(
   if (showOverlay) {
     const overlayText = renderer.createTextNode({
       color: 0xff0000ff,
-      text: `Test: ${test} | Driver: ${driverName}`,
+      text: `Test: ${test}`,
       zIndex: 99999,
       parent: renderer.root,
       fontSize: 50,
@@ -175,10 +160,9 @@ async function runTest(
   const exampleSettings: ExampleSettings = {
     testName: test,
     renderer,
-    driverName: driverName as 'main' | 'threadx',
     appElement,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    testRoot: renderer.root!,
+    testRoot: renderer.root,
     automation: false,
     perfMultiplier: perfMultiplier,
     snapshot: async () => {
@@ -191,7 +175,6 @@ async function runTest(
 }
 
 async function initRenderer(
-  driverName: string,
   renderMode: string,
   logFps: boolean,
   enableContextSpy: boolean,
@@ -200,16 +183,6 @@ async function initRenderer(
   enableInspector: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
-  let driver: ICoreDriver | null = null;
-
-  if (driverName === 'main') {
-    driver = new MainCoreDriver();
-  } else {
-    driver = new ThreadXCoreDriver({
-      coreWorkerUrl,
-    });
-  }
-
   const renderer = new RendererMain(
     {
       appWidth,
@@ -218,7 +191,6 @@ async function initRenderer(
       deviceLogicalPixelRatio: logicalPixelRatio,
       devicePhysicalPixelRatio: physicalPixelRatio,
       clearColor: 0x00000000,
-      coreExtensionModule: coreExtensionModuleUrl,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
@@ -226,8 +198,8 @@ async function initRenderer(
       ...customSettings,
     },
     'app',
-    driver,
   );
+  installFonts(renderer.stage);
 
   /**
    * Sample data captured
@@ -312,8 +284,6 @@ async function initRenderer(
     },
   );
 
-  await renderer.init();
-
   const appElement = document.querySelector('#app');
 
   assertTruthy(appElement instanceof HTMLDivElement);
@@ -329,14 +299,12 @@ function wildcardMatch(string: string, wildcardString: string) {
 }
 
 async function runAutomation(
-  driverName: string,
   renderMode: string,
   filter: string | null,
   logFps: boolean,
 ) {
   const logicalPixelRatio = defaultResolution / appHeight;
   const { renderer, appElement } = await initRenderer(
-    driverName,
     renderMode,
     logFps,
     false,
@@ -375,7 +343,6 @@ async function runAutomation(
           testName,
           renderer,
           testRoot,
-          driverName: driverName as 'main' | 'threadx',
           appElement,
           automation: true,
           perfMultiplier: 1,

@@ -26,7 +26,6 @@ import {
   type Bound,
   intersectBound,
   getNormalizedRgbaComponents,
-  type Rect,
   getNormalizedAlphaComponent,
   type BoundWithValid,
   createBound,
@@ -552,20 +551,16 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       });
       if (!(this.canvas.width === 0 || this.canvas.height === 0)) {
         pageInfo.texture?.setRenderableOwner(state, false);
-        pageInfo.texture = this.stage.txManager.loadTexture(
-          'ImageTexture',
-          {
-            src: this.context.getImageData(
-              0,
-              0,
-              this.canvas.width,
-              this.canvas.height,
-            ),
-          },
-          {
-            preload: true,
-          },
-        );
+        pageInfo.texture = this.stage.txManager.loadTexture('ImageTexture', {
+          src: this.context.getImageData(
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+          ),
+        });
+        this.stage.txManager.getCtxTexture(pageInfo.texture).load();
+
         pageInfo.texture.setRenderableOwner(state, state.isRenderable);
       }
       pageInfo.valid = true;

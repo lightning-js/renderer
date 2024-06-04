@@ -17,17 +17,9 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
-} from '../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
-import type {
-  ExtractProps,
-  TextureMap,
-  TextureOptions,
-} from './CoreTextureManager.js';
+import type { ExtractProps, TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
@@ -37,7 +29,6 @@ import type {
   TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
-import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -55,6 +46,15 @@ import {
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
+import type {
+  INodeAnimatableProps,
+  INodeWritableProps,
+} from '../main-api/INode.js';
+import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { IAnimationController } from '../common/IAnimationController.js';
+import { CoreAnimation } from '../core/animations/CoreAnimation.js';
+import { CoreAnimationController } from '../core/animations/CoreAnimationController.js';
+import type { ShaderRef } from '../main-api/Renderer.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -69,49 +69,15 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
-export interface CoreNodeProps {
+export interface CoreNodeProps extends INodeWritableProps {
   id: number;
-  // External facing properties whose defaults are determined by
-  // RendererMain's resolveNodeDefaults() method
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  alpha: number;
-  autosize: boolean;
-  clipping: boolean;
-  color: number;
-  colorTop: number;
-  colorBottom: number;
-  colorLeft: number;
-  colorRight: number;
-  colorTl: number;
-  colorTr: number;
-  colorBl: number;
-  colorBr: number;
-  parent: CoreNode | null;
-  zIndex: number;
-  texture: Texture | null;
-  textureOptions: TextureOptions | null;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
-  zIndexLocked: number;
-  scaleX: number;
-  scaleY: number;
-  mount: number;
-  mountX: number;
-  mountY: number;
-  pivot: number;
-  pivotX: number;
-  pivotY: number;
-  rotation: number;
-  rtt: boolean;
+  shaderProps: Record<string, unknown> | null; // these should be moved to INodeWritableProps?
 }
 
-type ICoreNode = Omit<
-  CoreNodeProps,
-  'texture' | 'textureOptions' | 'shader' | 'shaderProps'
->;
+// type ICoreNode = Omit<
+//   CoreNodeProps,
+//   'texture' | 'textureOptions' | 'shader' | 'shaderProps'
+// >;
 
 export enum UpdateType {
   /**
@@ -235,7 +201,7 @@ export enum UpdateType {
   All = 8191,
 }
 
-export class CoreNode extends EventEmitter implements ICoreNode {
+export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected props: Required<CoreNodeProps>;
 
@@ -267,43 +233,44 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
 
+  public _shader: CoreShader | null = null;
+  public _src = '';
+
   constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
+
     this.props = {
       ...props,
       parent: null,
+      data: props.data || {},
     };
-    // Allow for parent to be processed appropriately
-    this.parent = props.parent;
 
-    // Allow for Render Texture to be processed appropriately
+    // Assign props to instance
+    this.parent = props.parent;
+    this.shader = props.shader;
+    this.texture = props.texture;
+    this.src = props.src || '';
+    // FIXME
+    // this.data = props.data;
     this.rtt = props.rtt;
 
     this.updateScaleRotateTransform();
   }
 
   //#region Textures
-  loadTexture<Type extends keyof TextureMap>(
-    textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
-    options: TextureOptions | null = null,
-  ): void {
-    // First unload any existing texture
-    if (this.props.texture) {
-      this.unloadTexture();
-    }
-    const { txManager } = this.stage;
-    const texture = txManager.loadTexture(textureType, props, options);
-
-    this.props.texture = texture;
-    this.props.textureOptions = options;
-    this.setUpdateType(UpdateType.IsRenderable);
+  loadTexture(): void {
+    const { texture } = this.props;
+    assertTruthy(texture);
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
+      // Preload texture if required
+      if (this.textureOptions.preload) {
+        this.stage.txManager.getCtxTexture(texture).load();
+      }
       if (texture.state === 'loaded') {
         this.onTextureLoaded(texture, texture.dimensions!);
       } else if (texture.state === 'failed') {
@@ -318,16 +285,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   unloadTexture(): void {
-    if (this.props.texture) {
-      const { texture } = this.props;
-      texture.off('loaded', this.onTextureLoaded);
-      texture.off('failed', this.onTextureFailed);
-      texture.off('freed', this.onTextureFreed);
-      texture.setRenderableOwner(this, false);
+    if (this.texture) {
+      this.texture.off('loaded', this.onTextureLoaded);
+      this.texture.off('failed', this.onTextureFailed);
+      this.texture.off('freed', this.onTextureFreed);
+      this.texture.setRenderableOwner(this, false);
     }
-    this.props.texture = null;
-    this.props.textureOptions = null;
-    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   autosizeNode(dimensions: Dimensions) {
@@ -376,7 +339,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const shManager = this.stage.renderer.getShaderManager();
     assertTruthy(shManager);
     const { shader, props: p } = shManager.loadShader(shaderType, props);
-    this.props.shader = shader;
+    this._shader = shader;
     this.props.shaderProps = p;
     this.setUpdateType(UpdateType.IsRenderable);
   }
@@ -605,7 +568,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return false;
     }
 
-    if (this.props.shader) {
+    if (this._shader) {
       return true;
     }
 
@@ -749,7 +712,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   onChangeIsRenderable(isRenderable: boolean) {
-    this.props.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {
@@ -883,6 +846,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     this.props.texture = null;
     this.props.shader = null;
+    this.props.shaderProps = null;
+    this._shader = null;
 
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
@@ -893,8 +858,9 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, texture, textureOptions, shader, shaderProps, rtt } =
+    const { texture, width, height, textureOptions, shaderProps, rtt } =
       this.props;
+    const shader = this._shader;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
@@ -994,6 +960,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions = { preload: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1009,6 +980,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions = { preload: true };
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1333,9 +1309,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set rtt(value: boolean) {
-    if (!value) {
-      if (this.props.rtt) {
-        this.props.rtt = false;
+    if (this.props.rtt === true) {
+      this.props.rtt = value;
+
+      // unload texture if we used to have a render texture
+      if (value === false && this.texture !== null) {
         this.unloadTexture();
         this.setUpdateType(UpdateType.All);
 
@@ -1344,9 +1322,21 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         });
 
         this.stage.renderer?.removeRTTNode(this);
+        return;
       }
+    }
+
+    // if the new value is false and we didnt have rtt previously, we don't need to do anything
+    if (value === false) {
       return;
     }
+
+    // load texture
+    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+      width: this.width,
+      height: this.height,
+    });
+    this.textureOptions = { preload: true };
 
     this.props.rtt = true;
     this.hasRTTupdates = true;
@@ -1358,6 +1348,48 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // Store RTT nodes in a separate list
     this.stage.renderer?.renderToTexture(this);
+  }
+
+  get shader(): ShaderRef | null {
+    return this.props.shader;
+  }
+
+  set shader(value: ShaderRef | null) {
+    if (value === null && this._shader === null) {
+      return;
+    }
+
+    if (value === null) {
+      this._shader = null;
+      this.props.shader = null;
+      this.setUpdateType(UpdateType.IsRenderable);
+      return;
+    }
+
+    this.props.shader = value;
+    assertTruthy(value);
+    this.loadShader(value.shType, value.props);
+  }
+
+  get src(): string {
+    return this._src;
+  }
+
+  set src(imageUrl: string) {
+    if (this._src === imageUrl) {
+      return;
+    }
+
+    this._src = imageUrl;
+
+    if (!imageUrl) {
+      this.texture = null;
+      return;
+    }
+
+    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
+      src: imageUrl,
+    });
   }
 
   /**
@@ -1391,9 +1423,54 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return this.props.texture;
   }
 
+  set texture(value: Texture | null) {
+    if (this.props.texture === value) {
+      return;
+    }
+    const oldTexture = this.props.texture;
+    if (oldTexture) {
+      oldTexture.setRenderableOwner(this, false);
+      this.unloadTexture();
+    }
+    this.props.texture = value;
+    if (value) {
+      value.setRenderableOwner(this, this.isRenderable);
+      this.loadTexture();
+    } else {
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
+  }
+
+  set textureOptions(value: TextureOptions) {
+    this.props.textureOptions = value;
+  }
+
+  get textureOptions(): TextureOptions {
+    return this.props.textureOptions;
+  }
+
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
+
+  animate(
+    props: Partial<INodeAnimatableProps>,
+    settings: Partial<AnimationSettings>,
+  ): IAnimationController {
+    const animation = new CoreAnimation(this, props, settings);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const controller = new CoreAnimationController(
+      this.stage.animationManager,
+      animation,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return controller;
+  }
+
+  flush() {
+    // no-op
+  }
+
   //#endregion Properties
 }

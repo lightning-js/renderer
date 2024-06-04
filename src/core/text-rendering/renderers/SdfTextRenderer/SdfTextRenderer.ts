@@ -403,7 +403,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         this.setStatus(state, 'failed', new Error(msg));
         return;
       }
-      trFontFace.texture.setRenderableOwner(state, state.isRenderable);
+      trFontFace.texture.setRenderableOwner(state, true);
     }
 
     // If the font hasn't been loaded yet, stop here.

@@ -32,7 +32,7 @@ import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { Rect, RectWithValid } from './lib/utils.js';
+import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 

@@ -28,16 +28,12 @@ import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const FONT_SIZE = 45;
   const BEGIN_Y = FONT_SIZE;
 
   const header = renderer.createTextNode({
-    text: `Texture Test (${driverName})`,
+    text: `Texture Test`,
     fontSize: FONT_SIZE,
     offsetY: -5,
     parent: testRoot,

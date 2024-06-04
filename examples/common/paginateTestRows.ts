@@ -17,15 +17,15 @@
  * limitations under the License.
  */
 
-import type { INode } from '@lightningjs/renderer';
-import { PageContainer } from './PageContainer.js';
+import type { CoreNode } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
+import { PageContainer } from './PageContainer.js';
 
 const HEADER_FONT_SIZE = 30;
 const PADDING = 20;
 
-export type RowConstructor = (pageNode: INode) => Promise<INode>;
-export type RowContentConstructor = (rowNode: INode) => Promise<number>;
+export type RowConstructor = (pageNode: CoreNode) => Promise<CoreNode>;
+export type RowContentConstructor = (rowNode: CoreNode) => Promise<number>;
 
 export interface TestRowDesc {
   title: string;
@@ -37,7 +37,7 @@ export type TestRow = TestRowDesc | null;
 function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
   return async function (
     rowConstructors: RowConstructor[],
-    pageNode: INode,
+    pageNode: CoreNode,
   ): Promise<void> {
     let curY = 0;
     for (const rowConstructor of rowConstructors) {
@@ -70,7 +70,7 @@ export async function paginateTestRows(
     const isLastRow = curRowIndex === testRows.length - 1;
     let newRowConstructor: RowConstructor | null =
       testRow &&
-      (async (pageNode: INode) => {
+      (async (pageNode: CoreNode) => {
         assertTruthy(testRow);
         const rowContainer = renderer.createNode({
           x: 0,
@@ -101,7 +101,7 @@ export async function paginateTestRows(
       });
 
     let itFits = false;
-    let tmpRowContainer: INode | undefined;
+    let tmpRowContainer: CoreNode | undefined;
     // debugger;
     if (newRowConstructor) {
       // Construct the row just to get its height

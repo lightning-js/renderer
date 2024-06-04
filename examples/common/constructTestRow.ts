@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, RendererMain } from '../../dist/exports/main-api.js';
+import type { CoreNode, RendererMain } from '@lightningjs/renderer';
 import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;
@@ -25,14 +25,14 @@ const PADDING = 20;
 
 export interface TestRowOptions {
   renderer: RendererMain;
-  rowNode: INode;
+  rowNode: CoreNode;
   containerSize?: number;
   padding?: number;
 }
 
 export async function constructTestRow(
   options: TestRowOptions,
-  testNodes: (INode | string)[],
+  testNodes: (CoreNode | string)[],
 ): Promise<number> {
   const {
     renderer,

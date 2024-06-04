@@ -18,7 +18,7 @@
  */
 
 import {
-  type INode,
+  type CoreNode,
   type ITextNode,
   type RendererMain,
   type Dimensions,
@@ -33,13 +33,9 @@ const FONT_SIZE = 60;
 const BUTTON_PADDING = 10;
 const BEGIN_Y = HEADER_SIZE;
 
-export default async function ({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const header = renderer.createTextNode({
-    text: `Text Event Test (${driverName})`,
+    text: `Text Event Test`,
     fontSize: HEADER_SIZE,
     offsetY: -5,
     parent: testRoot,
@@ -186,11 +182,11 @@ interface BoxedTextProps {
   boxColor2: number;
   textColor: number;
   fontFamily: string;
-  parent: INode | null;
+  parent: CoreNode | null;
 }
 
 class BoxedText extends EventEmitter implements BoxedTextProps {
-  readonly node: INode;
+  readonly node: CoreNode;
   readonly textNode: ITextNode;
   constructor(
     private props: Partial<BoxedTextProps>,
@@ -295,7 +291,7 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
     return this.node.parent;
   }
 
-  set parent(v: INode | null) {
+  set parent(v: CoreNode | null) {
     this.node.parent = v;
   }
 }

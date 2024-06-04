@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-import type { INode, NodeLoadedEventHandler } from '@lightningjs/renderer';
+import type {
+  CoreNode,
+  INode,
+  NodeLoadedEventHandler,
+} from '@lightningjs/renderer';
 import { mergeColorAlpha } from '@lightningjs/renderer/utils';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import red25 from '../assets/red-25.png';
@@ -114,7 +118,7 @@ export default async function test(settings: ExampleSettings) {
     parent: testRoot,
   });
 
-  function buildSidePg0(bgColorName: 'red' | 'green', parent: INode) {
+  function buildSidePg0(bgColorName: 'red' | 'green', parent: CoreNode) {
     const bgColor = bgColorName === 'red' ? 0xff0000ff : 0x00ff00ff;
 
     let curY = PADDING * 2 + HEADER_FONT_SIZE;
@@ -304,7 +308,7 @@ export default async function test(settings: ExampleSettings) {
     return sideContainer;
   }
 
-  function buildSidePg1(bgColorName: 'red' | 'green', parent: INode) {
+  function buildSidePg1(bgColorName: 'red' | 'green', parent: CoreNode) {
     const bgColor = bgColorName === 'red' ? 0xff0000ff : 0x00ff00ff;
 
     let curY = PADDING * 2 + HEADER_FONT_SIZE;

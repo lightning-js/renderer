@@ -19,5 +19,3 @@
 
 /// <reference types="vite/client" />
 // This enables Vite's import.meta augmentations and possibly other things?
-/// <reference types="@lightningjs/vite-plugin-import-chunk-url/client" />
-// This installs 'import' types from the 'vite-plugin-import-chunk-url' plugin

@@ -19,7 +19,6 @@
 
 import { defineConfig } from 'vite';
 import * as path from 'path';
-import { importChunkUrl } from '@lightningjs/vite-plugin-import-chunk-url';
 
 /**
  * Targeting ES2019 gets us at least to WPE 2.28
@@ -49,7 +48,6 @@ const devTarget = 'es2020';
  */
 export default defineConfig(({ command, mode, ssrBuild }) => {
   return {
-    plugins: [importChunkUrl()],
     worker: {
       format: 'es',
     },

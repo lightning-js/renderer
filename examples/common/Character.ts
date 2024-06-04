@@ -18,11 +18,11 @@
  */
 
 import type {
-  SpecificTextureRef,
   INode,
   INodeWritableProps,
   RendererMain,
-  TextureRef,
+  Texture,
+  TextureMap,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
@@ -31,12 +31,11 @@ export class Character {
   curIntervalAnimation: ReturnType<typeof setTimeout> | null = null;
   direction!: 'left' | 'right'; // Set in setState
   state!: 'idle' | 'walk' | 'run' | 'jump'; // Set in setState
-  leftFrames: TextureRef[] = [];
 
   constructor(
     private props: Partial<INodeWritableProps>,
     private renderer: RendererMain,
-    private rightFrames: SpecificTextureRef<'SubTexture'>[],
+    private rightFrames: TextureMap['SubTexture'][],
   ) {
     this.node = renderer.createNode({
       x: props.x,
@@ -46,11 +45,6 @@ export class Character {
       texture: rightFrames[0],
       parent: renderer.root,
       zIndex: props.zIndex,
-    });
-    this.leftFrames = rightFrames.map((frame) => {
-      return renderer.createTexture('SubTexture', frame.props, {
-        flipX: true,
-      });
     });
     assertTruthy(this.node);
     this.setState('right', 'idle');
@@ -88,8 +82,8 @@ export class Character {
     intervalMs: number,
   ) {
     let curI = iStart;
-    const frameArr = direction === 'left' ? this.leftFrames : this.rightFrames;
-    if (iEnd + 1 > frameArr.length || iStart < 0) {
+    const flipX = direction === 'left' ? true : false;
+    if (iEnd + 1 > this.rightFrames.length || iStart < 0) {
       throw new Error('Animation out of bounds');
     }
     if (this.curIntervalAnimation) {
@@ -97,7 +91,8 @@ export class Character {
     }
     const nextFrame = () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.node.texture = frameArr[curI]!;
+      this.node.texture = this.rightFrames[curI]!;
+      this.node.textureOptions.flipX = flipX;
       curI++;
       if (curI > iEnd) {
         curI = iStart;

@@ -280,7 +280,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const flipX = textureOptions?.flipX ?? false;
-    const flipY = textureOptions?.flipY ?? false;
+    let flipY = textureOptions?.flipY ?? false;
+
+    // always flip Y for render textures
+    if (texture instanceof RenderTexture) {
+      flipY = true;
+    }
 
     let texCoordX1 = 0;
     let texCoordY1 = 0;

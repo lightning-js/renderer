@@ -40,6 +40,7 @@ export const startLoop = (stage: Stage) => {
 
     isIdle = false;
     stage.drawFrame();
+    stage.txManager.flushUnusedTextures();
     requestAnimationFrame(runLoop);
   };
   requestAnimationFrame(runLoop);

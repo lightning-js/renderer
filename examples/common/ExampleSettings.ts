@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, RendererMain } from '@lightningjs/renderer';
+import type { CoreNode, RendererMain } from '@lightningjs/renderer';
 
 /**
  * Keep in sync with `visual-regression/src/index.ts`
@@ -52,10 +52,6 @@ export interface ExampleSettings {
    */
   renderer: RendererMain;
   /**
-   * Core Driver being used by the test.
-   */
-  driverName: 'main' | 'threadx';
-  /**
    * The HTML Element that the Renderer's canvas is a child of
    */
   appElement: HTMLDivElement;
@@ -66,7 +62,7 @@ export interface ExampleSettings {
    * Tests should NEVER use the `renderer.root` node as this will prevent the
    * automation mode from being able to clean up after each test.
    */
-  testRoot: INode;
+  testRoot: CoreNode;
   /**
    * Whether the test is being run in automation mode.
    */

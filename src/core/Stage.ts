@@ -137,7 +137,6 @@ export class Stage extends EventEmitter {
       setInterval(() => {
         assertTruthy(this.txManager);
         const debugInfo = this.txManager.getDebugInfo();
-        console.log('Texture ID Cache Size: ', debugInfo.idCacheSize);
         console.log('Texture Key Cache Size: ', debugInfo.keyCacheSize);
       }, 1000);
     }
@@ -208,10 +207,12 @@ export class Stage extends EventEmitter {
       rotation: 0,
       parent: null,
       texture: null,
-      textureOptions: null,
+      textureOptions: {},
       shader: null,
       shaderProps: null,
       rtt: false,
+      src: null,
+      scale: 1,
     });
 
     this.root = rootNode;
