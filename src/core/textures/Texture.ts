@@ -167,12 +167,12 @@ export abstract class Texture extends EventEmitter {
     const oldSize = this.renderableOwners.size;
     if (renderable) {
       this.renderableOwners.add(owner);
-      if (oldSize === 0) {
+      if (this.renderableOwners.size > oldSize) {
         this.txManager.incTextureRenderable(this);
       }
     } else {
       this.renderableOwners.delete(owner);
-      if (oldSize === 1) {
+      if (this.renderableOwners.size < oldSize) {
         this.txManager.decTextureRenderable(this);
       }
     }

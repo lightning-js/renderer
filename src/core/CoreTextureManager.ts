@@ -233,18 +233,16 @@ export class CoreTextureManager {
    */
   incTextureRenderable(texture: Texture): void {
     const { refCountMap } = this;
-    const refCountObj = refCountMap.get(texture);
+    let refCountObj = refCountMap.get(texture);
     if (!refCountObj) {
-      this.initTextureToCache(texture, false);
+      refCountObj = this.initTextureToCache(texture, false);
     }
-    if (refCountObj) {
-      const oldCount = refCountObj.count;
-      refCountObj.count = oldCount + 1;
-      // If the texture was in the zero reference set, which was
-      // is if the count was 0, remove it.
-      if (oldCount === 0) {
-        this.zeroRefSet.delete(texture);
-      }
+    const oldCount = refCountObj.count;
+    refCountObj.count = oldCount + 1;
+    // If the texture was in the zero reference set, which was
+    // is if the count was 0, remove it.
+    if (oldCount === 0) {
+      this.zeroRefSet.delete(texture);
     }
   }
 
@@ -280,17 +278,21 @@ export class CoreTextureManager {
     const { keyCache, zeroRefSet, refCountMap } = this;
     for (const texture of zeroRefSet) {
       const refCountObj = refCountMap.get(texture);
-      if (refCountObj) {
+      if (refCountObj && texture.state !== 'loading') {
+        // We want to make sure we don't free any textures that are still loading
+        // because text and end users might be depending on a `loaded` / `failed`
+        // event to know when a texture is ready to use.
         const { cacheKey } = refCountObj;
         if (cacheKey) {
           keyCache.delete(cacheKey);
         }
-        refCountMap.delete(texture);
+
         // Free the ctx texture if it exists.
+        refCountMap.delete(texture);
+        zeroRefSet.delete(texture);
         this.ctxTextureCache.get(texture)?.free();
       }
     }
-    zeroRefSet.clear();
   }
 
   /**

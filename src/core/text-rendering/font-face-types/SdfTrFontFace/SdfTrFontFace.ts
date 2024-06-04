@@ -86,12 +86,14 @@ export class SdfTrFontFace<
       premultiplyAlpha: false,
     });
 
-    // Pre-load it
-    stage.txManager.getCtxTexture(this.texture).load();
-
     this.texture.on('loaded', () => {
       this.checkLoaded();
+      // Make sure we mark the stage for a re-render (in case the font's texture was freed and reloaded)
+      stage.requestRender();
     });
+
+    // Pre-load it
+    stage.txManager.getCtxTexture(this.texture).load();
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)
