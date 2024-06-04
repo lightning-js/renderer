@@ -242,6 +242,10 @@ export class CoreNode extends EventEmitter {
     this.props = {
       ...props,
       parent: null,
+      texture: null,
+      shader: null,
+      src: '',
+      rtt: false,
       data: props.data || {},
     };
 
