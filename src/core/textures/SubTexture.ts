@@ -111,6 +111,11 @@ export class SubTexture extends Texture {
     this.setState('failed', error);
   };
 
+  override onChangeIsRenderable(isRenderable: boolean): void {
+    // Propagate the renderable owner change to the parent texture
+    this.parentTexture.setRenderableOwner(this, isRenderable);
+  }
+
   override async getTextureData(): Promise<TextureData> {
     return {
       data: this.props,

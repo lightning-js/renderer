@@ -167,16 +167,35 @@ export abstract class Texture extends EventEmitter {
     const oldSize = this.renderableOwners.size;
     if (renderable) {
       this.renderableOwners.add(owner);
-      if (this.renderableOwners.size > oldSize) {
+      const newSize = this.renderableOwners.size;
+      if (newSize > oldSize) {
         this.txManager.incTextureRenderable(this);
+        if (this.onChangeIsRenderable && newSize === 1) {
+          this.onChangeIsRenderable(true);
+        }
       }
     } else {
       this.renderableOwners.delete(owner);
-      if (this.renderableOwners.size < oldSize) {
+      const newSize = this.renderableOwners.size;
+      if (newSize < oldSize) {
         this.txManager.decTextureRenderable(this);
+        if (this.onChangeIsRenderable && newSize === 0) {
+          this.onChangeIsRenderable(false);
+        }
       }
     }
   }
+
+  /**
+   * Event called when the Texture becomes renderable or unrenderable.
+   *
+   * @remarks
+   * Used by subclasses like SubTexture propogate then renderability of the
+   * Texture to other referenced Textures.
+   *
+   * @param isRenderable `true` if this Texture has renderable owners.
+   */
+  onChangeIsRenderable?(isRenderable: boolean): void;
 
   /**
    * Returns true if the texture is assigned to any Nodes that are renderable.
