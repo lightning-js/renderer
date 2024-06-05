@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import { assertTruthy } from '../../../utils.js';
 import type { CoreNode } from '../../CoreNode.js';
 import type { CoreShaderManager } from '../../CoreShaderManager.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
@@ -78,18 +79,13 @@ export class CanvasCoreRenderer extends CoreRenderer {
   addQuad(quad: QuadOptions): void {
     const ctx = this.context;
     const {
-      tx,
-      ty,
+      transform,
       width,
       height,
       alpha,
       colorTl,
       colorTr,
       colorBr,
-      ta,
-      tb,
-      tc,
-      td,
       clippingRect,
     } = quad;
     let texture = quad.texture;
@@ -113,6 +109,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
         return;
       }
     }
+    assertTruthy(transform);
+    const { tx, ty, ta, tb, tc, td } = transform;
 
     const color = parseColor(colorTl);
     const hasTransform = ta !== 1;

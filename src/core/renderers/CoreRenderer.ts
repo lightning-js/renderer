@@ -27,6 +27,8 @@ import type {
 import type { Stage } from '../Stage.js';
 import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
+import type { Matrix3d } from '../lib/Matrix3d.js';
+import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
 import { ColorTexture } from '../textures/ColorTexture.js';
 import type { Texture } from '../textures/Texture.js';
@@ -47,12 +49,8 @@ export interface QuadOptions {
   shaderProps: Record<string, unknown> | null;
   alpha: number;
   clippingRect: RectWithValid;
-  tx: number;
-  ty: number;
-  ta: number;
-  tb: number;
-  tc: number;
-  td: number;
+  renderCoords: RenderCoords;
+  transform: Matrix3d;
   rtt?: boolean;
   parentHasRenderTexture?: boolean;
   framebufferDimensions?: Dimensions;

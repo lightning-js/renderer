@@ -46,6 +46,7 @@ import {
   type TrPropSetters,
   type TrProps,
 } from './TextRenderer.js';
+import { RenderCoords } from '../../lib/RenderCoords.js';
 
 const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
 
@@ -638,12 +639,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        tx: transform.tx,
-        ty: transform.ty - scrollY + renderWindow.y1,
-        ta: transform.ta,
-        tb: transform.tb,
-        tc: transform.tc,
-        td: transform.td,
+        renderCoords: this.calculateRenderCoords(
+          width,
+          height,
+          transform,
+          transform.ty - scrollY + renderWindow.y1,
+        ),
+        transform,
       });
     }
     if (canvasPages[1].valid) {
@@ -661,12 +663,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        tx: transform.tx,
-        ty: transform.ty - scrollY + renderWindow.y1 + pageSize,
-        ta: transform.ta,
-        tb: transform.tb,
-        tc: transform.tc,
-        td: transform.td,
+        renderCoords: this.calculateRenderCoords(
+          width,
+          height,
+          transform,
+          transform.ty - scrollY + renderWindow.y1 + pageSize,
+        ),
+        transform,
       });
     }
     if (canvasPages[2].valid) {
@@ -684,12 +687,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
-        tx: transform.tx,
-        ty: transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
-        ta: transform.ta,
-        tb: transform.tb,
-        tc: transform.tc,
-        td: transform.td,
+        renderCoords: this.calculateRenderCoords(
+          width,
+          height,
+          transform,
+          transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
+        ),
+        transform,
       });
     }
 
@@ -724,6 +728,52 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     //     y + renderWindow.y2 - scrollY - (y + renderWindow.y1 - scrollY),
     //   );
     // }
+  }
+
+  calculateRenderCoords(
+    width: number,
+    height: number,
+    transform: Matrix3d,
+    y: number,
+  ): RenderCoords {
+    assertTruthy(transform);
+    const { tx, ta, tb, tc, td } = transform;
+    if (tb === 0 && tc === 0) {
+      const minX = tx;
+      const maxX = tx + width * ta;
+
+      const minY = y;
+      const maxY = y + height * td;
+      return RenderCoords.translate(
+        //top-left
+        minX,
+        minY,
+        //top-right
+        maxX,
+        minY,
+        //bottom-right
+        maxX,
+        maxY,
+        //bottom-left
+        minX,
+        maxY,
+      );
+    } else {
+      return RenderCoords.translate(
+        //top-left
+        tx,
+        y,
+        //top-right
+        tx + width * ta,
+        y + width * tc,
+        //bottom-right
+        tx + width * ta + height * tb,
+        y + width * tc + height * td,
+        //bottom-left
+        tx + height * tb,
+        y + height * td,
+      );
+    }
   }
 
   override setIsRenderable(
