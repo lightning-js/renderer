@@ -79,7 +79,12 @@ export class CanvasCoreRenderer extends CoreRenderer {
   addQuad(quad: QuadOptions): void {
     const ctx = this.context;
     const {
-      transform,
+      tx,
+      ty,
+      ta,
+      tb,
+      tc,
+      td,
       width,
       height,
       alpha,
@@ -109,8 +114,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
         return;
       }
     }
-    assertTruthy(transform);
-    const { tx, ty, ta, tb, tc, td } = transform;
 
     const color = parseColor(colorTl);
     const hasTransform = ta !== 1;

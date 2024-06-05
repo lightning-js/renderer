@@ -639,13 +639,18 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
         renderCoords: this.calculateRenderCoords(
           width,
           height,
           transform,
           transform.ty - scrollY + renderWindow.y1,
         ),
-        transform,
       });
     }
     if (canvasPages[1].valid) {
@@ -663,13 +668,18 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
         renderCoords: this.calculateRenderCoords(
           width,
           height,
           transform,
           transform.ty - scrollY + renderWindow.y1 + pageSize,
         ),
-        transform,
       });
     }
     if (canvasPages[2].valid) {
@@ -687,13 +697,18 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         shader: null,
         shaderProps: null,
         zIndex,
+        tx: transform.tx,
+        ty: transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
+        ta: transform.ta,
+        tb: transform.tb,
+        tc: transform.tc,
+        td: transform.td,
         renderCoords: this.calculateRenderCoords(
           width,
           height,
           transform,
           transform.ty - scrollY + renderWindow.y1 + pageSize + pageSize,
         ),
-        transform,
       });
     }
 

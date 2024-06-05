@@ -228,7 +228,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       shaderProps,
       alpha,
       clippingRect,
-      transform,
       renderCoords,
       rtt: renderToTexture,
       parentHasRenderTexture,
