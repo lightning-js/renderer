@@ -77,7 +77,10 @@ export class NoiseTexture extends Texture {
     };
   }
 
-  static override makeCacheKey(props: NoiseTextureProps): string {
+  static override makeCacheKey(props: NoiseTextureProps): string | false {
+    if (props.cacheId === undefined) {
+      return false;
+    }
     const resolvedProps = NoiseTexture.resolveDefaults(props);
     return `NoiseTexture,${resolvedProps.width},${resolvedProps.height},${resolvedProps.cacheId}`;
   }
