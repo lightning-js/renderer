@@ -884,12 +884,12 @@ export class CoreNode extends EventEmitter {
     const {
       zIndex,
       worldAlpha,
-      globalTransform: transform,
+      globalTransform: gt,
       clippingRect,
       renderCoords,
     } = this;
 
-    assertTruthy(transform);
+    assertTruthy(gt);
     assertTruthy(renderCoords);
 
     // add to list of renderables to be sorted before rendering
@@ -908,7 +908,12 @@ export class CoreNode extends EventEmitter {
       alpha: worldAlpha,
       clippingRect,
       renderCoords,
-      transform,
+      tx: gt.tx,
+      ty: gt.ty,
+      ta: gt.ta,
+      tb: gt.tb,
+      tc: gt.tc,
+      td: gt.td,
       rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
