@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { INodeWritableProps } from '@lightningjs/renderer';
+import type { CoreNodeWritableProps } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
@@ -50,7 +50,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -87,7 +87,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -124,7 +124,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -164,7 +164,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -201,7 +201,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -238,7 +238,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -278,7 +278,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -315,7 +315,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({
@@ -352,7 +352,7 @@ export default async function test(settings: ExampleSettings) {
           width: 100,
           height: 100,
           src: robotImg,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<CoreNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createNode({

@@ -19,7 +19,7 @@
 
 import {
   type CoreNode,
-  type ITextNode,
+  type CoreTextNode,
   type RendererMain,
   type Dimensions,
   type NodeLoadedEventHandler,
@@ -187,7 +187,7 @@ interface BoxedTextProps {
 
 class BoxedText extends EventEmitter implements BoxedTextProps {
   readonly node: CoreNode;
-  readonly textNode: ITextNode;
+  readonly textNode: CoreTextNode;
   constructor(
     private props: Partial<BoxedTextProps>,
     private renderer: RendererMain,
@@ -296,7 +296,7 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
   }
 }
 
-function waitForTextFailed(textNode: ITextNode) {
+function waitForTextFailed(textNode: CoreTextNode) {
   return new Promise<Error>((resolve, reject) => {
     setTimeout(() => {
       reject(new Error('TIMEOUT'));

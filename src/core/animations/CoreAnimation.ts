@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode } from '../CoreNode.js';
-import type { INodeAnimatableProps } from '../../main-api/INode.js';
+import type { CoreNode, CoreNodeAnimatableProps } from '../CoreNode.js';
 import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -34,21 +33,21 @@ export interface AnimationSettings {
 }
 
 export class CoreAnimation extends EventEmitter {
-  public propStartValues: Partial<INodeAnimatableProps> = {};
-  public restoreValues: Partial<INodeAnimatableProps> = {};
+  public propStartValues: Partial<CoreNodeAnimatableProps> = {};
+  public restoreValues: Partial<CoreNodeAnimatableProps> = {};
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
-  private propsList: Array<keyof INodeAnimatableProps>; //fixme - aint got not time for this
+  private propsList: Array<keyof CoreNodeAnimatableProps>; //fixme - aint got not time for this
 
   constructor(
     private node: CoreNode,
-    private props: Partial<INodeAnimatableProps>,
+    private props: Partial<CoreNodeAnimatableProps>,
     public settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};
-    this.propsList = Object.keys(props) as Array<keyof INodeAnimatableProps>;
+    this.propsList = Object.keys(props) as Array<keyof CoreNodeAnimatableProps>;
     this.propsList.forEach((propName) => {
       this.propStartValues[propName] = node[propName];
     });
@@ -69,7 +68,7 @@ export class CoreAnimation extends EventEmitter {
 
   restore() {
     this.reset();
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
+    (Object.keys(this.props) as Array<keyof CoreNodeAnimatableProps>).forEach(
       (propName) => {
         this.node[propName] = this.propStartValues[propName] as number;
       },
@@ -78,7 +77,7 @@ export class CoreAnimation extends EventEmitter {
 
   reverse() {
     this.progress = 0;
-    (Object.keys(this.props) as Array<keyof INodeAnimatableProps>).forEach(
+    (Object.keys(this.props) as Array<keyof CoreNodeAnimatableProps>).forEach(
       (propName) => {
         // set the start value to the current value
         const startValue = this.props[propName];
@@ -130,7 +129,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     for (let i = 0; i < this.propsList.length; i++) {
-      const propName = this.propsList[i] as keyof INodeAnimatableProps;
+      const propName = this.propsList[i] as keyof CoreNodeAnimatableProps;
       const propValue = this.props[propName] as number;
       const startValue = this.propStartValues[propName] as number;
       const endValue = propValue;

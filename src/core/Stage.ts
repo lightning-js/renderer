@@ -45,7 +45,6 @@ import type {
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 
 export interface StageOptions {
-  rootId: number;
   appWidth: number;
   appHeight: number;
   txMemByteThreshold: number;
@@ -108,7 +107,6 @@ export class Stage extends EventEmitter {
     const {
       canvas,
       clearColor,
-      rootId,
       debug,
       appWidth,
       appHeight,
@@ -177,7 +175,6 @@ export class Stage extends EventEmitter {
 
     // create root node
     const rootNode = new CoreNode(this, {
-      id: rootId,
       x: 0,
       y: 0,
       width: appWidth,

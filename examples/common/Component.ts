@@ -19,7 +19,7 @@
 
 import type {
   CoreNode,
-  INodeWritableProps,
+  CoreNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 
@@ -28,7 +28,7 @@ export class Component {
 
   constructor(
     readonly renderer: RendererMain,
-    nodeProps: Partial<INodeWritableProps>,
+    nodeProps: Partial<CoreNodeWritableProps>,
   ) {
     this.node = renderer.createNode({
       ...nodeProps,
