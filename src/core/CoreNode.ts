@@ -1412,7 +1412,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions = { preload: true };
+        this.textureOptions.preload = true;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1432,7 +1432,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions = { preload: true };
+        this.textureOptions.preload = true;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1784,7 +1784,7 @@ export class CoreNode extends EventEmitter {
       width: this.width,
       height: this.height,
     });
-    this.textureOptions = { preload: true };
+    this.textureOptions.preload = true;
 
     this.props.rtt = true;
     this.hasRTTupdates = true;
