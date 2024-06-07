@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { type INode } from '@lightningjs/renderer';
+import { CoreNode } from '@lightningjs/renderer';
 import logo from '../assets/lightning.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
@@ -36,7 +36,7 @@ export default async function test({
 }: ExampleSettings) {
   // create 100 nodes
   const numOuterNodes = (100 * Math.max(perfMultiplier, 1)) / 2;
-  const nodes: INode[] = [];
+  const nodes: CoreNode[] = [];
 
   const bg = renderer.createNode({
     width: 1920,

@@ -18,7 +18,7 @@
  */
 
 import type {
-  ITextNodeWritableProps,
+  CoreTextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -60,7 +60,7 @@ const NODE_PROPS = {
   fontSize: 20,
   lineHeight: 28,
   contain: 'both',
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<CoreTextNodeWritableProps>;
 
 function generateOverflowSuffixTest(
   renderer: RendererMain,
@@ -73,7 +73,7 @@ function generateOverflowSuffixTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

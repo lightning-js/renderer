@@ -18,6 +18,7 @@
  */
 import type { RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+// !!! TEST reference-texture-memory
 export function customSettings(): Partial<RendererMainSettings> {
   return {
     // Disable the threshold-based memory manager. This will allow this test to

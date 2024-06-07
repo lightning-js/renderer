@@ -18,7 +18,7 @@
  */
 
 import type {
-  ITextNodeWritableProps,
+  CoreTextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -59,7 +59,7 @@ const BASE_NODE_PROPS = {
   fontSize: 20,
   lineHeight: 28,
   contain: 'width',
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<CoreTextNodeWritableProps>;
 
 function generateMaxLinesTest(
   renderer: RendererMain,
@@ -73,7 +73,7 @@ function generateMaxLinesTest(
           ...BASE_NODE_PROPS,
           text: 'Line1 Line1_Line1_Line1\nLine2 Line2____Line2\nLine 3\nLine 4',
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -129,7 +129,7 @@ function generateMaxLinesTest(
           ...BASE_NODE_PROPS,
           text: getLoremIpsum(100),
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

@@ -18,22 +18,21 @@
  */
 
 import type {
-  INode,
-  INodeWritableProps,
+  CoreNode,
+  CoreNodeWritableProps,
   RendererMain,
-  Texture,
   TextureMap,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
 export class Character {
-  node: INode;
+  node: CoreNode;
   curIntervalAnimation: ReturnType<typeof setTimeout> | null = null;
   direction!: 'left' | 'right'; // Set in setState
   state!: 'idle' | 'walk' | 'run' | 'jump'; // Set in setState
 
   constructor(
-    private props: Partial<INodeWritableProps>,
+    private props: Partial<CoreNodeWritableProps>,
     private renderer: RendererMain,
     private rightFrames: TextureMap['SubTexture'][],
   ) {

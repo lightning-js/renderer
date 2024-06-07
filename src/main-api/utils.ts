@@ -1,4 +1,4 @@
-import type { CustomDataMap } from '../main-api/INode.js';
+import type { CustomDataMap } from '../core/CoreNode.js';
 
 export function santizeCustomDataMap(d: CustomDataMap): CustomDataMap {
   const validTypes = {

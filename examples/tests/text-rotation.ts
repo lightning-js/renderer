@@ -18,7 +18,7 @@
  */
 
 import type {
-  ITextNodeWritableProps,
+  CoreTextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -56,7 +56,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<CoreTextNodeWritableProps>;
 
 function generateRotationTest(
   renderer: RendererMain,
@@ -69,7 +69,7 @@ function generateRotationTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -120,7 +120,7 @@ function generateRotationTest(
           x: 100,
           y: 100,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createTextNode({
@@ -154,7 +154,7 @@ function generateRotationTest(
           ...NODE_PROPS,
           mount: 1,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<CoreTextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

@@ -22,15 +22,8 @@ import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureTypeMap,
-  TextureOptions,
   TextureMap,
 } from '../core/CoreTextureManager.js';
-import type {
-  INode,
-  INodeWritableProps,
-  ITextNode,
-  ITextNodeWritableProps,
-} from './INode.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from './utils.js';
@@ -41,8 +34,11 @@ import {
   type StageFrameTickHandler,
 } from '../core/Stage.js';
 import { getNewId } from '../utils.js';
-import { CoreNode } from '../core/CoreNode.js';
-import { CoreTextNode } from '../core/CoreTextNode.js';
+import { CoreNode, type CoreNodeWritableProps } from '../core/CoreNode.js';
+import {
+  CoreTextNode,
+  type CoreTextNodeWritableProps,
+} from '../core/CoreTextNode.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -287,7 +283,6 @@ export class RendererMain extends EventEmitter {
 
     // Initialize the stage
     this.stage = new Stage({
-      rootId: getNewId(),
       appWidth: this.settings.appWidth,
       appHeight: this.settings.appHeight,
       boundsMargin: this.settings.boundsMargin,
@@ -351,18 +346,17 @@ export class RendererMain extends EventEmitter {
    *
    * To create a text node, see {@link createTextNode}.
    *
-   * See {@link INode} for more details.
+   * See {@link CoreNode} for more details.
    *
    * @param props
    * @returns
    */
-  createNode(props: Partial<INodeWritableProps>): CoreNode {
+  createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
     assertTruthy(this.stage, 'Stage is not initialized');
 
     const resolvedProps = this.resolveNodeDefaults(props);
     const node = new CoreNode(this.stage, {
       ...resolvedProps,
-      id: getNewId(),
       shaderProps: null,
     });
 
@@ -390,7 +384,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<ITextNodeWritableProps>): CoreTextNode {
+  createTextNode(props: Partial<CoreTextNodeWritableProps>): CoreTextNode {
     const fontSize = props.fontSize ?? 16;
     const data = {
       ...this.resolveNodeDefaults(props),
@@ -438,7 +432,9 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  resolveNodeDefaults(props: Partial<INodeWritableProps>): INodeWritableProps {
+  resolveNodeDefaults(
+    props: Partial<CoreNodeWritableProps>,
+  ): CoreNodeWritableProps {
     const color = props.color ?? 0xffffffff;
     const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
     const colorTr =
@@ -472,6 +468,7 @@ export class RendererMain extends EventEmitter {
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
       shader: props.shader ?? null,
+      shaderProps: props.shaderProps ?? null,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',

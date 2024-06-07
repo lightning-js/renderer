@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 
-import type {
-  CoreNode,
-  INode,
-  NodeLoadedEventHandler,
-} from '@lightningjs/renderer';
+import type { CoreNode, NodeLoadedEventHandler } from '@lightningjs/renderer';
 import { mergeColorAlpha } from '@lightningjs/renderer/utils';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import red25 from '../assets/red-25.png';
@@ -495,8 +491,8 @@ export default async function test(settings: ExampleSettings) {
     return sideContainer;
   }
 
-  let curLeftSide: INode | null = null;
-  let curRightSide: INode | null = null;
+  let curLeftSide: CoreNode | null = null;
+  let curRightSide: CoreNode | null = null;
 
   function buildPage(pageNumber: number) {
     if (curLeftSide) {

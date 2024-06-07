@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { type INode } from '@lightningjs/renderer';
+import { type CoreNode } from '@lightningjs/renderer';
 import logo from '../assets/lightning.png';
 import robot from '../assets/robot/robot.png';
 
@@ -33,7 +33,7 @@ export default async function ({
 }: ExampleSettings) {
   // create nodes
   const numOuterNodes = 100 * perfMultiplier;
-  const nodes: INode[] = [];
+  const nodes: CoreNode[] = [];
 
   const bg = renderer.createNode({
     width: 1920,
