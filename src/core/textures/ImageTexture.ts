@@ -23,6 +23,7 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
+import { convertUrlToAbsolute } from '../lib/utils.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -108,13 +109,16 @@ export class ImageTexture extends Texture {
       return loadCompressedTexture(src);
     }
 
+    // Convert relative URL to absolute URL
+    const absoluteSrc = convertUrlToAbsolute(src);
+
     if (this.txManager.imageWorkerManager) {
       return await this.txManager.imageWorkerManager.getImage(
-        src,
+        absoluteSrc,
         premultiplyAlpha,
       );
     } else if (this.txManager.hasCreateImageBitmap) {
-      const response = await fetch(src);
+      const response = await fetch(absoluteSrc);
       const blob = await response.blob();
       const hasAlphaChannel =
         premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
@@ -131,7 +135,7 @@ export class ImageTexture extends Texture {
       if (!(src.substr(0, 5) === 'data:')) {
         img.crossOrigin = 'Anonymous';
       }
-      img.src = src;
+      img.src = absoluteSrc;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error(`Failed to load image`));
@@ -162,7 +166,7 @@ export class ImageTexture extends Texture {
     return {
       src: props.src ?? '',
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
-      key: props.key ?? null
+      key: props.key ?? null,
     };
   }
 
