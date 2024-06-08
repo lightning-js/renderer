@@ -1076,18 +1076,18 @@ export class CoreNode extends EventEmitter {
       this.strictBound,
     );
 
-    const renderM = this.stage.boundsMargin;
-    this.preloadBound = createBound(
-      parentClippingRect.x - renderM[3],
-      parentClippingRect.y - renderM[0],
-      parentClippingRect.x + rectW + renderM[1],
-      parentClippingRect.y + rectH + renderM[2],
-      this.preloadBound,
-    );
-
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
+
+    const renderM = this.stage.boundsMargin;
+    this.preloadBound = createBound(
+      this.strictBound.x1 - renderM[3],
+      this.strictBound.y1 - renderM[0],
+      this.strictBound.x2 + renderM[1],
+      this.strictBound.y2 + renderM[2],
+      this.preloadBound,
+    );
 
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
@@ -1097,48 +1097,19 @@ export class CoreNode extends EventEmitter {
 
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
-    if (renderState !== this.renderState) {
-      let previous = this.renderState;
-      this.renderState = renderState;
-      if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('outOfViewport', {
-          previous,
-          current: renderState,
-        });
-      }
-      if (
-        previous < CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.InViewport
-      ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
-        previous = CoreNodeRenderState.InBounds;
-      } else if (
-        previous > CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.OutOfBounds
-      ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
-        previous = CoreNodeRenderState.InBounds;
-      }
-      const event = CoreNodeRenderStateMap.get(renderState);
-      assertTruthy(event);
-      this.emit(event, {
-        previous,
-        current: renderState,
-      });
-    }
-  }
 
-  setRenderState(state: CoreNodeRenderState) {
-    if (state !== this.renderState) {
-      this.renderState = state;
-      this.emit(CoreNodeRenderState[state]);
+    if (renderState === this.renderState) {
+      return;
     }
+
+    const previous = this.renderState;
+    this.renderState = renderState;
+    const event = CoreNodeRenderStateMap.get(renderState);
+    assertTruthy(event);
+    this.emit(event, {
+      previous,
+      current: renderState,
+    });
   }
 
   /**
