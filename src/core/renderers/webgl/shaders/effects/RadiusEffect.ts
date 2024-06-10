@@ -92,8 +92,9 @@ export class RadiusEffect extends ShaderEffect {
     boxDist: `
       float function(vec2 p, vec2 size, float radius) {
         size -= vec2(radius);
-        vec2 d = abs(p) - size;
-        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
+        vec2 d = (abs(p) - size);
+        float dist = (min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius) * u_pixelRatio;
+        return dist;
       }
     `,
   };

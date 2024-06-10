@@ -76,7 +76,9 @@ export class BorderEffect extends ShaderEffect {
   };
 
   static override onEffectMask = `
-  float mask = clamp(shaderMask + width, 0.0, 1.0) - clamp(shaderMask, 0.0, 1.0);
+  //float mask = clamp(shaderMask + width, 0.0, 1.0) - clamp(shaderMask, 0.0, 1.0);
+  float intR = (shaderMask + 1.0 * u_pixelRatio);
+  float mask =  clamp(intR + width, 0.0, 1.0) - clamp(intR, 0.0, 1.0);
   return mix(shaderColor, mix(shaderColor, maskColor, maskColor.a), mask);
   `;
 
