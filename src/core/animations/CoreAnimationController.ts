@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -24,50 +25,48 @@ import type {
 import type { AnimationManager } from './AnimationManager.js';
 import type { CoreAnimation } from './CoreAnimation.js';
 import { assertTruthy } from '../../utils.js';
+import { EventEmitter } from '../../common/EventEmitter.js';
 
-export class CoreAnimationController implements IAnimationController {
-  startedPromise: Promise<void> | null = null;
-  /**
-   * If this is null, then the animation hasn't started yet.
-   */
-  startedResolve: ((scope?: any) => void) | null = null;
-
-  stoppedPromise: Promise<void> | null = null;
+export class CoreAnimationController
+  extends EventEmitter
+  implements IAnimationController
+{
+  stoppedPromise: Promise<void>;
   /**
    * If this is null, then the animation is in a finished / stopped state.
    */
   stoppedResolve: (() => void) | null = null;
+  state: AnimationControllerState;
 
   constructor(
     private manager: AnimationManager,
     private animation: CoreAnimation,
   ) {
+    super();
     this.state = 'stopped';
+    // Initial stopped promise is resolved (since the animation is stopped)
+    this.stoppedPromise = Promise.resolve();
+
+    // Bind event handlers
+    this.onAnimating = this.onAnimating.bind(this);
+    this.onFinished = this.onFinished.bind(this);
   }
 
-  state: AnimationControllerState;
-
   start(): IAnimationController {
-    this.makeStartedPromise();
-    this.animation.once('start', this.started.bind(this));
-
-    this.makeStoppedPromise();
-    this.animation.once('finished', this.finished.bind(this));
-
-    // prevent registering the same animation twice
-    if (!this.manager.activeAnimations.has(this.animation)) {
-      this.manager.registerAnimation(this.animation);
+    if (this.state !== 'running') {
+      this.makeStoppedPromise();
+      this.registerAnimation();
+      this.state = 'running';
     }
-
-    this.state = 'running';
     return this;
   }
 
   stop(): IAnimationController {
-    this.manager.unregisterAnimation(this.animation);
+    this.unregisterAnimation();
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
       this.stoppedResolve = null;
+      this.emit('stopped', this);
     }
     this.animation.reset();
     this.state = 'stopped';
@@ -75,7 +74,7 @@ export class CoreAnimationController implements IAnimationController {
   }
 
   pause(): IAnimationController {
-    this.manager.unregisterAnimation(this.animation);
+    this.unregisterAnimation();
     this.state = 'paused';
     return this;
   }
@@ -86,26 +85,24 @@ export class CoreAnimationController implements IAnimationController {
     return this;
   }
 
-  waitUntilStarted(): Promise<void> {
-    this.makeStartedPromise();
-    const promise = this.startedPromise;
-    assertTruthy(promise);
-    return promise;
-  }
-
   waitUntilStopped(): Promise<void> {
-    this.makeStoppedPromise();
-    const promise = this.stoppedPromise;
-    assertTruthy(promise);
-    return promise;
+    return this.stoppedPromise;
   }
 
-  private makeStartedPromise(): void {
-    if (this.startedResolve === null) {
-      this.startedPromise = new Promise((resolve) => {
-        this.startedResolve = resolve;
-      });
-    }
+  private registerAnimation(): void {
+    // Hook up event listeners
+    this.animation.once('finished', this.onFinished);
+    this.animation.on('animating', this.onAnimating);
+    // Then register the animation
+    this.manager.registerAnimation(this.animation);
+  }
+
+  private unregisterAnimation(): void {
+    // First unregister the animation
+    this.manager.unregisterAnimation(this.animation);
+    // Then unhook event listeners
+    this.animation.off('finished', this.onFinished);
+    this.animation.off('animating', this.onAnimating);
   }
 
   private makeStoppedPromise(): void {
@@ -116,33 +113,31 @@ export class CoreAnimationController implements IAnimationController {
     }
   }
 
-  private started(): void {
-    assertTruthy(this.startedResolve);
-    // resolve promise (and pass current this to continue to the chain)
-    this.startedResolve(this);
-    this.startedResolve = null;
-  }
-
-  private finished(): void {
+  private onFinished(this: CoreAnimationController): void {
     assertTruthy(this.stoppedResolve);
     // If the animation is looping, then we need to restart it.
     const { loop, stopMethod } = this.animation.settings;
 
     if (stopMethod === 'reverse') {
       this.animation.reverse();
-      this.start();
       return;
     }
-
-    // resolve promise
-    this.stoppedResolve();
-    this.stoppedResolve = null;
 
     if (loop) {
       return;
     }
 
     // unregister animation
-    this.manager.unregisterAnimation(this.animation);
+    this.unregisterAnimation();
+
+    // resolve promise
+    this.stoppedResolve();
+    this.stoppedResolve = null;
+    this.emit('stopped', this);
+    this.state = 'stopped';
+  }
+
+  private onAnimating(this: CoreAnimationController): void {
+    this.emit('animating', this);
   }
 }

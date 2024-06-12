@@ -119,15 +119,10 @@ export class ImageWorkerManager {
     return workers;
   }
 
-  private getNextWorker(): Worker {
+  private getNextWorker(): Worker | undefined {
     const worker = this.workers[this.workerIndex];
     this.workerIndex = (this.workerIndex + 1) % this.workers.length;
-    return worker!;
-  }
-
-  private convertUrlToAbsolute(url: string): string {
-    const absoluteUrl = new URL(url, self.location.href);
-    return absoluteUrl.href;
+    return worker;
   }
 
   getImage(
@@ -137,14 +132,16 @@ export class ImageWorkerManager {
     return new Promise((resolve, reject) => {
       try {
         if (this.workers) {
-          const absoluteSrcUrl = this.convertUrlToAbsolute(src);
           const id = this.nextId++;
           this.messageManager[id] = [resolve, reject];
-          this.getNextWorker().postMessage({
-            id,
-            src: absoluteSrcUrl,
-            premultiplyAlpha,
-          });
+          const nextWorker = this.getNextWorker();
+          if (nextWorker) {
+            nextWorker.postMessage({
+              id,
+              src: src,
+              premultiplyAlpha,
+            });
+          }
         }
       } catch (error) {
         reject(error);
