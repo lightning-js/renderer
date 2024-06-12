@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
@@ -52,7 +53,7 @@ export interface TextRendererState {
    * via queueMicrotask.
    */
   updateScheduled: boolean;
-  status: 'initialState' | 'loading' | 'loaded' | 'failed';
+  status: 'initialState' | 'loading' | 'loaded' | 'failed' | 'destroyed';
   /**
    * Event emitter for the text renderer
    */
@@ -266,11 +267,15 @@ export interface TrProps extends TrFontProps {
    * Line height for text (in pixels)
    *
    * @remarks
-   * This property sets the height of each line.
+   * This property sets the height of each line. If set to `undefined`, the
+   * line height will be calculated based on the font and font size to be the
+   * minimal height required to completely contain a line of text.
    *
-   * @default 0
+   * See: https://github.com/lightning-js/renderer/issues/170
+   *
+   * @default `undefined`
    */
-  lineHeight: number;
+  lineHeight: number | undefined;
   /**
    * Max lines for text
    *
@@ -505,12 +510,8 @@ export abstract class TextRenderer<
    * @param state
    */
   destroyState(state: StateT) {
-    const stateEvents = ['loading', 'loaded', 'failed'];
-
-    // Remove the old event listeners from previous state obj there was one
-    stateEvents.forEach((eventName) => {
-      state.emitter.off(eventName);
-    });
+    this.setStatus(state, 'destroyed');
+    state.emitter.removeAllListeners();
   }
 
   /**
@@ -529,6 +530,10 @@ export abstract class TextRenderer<
     }
     state.updateScheduled = true;
     queueMicrotask(() => {
+      // If the state has been destroyed, don't update it
+      if (state.status === 'destroyed') {
+        return;
+      }
       state.updateScheduled = false;
       this.updateState(state);
     });
@@ -541,5 +546,7 @@ export abstract class TextRenderer<
     transform: Matrix3d,
     clippingRect: RectWithValid,
     alpha: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | undefined,
   ): void;
 }

@@ -36,6 +36,7 @@ Options:
   -p, --port       Port to serve examples on           [number] [default: 50535]
   -i, --ci         Run in docker container with `ci` runtime environment
                                                       [boolean] [default: false]
+  -f, --filter     Tests to run ("*" wildcard pattern)   [string] [default: "*"]
 ```
 
 The test runner may be launched in local mode with:
@@ -141,6 +142,16 @@ Test. Addtional snapshots can be defined by calling `settings.snapshot()`
 additional times, while of course making changes to the Renderer state in
 between calls.
 
+A name may be optionally provided in the snapshot call:
+
+```typescript
+settings.snapshot({ name: 'myname' });
+```
+
+This name will be appended to the name of the Example Test. For example, if
+run in the `alpha` Example Test, the name of Snapshot will be `alpha_myname-1`.
+The same name may be used multiple times.
+
 Example Tests that utilize the `PageContainer` class to define separate pages
 of static content may use the `pageContainer.snapshotPages()` helper method
 to automatically take snapshots of each of the pages defined in the container.
@@ -199,3 +210,16 @@ export async function automation(settings: ExampleSettings) {
 Method 2 allows more flexibility in how snapshots are defined but should only
 be used if Method 1 does not satisfy the requirements for the snapshots to be
 taken.
+
+### Math.random()
+
+In order to allow for consistent snapshots when random numbers are convenient in
+writing tests, Example Tests that are run by the Visual Regression Test Runner
+receive a consistent constant [seeded implementation](https://github.com/stdlib-js/random-base-mt19937)
+of `Math.random()`.
+
+This means that for each Example Test that is run, `Math.random()` will
+produce the same sequence of random numbers.
+
+`Math.random()` operates as it normally does when the Example Tests are run
+directly in the browser (without the VRT Runnner).

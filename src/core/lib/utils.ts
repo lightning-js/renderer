@@ -248,3 +248,28 @@ export function isBoundPositive(bound: Bound): boolean {
 export function isRectPositive(rect: Rect): boolean {
   return rect.width > 0 && rect.height > 0;
 }
+
+export function convertUrlToAbsolute(url: string): string {
+  // handle local file imports
+  if (self.location.protocol === 'file:') {
+    const path = self.location.pathname.split('/');
+    path.pop();
+    const basePath = path.join('/');
+    const baseUrl = self.location.protocol + '//' + basePath;
+
+    // check if url has a leading dot
+    if (url.charAt(0) === '.') {
+      url = url.slice(1);
+    }
+
+    // check if url has a leading slash
+    if (url.charAt(0) === '/') {
+      url = url.slice(1);
+    }
+
+    return baseUrl + '/' + url;
+  }
+
+  const absoluteUrl = new URL(url, self.location.href);
+  return absoluteUrl.href;
+}

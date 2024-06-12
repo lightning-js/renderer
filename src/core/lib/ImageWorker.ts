@@ -101,9 +101,10 @@ const createImageWorker = function worker() {
 
 export class ImageWorkerManager {
   imageWorkersEnabled = true;
-  messageManager: Record<string, MessageCallback> = {};
+  messageManager: Record<number, MessageCallback> = {};
   workers: Worker[] = [];
   workerIndex = 0;
+  nextId = 0;
 
   constructor(numImageWorkers: number) {
     this.workers = this.createWorkers(numImageWorkers);
@@ -113,15 +114,16 @@ export class ImageWorkerManager {
   }
 
   private handleMessage(event: MessageEvent) {
-    const { src, data, error } = event.data as {
+    const { id, data, error } = event.data as {
+      id: number;
       src: string;
       data?: any;
       error?: string;
     };
-    const msg = this.messageManager[src];
+    const msg = this.messageManager[id];
     if (msg) {
       const [resolve, reject] = msg;
-      delete this.messageManager[src];
+      delete this.messageManager[id];
       if (error) {
         reject(new Error(error));
       } else {
@@ -144,15 +146,10 @@ export class ImageWorkerManager {
     return workers;
   }
 
-  private getNextWorker(): Worker {
+  private getNextWorker(): Worker | undefined {
     const worker = this.workers[this.workerIndex];
     this.workerIndex = (this.workerIndex + 1) % this.workers.length;
-    return worker!;
-  }
-
-  private convertUrlToAbsolute(url: string): string {
-    const absoluteUrl = new URL(url, self.location.href);
-    return absoluteUrl.href;
+    return worker;
   }
 
   getImage(
@@ -161,14 +158,17 @@ export class ImageWorkerManager {
   ): Promise<TextureData> {
     return new Promise((resolve, reject) => {
       try {
-        if (this.workers.length) {
-          const absoluteSrcUrl = this.convertUrlToAbsolute(src);
-          this.messageManager[absoluteSrcUrl] = [resolve, reject];
+        if (this.workers) {
+          const id = this.nextId++;
+          this.messageManager[id] = [resolve, reject];
           const nextWorker = this.getNextWorker();
-          nextWorker.postMessage({
-            src: absoluteSrcUrl,
-            premultiplyAlpha,
-          });
+          if (nextWorker) {
+            nextWorker.postMessage({
+              id,
+              src: src,
+              premultiplyAlpha,
+            });
+          }
         }
       } catch (error) {
         reject(error);

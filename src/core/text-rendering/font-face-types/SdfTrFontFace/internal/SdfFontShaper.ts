@@ -19,6 +19,7 @@
 
 import type { PeekableIterator } from '../../../renderers/SdfTextRenderer/internal/PeekableGenerator.js';
 import { SpecialCodepoints } from '../../../renderers/SdfTextRenderer/internal/SpecialCodepoints.js';
+import type { FontMetrics } from '../../TrFontFace.js';
 import {
   FontShaper,
   type FontShaperProps,
@@ -166,4 +167,5 @@ export interface SdfFontData {
     fieldType: 'sdf' | 'msdf';
     distanceRange: number;
   };
+  lightningMetrics?: FontMetrics;
 }

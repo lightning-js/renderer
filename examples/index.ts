@@ -27,6 +27,7 @@ import {
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
+import * as mt19937 from '@stdlib/random-base-mt19937';
 import coreWorkerUrl from './common/CoreWorker.js?importChunkUrl';
 import coreExtensionModuleUrl from './common/AppCoreExtension.js?importChunkUrl';
 import type {
@@ -68,7 +69,11 @@ const defaultPhysicalPixelRatio = 1;
   // See README.md for details on the supported URL params
   const urlParams = new URLSearchParams(window.location.search);
   const automation = urlParams.get('automation') === 'true';
-  const test = urlParams.get('test') || (automation ? null : 'test');
+  /**
+   * In automation mode this is a wildcard string of tests to run.
+   * In manual mode this is the name of the test to run.
+   */
+  const test = urlParams.get('test') || (automation ? '*' : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
   const logFps = urlParams.get('fps') === 'true';
   const enableContextSpy = urlParams.get('contextSpy') === 'true';
@@ -84,10 +89,19 @@ const defaultPhysicalPixelRatio = 1;
     driverName = 'main';
   }
 
-  if (test) {
+  let renderMode = urlParams.get('renderMode');
+  if (
+    driverName === 'threadx' ||
+    (renderMode !== 'webgl' && renderMode !== 'canvas')
+  ) {
+    renderMode = 'webgl';
+  }
+
+  if (!automation) {
     await runTest(
       test,
       driverName,
+      renderMode,
       urlParams,
       showOverlay,
       logicalPixelRatio,
@@ -100,7 +114,7 @@ const defaultPhysicalPixelRatio = 1;
     return;
   }
   assertTruthy(automation);
-  await runAutomation(driverName, logFps);
+  await runAutomation(driverName, renderMode, test, logFps);
 })().catch((err) => {
   console.error(err);
 });
@@ -108,6 +122,7 @@ const defaultPhysicalPixelRatio = 1;
 async function runTest(
   test: string,
   driverName: string,
+  renderMode: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
   logicalPixelRatio: number,
@@ -132,6 +147,7 @@ async function runTest(
 
   const { renderer, appElement } = await initRenderer(
     driverName,
+    renderMode,
     logFps,
     enableContextSpy,
     logicalPixelRatio,
@@ -177,6 +193,7 @@ async function runTest(
 
 async function initRenderer(
   driverName: string,
+  renderMode: string,
   logFps: boolean,
   enableContextSpy: boolean,
   logicalPixelRatio: number,
@@ -206,6 +223,7 @@ async function initRenderer(
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
+      renderMode: renderMode as 'webgl' | 'canvas',
       ...customSettings,
     },
     'app',
@@ -304,10 +322,23 @@ async function initRenderer(
   return { renderer, appElement };
 }
 
-async function runAutomation(driverName: string, logFps: boolean) {
+function wildcardMatch(string: string, wildcardString: string) {
+  const escapeRegex = (s: string) => s.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  return new RegExp(
+    `^${wildcardString.split('*').map(escapeRegex).join('.*')}$`,
+  ).test(string);
+}
+
+async function runAutomation(
+  driverName: string,
+  renderMode: string,
+  filter: string | null,
+  logFps: boolean,
+) {
   const logicalPixelRatio = defaultResolution / appHeight;
   const { renderer, appElement } = await initRenderer(
     driverName,
+    renderMode,
     logFps,
     false,
     logicalPixelRatio,
@@ -319,12 +350,23 @@ async function runAutomation(driverName: string, logFps: boolean) {
   for (const testPath in testModules) {
     const testModule = testModules[testPath];
     const testName = getTestName(testPath);
+    // Skip tests that don't match the filter (if provided)
+    if (filter && !wildcardMatch(testName, filter)) {
+      continue;
+    }
     assertTruthy(testModule);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { automation, customSettings } = await testModule();
     console.log(`Attempting to run automation for ${testName}...`);
     if (automation) {
       console.log(`Running automation for ${testName}...`);
+      // Override Math.random() as stable random number generator
+      // - Each test gets the same sequence of random numbers
+      // - This only is in effect when tests are run in automation mode
+      const rand = mt19937.factory({ seed: 1234 });
+      Math.random = function () {
+        return rand() / rand.MAX;
+      };
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {

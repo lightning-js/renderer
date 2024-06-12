@@ -41,6 +41,7 @@ import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { santizeCustomDataMap } from '../render-drivers/utils.js';
 import { isProductionEnvironment } from '../utils.js';
+import type { StageOptions } from '../core/Stage.js';
 
 /**
  * An immutable reference to a specific Texture type
@@ -270,6 +271,11 @@ export interface RendererMainSettings {
    * @defaultValue `false` (disabled)
    */
   enableInspector?: boolean;
+
+  /**
+   * Renderer mode
+   */
+  renderMode?: 'webgl' | 'canvas';
 }
 
 /**
@@ -344,6 +350,7 @@ export class RendererMain extends EventEmitter {
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
+      renderMode: settings.renderMode ?? 'webgl',
     };
     this.settings = resolvedSettings;
 
@@ -491,10 +498,10 @@ export class RendererMain extends EventEmitter {
       scrollY: props.scrollY ?? 0,
       offsetY: props.offsetY ?? 0,
       letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight ?? fontSize,
+      lineHeight: props.lineHeight, // `undefined` is a valid value
       maxLines: props.maxLines ?? 0,
       textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'top',
+      verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
     };
@@ -563,6 +570,7 @@ export class RendererMain extends EventEmitter {
       pivotX: props.pivotX ?? props.pivot ?? 0.5,
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
+      rtt: props.rtt ?? false,
       data: data,
     };
   }

@@ -136,8 +136,13 @@ export class SdfShader extends WebGlCoreShader {
       void main() {
         vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
         vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
-        gl_Position = vec4((transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1), 0, 1);
+
+        // Calculate screen space with pixel ratio
+        vec2 screenSpace = (transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1);
+
+        gl_Position = vec4(screenSpace, 0.0, 1.0);
         v_texcoord = a_textureCoordinate;
+
       }
     `,
     fragment: `
