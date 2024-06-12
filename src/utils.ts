@@ -19,13 +19,6 @@
 
 import type { ContextSpy } from './core/lib/ContextSpy.js';
 
-let promise
-
-if (window.queueMicrotask === undefined) {
-  window.queueMicrotask = requestIdleCallback;
-}
-
-
 export function createWebGLContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
   contextSpy: ContextSpy | null,
