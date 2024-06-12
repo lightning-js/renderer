@@ -21,6 +21,7 @@ import type { CoreTextureManager } from '../CoreTextureManager.js';
 import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -196,6 +197,25 @@ export abstract class Texture extends EventEmitter {
    * @param isRenderable `true` if this Texture has renderable owners.
    */
   onChangeIsRenderable?(isRenderable: boolean): void;
+
+  /**
+   * Get the CoreContextTexture for this Texture
+   *
+   * @remarks
+   * Each Texture has a corresponding CoreContextTexture that is used to
+   * manage the texture's native data depending on the renderer's mode
+   * (WebGL, Canvas, etc).
+   *
+   * The Texture and CoreContextTexture are always linked together in a 1:1
+   * relationship.
+   */
+  get ctxTexture() {
+    // The first time this is called, create the ctxTexture
+    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
+    // And replace this getter with the value for future calls
+    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
+    return ctxTexture;
+  }
 
   /**
    * Returns true if the texture is assigned to any Nodes that are renderable.

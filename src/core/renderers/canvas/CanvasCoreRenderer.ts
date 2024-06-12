@@ -104,7 +104,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
         texture = texture.parentTexture;
       }
 
-      ctxTexture = this.txManager.getCtxTexture(texture) as CanvasCoreTexture;
+      ctxTexture = texture.ctxTexture as CanvasCoreTexture;
       if (texture.state === 'freed') {
         ctxTexture.load();
         return;

@@ -311,8 +311,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const { txManager } = this.stage;
-    const ctxTexture = txManager.getCtxTexture(texture);
+    const ctxTexture = texture.ctxTexture;
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
@@ -583,7 +582,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.activeRttNode = node;
 
       assertTruthy(node.texture, 'RTT node missing texture');
-      const ctxTexture = txManager.getCtxTexture(node.texture);
+      const ctxTexture = node.texture.ctxTexture;
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
       this.renderToTextureActive = true;
 

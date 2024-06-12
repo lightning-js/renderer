@@ -93,7 +93,7 @@ export class SdfTrFontFace<
     });
 
     // Pre-load it
-    stage.txManager.getCtxTexture(this.texture).load();
+    this.texture.ctxTexture.load();
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)

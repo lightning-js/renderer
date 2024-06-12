@@ -717,7 +717,7 @@ export class CoreNode extends EventEmitter {
     queueMicrotask(() => {
       // Preload texture if required
       if (this.textureOptions.preload) {
-        this.stage.txManager.getCtxTexture(texture).load();
+        texture.ctxTexture.load();
       }
       if (texture.state === 'loaded') {
         this.onTextureLoaded(texture, texture.dimensions!);

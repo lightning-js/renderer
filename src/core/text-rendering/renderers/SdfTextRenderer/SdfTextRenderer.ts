@@ -712,7 +712,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const texture = state.trFontFace?.texture;
     assertTruthy(texture);
-    const ctxTexture = this.stage.txManager.getCtxTexture(texture);
+    const ctxTexture = texture.ctxTexture;
 
     renderOp.addTexture(ctxTexture as WebGlCoreCtxTexture);
     renderOp.length = state.bufferNumFloats;

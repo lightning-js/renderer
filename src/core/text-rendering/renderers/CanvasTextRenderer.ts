@@ -559,7 +559,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
             this.canvas.height,
           ),
         });
-        this.stage.txManager.getCtxTexture(pageInfo.texture).load();
+        pageInfo.texture.ctxTexture.load();
 
         pageInfo.texture.setRenderableOwner(state, state.isRenderable);
       }
