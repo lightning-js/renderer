@@ -137,8 +137,6 @@ export class CoreTextureManager {
    */
   zeroRefSet: Set<Texture> = new Set();
 
-  ctxTextureCache: WeakMap<Texture, CoreContextTexture> = new WeakMap();
-
   /**
    * Map of texture constructors by their type name
    */
@@ -290,7 +288,7 @@ export class CoreTextureManager {
         // Free the ctx texture if it exists.
         refCountMap.delete(texture);
         zeroRefSet.delete(texture);
-        this.ctxTextureCache.get(texture)?.free();
+        texture.ctxTexture.free();
       }
     }
   }
@@ -312,30 +310,5 @@ export class CoreTextureManager {
     return {
       keyCacheSize: this.keyCache.size,
     };
-  }
-
-  /**
-   * Get a CoreContextTexture for the given Texture source.
-   *
-   * @remarks
-   * If the texture source already has an allocated CoreContextTexture, it will be
-   * returned from the cache. Otherwise, a new CoreContextTexture will be created
-   * and cached.
-   *
-   * ContextTextures are stored in a WeakMap, so they will be garbage collected
-   * when the Texture source is no longer referenced.
-   *
-   * @param textureSource
-   * @returns
-   */
-  getCtxTexture(textureSource: Texture): CoreContextTexture {
-    if (this.ctxTextureCache.has(textureSource)) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return this.ctxTextureCache.get(textureSource)!;
-    }
-    const texture = this.renderer.createCtxTexture(textureSource);
-
-    this.ctxTextureCache.set(textureSource, texture);
-    return texture;
   }
 }
