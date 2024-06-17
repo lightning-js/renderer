@@ -44,6 +44,8 @@ pnpm watch
 - `overlay` (boolean, default: "true")
   - Whether or not to show the text overlay in the bottom-right corner that
     displays the current test and driver being used.
+- `monitor` (boolean, default: "false")
+  - Whether or not to show the Texture Memory Monitor overlay.
 - `resolution` (number, default: 720)
   - Resolution (height) of to render the test at (in logical pixels)
 - `fps` (boolean, default: "false")

@@ -39,6 +39,7 @@ import {
   CoreTextNode,
   type CoreTextNodeWritableProps,
 } from '../core/CoreTextNode.js';
+import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -92,16 +93,9 @@ export interface RendererMainSettings {
   appHeight?: number;
 
   /**
-   * Texture Memory Byte Threshold
-   *
-   * @remarks
-   * When the amount of GPU VRAM used by textures exceeds this threshold,
-   * the Renderer will free up all the textures that are current not visible
-   * within the configured `boundsMargin`.
-   *
-   * When set to `0`, the threshold-based texture memory manager is disabled.
+   * Texture Memory Manager Settings
    */
-  txMemByteThreshold?: number;
+  textureMemory?: Partial<TextureMemoryManagerSettings>;
 
   /**
    * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
@@ -227,6 +221,30 @@ export interface RendererMainSettings {
  *   new MainCoreDriver(),
  * );
  * ```
+ *
+ * ## Events
+ * - `fpsUpdate`
+ *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
+ * - `frameTick`
+ *   - Emitted every frame tick
+ * - `idle`
+ *   - Emitted when the renderer is idle (no changes to the scene
+ *     graph/animations running)
+ * - `criticalCleanup`
+ *  - Emitted when the Texture Memory Manager Cleanup process is triggered
+ *  - Payload: { memUsed: number, criticalThreshold: number }
+ *    - `memUsed` - The amount of memory (in bytes) used by textures before the
+ *       cleanup process
+ *    - `criticalThreshold` - The critical threshold (in bytes)
+ * - `criticalCleanupFailed`
+ *   - Emitted when the Texture Memory Manager Cleanup process is unable to free
+ *     up enough texture memory to reach below the critical threshold.
+ *     This can happen when there is not enough non-renderable textures to
+ *     free up.
+ *   - Payload (object with keys):
+ *     - `memUsed` - The amount of memory (in bytes) used by textures after
+ *       the cleanup process
+ *     - `criticalThreshold` - The critical threshold (in bytes)
  */
 export class RendererMain extends EventEmitter {
   readonly root: CoreNode;
@@ -244,10 +262,16 @@ export class RendererMain extends EventEmitter {
    */
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
+    const resolvedTxSettings: TextureMemoryManagerSettings = {
+      criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
+      targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
+      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
+      debugLogging: settings.textureMemory?.debugLogging || false,
+    };
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
-      txMemByteThreshold: settings.txMemByteThreshold || 124e6,
+      textureMemory: resolvedTxSettings,
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
@@ -288,29 +312,14 @@ export class RendererMain extends EventEmitter {
       boundsMargin: this.settings.boundsMargin,
       clearColor: this.settings.clearColor,
       canvas: this.canvas,
-      debug: {
-        monitorTextureCache: false,
-      },
       deviceLogicalPixelRatio: this.settings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: this.settings.devicePhysicalPixelRatio,
       enableContextSpy: this.settings.enableContextSpy,
       fpsUpdateInterval: this.settings.fpsUpdateInterval,
       numImageWorkers: this.settings.numImageWorkers,
       renderMode: this.settings.renderMode,
-      txMemByteThreshold: this.settings.txMemByteThreshold,
-    });
-
-    // Forward fpsUpdate events from the stage to RendererMain
-    this.stage.on('fpsUpdate', ((stage, fpsData) => {
-      this.emit('fpsUpdate', fpsData);
-    }) satisfies StageFpsUpdateHandler);
-
-    this.stage.on('frameTick', ((stage, frameTickData) => {
-      this.emit('frameTick', frameTickData);
-    }) satisfies StageFrameTickHandler);
-
-    this.stage.on('idle', () => {
-      this.emit('idle');
+      textureMemory: resolvedTxSettings,
+      eventBus: this,
     });
 
     // Extract the root node

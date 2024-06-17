@@ -42,7 +42,7 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
   }
 
   override async onLoadRequest(): Promise<Dimensions> {
-    const { glw, memManager } = this;
+    const { glw } = this;
     const nativeTexture = (this._nativeCtxTexture =
       this.createNativeCtxTexture());
     const { width, height } = this.textureSource;
@@ -60,7 +60,7 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
     );
 
     // Update the texture memory manager
-    memManager.setTextureMemUse(this, width * height * 4);
+    this.setTextureMemUse(width * height * 4);
 
     // Bind the framebuffer
     glw.bindFramebuffer(this.framebuffer);

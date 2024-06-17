@@ -18,6 +18,7 @@
  */
 
 import type { CoreNode, RendererMain } from '@lightningjs/renderer';
+import type { MemMonitor } from './MemMonitor.js';
 
 /**
  * Keep in sync with `visual-regression/src/index.ts`
@@ -83,4 +84,8 @@ export interface ExampleSettings {
    * This method will be a no-op if the test is not run in automation mode.
    */
   snapshot(options?: SnapshotOptions): Promise<void>;
+  /**
+   * The MemMonitor instance for the test (if enabled)
+   */
+  memMonitor: MemMonitor | null;
 }
