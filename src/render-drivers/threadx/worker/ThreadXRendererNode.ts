@@ -84,6 +84,12 @@ export class ThreadXRendererNode extends SharedNode {
           props as Partial<INodeAnimatableProps>,
           settings as Partial<AnimationSettings>,
         );
+        animation.on('animating', () => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          this.emit('animationAnimating', {
+            id: id as number,
+          });
+        });
         animation.on('finished', () => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           this.emit('animationFinished', {
@@ -231,6 +237,7 @@ export class ThreadXRendererNode extends SharedNode {
       pivotX: sharedNodeStruct.pivotX,
       pivotY: sharedNodeStruct.pivotY,
       rotation: sharedNodeStruct.rotation,
+      rtt: sharedNodeStruct.rtt,
 
       // These are passed in via message handlers
       shader: null,

@@ -75,6 +75,7 @@ export class WebGlContextWrapper {
   public readonly RGBA;
   public readonly UNSIGNED_BYTE;
   public readonly UNPACK_PREMULTIPLY_ALPHA_WEBGL;
+  public readonly UNPACK_FLIP_Y_WEBGL;
   public readonly FLOAT;
   public readonly TRIANGLES;
   public readonly UNSIGNED_SHORT;
@@ -86,6 +87,7 @@ export class WebGlContextWrapper {
   public readonly COMPILE_STATUS;
   public readonly LINK_STATUS;
   public readonly DYNAMIC_DRAW;
+  public readonly COLOR_ATTACHMENT0;
   //#endregion WebGL Enums
 
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
@@ -161,6 +163,7 @@ export class WebGlContextWrapper {
     this.RGBA = gl.RGBA;
     this.UNSIGNED_BYTE = gl.UNSIGNED_BYTE;
     this.UNPACK_PREMULTIPLY_ALPHA_WEBGL = gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL;
+    this.UNPACK_FLIP_Y_WEBGL = gl.UNPACK_FLIP_Y_WEBGL;
     this.FLOAT = gl.FLOAT;
     this.TRIANGLES = gl.TRIANGLES;
     this.UNSIGNED_SHORT = gl.UNSIGNED_SHORT;
@@ -175,6 +178,7 @@ export class WebGlContextWrapper {
     this.COMPILE_STATUS = gl.COMPILE_STATUS;
     this.LINK_STATUS = gl.LINK_STATUS;
     this.DYNAMIC_DRAW = gl.DYNAMIC_DRAW;
+    this.COLOR_ATTACHMENT0 = gl.COLOR_ATTACHMENT0;
   }
   /**
    * Returns true if the WebGL context is WebGL2
@@ -533,7 +537,7 @@ export class WebGlContextWrapper {
 
   /**
    * ```
-   * createBuffer();
+   * gl.createBuffer();
    * ```
    *
    * @returns
@@ -541,6 +545,52 @@ export class WebGlContextWrapper {
   createBuffer() {
     const { gl } = this;
     return gl.createBuffer();
+  }
+
+  /**
+   * ```
+   * gl.createFramebuffer();
+   * ```
+   * @returns
+   */
+  createFramebuffer() {
+    const { gl } = this;
+    return gl.createFramebuffer();
+  }
+
+  /**
+   * ```
+   * gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+   * ```
+   *
+   * @param framebuffer
+   */
+  bindFramebuffer(framebuffer: WebGLFramebuffer | null) {
+    const { gl } = this;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  }
+
+  /**
+   * ```
+   * gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+   * ```
+   * @remarks
+   * **WebGL Difference**: Bind target is always `gl.FRAMEBUFFER` and textarget is always `gl.TEXTURE_2D`
+   */
+
+  framebufferTexture2D(
+    attachment: GLenum,
+    texture: WebGLTexture | null,
+    level: GLint,
+  ) {
+    const { gl } = this;
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      attachment,
+      gl.TEXTURE_2D,
+      texture,
+      level,
+    );
   }
 
   /**

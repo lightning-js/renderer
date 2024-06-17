@@ -174,6 +174,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       pivotX: props.pivotX,
       pivotY: props.pivotY,
       rotation: props.rotation,
+      rtt: props.rtt,
     } satisfies NodeStructWritableProps);
 
     const node = new ThreadXMainNode(rendererMain, bufferStruct);
@@ -221,6 +222,7 @@ export class ThreadXCoreDriver implements ICoreDriver {
       pivotX: props.pivotX,
       pivotY: props.pivotY,
       rotation: props.rotation,
+      rtt: props.rtt,
 
       // Text specific properties
       text: props.text,

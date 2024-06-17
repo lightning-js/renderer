@@ -20,8 +20,8 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForLoadedDimensions } from '../common/utils.js';
 import type {
+  ITextNode,
   ITextNodeWritableProps,
   RendererMain,
 } from '../../dist/exports/main-api.js';
@@ -57,6 +57,31 @@ const NODE_PROPS = {
   lineHeight: 70,
 } satisfies Partial<ITextNodeWritableProps>;
 
+const CONTAINER_SIZE = 200;
+
+function getSquare(renderer: RendererMain, node: ITextNode) {
+  const wrapper = renderer.createNode({
+    width: CONTAINER_SIZE,
+    height: CONTAINER_SIZE,
+  });
+  const line1 = renderer.createNode({
+    width: CONTAINER_SIZE,
+    height: 1,
+    color: 0x00ff00ff,
+    y: NODE_PROPS.lineHeight,
+  });
+  line1.parent = wrapper;
+  const line2 = renderer.createNode({
+    width: CONTAINER_SIZE,
+    height: 1,
+    color: 0x00ff00ff,
+    y: NODE_PROPS.lineHeight * 2,
+  });
+  line2.parent = wrapper;
+  node.parent = wrapper;
+  return wrapper;
+}
+
 function generateVerticalAlignTest(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
@@ -76,18 +101,24 @@ function generateVerticalAlignTest(
         });
 
         return await constructTestRow({ renderer, rowNode }, [
-          'verticalAlign: top\n(default)\n->',
-          baselineNode,
-          'middle ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            verticalAlign: 'middle',
-          }),
+          'verticalAlign: middle\n(default)\n->',
+          getSquare(renderer, baselineNode),
+          'top ->',
+          getSquare(
+            renderer,
+            renderer.createTextNode({
+              ...nodeProps,
+              verticalAlign: 'top',
+            }),
+          ),
           'bottom ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            verticalAlign: 'bottom',
-          }),
+          getSquare(
+            renderer,
+            renderer.createTextNode({
+              ...nodeProps,
+              verticalAlign: 'bottom',
+            }),
+          ),
         ]);
       },
     },
@@ -105,18 +136,24 @@ function generateVerticalAlignTest(
         });
 
         return await constructTestRow({ renderer, rowNode }, [
-          'verticalAlign: top\n(default)\n->',
-          baselineNode,
-          'middle ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            verticalAlign: 'middle',
-          }),
+          'verticalAlign: middle\n(default)\n->',
+          getSquare(renderer, baselineNode),
+          'top ->',
+          getSquare(
+            renderer,
+            renderer.createTextNode({
+              ...nodeProps,
+              verticalAlign: 'top',
+            }),
+          ),
           'bottom ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            verticalAlign: 'bottom',
-          }),
+          getSquare(
+            renderer,
+            renderer.createTextNode({
+              ...nodeProps,
+              verticalAlign: 'bottom',
+            }),
+          ),
         ]);
       },
     },

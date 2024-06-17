@@ -37,6 +37,7 @@ import type {
   TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
+import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -104,6 +105,7 @@ export interface CoreNodeProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
+  rtt: boolean;
 }
 
 type ICoreNode = Omit<
@@ -213,6 +215,16 @@ export enum UpdateType {
   IsRenderable = 1024,
 
   /**
+   * Render Texture update
+   */
+  RenderTexture = 2048,
+
+  /**
+   * Track if parent has render texture
+   */
+  ParentRenderTexture = 4096,
+
+  /**
    * None
    */
   None = 0,
@@ -220,7 +232,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 2047,
+  All = 8191,
 }
 
 export class CoreNode extends EventEmitter implements ICoreNode {
@@ -252,6 +264,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public premultipliedColorBl = 0;
   public premultipliedColorBr = 0;
   public calcZIndex = 0;
+  public hasRTTupdates = false;
+  public parentHasRenderTexture = false;
 
   constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
@@ -261,6 +275,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     };
     // Allow for parent to be processed appropriately
     this.parent = props.parent;
+
+    // Allow for Render Texture to be processed appropriately
+    this.rtt = props.rtt;
+
     this.updateScaleRotateTransform();
   }
 
@@ -325,6 +343,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
+
+    // If parent has a render texture, flag that we need to update
+    // @todo: Reserve type for RTT updates
+    if (this.parentHasRenderTexture) {
+      this.setRTTUpdates(1);
+    }
+
     this.emit('loaded', {
       type: 'texture',
       dimensions,
@@ -378,6 +403,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     const parent = this.props.parent;
     if (parent && !(parent.updateType & UpdateType.Children)) {
       parent.setUpdateType(UpdateType.Children);
+    }
+    // If node is part of RTT texture
+    // Flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.setRTTUpdates(type);
     }
   }
 
@@ -466,16 +496,43 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     const parent = this.props.parent;
     let childUpdateType = UpdateType.None;
+
+    if (this.updateType & UpdateType.ParentRenderTexture) {
+      let p = this.parent;
+      while (p) {
+        if (p.rtt) {
+          this.parentHasRenderTexture = true;
+        }
+        p = p.parent;
+      }
+    }
+
+    // If we have render texture updates and not already running a full update
+    if (
+      this.updateType ^ UpdateType.All &&
+      this.updateType & UpdateType.RenderTexture
+    ) {
+      this.children.forEach((child) => {
+        child.setUpdateType(UpdateType.All);
+      });
+    }
+
     if (this.updateType & UpdateType.Global) {
       assertTruthy(this.localTransform);
+
       this.globalTransform = Matrix3d.copy(
         parent?.globalTransform || this.localTransform,
         this.globalTransform,
       );
 
+      if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+        this.globalTransform = Matrix3d.identity();
+      }
+
       if (parent) {
         this.globalTransform.multiply(this.localTransform);
       }
+
       this.calculateRenderCoords();
       this.updateBoundingRect();
       this.setUpdateType(
@@ -556,7 +613,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
-    if (this.updateType & UpdateType.Children && this.children.length) {
+    if (
+      this.updateType & UpdateType.Children &&
+      this.children.length &&
+      !this.rtt
+    ) {
       this.children.forEach((child) => {
         // Trigger the depenedent update types on the child
         child.setUpdateType(childUpdateType);
@@ -800,7 +861,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       );
     }
   }
-
   /**
    * This function calculates the clipping rectangle for a node.
    *
@@ -869,13 +929,30 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     this.props.texture = null;
     this.props.shader = null;
 
+    if (this.rtt) {
+      this.stage.renderer.removeRTTNode(this);
+    }
+
     this.removeAllListeners();
     this.parent = null;
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, texture, textureOptions, shader, shaderProps } =
+    const { width, height, texture, textureOptions, shader, shaderProps, rtt } =
       this.props;
+
+    // Prevent quad rendering if parent has a render texture
+    // and renderer is not currently rendering to a texture
+    if (this.parentHasRenderTexture) {
+      if (!renderer.renderToTextureActive) {
+        return;
+      }
+      // Prevent quad rendering if parent render texture is not the active render texture
+      if (this.parentRenderTexture !== renderer.activeRttNode) {
+        return;
+      }
+    }
+
     const {
       premultipliedColorTl,
       premultipliedColorTr,
@@ -908,10 +985,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       tb: gt.tb,
       tc: gt.tc,
       td: gt.td,
+      rtt,
+      parentHasRenderTexture: this.parentHasRenderTexture,
+      framebufferDimensions: this.framebufferDimensions,
     });
-
-    // Calculate absolute X and Y based on all ancestors
-    // renderer.addQuad(absX, absY, w, h, color, texture, textureOptions, zIndex);
   }
 
   //#region Properties
@@ -960,6 +1037,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.width !== value) {
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt) {
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
     }
   }
 
@@ -971,6 +1052,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     if (this.props.height !== value) {
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt) {
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
     }
   }
 
@@ -1280,9 +1365,80 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       newParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
+
+      if (newParent.rtt || newParent.parentHasRenderTexture) {
+        this.setRTTUpdates(UpdateType.All);
+      }
+    }
+    this.updateScaleRotateTransform();
+  }
+
+  get rtt(): boolean {
+    return this.props.rtt;
+  }
+
+  set rtt(value: boolean) {
+    if (!value) {
+      if (this.props.rtt) {
+        this.props.rtt = false;
+        this.unloadTexture();
+        this.setUpdateType(UpdateType.All);
+
+        this.children.forEach((child) => {
+          child.parentHasRenderTexture = false;
+        });
+
+        this.stage.renderer?.removeRTTNode(this);
+      }
+      return;
     }
 
-    this.updateScaleRotateTransform();
+    this.props.rtt = true;
+    this.hasRTTupdates = true;
+    this.setUpdateType(UpdateType.All);
+
+    this.children.forEach((child) => {
+      child.setUpdateType(UpdateType.All);
+    });
+
+    // Store RTT nodes in a separate list
+    this.stage.renderer?.renderToTexture(this);
+  }
+
+  /**
+   * Returns the framebuffer dimensions of the node.
+   * If the node has a render texture, the dimensions are the same as the node's dimensions.
+   * If the node does not have a render texture, the dimensions are inherited from the parent.
+   * If the node parent has a render texture and the node is a render texture, the nodes dimensions are used.
+   */
+  get framebufferDimensions(): Dimensions {
+    if (this.parentHasRenderTexture && !this.rtt && this.parent) {
+      return this.parent.framebufferDimensions;
+    }
+    return { width: this.width, height: this.height };
+  }
+
+  /**
+   * Returns the parent render texture node if it exists.
+   */
+  get parentRenderTexture(): CoreNode | null {
+    let parent = this.parent;
+    while (parent) {
+      if (parent.rtt) {
+        return parent;
+      }
+      parent = parent.parent;
+    }
+    return null;
+  }
+
+  get texture(): Texture | null {
+    return this.props.texture;
+  }
+
+  setRTTUpdates(type: number) {
+    this.hasRTTupdates = true;
+    this.parent?.setRTTUpdates(type);
   }
   //#endregion Properties
 }

@@ -143,19 +143,30 @@ export function mergeColorAlpha(rgba: number, alpha: number): number {
   return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
 }
 
+let premultiplyRGB = true;
+
+/**
+ * RGB components should not be premultiplied when using Canvas renderer
+ * @param mode  Renderer mode
+ */
+export function setPremultiplyMode(mode: 'webgl' | 'canvas'): void {
+  premultiplyRGB = mode === 'webgl';
+}
+
 /**
  * Given an RGBA encoded number, returns back the RGBA number with it's alpha
- * component multiplied by the passed `alpha` parameter. Before returning, the
- * final alpha value is multiplied into the color channels.
+ * component multiplied by the passed `alpha` parameter.
+ *
+ * For the webGl renderer, each color channel is premultiplied by the final alpha value.
  *
  * @remarks
  * If `flipEndianess` is set to true, the function will returned an ABGR encoded number
  * which is useful when the color value needs to be passed into a shader attribute.
  *
- * NOTE: This method returns a PREMULTIPLIED alpha color which is generally only useful
- * in the context of the internal rendering process. Use {@link mergeColorAlpha} if you
- * need to blend an alpha value into a color in the context of the Renderer's
- * main API.
+ * NOTE: Depending on the mode set by {@link setPremultiplyMode}, this method returns
+ * a PREMULTIPLIED alpha color which is generally only useful in the context of the
+ * internal rendering process. Use {@link mergeColorAlpha} if you need to blend an alpha
+ * value into a color in the context of the Renderer's main API.
  *
  * @internalRemarks
  * Do not expose this method in the main API because Renderer users should instead use
@@ -173,9 +184,10 @@ export function mergeColorAlphaPremultiplied(
   flipEndianess = false,
 ): number {
   const newAlpha = ((rgba & 0xff) / 255) * alpha;
-  const r = Math.trunc((rgba >>> 24) * newAlpha);
-  const g = Math.trunc(((rgba >>> 16) & 0xff) * newAlpha);
-  const b = Math.trunc(((rgba >>> 8) & 0xff) * newAlpha);
+  const rgbAlpha = premultiplyRGB ? newAlpha : 1;
+  const r = Math.trunc((rgba >>> 24) * rgbAlpha);
+  const g = Math.trunc(((rgba >>> 16) & 0xff) * rgbAlpha);
+  const b = Math.trunc(((rgba >>> 8) & 0xff) * rgbAlpha);
   const a = Math.trunc(newAlpha * 255);
 
   if (flipEndianess) {

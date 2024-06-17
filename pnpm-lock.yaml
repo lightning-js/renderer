@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@lightningjs/threadx':
-        specifier: ^0.3.4
-        version: 0.3.4
+        specifier: ^0.3.5
+        version: 0.3.5
       '@protobufjs/eventemitter':
         specifier: ^1.1.0
         version: 1.1.0
@@ -60,6 +60,9 @@ importers:
       '@lightningjs/renderer':
         specifier: link:..
         version: link:..
+      '@stdlib/random-base-mt19937':
+        specifier: ^0.2.1
+        version: 0.2.1
     devDependencies:
       '@lightningjs/vite-plugin-import-chunk-url':
         specifier: ^0.3.0
@@ -385,8 +388,8 @@ packages:
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
     dev: true
 
-  /@lightningjs/threadx@0.3.4:
-    resolution: {integrity: sha512-x9ylADrRxSrIczcMHgkNYpmnvoPvWKuasxmEf3dnixazpYJCw9HLoWNOi2UsD0U4oEL/tMQZA0sZbO7VVGMTag==}
+  /@lightningjs/threadx@0.3.5:
+    resolution: {integrity: sha512-aUIUfP/d3S0Vg/Ror7CLbqQR6qu5AAdGRnQ5RQuSQz4t9X2p8TomKD7ShRxI1/FnRR7om2MwKIe1Dix/Axdgpg==}
     dev: false
 
   /@lightningjs/vite-plugin-import-chunk-url@0.3.0(vite@4.5.0):
@@ -425,6 +428,1247 @@ packages:
   /@sinclair/typebox@0.27.8:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
     dev: true
+
+  /@stdlib/array-base-accessor-getter@0.2.1:
+    resolution: {integrity: sha512-RqiEJmXg8CdQd2plfsJ6DCy7czTOZzU4GxK/Y9kmk3ZB6DcfZQIDk0Vwawky1MMHfFGSg5stU8s3Ui0LyOobmw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-accessor-setter@0.2.1:
+    resolution: {integrity: sha512-p1jjURuA+1j/bVAdXBCVgBbzX5h8WO0K8JeyBPH+ewr7JzEXXXbNJnB9fd2DOkzNFXoQY0LZq93Bu31TOSGgdw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-arraylike2object@0.2.1:
+    resolution: {integrity: sha512-WHlzAZQXwz2zR0UnkGXznjvykuvhlhFqb0s8Dhv5InhRvhYkcfT7BY23In74kBBzW3gkonxJUxbd0OG6nEHcCA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-base-accessor-getter': 0.2.1
+      '@stdlib/array-base-accessor-setter': 0.2.1
+      '@stdlib/array-base-assert-is-accessor-array': 0.2.1
+      '@stdlib/array-base-getter': 0.2.1
+      '@stdlib/array-base-setter': 0.2.1
+      '@stdlib/array-dtype': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/array-base-assert-is-accessor-array@0.2.1:
+    resolution: {integrity: sha512-f9FBl42yM7hBhY2k75WpnVTDdV4amBUr4yFOaSW17QVJYYkDm4rKpeNvuQxadJ2NO3nLo/nyBys40knWecwSDw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-assert-is-complex128array@0.2.1:
+    resolution: {integrity: sha512-iXsqhzcIuUZ4H4hAvO71Q6triuz3vt8wIfsoE1ujL5Lz8zrS23OLFctB2Pieszkx0yxFDxg1OoW0/3zJ1KtS+Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-assert-is-complex64array@0.2.1:
+    resolution: {integrity: sha512-uBo7HQD2dTEPpanPz3mjkfAuP8iU3da+vzAFn//22EvttT2SGmFnC7mU1BHrUoOaxZhjZQnso77rUJBuCbzUyA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-getter@0.2.1:
+    resolution: {integrity: sha512-nGfohfcl5qxbGAIl9QmVAZ3owhJsUmivxovnAWa2M5UZVHudYj18/fk4g8HKqhJnBY1794LXSZKVDDGA+IHVcQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-base-setter@0.2.1:
+    resolution: {integrity: sha512-NtRCXCuFe6U2kM/9kznPi0KYfGG6iC1oZzsNIAkOPg3tfq7MCMkX4fXAIfmhYIpCAE+fm1Uq1/Atpwhr7acPqQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/array-complex128@0.2.1:
+    resolution: {integrity: sha512-AinzxxCWP0E47eCPmGWTRbUKoYtY+lJQmAi1t+yvv07K0Qgph8OTDAbk2xR8dF2JmBFIZXypUTRG2cG+aoZvNw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-base-accessor-getter': 0.2.1
+      '@stdlib/array-base-assert-is-complex128array': 0.2.1
+      '@stdlib/array-base-assert-is-complex64array': 0.2.1
+      '@stdlib/array-base-getter': 0.2.1
+      '@stdlib/array-float64': 0.2.1
+      '@stdlib/assert-has-iterator-symbol-support': 0.2.1
+      '@stdlib/assert-is-array': 0.2.1
+      '@stdlib/assert-is-array-like-object': 0.2.1
+      '@stdlib/assert-is-arraybuffer': 0.2.1
+      '@stdlib/assert-is-collection': 0.2.1
+      '@stdlib/assert-is-complex-like': 0.2.1
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/assert-is-nonnegative-integer': 0.2.1
+      '@stdlib/assert-is-object': 0.2.1
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/complex-float64': 0.2.1
+      '@stdlib/complex-imag': 0.2.1
+      '@stdlib/complex-real': 0.2.1
+      '@stdlib/error-tools-fmtprodmsg': 0.2.1
+      '@stdlib/math-base-assert-is-even': 0.2.2
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+      '@stdlib/math-base-special-floor': 0.2.2
+      '@stdlib/strided-base-reinterpret-complex128': 0.2.1
+      '@stdlib/strided-base-reinterpret-complex64': 0.2.0
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/symbol-iterator': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-accessor': 0.2.2
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/array-complex64@0.2.1:
+    resolution: {integrity: sha512-1CdCZtov9hS/RZO5RQ1DCxVIA8uMfaBpjCqA+JiEpSVHK1lnYcl86PljMs+ls38IH+B/h/cpOCWC68iuu14vwg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-base-accessor-getter': 0.2.1
+      '@stdlib/array-base-assert-is-complex128array': 0.2.1
+      '@stdlib/array-base-assert-is-complex64array': 0.2.1
+      '@stdlib/array-base-getter': 0.2.1
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/assert-has-iterator-symbol-support': 0.2.1
+      '@stdlib/assert-is-array': 0.2.1
+      '@stdlib/assert-is-array-like-object': 0.2.1
+      '@stdlib/assert-is-arraybuffer': 0.2.1
+      '@stdlib/assert-is-collection': 0.2.1
+      '@stdlib/assert-is-complex-like': 0.2.1
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/assert-is-nonnegative-integer': 0.2.1
+      '@stdlib/assert-is-object': 0.2.1
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/complex-float32': 0.2.1
+      '@stdlib/complex-imagf': 0.2.1
+      '@stdlib/complex-realf': 0.2.1
+      '@stdlib/error-tools-fmtprodmsg': 0.2.1
+      '@stdlib/math-base-assert-is-even': 0.2.2
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+      '@stdlib/math-base-special-floor': 0.2.2
+      '@stdlib/strided-base-reinterpret-complex128': 0.2.1
+      '@stdlib/strided-base-reinterpret-complex64': 0.2.0
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/symbol-iterator': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-accessor': 0.2.2
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/array-dtype@0.2.1:
+    resolution: {integrity: sha512-ZE1BycHa405hpg2nApMDS9Lq4zOCIYdklCBmSFdwB3bUPC40/GUR4RxqVETLZKxHx+rbPyXSvzpqDm7wgQjpZA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-complex128': 0.2.1
+      '@stdlib/array-complex64': 0.2.1
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/array-float64': 0.2.1
+      '@stdlib/array-int16': 0.2.1
+      '@stdlib/array-int32': 0.2.1
+      '@stdlib/array-int8': 0.2.1
+      '@stdlib/array-uint16': 0.2.1
+      '@stdlib/array-uint32': 0.2.1
+      '@stdlib/array-uint8': 0.2.1
+      '@stdlib/array-uint8c': 0.2.1
+      '@stdlib/assert-is-array': 0.2.1
+      '@stdlib/assert-is-buffer': 0.2.1
+      '@stdlib/utils-constructor-name': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/array-float32@0.2.1:
+    resolution: {integrity: sha512-Q5iME19GlfiF9TrZZbhKWvAYKzWGfe9sZQgsUeO9pvbF7N2tCbeUI9ZzQCClSfGr4uD3G+ExyvU1gUFNEayycQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-float32array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-float64@0.2.1:
+    resolution: {integrity: sha512-FM6eNRA/TyPyIekTcCapfmsZcXAggeVzKM8XrsSXPjCdSYOcUrwtlOwqWfTs8gfx1t67roMPblsL+xEq4JUm5g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-float64array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-int16@0.2.1:
+    resolution: {integrity: sha512-0CAZ/7O2uPEkwA9zbhGhwnk1MXv1YjtH3cwZp8JSZs+hzd0Ac8NSIXcy2T2l9zyXdN//qVTesZyGhkIxcXJQOg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-int16array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-int32@0.2.1:
+    resolution: {integrity: sha512-MhZdQMligR3gQ0beDiSOdUxHCxwl3EaXKxnagcCjkfi33cSTP9oqDuUZnrNTCm/pVMcY0MOpMnDyisGpyn8o9Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-int32array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-int8@0.2.1:
+    resolution: {integrity: sha512-eJUpnS+XV7Edo4o7EBwRQAoec4LcA5yL0AYM39HKy68JfPqfGS9ZfVEqfDXq9kjS3qs2OvJO/uzjntNAFqbSKA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-int8array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-to-json@0.2.1:
+    resolution: {integrity: sha512-cTLBiXSbs2/g4U5xf9nz9TY54LW67nrbLCGsnqHMp4KSKixb/wH/F7BSNCN3WLJVW+5qFInVJ7Tav+lBeSPDQQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-complex128': 0.2.1
+      '@stdlib/array-complex64': 0.2.1
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/array-float64': 0.2.1
+      '@stdlib/array-int16': 0.2.1
+      '@stdlib/array-int32': 0.2.1
+      '@stdlib/array-int8': 0.2.1
+      '@stdlib/array-uint16': 0.2.1
+      '@stdlib/array-uint32': 0.2.1
+      '@stdlib/array-uint8': 0.2.1
+      '@stdlib/array-uint8c': 0.2.1
+      '@stdlib/assert-instance-of': 0.2.1
+      '@stdlib/assert-is-complex-typed-array': 0.2.1
+      '@stdlib/assert-is-typed-array': 0.2.1
+      '@stdlib/error-tools-fmtprodmsg': 0.2.1
+      '@stdlib/strided-base-reinterpret-complex128': 0.2.1
+      '@stdlib/strided-base-reinterpret-complex64': 0.2.0
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-constructor-name': 0.2.1
+      '@stdlib/utils-get-prototype-of': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/array-uint16@0.2.1:
+    resolution: {integrity: sha512-TEX88VMABKpGPNSwx/xpNj9ixhaVPpGKWZNHCJuYoWG5AYv2CKyd3rIgZsMXR5A+yr0T83AayUc2YsDzrobhEw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-uint16array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-uint32@0.2.1:
+    resolution: {integrity: sha512-nRkvGvMEMd7OUfDWbHhUstqkoWaln08ufUkgDXVDbKyF03HpbCHMM4xGfiKDfaW7h3T2AYLE8YzyKylmAj5jLA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-uint32array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-uint8@0.2.1:
+    resolution: {integrity: sha512-EkRR9xeBUVMLSWSWDSy3t5I8GGKbKqCPbPdZTH0oPrARRrXVUETSB9itT64/LbhP3Oc2ny4eh+dn/7PuOOREUw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-uint8array-support': 0.2.1
+    dev: false
+
+  /@stdlib/array-uint8c@0.2.1:
+    resolution: {integrity: sha512-47bitR7ZlE7puoG0imVuOgOhwCGIr5W45caLL2IafNQNskYAoeL4ciAEKker2HH+Wgb/og6k41F/E/dnC95FVg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-uint8clampedarray-support': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-float32array-support@0.2.1:
+    resolution: {integrity: sha512-m5UW0dJ1XfEpcDEvT/THKNrxvib7uvSu1bAkezuLlakI4vkfWvTUwRja0L2PtoKXCn6rxycGu0NXKFQXU4O5CQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-float32array': 0.2.1
+      '@stdlib/constants-float64-pinf': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-float64array-support@0.2.1:
+    resolution: {integrity: sha512-P++t7tMba8fNXabOVkZ+KgEkSEyJEuk7BzJuNtCbPttcPZmYR+e4xFXZe9wPO5VbLYVCaCKeP59h8HZpy8jHfg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-float64array': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-function-name-support@0.2.1:
+    resolution: {integrity: sha512-z1RE0QkbhjkBFAoP522CqIxmRMqOnx4V7tp2/Yzp0VLTZFL6gxncybAWW/gVrkDR7fu9Tacsq3N68SBsMehLvw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/assert-has-int16array-support@0.2.1:
+    resolution: {integrity: sha512-l4Xp1JDuvuBdrtCaaIR67oEvL3glZdTKblu29L5H8Yv8ha02XXbY+VwWnof2CraFMGgJbx875ASSgnOlvG+TIg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-int16array': 0.2.1
+      '@stdlib/constants-int16-max': 0.2.1
+      '@stdlib/constants-int16-min': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-int32array-support@0.2.1:
+    resolution: {integrity: sha512-b6QV1oJLVx/KwyGbsmq1EIrIkfLc9/UYzFUo/7S+NM5QUUyR1WlWm9p/QK1YCMW1bdzoXEG3w8rTu7mXGL+VDw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-int32array': 0.2.1
+      '@stdlib/constants-int32-max': 0.2.1
+      '@stdlib/constants-int32-min': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-int8array-support@0.2.1:
+    resolution: {integrity: sha512-IoaIK338rQTC2DY+Hg/PI126Z9+ycRbFSJ/J8c0vXqRQ9tMMAV3n9izuBVNn+k6WGUqMsVfSuLGg1sYKQdyaug==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-int8array': 0.2.1
+      '@stdlib/constants-int8-max': 0.2.1
+      '@stdlib/constants-int8-min': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-iterator-symbol-support@0.2.1:
+    resolution: {integrity: sha512-qTDstpKlqd9D1d9Hm1S5WhRZpOzr5OrlUX07Ns5WmUfWqhsGqrbc+Y4K8vnxp86hP1+JpLqhk8mOa3MTVUSV+w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-own-property': 0.2.1
+      '@stdlib/symbol-ctor': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-own-property@0.2.1:
+    resolution: {integrity: sha512-TNx+PlR1kGG6Ypg9aiHpHzaIYI8iaKAj7Ad1r/A6BlbkA/czzJMMidJE91uDlpgrMAIILAT68MRXt3kD6X2tAw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/assert-has-symbol-support@0.2.1:
+    resolution: {integrity: sha512-a0N1kI/csNiPZ/0lad7ATOIMSXgpm0mCBjV95TgA4+Dmmruol0DK3PrP4n+NuoziTLzRSM/CRgEtLQI5X9g6mQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/assert-has-tostringtag-support@0.2.1:
+    resolution: {integrity: sha512-cWhgirurOsVJzHSSU0GdX5HqHGF2DRWXPk7xbQ4OPhu0x4yeOa2WAupPf7PHQ0pMD++IoWW3I16Gr310WjLDeg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-symbol-support': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-uint16array-support@0.2.1:
+    resolution: {integrity: sha512-9wryIrv16SZ4IZDa4AKCS0xgmRyBT7KHzpPcpkH1rFWGFe8kev8AKRH0MJ5ukl4C1wVnnqomctZyR1f3WFlNVg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-uint16array': 0.2.1
+      '@stdlib/constants-uint16-max': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-uint32array-support@0.2.1:
+    resolution: {integrity: sha512-WrEfqfmgNjD7imwFVNMqr7RRky4iPuddXyJdL/rQQ0fBZA3FcGuOeoTRn7gSJBq92WYHvmmAkr2FQ1SoD0BQyg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-uint32array': 0.2.1
+      '@stdlib/constants-uint32-max': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-uint8array-support@0.2.1:
+    resolution: {integrity: sha512-ie9PmgRi4MfDQwDf7FBN1IkQYvSTFvUGDlEaz61rC397Sz88SfIWJDGMcDGmIRQ/0Mg7jkTCoYU4gNVsRTzW2w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-uint8array': 0.2.1
+      '@stdlib/constants-uint8-max': 0.2.1
+    dev: false
+
+  /@stdlib/assert-has-uint8clampedarray-support@0.2.1:
+    resolution: {integrity: sha512-EXxRz2Uqio13c+P8N2WOCsKPwLq7QHhin6tDchmKc21oFNEP05SHz0KiWknX5wEmNDDx0p4QNX9un8L64S/r0g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-uint8clampedarray': 0.2.1
+    dev: false
+
+  /@stdlib/assert-instance-of@0.2.1:
+    resolution: {integrity: sha512-0ugxPHLH3n71G9F6h7cnUeGqnKmgYijnZPlVGCznDfiNDXdb6Wkiv+FfWNnFwRTqWj400Po51nKxC+Wu7fFu2w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-array-like-object@0.2.1:
+    resolution: {integrity: sha512-NRS6bMzrtiQ4R/0loX8oXNa++b0iifwthKmhfIJ2ggWslInMUjxArcm3nZhh5tapZIBiEzLdwTE3yJjIkXo6iw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/constants-array-max-array-length': 0.2.1
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-array@0.2.1:
+    resolution: {integrity: sha512-5sn5LKMn6mELsAXEDsxsm6S2+9mmGDdKGQdTNw9QnT/Kz3M+DzBPKEH719M20Pm1J7QNwMKICBZNWJzb5mvM4g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-arraybuffer@0.2.1:
+    resolution: {integrity: sha512-UHtSp23K5xnq91wA94BwvaZeQPTqOXmBP8SuWhcaMiaiGlCOOJc0sZno6j1ba0ewmv3WW9whkckF5rmDQnpiOA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-boolean@0.2.1:
+    resolution: {integrity: sha512-Ls9j8PAFGZsR8v9J/39QKghT9oLmkm8RI418dt+fHBemFsjd4U/VEvUUgNEfal1LsVAc31ltklR0HJEKrkGDEg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-tostringtag-support': 0.2.1
+      '@stdlib/boolean-ctor': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-buffer@0.2.1:
+    resolution: {integrity: sha512-kSJW8R/byBz7yk2V3g3CCCM+6Im51l2pbNfnL7JABipyBZPolsOzRby6sD046PIFVf5jwufvpUUCZ68hzyEGsw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-object-like': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-collection@0.2.1:
+    resolution: {integrity: sha512-7HR5kgW2hZ2rjtgHUVTXr+Sis8YQ/ihfDgVbkYTwmSueIqhQnXd9JNxCepGmWxlg1N2k0iyDhAA+8QdPHZvAjQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/constants-array-max-typed-array-length': 0.2.1
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-complex-like@0.2.1:
+    resolution: {integrity: sha512-oITLmUudQVlFalftQz2N9+g6DPsJIKgTCJHGvLqnYXxwftR6EWPaset++GRLRHf9LfaGrZM2InTBWtBdatEW7g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float32': 0.2.1
+      '@stdlib/complex-float64': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-complex-typed-array@0.2.1:
+    resolution: {integrity: sha512-Y0DmvXDpJXGq4kWCSQNdSZi724jMOcssxs53ZRJzWdWkOhOTWEBTcJ0RAPmGRmzmVAuuDgmZIxZ0Fu9tvm9NAw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-complex128': 0.2.1
+      '@stdlib/array-complex64': 0.2.1
+      '@stdlib/utils-constructor-name': 0.2.1
+      '@stdlib/utils-get-prototype-of': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-float32array@0.2.1:
+    resolution: {integrity: sha512-xrushmHQ2S5QOkdQgGxx263aQ+nUJFQ5LJDEAOHNuVTfmGErr/1SXanY7TdZEvfERrd4GJxO21q14+osvoBe4w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-float64array@0.2.1:
+    resolution: {integrity: sha512-TX/5Shjx0QrpP6EDXmOfNoQNEcYlUvX2IS4gt1OV8pvsV956/ZuZa4lD/2YwHVnCr4a4D2X8kttfyxHaPX6zvg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-function@0.2.1:
+    resolution: {integrity: sha512-tOt8GfMRxdx4t5x1ts85ndfYrnBUDE0wBiC5O1AR95xMdlA+yivkqyC1PjE3cA8XaxRT6E20DUruwJcbRamKIA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-type-of': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-int16array@0.2.1:
+    resolution: {integrity: sha512-kpf358tXoo9qQPsZ8rk81WPaO1Nm9uc2gXzK4wLkeGqxkZcHNgWsamDaEmWIUu/xjN0Mu5DBiMdd1AAKUwxMLg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-int32array@0.2.1:
+    resolution: {integrity: sha512-CccsNFEDJLJRDpp2YaTzllxJvTyB/9MljPZ6IVYbh+lJJuj46mtpHKT0s8Aywy2ZSHaiv7rzAEmdkM2wQHdIpw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-int8array@0.2.1:
+    resolution: {integrity: sha512-O8APBQ1Yo3UEj/dcuX07d+c0iJxheKvu55KAp2YQ5G/o5pPJffZBIll19GU8W5469/fDn7yiy6oqI4/UYi6yMg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-integer@0.2.1:
+    resolution: {integrity: sha512-rfXNlpokNHiwkUScAtInQT4aGAmRIYSxdLMatWp6bD4dhmIZIQU6ckNGxEfU/jckPcUMECdwsNg1x+Gxn3VTrQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-number': 0.2.1
+      '@stdlib/constants-float64-ninf': 0.2.1
+      '@stdlib/constants-float64-pinf': 0.2.1
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-nonnegative-integer@0.2.1:
+    resolution: {integrity: sha512-YGsEfQnX1iNiKAputASGNEUpu6BFoDQ/Qfd2wXAvnZadofGOqo3B5vv3VyY78y+yesaxxrDPgiZX+IO7hnI6VQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-integer': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-number@0.2.1:
+    resolution: {integrity: sha512-JrRo3C+DaLHix8gTk8mlZ+SQQ862NyQn06cg3ox5nuzBEIxpSQ9+n4CAT/PhC73TH/NkPD76HAcqfI+8eLYYQA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-tostringtag-support': 0.2.1
+      '@stdlib/number-ctor': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-object-like@0.2.1:
+    resolution: {integrity: sha512-vlnwFfJR0UmOO7R/Ny4nTZqZ3PCANIww3sz2Klliti3L85Yb3scUvTCmCGvRQ+QvbnFpqQsgIkCwqzGlKiQkcg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-tools-array-function': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-object@0.2.1:
+    resolution: {integrity: sha512-Gl7fE1C61sTaFTcR9GxFGTtVH4v4+SwSceUCPP660eJQmfs1zt8ypyXGqvrc0Pr2qJ/PBms5y+Cpz1uPcIKS3Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-array': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-plain-object@0.2.1:
+    resolution: {integrity: sha512-prTOBRi5CeKR5mVP9q8Z+PKxE5YiIAwdArkxjiFMvugtXwDK9jT1QgRF5nE0oUOhuRQ0l1dVx58vzBggOCWkCQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-own-property': 0.2.1
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/assert-is-object': 0.2.1
+      '@stdlib/utils-get-prototype-of': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-positive-integer@0.2.1:
+    resolution: {integrity: sha512-Ouu4sr8GZzEuuZeombG14wDV6cRTBRetT8IM1+u5lIit2y1s8UWNqASqQ1rZW0XpmWtCYn7jhYWARShdQHzXvQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-integer': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/assert-is-regexp@0.2.1:
+    resolution: {integrity: sha512-XdPKcrW8Sh5TvuMdU4+DxuxuaBTX/K9pv7sIuOSMWHRZcblOUiEMf5wk8OHoG9I1PmRhDlaR0AC/MC6R5bFq3Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-tostringtag-support': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-string@0.2.1:
+    resolution: {integrity: sha512-xphxm9i61By/M7cmyCqgPiDof4DP3Rms3lVdcCpkr7T9PkBFMhOlm6zyhxo/2+dhukjf4Sak/WqntF/CWgJFJw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-tostringtag-support': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-typed-array@0.2.1:
+    resolution: {integrity: sha512-DHKj8YreaZjMj9tMev9jY8yNlNYOXMInpZa/OX71uRlLkOrcTGVl4HmkaDgoAip/OLhqdw9NNu7XXpXUqhzysg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/array-float64': 0.2.1
+      '@stdlib/array-int16': 0.2.1
+      '@stdlib/array-int32': 0.2.1
+      '@stdlib/array-int8': 0.2.1
+      '@stdlib/array-uint16': 0.2.1
+      '@stdlib/array-uint32': 0.2.1
+      '@stdlib/array-uint8': 0.2.1
+      '@stdlib/array-uint8c': 0.2.1
+      '@stdlib/assert-has-float64array-support': 0.2.1
+      '@stdlib/utils-constructor-name': 0.2.1
+      '@stdlib/utils-function-name': 0.2.1
+      '@stdlib/utils-get-prototype-of': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-uint16array@0.2.1:
+    resolution: {integrity: sha512-6HcIp+3xfI6sItm3Qe6UjbUAjhvqDF0aD9EtvPfYm9g8wR+fhoEGPE3LxBEsQS1nX52Q9bavzrKj8tQFVAJ1zQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-uint32array@0.2.1:
+    resolution: {integrity: sha512-PYPdPqBzoX6cdfvNLb0DSWPqYHpi03X5RSI40FrLpKf226H6hQv7w7xVxFsxl7+uTueFoGyAsq5xa/aHrP4XsQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-uint8array@0.2.1:
+    resolution: {integrity: sha512-CHrY1QWnXnVPSyaH01yJ3t1QJ+X5Lqs0KjTYSOQtEt3rTH8hPK5e0iPZJFMy0JNSz5VwwV249oa2+RK1HQ2C8w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-is-uint8clampedarray@0.2.1:
+    resolution: {integrity: sha512-Qryym3poKTNtVwHY9Dj/dP+A8CBWlY3ymjJJxQAgxFrcIItlYzE//+vbic4LNzGYikifQOCglv7U/JJgl0uONg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/assert-tools-array-function@0.2.1:
+    resolution: {integrity: sha512-Igezf184udgzGjif5nS1VWJCSsYq1DgX9Lt2smE4YW29W0SjWW9ahps4t0QfEm3UrfTdiOY5DLLAO1MjzAVkVQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-array': 0.2.1
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/blas-base-gcopy@0.2.1:
+    resolution: {integrity: sha512-59sZsv2kzV+zHGhINJDL53o+6wFpcBPfV2BNxOZ7FRsrASR7ah9BFDPU3bo4LtxVouZFYaBcXlXcG0av4K9aQQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-base-arraylike2object': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/boolean-ctor@0.2.1:
+    resolution: {integrity: sha512-CJx4lCU2eYoIcthpdzIoEmhE1Fgd1PFvQeFHhOvbm4TidP/uRP5xQGU+eimgxQ4G0lMxTJ8RNXpLPiK5OdeSUQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/complex-float32@0.2.1:
+    resolution: {integrity: sha512-tp83HfJzcZLK7/6P6gZPcAa/8F/aHS7gBHgB6ft45d/n6oE+/VbnyOvsJKanRv8S96kBRj8xkvlWHz4IiBrT0Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-number': 0.2.1
+      '@stdlib/number-float64-base-to-float32': 0.2.1
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-define-property': 0.2.3
+    dev: false
+
+  /@stdlib/complex-float64@0.2.1:
+    resolution: {integrity: sha512-vN9GqlSaonoREf8/RIN9tfNLnkfN4s7AI0DPsGnvc1491oOqq9UqMw8rYTrnxuum9/OaNAAUqDkb5GLu5uTveQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-number': 0.2.1
+      '@stdlib/complex-float32': 0.2.1
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-define-property': 0.2.3
+    dev: false
+
+  /@stdlib/complex-imag@0.2.1:
+    resolution: {integrity: sha512-HHTDnEFTeC2FJfP0jXccsam4hgnPF0PjQJDzKin6F/SFocxOeT2YoqA6Pii09XnDH6RrUaXIZp+VzTr7w/Vs5A==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float64': 0.2.1
+    dev: false
+
+  /@stdlib/complex-imagf@0.2.1:
+    resolution: {integrity: sha512-lrYYEZfPZ9j/7jRUWVNDUunj1f/9lCxtuzHINqQg2VJ3WNJvyQ9RdWEM1ahZftZImZMIWElCNBTCrRJUOA/bww==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float32': 0.2.1
+    dev: false
+
+  /@stdlib/complex-real@0.2.1:
+    resolution: {integrity: sha512-WT7Z77jQLm8VrfvOPJ0C6d8q0Of105owANn72+3YnBwIuGk4TG9DVkB+g/9vo4ptIxPdQRiZQkIGVY0bq7h9YA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float64': 0.2.1
+    dev: false
+
+  /@stdlib/complex-realf@0.2.1:
+    resolution: {integrity: sha512-bjLLhSaQWhXEkSx4CJNp81mmUCBwWkhsl62gsp8Cdd56zWkf6c2tWCph9jmXNKMzqueYswzykZt9itHjHmTT8g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float32': 0.2.1
+    dev: false
+
+  /@stdlib/complex-reim@0.2.1:
+    resolution: {integrity: sha512-67nakj+HwBRx/ha3j/sLbrMr2hwFVgEZtaczOgn1Jy/cU03lKvNbMkR7QI9s+sA+b+A3yJB3ob8ZQSqh3D1+dA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float64': 0.2.1
+      '@stdlib/complex-float64': 0.2.1
+    dev: false
+
+  /@stdlib/complex-reimf@0.2.1:
+    resolution: {integrity: sha512-6HyPPmo0CEHoBjOg2w70mMFLcFEunM78ljnW6kf1OxjM/mqMaBM1NRpDrQoFwCIdh1RF1ojl3JR0YLllEf0qyQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/complex-float32': 0.2.1
+    dev: false
+
+  /@stdlib/constants-array-max-array-length@0.2.1:
+    resolution: {integrity: sha512-eqPcbpxYN0ppxALSVUBYZVT1/QJDk4bYKmHoNDDQJicL1iJ7+3WCikOjpbVtjFD45ThYTu19sUB0O3V1hdmuOA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-array-max-typed-array-length@0.2.1:
+    resolution: {integrity: sha512-JAhOrL1NFp2NxBl5Fn1HVJandtm0QgB+gRdRHd1zZ9Bn4lQxIkh285CIyneDlqHSKSQGEnk5gUtTvpfIAzc1AA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-float64-max-safe-integer@0.2.1:
+    resolution: {integrity: sha512-IcVEnGF64l1TV4/d+tS/2yUj43epbmRQYo3Hhem0RTZkcH4vDqIs2Y1AS2O7lqblS+jvr0QgYXt0p5aM2/d4QA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-float64-ninf@0.2.1:
+    resolution: {integrity: sha512-6z1MihX3rLwRsXfiXrfK3OoNTsfalOfIfu6BtTxQ+j4Ekc6GuLsbOhs8PtFCFjgC0qegkkNXM6e4GVGYwP/bXA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/number-ctor': 0.2.1
+    dev: false
+
+  /@stdlib/constants-float64-pinf@0.2.1:
+    resolution: {integrity: sha512-sphEj5GvJbWSFAYSc3Kc5qmFW0mcSbvDTtbBg5Cc1sB5jGfc9PzofZPuKBTJpjJRI5KjgjnST4grg8FFchjfVw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int16-max@0.2.1:
+    resolution: {integrity: sha512-wsL7uSrA6FE00B94XxPM46CAZcOyuPId/Q+4lLPtPAezIZjRHmEzomCEzkIZ0pogX/3QUCWb2oZizemj2BmN7g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int16-min@0.2.1:
+    resolution: {integrity: sha512-WdBl0tDryiBGkLce/5GTlV64g/z34dcRe15KZbSMQ886L32RZKlizLV/s0b2PTp8dtAa1V97Mo+sTJHJa+pWMA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int32-max@0.2.1:
+    resolution: {integrity: sha512-vKtp3q/HdAeGG8BJBZdNzFrYpVQeleODgvOxh9Pn/TX1Ktjc50I9TVl7nTVWsT2QnacruOorILk2zNsdgBHPUQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int32-min@0.2.1:
+    resolution: {integrity: sha512-nfbx8l1f7lKdRheH5FKRKD2AvlK3rbq0peDNEknHjzBLi+e/OUCBp3FvQVYHad3rACHW8N6BoCFbbs5Kv7bfgQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int8-max@0.2.1:
+    resolution: {integrity: sha512-ylFhNAvZq37by2TOtMz06VwbA6fxnl8XsS7+rcvbW86K8nGwjJKZw7TV5Gp+Y3jRKfRFIK+DMBm7lY+juCXLcA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-int8-min@0.2.1:
+    resolution: {integrity: sha512-D0CqBZcZ44QewC9BE5WtQd9ALZTqmWRtIGBbXrzpu7GA0+12EPao8nyeMyg63q9+0o8XmeYIMc751w8go316eg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-uint16-max@0.2.1:
+    resolution: {integrity: sha512-X8n01bbYzYf8BLm43jYtwik28YD3OJ9U8GkEwgqD1znL3MJ+Qpd/EUw7asOTIcEKrWzKGdoft1IPRgkGr1eGtw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-uint32-max@0.2.1:
+    resolution: {integrity: sha512-Bcr6I9VE2EPy5rTWKB5EhbqxAHoILP6M7IVcVyFqPZRw+efbvm0Z0/X5wvVxCcHOA15XaOyD4eS5/O40/CEP8A==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/constants-uint8-max@0.2.1:
+    resolution: {integrity: sha512-LaP+G7rwFmRwgFB887uKFsaiFMX5jLtN8BzbVs5mLtX6ItaYdM/GEu4kV8sePizlHODSfOW3EUsJYqq1021Obg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/error-tools-fmtprodmsg@0.2.1:
+    resolution: {integrity: sha512-SaxvGeGfWfda/O3rTNGRGBzAL9gsY/yd8n1hXwzOl/2aUHf8nxcf6Fz6/BQ5PguT0GiBkca19XEhHZZHxX3X/g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/fs-exists@0.2.1:
+    resolution: {integrity: sha512-LeynjpWVjizojjshscyAMZCWeaWziIIENBA9/99Zv/x60waoBPphibIYjCEhY0agUqIdgTx+9COJU6zvwASGCw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    dev: false
+
+  /@stdlib/fs-resolve-parent-path@0.2.1:
+    resolution: {integrity: sha512-BxkdEYgAJkcZpoctFeU/x7AeGuAJWuIzkwa39pi5qu3feWkSTMimD8Y+BnnJy8GPlGnClMlfp3hc13ojmJ79mQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-own-property': 0.2.1
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/assert-is-plain-object': 0.2.1
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/fs-exists': 0.2.1
+      '@stdlib/process-cwd': 0.2.1
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    dev: false
+
+  /@stdlib/math-base-assert-is-even@0.2.2:
+    resolution: {integrity: sha512-CY2EphtieB9K1WfVtBSj/3z/es9E0FV5ejYgggghdozmjFukgg4GtXYYCAl1Zj8hlbGiPa2Jat8zPXf348EibA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/math-base-assert-is-integer': 0.2.4
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-assert-is-integer@0.2.4:
+    resolution: {integrity: sha512-aCmocusl/qXSLk/0x7HFkKdOIV8t2I534ROCOFP61ICl752CrpJd+0TpU1GwpBoaRkF2dYER5tLGOoRf91Bz1A==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/math-base-special-floor': 0.2.2
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-assert-is-nan@0.2.1:
+    resolution: {integrity: sha512-+WAc5YYLkqjOS/95QaFjrMq+ciNPdKN6M8ptNbfvxdPg2Oyrm7QeRih7tQ9gx99BifrD9UQ0wu5ndMiMG+dQcw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-assert-is-positive-zero@0.2.1:
+    resolution: {integrity: sha512-QOSVW30dsmr/V9PvpW/X/bkyJGOF+/llGYNDXy3pNi5mrSdwbMigrxsVWpG7siZ2ub5xbCpWjSg8iUIW5F0bkA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/constants-float64-pinf': 0.2.1
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-napi-unary@0.2.1:
+    resolution: {integrity: sha512-M0a0IpCrkOZaS07j3x3xZXyq/X00FFeFPX6kUZOgk9mPfPHCQgGimgGJWBYgNKPcdWdRvpb4Nv2YI9G+nZu+gA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/complex-float32': 0.2.1
+      '@stdlib/complex-float64': 0.2.1
+      '@stdlib/complex-reim': 0.2.1
+      '@stdlib/complex-reimf': 0.2.1
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-ops-umul@0.2.1:
+    resolution: {integrity: sha512-eG0YFhuyG5qqD7ttOl5C+8jG7YhAGKxoE1pnp92gtABalJt4c1KPmfHQzWoUj+re/E7ubCEblGNp7fumgWEOAg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/math-base-special-floor@0.2.2:
+    resolution: {integrity: sha512-BJ5WA0kLX0b2/NV2HkOg4XgYcZOy3//HOjSc4oro642J6Ai3mjxk30sbnad7Miry0cUZEyQ6YsnwF42T1gOObw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/math-base-napi-unary': 0.2.1
+      '@stdlib/utils-library-manifest': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/math-base-special-max@0.2.1:
+    resolution: {integrity: sha512-jsA3x5azfclbULDFwvHjNlB2nciUDHwrw7qHP/QlSdJi47E1iBDNYdzhlOa3JKzblbrITpzgZEsGBcpCinEInQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/constants-float64-pinf': 0.2.1
+      '@stdlib/math-base-assert-is-nan': 0.2.1
+      '@stdlib/math-base-assert-is-positive-zero': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/number-ctor@0.2.1:
+    resolution: {integrity: sha512-Y77276+aKfpd5VSQLK5rGNo6ULW35I95zd+5V6hSF63UmpNppiuNe2z+6ltJmp1zI/pNuEscevmF4KVREhH47g==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/number-float64-base-to-float32@0.2.1:
+    resolution: {integrity: sha512-cAHWxJMrQ94XIrSIAobvmu8VAseM39zP4SYr/PinhtpGS1xTP/sx4Fr0oVQgxe4D7oLWsRaj1ORl99cSSzPcmQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float32': 0.2.1
+    dev: false
+
+  /@stdlib/object-ctor@0.2.1:
+    resolution: {integrity: sha512-HEIBBpfdQS9Nh5mmIqMk9fzedx6E0tayJrVa2FD7No86rVuq/Ikxq1QP7qNXm+i6z9iNUUS/lZq7BmJESWO/Zg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/process-cwd@0.2.1:
+    resolution: {integrity: sha512-VnUglHWLeotm/zqhEmPaRtVBcivbr7mRbMn3MP0z9u8uS4aYRgQy32tHhYfZdYb+RANJIDylTMJnczN+sDKbYA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/random-base-mt19937@0.2.1:
+    resolution: {integrity: sha512-k6EelL+OfM/ygS7L1m9Fx+AuFBlPtFgyRikVcixCuyEB8xfyYkzn1+LtoqlQLcLb6IwmkKgYX4/dSL9XBL1Gew==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-to-json': 0.2.1
+      '@stdlib/array-uint32': 0.2.1
+      '@stdlib/assert-has-own-property': 0.2.1
+      '@stdlib/assert-is-boolean': 0.2.1
+      '@stdlib/assert-is-collection': 0.2.1
+      '@stdlib/assert-is-plain-object': 0.2.1
+      '@stdlib/assert-is-positive-integer': 0.2.1
+      '@stdlib/assert-is-uint32array': 0.2.1
+      '@stdlib/blas-base-gcopy': 0.2.1
+      '@stdlib/constants-float64-max-safe-integer': 0.2.1
+      '@stdlib/constants-uint32-max': 0.2.1
+      '@stdlib/error-tools-fmtprodmsg': 0.2.1
+      '@stdlib/math-base-ops-umul': 0.2.1
+      '@stdlib/math-base-special-floor': 0.2.2
+      '@stdlib/math-base-special-max': 0.2.1
+      '@stdlib/random-base-shared': 0.1.0
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-only-accessor': 0.2.2
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+      '@stdlib/utils-define-nonenumerable-read-write-accessor': 0.2.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/random-base-shared@0.1.0:
+    resolution: {integrity: sha512-vmI4v/RaEX+P7bydQPm+8b6BOA85RVlKu2cialTXibru7zvzVfuZdahHD0X6cj15C1C00u2DMa/Uk9+KdGeTow==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/regexp-extended-length-path@0.2.1:
+    resolution: {integrity: sha512-sQFAjW0JieAsvVyrIBJyAS5eObp+W0J/h6omsrxecRQc8HkTTc8HnseSMtWRxIw4/Z2dm4+0VLxosHugAy2F3w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    dev: false
+
+  /@stdlib/regexp-function-name@0.2.1:
+    resolution: {integrity: sha512-Ba/EpQ6Lt9CybnFGd5IWvwk8iKCWVv9zVsssuY5ABHhKc+nK0b7CK5qorISMYOMhVHH8PwofhY/iQtWfeb8RWA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-nonenumerable-read-only-property': 0.2.1
+    dev: false
+
+  /@stdlib/strided-base-reinterpret-complex128@0.2.1:
+    resolution: {integrity: sha512-pc8YMkmg5qAvPakjVMDE5ZyIY92dE1B1wWfdtglIRXJ8uWclxc5du7PLV6dMaIpJs40uFUUAzC379K5Tjg9XXA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float64': 0.2.1
+    dev: false
+
+  /@stdlib/strided-base-reinterpret-complex64@0.2.0:
+    resolution: {integrity: sha512-UxRBlSW2chDZFUFBXWwAEW2kVn1JwFCZ2SzjArAlkRMraWQC1K3IbNuMk3xZPQXzPZLTDwudp8nDaMq6TaKgHA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/array-float32': 0.2.1
+      '@stdlib/types': 0.3.2
+    dev: false
+
+  /@stdlib/string-base-format-interpolate@0.2.1:
+    resolution: {integrity: sha512-Uxz89eUi4m9yao4VjsqXIxLIF7qDmqEAH0e+XBRWRGC2zx6DhmK2kLnaU0xW69+VJPn3dq4itxq0oryw2E+qIQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/string-base-format-tokenize@0.2.1:
+    resolution: {integrity: sha512-3Ut96pmCgEFArrdwXKm1q0j1FOqTnG/uOsh24uYNU/ABRsMOOajRlAjCCdQv9f8P916qPrSnF1V3Pd18LAaksg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/string-base-lowercase@0.3.1:
+    resolution: {integrity: sha512-4VnyWsIkmzHP5mVU1UJVZBSlAt4oxaRBj4fSQhG3kcKnS+5ZtfncWQDsskM0WveSkBRi37DXdyhbPm0/KYQUwA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/string-base-replace@0.2.1:
+    resolution: {integrity: sha512-n7FRXJDCFTr7BfW/HOhyaOFKYrzsUHS3MULrykCld5MEJrVbTL61eXRWBPhMWeTVwJHCHU6zxtiwGt4+cU5vdg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/string-format@0.2.1:
+    resolution: {integrity: sha512-+HpXkEJ0Z4gthH5KicXvRRJiCiCTSrKzM+mS8N6vwaAD+OG+Oq8Cn43XBD1ic/UHROI9un42MruF1ZLlkSmdOw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/string-base-format-interpolate': 0.2.1
+      '@stdlib/string-base-format-tokenize': 0.2.1
+    dev: false
+
+  /@stdlib/string-replace@0.2.1:
+    resolution: {integrity: sha512-rle3pW4KowxxITbrad0+/cjRg+zWUMITvWqK2MKNDRfI8x9Jf1wOA34N7w0YBCMcT6UVQDJKX3cwe4rhz3ZDKw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/assert-is-regexp': 0.2.1
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/string-base-replace': 0.2.1
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/utils-escape-regexp-string': 0.2.1
+    dev: false
+
+  /@stdlib/symbol-ctor@0.2.1:
+    resolution: {integrity: sha512-ZZAuKPJZ9PVrbRCp4iPKdlyh7uyrCi39dqrU/j/w38mOzYZJV6utK33eeAIsQH5yMDO7Tr0Zu69TKGf2XqmaPw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/symbol-iterator@0.2.1:
+    resolution: {integrity: sha512-K4vqgV08A3ck1JLc7DQ+wqidfVJ/ox8HmY26YtEFtPo0vBPrheRbj7CCpn8oal9yX0Uak8Ut/FhFlx0CYa4V9w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-iterator-symbol-support': 0.2.1
+    dev: false
+
+  /@stdlib/types@0.3.2:
+    resolution: {integrity: sha512-4hBkuU8QNsvpoyPR3WmCP0Jq6hTuVpVnfJQKu+HRKVHKYXzsIQIt9wdW8FUm9/0GfFkVZDCc46TEkTI0bkq8vw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dev: false
+
+  /@stdlib/utils-constructor-name@0.2.1:
+    resolution: {integrity: sha512-liLBKiHjR5pPrvq+H2UtDA05LMRHGZgyxOAGiR/rW5Lb1OmBHOQcxzR9k4TK3Ck0pHPzS8Oe6Yxy/d7lO9sqFg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-buffer': 0.2.1
+      '@stdlib/regexp-function-name': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/utils-convert-path@0.2.1:
+    resolution: {integrity: sha512-8RN52B1tXN8LFP5nQJWK8zYJxLRcYymEs+glSYAWHXR8A4O+RKLFaJRvVCiND20N/jddagOyanOWJcrebhlkzg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/regexp-extended-length-path': 0.2.1
+      '@stdlib/string-base-lowercase': 0.3.1
+      '@stdlib/string-format': 0.2.1
+      '@stdlib/string-replace': 0.2.1
+    dev: false
+
+  /@stdlib/utils-define-nonenumerable-read-only-accessor@0.2.2:
+    resolution: {integrity: sha512-AaaH7qHbGT/16RFmgznhVQI2yLu/9QZ2dEFd7n201VciodEfl6TaUGnuX7cSyFvFXjJiFnQviCmEQ/udAQVnTw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-property': 0.2.3
+    dev: false
+
+  /@stdlib/utils-define-nonenumerable-read-only-property@0.2.1:
+    resolution: {integrity: sha512-L8fs1kI79T2RQIg8rHR9aQnnSDELqiDGWbK3jA1NP8iW+ydxlxXyO8Dw17fBCXVua3Y19a1NVyGtIN5WGe2UCw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-property': 0.2.3
+    dev: false
+
+  /@stdlib/utils-define-nonenumerable-read-write-accessor@0.2.1:
+    resolution: {integrity: sha512-wO70dQkZvaTypB83LuLTK1NJPITIDfgMrTV98atGKon1xab8oqG3MxAj4fIS8jxa/JeMWmGvoAPytZcZR3l7rg==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-define-property': 0.2.3
+    dev: false
+
+  /@stdlib/utils-define-property@0.2.3:
+    resolution: {integrity: sha512-+EzWImaQR/6XNFbXIITFi3PLQGTbKVIWSYxJfHXAuTtibAMnhHOWvEzKOumVe/Q4Cdsrc3/PIkpjJzliqAX9AA==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/error-tools-fmtprodmsg': 0.2.1
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/utils-escape-regexp-string@0.2.1:
+    resolution: {integrity: sha512-JwxkU1JGuHu9WJfEAgAvGElizGfainZ25JqIxLOn1pzpmHRW0RVa2cq+scgTjlAvHebcDjjkRQN66ROzIDgUNw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-string': 0.2.1
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/utils-function-name@0.2.1:
+    resolution: {integrity: sha512-bvmMc/qvi63OU/W7ivCd/j4tG+NDA2UulTXU0vzr3Th9/z72VK60I0ltOu7ONpaXvtskt8Xyczb7ExKIW9BGTQ==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-function-name-support': 0.2.1
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/regexp-function-name': 0.2.1
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/utils-get-prototype-of@0.2.1:
+    resolution: {integrity: sha512-qb8IQd93m47VisTGi6Awu2i2sk+ptzmnIkUt9lYYrNDK5EIpH/nveAuWTfi/X/QdJpFfIXtTuC/sv43KAgYe1Q==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-function': 0.2.1
+      '@stdlib/object-ctor': 0.2.1
+      '@stdlib/utils-native-class': 0.2.1
+    dev: false
+
+  /@stdlib/utils-global@0.2.1:
+    resolution: {integrity: sha512-xf/cwHUN/BFSTYwiokQmMLxuXlYZYzNch/HgyDGx78bCx4MAVinK86EzP0dPn8HOLcZ/roxtQ5rXsyD49lEp/w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-is-boolean': 0.2.1
+      '@stdlib/string-format': 0.2.1
+    dev: false
+
+  /@stdlib/utils-library-manifest@0.2.1:
+    resolution: {integrity: sha512-5qhCqcJ2DD1ZylPOX7JGzzIGpgXJ5UsiG2oOmS/P8XEnoQA9DVMXt7aCD60AN+pE5QUfK+r20144XH7JMBQzMw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/fs-resolve-parent-path': 0.2.1
+      '@stdlib/utils-convert-path': 0.2.1
+      debug: 2.6.9
+      resolve: 1.22.8
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@stdlib/utils-native-class@0.2.1:
+    resolution: {integrity: sha512-tM3am6amt50I4mFRlClExUmORqPzMExgDyZc4Lur+LXn5wb0uEoeBbJ27ftMDg8PNLSi5RUuBCwZBEXvYpG0yw==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/assert-has-own-property': 0.2.1
+      '@stdlib/assert-has-tostringtag-support': 0.2.1
+      '@stdlib/symbol-ctor': 0.2.1
+    dev: false
+
+  /@stdlib/utils-type-of@0.2.1:
+    resolution: {integrity: sha512-FE7rbPMkHwFsciA8ntfAcMvJ71DCerNO7m/pnpq+cFPR7bJSb8h2gaIqoHTkg9+vTMnJaOo3tDIWz4vN/CEQ8w==}
+    engines: {node: '>=0.10.0', npm: '>2.7.0'}
+    os: [aix, darwin, freebsd, linux, macos, openbsd, sunos, win32, windows]
+    dependencies:
+      '@stdlib/utils-constructor-name': 0.2.1
+      '@stdlib/utils-global': 0.2.1
+    dev: false
 
   /@types/chai-subset@1.3.4:
     resolution: {integrity: sha512-CCWNXrJYSUIojZ1149ksLl3AN9cmZ5djf+yUoVVV+NuYrtydItQVlL2ZDqyC6M6O9LWRnVf8yYDxbXHO2TfQZg==}
@@ -870,6 +2114,17 @@ packages:
       '@babel/runtime': 7.23.2
     dev: true
 
+  /debug@2.6.9:
+    resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    dependencies:
+      ms: 2.0.0
+    dev: false
+
   /debug@4.3.4:
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
     engines: {node: '>=6.0'}
@@ -1204,6 +2459,10 @@ packages:
     dev: true
     optional: true
 
+  /function-bind@1.1.2:
+    resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+    dev: false
+
   /get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
     engines: {node: 6.* || 8.* || >= 10.*}
@@ -1279,6 +2538,13 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
+  /hasown@2.0.2:
+    resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
+    engines: {node: '>= 0.4'}
+    dependencies:
+      function-bind: 1.1.2
+    dev: false
+
   /human-signals@4.3.1:
     resolution: {integrity: sha512-nZXjEF2nbo7lIw3mgYjItAfgQXog3OjJogSbKa2CQIIvSGWcKgeJnQlNXip6NglNzYH45nSRiEVimMvYL8DDqQ==}
     engines: {node: '>=14.18.0'}
@@ -1323,6 +2589,12 @@ packages:
   /inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
     dev: true
+
+  /is-core-module@2.13.1:
+    resolution: {integrity: sha512-hHrIjvZsftOsvKSn2TRYl63zvxsgE0K+0mYMoH6gD4omR5IWB2KynivBQczo3+wF1cCkjzvptnI9Q0sPU66ilw==}
+    dependencies:
+      hasown: 2.0.2
+    dev: false
 
   /is-extglob@2.1.1:
     resolution: {integrity: sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==}
@@ -1561,6 +2833,10 @@ packages:
       ufo: 1.3.1
     dev: true
 
+  /ms@2.0.0:
+    resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
+    dev: false
+
   /ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
     dev: true
@@ -1665,6 +2941,10 @@ packages:
   /path-key@4.0.0:
     resolution: {integrity: sha512-haREypq7xkM7ErfgIyA0z+Bj4AGKlMSdlQE2jvJo6huWD1EdkKYV+G/T4nq0YEF2vgTT8kqMFKo1uHn950r4SQ==}
     engines: {node: '>=12'}
+
+  /path-parse@1.0.7:
+    resolution: {integrity: sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==}
+    dev: false
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
@@ -1772,6 +3052,15 @@ packages:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
     dev: true
+
+  /resolve@1.22.8:
+    resolution: {integrity: sha512-oKWePCxqpd6FlLvGV1VU0x7bkPmmCNolxzjMf4NczoDnQcIWrAF+cPtZn5i6n+RfD2d9i0tzpKnG6Yk168yIyw==}
+    hasBin: true
+    dependencies:
+      is-core-module: 2.13.1
+      path-parse: 1.0.7
+      supports-preserve-symlinks-flag: 1.0.0
+    dev: false
 
   /restore-cursor@4.0.0:
     resolution: {integrity: sha512-I9fPXU9geO9bHOt9pHHOhOkYerIMsmVaWB0rA2AI9ERh/+x/i7MV5HKBNrg+ljO5eoPVgCcnFuRjJ9uH6I/3eg==}
@@ -1954,6 +3243,11 @@ packages:
     dependencies:
       has-flag: 4.0.0
     dev: true
+
+  /supports-preserve-symlinks-flag@1.0.0:
+    resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
+    engines: {node: '>= 0.4'}
+    dev: false
 
   /text-table@0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}

@@ -48,6 +48,7 @@ export interface NodeStructWritableProps {
   pivotX: number;
   pivotY: number;
   rotation: number;
+  rtt: boolean;
 }
 
 export class NodeStruct
@@ -305,6 +306,15 @@ export class NodeStruct
   }
 
   set zIndexLocked(value: number) {
+    // Decorator will handle this
+  }
+
+  @structProp('boolean')
+  get rtt(): boolean {
+    return false;
+  }
+
+  set rtt(value: boolean) {
     // Decorator will handle this
   }
 }

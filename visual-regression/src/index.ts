@@ -43,6 +43,7 @@ import { fileURLToPath } from 'url';
  * Keep in sync with `examples/common/ExampleSettings.ts`
  */
 export interface SnapshotOptions {
+  name?: string;
   clip?: {
     x: number;
     y: number;
@@ -113,6 +114,12 @@ const argv = yargs(hideBin(process.argv))
       default: false,
       description: 'Run in docker container with `ci` runtime environment',
     },
+    filter: {
+      type: 'string',
+      alias: 'f',
+      default: '*',
+      description: 'Tests to run ("*" wildcard pattern)',
+    },
   })
   .parseSync();
 
@@ -145,6 +152,7 @@ async function dockerCiMode(): Promise<number> {
     argv.verbose ? '--verbose' : '',
     argv.skipBuild ? '--skipBuild' : '',
     argv.port ? `--port ${argv.port}` : '',
+    argv.filter ? `--filter "${argv.filter}"` : '',
   ].join(' ');
 
   // Get the directory of the current file
@@ -239,6 +247,7 @@ async function runTest(browserType: 'chromium') {
   const paramString = Object.entries({
     browser: browserType,
     overwrite: argv.overwrite,
+    filter: argv.filter,
     RUNTIME_ENV: runtimeEnv,
   }).reduce((acc, [key, value]) => {
     return `${acc ? `${acc}, ` : ''}${`${key}: ${chalk.white(value)}`}`;
@@ -284,7 +293,9 @@ async function runTest(browserType: 'chromium') {
   }
 
   // Go to the examples page
-  await page.goto(`http://localhost:${argv.port}/?automation=true`);
+  await page.goto(
+    `http://localhost:${argv.port}/?automation=true&test=${argv.filter}`,
+  );
 
   /**
    * Keeps track of the latest snapshot index for each test
@@ -304,16 +315,17 @@ async function runTest(browserType: 'chromium') {
           height: Math.round(options.clip.height),
         };
       }
-      const snapshotIndex = (testCounters[test] =
-        (testCounters[test] || 0) + 1);
+      const subtestName = options.name ? `${test}_${options.name}` : test;
+      const snapshotIndex = (testCounters[subtestName] =
+        (testCounters[subtestName] || 0) + 1);
       const makeFilename = (postfix?: string) =>
-        `${test}-${snapshotIndex}${postfix ? `-${postfix}` : ''}.png`;
+        `${subtestName}-${snapshotIndex}${postfix ? `-${postfix}` : ''}.png`;
       const snapshotPath = path.join(snapshotSubDir, makeFilename());
       if (argv.capture) {
         process.stdout.write(
           chalk.gray(
             `Saving snapshot for ${chalk.white(
-              `${test}-${snapshotIndex}`,
+              `${subtestName}-${snapshotIndex}`,
             )}... `,
           ),
         );
@@ -332,7 +344,9 @@ async function runTest(browserType: 'chromium') {
         }
       } else {
         process.stdout.write(
-          chalk.gray(`Running ${chalk.white(`${test}-${snapshotIndex}`)}... `),
+          chalk.gray(
+            `Running ${chalk.white(`${subtestName}-${snapshotIndex}`)}... `,
+          ),
         );
         const actualPng = await page.screenshot({ clip: options?.clip });
         const actualImage = upng.decode(actualPng);

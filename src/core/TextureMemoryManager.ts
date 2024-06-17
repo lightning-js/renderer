@@ -22,6 +22,7 @@ export class TextureMemoryManager {
   private memUsed = 0;
   private textures: Map<CoreContextTexture, number> = new Map();
   private threshold: number;
+  public gcRequested = false;
 
   /**
    * @param byteThreshold Number of texture bytes to trigger garbage collection
@@ -52,11 +53,12 @@ export class TextureMemoryManager {
     }
 
     if (this.memUsed > this.threshold) {
-      this.gc();
+      this.gcRequested = true;
     }
   }
 
   gc() {
+    this.gcRequested = false;
     this.textures.forEach((byteSize, ctxTexture) => {
       if (!ctxTexture.renderable) {
         ctxTexture.free();

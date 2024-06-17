@@ -28,7 +28,12 @@ import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({
+export async function automation(settings: ExampleSettings) {
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({
   renderer,
   driverName,
   testRoot,
@@ -37,9 +42,9 @@ export default async function ({
   const BEGIN_Y = FONT_SIZE;
 
   const header = renderer.createTextNode({
+    fontFamily: 'Ubuntu',
     text: `Texture Test (${driverName})`,
     fontSize: FONT_SIZE,
-    offsetY: -5,
     parent: testRoot,
   });
 
@@ -227,10 +232,10 @@ export default async function ({
     expectedHeight: number,
   ) {
     const textNode = renderer.createTextNode({
+      fontFamily: 'Ubuntu',
       x: curX,
       text: '',
       fontSize: FONT_SIZE,
-      offsetY: -5,
       parent: testRoot,
     });
 
@@ -271,10 +276,10 @@ export default async function ({
 
   async function execFailureTest(imgNode: INode) {
     const textNode = renderer.createTextNode({
+      fontFamily: 'Ubuntu',
       x: curX,
       text: '',
       fontSize: FONT_SIZE,
-      offsetY: -5,
       parent: testRoot,
     });
 

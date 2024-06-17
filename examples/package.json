@@ -20,7 +20,8 @@
   "author": "Frank Weindel",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lightningjs/renderer": "link:.."
+    "@lightningjs/renderer": "link:..",
+    "@stdlib/random-base-mt19937": "^0.2.1"
   },
   "devDependencies": {
     "@lightningjs/vite-plugin-import-chunk-url": "^0.3.0",

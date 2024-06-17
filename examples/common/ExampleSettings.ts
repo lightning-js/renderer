@@ -23,6 +23,17 @@ import type { INode, RendererMain } from '@lightningjs/renderer';
  * Keep in sync with `visual-regression/src/index.ts`
  */
 export interface SnapshotOptions {
+  /**
+   * Snapshot name
+   *
+   * @remarks
+   * This name, if provided, is appended to the end of the test name and used in
+   * the snapshot file name.
+   */
+  name?: string;
+  /**
+   * Clip the snapshot to a specific area of the canvas.
+   */
   clip?: {
     x: number;
     y: number;

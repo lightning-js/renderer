@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-import { TrFontFace, type TrFontFaceDescriptors } from './TrFontFace.js';
+import {
+  TrFontFace,
+  type TrFontFaceDescriptors,
+  type TrFontFaceOptions,
+} from './TrFontFace.js';
 
 declare module './TrFontFace.js' {
   interface TrFontFaceMap {
@@ -25,16 +29,18 @@ declare module './TrFontFace.js' {
   }
 }
 
+export interface WebTrFontFaceOptions extends TrFontFaceOptions {
+  fontUrl: string;
+}
+
 export class WebTrFontFace extends TrFontFace {
   public readonly fontFace: FontFace;
   public readonly fontUrl: string;
 
-  constructor(
-    fontFamily: string,
-    descriptors: Partial<TrFontFaceDescriptors>,
-    fontUrl: string,
-  ) {
-    super(fontFamily, descriptors);
+  constructor(options: WebTrFontFaceOptions) {
+    super(options);
+
+    const { fontFamily, fontUrl } = options;
 
     // Filter out parentheses from fontUrl
     const fontUrlWithoutParentheses = fontUrl.replace(/\(|\)/g, '');

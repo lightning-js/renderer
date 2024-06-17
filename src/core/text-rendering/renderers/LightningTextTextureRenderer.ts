@@ -19,7 +19,12 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
+import { assertTruthy } from '../../../utils.js';
 import { getRgbaString, type RGBA } from '../../lib/utils.js';
+import { calcDefaultLineHeight } from '../TextRenderingUtils.js';
+import { getWebFontMetrics } from '../TextTextureRendererUtils.js';
+import type { NormalizedFontMetrics } from '../font-face-types/TrFontFace.js';
+import type { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 
 const MAX_TEXTURE_DIMENSION = 2048;
 
@@ -62,7 +67,8 @@ export interface Settings {
   fontStyle: string;
   fontSize: number;
   fontBaselineRatio: number;
-  fontFace: string | null;
+  fontFamily: string | null;
+  trFontFace: WebTrFontFace | null;
   wordWrap: boolean;
   wordWrapWidth: number;
   wordBreak: boolean;
@@ -73,6 +79,7 @@ export interface Settings {
   verticalAlign: TextVerticalAlign;
   offsetY: number | null;
   maxLines: number;
+  maxHeight: number | null;
   overflowSuffix: string;
   precision: number;
   textColor: RGBA;
@@ -117,12 +124,14 @@ export interface RenderInfo {
   cutEx: number;
   cutEy: number;
   lineHeight: number;
+  defLineHeight: number;
   lineWidths: number[];
   offsetY: number;
   paddingLeft: number;
   paddingRight: number;
   letterSpacing: number;
   textIndent: number;
+  metrics: NormalizedFontMetrics;
 }
 
 /**
@@ -186,7 +195,7 @@ export class LightningTextTextureRenderer {
   }
 
   _getFontSetting() {
-    const ff = [this._settings.fontFace];
+    const ff = [this._settings.fontFamily];
 
     const ffs = [];
     for (let i = 0, n = ff.length; i < n; i++) {
@@ -238,7 +247,6 @@ export class LightningTextTextureRenderer {
       this._settings.offsetY === null
         ? null
         : this._settings.offsetY * precision;
-    let lineHeight = (this._settings.lineHeight || fontSize) * precision;
     const w = this._settings.w * precision;
     const h = this._settings.h * precision;
     let wordWrapWidth = this._settings.wordWrapWidth * precision;
@@ -248,9 +256,30 @@ export class LightningTextTextureRenderer {
     const cutEy = this._settings.cutEy * precision;
     const letterSpacing = (this._settings.letterSpacing || 0) * precision;
     const textIndent = this._settings.textIndent * precision;
+    const trFontFace = this._settings.trFontFace;
 
     // Set font properties.
     this.setFontProperties();
+
+    assertTruthy(trFontFace);
+    const metrics = getWebFontMetrics(this._context, trFontFace, fontSize);
+    const defLineHeight = calcDefaultLineHeight(metrics, fontSize) * precision;
+    const lineHeight =
+      this._settings.lineHeight !== null
+        ? this._settings.lineHeight * precision
+        : defLineHeight;
+
+    const maxHeight = this._settings.maxHeight;
+    const containedMaxLines =
+      maxHeight !== null && lineHeight > 0
+        ? Math.floor(maxHeight / lineHeight)
+        : 0;
+
+    const setMaxLines = this._settings.maxLines;
+    const calcMaxLines =
+      containedMaxLines > 0 && setMaxLines > 0
+        ? Math.min(containedMaxLines, setMaxLines)
+        : Math.max(containedMaxLines, setMaxLines);
 
     // Total width.
     let width = w || 2048 / this.getPrecision();
@@ -305,8 +334,8 @@ export class LightningTextTextureRenderer {
     }
     let lines = linesInfo.l;
 
-    if (this._settings.maxLines && lines.length > this._settings.maxLines) {
-      const usedLines = lines.slice(0, this._settings.maxLines);
+    if (calcMaxLines && lines.length > calcMaxLines) {
+      const usedLines = lines.slice(0, calcMaxLines);
 
       let otherLines = null;
       if (this._settings.overflowSuffix) {
@@ -333,7 +362,7 @@ export class LightningTextTextureRenderer {
       const n = lines.length;
       let j = 0;
       const m = linesInfo.n.length;
-      for (i = this._settings.maxLines; i < n; i++) {
+      for (i = calcMaxLines; i < n; i++) {
         otherLines[j] += `${otherLines[j] ? ' ' : ''}${lines[i]!}`;
         if (i + 1 < m && linesInfo.n[i + 1]) {
           j++;
@@ -367,9 +396,6 @@ export class LightningTextTextureRenderer {
       width = maxLineWidth + paddingLeft + paddingRight;
       innerWidth = maxLineWidth;
     }
-
-    // calculate text height
-    lineHeight = lineHeight || fontSize;
 
     let height;
     if (h) {
@@ -420,12 +446,14 @@ export class LightningTextTextureRenderer {
     renderInfo.cutEx = cutEx;
     renderInfo.cutEy = cutEy;
     renderInfo.lineHeight = lineHeight;
+    renderInfo.defLineHeight = defLineHeight;
     renderInfo.lineWidths = lineWidths;
     renderInfo.offsetY = offsetY;
     renderInfo.paddingLeft = paddingLeft;
     renderInfo.paddingRight = paddingRight;
     renderInfo.letterSpacing = letterSpacing;
     renderInfo.textIndent = textIndent;
+    renderInfo.metrics = metrics;
 
     return renderInfo as RenderInfo;
   }
@@ -477,17 +505,33 @@ export class LightningTextTextureRenderer {
 
     const drawLines = [];
 
+    const { metrics } = renderInfo;
+
+    /**
+     * Ascender (in pixels)
+     */
+    const ascenderPx = metrics
+      ? metrics.ascender * renderInfo.fontSize
+      : renderInfo.fontSize;
+
+    /**
+     * Bare line height is the distance between the ascender and descender of the font.
+     * without the line gap metric.
+     */
+    const bareLineHeightPx =
+      (metrics.ascender - metrics.descender) * renderInfo.fontSize;
+
     // Draw lines line by line.
     for (let i = 0, n = lines.length; i < n; i++) {
       linePositionX = i === 0 ? renderInfo.textIndent : 0;
 
       // By default, text is aligned to top
-      linePositionY = i * renderInfo.lineHeight + renderInfo.offsetY;
+      linePositionY = i * renderInfo.lineHeight + ascenderPx;
 
       if (this._settings.verticalAlign == 'middle') {
-        linePositionY += (renderInfo.lineHeight - renderInfo.fontSize) / 2;
+        linePositionY += (renderInfo.lineHeight - bareLineHeightPx) / 2;
       } else if (this._settings.verticalAlign == 'bottom') {
-        linePositionY += renderInfo.lineHeight - renderInfo.fontSize;
+        linePositionY += renderInfo.lineHeight - bareLineHeightPx;
       }
 
       if (this._settings.textAlign === 'right') {
@@ -699,7 +743,8 @@ export class LightningTextTextureRenderer {
       h: 0,
       fontStyle: 'normal',
       fontSize: 40,
-      fontFace: null,
+      fontFamily: null,
+      trFontFace: null,
       wordWrap: true,
       wordWrapWidth: 0,
       wordBreak: false,
@@ -710,6 +755,7 @@ export class LightningTextTextureRenderer {
       verticalAlign: 'top',
       offsetY: null,
       maxLines: 0,
+      maxHeight: null,
       overflowSuffix: '...',
       textColor: [1.0, 1.0, 1.0, 1.0],
       paddingLeft: 0,
