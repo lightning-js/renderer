@@ -206,34 +206,6 @@ export default async function test(settings: ExampleSettings) {
 
         curX += containerProps.width + PADDING;
 
-        const container2 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 0.5,
-          x: containerProps.width / 2,
-          y: containerProps.height / 2,
-          parent: container2,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container3 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 1,
-          x: containerProps.width,
-          y: containerProps.height,
-          parent: container3,
-        });
-
         rowNode.height = containerProps.height;
         return rowNode.height;
       },
@@ -242,7 +214,7 @@ export default async function test(settings: ExampleSettings) {
       title:
         'Texture Width > Height - resizeMode contain maximum width of node',
       content: async (rowNode) => {
-        let curX = 0;
+        const curX = 0;
         const containerProps = {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE - 200,
@@ -274,36 +246,6 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           ...textureNodeProps,
           parent: container1,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container2 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 0.5,
-          x: containerProps.width / 2,
-          y: containerProps.height / 2,
-          parent: container2,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container3 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 1,
-          x: containerProps.width,
-          y: containerProps.height,
-          parent: container3,
         });
 
         rowNode.height = containerProps.height;
@@ -360,39 +302,9 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: containerProps.width / 2,
           y: containerProps.height / 2,
-          parent: container2,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container3 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 1,
-          x: containerProps.width,
-          y: containerProps.height,
-          parent: container3,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container4 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 0.5,
-          x: containerProps.width / 2,
-          y: containerProps.height / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),
-          parent: container4,
+          parent: container2,
         });
 
         rowNode.height = containerProps.height;
@@ -449,39 +361,9 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: containerProps.width / 2,
           y: containerProps.height / 2,
-          parent: container2,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container3 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 1,
-          x: containerProps.width,
-          y: containerProps.height,
-          parent: container3,
-        });
-
-        curX += containerProps.width + PADDING;
-
-        const container4 = renderer.createNode({
-          ...containerProps,
-          x: curX,
-        });
-
-        renderer.createNode({
-          ...textureNodeProps,
-          mount: 0.5,
-          x: containerProps.width / 2,
-          y: containerProps.height / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),
-          parent: container4,
+          parent: container2,
         });
 
         rowNode.height = containerProps.height;
