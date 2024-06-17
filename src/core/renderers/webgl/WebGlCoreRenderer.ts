@@ -352,78 +352,75 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+    } else if (tb !== 0 || tc !== 0) {
+      // Upper-Left
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
+      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
+      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
+      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+
+      // Upper-Right
+      fQuadBuffer[bufferIdx++] = tx + width * ta;
+      fQuadBuffer[bufferIdx++] = ty + width * tc;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY1;
+      uiQuadBuffer[bufferIdx++] = colorTr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Left
+      fQuadBuffer[bufferIdx++] = tx + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + height * td;
+      fQuadBuffer[bufferIdx++] = texCoordX1;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBl;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Right
+      fQuadBuffer[bufferIdx++] = tx + width * ta + height * tb;
+      fQuadBuffer[bufferIdx++] = ty + width * tc + height * td;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
     } else {
-      // render quad advanced
-      if (tb !== 0 || tc !== 0) {
-        // Upper-Left
-        fQuadBuffer[bufferIdx++] = tx; // vertexX
-        fQuadBuffer[bufferIdx++] = ty; // vertexY
-        fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-        fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-        uiQuadBuffer[bufferIdx++] = colorTl; // color
-        fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+      // Calculate the right corner of the quad
+      // multiplied by the scale
+      const rightCornerX = tx + width * ta;
+      const rightCornerY = ty + height * td;
 
-        // Upper-Right
-        fQuadBuffer[bufferIdx++] = tx + width * ta;
-        fQuadBuffer[bufferIdx++] = ty + width * tc;
-        fQuadBuffer[bufferIdx++] = texCoordX2;
-        fQuadBuffer[bufferIdx++] = texCoordY1;
-        uiQuadBuffer[bufferIdx++] = colorTr;
-        fQuadBuffer[bufferIdx++] = textureIdx;
+      // Upper-Left
+      fQuadBuffer[bufferIdx++] = tx; // vertexX
+      fQuadBuffer[bufferIdx++] = ty; // vertexY
+      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
+      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
+      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
-        // Lower-Left
-        fQuadBuffer[bufferIdx++] = tx + height * tb;
-        fQuadBuffer[bufferIdx++] = ty + height * td;
-        fQuadBuffer[bufferIdx++] = texCoordX1;
-        fQuadBuffer[bufferIdx++] = texCoordY2;
-        uiQuadBuffer[bufferIdx++] = colorBl;
-        fQuadBuffer[bufferIdx++] = textureIdx;
+      // Upper-Right
+      fQuadBuffer[bufferIdx++] = rightCornerX;
+      fQuadBuffer[bufferIdx++] = ty;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY1;
+      uiQuadBuffer[bufferIdx++] = colorTr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
 
-        // Lower-Right
-        fQuadBuffer[bufferIdx++] = tx + width * ta + height * tb;
-        fQuadBuffer[bufferIdx++] = ty + width * tc + height * td;
-        fQuadBuffer[bufferIdx++] = texCoordX2;
-        fQuadBuffer[bufferIdx++] = texCoordY2;
-        uiQuadBuffer[bufferIdx++] = colorBr;
-        fQuadBuffer[bufferIdx++] = textureIdx;
-      } else {
-        // Calculate the right corner of the quad
-        // multiplied by the scale
-        const rightCornerX = tx + width * ta;
-        const rightCornerY = ty + height * td;
+      // Lower-Left
+      fQuadBuffer[bufferIdx++] = tx;
+      fQuadBuffer[bufferIdx++] = rightCornerY;
+      fQuadBuffer[bufferIdx++] = texCoordX1;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBl;
+      fQuadBuffer[bufferIdx++] = textureIdx;
 
-        // Upper-Left
-        fQuadBuffer[bufferIdx++] = tx; // vertexX
-        fQuadBuffer[bufferIdx++] = ty; // vertexY
-        fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-        fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-        uiQuadBuffer[bufferIdx++] = colorTl; // color
-        fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
-
-        // Upper-Right
-        fQuadBuffer[bufferIdx++] = rightCornerX;
-        fQuadBuffer[bufferIdx++] = ty;
-        fQuadBuffer[bufferIdx++] = texCoordX2;
-        fQuadBuffer[bufferIdx++] = texCoordY1;
-        uiQuadBuffer[bufferIdx++] = colorTr;
-        fQuadBuffer[bufferIdx++] = textureIdx;
-
-        // Lower-Left
-        fQuadBuffer[bufferIdx++] = tx;
-        fQuadBuffer[bufferIdx++] = rightCornerY;
-        fQuadBuffer[bufferIdx++] = texCoordX1;
-        fQuadBuffer[bufferIdx++] = texCoordY2;
-        uiQuadBuffer[bufferIdx++] = colorBl;
-        fQuadBuffer[bufferIdx++] = textureIdx;
-
-        // Lower-Right
-        fQuadBuffer[bufferIdx++] = rightCornerX;
-        fQuadBuffer[bufferIdx++] = rightCornerY;
-        fQuadBuffer[bufferIdx++] = texCoordX2;
-        fQuadBuffer[bufferIdx++] = texCoordY2;
-        uiQuadBuffer[bufferIdx++] = colorBr;
-        fQuadBuffer[bufferIdx++] = textureIdx;
-      }
+      // Lower-Right
+      fQuadBuffer[bufferIdx++] = rightCornerX;
+      fQuadBuffer[bufferIdx++] = rightCornerY;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
     }
     // Update the length of the current render op
     curRenderOp.length += WORDS_PER_QUAD;
