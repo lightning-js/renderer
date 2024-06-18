@@ -1300,9 +1300,16 @@ export class CoreNode extends EventEmitter {
       premultipliedColorBr,
     } = this;
 
-    const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
+    const {
+      zIndex,
+      worldAlpha,
+      globalTransform: gt,
+      clippingRect,
+      renderCoords,
+    } = this;
 
     assertTruthy(gt);
+    assertTruthy(renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1325,6 +1332,7 @@ export class CoreNode extends EventEmitter {
       tb: gt.tb,
       tc: gt.tc,
       td: gt.td,
+      renderCoords,
       rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
