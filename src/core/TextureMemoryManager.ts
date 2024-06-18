@@ -18,6 +18,7 @@
  */
 import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
+import { bytesToMb } from './utils.js';
 
 export interface TextureMemoryManagerSettings {
   /**
@@ -30,7 +31,7 @@ export interface TextureMemoryManagerSettings {
    *
    * When set to `0`, the Texture Memory Manager is disabled.
    *
-   * @defaultValue `124e6` (124 MB)
+   * @defaultValue `124e6` (118 MB)
    */
   criticalThreshold: number;
 
@@ -56,7 +57,7 @@ export interface TextureMemoryManagerSettings {
    * Texture Memory Manager will perform a Texture Cleanup no more
    * frequently than this interval generally when the scene becomes idle.
    *
-   * @defaultValue `5000` (5 seconds)
+   * @defaultValue `30,000` (30 seconds)
    */
   cleanupInterval: number;
 
@@ -169,7 +170,8 @@ export class TextureMemoryManager {
   checkCleanup() {
     return (
       this.criticalCleanupRequested ||
-      this.frameTime - this.lastCleanupTime >= this.cleanupInterval
+      (this.memUsed > this.targetThreshold &&
+        this.frameTime - this.lastCleanupTime >= this.cleanupInterval)
     );
   }
 
@@ -248,7 +250,8 @@ export class TextureMemoryManager {
    * Get the current texture memory usage information
    *
    * @remarks
-   *
+   * This method is for debugging purposes and returns information about the
+   * current memory usage of the textures in the Renderer.
    */
   getMemoryInfo(): MemoryInfo {
     let renderableTexturesLoaded = 0;
@@ -271,8 +274,4 @@ export class TextureMemoryManager {
       loadedTextures: this.loadedTextures.size,
     };
   }
-}
-
-function bytesToMb(bytes: number) {
-  return (bytes / 1024 / 1024).toFixed(2);
 }

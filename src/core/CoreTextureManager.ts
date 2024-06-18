@@ -255,27 +255,7 @@ export class CoreTextureManager {
     const { inverseKeyCache, keyCache } = this;
     const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
-      inverseKeyCache.delete(texture);
       keyCache.delete(cacheKey);
     }
-  }
-
-  /**
-   * Get an object containing debug information about the texture manager.
-   *
-   * @returns
-   */
-  getDebugInfo(): TextureManagerDebugInfo {
-    // const textureSet = new Set<Texture>();
-    // for (const texture of this.textureIdCache.values()) {
-    //   textureSet.add(texture);
-    // }
-    // for (const texture of this.textureKeyCache.values()) {
-    //   textureSet.add(texture);
-    // }
-    // TODO: Output number of bytes used by textures
-    return {
-      keyCacheSize: this.keyCache.size,
-    };
   }
 }

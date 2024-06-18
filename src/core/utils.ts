@@ -216,12 +216,12 @@ export const getTimingFunction = (
   return defaultTiming;
 };
 
-if (!Math.hypot)
-  Math.hypot = (...args: number[]) => {
-    let y = 0,
-      i = args.length;
-    while (i--) {
-      y += args[i]! * args[i]!;
-    }
-    return Math.sqrt(y);
-  };
+/**
+ * Convert bytes to string of megabytes with 2 decimal points
+ *
+ * @param bytes
+ * @returns
+ */
+export function bytesToMb(bytes: number) {
+  return (bytes / 1024 / 1024).toFixed(2);
+}

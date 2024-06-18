@@ -265,7 +265,7 @@ export class RendererMain extends EventEmitter {
     const resolvedTxSettings: TextureMemoryManagerSettings = {
       criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
       targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
-      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
+      cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
       debugLogging: settings.textureMemory?.debugLogging || false,
     };
     const resolvedSettings: Required<RendererMainSettings> = {
