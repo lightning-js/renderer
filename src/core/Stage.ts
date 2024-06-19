@@ -206,7 +206,6 @@ export class Stage extends EventEmitter {
       texture: null,
       textureOptions: {},
       shader: null,
-      shaderProps: null,
       rtt: false,
       src: null,
       scale: 1,

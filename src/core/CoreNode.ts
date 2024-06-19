@@ -428,10 +428,6 @@ export interface CoreNodeWritableProps {
    */
   shader: ShaderRef | null;
   /**
-   * Shader properties
-   */
-  shaderProps: Record<string, unknown> | null;
-  /**
    * Image URL
    *
    * @remarks
@@ -681,7 +677,7 @@ export class CoreNode extends EventEmitter {
 
   private _shader: CoreShader | null = null;
   private _shaderProps: Record<string, unknown> | null = null;
-
+  private _shaderPropsData: Record<string, unknown> | null = null;
   private _src = '';
 
   constructor(protected stage: Stage, props: CoreNodeWritableProps) {
@@ -792,7 +788,7 @@ export class CoreNode extends EventEmitter {
     assertTruthy(shManager);
     const { shader, props: p } = shManager.loadShader(shaderType, props);
 
-    this.props.shaderProps = p;
+    this._shaderPropsData = p;
     this._shader = shader;
 
     this.defineShaderProps();
@@ -802,7 +798,7 @@ export class CoreNode extends EventEmitter {
 
   defineShaderProps() {
     this._shaderProps = {};
-    const shaderProps = this.props.shaderProps!;
+    const shaderProps = this._shaderPropsData!;
     const keys = Object.keys(shaderProps);
     const l = keys.length;
     let i = 0;
@@ -1295,7 +1291,8 @@ export class CoreNode extends EventEmitter {
 
     this.props.texture = null;
     this.props.shader = null;
-    this.props.shaderProps = null;
+    this._shaderPropsData = null;
+    this._shaderProps = null;
     this._shader = null;
 
     if (this.rtt) {
@@ -1307,9 +1304,9 @@ export class CoreNode extends EventEmitter {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { texture, width, height, textureOptions, shaderProps, rtt } =
-      this.props;
+    const { texture, width, height, textureOptions, rtt } = this.props;
     const shader = this._shader;
+    const shaderProps = this._shaderPropsData;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture

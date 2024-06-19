@@ -465,7 +465,6 @@ export class RendererMain extends EventEmitter {
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
       shader: props.shader ?? null,
-      shaderProps: null,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',
