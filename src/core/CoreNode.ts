@@ -630,6 +630,8 @@ export type CoreNodeAnimatableProps = {
   > extends number
     ? Key
     : never]: number;
+} & {
+  shaderProps: Record<string, number>;
 };
 
 /**
@@ -677,8 +679,10 @@ export class CoreNode extends EventEmitter {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
 
-  public _shader: CoreShader | null = null;
-  public _src = '';
+  private _shader: CoreShader | null = null;
+  private _shaderProps: Record<string, unknown> | null = null;
+
+  private _src = '';
 
   constructor(protected stage: Stage, props: CoreNodeWritableProps) {
     super();
@@ -787,9 +791,35 @@ export class CoreNode extends EventEmitter {
     const shManager = this.stage.renderer.getShaderManager();
     assertTruthy(shManager);
     const { shader, props: p } = shManager.loadShader(shaderType, props);
-    this._shader = shader;
+
     this.props.shaderProps = p;
+    this._shader = shader;
+
+    this.defineShaderProps();
+
     this.setUpdateType(UpdateType.IsRenderable);
+  }
+
+  defineShaderProps() {
+    this._shaderProps = {};
+    const shaderProps = this.props.shaderProps!;
+    const keys = Object.keys(shaderProps);
+    const l = keys.length;
+    let i = 0;
+    for (; i < l; i++) {
+      const propName = keys[i]!;
+      Object.defineProperty(this._shaderProps, propName, {
+        get: () => {
+          return shaderProps[propName];
+        },
+        set: (value) => {
+          shaderProps[propName] = value;
+          this.setUpdateType(UpdateType.Local);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    }
   }
 
   /**
@@ -1791,11 +1821,7 @@ export class CoreNode extends EventEmitter {
   }
 
   get shaderProps(): Record<string, unknown> | null {
-    return this.props.shaderProps;
-  }
-
-  set shaderProps(value: Record<string, unknown> | null) {
-    this.props.shaderProps = value;
+    return this._shaderProps;
   }
 
   get src(): string {

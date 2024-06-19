@@ -355,10 +355,7 @@ export class RendererMain extends EventEmitter {
     assertTruthy(this.stage, 'Stage is not initialized');
 
     const resolvedProps = this.resolveNodeDefaults(props);
-    const node = new CoreNode(this.stage, {
-      ...resolvedProps,
-      shaderProps: null,
-    });
+    const node = new CoreNode(this.stage, resolvedProps);
 
     if (this.inspector) {
       return this.inspector.createNode(node, resolvedProps);
@@ -468,7 +465,7 @@ export class RendererMain extends EventEmitter {
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
       shader: props.shader ?? null,
-      shaderProps: props.shaderProps ?? null,
+      shaderProps: null,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',
