@@ -52,6 +52,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 
 const WORDS_PER_QUAD = 24;
+const QUAD_BUFFER_SIZE_MB = 4;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlCoreRendererOptions = CoreRendererOptions;
@@ -67,7 +68,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   system: CoreWebGlSystem;
 
   //// Persistent data
-  quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
+  quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * QUAD_BUFFER_SIZE_MB);
   fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
   uiQuadBuffer: Uint32Array = new Uint32Array(this.quadBuffer);
   renderOps: WebGlCoreRenderOp[] = [];
@@ -583,6 +584,19 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
+    if (doLog) {
+      const bufferPercentage = (
+        (this.curBufferIdx / (QUAD_BUFFER_SIZE_MB * 1024 * 1024)) *
+        100
+      ).toFixed(2);
+      console.log(
+        'quadBuffer usage: ' +
+          String(this.curBufferIdx) +
+          ' = ' +
+          bufferPercentage +
+          '%',
+      );
+    }
   }
 
   renderToTexture(node: CoreNode) {
