@@ -18,7 +18,7 @@
  */
 
 import type {
-  CoreTextNodeWritableProps,
+  ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -61,7 +61,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeWritableProps>;
 
 function generateScalingTest(
   renderer: RendererMain,
@@ -75,7 +75,7 @@ function generateScalingTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -145,7 +145,7 @@ function generateScalingTest(
           x: 100,
           y: 100,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -200,7 +200,7 @@ function generateScalingTest(
           ...NODE_PROPS,
           mount: 1,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

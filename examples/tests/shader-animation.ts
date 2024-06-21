@@ -42,11 +42,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  t1.shaderProps!.radius = 50;
+  t1.shader.props.radius = 50;
 
   const shaderAnimation = t1.animate(
     {
-      x: 400,
+      x: 1,
       shaderProps: {
         radius: 200,
       },

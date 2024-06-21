@@ -23,7 +23,7 @@ import { AnimationManager } from './animations/AnimationManager.js';
 import { CoreNode } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager } from './CoreShaderManager.js';
+import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
 import type {
   TextRenderer,
   TextRendererMap,
@@ -43,6 +43,8 @@ import type {
   CoreRendererOptions,
 } from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import type { AnyShaderController } from '../main-api/ShaderController.js';
+import type { CoreShader } from './renderers/CoreShader.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -87,6 +89,7 @@ export class Stage extends EventEmitter {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
+  public readonly defShaderCtr: AnyShaderController;
 
   /// State
   deltaTime = 0;
@@ -157,6 +160,7 @@ export class Stage extends EventEmitter {
     } else {
       this.renderer = new WebGlCoreRenderer(rendererOptions);
     }
+    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -205,7 +209,7 @@ export class Stage extends EventEmitter {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: null,
+      shader: this.defShaderCtr,
       rtt: false,
       src: null,
       scale: 1,
@@ -403,5 +407,19 @@ export class Stage extends EventEmitter {
     // Need to explicitly cast to TextRenderer because TS doesn't like
     // the covariant state argument in the setter method map
     return resolvedTextRenderer as unknown as TextRenderer;
+  }
+
+  /**
+   * Create a shader controller instance
+   *
+   * @param type
+   * @param props
+   * @returns
+   */
+  createShaderCtr(
+    type: keyof ShaderMap,
+    props: Record<string, unknown>,
+  ): AnyShaderController {
+    return this.shManager.loadShader(type, props);
   }
 }

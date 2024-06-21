@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode, CoreNodeAnimatableProps } from '../CoreNode.js';
+import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
 import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -33,10 +33,10 @@ export interface AnimationSettings {
 }
 
 export class CoreAnimation extends EventEmitter {
-  public propStartValues: Partial<CoreNodeAnimatableProps> = {};
+  public propStartValues: Partial<CoreNodeAnimateProps> = {};
   public shaderPropsStartValues: Record<string, number> = {};
 
-  public restoreValues: Partial<CoreNodeAnimatableProps> = {};
+  public restoreValues: Partial<CoreNodeAnimateProps> = {};
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
@@ -45,7 +45,7 @@ export class CoreAnimation extends EventEmitter {
 
   constructor(
     private node: CoreNode,
-    private props: Partial<CoreNodeAnimatableProps>,
+    private props: Partial<CoreNodeAnimateProps>,
     public settings: Partial<AnimationSettings>,
   ) {
     super();
@@ -56,15 +56,14 @@ export class CoreAnimation extends EventEmitter {
       if (key !== 'shaderProps') {
         this.propsList.push(key);
         this.propStartValues[
-          key as keyof Omit<CoreNodeAnimatableProps, 'shaderProps'>
-        ] = node[key as keyof Omit<CoreNodeAnimatableProps, 'shaderProps'>];
-      }
-    }
-    if (props.shaderProps) {
-      this.shaderPropsList = [];
-      for (const key in props.shaderProps) {
-        this.shaderPropsList.push(key);
-        this.shaderPropsStartValues[key] = node.shaderProps![key] as number;
+          key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
+        ] = node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>];
+      } else {
+        this.shaderPropsList = [];
+        for (const key in props.shaderProps) {
+          this.shaderPropsList.push(key);
+          this.shaderPropsStartValues[key] = node.shader.props[key] as number;
+        }
       }
     }
 
@@ -85,22 +84,16 @@ export class CoreAnimation extends EventEmitter {
   restore() {
     this.reset();
     (
-      this.propsList as Array<
-        keyof Omit<CoreNodeAnimatableProps, 'shaderProps'>
-      >
+      this.propsList as Array<keyof Omit<CoreNodeAnimateProps, 'shaderProps'>>
     ).forEach((propName) => {
       this.node[propName] = this.propStartValues[propName] as number;
     });
-
-    if (this.props.shaderProps) {
-      this.shaderPropsList?.forEach((propName) => {
-        this.node.shaderProps![propName] =
-          this.shaderPropsStartValues[propName];
-      });
-    }
+    this.shaderPropsList?.forEach((propName) => {
+      this.node.shader.props[propName] = this.shaderPropsStartValues[propName];
+    });
   }
 
-  reverseValues(
+  private reverseValues(
     propName: string,
     props: Record<string, number>,
     startValues: Record<string, number>,
@@ -116,9 +109,7 @@ export class CoreAnimation extends EventEmitter {
   reverse() {
     this.progress = 0;
     (
-      this.propsList as Array<
-        keyof Omit<CoreNodeAnimatableProps, 'shaderProps'>
-      >
+      this.propsList as Array<keyof Omit<CoreNodeAnimateProps, 'shader'>>
     ).forEach((propName) => {
       this.reverseValues(
         propName,
@@ -127,11 +118,12 @@ export class CoreAnimation extends EventEmitter {
       );
     });
 
-    if (this.props.shaderProps) {
-      this.shaderPropsList?.forEach((propName) => {
+    if (this.shaderPropsList) {
+      this.shaderPropsList.forEach((propName) => {
         this.reverseValues(
           propName,
-          this.node.shaderProps as Record<string, number>,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          this.props.shaderProps!,
           this.shaderPropsStartValues,
         );
       });
@@ -173,7 +165,7 @@ export class CoreAnimation extends EventEmitter {
     return startValue + (endValue - startValue) * this.progress;
   }
 
-  updateValues(
+  private updateValues(
     target: Record<string, number>,
     list: string[],
     props: Record<string, number>,
@@ -230,11 +222,12 @@ export class CoreAnimation extends EventEmitter {
       easing,
     );
 
-    if (this.props.shaderProps) {
+    if (this.shaderPropsList) {
       this.updateValues(
-        this.node.shaderProps as Record<string, number>,
-        this.shaderPropsList!,
-        this.props.shaderProps,
+        this.node.shader.props as Record<string, number>,
+        this.shaderPropsList,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.props.shaderProps!,
         this.shaderPropsStartValues,
         easing,
       );

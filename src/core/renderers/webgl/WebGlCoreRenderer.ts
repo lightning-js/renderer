@@ -50,6 +50,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import type { AnyShaderController } from '../../../main-api/ShaderController.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -79,6 +80,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
+  defShaderCtrl: AnyShaderController;
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
@@ -127,7 +129,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
+    this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
+    this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -631,5 +634,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+
+  override getDefShaderCtr(): AnyShaderController {
+    return this.defShaderCtrl;
   }
 }

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode, RendererMain } from '@lightningjs/renderer';
+import type { INode, RendererMain } from '@lightningjs/renderer';
 
 /**
  * Keep in sync with `visual-regression/src/index.ts`
@@ -62,7 +62,7 @@ export interface ExampleSettings {
    * Tests should NEVER use the `renderer.root` node as this will prevent the
    * automation mode from being able to clean up after each test.
    */
-  testRoot: CoreNode;
+  testRoot: INode;
   /**
    * Whether the test is being run in automation mode.
    */

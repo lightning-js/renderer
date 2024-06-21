@@ -18,17 +18,17 @@
  */
 
 import type {
-  CoreNode,
-  CoreNodeWritableProps,
+  INode,
+  INodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 
 export class Component {
-  readonly node: CoreNode;
+  readonly node: INode;
 
   constructor(
     readonly renderer: RendererMain,
-    nodeProps: Partial<CoreNodeWritableProps>,
+    nodeProps: Partial<INodeWritableProps>,
   ) {
     this.node = renderer.createNode({
       ...nodeProps,

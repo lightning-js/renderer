@@ -39,6 +39,16 @@ import {
   CoreTextNode,
   type CoreTextNodeWritableProps,
 } from '../core/CoreTextNode.js';
+import type {
+  AnyShaderController,
+  ShaderController,
+} from './ShaderController.js';
+import type {
+  INode,
+  INodeWritableProps,
+  ITextNode,
+  ITextNodeWritableProps,
+} from './INode.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -104,7 +114,7 @@ export interface RendererMainSettings {
   txMemByteThreshold?: number;
 
   /**
-   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   * Bounds margin to extend the boundary in which a Node is added as Quad.
    */
   boundsMargin?: number | [number, number, number, number];
 
@@ -229,7 +239,7 @@ export interface RendererMainSettings {
  * ```
  */
 export class RendererMain extends EventEmitter {
-  readonly root: CoreNode;
+  readonly root: INode<ShaderController<'DefaultShader'>>;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
@@ -314,7 +324,9 @@ export class RendererMain extends EventEmitter {
     });
 
     // Extract the root node
-    this.root = this.stage.root;
+    this.root = this.stage.root as unknown as INode<
+      ShaderController<'DefaultShader'>
+    >;
 
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
@@ -351,20 +363,26 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
+  createNode<
+    ShCtr extends AnyShaderController = ShaderController<'DefaultShader'>,
+  >(props: Partial<INodeWritableProps<ShCtr>>): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const resolvedProps = this.resolveNodeDefaults(props);
+    const resolvedProps = this.resolveNodeDefaults(
+      props as CoreNodeWritableProps,
+    );
     const node = new CoreNode(this.stage, resolvedProps);
 
     if (this.inspector) {
-      return this.inspector.createNode(node, resolvedProps);
+      return this.inspector.createNode(
+        node,
+        resolvedProps,
+      ) as unknown as INode<ShCtr>;
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
-
-    return node;
+    return node as unknown as INode<ShCtr>;
   }
 
   /**
@@ -381,10 +399,10 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<CoreTextNodeWritableProps>): CoreTextNode {
+  createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
     const fontSize = props.fontSize ?? 16;
     const data = {
-      ...this.resolveNodeDefaults(props),
+      ...this.resolveNodeDefaults(props as CoreTextNodeWritableProps),
       id: getNewId(),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
@@ -412,10 +430,13 @@ export class RendererMain extends EventEmitter {
     const textNode = new CoreTextNode(this.stage, data);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode, data);
+      return this.inspector.createTextNode(
+        textNode,
+        data,
+      ) as unknown as ITextNode;
     }
 
-    return textNode;
+    return textNode as unknown as ITextNode;
   }
 
   /**
@@ -429,7 +450,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  resolveNodeDefaults(
+  private resolveNodeDefaults(
     props: Partial<CoreNodeWritableProps>,
   ): CoreNodeWritableProps {
     const color = props.color ?? 0xffffffff;
@@ -464,7 +485,7 @@ export class RendererMain extends EventEmitter {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? null,
+      shader: props.shader ?? this.stage.defShaderCtr,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',
@@ -492,7 +513,7 @@ export class RendererMain extends EventEmitter {
    * @param node
    * @returns
    */
-  destroyNode(node: CoreNode) {
+  destroyNode(node: INode) {
     if (this.inspector) {
       this.inspector.destroyNode(node.id);
     }
@@ -541,12 +562,8 @@ export class RendererMain extends EventEmitter {
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
     props?: ExtractProps<ShaderMap[ShType]>,
-  ): SpecificShaderRef<ShType> {
-    return {
-      descType: 'shader',
-      shType: shaderType,
-      props: props as SpecificShaderRef<ShType>['props'],
-    };
+  ): ShaderController<ShType> {
+    return this.stage.shManager.loadShader(shaderType, props);
   }
 
   /**

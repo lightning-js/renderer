@@ -18,7 +18,7 @@
  */
 
 import {
-  type CoreNode,
+  type INode,
   type Dimensions,
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
@@ -195,7 +195,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   await execFailureTest(subTxFailure2);
 
-  function waitForTxLoaded(imgNode: CoreNode) {
+  function waitForTxLoaded(imgNode: INode) {
     return new Promise<Dimensions>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
@@ -206,7 +206,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
-  function waitForTxFailed(imgNode: CoreNode) {
+  function waitForTxFailed(imgNode: INode) {
     return new Promise<boolean>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
@@ -218,7 +218,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   async function execLoadingTest(
-    imgNode: CoreNode,
+    imgNode: INode,
     expectedWidth: number,
     expectedHeight: number,
   ) {
@@ -265,7 +265,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     curTest++;
   }
 
-  async function execFailureTest(imgNode: CoreNode) {
+  async function execFailureTest(imgNode: INode) {
     const textNode = renderer.createTextNode({
       x: curX,
       text: '',

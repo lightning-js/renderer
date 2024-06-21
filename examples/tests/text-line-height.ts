@@ -18,7 +18,7 @@
  */
 
 import type {
-  CoreTextNodeWritableProps,
+  ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -56,7 +56,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeWritableProps>;
 
 function generateLineHeightTest(
   renderer: RendererMain,
@@ -71,7 +71,7 @@ function generateLineHeightTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

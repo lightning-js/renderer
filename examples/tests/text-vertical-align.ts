@@ -18,8 +18,8 @@
  */
 
 import type {
-  CoreTextNode,
-  CoreTextNodeWritableProps,
+  ITextNode,
+  ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -55,11 +55,11 @@ const NODE_PROPS = {
   textRendererOverride: 'sdf',
   fontSize: 50,
   lineHeight: 70,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeWritableProps>;
 
 const CONTAINER_SIZE = 200;
 
-function getSquare(renderer: RendererMain, node: CoreTextNode) {
+function getSquare(renderer: RendererMain, node: ITextNode) {
   const wrapper = renderer.createNode({
     width: CONTAINER_SIZE,
     height: CONTAINER_SIZE,
@@ -94,7 +94,7 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'txyz',
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -129,7 +129,7 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'abcd\ntxyz',
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

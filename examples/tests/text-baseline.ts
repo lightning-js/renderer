@@ -18,7 +18,7 @@
  */
 
 import type {
-  CoreTextNodeWritableProps,
+  ITextNodeWritableProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -57,7 +57,7 @@ const NODE_PROPS = {
   textRendererOverride: 'sdf',
   fontSize: 50,
   lineHeight: 70,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeWritableProps>;
 
 function generateBaselineTest(
   renderer: RendererMain,
@@ -72,7 +72,7 @@ function generateBaselineTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeWritableProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

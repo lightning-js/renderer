@@ -18,6 +18,7 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
+import type { AnyShaderController } from '../../main-api/ShaderController.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type {
@@ -28,7 +29,6 @@ import type { Stage } from '../Stage.js';
 import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RectWithValid } from '../lib/utils.js';
-import { ColorTexture } from '../textures/ColorTexture.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShader } from './CoreShader.js';
@@ -100,4 +100,5 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
+  abstract getDefShaderCtr(): AnyShaderController;
 }

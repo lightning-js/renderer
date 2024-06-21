@@ -18,7 +18,6 @@
  */
 
 import { ImageWorkerManager } from './lib/ImageWorker.js';
-import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';

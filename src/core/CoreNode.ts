@@ -54,7 +54,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type { ShaderRef } from '../main-api/Renderer.js';
+import type { AnyShaderController } from '../main-api/ShaderController.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -426,7 +426,7 @@ export interface CoreNodeWritableProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: ShaderRef | null;
+  shader: AnyShaderController;
   /**
    * Image URL
    *
@@ -618,29 +618,31 @@ export interface CoreNodeWritableProps {
 }
 
 /**
- * Animatable properties of a Node
+ * Grab all the number properties of type T
  */
-export type CoreNodeAnimatableProps = {
-  [Key in keyof CoreNodeWritableProps as NonNullable<
-    CoreNodeWritableProps[Key]
-  > extends number
-    ? Key
-    : never]: number;
-} & {
-  shaderProps: Record<string, number>;
+type NumberProps<T> = {
+  [Key in keyof T as NonNullable<T[Key]> extends number ? Key : never]: number;
 };
+
+/**
+ * Properties of a Node used by the animate() function
+ */
+export interface CoreNodeAnimateProps
+  extends NumberProps<CoreNodeWritableProps> {
+  /**
+   * Shader properties to animate
+   */
+  shaderProps: Record<string, number>;
+  // TODO: textureProps: Record<string, number>;
+}
 
 /**
  * A visual Node in the Renderer scene graph.
  *
  * @remarks
- * A Node is a basic building block of the Renderer scene graph. It can be a
- * container for other Nodes, or it can be a leaf Node that renders a solid
- * color, gradient, image, or specific texture, using a specific shader.
- *
- * For text rendering, see {@link CoreTextNode}.
- *
- * This is named `CoreNode` because the browser already defines a `Node` class.
+ * CoreNode is an internally used class that represents a Renderer Node in the
+ * scene graph. See INode.ts for the public APIs exposed to Renderer users
+ * that include generic types for Shaders.
  */
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
@@ -674,10 +676,6 @@ export class CoreNode extends EventEmitter {
   public calcZIndex = 0;
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
-
-  private _shader: CoreShader | null = null;
-  private _shaderProps: Record<string, unknown> | null = null;
-  private _shaderPropsData: Record<string, unknown> | null = null;
   private _src = '';
 
   constructor(protected stage: Stage, props: CoreNodeWritableProps) {
@@ -687,7 +685,7 @@ export class CoreNode extends EventEmitter {
       ...props,
       parent: null,
       texture: null,
-      shader: null,
+      shader: stage.defShaderCtr,
       src: '',
       rtt: false,
       data: props.data || {},
@@ -779,44 +777,6 @@ export class CoreNode extends EventEmitter {
     } satisfies NodeTextureFreedPayload);
   };
   //#endregion Textures
-
-  loadShader<Type extends keyof ShaderMap>(
-    shaderType: Type,
-    props: ExtractProps<ShaderMap[Type]>,
-  ): void {
-    const shManager = this.stage.renderer.getShaderManager();
-    assertTruthy(shManager);
-    const { shader, props: p } = shManager.loadShader(shaderType, props);
-
-    this._shaderPropsData = p;
-    this._shader = shader;
-
-    this.defineShaderProps();
-
-    this.setUpdateType(UpdateType.IsRenderable);
-  }
-
-  defineShaderProps() {
-    this._shaderProps = {};
-    const shaderProps = this._shaderPropsData!;
-    const keys = Object.keys(shaderProps);
-    const l = keys.length;
-    let i = 0;
-    for (; i < l; i++) {
-      const propName = keys[i]!;
-      Object.defineProperty(this._shaderProps, propName, {
-        get: () => {
-          return shaderProps[propName];
-        },
-        set: (value) => {
-          shaderProps[propName] = value;
-          this.setUpdateType(UpdateType.Local);
-        },
-        enumerable: true,
-        configurable: true,
-      });
-    }
-  }
 
   /**
    * Change types types is used to determine the scope of the changes being applied
@@ -1042,7 +1002,7 @@ export class CoreNode extends EventEmitter {
       return false;
     }
 
-    if (this._shader) {
+    if (this.props.shader === this.stage.defShaderCtr) {
       return true;
     }
 
@@ -1290,10 +1250,7 @@ export class CoreNode extends EventEmitter {
     delete this.localTransform;
 
     this.props.texture = null;
-    this.props.shader = null;
-    this._shaderPropsData = null;
-    this._shaderProps = null;
-    this._shader = null;
+    this.props.shader = this.stage.defShaderCtr;
 
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
@@ -1304,9 +1261,7 @@ export class CoreNode extends EventEmitter {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { texture, width, height, textureOptions, rtt } = this.props;
-    const shader = this._shader;
-    const shaderProps = this._shaderPropsData;
+    const { texture, width, height, textureOptions, rtt, shader } = this.props;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
@@ -1342,8 +1297,8 @@ export class CoreNode extends EventEmitter {
       texture,
       textureOptions,
       zIndex,
-      shader,
-      shaderProps,
+      shader: shader.shader,
+      shaderProps: shader.props,
       alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,
@@ -1796,29 +1751,20 @@ export class CoreNode extends EventEmitter {
     this.stage.renderer?.renderToTexture(this);
   }
 
-  get shader(): ShaderRef | null {
+  get shader(): AnyShaderController {
     return this.props.shader;
   }
 
-  set shader(value: ShaderRef | null) {
-    if (value === null && this._shader === null) {
-      return;
-    }
-
-    if (value === null) {
-      this._shader = null;
-      this.props.shader = null;
-      this.setUpdateType(UpdateType.IsRenderable);
+  set shader(value: AnyShaderController) {
+    if (this.props.shader === value) {
       return;
     }
 
     this.props.shader = value;
-    assertTruthy(value);
-    this.loadShader(value.shType, value.props);
-  }
 
-  get shaderProps(): Record<string, unknown> | null {
-    return this._shaderProps;
+    if (value === this.stage.defShaderCtr) {
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
   }
 
   get src(): string {
@@ -1904,7 +1850,7 @@ export class CoreNode extends EventEmitter {
   }
 
   animate(
-    props: Partial<CoreNodeAnimatableProps>,
+    props: Partial<CoreNodeAnimateProps>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this, props, settings);

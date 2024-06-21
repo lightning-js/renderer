@@ -17,10 +17,7 @@
  * limitations under the License.
  */
 
-import {
-  type CoreNode,
-  type IAnimationController,
-} from '@lightningjs/renderer';
+import { type INode, type IAnimationController } from '@lightningjs/renderer';
 import rocko from '../assets/rocko.png';
 import elevator from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
@@ -303,7 +300,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     }
   }, 1000);
 
-  let blueRect: CoreNode | null = null;
+  let blueRect: INode | null = null;
 
   const interval = setInterval(() => {
     redRect.color++;

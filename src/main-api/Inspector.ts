@@ -1,6 +1,6 @@
 import {
   CoreNode,
-  type CoreNodeAnimatableProps,
+  type CoreNodeAnimateProps,
   type CoreNodeWritableProps,
 } from '../core/CoreNode.js';
 import { type RendererMainSettings } from './Renderer.js';
@@ -280,10 +280,7 @@ export class Inspector {
         }
 
         if (property === 'animate') {
-          return (
-            props: CoreNodeAnimatableProps,
-            settings: AnimationSettings,
-          ) => {
+          return (props: CoreNodeAnimateProps, settings: AnimationSettings) => {
             const anim = target.animate(props, settings);
 
             // Trap the animate start function so we can update the inspector accordingly
@@ -415,7 +412,7 @@ export class Inspector {
   // simple animation handler
   animateNode(
     div: HTMLElement,
-    props: CoreNodeAnimatableProps,
+    props: CoreNodeAnimateProps,
     settings: AnimationSettings,
   ) {
     const {

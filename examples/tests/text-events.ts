@@ -18,8 +18,8 @@
  */
 
 import {
-  type CoreNode,
-  type CoreTextNode,
+  type INode,
+  type ITextNode,
   type RendererMain,
   type Dimensions,
   type NodeLoadedEventHandler,
@@ -182,12 +182,12 @@ interface BoxedTextProps {
   boxColor2: number;
   textColor: number;
   fontFamily: string;
-  parent: CoreNode | null;
+  parent: INode | null;
 }
 
 class BoxedText extends EventEmitter implements BoxedTextProps {
-  readonly node: CoreNode;
-  readonly textNode: CoreTextNode;
+  readonly node: INode;
+  readonly textNode: ITextNode;
   constructor(
     private props: Partial<BoxedTextProps>,
     private renderer: RendererMain,
@@ -291,12 +291,12 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
     return this.node.parent;
   }
 
-  set parent(v: CoreNode | null) {
+  set parent(v: INode | null) {
     this.node.parent = v;
   }
 }
 
-function waitForTextFailed(textNode: CoreTextNode) {
+function waitForTextFailed(textNode: ITextNode) {
   return new Promise<Error>((resolve, reject) => {
     setTimeout(() => {
       reject(new Error('TIMEOUT'));
