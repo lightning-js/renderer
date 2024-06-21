@@ -50,6 +50,7 @@ export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextR
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type {
+  EffectMap,
   EffectProps,
   FadeOutEffectProps,
   LinearGradientEffectProps,
@@ -57,4 +58,5 @@ export type {
   GrayscaleEffectProps,
   GlitchEffectProps,
   RadialProgressEffectProps,
+  HolePunchEffectProps,
 } from '../src/core/CoreShaderManager.js';
