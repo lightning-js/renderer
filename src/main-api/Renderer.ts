@@ -39,6 +39,10 @@ import {
   CoreTextNode,
   type CoreTextNodeWritableProps,
 } from '../core/CoreTextNode.js';
+import type {
+  SpecificNode,
+  SpecificNodeWritableProps,
+} from '../core/renderers/SpecificNode.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -351,20 +355,24 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
+  createNode<S extends keyof ShaderMap = 'DefaultShader'>(
+    props: Partial<SpecificNodeWritableProps<S>>,
+  ): SpecificNode<S> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const resolvedProps = this.resolveNodeDefaults(props);
+    const resolvedProps = this.resolveNodeDefaults(
+      props as CoreNodeWritableProps,
+    );
     const node = new CoreNode(this.stage, resolvedProps);
 
     if (this.inspector) {
-      return this.inspector.createNode(node, resolvedProps);
+      return this.inspector.createNode(node, resolvedProps) as SpecificNode<S>;
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
 
-    return node;
+    return node as SpecificNode<S>;
   }
 
   /**
@@ -600,3 +608,12 @@ export class RendererMain extends EventEmitter {
     throw new Error('Not implemented');
   }
 }
+
+const a: RendererMain = {} as RendererMain;
+const node = a.createNode({
+  x: 10,
+  y: 10,
+  width: 100,
+  height: 100,
+  color: 0xff0000ff,
+});
