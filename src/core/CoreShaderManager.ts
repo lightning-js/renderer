@@ -61,7 +61,10 @@ import {
   RadialProgressEffect,
   type RadialProgressEffectProps,
 } from './renderers/webgl/shaders/effects/RadialProgressEffect.js';
-import { HolePunchEffect } from './renderers/webgl/shaders/effects/HolePunchEffect.js';
+import {
+  HolePunchEffect,
+  type HolePunchEffectProps,
+} from './renderers/webgl/shaders/effects/HolePunchEffect.js';
 import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
 import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
 
@@ -71,6 +74,7 @@ export type { RadialGradientEffectProps };
 export type { GrayscaleEffectProps };
 export type { GlitchEffectProps };
 export type { RadialProgressEffectProps };
+export type { HolePunchEffectProps };
 
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
@@ -109,7 +113,8 @@ export type EffectProps =
   | RadialGradientEffectProps
   | GrayscaleEffectProps
   | GlitchEffectProps
-  | RadialProgressEffectProps;
+  | RadialProgressEffectProps
+  | HolePunchEffectProps;
 
 export class CoreShaderManager {
   protected shCache: Map<string, InstanceType<ShaderMap[keyof ShaderMap]>> =

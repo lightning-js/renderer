@@ -125,11 +125,6 @@ export class ImageWorkerManager {
     return worker;
   }
 
-  private convertUrlToAbsolute(url: string): string {
-    const absoluteUrl = new URL(url, self.location.href);
-    return absoluteUrl.href;
-  }
-
   getImage(
     src: string,
     premultiplyAlpha: boolean | null,
@@ -137,14 +132,13 @@ export class ImageWorkerManager {
     return new Promise((resolve, reject) => {
       try {
         if (this.workers) {
-          const absoluteSrcUrl = this.convertUrlToAbsolute(src);
           const id = this.nextId++;
           this.messageManager[id] = [resolve, reject];
           const nextWorker = this.getNextWorker();
           if (nextWorker) {
             nextWorker.postMessage({
               id,
-              src: absoluteSrcUrl,
+              src: src,
               premultiplyAlpha,
             });
           }

@@ -49,7 +49,11 @@ export default async function test({
     parent: testRoot,
   });
 
-  function execTest(y: number, title: string, setKey: boolean): Promise<boolean> {
+  function execTest(
+    y: number,
+    title: string,
+    setKey: boolean,
+  ): Promise<boolean> {
     const textNode = renderer.createTextNode({
       text: title,
       fontSize: FONT_SIZE,
@@ -66,12 +70,12 @@ export default async function test({
       canvas.height = 200;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Unable to create canvas 2d context');
-      for (let i = 0; i<10; i++) {
+      for (let i = 0; i < 10; i++) {
         ctx.fillStyle = randomColor();
         ctx.fillRect(rnd(0, 280), rnd(0, 180), rnd(20, 200), rnd(20, 100));
       }
       return ctx.getImageData(0, 0, 300, 200);
-    }
+    };
 
     renderer.createNode({
       color: 0xffffffff,
@@ -80,12 +84,10 @@ export default async function test({
       width: 300,
       height: 200,
       parent: testRoot,
-      texture: renderer.createTexture(
-        'ImageTexture', {
-          src: factory,
-          key: setKey ? `test-key-${y}` : undefined
-        }
-      )
+      texture: renderer.createTexture('ImageTexture', {
+        src: factory,
+        key: setKey ? `test-key-${y}` : undefined,
+      }),
     });
 
     renderer.createNode({
@@ -95,12 +97,10 @@ export default async function test({
       width: 300,
       height: 200,
       parent: testRoot,
-      texture: renderer.createTexture(
-        'ImageTexture', {
-          src: factory,
-          key: setKey ? `test-key-${y}` : undefined
-        }
-      )
+      texture: renderer.createTexture('ImageTexture', {
+        src: factory,
+        key: setKey ? `test-key-${y}` : undefined,
+      }),
     });
 
     return new Promise((resolve, reject) => {
