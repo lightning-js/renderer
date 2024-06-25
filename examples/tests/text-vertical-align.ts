@@ -19,7 +19,7 @@
 
 import type {
   ITextNode,
-  ITextNodeWritableProps,
+  ITextNodeProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -55,7 +55,7 @@ const NODE_PROPS = {
   textRendererOverride: 'sdf',
   fontSize: 50,
   lineHeight: 70,
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 const CONTAINER_SIZE = 200;
 
@@ -94,7 +94,7 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'txyz',
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -129,7 +129,7 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'abcd\ntxyz',
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

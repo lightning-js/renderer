@@ -19,7 +19,7 @@
 
 import type {
   INode,
-  INodeWritableProps,
+  INodeProps,
   RendererMain,
   TextureMap,
 } from '@lightningjs/renderer';
@@ -32,7 +32,7 @@ export class Character {
   state!: 'idle' | 'walk' | 'run' | 'jump'; // Set in setState
 
   constructor(
-    private props: Partial<INodeWritableProps>,
+    private props: Partial<INodeProps>,
     private renderer: RendererMain,
     private rightFrames: TextureMap['SubTexture'][],
   ) {

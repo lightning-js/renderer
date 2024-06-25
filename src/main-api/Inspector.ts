@@ -1,16 +1,13 @@
 import {
   CoreNode,
   type CoreNodeAnimateProps,
-  type CoreNodeWritableProps,
+  type CoreNodeProps,
 } from '../core/CoreNode.js';
 import { type RendererMainSettings } from './Renderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';
-import type {
-  CoreTextNode,
-  CoreTextNodeWritableProps,
-} from '../core/CoreTextNode.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 
 /**
  * Inspector
@@ -221,7 +218,7 @@ export class Inspector {
 
   createDiv(
     id: number,
-    properties: CoreNodeWritableProps | CoreTextNodeWritableProps,
+    properties: CoreNodeProps | CoreTextNodeProps,
   ): HTMLElement {
     const div = document.createElement('div');
     div.style.position = 'absolute';
@@ -232,15 +229,15 @@ export class Inspector {
       this.updateNodeProperty(
         div,
         // really typescript? really?
-        key as keyof CoreNodeWritableProps,
-        properties[key as keyof CoreNodeWritableProps],
+        key as keyof CoreNodeProps,
+        properties[key as keyof CoreNodeProps],
       );
     }
 
     return div;
   }
 
-  createNode(node: CoreNode, properties: CoreNodeWritableProps): CoreNode {
+  createNode(node: CoreNode, properties: CoreNodeProps): CoreNode {
     const div = this.createDiv(node.id, properties);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
@@ -252,10 +249,7 @@ export class Inspector {
     return this.createProxy(node, div);
   }
 
-  createTextNode(
-    node: CoreNode,
-    properties: CoreTextNodeWritableProps,
-  ): CoreTextNode {
+  createTextNode(node: CoreNode, properties: CoreTextNodeProps): CoreTextNode {
     const div = this.createDiv(node.id, properties);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
@@ -270,7 +264,7 @@ export class Inspector {
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
     return new Proxy(node, {
-      set: (target, property: keyof CoreNodeWritableProps, value) => {
+      set: (target, property: keyof CoreNodeProps, value) => {
         this.updateNodeProperty(div, property, value);
         return Reflect.set(target, property, value);
       },
@@ -308,7 +302,7 @@ export class Inspector {
 
   updateNodeProperty(
     div: HTMLElement,
-    property: keyof CoreNodeWritableProps | keyof CoreTextNodeWritableProps,
+    property: keyof CoreNodeProps | keyof CoreTextNodeProps,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ) {

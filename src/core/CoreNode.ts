@@ -206,7 +206,7 @@ export type CustomDataMap = {
 /**
  * Writable properties of a Node.
  */
-export interface CoreNodeWritableProps {
+export interface CoreNodeProps {
   /**
    * The x coordinate of the Node's Mount Point.
    *
@@ -627,8 +627,7 @@ type NumberProps<T> = {
 /**
  * Properties of a Node used by the animate() function
  */
-export interface CoreNodeAnimateProps
-  extends NumberProps<CoreNodeWritableProps> {
+export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
   /**
    * Shader properties to animate
    */
@@ -647,7 +646,7 @@ export interface CoreNodeAnimateProps
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
-  protected props: Required<CoreNodeWritableProps>;
+  protected props: Required<CoreNodeProps>;
 
   public updateType = UpdateType.All;
 
@@ -678,7 +677,7 @@ export class CoreNode extends EventEmitter {
   public parentHasRenderTexture = false;
   private _src = '';
 
-  constructor(protected stage: Stage, props: CoreNodeWritableProps) {
+  constructor(protected stage: Stage, props: CoreNodeProps) {
     super();
 
     this.props = {

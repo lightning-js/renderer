@@ -20,12 +20,9 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import {
   CoreNode,
   type CoreNodeAnimateProps,
-  type CoreNodeWritableProps,
+  type CoreNodeProps,
 } from '../core/CoreNode.js';
-import type {
-  CoreTextNode,
-  CoreTextNodeWritableProps,
-} from '../core/CoreTextNode.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { AnyShaderController } from './ShaderController.js';
 
@@ -68,9 +65,9 @@ export interface INodeAnimateProps<SC extends AnyShaderController>
 /**
  * Properties used to create a new Node
  */
-export interface INodeWritableProps<
+export interface INodeProps<
   SC extends AnyShaderController = AnyShaderController,
-> extends Omit<CoreNodeWritableProps, 'shader' | 'parent'> {
+> extends Omit<CoreNodeProps, 'shader' | 'parent'> {
   shader: SC;
   parent: INode | null;
 }
@@ -98,7 +95,6 @@ export interface ITextNode extends Omit<CoreTextNode, 'animate' | 'parent'> {
 /**
  * Properties used to create a new Text Node
  */
-export interface ITextNodeWritableProps
-  extends Omit<CoreTextNodeWritableProps, 'parent'> {
+export interface ITextNodeProps extends Omit<CoreTextNodeProps, 'parent'> {
   parent: INode | null;
 }

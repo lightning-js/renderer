@@ -17,10 +17,7 @@
  * limitations under the License.
  */
 
-import type {
-  ITextNodeWritableProps,
-  RendererMain,
-} from '@lightningjs/renderer';
+import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
@@ -60,7 +57,7 @@ const NODE_PROPS = {
   fontSize: 20,
   lineHeight: 28,
   contain: 'both',
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 function generateOverflowSuffixTest(
   renderer: RendererMain,
@@ -73,7 +70,7 @@ function generateOverflowSuffixTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

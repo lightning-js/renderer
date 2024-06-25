@@ -34,21 +34,13 @@ import {
   type StageFrameTickHandler,
 } from '../core/Stage.js';
 import { getNewId } from '../utils.js';
-import { CoreNode, type CoreNodeWritableProps } from '../core/CoreNode.js';
-import {
-  CoreTextNode,
-  type CoreTextNodeWritableProps,
-} from '../core/CoreTextNode.js';
+import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
+import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type {
   AnyShaderController,
   ShaderController,
 } from './ShaderController.js';
-import type {
-  INode,
-  INodeWritableProps,
-  ITextNode,
-  ITextNodeWritableProps,
-} from './INode.js';
+import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -365,12 +357,10 @@ export class RendererMain extends EventEmitter {
    */
   createNode<
     ShCtr extends AnyShaderController = ShaderController<'DefaultShader'>,
-  >(props: Partial<INodeWritableProps<ShCtr>>): INode<ShCtr> {
+  >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const resolvedProps = this.resolveNodeDefaults(
-      props as CoreNodeWritableProps,
-    );
+    const resolvedProps = this.resolveNodeDefaults(props as CoreNodeProps);
     const node = new CoreNode(this.stage, resolvedProps);
 
     if (this.inspector) {
@@ -399,10 +389,10 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<ITextNodeWritableProps>): ITextNode {
+  createTextNode(props: Partial<ITextNodeProps>): ITextNode {
     const fontSize = props.fontSize ?? 16;
     const data = {
-      ...this.resolveNodeDefaults(props as CoreTextNodeWritableProps),
+      ...this.resolveNodeDefaults(props as CoreTextNodeProps),
       id: getNewId(),
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
@@ -450,9 +440,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  private resolveNodeDefaults(
-    props: Partial<CoreNodeWritableProps>,
-  ): CoreNodeWritableProps {
+  private resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const color = props.color ?? 0xffffffff;
     const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
     const colorTr =
