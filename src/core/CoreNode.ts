@@ -1564,17 +1564,10 @@ export class CoreNode extends EventEmitter {
   }
 
   set color(value: number) {
-    if (
-      this.props.colorTl !== value ||
-      this.props.colorTr !== value ||
-      this.props.colorBl !== value ||
-      this.props.colorBr !== value
-    ) {
-      this.colorTl = value;
-      this.colorTr = value;
-      this.colorBl = value;
-      this.colorBr = value;
-    }
+    this.colorTop = value;
+    this.colorBottom = value;
+    this.colorLeft = value;
+    this.colorRight = value;
     this.props.color = value;
 
     this.setUpdateType(UpdateType.PremultipliedColors);
