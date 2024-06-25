@@ -252,8 +252,12 @@ export function isRectPositive(rect: Rect): boolean {
 }
 
 export function convertUrlToAbsolute(url: string): string {
-  // handle local file imports if the url is not the network resource
-  if (self.location.protocol === 'file:' && !EXTERNAL_REGEX_URL.test(url)) {
+  // handle local file imports if the url isn't remote resource or data blob
+  if (
+    self.location.protocol === 'file:' &&
+    !EXTERNAL_REGEX_URL.test(url) &&
+    !url.startsWith('data:')
+  ) {
     const path = self.location.pathname.split('/');
     path.pop();
     const basePath = path.join('/');
