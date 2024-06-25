@@ -28,6 +28,7 @@ import type {
 import type { Stage } from '../Stage.js';
 import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
+import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
@@ -53,6 +54,7 @@ export interface QuadOptions {
   tb: number;
   tc: number;
   td: number;
+  renderCoords?: RenderCoords;
   rtt?: boolean;
   parentHasRenderTexture?: boolean;
   framebufferDimensions?: Dimensions;

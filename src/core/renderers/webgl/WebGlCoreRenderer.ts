@@ -51,6 +51,7 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
+import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -237,6 +238,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       tb,
       tc,
       td,
+      renderCoords,
       rtt: renderToTexture,
       parentHasRenderTexture,
       framebufferDimensions,
@@ -306,6 +308,32 @@ export class WebGlCoreRenderer extends CoreRenderer {
       texture = texture.parentTexture;
     }
 
+    const resizeMode = textureOptions?.resizeMode ?? false;
+
+    if (texture instanceof ImageTexture) {
+      if (resizeMode && texture.dimensions) {
+        const { width: tw, height: th } = texture.dimensions;
+        if (resizeMode.type === 'cover') {
+          const scaleX = width / tw;
+          const scaleY = height / th;
+          const scale = Math.max(scaleX, scaleY);
+          const precision = 1 / scale;
+          // Determine based on width
+          if (scale && scaleX && scaleX < scale) {
+            const desiredSize = precision * width;
+            texCoordX1 = (1 - desiredSize / tw) * (resizeMode.clipX ?? 0.5);
+            texCoordX2 = texCoordX1 + desiredSize / tw;
+          }
+          // Determine based on height
+          if (scale && scaleY && scaleY < scale) {
+            const desiredSize = precision * height;
+            texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
+            texCoordY2 = texCoordY1 + desiredSize / th;
+          }
+        }
+      }
+    }
+
     // Flip texture coordinates if dictated by texture options
     if (flipX) {
       [texCoordX1, texCoordX2] = [texCoordX2, texCoordX1];
@@ -320,9 +348,40 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
+    if (renderCoords) {
+      const { x1, y1, x2, y2, x3, y3, x4, y4 } = renderCoords;
+      // Upper-Left
+      fQuadBuffer[bufferIdx++] = x1; // vertexX
+      fQuadBuffer[bufferIdx++] = y1; // vertexY
+      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
+      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
+      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
-    // render quad advanced
-    if (tb !== 0 || tc !== 0) {
+      // Upper-Right
+      fQuadBuffer[bufferIdx++] = x2;
+      fQuadBuffer[bufferIdx++] = y2;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY1;
+      uiQuadBuffer[bufferIdx++] = colorTr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Left
+      fQuadBuffer[bufferIdx++] = x4;
+      fQuadBuffer[bufferIdx++] = y4;
+      fQuadBuffer[bufferIdx++] = texCoordX1;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBl;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Right
+      fQuadBuffer[bufferIdx++] = x3;
+      fQuadBuffer[bufferIdx++] = y3;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+    } else if (tb !== 0 || tc !== 0) {
       // Upper-Left
       fQuadBuffer[bufferIdx++] = tx; // vertexX
       fQuadBuffer[bufferIdx++] = ty; // vertexY
@@ -392,7 +451,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     }
-
     // Update the length of the current render op
     curRenderOp.length += WORDS_PER_QUAD;
     curRenderOp.numQuads++;
