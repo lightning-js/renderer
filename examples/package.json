@@ -23,7 +23,7 @@
     "@lightningjs/renderer": "link:.."
   },
   "devDependencies": {
-    "vite": "^4.4.9"
+    "vite": "^5.0.0"
   },
   "engines": {
     "npm": "please-use-pnpm"
