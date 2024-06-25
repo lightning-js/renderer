@@ -50,7 +50,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
-import type { AnyShaderController } from '../../../main-api/ShaderController.js';
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -80,7 +80,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
-  defShaderCtrl: AnyShaderController;
+  defShaderCtrl: BaseShaderController;
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
@@ -636,7 +636,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.rttNodes.splice(index, 1);
   }
 
-  override getDefShaderCtr(): AnyShaderController {
+  override getDefShaderCtr(): BaseShaderController {
     return this.defShaderCtrl;
   }
 }

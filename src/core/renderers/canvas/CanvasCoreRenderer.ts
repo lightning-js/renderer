@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { AnyShaderController } from '../../../main-api/ShaderController.js';
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 import type { CoreNode } from '../../CoreNode.js';
 import type { CoreShaderManager } from '../../CoreShaderManager.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
@@ -45,7 +45,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   private clearColor: RGBA | undefined;
   public renderToTextureActive = false;
   activeRttNode: CoreNode | null = null;
-  private defShaderCtr: AnyShaderController;
+  private defShaderCtr: BaseShaderController;
 
   constructor(options: CoreRendererOptions) {
     super(options);
@@ -221,7 +221,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
     return this.shManager;
   }
 
-  override getDefShaderCtr(): AnyShaderController {
+  override getDefShaderCtr(): BaseShaderController {
     return this.defShaderCtr;
   }
 

@@ -38,12 +38,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radius',
           props: {
             radius: 50,
           },
         },
         {
+          name: 'e2',
           type: 'linearGradient',
           props: {
             angle: 0,
@@ -54,6 +56,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e3',
           type: 'border',
           props: {
             width: 30,
@@ -61,6 +64,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e4',
           type: 'linearGradient',
           props: {
             angle: degToRad(40),
@@ -84,6 +88,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'borderTop',
           props: {
             width: 30,
@@ -91,6 +96,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'borderBottom',
           props: {
             width: 30,
@@ -110,6 +116,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
@@ -121,6 +128,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'radius',
           props: {
             radius: 50,
@@ -140,6 +148,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'borderRight',
           props: {
             width: 30,
@@ -147,6 +156,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'borderLeft',
           props: {
             width: 15,
@@ -167,6 +177,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'linearGradient',
           props: {
             angle: degToRad(180),
@@ -175,6 +186,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'linearGradient',
           props: {
             angle: degToRad(-90),
@@ -196,12 +208,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radius',
           props: {
             radius: 100,
           },
         },
         {
+          name: 'e2',
           type: 'fadeOut',
           props: {
             fade: [200, 100, 0, 0],
@@ -220,6 +234,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialGradient',
           props: {
             colors: [0xff0000ff, 0x00ff00ff, 0x00000000],

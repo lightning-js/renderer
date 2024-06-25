@@ -43,7 +43,7 @@ import type {
   CoreRendererOptions,
 } from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
-import type { AnyShaderController } from '../main-api/ShaderController.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
 import type { CoreShader } from './renderers/CoreShader.js';
 
 export interface StageOptions {
@@ -89,7 +89,7 @@ export class Stage extends EventEmitter {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
-  public readonly defShaderCtr: AnyShaderController;
+  public readonly defShaderCtr: BaseShaderController;
 
   /// State
   deltaTime = 0;
@@ -419,7 +419,7 @@ export class Stage extends EventEmitter {
   createShaderCtr(
     type: keyof ShaderMap,
     props: Record<string, unknown>,
-  ): AnyShaderController {
+  ): BaseShaderController {
     return this.shManager.loadShader(type, props);
   }
 }

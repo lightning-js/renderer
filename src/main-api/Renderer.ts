@@ -18,7 +18,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { ShaderMap } from '../core/CoreShaderManager.js';
+import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureTypeMap,
@@ -37,10 +37,18 @@ import { getNewId } from '../utils.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type {
-  AnyShaderController,
+  BaseShaderController,
   ShaderController,
 } from './ShaderController.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
+import type {
+  DynamicEffects,
+  DynamicShaderController,
+} from './DynamicShaderController.js';
+import type {
+  EffectDesc,
+  EffectDescUnion,
+} from '../core/renderers/webgl/shaders/DynamicShader.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -356,7 +364,7 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createNode<
-    ShCtr extends AnyShaderController = ShaderController<'DefaultShader'>,
+    ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
   >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
@@ -535,11 +543,13 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
-   * Create a new shader reference
+   * Create a new shader controller for a shader type
    *
    * @remarks
-   * This method creates a new reference to a shader. The shader is not
-   * loaded until it is used on a Node.
+   * This method creates a new Shader Controller for a specific shader type.
+   *
+   * If the shader has not been loaded yet, it will be loaded. Otherwise, the
+   * existing shader will be reused.
    *
    * It can be assigned to a Node's `shader` property.
    *
@@ -552,6 +562,26 @@ export class RendererMain extends EventEmitter {
     props?: ExtractProps<ShaderMap[ShType]>,
   ): ShaderController<ShType> {
     return this.stage.shManager.loadShader(shaderType, props);
+  }
+
+  createDynamicShader<
+    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+  >(effects: [...T]): DynamicShaderController<T> {
+    return this.stage.shManager.loadDynamicShader({
+      effects: effects as EffectDescUnion[],
+    }) as DynamicShaderController<T>;
+  }
+
+  createEffect<Name extends string, Type extends keyof EffectMap>(
+    name: Name,
+    type: Type,
+    props: EffectDesc<{ name: Name; type: Type }>['props'],
+  ): EffectDesc<{ name: Name; type: Type }> {
+    return {
+      name,
+      type,
+      props,
+    };
   }
 
   /**

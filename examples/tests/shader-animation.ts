@@ -59,6 +59,33 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   shaderAnimation?.start();
 
+  const t2 = renderer.createNode({
+    x: 0,
+    y: 540,
+    width: 960,
+    height: 540,
+    color: 0x00ff00ff,
+    shader: renderer.createDynamicShader([
+      renderer.createEffect('e1', 'border', {
+        color: 0xff00ffff,
+        width: 15,
+      }),
+    ]),
+    parent: testRoot,
+  });
+
+  // !!! The below two statements are now dynamically typed correctly but don't work yet
+  // t2.shader.props.e1.width = 5;
+  // t2.animate({
+  //   shaderProps: {
+  //     e1: {
+  //       width: 10,
+  //     }
+  //   }
+  // }, {
+  //   duration: 5000
+  // });
+
   // document.addEventListener('click', () => {
   //   if (t1.shader) {
   //     t1.shader.radius = 10;

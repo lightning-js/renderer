@@ -64,7 +64,7 @@ import { HolePunchEffect } from './renderers/webgl/shaders/effects/HolePunchEffe
 import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
 import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
 import type {
-  AnyShaderController,
+  BaseShaderController,
   ShaderController,
 } from '../main-api/ShaderController.js';
 

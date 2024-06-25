@@ -18,7 +18,7 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
-import type { AnyShaderController } from '../../main-api/ShaderController.js';
+import type { BaseShaderController } from '../../main-api/ShaderController.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type {
@@ -100,5 +100,5 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
-  abstract getDefShaderCtr(): AnyShaderController;
+  abstract getDefShaderCtr(): BaseShaderController;
 }

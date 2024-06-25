@@ -59,6 +59,7 @@ export default async function test({
       shader: renderer.createShader('DynamicShader', {
         effects: [
           {
+            name: 'e1',
             type: 'radius',
             props: {
               radius: 50,

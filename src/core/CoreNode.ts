@@ -54,7 +54,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type { AnyShaderController } from '../main-api/ShaderController.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -426,7 +426,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: AnyShaderController;
+  shader: BaseShaderController;
   /**
    * Image URL
    *
@@ -1750,11 +1750,11 @@ export class CoreNode extends EventEmitter {
     this.stage.renderer?.renderToTexture(this);
   }
 
-  get shader(): AnyShaderController {
+  get shader(): BaseShaderController {
     return this.props.shader;
   }
 
-  set shader(value: AnyShaderController) {
+  set shader(value: BaseShaderController) {
     if (this.props.shader === value) {
       return;
     }

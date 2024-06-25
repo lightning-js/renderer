@@ -29,6 +29,24 @@ import { ShaderEffect } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 import memize from 'memize';
 
+export interface BaseEffectDesc {
+  name: string;
+  type: keyof EffectMap;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  props: Record<string, any>;
+}
+
+export interface EffectDesc<
+  T extends { name: string; type: keyof EffectMap } = {
+    name: string;
+    type: keyof EffectMap;
+  },
+> extends BaseEffectDesc {
+  name: T['name'];
+  type: T['type'];
+  props: ExtractProps<EffectMap[T['type']]>;
+}
+
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
  * union of all the EffectDescs structures individually.
@@ -62,40 +80,34 @@ import memize from 'memize';
  * field.
  */
 type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
-  ? SpecificEffectDesc<T>
+  ? EffectDesc<{ type: T; name: string }>
   : never;
 
-type EffectDesc = MapEffectDescs<keyof EffectMap>;
+export type EffectDescUnion = MapEffectDescs<keyof EffectMap>;
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,
     AlphaShaderProp {
-  effects?: EffectDesc[];
+  effects?: EffectDescUnion[];
 }
 
-export interface SpecificEffectDesc<
-  FxType extends keyof EffectMap = keyof EffectMap,
-> {
-  type: FxType;
-  props?: ExtractProps<EffectMap[FxType]>;
-}
-
-const effectCache = new Map<string, EffectDesc[]>();
+const effectCache = new Map<string, BaseEffectDesc[]>();
 const getResolvedEffect = (
-  effects: EffectDesc[] | undefined,
+  effects: BaseEffectDesc[] | undefined,
   effectContructors: Partial<EffectMap> | undefined,
-): EffectDesc[] => {
+): BaseEffectDesc[] => {
   const key = JSON.stringify(effects);
   if (effectCache.has(key)) {
     return effectCache.get(key)!;
   }
 
   const value = (effects ?? []).map((effect) => ({
+    name: effect.name,
     type: effect.type,
     props: effectContructors![effect.type]!.resolveDefaults(
       (effect.props || {}) as any,
     ),
-  })) as EffectDesc[];
+  })) as BaseEffectDesc[];
 
   effectCache.set(key, value);
   return value;
@@ -140,7 +152,7 @@ export class DynamicShader extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  private calculateProps(effects: EffectDesc[]) {
+  private calculateProps(effects: BaseEffectDesc[]) {
     const regEffects = this.renderer.shManager.getRegisteredEffects();
     const results: { name: string; value: unknown }[] = [];
     effects?.forEach((eff, index) => {
@@ -192,7 +204,7 @@ export class DynamicShader extends WebGlCoreShader {
       for (const key in effectA.props) {
         if (
           (effectB.props && !effectB.props[key]) ||
-          effectA.props[key] !== effectB.props![key]
+          effectA.props[key] !== effectB.props[key]
         ) {
           return false;
         }
@@ -397,7 +409,10 @@ export class DynamicShader extends WebGlCoreShader {
     effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
     return {
-      effects: getResolvedEffect(props.effects, effectContructors),
+      effects: getResolvedEffect(
+        props.effects,
+        effectContructors,
+      ) as EffectDescUnion[],
       $dimensions: {
         width: 0,
         height: 0,

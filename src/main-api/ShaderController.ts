@@ -28,7 +28,7 @@ import type { CoreShader } from '../core/renderers/CoreShader.js';
  * Used directly this interface is like an `any` type for Shader Controllers.
  * But it is also used as a base for more specific Shader Controller interfaces.
  */
-export interface AnyShaderController {
+export interface BaseShaderController {
   type: keyof ShaderMap;
   shader: CoreShader;
   props: Record<string, any>;
@@ -41,20 +41,8 @@ export interface AnyShaderController {
  * This interface is used to define the shape of a specific Shader Controller.
  */
 export interface ShaderController<S extends keyof ShaderMap>
-  extends AnyShaderController {
+  extends BaseShaderController {
   type: S;
   shader: InstanceType<ShaderMap[S]>;
   props: ExtractProps<ShaderMap[S]>;
 }
-
-// Placeholder for Dynamic Shader related typings
-// type MapEffectProps<Effects extends [...{ name: string, type: keyof EffectMap }[]]> = {
-//   [K in Effects[number] as K['name']]: InstanceType<EffectMap[K['type']]>['props']
-// }
-
-// interface DynamicShaderController<Effects extends [...{ name: string, type: keyof EffectMap }[]]> extends AnyShaderController {
-//   effects: MapEffectProps<Effects>;
-//   animate(props: Partial<{
-//     [K in keyof this['effects']]: Partial<this['effects'][K]>;
-//   }>): void;
-// }
