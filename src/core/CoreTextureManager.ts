@@ -62,6 +62,36 @@ export interface TextureManagerDebugInfo {
   keyCacheSize: number;
 }
 
+export type ResizeModeOptions =
+  | {
+      /**
+       * Specifies that the image should be resized to cover the specified dimensions.
+       */
+      type: 'cover';
+      /**
+       * The horizontal clipping position
+       * To clip the left, set clipX to 0. To clip the right, set clipX to 1.
+       * clipX 0.5 will clip a equal amount from left and right
+       *
+       * @defaultValue 0.5
+       */
+      clipX?: number;
+      /**
+       * The vertical clipping position
+       * To clip the top, set clipY to 0. To clip the bottom, set clipY to 1.
+       * clipY 0.5 will clip a equal amount from top and bottom
+       *
+       * @defaultValue 0.5
+       */
+      clipY?: number;
+    }
+  | {
+      /**
+       * Specifies that the image should be resized to fit within the specified dimensions.
+       */
+      type: 'contain';
+    };
+
 /**
  * Universal options for all texture types
  *
@@ -105,6 +135,15 @@ export interface TextureOptions {
    * @defaultValue `false`
    */
   flipY?: boolean;
+
+  /**
+   * You can use resizeMode to determine the clipping automatically from the width
+   * and height of the source texture. This can be convenient if you are unsure about
+   * the exact image sizes but want the image to cover a specific area.
+   *
+   * The resize modes cover and contain are supported
+   */
+  resizeMode?: ResizeModeOptions;
 }
 
 /**

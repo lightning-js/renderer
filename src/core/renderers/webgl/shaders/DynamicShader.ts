@@ -65,7 +65,7 @@ type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
   ? SpecificEffectDesc<T>
   : never;
 
-type EffectDesc = MapEffectDescs<keyof EffectMap>;
+export type EffectDesc = MapEffectDescs<keyof EffectMap>;
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,

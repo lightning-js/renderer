@@ -35,6 +35,7 @@ export interface AnimationSettings {
 export class CoreAnimation extends EventEmitter {
   public propStartValues: Partial<CoreNodeAnimatableProps> = {};
   public restoreValues: Partial<CoreNodeAnimatableProps> = {};
+  public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
@@ -43,7 +44,7 @@ export class CoreAnimation extends EventEmitter {
   constructor(
     private node: CoreNode,
     private props: Partial<CoreNodeAnimatableProps>,
-    public settings: Partial<AnimationSettings>,
+    settings: Partial<AnimationSettings>,
   ) {
     super();
     this.propStartValues = {};
@@ -52,12 +53,19 @@ export class CoreAnimation extends EventEmitter {
       this.propStartValues[propName] = node[propName];
     });
 
-    this.timingFunction = (t: number) => t;
-
-    if (settings.easing && typeof settings.easing === 'string') {
-      this.timingFunction = getTimingFunction(settings.easing);
-    }
-    this.delayFor = settings.delay || 0;
+    const easing = settings.easing || 'linear';
+    const delay = settings.delay ?? 0;
+    this.settings = {
+      duration: settings.duration ?? 0,
+      delay,
+      easing,
+      loop: settings.loop ?? false,
+      repeat: settings.repeat ?? 0,
+      repeatDelay: settings.repeatDelay ?? 0,
+      stopMethod: settings.stopMethod ?? false,
+    };
+    this.timingFunction = getTimingFunction(easing);
+    this.delayFor = delay;
   }
 
   reset() {
@@ -95,24 +103,40 @@ export class CoreAnimation extends EventEmitter {
     }
   }
 
-  applyEasing(p: number, s: number, e: number): number {
+  private applyEasing(p: number, s: number, e: number): number {
     return (this.timingFunction(p) || p) * (e - s) + s;
   }
 
   update(dt: number) {
     const { duration, loop, easing, stopMethod } = this.settings;
-    if (!duration) {
+    const { delayFor } = this;
+    if (duration === 0 && delayFor === 0) {
       this.emit('finished', {});
       return;
     }
 
     if (this.delayFor > 0) {
       this.delayFor -= dt;
+      if (this.delayFor >= 0) {
+        // Either no or more delay left. Exit.
+        return;
+      } else {
+        // We went beyond the delay time, add it back to dt so we can continue
+        // with the animation.
+        dt = -this.delayFor;
+        this.delayFor = 0;
+      }
+    }
+
+    if (duration === 0) {
+      // No duration, we are done.
+      this.emit('finished', {});
       return;
     }
 
-    if (this.delayFor <= 0 && this.progress === 0) {
-      this.emit('start', {});
+    if (this.progress === 0) {
+      // Progress is 0, we are starting the post-delay part of the animation.
+      this.emit('animating', {});
     }
 
     this.progress += dt / duration;

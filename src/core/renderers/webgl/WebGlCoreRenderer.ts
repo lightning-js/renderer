@@ -50,6 +50,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -302,6 +303,32 @@ export class WebGlCoreRenderer extends CoreRenderer {
       texCoordY1 = ty / parentH;
       texCoordY2 = texCoordY1 + th / parentH;
       texture = texture.parentTexture;
+    }
+
+    const resizeMode = textureOptions?.resizeMode ?? false;
+
+    if (texture instanceof ImageTexture) {
+      if (resizeMode && texture.dimensions) {
+        const { width: tw, height: th } = texture.dimensions;
+        if (resizeMode.type === 'cover') {
+          const scaleX = width / tw;
+          const scaleY = height / th;
+          const scale = Math.max(scaleX, scaleY);
+          const precision = 1 / scale;
+          // Determine based on width
+          if (scale && scaleX && scaleX < scale) {
+            const desiredSize = precision * width;
+            texCoordX1 = (1 - desiredSize / tw) * (resizeMode.clipX ?? 0.5);
+            texCoordX2 = texCoordX1 + desiredSize / tw;
+          }
+          // Determine based on height
+          if (scale && scaleY && scaleY < scale) {
+            const desiredSize = precision * height;
+            texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
+            texCoordY2 = texCoordY1 + desiredSize / th;
+          }
+        }
+      }
     }
 
     // Flip texture coordinates if dictated by texture options
