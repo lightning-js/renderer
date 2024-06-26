@@ -745,6 +745,7 @@ export class CoreNode extends EventEmitter {
 
   private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
     this.autosizeNode(dimensions);
+
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
@@ -759,6 +760,11 @@ export class CoreNode extends EventEmitter {
       type: 'texture',
       dimensions,
     } satisfies NodeTextureLoadedPayload);
+
+    // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
+    if (this.props.textureOptions?.resizeMode?.type === 'contain') {
+      this.setUpdateType(UpdateType.Local);
+    }
   };
 
   private onTextureFailed: TextureFailedEventHandler = (target, error) => {
@@ -824,6 +830,45 @@ export class CoreNode extends EventEmitter {
     )
       .multiply(this.scaleRotateTransform)
       .translate(-pivotTranslateX, -pivotTranslateY);
+
+    // Handle 'contain' resize mode
+    const { width, height } = this.props;
+    const texture = this.props.texture;
+    if (
+      texture &&
+      texture.dimensions &&
+      this.props.textureOptions?.resizeMode?.type === 'contain'
+    ) {
+      let resizeModeScaleX = 1;
+      let resizeModeScaleY = 1;
+      let extraX = 0;
+      let extraY = 0;
+      const { width: tw, height: th } = texture.dimensions;
+      const txAspectRatio = tw / th;
+      const nodeAspectRatio = width / height;
+      if (txAspectRatio > nodeAspectRatio) {
+        // Texture is wider than node
+        // Center the node vertically (shift down by extraY)
+        // Scale the node vertically to maintain original aspect ratio
+        const scaleX = width / tw;
+        const scaledTxHeight = th * scaleX;
+        extraY = (height - scaledTxHeight) / 2;
+        resizeModeScaleY = scaledTxHeight / height;
+      } else {
+        // Texture is taller than node (or equal)
+        // Center the node horizontally (shift right by extraX)
+        // Scale the node horizontally to maintain original aspect ratio
+        const scaleY = height / th;
+        const scaledTxWidth = tw * scaleY;
+        extraX = (width - scaledTxWidth) / 2;
+        resizeModeScaleX = scaledTxWidth / width;
+      }
+
+      // Apply the extra translation and scale to the local transform
+      this.localTransform
+        .translate(extraX, extraY)
+        .scale(resizeModeScaleX, resizeModeScaleY);
+    }
 
     this.setUpdateType(UpdateType.Global);
   }
@@ -1279,7 +1324,13 @@ export class CoreNode extends EventEmitter {
       premultipliedColorBr,
     } = this;
 
-    const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
+    const {
+      zIndex,
+      worldAlpha,
+      globalTransform: gt,
+      clippingRect,
+      renderCoords,
+    } = this;
 
     let shaderProps = shader.props
 
@@ -1289,6 +1340,7 @@ export class CoreNode extends EventEmitter {
     }
 
     assertTruthy(gt);
+    assertTruthy(renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1311,6 +1363,7 @@ export class CoreNode extends EventEmitter {
       tb: gt.tb,
       tc: gt.tc,
       td: gt.td,
+      renderCoords,
       rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
@@ -1542,17 +1595,10 @@ export class CoreNode extends EventEmitter {
   }
 
   set color(value: number) {
-    if (
-      this.props.colorTl !== value ||
-      this.props.colorTr !== value ||
-      this.props.colorBl !== value ||
-      this.props.colorBr !== value
-    ) {
-      this.colorTl = value;
-      this.colorTr = value;
-      this.colorBl = value;
-      this.colorBr = value;
-    }
+    this.colorTop = value;
+    this.colorBottom = value;
+    this.colorLeft = value;
+    this.colorRight = value;
     this.props.color = value;
 
     this.setUpdateType(UpdateType.PremultipliedColors);
