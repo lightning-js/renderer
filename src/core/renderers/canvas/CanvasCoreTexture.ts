@@ -50,7 +50,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
     this.image = undefined;
     this.tintCache = undefined;
     this.textureSource.setState('freed');
-    this.memManager.setTextureMemUse(this, 0);
+    this.setTextureMemUse(0);
   }
 
   updateMemSize(): void {
@@ -60,7 +60,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
     const mult = this.tintCache ? 8 : 4;
     if (this.textureSource.dimensions) {
       const { width, height } = this.textureSource.dimensions;
-      this.memManager.setTextureMemUse(this, width * height * mult);
+      this.setTextureMemUse(width * height * mult);
     }
   }
 
@@ -117,10 +117,6 @@ export class CanvasCoreTexture extends CoreContextTexture {
       ctx.drawImage(source, 0, 0, width, height, 0, 0, width, height);
     }
     return canvas;
-  }
-
-  get renderable(): boolean {
-    return this.textureSource.renderable;
   }
 
   private async onLoadRequest(): Promise<Dimensions> {

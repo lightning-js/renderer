@@ -146,6 +146,10 @@ export abstract class Texture extends EventEmitter {
 
   readonly renderableOwners = new Set<unknown>();
 
+  readonly renderable: boolean = false;
+
+  readonly lastRenderableChangeTime = 0;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }
@@ -169,20 +173,20 @@ export abstract class Texture extends EventEmitter {
     if (renderable) {
       this.renderableOwners.add(owner);
       const newSize = this.renderableOwners.size;
-      if (newSize > oldSize) {
-        this.txManager.incTextureRenderable(this);
-        if (this.onChangeIsRenderable && newSize === 1) {
-          this.onChangeIsRenderable(true);
-        }
+      if (newSize > oldSize && newSize === 1) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.renderable as boolean) = true;
+        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
+        this.onChangeIsRenderable?.(true);
       }
     } else {
       this.renderableOwners.delete(owner);
       const newSize = this.renderableOwners.size;
-      if (newSize < oldSize) {
-        this.txManager.decTextureRenderable(this);
-        if (this.onChangeIsRenderable && newSize === 0) {
-          this.onChangeIsRenderable(false);
-        }
+      if (newSize < oldSize && newSize === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.renderable as boolean) = false;
+        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
+        this.onChangeIsRenderable?.(false);
       }
     }
   }
@@ -215,13 +219,6 @@ export abstract class Texture extends EventEmitter {
     // And replace this getter with the value for future calls
     Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
     return ctxTexture;
-  }
-
-  /**
-   * Returns true if the texture is assigned to any Nodes that are renderable.
-   */
-  get renderable(): boolean {
-    return this.renderableOwners.size > 0;
   }
 
   /**

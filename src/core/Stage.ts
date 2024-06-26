@@ -37,7 +37,10 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
-import { TextureMemoryManager } from './TextureMemoryManager.js';
+import {
+  TextureMemoryManager,
+  type TextureMemoryManagerSettings,
+} from './TextureMemoryManager.js';
 import type {
   CoreRenderer,
   CoreRendererOptions,
@@ -47,7 +50,7 @@ import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 export interface StageOptions {
   appWidth: number;
   appHeight: number;
-  txMemByteThreshold: number;
+  textureMemory: TextureMemoryManagerSettings;
   boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
@@ -57,10 +60,7 @@ export interface StageOptions {
   enableContextSpy: boolean;
   numImageWorkers: number;
   renderMode: 'webgl' | 'canvas';
-
-  debug?: {
-    monitorTextureCache?: boolean;
-  };
+  eventBus: EventEmitter;
 }
 
 export type StageFpsUpdateHandler = (
@@ -76,7 +76,7 @@ export type StageFrameTickHandler = (
 const bufferMemory = 2e6;
 const autoStart = true;
 
-export class Stage extends EventEmitter {
+export class Stage {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -88,6 +88,16 @@ export class Stage extends EventEmitter {
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
 
+  /**
+   * Renderer Event Bus for the Stage to emit events onto
+   *
+   * @remarks
+   * In reality this is just the RendererMain instance, which is an EventEmitter.
+   * this allows us to directly emit events from the Stage to RendererMain
+   * without having to set up forwarding handlers.
+   */
+  public readonly eventBus: EventEmitter;
+
   /// State
   deltaTime = 0;
   lastFrameTime = 0;
@@ -95,6 +105,7 @@ export class Stage extends EventEmitter {
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
+  private frameEventQueue: [name: string, payload: unknown][] = [];
 
   /// Debug data
   contextSpy: ContextSpy | null = null;
@@ -103,22 +114,21 @@ export class Stage extends EventEmitter {
    * Stage constructor
    */
   constructor(readonly options: StageOptions) {
-    super();
     const {
       canvas,
       clearColor,
-      debug,
       appWidth,
       appHeight,
       boundsMargin,
       enableContextSpy,
       numImageWorkers,
-      txMemByteThreshold,
+      textureMemory,
       renderMode,
     } = options;
 
+    this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(numImageWorkers);
-    this.txMemManager = new TextureMemoryManager(txMemByteThreshold);
+    this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
@@ -130,14 +140,6 @@ export class Stage extends EventEmitter {
         : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
     }
     this.boundsMargin = bm;
-
-    if (debug?.monitorTextureCache) {
-      setInterval(() => {
-        assertTruthy(this.txManager);
-        const debugInfo = this.txManager.getDebugInfo();
-        console.log('Texture Key Cache Size: ', debugInfo.keyCacheSize);
-      }, 1000);
-    }
 
     const rendererOptions: CoreRendererOptions = {
       stage: this,
@@ -220,6 +222,24 @@ export class Stage extends EventEmitter {
     }
   }
 
+  updateFrameTime() {
+    const newFrameTime = getTimeStamp();
+    this.lastFrameTime = this.currentFrameTime;
+    this.currentFrameTime = newFrameTime;
+    this.deltaTime = !this.lastFrameTime
+      ? 100 / 6
+      : newFrameTime - this.lastFrameTime;
+    this.txManager.frameTime = newFrameTime;
+    this.txMemManager.frameTime = newFrameTime;
+
+    // This event is emitted at the beginning of the frame (before any updates
+    // or rendering), so no need to to use `stage.queueFrameEvent` here.
+    this.eventBus.emit('frameTick', {
+      time: this.currentFrameTime,
+      delta: this.deltaTime,
+    });
+  }
+
   /**
    * Update animations
    */
@@ -228,17 +248,6 @@ export class Stage extends EventEmitter {
     if (!this.root) {
       return;
     }
-    this.lastFrameTime = this.currentFrameTime;
-    this.currentFrameTime = getTimeStamp();
-
-    this.deltaTime = !this.lastFrameTime
-      ? 100 / 6
-      : this.currentFrameTime - this.lastFrameTime;
-
-    this.emit('frameTick', {
-      time: this.currentFrameTime,
-      delta: this.deltaTime,
-    });
     // step animation
     animationManager.update(this.deltaTime);
   }
@@ -265,9 +274,9 @@ export class Stage extends EventEmitter {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to garbage collect
-    if (renderer.txMemManager.gcRequested) {
-      renderer.txMemManager.gc();
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested) {
+      this.txMemManager.cleanup();
     }
 
     // If we have RTT nodes draw them first
@@ -290,6 +299,40 @@ export class Stage extends EventEmitter {
     }
   }
 
+  /**
+   * Queue an event to be emitted after the current/next frame is rendered
+   *
+   * @remarks
+   * When we are operating in the context of the render loop, we may want to
+   * emit events that are related to the current frame. However, we generally do
+   * NOT want to emit events directly in the middle of the render loop, since
+   * this could enable event handlers to modify the scene graph and cause
+   * unexpected behavior. Instead, we queue up events to be emitted and then
+   * flush the queue after the frame has been rendered.
+   *
+   * @param name
+   * @param data
+   */
+  queueFrameEvent(name: string, data: unknown) {
+    this.frameEventQueue.push([name, data]);
+  }
+
+  /**
+   * Emit all queued frame events
+   *
+   * @remarks
+   * This method should be called after the frame has been rendered to emit
+   * all events that were queued during the frame.
+   *
+   * See {@link queueFrameEvent} for more information.
+   */
+  flushFrameEvents() {
+    for (const [name, data] of this.frameEventQueue) {
+      this.eventBus.emit(name, data);
+    }
+    this.frameEventQueue = [];
+  }
+
   calculateFps() {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
@@ -303,7 +346,7 @@ export class Stage extends EventEmitter {
         );
         this.fpsNumFrames = 0;
         this.fpsElapsedTime = 0;
-        this.emit('fpsUpdate', {
+        this.queueFrameEvent('fpsUpdate', {
           fps,
           contextSpyData: this.contextSpy?.getData() ?? null,
         } satisfies FpsUpdatePayload);

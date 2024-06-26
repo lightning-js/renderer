@@ -18,7 +18,6 @@
  */
 
 import { ImageWorkerManager } from './lib/ImageWorker.js';
-import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
@@ -146,35 +145,16 @@ export interface TextureOptions {
   resizeMode?: ResizeModeOptions;
 }
 
-/**
- * {@link CoreTextureManager.refCountMap}
- */
-interface RefCountObj {
-  cacheKey: string | false;
-  count: number;
-}
-
 export class CoreTextureManager {
   /**
-   * Amount of used memory defined in pixels
-   */
-  usedMemory = 0;
-
-  /**
-   * Cache of textures by their Cache Key
+   * Map of textures by cache key
    */
   keyCache: Map<string, Texture> = new Map();
+
   /**
-   * This map keeps track of the number of renderable owners that are using a
-   * Texture that is in the {@link keyCache}. This is used to determine when a
-   * Texture is no longer being used and can be removed from the cache.
+   * Map of cache keys by texture
    */
-  refCountMap: WeakMap<Texture, RefCountObj> = new WeakMap();
-  /**
-   * The Textures in the set have a renderable owner count of 0. This means
-   * their entries in the {@link keyCache} can be removed.
-   */
-  zeroRefSet: Set<Texture> = new Set();
+  inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
 
   /**
    * Map of texture constructors by their type name
@@ -192,6 +172,17 @@ export class CoreTextureManager {
    * will occur when using the texture manager.
    */
   renderer!: CoreRenderer;
+
+  /**
+   * The current frame time in milliseconds
+   *
+   * @remarks
+   * This is used to populate the `lastRenderableChangeTime` property of
+   * {@link Texture} instances when their renderable state changes.
+   *
+   * Set by stage via `updateFrameTime` method.
+   */
+  frameTime = 0;
 
   constructor(numImageWorkers: number) {
     // Register default known texture types
@@ -246,108 +237,25 @@ export class CoreTextureManager {
     return texture as InstanceType<TextureTypeMap[Type]>;
   }
 
-  private initTextureToCache(
-    texture: Texture,
-    cacheKey: string | false,
-  ): RefCountObj {
-    const { keyCache, refCountMap, zeroRefSet } = this;
+  private initTextureToCache(texture: Texture, cacheKey: string) {
+    const { keyCache, inverseKeyCache } = this;
+    keyCache.set(cacheKey, texture);
+    inverseKeyCache.set(texture, cacheKey);
+  }
+
+  /**
+   * Remove a texture from the cache
+   *
+   * @remarks
+   * Called by Texture Cleanup when a texture is freed.
+   *
+   * @param texture
+   */
+  removeTextureFromCache(texture: Texture) {
+    const { inverseKeyCache, keyCache } = this;
+    const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
-      keyCache.set(cacheKey, texture);
+      keyCache.delete(cacheKey);
     }
-    const refCountObj = { cacheKey, count: 0 };
-    refCountMap.set(texture, refCountObj);
-    zeroRefSet.add(texture);
-    return refCountObj;
-  }
-
-  /**
-   * Increment the renderable owner count for a Texture in the {@link keyCache}.
-   *
-   * @remarks
-   * If the Texture is not in the {@link keyCache}, this method does nothing.
-   *
-   * @param texture
-   */
-  incTextureRenderable(texture: Texture): void {
-    const { refCountMap } = this;
-    let refCountObj = refCountMap.get(texture);
-    if (!refCountObj) {
-      refCountObj = this.initTextureToCache(texture, false);
-    }
-    const oldCount = refCountObj.count;
-    refCountObj.count = oldCount + 1;
-    // If the texture was in the zero reference set, which was
-    // is if the count was 0, remove it.
-    if (oldCount === 0) {
-      this.zeroRefSet.delete(texture);
-    }
-  }
-
-  /**
-   * Decrement the renderable owner count for a Texture in the {@link keyCache}.
-   *
-   * @remarks
-   * If the Texture is not in the {@link keyCache}, this method does nothing.
-   *
-   * @param texture
-   */
-  decTextureRenderable(texture: Texture): void {
-    const { refCountMap } = this;
-    const refCountObj = refCountMap.get(texture);
-    if (refCountObj) {
-      const oldCount = refCountObj.count;
-      refCountObj.count = oldCount - 1;
-      // New count is now 0, add to the zero reference set.
-      if (oldCount === 1) {
-        this.zeroRefSet.add(texture);
-      }
-    }
-  }
-
-  /**
-   * Flush out all textures that have a renderable owner count of 0
-   *
-   * @remarks
-   * Each Texture flushed will be removed from the {@link keyCache} (if it's in
-   * there) and also have its associated CoreContextTexture freed.
-   */
-  flushUnusedTextures(): void {
-    const { keyCache, zeroRefSet, refCountMap } = this;
-    for (const texture of zeroRefSet) {
-      const refCountObj = refCountMap.get(texture);
-      if (refCountObj && texture.state !== 'loading') {
-        // We want to make sure we don't free any textures that are still loading
-        // because text and end users might be depending on a `loaded` / `failed`
-        // event to know when a texture is ready to use.
-        const { cacheKey } = refCountObj;
-        if (cacheKey) {
-          keyCache.delete(cacheKey);
-        }
-
-        // Free the ctx texture if it exists.
-        refCountMap.delete(texture);
-        zeroRefSet.delete(texture);
-        texture.ctxTexture.free();
-      }
-    }
-  }
-
-  /**
-   * Get an object containing debug information about the texture manager.
-   *
-   * @returns
-   */
-  getDebugInfo(): TextureManagerDebugInfo {
-    // const textureSet = new Set<Texture>();
-    // for (const texture of this.textureIdCache.values()) {
-    //   textureSet.add(texture);
-    // }
-    // for (const texture of this.textureKeyCache.values()) {
-    //   textureSet.add(texture);
-    // }
-    // TODO: Output number of bytes used by textures
-    return {
-      keyCacheSize: this.keyCache.size,
-    };
   }
 }
