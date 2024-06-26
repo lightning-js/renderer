@@ -19,6 +19,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type { ExtractProps } from '../core/CoreTextureManager.js';
+import type { Stage } from '../core/Stage.js';
 import type { CoreShader } from '../core/renderers/CoreShader.js';
 
 /**
@@ -32,6 +33,7 @@ export interface BaseShaderController {
   type: keyof ShaderMap;
   shader: CoreShader;
   props: Record<string, any>;
+  getResolvedProps: () => Record<string, any>;
 }
 
 /**
@@ -45,4 +47,42 @@ export interface ShaderController<S extends keyof ShaderMap>
   type: S;
   shader: InstanceType<ShaderMap[S]>;
   props: ExtractProps<ShaderMap[S]>;
+}
+
+export class ShaderControllerInstance<S extends keyof ShaderMap>
+  implements ShaderController<S>
+{
+  private resolvedProps: ExtractProps<ShaderMap[S]>;
+  props: ExtractProps<ShaderMap[S]>;
+  constructor(
+    readonly type: S,
+    readonly shader: InstanceType<ShaderMap[S]>,
+    props: ExtractProps<ShaderMap[S]>,
+    stage: Stage,
+  ) {
+    this.resolvedProps = props;
+
+    const keys = Object.keys(props);
+    const l = keys.length;
+    let i = 0;
+
+    const definedProps = {};
+    for (; i < l; i++) {
+      const name = keys[i]!;
+      Object.defineProperty(definedProps, name, {
+        get: () => {
+          return this.resolvedProps[name as keyof ExtractProps<ShaderMap[S]>];
+        },
+        set: (value) => {
+          this.resolvedProps[name as keyof ExtractProps<ShaderMap[S]>] = value;
+          stage.requestRender();
+        },
+      });
+    }
+    this.props = definedProps as ExtractProps<ShaderMap[S]>;
+  }
+
+  getResolvedProps() {
+    return this.resolvedProps;
+  }
 }

@@ -44,20 +44,20 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   t1.shader.props.radius = 50;
 
-  // const shaderAnimation = t1.animate(
-  //   {
-  //     x: 1,
-  //     shaderProps: {
-  //       radius: 200,
-  //     },
-  //   },
-  //   {
-  //     delay: 400,
-  //     duration: 5000,
-  //   },
-  // );
+  const shaderAnimation = t1.animate(
+    {
+      x: 1,
+      shaderProps: {
+        radius: 200,
+      },
+    },
+    {
+      delay: 400,
+      duration: 5000,
+    },
+  );
 
-  // shaderAnimation?.start();
+  shaderAnimation?.start();
 
   const t2 = renderer.createNode({
     x: 0,
@@ -66,6 +66,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: 540,
     color: 0x00ff00ff,
     shader: renderer.createDynamicShader([
+      renderer.createEffect('r1', 'radius', {
+        radius: 0,
+      }),
       renderer.createEffect('e1', 'border', {
         color: 0xff00ffff,
         width: 10,
@@ -75,22 +78,28 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   });
 
   // !!! The below two statements are now dynamically typed correctly but don't work yet
-  // t2.shader.props.e1.width = 40;
-  // t2.animate({
-  //   shaderProps: {
-  //     e1: {
-  //       width: 40,
-  //     }
-  //   }
-  // }, {
-  //   duration: 5000
-  // }).start();
+  t2.shader.props.e1.width = 40;
+  t2.animate(
+    {
+      shaderProps: {
+        r1: {
+          radius: 40,
+        },
+        e1: {
+          width: 100,
+        },
+      },
+    },
+    {
+      duration: 5000,
+    },
+  ).start();
 
   setTimeout(() => {
-    console.log('test', t2.shader.props.e1.width)
-
-    t2.shader.props.e1.width = 70
-  }, 2000)
+    // console.log('test', t2.shader.props.e1.width)
+    t1.shader.props.radius = 70;
+    t2.shader.props.e1.width = 70;
+  }, 2000);
 
   // document.addEventListener('click', () => {
   //   if (t1.shader) {

@@ -66,9 +66,11 @@ import {
 } from './renderers/webgl/shaders/effects/HolePunchEffect.js';
 import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
 import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
-import type {
-  ShaderController,
+import {
+  ShaderControllerInstance,
+  type ShaderController,
 } from '../main-api/ShaderController.js';
+import { DynamicShaderControllerInstance } from '../main-api/DynamicShaderController.js';
 
 export type { FadeOutEffectProps };
 export type { LinearGradientEffectProps };
@@ -254,48 +256,34 @@ export class CoreShaderManager {
     if (cacheKey) {
       this.shCache.set(cacheKey, shader);
     }
-    return this._createDynShaderCtr(shader, resolvedProps) as unknown as ShaderController<'DynamicShader'>;
+    return this._createDynShaderCtr(
+      shader,
+      resolvedProps,
+    ) as unknown as ShaderController<'DynamicShader'>;
   }
 
   private _createShaderCtr<Type extends keyof ShaderMap>(
     type: Type,
     shader: InstanceType<ShaderMap[Type]>,
     props: ExtractProps<ShaderMap[Type]>,
-  ): ShaderController<Type> {
-    return {
-      type: type,
+  ): ShaderControllerInstance<Type> {
+    return new ShaderControllerInstance(
+      type,
       shader,
       props,
-    };
+      this.renderer.stage,
+    );
   }
 
   private _createDynShaderCtr(
     shader: InstanceType<ShaderMap['DynamicShader']>,
     props: ExtractProps<ShaderMap['DynamicShader']>,
-  ): Record<string, unknown> {
-
-    const controller = {
-      resolvedProps: props,
-      type: 'DynamicShader',
+  ): ShaderController<'DynamicShader'> {
+    return new DynamicShaderControllerInstance(
       shader,
-      props: {}
-    }
-
-    const effects = props.effects!;
-    const l = effects.length;
-    const stage = this.renderer.stage;
-    let i = 0;
-    for(;i < l; i++) {
-      const name = effects[i]!.name;
-      const index = i;
-      Object.defineProperty(controller.props, name, {
-        get() {
-          return controller.resolvedProps.effects![index]!.props;
-        }
-      })
-    }
-
-    return controller;
+      props,
+      this.renderer.stage,
+    );
   }
 
   useShader(shader: CoreShader): void {

@@ -65,6 +65,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
       type: 'DefaultShader',
       props: {},
       shader: new UnsupportedShader('DefaultShader'),
+      getResolvedProps: () => () => {
+        return {};
+      },
     };
   }
 

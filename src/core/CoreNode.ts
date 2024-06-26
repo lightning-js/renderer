@@ -1332,13 +1332,6 @@ export class CoreNode extends EventEmitter {
       renderCoords,
     } = this;
 
-    let shaderProps = shader.props
-
-    if(shader.type === 'DynamicShader') {
-      //@ts-ignore-next-line
-      shaderProps = shader.resolvedProps;
-    }
-
     assertTruthy(gt);
     assertTruthy(renderCoords);
 
@@ -1354,7 +1347,7 @@ export class CoreNode extends EventEmitter {
       textureOptions,
       zIndex,
       shader: shader.shader,
-      shaderProps,
+      shaderProps: shader.getResolvedProps(),
       alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,
