@@ -27,6 +27,7 @@ import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import { ShaderEffect } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
+import { assertTruthy } from '../../../../utils.js';
 
 export interface BaseEffectDesc {
   name: string;
@@ -92,24 +93,56 @@ export interface DynamicShaderProps
 
 const effectCache = new Map<string, BaseEffectDesc[]>();
 const getResolvedEffect = (
-  effects: BaseEffectDesc[] | undefined,
-  effectContructors: Partial<EffectMap> | undefined,
+  effects: BaseEffectDesc[],
+  effectContructors: Partial<EffectMap>,
 ): BaseEffectDesc[] => {
   const key = JSON.stringify(effects);
   if (effectCache.has(key)) {
     return effectCache.get(key)!;
   }
+  effects = effects ?? [];
+  const resolvedEffects = [];
+  const effectsLength = effects.length;
+  let i = 0;
+  for (; i < effectsLength; i++) {
+    const { name, type, props } = effects[i] as BaseEffectDesc;
+    const resolvedEffect = {
+      name,
+      type,
+      props: {} as Record<string, any>,
+    };
 
-  const value = (effects ?? []).map((effect) => ({
-    name: effect.name,
-    type: effect.type,
-    props: effectContructors![effect.type]!.resolveDefaults(
-      (effect.props || {}) as any,
-    ),
-  })) as BaseEffectDesc[];
+    const effectConstructor = effectContructors[type]!;
+    const defaultPropValues = effectConstructor.resolveDefaults(props);
+    const uniforms = effectConstructor.uniforms;
+    const uniformKeys = Object.keys(uniforms);
+    const uniformsLength = uniformKeys.length;
+    let j = 0;
+    for (; j < uniformsLength; j++) {
+      const key = uniformKeys[j]!;
+      const uniform = uniforms[key]!;
 
-  effectCache.set(key, value);
-  return value;
+      let programValue =
+        (uniform.validator !== undefined &&
+          uniform.validator(defaultPropValues[key], defaultPropValues)) ||
+        defaultPropValues[key];
+      if (Array.isArray(programValue)) {
+        programValue = new Float32Array(programValue);
+      }
+      const result = {
+        value: defaultPropValues[key],
+        programValues: {
+          hasValidator: uniform.validator !== undefined,
+          value: programValue,
+        },
+      };
+      resolvedEffect.props[key] = result;
+    }
+    resolvedEffects.push(resolvedEffect);
+  }
+
+  effectCache.set(key, resolvedEffects);
+  return resolvedEffects;
 };
 
 export class DynamicShader extends WebGlCoreShader {
@@ -149,34 +182,24 @@ export class DynamicShader extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  private calculateProps(effects: BaseEffectDesc[]) {
-    const regEffects = this.renderer.shManager.getRegisteredEffects();
-    const results: { name: string; value: unknown }[] = [];
-    effects?.forEach((eff, index) => {
-      const effect = this.effects[index]!;
-      const fxClass = regEffects[effect.name as keyof EffectMap]!;
-      const props = eff.props ?? {};
-      const uniInfo = effect.uniformInfo;
-      Object.keys(props).forEach((p) => {
-        const fxProp = fxClass.uniforms[p]!;
-        const propInfo = uniInfo[p]!;
-        let value = fxProp.validator
-          ? fxProp.validator(props[p], props)
-          : props[p];
-        if (Array.isArray(value)) {
-          value = new Float32Array(value);
-        }
-        results.push({ name: propInfo.name, value });
-      });
-    });
-    return results;
-  }
-
   protected override bindProps(props: Required<DynamicShaderProps>): void {
-    const results = this.calculateProps(props.effects);
-    results.forEach((r) => {
-      this.setUniform(r.name, r.value);
-    });
+    const effects = props.effects;
+    const effectsL = effects.length;
+    let i = 0;
+    for (; i < effectsL; i++) {
+      const effect = effects[i]! as Record<string, any>;
+      const uniformInfo = this.effects[i]!.uniformInfo;
+      const propKeys = Object.keys(effect.props);
+      const propsLength = propKeys.length;
+      let j = 0;
+      for (; j < propsLength; j++) {
+        const key = propKeys[j]!;
+        this.setUniform(
+          uniformInfo[key]!.name,
+          effect.props[key].programValues.value,
+        );
+      }
+    }
   }
 
   override canBatchShaderProps(
@@ -405,9 +428,10 @@ export class DynamicShader extends WebGlCoreShader {
     props: DynamicShaderProps,
     effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
+    assertTruthy(effectContructors);
     return {
       effects: getResolvedEffect(
-        props.effects,
+        props.effects ?? [],
         effectContructors,
       ) as EffectDescUnion[],
       $dimensions: {

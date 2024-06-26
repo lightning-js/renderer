@@ -256,6 +256,7 @@ export class CoreShaderManager {
     if (cacheKey) {
       this.shCache.set(cacheKey, shader);
     }
+
     return this._createDynShaderCtr(
       shader,
       resolvedProps,
@@ -279,11 +280,7 @@ export class CoreShaderManager {
     shader: InstanceType<ShaderMap['DynamicShader']>,
     props: ExtractProps<ShaderMap['DynamicShader']>,
   ): ShaderController<'DynamicShader'> {
-    return new DynamicShaderControllerInstance(
-      shader,
-      props,
-      this.renderer.stage,
-    );
+    return new DynamicShaderControllerInstance(shader, props, this);
   }
 
   useShader(shader: CoreShader): void {

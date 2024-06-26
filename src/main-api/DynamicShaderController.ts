@@ -1,6 +1,9 @@
-import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
+import type {
+  CoreShaderManager,
+  EffectMap,
+  ShaderMap,
+} from '../core/CoreShaderManager.js';
 import type { ExtractProps } from '../core/CoreTextureManager.js';
-import type { Stage } from '../core/Stage.js';
 import type { EffectDesc } from '../core/renderers/webgl/shaders/DynamicShader.js';
 import type { ShaderController } from './ShaderController.js';
 
@@ -33,7 +36,7 @@ export class DynamicShaderControllerInstance<
   constructor(
     readonly shader: InstanceType<ShaderMap['DynamicShader']>,
     props: ExtractProps<ShaderMap['DynamicShader']>,
-    stage: Stage,
+    shManager: CoreShaderManager,
   ) {
     this.type = 'DynamicShader';
     this.resolvedProps = props;
@@ -45,7 +48,11 @@ export class DynamicShaderControllerInstance<
 
     let i = 0;
     for (; i < effectsLength; i++) {
-      const { name: effectName, props: effectProps } = effects[i]!;
+      const {
+        name: effectName,
+        props: effectProps,
+        type: effectType,
+      } = effects[i]!;
       const effectIndex = i;
       const definedEffectProps = {};
       const propEntries = Object.keys(effectProps);
@@ -55,11 +62,30 @@ export class DynamicShaderControllerInstance<
         const propName = propEntries[j]!;
         Object.defineProperty(definedEffectProps, propName, {
           get: () => {
-            return this.resolvedProps.effects![effectIndex]!.props[propName];
+            return (
+              this.resolvedProps.effects![effectIndex]!.props[
+                propName
+              ] as Record<string, any>
+            ).value;
           },
           set: (value) => {
-            this.resolvedProps.effects![effectIndex]!.props[propName] = value;
-            stage.requestRender();
+            const target = this.resolvedProps.effects![effectIndex]!.props[
+              propName
+            ] as Record<string, any>;
+            target.value = value;
+            if (target.programValues.hasValidator) {
+              const effectConstructor =
+                shManager.getRegisteredEffects()[effectType];
+              value = effectConstructor?.uniforms[propName]?.validator!(
+                value,
+                effectProps,
+              );
+            }
+            if (Array.isArray(value)) {
+              value = new Float32Array(value);
+            }
+            target.programValues.value = value;
+            shManager.renderer.stage.requestRender();
           },
         });
       }
