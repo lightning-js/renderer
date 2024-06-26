@@ -24,7 +24,7 @@
     "@stdlib/random-base-mt19937": "^0.2.1"
   },
   "devDependencies": {
-    "vite": "^4.4.9"
+    "vite": "^5.0.0"
   },
   "engines": {
     "npm": "please-use-pnpm"

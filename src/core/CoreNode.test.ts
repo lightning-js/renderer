@@ -18,10 +18,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CoreNode, type CoreNodeWritableProps, UpdateType } from './CoreNode';
-import { Stage } from './Stage';
+import {
+  CoreNode,
+  type CoreNodeWritableProps,
+  UpdateType,
+} from './CoreNode.js';
+import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
-import { type TextureOptions } from './CoreTextureManager';
+import { type TextureOptions } from './CoreTextureManager.js';
 
 describe('set color()', () => {
   const defaultProps: CoreNodeWritableProps = {

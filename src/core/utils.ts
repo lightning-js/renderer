@@ -197,10 +197,11 @@ export const getTimingFunction = (
     };
   }
 
-  if (timingLookup[str] !== undefined) {
+  const lookup = timingLookup[str];
+  if (lookup !== undefined) {
+    const [a, b, c, d] = lookup;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - TS doesn't understand that we've checked for undefined
-    const [a, b, c, d] = timingLookup[str];
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const timing = getTimingBezier(a, b, c, d);
     timingMapping[str] = timing;
