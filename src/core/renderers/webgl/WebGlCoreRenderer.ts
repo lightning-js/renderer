@@ -586,19 +586,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       renderOp.draw();
     });
     this.quadBufferUsage = this.curBufferIdx;
-    if (doLog) {
-      const bufferPercentage = (
-        (this.curBufferIdx / (QUAD_BUFFER_SIZE_MB * 1024 * 1024)) *
-        100
-      ).toFixed(2);
-      console.log(
-        'quadBuffer usage: ' +
-          String(this.curBufferIdx) +
-          ' = ' +
-          bufferPercentage +
-          '%',
-      );
-    }
   }
 
   renderToTexture(node: CoreNode) {
