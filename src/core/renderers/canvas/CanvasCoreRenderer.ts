@@ -220,4 +220,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   renderToTexture(node: CoreNode): void {
     // noop
   }
+  getQuadBufferUsage(): null {
+    return null;
+  }
 }

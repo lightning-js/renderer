@@ -102,4 +102,5 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
+  abstract getQuadBufferUsage(): number | null;
 }

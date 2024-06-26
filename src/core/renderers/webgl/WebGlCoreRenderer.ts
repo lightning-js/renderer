@@ -88,6 +88,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   defaultTexture: Texture;
 
+  quadBufferUsage = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -584,6 +585,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
+    this.quadBufferUsage = this.curBufferIdx;
     if (doLog) {
       const bufferPercentage = (
         (this.curBufferIdx / (QUAD_BUFFER_SIZE_MB * 1024 * 1024)) *
@@ -676,5 +678,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+  getQuadBufferUsage(): number {
+    return this.quadBufferUsage;
   }
 }
