@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
+import { type CoreNode, type CoreNodeAnimateProps } from '../CoreNode.js';
 import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -32,16 +32,19 @@ export interface AnimationSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
-export class CoreAnimation extends EventEmitter {
-  public propStartValues: Partial<CoreNodeAnimateProps> = {};
-  public shaderPropsStartValues: Record<string, number> = {};
+type PropValues = {
+  start: number,
+  target: number
+}
+type PropValuesMap = Record<string, Record<string, PropValues>>
 
-  public restoreValues: Partial<CoreNodeAnimateProps> = {};
+export class CoreAnimation extends EventEmitter {
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
-  private propsList: string[];
-  private shaderPropsList: string[] | null = null;
+
+  propValuesMap: PropValuesMap = {};
+  dynPropValuesMap: PropValuesMap = {};
 
   constructor(
     private node: CoreNode,
@@ -49,20 +52,44 @@ export class CoreAnimation extends EventEmitter {
     public settings: Partial<AnimationSettings>,
   ) {
     super();
-    this.propStartValues = {};
 
-    this.propsList = [];
     for (const key in props) {
       if (key !== 'shaderProps') {
-        this.propsList.push(key);
-        this.propStartValues[
-          key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
-        ] = node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>];
-      } else {
-        this.shaderPropsList = [];
+        if(this.propValuesMap['props'] === undefined) {
+          this.propValuesMap['props'] = {};
+        }
+        this.propValuesMap['props'][key] = {
+          start: node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>],
+          target: props[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] as number
+        }
+      } else if(node.shader.type !== 'DynamicShader'){
+        this.propValuesMap['shaderProps'] = {};
         for (const key in props.shaderProps) {
-          this.shaderPropsList.push(key);
-          this.shaderPropsStartValues[key] = node.shader.props[key] as number;
+          this.propValuesMap['shaderProps'][key] = {
+            start: node.shader.props[key] as number,
+            target: props.shaderProps[key] as number
+          }
+        }
+      }
+      else {
+        const shaderPropKeys = Object.keys(props.shaderProps!)
+        const spLength = shaderPropKeys.length;
+        let j = 0;
+        for(; j < spLength; j++) {
+          const effectName = shaderPropKeys[j]!;
+          const effect = props.shaderProps![effectName]!;
+          this.dynPropValuesMap[effectName] = {};
+          const effectProps = Object.entries(effect);
+          const eLength = effectProps.length;
+
+          let k = 0;
+          for(; k < eLength; k++) {
+            const [key, value] = effectProps[k]!;
+            this.dynPropValuesMap[effectName]![key] = {
+              start: node.shader.props[effectName][key],
+              target: value
+            }
+          }
         }
       }
     }
@@ -81,52 +108,87 @@ export class CoreAnimation extends EventEmitter {
     this.update(0);
   }
 
+  private restoreValues(
+    target: Record<string, number>,
+    valueMap: Record<string, PropValues>
+  ) {
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      target[key] = value.start
+    }
+  }
+
   restore() {
     this.reset();
-    (
-      this.propsList as Array<keyof Omit<CoreNodeAnimateProps, 'shaderProps'>>
-    ).forEach((propName) => {
-      this.node[propName] = this.propStartValues[propName] as number;
-    });
-    this.shaderPropsList?.forEach((propName) => {
-      this.node.shader.props[propName] = this.shaderPropsStartValues[propName];
-    });
+    if(this.propValuesMap['props'] !== undefined) {
+      this.restoreValues(
+        this.node as unknown as Record<string, number>,
+        this.propValuesMap['props']
+      );
+    }
+    if(this.propValuesMap['shaderProps'] !== undefined) {
+      this.restoreValues(
+        this.node.shader.props as Record<string, number>,
+        this.propValuesMap['shaderProps']
+      )
+    }
+
+    const dynEntries = Object.keys(this.dynPropValuesMap);
+    const dynEntriesL = dynEntries.length;
+    if(dynEntriesL > 0) {
+      let i = 0;
+      for(; i < dynEntriesL; i++) {
+        const key = dynEntries[i]!;
+        this.restoreValues(
+          this.node.shader.props[key],
+          this.dynPropValuesMap[key]!,
+        )
+      }
+    }
   }
 
   private reverseValues(
-    propName: string,
-    props: Record<string, number>,
-    startValues: Record<string, number>,
+    valueMap: Record<string, PropValues>
   ) {
-    // set the start value to the current value
-    const startValue = props[propName]!;
-    const endValue = startValues[propName]!;
-    // swap the start and end values
-    props[propName] = endValue;
-    startValues[propName] = startValue;
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      valueMap[key] = {
+        start: value.target,
+        target: value.start,
+      }
+    }
   }
 
   reverse() {
     this.progress = 0;
-    (
-      this.propsList as Array<keyof Omit<CoreNodeAnimateProps, 'shader'>>
-    ).forEach((propName) => {
-      this.reverseValues(
-        propName,
-        this.props as Record<string, number>,
-        this.propStartValues as Record<string, number>,
-      );
-    });
 
-    if (this.shaderPropsList) {
-      this.shaderPropsList.forEach((propName) => {
+    if(this.propValuesMap['props'] !== undefined) {
+      this.reverseValues(
+        this.propValuesMap['props']
+      );
+    }
+    if(this.propValuesMap['shaderProps'] !== undefined) {
+      this.reverseValues(
+        this.propValuesMap['shaderProps']
+      )
+    }
+
+    const dynEntries = Object.keys(this.dynPropValuesMap);
+    const dynEntriesL = dynEntries.length;
+    if(dynEntriesL > 0) {
+      let i = 0;
+      for(; i < dynEntriesL; i++) {
+        const key = dynEntries[i]!;
         this.reverseValues(
-          propName,
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          this.props.shaderProps!,
-          this.shaderPropsStartValues,
-        );
-      });
+          this.dynPropValuesMap[key]!
+        )
+      }
     }
 
     // restore stop method if we are not looping
@@ -167,19 +229,18 @@ export class CoreAnimation extends EventEmitter {
 
   private updateValues(
     target: Record<string, number>,
-    list: string[],
-    props: Record<string, number>,
-    startValues: Record<string, number>,
+    valueMap: Record<string, PropValues>,
     easing: string | undefined,
   ) {
-    for (let i = 0; i < list.length; i++) {
-      const propName = list[i]!;
-      const propValue = props[propName]!;
-      const startValue = startValues[propName]!;
-      target[propName] = this.updateValue(
-        propName,
-        propValue,
-        startValue,
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      target[key] = this.updateValue(
+        key,
+        value.target,
+        value.start,
         easing,
       );
     }
@@ -214,24 +275,36 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    this.updateValues(
-      this.node as unknown as Record<string, number>,
-      this.propsList,
-      this.props as Record<string, number>,
-      this.propStartValues as Record<string, number>,
-      easing,
-    );
-
-    if (this.shaderPropsList) {
+    if(this.propValuesMap['props'] !== undefined) {
       this.updateValues(
-        this.node.shader.props as Record<string, number>,
-        this.shaderPropsList,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.props.shaderProps!,
-        this.shaderPropsStartValues,
+        this.node as unknown as Record<string, number>,
+        this.propValuesMap['props'],
         easing,
       );
     }
+    if(this.propValuesMap['shaderProps'] !== undefined) {
+      this.updateValues(
+        this.node.shader.props as Record<string, number>,
+        this.propValuesMap['shaderProps'],
+        easing
+      )
+    }
+
+    const dynEntries = Object.keys(this.dynPropValuesMap);
+    const dynEntriesL = dynEntries.length;
+    if(dynEntriesL > 0) {
+      let i = 0;
+      for(; i < dynEntriesL; i++) {
+        const key = dynEntries[i]!;
+        this.updateValues(
+          this.node.shader.props[key],
+          this.dynPropValuesMap[key]!,
+          easing
+        )
+      }
+    }
+
+    this.node.stage.requestRender()
 
     if (this.progress === 1) {
       this.emit('finished', {});

@@ -27,7 +27,6 @@ import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import { ShaderEffect } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
-import memize from 'memize';
 
 export interface BaseEffectDesc {
   name: string;
@@ -142,8 +141,6 @@ export class DynamicShader extends WebGlCoreShader {
     this.effects = shader.effects as Array<
       InstanceType<EffectMap[keyof EffectMap]>
     >;
-
-    this.calculateProps = memize(this.calculateProps.bind(this));
   }
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {

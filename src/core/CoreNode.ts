@@ -22,10 +22,8 @@ import {
   getNewId,
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
-import type { ShaderMap } from './CoreShaderManager.js';
-import type { ExtractProps, TextureOptions } from './CoreTextureManager.js';
+import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
 import type {
   Texture,
@@ -677,7 +675,7 @@ export class CoreNode extends EventEmitter {
   public parentHasRenderTexture = false;
   private _src = '';
 
-  constructor(protected stage: Stage, props: CoreNodeProps) {
+  constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
     this.props = {
@@ -1283,6 +1281,13 @@ export class CoreNode extends EventEmitter {
 
     const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
 
+    let shaderProps = shader.props
+
+    if(shader.type === 'DynamicShader') {
+      //@ts-ignore-next-line
+      shaderProps = shader.resolvedProps;
+    }
+
     assertTruthy(gt);
 
     // add to list of renderables to be sorted before rendering
@@ -1297,7 +1302,7 @@ export class CoreNode extends EventEmitter {
       textureOptions,
       zIndex,
       shader: shader.shader,
-      shaderProps: shader.props,
+      shaderProps,
       alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,

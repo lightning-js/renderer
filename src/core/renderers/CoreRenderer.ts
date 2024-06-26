@@ -74,7 +74,7 @@ export abstract class CoreRenderer {
   public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
 
-  protected stage: Stage;
+  readonly stage: Stage;
 
   //// Core Managers
   txManager: CoreTextureManager;

@@ -64,7 +64,6 @@ import { HolePunchEffect } from './renderers/webgl/shaders/effects/HolePunchEffe
 import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
 import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
 import type {
-  BaseShaderController,
   ShaderController,
 } from '../main-api/ShaderController.js';
 
@@ -250,7 +249,7 @@ export class CoreShaderManager {
     if (cacheKey) {
       this.shCache.set(cacheKey, shader);
     }
-    return this._createShaderCtr('DynamicShader', shader, resolvedProps);
+    return this._createDynShaderCtr(shader, resolvedProps) as unknown as ShaderController<'DynamicShader'>;
   }
 
   private _createShaderCtr<Type extends keyof ShaderMap>(
@@ -263,6 +262,35 @@ export class CoreShaderManager {
       shader,
       props,
     };
+  }
+
+  private _createDynShaderCtr(
+    shader: InstanceType<ShaderMap['DynamicShader']>,
+    props: ExtractProps<ShaderMap['DynamicShader']>,
+  ): Record<string, unknown> {
+
+    const controller = {
+      resolvedProps: props,
+      type: 'DynamicShader',
+      shader,
+      props: {}
+    }
+
+    const effects = props.effects!;
+    const l = effects.length;
+    const stage = this.renderer.stage;
+    let i = 0;
+    for(;i < l; i++) {
+      const name = effects[i]!.name;
+      const index = i;
+      Object.defineProperty(controller.props, name, {
+        get() {
+          return controller.resolvedProps.effects![index]!.props;
+        }
+      })
+    }
+
+    return controller;
   }
 
   useShader(shader: CoreShader): void {
