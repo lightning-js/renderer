@@ -76,6 +76,7 @@ export abstract class CoreRenderer {
   public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
 
+  public quadBufferUsage?: number;
   protected stage: Stage;
 
   //// Core Managers
@@ -102,5 +103,4 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
-  abstract getQuadBufferUsage(): number | null;
 }

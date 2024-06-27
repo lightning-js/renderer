@@ -591,10 +591,6 @@ export class RendererMain extends EventEmitter {
     throw new Error('Not implemented');
   }
 
-  getQuadBufferUsage() {
-    return this.stage.renderer.getQuadBufferUsage();
-  }
-
   /**
    * Re-render the current frame without advancing any running animations.
    *
