@@ -166,7 +166,6 @@ export class LightningTextTextureRenderer {
     | OffscreenCanvasRenderingContext2D
     | CanvasRenderingContext2D;
   private _settings: Settings;
-  private renderInfo: RenderInfo | undefined;
 
   constructor(
     canvas: OffscreenCanvas | HTMLCanvasElement,
@@ -619,8 +618,6 @@ export class LightningTextTextureRenderer {
     if (renderInfo.cutSx || renderInfo.cutSy) {
       this._context.translate(renderInfo.cutSx, renderInfo.cutSy);
     }
-
-    this.renderInfo = renderInfo;
   }
 
   wrapWord(word: string, wordWrapWidth: number, suffix: string) {

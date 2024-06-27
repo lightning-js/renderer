@@ -647,7 +647,7 @@ export type CoreNodeAnimatableProps = {
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
-  protected props: Required<CoreNodeWritableProps>;
+  readonly props: Required<CoreNodeWritableProps>;
 
   public updateType = UpdateType.All;
 

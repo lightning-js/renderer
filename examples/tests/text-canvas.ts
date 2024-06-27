@@ -99,8 +99,6 @@ export default async function test(settings: ExampleSettings) {
             {
               duration: 3000,
               easing: 'ease-out',
-              // loop: true,
-              stopMethod: 'reverse',
             },
           )
           .start();
