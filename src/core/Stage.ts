@@ -20,7 +20,7 @@ import { startLoop, getTimeStamp } from './platform.js';
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
-import { CoreNode } from './CoreNode.js';
+import { CoreNode, type CoreNodeWritableProps } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
 import { CoreShaderManager } from './CoreShaderManager.js';
@@ -46,6 +46,11 @@ import type {
   CoreRendererOptions,
 } from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import { santizeCustomDataMap } from '../main-api/utils.js';
+import {
+  CoreTextNode,
+  type CoreTextNodeWritableProps,
+} from './CoreTextNode.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -447,5 +452,109 @@ export class Stage {
     // Need to explicitly cast to TextRenderer because TS doesn't like
     // the covariant state argument in the setter method map
     return resolvedTextRenderer as unknown as TextRenderer;
+  }
+
+  createNode(props: Partial<CoreNodeWritableProps>) {
+    const resolvedProps = this.resolveNodeDefaults(props);
+    const node = new CoreNode(this, {
+      ...resolvedProps,
+      shaderProps: null,
+    });
+    return node;
+  }
+
+  createTextNode(props: Partial<CoreTextNodeWritableProps>) {
+    const fontSize = props.fontSize ?? 16;
+    const resolvedProps = {
+      ...this.resolveNodeDefaults(props),
+      text: props.text ?? '',
+      textRendererOverride: props.textRendererOverride ?? null,
+      fontSize,
+      fontFamily: props.fontFamily ?? 'sans-serif',
+      fontStyle: props.fontStyle ?? 'normal',
+      fontWeight: props.fontWeight ?? 'normal',
+      fontStretch: props.fontStretch ?? 'normal',
+      textAlign: props.textAlign ?? 'left',
+      contain: props.contain ?? 'none',
+      scrollable: props.scrollable ?? false,
+      scrollY: props.scrollY ?? 0,
+      offsetY: props.offsetY ?? 0,
+      letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight, // `undefined` is a valid value
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'middle',
+      overflowSuffix: props.overflowSuffix ?? '...',
+      debug: props.debug ?? {},
+      shaderProps: null,
+    };
+
+    return new CoreTextNode(this, resolvedProps);
+  }
+
+  /**
+   * Resolves the default property values for a Node
+   *
+   * @remarks
+   * This method is used internally by the RendererMain to resolve the default
+   * property values for a Node. It is exposed publicly so that it can be used
+   * by Core Driver implementations.
+   *
+   * @param props
+   * @returns
+   */
+  protected resolveNodeDefaults(
+    props: Partial<CoreNodeWritableProps>,
+  ): CoreNodeWritableProps {
+    const color = props.color ?? 0xffffffff;
+    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
+    const colorTr =
+      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
+    const colorBl =
+      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
+    const colorBr =
+      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const data = santizeCustomDataMap(props.data ?? {});
+
+    return {
+      x: props.x ?? 0,
+      y: props.y ?? 0,
+      width: props.width ?? 0,
+      height: props.height ?? 0,
+      alpha: props.alpha ?? 1,
+      autosize: props.autosize ?? false,
+      clipping: props.clipping ?? false,
+      color,
+      colorTop: props.colorTop ?? color,
+      colorBottom: props.colorBottom ?? color,
+      colorLeft: props.colorLeft ?? color,
+      colorRight: props.colorRight ?? color,
+      colorBl,
+      colorBr,
+      colorTl,
+      colorTr,
+      zIndex: props.zIndex ?? 0,
+      zIndexLocked: props.zIndexLocked ?? 0,
+      parent: props.parent ?? null,
+      texture: props.texture ?? null,
+      textureOptions: props.textureOptions ?? {},
+      shader: props.shader ?? null,
+      shaderProps: props.shaderProps ?? null,
+      // Since setting the `src` will trigger a texture load, we need to set it after
+      // we set the texture. Otherwise, problems happen.
+      src: props.src ?? '',
+      scale: props.scale ?? null,
+      scaleX: props.scaleX ?? props.scale ?? 1,
+      scaleY: props.scaleY ?? props.scale ?? 1,
+      mount: props.mount ?? 0,
+      mountX: props.mountX ?? props.mount ?? 0,
+      mountY: props.mountY ?? props.mount ?? 0,
+      pivot: props.pivot ?? 0.5,
+      pivotX: props.pivotX ?? props.pivot ?? 0.5,
+      pivotY: props.pivotY ?? props.pivot ?? 0.5,
+      rotation: props.rotation ?? 0,
+      rtt: props.rtt ?? false,
+      data: data,
+    };
   }
 }

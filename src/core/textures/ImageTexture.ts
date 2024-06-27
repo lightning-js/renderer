@@ -38,7 +38,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData | (() => ImageData);
+  src?: string | ImageData | (() => ImageData | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -158,18 +158,6 @@ export class ImageTexture extends Texture {
       return false;
     }
     return `ImageTexture,${key},${resolvedProps.premultiplyAlpha ?? 'true'}`;
-  }
-
-  override free(): void {
-    if (this.props.src instanceof ImageData) {
-      // ImageData is a non-cacheable texture, so we need to free it manually
-      const texture = this.txManager.getCtxTexture(this);
-      texture?.free();
-
-      this.props.src = '';
-    }
-
-    this.setState('freed');
   }
 
   static override resolveDefaults(
