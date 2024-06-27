@@ -117,7 +117,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.clearColor(color[0], color[1], color[2], color[3]);
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
@@ -600,6 +600,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
         continue;
       }
 
+      const prevAlpha = node.alpha;
+
       // Set the active RTT node to the current node
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
@@ -632,6 +634,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
         this.stage.addQuads(child);
         child.hasRTTupdates = false;
       }
+
+      node.alpha = prevAlpha;
 
       // Render all associated quads to the texture
       this.render();

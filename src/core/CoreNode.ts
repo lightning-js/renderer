@@ -1182,6 +1182,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set alpha(value: number) {
     this.props.alpha = value;
     this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
+
+    if (this.props.rtt) {
+      this.setUpdateType(UpdateType.RenderTexture);
+    }
   }
 
   get autosize(): boolean {
