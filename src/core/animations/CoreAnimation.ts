@@ -198,6 +198,11 @@ export class CoreAnimation extends EventEmitter {
         startValue + (endValue - startValue) * this.progress;
     }
     if (this.progress === 1) {
+      for (let i = 0; i < this.propsList.length; i++) {
+        const propName = this.propsList[i] as keyof CoreNodeAnimatableProps;
+        const propValue = this.props[propName] as number;
+        this.node[propName] = propValue;
+      }
       this.emit('finished', {});
     }
   }
