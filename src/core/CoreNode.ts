@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 
-import {
-  assertTruthy,
-  mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
-} from '../utils.js';
+import { assertTruthy, mergeColorAlphaPremultiplied } from '../utils.js';
 import type { ShaderMap } from './CoreShaderManager.js';
 import type {
   ExtractProps,
@@ -37,7 +33,6 @@ import type {
   TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
-import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -620,7 +615,13 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     ) {
       this.children.forEach((child) => {
         // Trigger the depenedent update types on the child
-        child.setUpdateType(childUpdateType);
+        // if the child has rtt and is updating the world alpha updates the rtt
+        child.setUpdateType(
+          child.rtt && childUpdateType & UpdateType.WorldAlpha
+            ? childUpdateType | UpdateType.RenderTexture
+            : childUpdateType,
+        );
+
         // If child has no updates, skip
         if (child.updateType === 0) {
           return;
@@ -1182,10 +1183,6 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   set alpha(value: number) {
     this.props.alpha = value;
     this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
-
-    if (this.props.rtt) {
-      this.setUpdateType(UpdateType.RenderTexture);
-    }
   }
 
   get autosize(): boolean {

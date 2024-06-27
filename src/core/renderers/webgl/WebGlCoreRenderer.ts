@@ -600,8 +600,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
         continue;
       }
 
-      const prevAlpha = node.alpha;
-
       // Set the active RTT node to the current node
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
@@ -634,8 +632,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
         this.stage.addQuads(child);
         child.hasRTTupdates = false;
       }
-
-      node.alpha = prevAlpha;
 
       // Render all associated quads to the texture
       this.render();
