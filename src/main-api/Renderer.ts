@@ -569,7 +569,7 @@ export class RendererMain extends EventEmitter {
   >(effects: [...T]): DynamicShaderController<T> {
     return this.stage.shManager.loadDynamicShader({
       effects: effects as EffectDescUnion[],
-    }) as DynamicShaderController<T>;
+    });
   }
 
   createEffect<Name extends string, Type extends keyof EffectMap>(

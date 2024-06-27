@@ -37,20 +37,14 @@ export interface BaseShaderController {
 }
 
 /**
- * Shader Controller Interface
+ * Shader Controller Class
  *
  * @remarks
- * This interface is used to define the shape of a specific Shader Controller.
+ * This class is used to control shader props.
  */
-export interface ShaderController<S extends keyof ShaderMap>
-  extends BaseShaderController {
-  type: S;
-  shader: InstanceType<ShaderMap[S]>;
-  props: ExtractProps<ShaderMap[S]>;
-}
 
-export class ShaderControllerInstance<S extends keyof ShaderMap>
-  implements ShaderController<S>
+export class ShaderController<S extends keyof ShaderMap>
+  implements BaseShaderController
 {
   private resolvedProps: ExtractProps<ShaderMap[S]>;
   props: ExtractProps<ShaderMap[S]>;

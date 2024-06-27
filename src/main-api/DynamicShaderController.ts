@@ -5,7 +5,7 @@ import type {
 } from '../core/CoreShaderManager.js';
 import type { ExtractProps } from '../core/CoreTextureManager.js';
 import type { EffectDesc } from '../core/renderers/webgl/shaders/DynamicShader.js';
-import type { ShaderController } from './ShaderController.js';
+import type { BaseShaderController } from './ShaderController.js';
 
 type MapEffectProps<
   Effects extends [...{ name: string; type: keyof EffectMap }[]],
@@ -19,15 +19,9 @@ export type DynamicEffects<
   [K in keyof T]: EffectDesc<T[K]>;
 };
 
-export interface DynamicShaderController<
+export class DynamicShaderController<
   Effects extends [...{ name: string; type: keyof EffectMap }[]],
-> extends ShaderController<'DynamicShader'> {
-  props: MapEffectProps<Effects>;
-}
-
-export class DynamicShaderControllerInstance<
-  Effects extends [...{ name: string; type: keyof EffectMap }[]],
-> implements DynamicShaderController<Effects>
+> implements BaseShaderController
 {
   private resolvedProps: ExtractProps<ShaderMap['DynamicShader']>;
   props: MapEffectProps<Effects>;
