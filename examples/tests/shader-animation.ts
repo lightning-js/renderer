@@ -22,19 +22,27 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await test(settings);
-  await settings.snapshot();
+  // await settings.snapshot();
 }
 
-export default async function test({ renderer, testRoot }: ExampleSettings) {
+export default async function test({
+  renderer,
+  testRoot,
+  snapshot,
+}: ExampleSettings) {
   const degToRad = (deg: number) => {
     return (Math.PI / 180) * deg;
   };
 
+  const nodeSize = {
+    width: 300,
+    height: 300,
+  };
+
   const t1 = renderer.createNode({
-    x: 0,
-    y: 0,
-    width: 960,
-    height: 540,
+    ...nodeSize,
+    x: 90,
+    y: 90,
     color: 0xff0000ff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 100,
@@ -42,28 +50,21 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  t1.shader.props.radius = 50;
-
-  const shaderAnimation = t1.animate(
-    {
-      x: 1,
-      shaderProps: {
-        radius: 200,
-      },
-    },
-    {
-      delay: 400,
-      duration: 5000,
-    },
-  );
-
-  shaderAnimation?.start();
+  const t1Radius = renderer.createTextNode({
+    mountX: 1,
+    x: testRoot.width - 90,
+    y: 90,
+    fontSize: 40,
+    fontFamily: 'Ubuntu',
+    text: 'radius: 100',
+    parent: testRoot,
+    color: 0xffffffff,
+  });
 
   const t2 = renderer.createNode({
-    x: 0,
+    ...nodeSize,
+    x: 90,
     y: 540,
-    width: 960,
-    height: 540,
     color: 0x00ff00ff,
     shader: renderer.createDynamicShader([
       renderer.createEffect('r1', 'radius', {
@@ -77,35 +78,69 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  // !!! The below two statements are now dynamically typed correctly but don't work yet
-  t2.shader.props.e1.width = 40;
-  t2.animate(
+  const t2Radius = renderer.createTextNode({
+    mountX: 1,
+    x: testRoot.width - 90,
+    y: 540,
+    fontSize: 40,
+    fontFamily: 'Ubuntu',
+    text: 'radius: 0',
+    parent: testRoot,
+    color: 0xffffffff,
+  });
+
+  const t2Border = renderer.createTextNode({
+    mountX: 1,
+    x: testRoot.width - 90,
+    y: 590,
+    fontSize: 40,
+    fontFamily: 'Ubuntu',
+    text: 'border: 10',
+    parent: testRoot,
+    color: 0xffffffff,
+  });
+
+  await snapshot({ name: 'startup' });
+
+  const shaderAnimation = t1.animate(
     {
+      x: 1140,
+      shaderProps: {
+        radius: 150,
+      },
+    },
+    {
+      duration: 500,
+    },
+  );
+  shaderAnimation.start();
+  await shaderAnimation.waitUntilStopped();
+  t1Radius.text = 'radius: ' + t1.shader.props.radius!.toString();
+
+  await snapshot({ name: 'animation1 finished' });
+
+  const shaderAnimation2 = t2.animate(
+    {
+      x: 1140,
       shaderProps: {
         r1: {
-          radius: 40,
+          radius: 150,
         },
         e1: {
-          width: 100,
+          width: 50,
         },
       },
     },
     {
-      duration: 5000,
+      duration: 500,
     },
-  ).start();
+  );
 
-  setTimeout(() => {
-    // console.log('test', t2.shader.props.e1.width)
-    t1.shader.props.radius = 70;
-    t2.shader.props.e1.width = 70;
-  }, 2000);
+  shaderAnimation2.start();
+  await shaderAnimation2.waitUntilStopped();
+  t2Radius.text = 'radius: ' + t2.shader.props.r1.radius!.toString();
+  t2Border.text = 'border: ' + t2.shader.props.e1.width!.toString();
 
-  // document.addEventListener('click', () => {
-  //   if (t1.shader) {
-  //     t1.shader.radius = 10;
-  //   }
-  // });
-
+  await snapshot({ name: 'animation2 finished' });
   console.log('ready!');
 }
