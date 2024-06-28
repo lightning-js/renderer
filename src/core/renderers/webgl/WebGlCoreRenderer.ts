@@ -610,11 +610,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
         node.texture.needsToBeRegenerated === undefined &&
         !node.isRenderable
       ) {
+        // The texture will have to be regenerated when the worldAlpha becomes 1
         node.texture.needsToBeRegenerated = true;
       } else if (
         node.texture.needsToBeRegenerated !== false &&
         node.isRenderable
       ) {
+        // The texture must be regenerated with worldAlpha 1 because it was created with alpha 0
         node.worldAlpha = 1;
         node.texture.needsToBeRegenerated = false;
       }
