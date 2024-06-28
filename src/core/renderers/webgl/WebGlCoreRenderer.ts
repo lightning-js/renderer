@@ -646,8 +646,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
         this.stage.addQuads(child);
         child.hasRTTupdates = false;
-
-        //child.worldAlpha = oldAlpha;
       }
 
       // Render all associated quads to the texture
