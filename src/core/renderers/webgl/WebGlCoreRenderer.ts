@@ -606,14 +606,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       assertTruthy(node.texture, 'RTT node missing texture');
 
-      if (node.texture.needsToBeRecreated === undefined && !node.isRenderable) {
-        node.texture.needsToBeRecreated = true;
+      if (
+        node.texture.needsToBeRegenerated === undefined &&
+        !node.isRenderable
+      ) {
+        node.texture.needsToBeRegenerated = true;
       } else if (
-        node.texture.needsToBeRecreated !== false &&
+        node.texture.needsToBeRegenerated !== false &&
         node.isRenderable
       ) {
         node.worldAlpha = 1;
-        node.texture.needsToBeRecreated = false;
+        node.texture.needsToBeRegenerated = false;
       }
 
       const ctxTexture = txManager.getCtxTexture(node.texture);

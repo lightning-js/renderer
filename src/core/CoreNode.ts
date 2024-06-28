@@ -617,11 +617,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         // Trigger the depenedent update types on the child
         child.setUpdateType(childUpdateType);
 
-        // if the child has rtt and is updating the world alpha updates the rtt
+        // if the child has rtt and needs to be regenerated set the type to RenderTexture
         if (
           child.rtt &&
           childUpdateType !== UpdateType.None &&
-          child.texture?.needsToBeRecreated &&
+          child.texture?.needsToBeRegenerated &&
           child.isRenderable
         ) {
           child.setUpdateType(UpdateType.RenderTexture);
