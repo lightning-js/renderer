@@ -145,6 +145,8 @@ export abstract class Texture extends EventEmitter {
 
   readonly renderableOwners = new Set<unknown>();
 
+  needsToBeRecreated: boolean | undefined = undefined;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }

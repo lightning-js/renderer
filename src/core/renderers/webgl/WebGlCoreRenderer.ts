@@ -605,8 +605,20 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.activeRttNode = node;
 
       assertTruthy(node.texture, 'RTT node missing texture');
+
+      if (node.texture.needsToBeRecreated === undefined && !node.isRenderable) {
+        node.texture.needsToBeRecreated = true;
+      } else if (
+        node.texture.needsToBeRecreated !== false &&
+        node.isRenderable
+      ) {
+        node.worldAlpha = 1;
+        node.texture.needsToBeRecreated = false;
+      }
+
       const ctxTexture = txManager.getCtxTexture(node.texture);
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
+
       this.renderToTextureActive = true;
 
       // Bind the the texture's framebuffer
@@ -631,6 +643,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
         this.stage.addQuads(child);
         child.hasRTTupdates = false;
+
+        //child.worldAlpha = oldAlpha;
       }
 
       // Render all associated quads to the texture
