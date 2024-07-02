@@ -117,7 +117,7 @@ export default async function test({
   await shaderAnimation.waitUntilStopped();
   t1Radius.text = 'radius: ' + t1.shader.props.radius!.toString();
 
-  await snapshot({ name: 'animation1 finished' });
+  await snapshot({ name: 'animation1' });
 
   const shaderAnimation2 = t2.animate(
     {
@@ -141,6 +141,6 @@ export default async function test({
   t2Radius.text = 'radius: ' + t2.shader.props.r1.radius!.toString();
   t2Border.text = 'border: ' + t2.shader.props.e1.width!.toString();
 
-  await snapshot({ name: 'animation2 finished' });
+  await snapshot({ name: 'animation2' });
   console.log('ready!');
 }
