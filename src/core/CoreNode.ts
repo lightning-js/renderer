@@ -720,9 +720,11 @@ export class CoreNode extends EventEmitter {
         texture.ctxTexture.load();
       }
       if (texture.state === 'loaded') {
-        this.onTextureLoaded(texture, texture.dimensions!);
+        assertTruthy(texture.dimensions);
+        this.onTextureLoaded(texture, texture.dimensions);
       } else if (texture.state === 'failed') {
-        this.onTextureFailed(texture, texture.error!);
+        assertTruthy(texture.error);
+        this.onTextureFailed(texture, texture.error);
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
       }
@@ -748,7 +750,7 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+  private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
@@ -772,14 +774,14 @@ export class CoreNode extends EventEmitter {
     }
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (target, error) => {
+  private onTextureFailed: TextureFailedEventHandler = (_, error) => {
     this.emit('failed', {
       type: 'texture',
       error,
     } satisfies NodeTextureFailedPayload);
   };
 
-  private onTextureFreed: TextureFreedEventHandler = (target: Texture) => {
+  private onTextureFreed: TextureFreedEventHandler = () => {
     this.emit('freed', {
       type: 'texture',
     } satisfies NodeTextureFreedPayload);
@@ -827,29 +829,45 @@ export class CoreNode extends EventEmitter {
   }
 
   updateScaleRotateTransform() {
+    const { rotation, scaleX, scaleY } = this.props;
+
+    // optimize simple translation cases
+    if (rotation === 0 && scaleX === 1 && scaleY === 1) {
+      this.scaleRotateTransform = undefined;
+      return;
+    }
+
     this.scaleRotateTransform = Matrix3d.rotate(
-      this.props.rotation,
+      rotation,
       this.scaleRotateTransform,
-    ).scale(this.props.scaleX, this.props.scaleY);
+    ).scale(scaleX, scaleY);
   }
 
   updateLocalTransform() {
-    assertTruthy(this.scaleRotateTransform);
-    const pivotTranslateX = this.props.pivotX * this.props.width;
-    const pivotTranslateY = this.props.pivotY * this.props.height;
-    const mountTranslateX = this.props.mountX * this.props.width;
-    const mountTranslateY = this.props.mountY * this.props.height;
+    const { x, y, width, height } = this.props;
+    const mountTranslateX = this.props.mountX * width;
+    const mountTranslateY = this.props.mountY * height;
 
-    this.localTransform = Matrix3d.translate(
-      pivotTranslateX - mountTranslateX + this.props.x,
-      pivotTranslateY - mountTranslateY + this.props.y,
-      this.localTransform,
-    )
-      .multiply(this.scaleRotateTransform)
-      .translate(-pivotTranslateX, -pivotTranslateY);
+    if (this.scaleRotateTransform) {
+      const pivotTranslateX = this.props.pivotX * width;
+      const pivotTranslateY = this.props.pivotY * height;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .multiply(this.scaleRotateTransform)
+        .translate(-pivotTranslateX, -pivotTranslateY);
+    } else {
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX,
+        y - mountTranslateY,
+        this.localTransform,
+      );
+    }
 
     // Handle 'contain' resize mode
-    const { width, height } = this.props;
     const texture = this.props.texture;
     if (
       texture &&
