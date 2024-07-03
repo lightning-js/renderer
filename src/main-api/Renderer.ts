@@ -591,8 +591,8 @@ export class RendererMain extends EventEmitter {
     throw new Error('Not implemented');
   }
 
-  getQuadBufferUsage() {
-    return this.stage.renderer.getQuadBufferUsage();
+  getBufferInfo() {
+    return this.stage.renderer.getBufferInfo();
   }
 
   /**
