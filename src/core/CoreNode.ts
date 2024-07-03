@@ -1318,13 +1318,13 @@ export class CoreNode extends EventEmitter {
 
     this.isRenderable = false;
 
-    delete this.renderCoords;
-    delete this.renderBound;
-    delete this.strictBound;
-    delete this.preloadBound;
-    delete this.globalTransform;
-    delete this.scaleRotateTransform;
-    delete this.localTransform;
+    this.renderCoords = undefined;
+    this.renderBound = undefined;
+    this.strictBound = undefined;
+    this.preloadBound = undefined;
+    this.globalTransform = undefined;
+    this.scaleRotateTransform = undefined;
+    this.localTransform = undefined;
 
     this.props.texture = null;
     this.props.shader = null;

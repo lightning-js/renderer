@@ -317,6 +317,7 @@ export class WebGlContextWrapper {
   ) {
     const { gl } = this;
     if (format) {
+      // console.log('texImage2D-1', level, internalFormat, widthOrFormat, heightOrType, borderOrSource, format, type, pixels);
       gl.texImage2D(
         gl.TEXTURE_2D,
         level,
@@ -329,6 +330,7 @@ export class WebGlContextWrapper {
         pixels,
       );
     } else {
+      // console.log('texImage2D-2', level, internalFormat, widthOrFormat, heightOrType, borderOrSource);
       gl.texImage2D(
         gl.TEXTURE_2D,
         level,

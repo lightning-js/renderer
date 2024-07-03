@@ -117,8 +117,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     const { glw } = this;
 
     // Set to a 1x1 transparent texture
-    glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
-    this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
+    // glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
+    // this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
     const textureData = await this.textureSource?.getTextureData();
     // If the texture has been freed while loading, return early.
