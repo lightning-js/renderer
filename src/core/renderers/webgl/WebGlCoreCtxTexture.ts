@@ -136,6 +136,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (
       textureData.data instanceof ImageBitmap ||
       textureData.data instanceof ImageData ||
+      textureData.data instanceof HTMLCanvasElement ||
       // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(textureData.data)
     ) {

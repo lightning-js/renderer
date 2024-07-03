@@ -161,17 +161,14 @@ function calcHeight(
 }
 
 export class LightningTextTextureRenderer {
-  private _canvas: OffscreenCanvas | HTMLCanvasElement;
+  public canvas: HTMLCanvasElement;
   private _context:
     | OffscreenCanvasRenderingContext2D
     | CanvasRenderingContext2D;
   private _settings: Settings;
 
-  constructor(
-    canvas: OffscreenCanvas | HTMLCanvasElement,
-    context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
-  ) {
-    this._canvas = canvas;
+  constructor(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) {
+    this.canvas = canvas;
     this._context = context;
     this._settings = this.mergeDefaults({});
   }
@@ -479,11 +476,11 @@ export class LightningTextTextureRenderer {
       : renderInfo.height;
 
     // Add extra margin to prevent issue with clipped text when scaling.
-    this._canvas.width = Math.min(
+    this.canvas.width = Math.min(
       Math.ceil(renderInfo.width + this._settings.textRenderIssueMargin),
       MAX_TEXTURE_DIMENSION,
     );
-    this._canvas.height = Math.min(Math.ceil(height), MAX_TEXTURE_DIMENSION);
+    this.canvas.height = Math.min(Math.ceil(height), MAX_TEXTURE_DIMENSION);
 
     // Canvas context has been reset.
     this.setFontProperties();

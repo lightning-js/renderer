@@ -91,6 +91,7 @@ export interface TextureData {
     | SubTextureProps
     | CompressedData
     | HTMLImageElement
+    | HTMLCanvasElement
     | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU

@@ -79,10 +79,8 @@ export interface CanvasTextRendererState extends TextRendererState {
 }
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
-  protected canvas: OffscreenCanvas | HTMLCanvasElement;
-  protected context:
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D;
+  // protected canvas: HTMLCanvasElement;
+  // protected context: CanvasRenderingContext2D;
   /**
    * Font family map used to store web font faces that were added to the
    * canvas text renderer.
@@ -92,26 +90,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   constructor(stage: Stage) {
     super(stage);
-    if (typeof OffscreenCanvas !== 'undefined') {
-      this.canvas = new OffscreenCanvas(0, 0);
-    } else {
-      this.canvas = document.createElement('canvas');
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    let context = this.canvas.getContext('2d', {
-      willReadFrequently: true,
-    }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
-    if (!context) {
-      // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
-      // Here we try getting the context again after falling back to an HTMLCanvasElement.
-      // See: https://github.com/lightning-js/renderer/issues/26#issuecomment-1750438486
-      this.canvas = document.createElement('canvas');
-      context = this.canvas.getContext('2d', {
-        willReadFrequently: true,
-      });
-    }
-    assertTruthy(context);
-    this.context = context;
+    // this.canvas = document.createElement('canvas');
+    // const context = this.canvas.getContext('2d', {
+    //   willReadFrequently: true,
+    // });
+    // assertTruthy(context);
+    // this.context = context;
 
     // Install the default 'san-serif' font face
     this.addFontFace(
@@ -265,6 +249,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     props: TrProps,
     node: CoreTextNode,
   ): CanvasTextRendererState {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    assertTruthy(context);
     return {
       node,
       props,
@@ -272,10 +259,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       updateScheduled: false,
       emitter: new EventEmitter(),
       textureNode: undefined,
-      lightning2TextRenderer: new LightningTextTextureRenderer(
-        this.canvas,
-        this.context,
-      ),
+      lightning2TextRenderer: new LightningTextTextureRenderer(canvas, context),
       renderInfo: undefined,
       forceFullLayoutCalc: false,
       textW: 0,
@@ -350,15 +334,13 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
           lines: renderInfo.lines,
           lineWidths: renderInfo.lineWidths,
         });
-        if (this.canvas.width === 0 || this.canvas.height === 0) {
+        if (
+          lightning2TextRenderer.canvas.width === 0 ||
+          lightning2TextRenderer.canvas.height === 0
+        ) {
           return null;
         }
-        return this.context.getImageData(
-          0,
-          0,
-          this.canvas.width,
-          this.canvas.height,
-        );
+        return lightning2TextRenderer.canvas;
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
     if (state.textureNode) {
