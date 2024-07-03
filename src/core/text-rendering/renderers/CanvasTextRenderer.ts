@@ -362,6 +362,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
     if (state.textureNode) {
+      // Free the existing texture
+      state.textureNode.texture!.ctxTexture.free();
       // Use the existing texture node
       state.textureNode.texture = texture;
     } else {
@@ -449,10 +451,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     super.destroyState(state);
 
     if (state.textureNode) {
+      state.textureNode.texture?.ctxTexture.free();
       state.textureNode.destroy();
-      delete state.textureNode;
+      state.textureNode = undefined;
     }
-    delete state.renderInfo;
+    state.renderInfo = undefined;
   }
   //#endregion Overrides
 

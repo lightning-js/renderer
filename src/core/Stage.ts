@@ -279,11 +279,6 @@ export class Stage {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested) {
-      this.txMemManager.cleanup();
-    }
-
     // If we have RTT nodes draw them first
     // So we can use them as textures in the main scene
     if (renderer.rttNodes.length > 0) {
@@ -295,6 +290,11 @@ export class Stage {
 
     // Perform render pass
     renderer?.render();
+
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested) {
+      this.txMemManager.cleanup();
+    }
 
     this.calculateFps();
 
