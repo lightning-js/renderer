@@ -158,6 +158,11 @@ export class CoreAnimation extends EventEmitter {
       const startValue = this.propStartValues[propName] as number;
       const endValue = propValue;
 
+      if (this.progress === 1) {
+        this.node[propName] = endValue;
+        continue;
+      }
+
       if (propName.indexOf('color') !== -1) {
         // check if we have to change the color to begin with
         if (startValue === endValue) {
@@ -198,11 +203,6 @@ export class CoreAnimation extends EventEmitter {
         startValue + (endValue - startValue) * this.progress;
     }
     if (this.progress === 1) {
-      for (let i = 0; i < this.propsList.length; i++) {
-        const propName = this.propsList[i] as keyof CoreNodeAnimatableProps;
-        const propValue = this.props[propName] as number;
-        this.node[propName] = propValue;
-      }
       this.emit('finished', {});
     }
   }
