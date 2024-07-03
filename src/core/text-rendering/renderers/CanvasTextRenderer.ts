@@ -295,7 +295,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
     // If fontInfo is invalid, we need to establish it
     if (!state.fontInfo) {
-      return this.loadFont(state);
+      state.fontInfo = this.loadFont(state);
     }
 
     // If we're waiting for a font face to load, don't render anything
@@ -364,28 +364,28 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  loadFont = (state: CanvasTextRendererState): void => {
+  private loadFont(state: CanvasTextRendererState) {
     const cssString = getFontCssString(state.props);
     const trFontFace = TrFontManager.resolveFontFace(
       this.fontFamilyArray,
       state.props,
     ) as WebTrFontFace | undefined;
     assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
-    state.fontInfo = {
+    const fontInfo = {
       fontFace: trFontFace,
       cssString: cssString,
       // TODO: For efficiency we would use this here but it's not reliable on WPE -> document.fonts.check(cssString),
-      loaded: false,
+      loaded: globalFontSet.check(cssString),
     };
     // If font is not loaded, set up a handler to update the font info when the font loads
-    if (!state.fontInfo.loaded) {
+    if (!fontInfo.loaded) {
       globalFontSet
         .load(cssString)
         .then(this.onFontLoaded.bind(this, state, cssString))
         .catch(this.onFontLoadError.bind(this, state, cssString));
-      return;
     }
-  };
+    return fontInfo;
+  }
 
   calculateRenderInfo(state: CanvasTextRendererState): RenderInfo {
     state.lightning2TextRenderer.settings = {
