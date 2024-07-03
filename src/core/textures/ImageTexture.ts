@@ -83,7 +83,7 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override getTextureData(): Promise<TextureData> | TextureData {
     const { src, premultiplyAlpha } = this.props;
     if (!src) {
       return {
@@ -104,50 +104,52 @@ export class ImageTexture extends Texture {
       };
     }
 
-    // Handle compressed textures
-    if (isCompressedTextureContainer(src)) {
-      return loadCompressedTexture(src);
-    }
-
-    // Convert relative URL to absolute URL
-    const absoluteSrc = convertUrlToAbsolute(src);
-
-    if (this.txManager.imageWorkerManager) {
-      return await this.txManager.imageWorkerManager.getImage(
-        absoluteSrc,
-        premultiplyAlpha,
-      );
-    } else if (this.txManager.hasCreateImageBitmap) {
-      const response = await fetch(absoluteSrc);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
-      return {
-        data: await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }),
-        premultiplyAlpha: hasAlphaChannel,
-      };
-    } else {
-      const img = new Image();
-      if (!(src.substr(0, 5) === 'data:')) {
-        img.crossOrigin = 'Anonymous';
+    return Promise.resolve().then(async () => {
+      // Handle compressed textures
+      if (isCompressedTextureContainer(src)) {
+        return loadCompressedTexture(src);
       }
-      img.src = absoluteSrc;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
-      });
 
-      return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
-      };
-    }
+      // Convert relative URL to absolute URL
+      const absoluteSrc = convertUrlToAbsolute(src);
+
+      if (this.txManager.imageWorkerManager) {
+        return await this.txManager.imageWorkerManager.getImage(
+          absoluteSrc,
+          premultiplyAlpha,
+        );
+      } else if (this.txManager.hasCreateImageBitmap) {
+        const response = await fetch(absoluteSrc);
+        const blob = await response.blob();
+        const hasAlphaChannel =
+          premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+        return {
+          data: await createImageBitmap(blob, {
+            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          }),
+          premultiplyAlpha: hasAlphaChannel,
+        };
+      } else {
+        const img = new Image();
+        if (!(src.substr(0, 5) === 'data:')) {
+          img.crossOrigin = 'Anonymous';
+        }
+        img.src = absoluteSrc;
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error(`Failed to load image`));
+        }).catch((e) => {
+          console.error(e);
+        });
+
+        return {
+          data: img,
+          premultiplyAlpha: premultiplyAlpha ?? true,
+        };
+      }
+    });
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {

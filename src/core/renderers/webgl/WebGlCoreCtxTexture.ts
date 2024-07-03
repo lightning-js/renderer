@@ -21,7 +21,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-import type { Texture } from '../../textures/Texture.js';
+import type { Texture, TextureData } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
@@ -86,41 +86,70 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._state = 'loading';
     this.textureSource.setState('loading');
     this._nativeCtxTexture = this.createNativeCtxTexture();
-    this.onLoadRequest()
-      .then(({ width, height }) => {
-        // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
-          return;
-        }
-        this._state = 'loaded';
-        this._w = width;
-        this._h = height;
-        // Update the texture source's width and height so that it can be used
-        // for rendering.
-        this.textureSource.setState('loaded', { width, height });
-      })
-      .catch((err) => {
-        // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
-          return;
-        }
-        this._state = 'failed';
-        this.textureSource.setState('failed', err);
-        console.error(err);
-      });
+
+    let dimensions: Dimensions | Promise<Dimensions>;
+    try {
+      dimensions = this.onLoadRequest();
+    } catch (e: unknown) {
+      this.handleLoadError(e);
+      return;
+    }
+
+    if (dimensions instanceof Promise) {
+      dimensions
+        .then((dim) => this.handleLoad(dim))
+        .catch((err) => this.handleLoadError(err));
+    } else if (dimensions) {
+      this.handleLoad(dimensions);
+    }
+  }
+
+  handleLoad(dimensions: Dimensions) {
+    // If the texture has been freed while loading, return early.
+    if (this._state === 'freed') {
+      return;
+    }
+    const { width, height } = dimensions;
+    this._state = 'loaded';
+    this._w = width;
+    this._h = height;
+    // Update the texture source's width and height so that it can be used
+    // for rendering.
+    this.textureSource.setState('loaded', { width, height });
+  }
+
+  handleLoadError(err: unknown) {
+    // If the texture has been freed while loading, return early.
+    if (this._state === 'freed') {
+      return;
+    }
+    this._state = 'failed';
+    this.textureSource.setState('failed', err as Error);
+    console.error(err);
   }
 
   /**
    * Called when the texture data needs to be loaded and uploaded to a texture
    */
-  async onLoadRequest(): Promise<Dimensions> {
+  onLoadRequest(): Promise<Dimensions> | Dimensions {
     const { glw } = this;
 
     // Set to a 1x1 transparent texture
     // glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
-    // this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
+    this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
-    const textureData = await this.textureSource?.getTextureData();
+    const textureData = this.textureSource?.getTextureData();
+
+    if (textureData instanceof Promise) {
+      return textureData.then((data) => this.handleTextureData(data));
+    } else {
+      return this.handleTextureData(textureData);
+    }
+  }
+
+  private handleTextureData(textureData: TextureData) {
+    const { glw } = this;
+
     // If the texture has been freed while loading, return early.
     if (!this._nativeCtxTexture) {
       assertTruthy(this._state === 'freed');
