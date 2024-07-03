@@ -151,11 +151,6 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
       this.setTextureMemUse(width * height * 4);
-
-      // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
-      if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
-        glw.generateMipmap();
-      }
     } else if (textureData.data === null) {
       width = 0;
       height = 0;

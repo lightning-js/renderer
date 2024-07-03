@@ -384,19 +384,6 @@ export class WebGlContextWrapper {
 
   /**
    * ```
-   * gl.generateMipmap(gl.TEXTURE_2D);
-   * ```
-   *
-   * @remarks
-   * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
-   */
-  generateMipmap() {
-    const { gl } = this;
-    gl.generateMipmap(gl.TEXTURE_2D);
-  }
-
-  /**
-   * ```
    * gl.createTexture();
    * ```
    *
