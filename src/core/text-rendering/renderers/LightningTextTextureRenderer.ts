@@ -22,7 +22,10 @@
 import { assertTruthy } from '../../../utils.js';
 import { getRgbaString, type RGBA } from '../../lib/utils.js';
 import { calcDefaultLineHeight } from '../TextRenderingUtils.js';
-import { getWebFontMetrics } from '../TextTextureRendererUtils.js';
+import {
+  getFontSetting,
+  getWebFontMetrics,
+} from '../TextTextureRendererUtils.js';
 import type { NormalizedFontMetrics } from '../font-face-types/TrFontFace.js';
 import type { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 
@@ -67,7 +70,7 @@ export interface Settings {
   fontStyle: string;
   fontSize: number;
   fontBaselineRatio: number;
-  fontFamily: string | null;
+  fontFamily: string;
   trFontFace: WebTrFontFace | null;
   wordWrap: boolean;
   wordWrapWidth: number;
@@ -162,23 +165,15 @@ function calcHeight(
 
 export class LightningTextTextureRenderer {
   public canvas: HTMLCanvasElement;
-  private _context:
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D;
+  private _context: CanvasRenderingContext2D;
   private _settings: Settings;
 
-  constructor(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) {
+  constructor(canvas: HTMLCanvasElement, settings: Partial<Settings>) {
     this.canvas = canvas;
+    const context = this.canvas.getContext('2d');
+    assertTruthy(context, 'Canvas 2D context is not available');
     this._context = context;
-    this._settings = this.mergeDefaults({});
-  }
-
-  set settings(v: Partial<Settings>) {
-    this._settings = this.mergeDefaults(v);
-  }
-
-  get settings(): Settings {
-    return this._settings;
+    this._settings = this.mergeDefaults(settings);
   }
 
   getPrecision() {
@@ -186,52 +181,59 @@ export class LightningTextTextureRenderer {
   }
 
   setFontProperties() {
-    this._context.font = this._getFontSetting();
+    this._context.font = getFontSetting(
+      this._settings.fontFamily,
+      this._settings.fontStyle,
+      this._settings.fontSize,
+      this.getPrecision(),
+      'sans-serif',
+    );
     this._context.textBaseline = this._settings.textBaseline;
   }
 
-  _getFontSetting() {
-    const ff = [this._settings.fontFamily];
+  // _load() {
+  //   if (true && document.fonts) {
+  //     const fontSetting = getFontSetting(
+  //       this._settings.fontFamily,
+  //       this._settings.fontStyle,
+  //       this._settings.fontSize,
+  //       this.getPrecision(),
+  //       'sans-serif',
+  //     );
+  //     try {
+  //       if (!document.fonts.check(fontSetting, this._settings.text)) {
+  //         // Use a promise that waits for loading.
+  //         return document.fonts
+  //           .load(fontSetting, this._settings.text)
+  //           .catch((err) => {
+  //             // Just load the fallback font.
+  //             console.warn('[Lightning] Font load error', err, fontSetting);
+  //           })
+  //           .then(() => {
+  //             if (!document.fonts.check(fontSetting, this._settings.text)) {
+  //               console.warn('[Lightning] Font not found', fontSetting);
+  //             }
+  //           });
+  //       }
+  //     } catch (e) {
+  //       console.warn("[Lightning] Can't check font loading for " + fontSetting);
+  //     }
+  //   }
+  // }
 
-    const ffs = [];
-    for (let i = 0, n = ff.length; i < n; i++) {
-      if (ff[i] === 'serif' || ff[i] === 'sans-serif') {
-        ffs.push(ff[i]);
-      } else {
-        ffs.push(`"${ff[i]!}"`);
-      }
-    }
+  // draw() {
+  //   // We do not use a promise so that loading is performed syncronous when possible.
+  //   const loadPromise = this._load();
+  //   if (!loadPromise) {
+  //       return this._draw();
+  //   } else {
+  //       return loadPromise.then(() => {
+  //         return this._draw();
+  //       });
+  //   }
+  // }
 
-    return `${this._settings.fontStyle} ${
-      this._settings.fontSize * this.getPrecision()
-    }px ${ffs.join(',')}`;
-  }
-
-  _load() {
-    if (true && document.fonts) {
-      const fontSetting = this._getFontSetting();
-      try {
-        if (!document.fonts.check(fontSetting, this._settings.text)) {
-          // Use a promise that waits for loading.
-          return document.fonts
-            .load(fontSetting, this._settings.text)
-            .catch((err) => {
-              // Just load the fallback font.
-              console.warn('[Lightning] Font load error', err, fontSetting);
-            })
-            .then(() => {
-              if (!document.fonts.check(fontSetting, this._settings.text)) {
-                console.warn('[Lightning] Font not found', fontSetting);
-              }
-            });
-        }
-      } catch (e) {
-        console.warn("[Lightning] Can't check font loading for " + fontSetting);
-      }
-    }
-  }
-
-  calculateRenderInfo(): RenderInfo {
+  private _calculateRenderInfo(): RenderInfo {
     const renderInfo: Partial<RenderInfo> = {};
 
     const precision = this.getPrecision();
@@ -454,26 +456,14 @@ export class LightningTextTextureRenderer {
     return renderInfo as RenderInfo;
   }
 
-  draw(
-    renderInfo: RenderInfo,
-    linesOverride?: { lines: string[]; lineWidths: number[] },
-  ) {
+  draw() {
+    const renderInfo = this._calculateRenderInfo();
     const precision = this.getPrecision();
 
     // Allow lines to be overriden for partial rendering.
-    const lines = linesOverride?.lines || renderInfo.lines;
-    const lineWidths = linesOverride?.lineWidths || renderInfo.lineWidths;
-    const height = linesOverride
-      ? calcHeight(
-          this._settings.textBaseline,
-          renderInfo.fontSize,
-          renderInfo.lineHeight,
-          linesOverride.lines.length,
-          this._settings.offsetY === null
-            ? null
-            : this._settings.offsetY * precision,
-        )
-      : renderInfo.height;
+    const lines = renderInfo.lines;
+    const lineWidths = renderInfo.lineWidths;
+    const height = renderInfo.height;
 
     // Add extra margin to prevent issue with clipped text when scaling.
     this.canvas.width = Math.min(
@@ -737,7 +727,7 @@ export class LightningTextTextureRenderer {
       h: 0,
       fontStyle: 'normal',
       fontSize: 40,
-      fontFamily: null,
+      fontFamily: 'sans-serif',
       trFontFace: null,
       wordWrap: true,
       wordWrapWidth: 0,

@@ -23,7 +23,7 @@ import type { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
 /**
  * Returns CSS font setting string for use in canvas context.
  *
- * @param fontFace
+ * @param fontFamily
  * @param fontStyle
  * @param fontSize
  * @param precision
@@ -31,13 +31,13 @@ import type { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
  * @returns
  */
 export function getFontSetting(
-  fontFace: string | string[],
+  fontFamily: string | string[],
   fontStyle: string,
   fontSize: number,
   precision: number,
   defaultFontFace: string,
 ): string {
-  let ff = fontFace;
+  let ff = fontFamily;
 
   if (!Array.isArray(ff)) {
     ff = [ff];
