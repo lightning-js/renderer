@@ -26,14 +26,8 @@ import type {
 } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
-import { santizeCustomDataMap } from './utils.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
-import {
-  Stage,
-  type StageFpsUpdateHandler,
-  type StageFrameTickHandler,
-} from '../core/Stage.js';
-import { getNewId } from '../utils.js';
+import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeWritableProps } from '../core/CoreNode.js';
 import {
   CoreTextNode,
@@ -363,14 +357,10 @@ export class RendererMain extends EventEmitter {
   createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const resolvedProps = this.resolveNodeDefaults(props);
-    const node = new CoreNode(this.stage, {
-      ...resolvedProps,
-      shaderProps: null,
-    });
+    const node = this.stage.createNode(props);
 
     if (this.inspector) {
-      return this.inspector.createNode(node, resolvedProps);
+      return this.inspector.createNode(node);
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
@@ -394,106 +384,13 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createTextNode(props: Partial<CoreTextNodeWritableProps>): CoreTextNode {
-    const fontSize = props.fontSize ?? 16;
-    const data = {
-      ...this.resolveNodeDefaults(props),
-      id: getNewId(),
-      text: props.text ?? '',
-      textRendererOverride: props.textRendererOverride ?? null,
-      fontSize,
-      fontFamily: props.fontFamily ?? 'sans-serif',
-      fontStyle: props.fontStyle ?? 'normal',
-      fontWeight: props.fontWeight ?? 'normal',
-      fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
-      contain: props.contain ?? 'none',
-      scrollable: props.scrollable ?? false,
-      scrollY: props.scrollY ?? 0,
-      offsetY: props.offsetY ?? 0,
-      letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight, // `undefined` is a valid value
-      maxLines: props.maxLines ?? 0,
-      textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
-      overflowSuffix: props.overflowSuffix ?? '...',
-      debug: props.debug ?? {},
-      shaderProps: null,
-    };
-
-    assertTruthy(this.stage);
-    const textNode = new CoreTextNode(this.stage, data);
+    const textNode = this.stage.createTextNode(props);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode, data);
+      return this.inspector.createTextNode(textNode);
     }
 
     return textNode;
-  }
-
-  /**
-   * Resolves the default property values for a Node
-   *
-   * @remarks
-   * This method is used internally by the RendererMain to resolve the default
-   * property values for a Node. It is exposed publicly so that it can be used
-   * by Core Driver implementations.
-   *
-   * @param props
-   * @returns
-   */
-  resolveNodeDefaults(
-    props: Partial<CoreNodeWritableProps>,
-  ): CoreNodeWritableProps {
-    const color = props.color ?? 0xffffffff;
-    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
-    const colorTr =
-      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
-    const colorBl =
-      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
-    const colorBr =
-      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
-    const data = santizeCustomDataMap(props.data ?? {});
-
-    return {
-      x: props.x ?? 0,
-      y: props.y ?? 0,
-      width: props.width ?? 0,
-      height: props.height ?? 0,
-      alpha: props.alpha ?? 1,
-      autosize: props.autosize ?? false,
-      clipping: props.clipping ?? false,
-      color,
-      colorTop: props.colorTop ?? color,
-      colorBottom: props.colorBottom ?? color,
-      colorLeft: props.colorLeft ?? color,
-      colorRight: props.colorRight ?? color,
-      colorBl,
-      colorBr,
-      colorTl,
-      colorTr,
-      zIndex: props.zIndex ?? 0,
-      zIndexLocked: props.zIndexLocked ?? 0,
-      parent: props.parent ?? null,
-      texture: props.texture ?? null,
-      textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? null,
-      shaderProps: props.shaderProps ?? null,
-      // Since setting the `src` will trigger a texture load, we need to set it after
-      // we set the texture. Otherwise, problems happen.
-      src: props.src ?? '',
-      scale: props.scale ?? null,
-      scaleX: props.scaleX ?? props.scale ?? 1,
-      scaleY: props.scaleY ?? props.scale ?? 1,
-      mount: props.mount ?? 0,
-      mountX: props.mountX ?? props.mount ?? 0,
-      mountY: props.mountY ?? props.mount ?? 0,
-      pivot: props.pivot ?? 0.5,
-      pivotX: props.pivotX ?? props.pivot ?? 0.5,
-      pivotY: props.pivotY ?? props.pivot ?? 0.5,
-      rotation: props.rotation ?? 0,
-      rtt: props.rtt ?? false,
-      data: data,
-    };
   }
 
   /**

@@ -19,6 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { EventEmitter } from '../../../common/EventEmitter.js';
+import type { CoreTextNode } from '../../CoreTextNode.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
 import type { Rect, RectWithValid } from '../../lib/utils.js';
@@ -501,7 +502,7 @@ export abstract class TextRenderer<
    */
   abstract addFontFace(fontFace: TrFontFace): void;
 
-  abstract createState(props: TrProps): StateT;
+  abstract createState(props: TrProps, node: CoreTextNode): StateT;
 
   /**
    * Destroy/Clean up the state object
@@ -544,7 +545,7 @@ export abstract class TextRenderer<
 
   abstract updateState(state: StateT): void;
 
-  abstract renderQuads(
+  renderQuads?(
     state: StateT,
     transform: Matrix3d,
     clippingRect: RectWithValid,
