@@ -39,7 +39,7 @@ export interface ColorTextureProps {
  * The pixel color is set with the {@link ColorTextureProps.color} prop.
  *
  * This is the default texture used for a Node if it's
- * {@link INodeWritableProps.texture} prop is set to `null` (the default)
+ * {@link INodeProps.texture} prop is set to `null` (the default)
  *
  * Generally the 1x1 color pixel is stretched to whatever the set dimensions of
  * a Node are.

@@ -22,7 +22,7 @@ import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
 import { waitForLoadedDimensions } from '../common/utils.js';
 import { deg2Rad } from '@lightningjs/renderer/utils';
-import type { CoreNodeWritableProps } from '@lightningjs/renderer';
+import type { INodeProps } from '@lightningjs/renderer';
 import robotImg from '../assets/robot/robot.png';
 
 export async function automation(settings: ExampleSettings) {
@@ -492,7 +492,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x00ff00ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const clippingParentProps = {
           mount: 0.5,
@@ -502,14 +502,14 @@ export default async function test(settings: ExampleSettings) {
           height: SQUARE_SIZE / 2,
           clipping: true,
           // rotation: Math.PI / 4
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const clippingChildProps = {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           mount: 0.5,
           src: robotImg,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container = renderer.createNode({
           ...containerProps,
@@ -632,7 +632,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x00ff00ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const clippingParentProps = {
           mount: 0.5,
@@ -641,14 +641,14 @@ export default async function test(settings: ExampleSettings) {
           width: SQUARE_SIZE / 2,
           height: SQUARE_SIZE / 2,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const clippingChildProps = {
           width: SQUARE_SIZE,
           height: SQUARE_SIZE,
           mount: 0.5,
           src: robotImg,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container = renderer.createNode({
           ...containerProps,

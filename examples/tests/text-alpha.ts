@@ -18,8 +18,8 @@
  */
 
 import type {
-  CoreNodeWritableProps,
-  CoreTextNodeWritableProps,
+  INodeProps,
+  ITextNodeProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -38,7 +38,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot all the pages
@@ -73,7 +73,7 @@ function generateAlphaTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           renderer.createTextNode({
@@ -103,7 +103,7 @@ function generateAlphaTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           createContainedTextNode(renderer, textRenderer, {
@@ -130,7 +130,7 @@ function generateAlphaTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           renderer.createTextNode({
@@ -159,7 +159,7 @@ function generateAlphaTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<CoreTextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
           createContainedTextNode(renderer, textRenderer, {
@@ -188,7 +188,7 @@ function generateAlphaTest(
 function createContainedTextNode(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
-  containerProps: Partial<CoreNodeWritableProps>,
+  containerProps: Partial<INodeProps>,
 ) {
   const container = renderer.createNode({
     width: containerSize,

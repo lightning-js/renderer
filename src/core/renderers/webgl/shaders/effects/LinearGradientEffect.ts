@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 import { getNormalizedRgbaComponents } from '../../../../lib/utils.js';
+import { updateFloat32ArrayLengthN } from './EffectUtils.js';
 import {
   type DefaultEffectProps,
   ShaderEffect,
@@ -94,9 +95,12 @@ export class LinearGradientEffect extends ShaderEffect {
     colors: {
       value: 0xffffffff,
       validator: (rgbas: number[]): number[] => {
-        const cols = rgbas.map((rgbas) => getNormalizedRgbaComponents(rgbas));
-        return cols.reduce((acc, val) => acc.concat(val), [] as number[]);
+        return rgbas.reduce(
+          (acc, val) => acc.concat(getNormalizedRgbaComponents(val)),
+          [] as number[],
+        );
       },
+      updateProgramValue: updateFloat32ArrayLengthN,
       size: (props: LinearGradientEffectProps) => props.colors!.length,
       method: 'uniform4fv',
       type: 'vec4',

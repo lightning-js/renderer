@@ -20,10 +20,10 @@ import { startLoop, getTimeStamp } from './platform.js';
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
-import { CoreNode, type CoreNodeWritableProps } from './CoreNode.js';
+import { CoreNode, type CoreNodeProps } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager } from './CoreShaderManager.js';
+import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
 import type {
   TextRenderer,
   TextRendererMap,
@@ -46,11 +46,9 @@ import type {
   CoreRendererOptions,
 } from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
+import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
-import {
-  CoreTextNode,
-  type CoreTextNodeWritableProps,
-} from './CoreTextNode.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -92,6 +90,7 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
+  public readonly defShaderCtr: BaseShaderController;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -164,6 +163,7 @@ export class Stage {
     } else {
       this.renderer = new WebGlCoreRenderer(rendererOptions);
     }
+    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -212,8 +212,7 @@ export class Stage {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: null,
-      shaderProps: null,
+      shader: this.defShaderCtr,
       rtt: false,
       src: null,
       scale: 1,
@@ -454,16 +453,26 @@ export class Stage {
     return resolvedTextRenderer as unknown as TextRenderer;
   }
 
-  createNode(props: Partial<CoreNodeWritableProps>) {
-    const resolvedProps = this.resolveNodeDefaults(props);
-    const node = new CoreNode(this, {
-      ...resolvedProps,
-      shaderProps: null,
-    });
-    return node;
+  /**
+   * Create a shader controller instance
+   *
+   * @param type
+   * @param props
+   * @returns
+   */
+  createShaderCtr(
+    type: keyof ShaderMap,
+    props: Record<string, unknown>,
+  ): BaseShaderController {
+    return this.shManager.loadShader(type, props);
   }
 
-  createTextNode(props: Partial<CoreTextNodeWritableProps>) {
+  createNode(props: Partial<CoreNodeProps>) {
+    const resolvedProps = this.resolveNodeDefaults(props);
+    return new CoreNode(this, resolvedProps);
+  }
+
+  createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
     const resolvedProps = {
       ...this.resolveNodeDefaults(props),
@@ -503,9 +512,7 @@ export class Stage {
    * @param props
    * @returns
    */
-  protected resolveNodeDefaults(
-    props: Partial<CoreNodeWritableProps>,
-  ): CoreNodeWritableProps {
+  protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const color = props.color ?? 0xffffffff;
     const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
     const colorTr =
@@ -538,8 +545,7 @@ export class Stage {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? null,
-      shaderProps: props.shaderProps ?? null,
+      shader: props.shader ?? this.defShaderCtr,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? '',

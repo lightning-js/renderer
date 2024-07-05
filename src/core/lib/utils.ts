@@ -20,6 +20,7 @@
 export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
 
 export type RGBA = [r: number, g: number, b: number, a: number];
+
 export const getNormalizedRgbaComponents = (rgba: number): RGBA => {
   const r = rgba >>> 24;
   const g = (rgba >>> 16) & 0xff;

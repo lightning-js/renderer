@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 import { getNormalizedRgbaComponents } from '../../../../lib/utils.js';
+import { updateShaderEffectColor } from './EffectUtils.js';
 import {
   ShaderEffect,
   type DefaultEffectProps,
@@ -132,7 +133,7 @@ export class RadialProgressEffect extends ShaderEffect {
     },
     color: {
       value: 0xffffffff,
-      validator: (rgba): number[] => getNormalizedRgbaComponents(rgba),
+      updateProgramValue: updateShaderEffectColor,
       method: 'uniform4fv',
       type: 'vec4',
     },

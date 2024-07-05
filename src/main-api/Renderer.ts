@@ -18,7 +18,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { ShaderMap } from '../core/CoreShaderManager.js';
+import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureTypeMap,
@@ -28,11 +28,21 @@ import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
-import { CoreNode, type CoreNodeWritableProps } from '../core/CoreNode.js';
-import {
-  CoreTextNode,
-  type CoreTextNodeWritableProps,
-} from '../core/CoreTextNode.js';
+import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
+import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
+import type {
+  BaseShaderController,
+  ShaderController,
+} from './ShaderController.js';
+import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
+import type {
+  DynamicEffects,
+  DynamicShaderController,
+} from './DynamicShaderController.js';
+import type {
+  EffectDesc,
+  EffectDescUnion,
+} from '../core/renderers/webgl/shaders/DynamicShader.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 
 /**
@@ -92,7 +102,7 @@ export interface RendererMainSettings {
   textureMemory?: Partial<TextureMemoryManagerSettings>;
 
   /**
-   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   * Bounds margin to extend the boundary in which a Node is added as Quad.
    */
   boundsMargin?: number | [number, number, number, number];
 
@@ -241,7 +251,7 @@ export interface RendererMainSettings {
  *     - `criticalThreshold` - The critical threshold (in bytes)
  */
 export class RendererMain extends EventEmitter {
-  readonly root: CoreNode;
+  readonly root: INode<ShaderController<'DefaultShader'>>;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
@@ -317,7 +327,9 @@ export class RendererMain extends EventEmitter {
     });
 
     // Extract the root node
-    this.root = this.stage.root;
+    this.root = this.stage.root as unknown as INode<
+      ShaderController<'DefaultShader'>
+    >;
 
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
@@ -354,19 +366,20 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
+  createNode<
+    ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
+  >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const node = this.stage.createNode(props);
+    const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
-      return this.inspector.createNode(node);
+      return this.inspector.createNode(node) as unknown as INode<ShCtr>;
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
-
-    return node;
+    return node as unknown as INode<ShCtr>;
   }
 
   /**
@@ -383,14 +396,14 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<CoreTextNodeWritableProps>): CoreTextNode {
-    const textNode = this.stage.createTextNode(props);
+  createTextNode(props: Partial<ITextNodeProps>): ITextNode {
+    const textNode = this.stage.createTextNode(props as CoreTextNodeProps);
 
     if (this.inspector) {
       return this.inspector.createTextNode(textNode);
     }
 
-    return textNode;
+    return textNode as unknown as ITextNode;
   }
 
   /**
@@ -402,7 +415,7 @@ export class RendererMain extends EventEmitter {
    * @param node
    * @returns
    */
-  destroyNode(node: CoreNode) {
+  destroyNode(node: INode) {
     if (this.inspector) {
       this.inspector.destroyNode(node.id);
     }
@@ -436,11 +449,13 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
-   * Create a new shader reference
+   * Create a new shader controller for a shader type
    *
    * @remarks
-   * This method creates a new reference to a shader. The shader is not
-   * loaded until it is used on a Node.
+   * This method creates a new Shader Controller for a specific shader type.
+   *
+   * If the shader has not been loaded yet, it will be loaded. Otherwise, the
+   * existing shader will be reused.
    *
    * It can be assigned to a Node's `shader` property.
    *
@@ -451,11 +466,27 @@ export class RendererMain extends EventEmitter {
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
     props?: ExtractProps<ShaderMap[ShType]>,
-  ): SpecificShaderRef<ShType> {
+  ): ShaderController<ShType> {
+    return this.stage.shManager.loadShader(shaderType, props);
+  }
+
+  createDynamicShader<
+    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+  >(effects: [...T]): DynamicShaderController<T> {
+    return this.stage.shManager.loadDynamicShader({
+      effects: effects as EffectDescUnion[],
+    });
+  }
+
+  createEffect<Name extends string, Type extends keyof EffectMap>(
+    name: Name,
+    type: Type,
+    props: EffectDesc<{ name: Name; type: Type }>['props'],
+  ): EffectDesc<{ name: Name; type: Type }> {
     return {
-      descType: 'shader',
-      shType: shaderType,
-      props: props as SpecificShaderRef<ShType>['props'],
+      name,
+      type,
+      props,
     };
   }
 
