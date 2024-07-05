@@ -11,14 +11,14 @@ more information on how those tests are run and how their Snapshots are defined.
 
 ```
 # Run code in dev mode (includes building Renderer in watch mode)
-pnpm start
+bun start
 
 # Build and run in production mode (vite builds the bundle files in the ./dist folder)
-pnpm start:prod
+bun start:prod
 ```
 
 **Very Important:** When making changes to the Renderer, the Renderer must be
-re-built before you will see the changes appear. `pnpm start` will run the
+re-built before you will see the changes appear. `bun start` will run the
 Renderer's build process in watch mode, but a build of the Renderer must be
 run before building these examples in production mode.
 
@@ -27,10 +27,10 @@ run before building these examples in production mode.
 cd ..
 
 # Build once
-pnpm build
+bun run build
 
 # Build in watch mode
-pnpm watch
+bun watch
 ```
 
 ## URL Params

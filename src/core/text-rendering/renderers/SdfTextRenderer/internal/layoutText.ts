@@ -360,6 +360,8 @@ export function layoutText(
 
       const xOffset = (vertexTextW - lineWidth) / 2;
       for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - TS doesn't understand that we've checked for undefined
         vertexBuffer[j] += xOffset;
       }
     }
@@ -376,6 +378,8 @@ export function layoutText(
 
       const xOffset = vertexTextW - lineWidth;
       for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - TS doesn't understand that we've checked for undefined
         vertexBuffer[j] += xOffset;
       }
     }

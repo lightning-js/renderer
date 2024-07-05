@@ -41,13 +41,13 @@ Options:
 The test runner may be launched in local mode with:
 
 ```
-pnpm test:visual
+bun test:visual
 ```
 
 To run the tests in a Docker container with the `ci` runtime environment, use `--ci` mode:
 
 ```
-pnpm test:visual --ci
+bun test:visual --ci
 ```
 
 NOTE: For this to work, you must have Docker installed and have built the
@@ -77,7 +77,7 @@ In order to capture new Snapshots (or overwrite existing ones), you need to run
 the Visual Regression Test Runner in Capture mode:
 
 ```
-pnpm test:visual [--ci] --capture
+bun test:visual [--ci] --capture
 ```
 
 This will do everything that the Comparison mode does, but skip the actual
@@ -98,10 +98,10 @@ are never checked into the repository, however you can utilize local snapshots
 to speed up the time it takes to verify if your changes cause any regressions.
 
 1. After creating a new branch for a new feature or bug fix, capture a new set
-   of local snapshots by running: `pnpm test:visual --capture --overwrite`
+   of local snapshots by running: `bun test:visual --capture --overwrite`
 2. Implement the new feature or bug fix.
 3. Before pushing new commits to the remote PR branch, compare your changes
-   to the snapshots you took prior to starting your PR: `pnpm test:visual`
+   to the snapshots you took prior to starting your PR: `bun test:visual`
 
 ## GitHub Actions Workflow
 

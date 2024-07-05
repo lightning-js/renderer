@@ -25,7 +25,7 @@
  * This script is used to run visual regression tests on the specific examples
  * in `examples/tests` that export an `automation()` function.
  *
- * See `README.md` and `pnpm start --help` (from this directory) for more info.
+ * See `README.md` and `bun start --help` (from this directory) for more info.
  *
  * @module
  */
@@ -36,8 +36,8 @@ import upng from 'upng-js';
 import chalk from 'chalk';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { execa, $ } from 'execa';
 import { fileURLToPath } from 'url';
+import { spawn } from 'bun';
 
 /**
  * Keep in sync with `examples/common/ExampleSettings.ts`
@@ -76,7 +76,7 @@ if (!['ci', 'local'].includes(runtimeEnv)) {
   process.exit(1);
 }
 
-const argv = yargs(hideBin(process.argv))
+const argv = yargs(hideBin(Bun.argv))
   .options({
     capture: {
       type: 'boolean',
@@ -157,18 +157,37 @@ async function dockerCiMode(): Promise<number> {
 
   // Get the directory of the current file
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const rootDir = path.resolve(__dirname, '..', '..', '..');
+  const rootDir = path.resolve(__dirname, '..', '..');
 
-  const childProc = $({ stdio: 'inherit' })`docker run --network host \
-    -v ${rootDir}:/work/ \
-    -v /work/node_modules \
-    -v /work/.pnpm-store \
-    -v /work/examples/node_modules \
-    -v /work/visual-regression/node_modules \
-    -w /work/ -it visual-regression:latest \
-    /bin/bash -c ${`pnpm install && RUNTIME_ENV=ci pnpm test:visual ${commandLineStr}`}
-  `;
-  await childProc;
+  console.log('Running in docker container with `ci` runtime environment...');
+
+  const childProc = spawn(
+    [
+      'docker',
+      'run',
+      '--dns=8.8.8.8',
+      '-v',
+      `${rootDir}:/work/`,
+      '-w',
+      '/work/',
+      '-it',
+      'visual-regression:latest',
+      '/bin/bash',
+      '-c',
+      `bun install --ignore-scripts && RUNTIME_ENV=ci bun test:visual ${commandLineStr}`,
+    ],
+    {
+      stdin: 'inherit',
+      stdout: 'inherit',
+    },
+  );
+
+  console.log('Waiting for docker container to exit...');
+
+  await childProc.exited;
+
+  console.log('Docker container exited!', childProc.exitCode ?? 1);
+
   return childProc.exitCode ?? 1;
 }
 
@@ -187,55 +206,55 @@ interface CompareResult {
 async function compareCaptureMode(): Promise<number> {
   const stdioOption = argv.verbose ? 'inherit' : 'ignore';
 
+  console.log('Compare Capture Mode');
+
   if (!argv.skipBuild) {
     // 1. Build Renderer
     console.log(chalk.magentaBright.bold(`Building Renderer...`));
-    const rendererBuildRes = await execa('pnpm', ['build:renderer'], {
-      stdio: stdioOption,
-    });
-    if (rendererBuildRes.exitCode !== 0) {
+    const rendererBuild = spawn(['bun', 'run', 'build:renderer']);
+    await rendererBuild.exited;
+    if (rendererBuild.exitCode !== 0) {
       console.error(chalk.red.bold('Build failed!'));
       return 1;
     }
     console.log(chalk.magentaBright.bold(`Building Examples...`));
-    const exampleBuildRes = await execa('pnpm', ['build:examples'], {
-      stdio: stdioOption,
-    });
+    const exampleBuildRes = spawn(['bun', 'run', 'build:examples']);
+    await exampleBuildRes.exited;
     if (exampleBuildRes.exitCode !== 0) {
       console.error(chalk.red.bold('Build failed!'));
       return 1;
     }
   }
+
   console.log(
     chalk.magentaBright.bold(`Serving Examples (port: ${argv.port})...`),
   );
 
-  // Serve the examples
-  const serveExamplesChildProc = $({
-    stdio: 'ignore',
-    // Must run detached and kill after tests complete otherwise ghost process tree will hang
-    detached: true,
-    cleanup: false,
-  })`pnpm serve-examples --port ${argv.port}`;
+  const spawnServeExamples = spawn([
+    'bun',
+    'serve-examples',
+    '--port',
+    `${argv.port}`,
+    '--host',
+    'localhost',
+  ]);
 
-  let exitCode = 1;
-  try {
-    const waitPortRes = await $({
-      stdio: stdioOption,
-      timeout: 10000,
-    })`wait-port ${argv.port}`;
-
-    if (waitPortRes.exitCode !== 0) {
-      console.error(chalk.red.bold('Failed to start server!'));
-      return 1;
-    }
-
-    // Run the tests
-    exitCode = await runTest('chromium');
-  } finally {
-    // Kill the serve-examples process
-    serveExamplesChildProc.kill();
+  // try {
+  const waitPortRes = spawn(['bunx', 'wait-port', `${argv.port}`]);
+  await waitPortRes.exited;
+  console.log('waitPortRes', waitPortRes.exitCode);
+  if (waitPortRes.exitCode !== 0) {
+    console.error(chalk.red.bold('Failed to start server!'));
+    spawnServeExamples.kill();
+    return 1;
   }
+
+  // Run the tests
+  const exitCode = await runTest('chromium');
+  // } finally {
+  // Kill the serve-examples process
+  // serveExamplesChildProc.kill();
+  // }
   return exitCode;
 }
 
@@ -283,6 +302,7 @@ async function runTest(browserType: 'chromium') {
   }
 
   // Launch browser and create page
+  console.log(chalk.gray('Launching browser...', browserType));
   const browser = await browsers[browserType].launch();
 
   const page = await browser.newPage();

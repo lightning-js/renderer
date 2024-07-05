@@ -13,6 +13,6 @@ releases
 .tmp
 .env
 *.tgz
-.pnpm-store
-# This project uses `pnpm` for package management
+.bun
+# This project uses `bun` for package management
 package-lock.json

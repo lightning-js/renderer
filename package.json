@@ -9,23 +9,22 @@
     "./utils": "./dist/exports/utils.js"
   },
   "scripts": {
-    "preinstall": "node scripts/please-use-pnpm.js",
-    "start": "cd examples && pnpm start",
-    "start:prod": "cd examples && pnpm start:prod",
+    "start": "cd examples && bun start",
+    "start:prod": "cd examples && bun start:prod",
     "build": "tsc --build",
     "build:docker": "docker build -t visual-regression .",
     "watch": "tsc --build --watch",
     "test": "vitest",
-    "test:visual": "cd visual-regression && pnpm test:visual",
-    "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
-    "lint:fix": "pnpm run lint:fix:prettier && pnpm run lint:fix:eslint",
+    "test:visual": "cd visual-regression && bun test:visual",
+    "lint": "bun run lint:prettier && bun run lint:eslint",
+    "lint:fix": "bun run lint:fix:prettier && bun run lint:fix:eslint",
     "lint:prettier": "prettier --check \"**/*.{ts,js,cjs,md}\"",
     "lint:fix:prettier": "prettier --write \"**/*.{ts,js,cjs,md}\"",
     "lint:eslint": "eslint .",
     "lint:fix:eslint": "eslint --fix .",
     "typedoc": "typedoc",
     "prepare": "husky install",
-    "prepack": "pnpm run build",
+    "prepack": "bun run build",
     "node-version": "node --version"
   },
   "repository": {
@@ -57,13 +56,15 @@
     "lint-staged": "^13.2.0",
     "prettier": "^2.8.4",
     "typedoc": "^0.25.1",
-    "typescript": "^5.2.2",
+    "typescript": "^5.5.2",
     "vitest": "^0.34.2"
   },
   "dependencies": {
     "@lightningjs/threadx": "^0.3.5",
     "@protobufjs/eventemitter": "^1.1.0",
-    "memize": "^2.1.0"
+    "memize": "^2.1.0",
+    "playwright": "1.45.1",
+    "tsc": "^2.0.4"
   },
   "lint-staged": {
     "*.ts": [
@@ -81,10 +82,8 @@
     "README.md",
     "scripts"
   ],
-  "packageManager": "pnpm@8.9.2",
   "engines": {
     "npm": ">= 10.0.0",
-    "pnpm": ">= 8.9.2",
     "node": ">= 20.9.0"
   }
 }

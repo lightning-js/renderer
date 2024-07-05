@@ -17,20 +17,20 @@ git stash -u
 git pull
 
 # Run the unit tests
-pnpm test
+bun test
 
 # Run the Visual Regression Tests in CI mode
-pnpm test:visual --ci
+bun test:visual --ci
 
 # Review changes in order to decide which release-increment to use
 git log --first-parent main...v<last-version-number>
 
 # Mark the version update
 # This creates a new tagged commit for the version
-pnpm version <release-increment> # patch/minor/major
+bun version <release-increment> # patch/minor/major
 
 # Publish the package to NPM
-pnpm publish --access public
+bun publish --access public
 
 # Push version commit to github
 git push

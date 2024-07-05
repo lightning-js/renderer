@@ -14,30 +14,30 @@ Solid.
 
 ```
 # Install renderer + example dependencies
-pnpm install
+bun install
 
 # Build Renderer
-pnpm build
+bun run build
 
 # Build Renderer (watch mode)
-pnpm watch
+bun watch
 
 # Run unit tests
-pnpm test
+bun test
 
 # Run Visual Regression Tests
-pnpm test:visual
+bun test:visual
 
 # Build API Documentation (builds into ./typedocs folder)
-pnpm typedoc
+bun typedoc
 
 # Launch Example Tests in dev mode (includes Build Renderer (watch mode))
-pnpm start
+bun start
 
 # Launch Example Tests in production mode
 # IMPORTANT: To run test examples on embedded devices that use older browser versions
 # you MUST run the examples in this mode.
-pnpm start:prod
+bun start:prod
 ```
 
 ## Browser Targets
@@ -59,7 +59,7 @@ many of the Example Tests define Snapshots for the Visual Regression Test Runner
 The Example Tests can be launched with:
 
 ```
-pnpm start
+bun start
 ```
 
 See [examples/README.md](./examples/README.md) for more info.
@@ -73,7 +73,7 @@ with a set of certified snapshot files that are checked into the repository.
 These tests can be launched with:
 
 ```
-pnpm test:visual
+bun test:visual
 ```
 
 The captured Snapshots of these tests are optionally defined in the individual

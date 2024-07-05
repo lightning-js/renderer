@@ -207,7 +207,8 @@ export const getTimingFunction = (
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - TS doesn't understand that we've checked for undefined
     const [a, b, c, d] = timingLookup[str];
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - TS doesn't understand that we've checked for undefined
     const timing = getTimingBezier(a, b, c, d);
     timingMapping[str] = timing;
     return timing;

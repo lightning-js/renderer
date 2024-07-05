@@ -63,7 +63,7 @@ After installing Docker, you must build the Visual Regression Test Image before
 running the test runner in `--ci` mode.
 
 ```
-pnpm build:docker
+bun build:docker
 ```
 
 If all goes well it should create an image called **visual-regression** locally.

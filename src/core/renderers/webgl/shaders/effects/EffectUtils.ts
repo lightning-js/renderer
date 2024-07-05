@@ -18,8 +18,14 @@
  */
 export const colorToFloat32Array = (argb: number) => {
   const col = getRgbaComponentsNormalized(argb);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - TS doesn't understand that we've checked for undefined
   col[0] *= col[3]!;
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - TS doesn't understand that we've checked for undefined
   col[1] *= col[3]!;
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - TS doesn't understand that we've checked for undefined
   col[2] *= col[3]!;
   return col;
 };

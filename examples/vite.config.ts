@@ -25,9 +25,9 @@ import * as path from 'path';
  *
  * Despite setting the target in different places in the Vite config below
  * this does not seem to have an effect on the output when running Vite in
- * development mode (`pnpm start`). In order to properly test on embedded devices
- * that require the es2019 target, you must run `pnpm run build` and then serve the
- * production build via `pnpm run preview`.
+ * development mode (`bun start`). In order to properly test on embedded devices
+ * that require the es2019 target, you must run `bun run build` and then serve the
+ * production build via `bun run preview`.
  *
  * See the following for any updates on this:
  * https://github.com/vitejs/vite/issues/13756#issuecomment-1751085158

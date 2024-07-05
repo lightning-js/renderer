@@ -7,4 +7,4 @@ if [ -n "$(ls -A visual-regression/failed-results)" ]; then
   exit 1
 fi
 
-pnpm exec lint-staged
+bun run lint-staged
