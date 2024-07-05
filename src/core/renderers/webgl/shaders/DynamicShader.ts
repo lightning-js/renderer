@@ -25,7 +25,11 @@ import {
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import { ShaderEffect } from './effects/ShaderEffect.js';
+import {
+  ShaderEffect,
+  type ShaderEffectUniform,
+  type ShaderEffectValueMap,
+} from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 import { assertTruthy } from '../../../../utils.js';
 
@@ -60,12 +64,14 @@ export interface EffectDesc<
  * ```
  * (
  *   {
+ *     name: 'effect1',
  *     type: 'radius',
  *     props?: {
  *       radius?: number | number[];
  *     }
  *   } |
  *   {
+ *     name: 'effect2',
  *     type: 'border',
  *     props?: {
  *       width?: number;
@@ -122,20 +128,31 @@ const getResolvedEffect = (
       const key = uniformKeys[j]!;
       const uniform = uniforms[key]!;
 
-      let programValue =
-        (uniform.validator !== undefined &&
-          uniform.validator(defaultPropValues[key], defaultPropValues)) ||
-        defaultPropValues[key];
-      if (Array.isArray(programValue)) {
-        programValue = new Float32Array(programValue);
-      }
-      const result = {
-        value: defaultPropValues[key],
-        programValues: {
-          hasValidator: uniform.validator !== undefined,
-          value: programValue,
-        },
+      const result: ShaderEffectValueMap = {
+        value: defaultPropValues[key] as ShaderEffectUniform['value'],
+        programValue: undefined,
+        updateOnBind: uniform.updateOnBind || false,
+        hasValidator: uniform.validator !== undefined,
+        hasProgramValueUpdater: uniform.updateProgramValue !== undefined,
       };
+
+      const validatedValue =
+        (result.hasValidator &&
+          uniform.validator!(defaultPropValues[key], defaultPropValues)) ||
+        defaultPropValues[key];
+
+      if (defaultPropValues[key] !== validatedValue) {
+        result.validatedValue = validatedValue as number | number[];
+      }
+
+      if (result.hasProgramValueUpdater) {
+        uniform.updateProgramValue!(result);
+      }
+
+      if (result.programValue === undefined) {
+        result.programValue = result.value as number;
+      }
+
       resolvedEffect.props[key] = result;
     }
     resolvedEffects.push(resolvedEffect);
@@ -194,10 +211,15 @@ export class DynamicShader extends WebGlCoreShader {
       let j = 0;
       for (; j < propsLength; j++) {
         const key = propKeys[j]!;
-        this.setUniform(
-          uniformInfo[key]!.name,
-          effect.props[key].programValues.value,
-        );
+        const prop = effect.props[key]!;
+        if (prop.updateOnBind === true) {
+          const uniform =
+            this.renderer.shManager.getRegisteredEffects()[
+              effect.type as keyof EffectMap
+            ]?.uniforms[key];
+          uniform?.updateProgramValue!(effect.props[key], props);
+        }
+        this.setUniform(uniformInfo[key]!.name, effect.props[key].programValue);
       }
     }
   }
@@ -224,7 +246,8 @@ export class DynamicShader extends WebGlCoreShader {
       for (const key in effectA.props) {
         if (
           (effectB.props && !effectB.props[key]) ||
-          effectA.props[key] !== effectB.props[key]
+          (effectA.props[key] as ShaderEffectValueMap).value !==
+            (effectB.props[key] as ShaderEffectValueMap).value
         ) {
           return false;
         }

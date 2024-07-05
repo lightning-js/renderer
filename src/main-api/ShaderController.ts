@@ -58,10 +58,9 @@ export class ShaderController<S extends keyof ShaderMap>
 
     const keys = Object.keys(props);
     const l = keys.length;
-    let i = 0;
 
     const definedProps = {};
-    for (; i < l; i++) {
+    for (let i = 0; i < l; i++) {
       const name = keys[i]!;
       Object.defineProperty(definedProps, name, {
         get: () => {

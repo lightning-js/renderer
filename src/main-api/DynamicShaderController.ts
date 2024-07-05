@@ -1,3 +1,4 @@
+import type { ShaderEffectValueMap } from '../../exports/index.js';
 import type {
   CoreShaderManager,
   EffectMap,
@@ -34,51 +35,47 @@ export class DynamicShaderController<
   ) {
     this.type = 'DynamicShader';
     this.resolvedProps = props;
-
+    const effectConstructors = shManager.getRegisteredEffects();
     const definedProps = {};
 
     const effects = props.effects!;
     const effectsLength = effects.length;
 
-    let i = 0;
-    for (; i < effectsLength; i++) {
+    for (let i = 0; i < effectsLength; i++) {
       const {
         name: effectName,
         props: effectProps,
         type: effectType,
       } = effects[i]!;
-      const effectIndex = i;
       const definedEffectProps = {};
       const propEntries = Object.keys(effectProps);
       const propEntriesLength = propEntries.length;
-      let j = 0;
-      for (; j < propEntriesLength; j++) {
+      for (let j = 0; j < propEntriesLength; j++) {
         const propName = propEntries[j]!;
         Object.defineProperty(definedEffectProps, propName, {
           get: () => {
             return (
-              this.resolvedProps.effects![effectIndex]!.props[
-                propName
-              ] as Record<string, any>
+              this.resolvedProps.effects![i]!.props[propName] as Record<
+                string,
+                any
+              >
             ).value;
           },
           set: (value) => {
-            const target = this.resolvedProps.effects![effectIndex]!.props[
+            const target = this.resolvedProps.effects![i]!.props[
               propName
             ] as Record<string, any>;
             target.value = value;
-            if (target.programValues.hasValidator) {
-              const effectConstructor =
-                shManager.getRegisteredEffects()[effectType];
-              value = effectConstructor?.uniforms[propName]?.validator!(
-                value,
-                effectProps,
-              );
+            if (target.hasValidator) {
+              value = target.validatedValue = effectConstructors[effectType]!
+                .uniforms[propName]?.validator!(value, effectProps);
             }
-            if (Array.isArray(value)) {
-              value = new Float32Array(value);
+            if (target.hasProgramValueUpdater) {
+              effectConstructors[effectType]!.uniforms[propName]
+                ?.updateProgramValue!(target as ShaderEffectValueMap);
+            } else {
+              target.programValue = value;
             }
-            target.programValues.value = value;
             shManager.renderer.stage.requestRender();
           },
         });

@@ -84,8 +84,11 @@ export class GlitchEffect extends ShaderEffect {
     time: {
       value: 0,
       method: 'uniform1f',
-      validator: (value: number) => {
-        return (Date.now() - value) % 1000;
+      updateOnBind: true,
+      updateProgramValue: (values) => {
+        const value = (values.value =
+          (Date.now() - (values.value as number)) % 1000);
+        values.programValue = value;
       },
       type: 'float',
     },
