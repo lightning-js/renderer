@@ -117,7 +117,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.clearColor(color[0], color[1], color[2], color[3]);
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
@@ -605,8 +605,25 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.activeRttNode = node;
 
       assertTruthy(node.texture, 'RTT node missing texture');
+
+      if (
+        node.texture.needsToBeRegenerated === undefined &&
+        !node.isRenderable
+      ) {
+        // The texture will have to be regenerated when the worldAlpha becomes 1
+        node.texture.needsToBeRegenerated = true;
+      } else if (
+        node.texture.needsToBeRegenerated !== false &&
+        node.isRenderable
+      ) {
+        // The texture must be regenerated with worldAlpha 1 because it was created with alpha 0
+        node.worldAlpha = 1;
+        node.texture.needsToBeRegenerated = false;
+      }
+
       const ctxTexture = txManager.getCtxTexture(node.texture);
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
+
       this.renderToTextureActive = true;
 
       // Bind the the texture's framebuffer
