@@ -18,16 +18,26 @@
  */
 import type { RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-// !!! TEST reference-texture-memory
+
 export function customSettings(): Partial<RendererMainSettings> {
   return {
-    // Disable the threshold-based memory manager. This will allow this test to
-    // focus only on the reference-based memory manager.
-    txMemByteThreshold: 0,
+    textureMemory: {
+      criticalThreshold: 100 * 1024 ** 2,
+      targetThresholdLevel: 0.25,
+      debugLogging: true,
+    },
   };
 }
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  testRoot,
+  memMonitor,
+}: ExampleSettings) {
+  // Make the memory monitor update fast
+  if (memMonitor) {
+    memMonitor.interval = 10;
+  }
   const screen = renderer.createNode({
     x: 0,
     y: 0,
@@ -40,7 +50,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 0,
     y: 0,
-    text: 'Reference-based Texture Memory Management Test',
+    text: 'Critical Texture Memory Cleanup Test',
     parent: screen,
     fontFamily: 'Ubuntu',
     fontSize: 60,
@@ -51,7 +61,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     width: renderer.settings.appWidth,
     contain: 'width',
-    text: `This test will create and display a random NoiseTexture node every 10ms.
+    text: `This test will create and display a random NoiseTexture node every 10ms and never offer a moment for Idle Texture Cleanup. Only Critical Texture Cleanup will be triggered.
 
 See docs/ManualRegressionTests.md for more information.
     `,

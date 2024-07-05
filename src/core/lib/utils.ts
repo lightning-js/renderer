@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
+
 export type RGBA = [r: number, g: number, b: number, a: number];
 
 export const getNormalizedRgbaComponents = (rgba: number): RGBA => {
@@ -251,8 +253,8 @@ export function isRectPositive(rect: Rect): boolean {
 }
 
 export function convertUrlToAbsolute(url: string): string {
-  // handle local file imports
-  if (self.location.protocol === 'file:') {
+  // handle local file imports if the url isn't remote resource or data blob
+  if (self.location.protocol === 'file:' && !PROTOCOL_REGEX.test(url)) {
     const path = self.location.pathname.split('/');
     path.pop();
     const basePath = path.join('/');

@@ -18,10 +18,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode';
-import { Stage } from './Stage';
+import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
+import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
-import { type TextureOptions } from './CoreTextureManager';
+import { type TextureOptions } from './CoreTextureManager.js';
 import { type BaseShaderController } from '../main-api/ShaderController';
 
 describe('set color()', () => {

@@ -104,7 +104,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.defaultTexture = new ColorTexture(this.txManager);
 
     // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being garbage collected.
+    // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
     this.defaultTexture.setRenderableOwner(this, true);
 

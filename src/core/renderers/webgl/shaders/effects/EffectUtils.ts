@@ -21,9 +21,11 @@ import type { ShaderEffectValueMap } from './ShaderEffect.js';
  */
 export const colorToFloat32Array = (argb: number) => {
   const col = getRgbaComponentsNormalized(argb);
-  col[0] *= col[3]!;
-  col[1] *= col[3]!;
-  col[2] *= col[3]!;
+  /* eslint-disable @typescript-eslint/no-non-null-assertion -- getRgbaComponentsNormalized has a constant array size */
+  col[0]! *= col[3]!;
+  col[1]! *= col[3]!;
+  col[2]! *= col[3]!;
+  /* eslint-enable */
   return col;
 };
 

@@ -379,6 +379,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
 
+    // If the text renderer does not support rendering quads, fallback to the
+    // default renderQuads method
+    if (!this.textRenderer.renderQuads) {
+      super.renderQuads(renderer);
+      return;
+    }
+
+    // If the text renderer does support rendering quads, use it...
+
     // Prevent quad rendering if parent has a render texture
     // and this node is not the render texture
     if (this.parentHasRenderTexture) {
@@ -433,7 +442,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._textRendererOverride,
     );
 
-    const textRendererState = resolvedTextRenderer.createState(props);
+    const textRendererState = resolvedTextRenderer.createState(props, this);
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);

@@ -45,6 +45,7 @@ export * from '../src/common/CommonTypes.js';
 // Selected types exported from the Core Renderer that can be used in the
 // context of the main API.
 export type { TextureMap } from '../src/core/CoreTextureManager.js';
+export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';

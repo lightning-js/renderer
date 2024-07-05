@@ -11,3 +11,4 @@ releases
 .tmp
 .env
 scripts
+vitest.config.ts

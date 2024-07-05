@@ -237,8 +237,8 @@ export class Inspector {
     return div;
   }
 
-  createNode(node: CoreNode, properties: CoreNodeProps): CoreNode {
-    const div = this.createDiv(node.id, properties);
+  createNode(node: CoreNode): CoreNode {
+    const div = this.createDiv(node.id, node.props);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
@@ -249,8 +249,8 @@ export class Inspector {
     return this.createProxy(node, div);
   }
 
-  createTextNode(node: CoreNode, properties: CoreTextNodeProps): CoreTextNode {
-    const div = this.createDiv(node.id, properties);
+  createTextNode(node: CoreNode): CoreTextNode {
+    const div = this.createDiv(node.id, node.props);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
 

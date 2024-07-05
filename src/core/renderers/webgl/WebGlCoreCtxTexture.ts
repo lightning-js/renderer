@@ -61,10 +61,6 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     return this._nativeCtxTexture;
   }
 
-  get renderable(): boolean {
-    return this.textureSource.renderable;
-  }
-
   get w() {
     return this._w;
   }
@@ -118,11 +114,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    * Called when the texture data needs to be loaded and uploaded to a texture
    */
   async onLoadRequest(): Promise<Dimensions> {
-    const { glw, memManager } = this;
+    const { glw } = this;
 
     // Set to a 1x1 transparent texture
     glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
-    memManager.setTextureMemUse(this, TRANSPARENT_TEXTURE_DATA.byteLength);
+    this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
     const textureData = await this.textureSource?.getTextureData();
     // If the texture has been freed while loading, return early.
@@ -153,7 +149,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       );
 
       glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
-      memManager.setTextureMemUse(this, width * height * 4);
+      this.setTextureMemUse(width * height * 4);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
       if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
@@ -175,7 +171,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         glw.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
-      memManager.setTextureMemUse(this, TRANSPARENT_TEXTURE_DATA.byteLength);
+      this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
     } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
       const {
         mipmaps,
@@ -197,7 +193,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
       glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
 
-      memManager.setTextureMemUse(this, view.byteLength);
+      this.setTextureMemUse(view.byteLength);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
@@ -227,10 +223,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (!this._nativeCtxTexture) {
       return;
     }
-    const { glw, memManager } = this;
+    const { glw } = this;
 
     glw.deleteTexture(this._nativeCtxTexture);
-    memManager.setTextureMemUse(this, 0);
+    this.setTextureMemUse(0);
     this._nativeCtxTexture = null;
   }
 
