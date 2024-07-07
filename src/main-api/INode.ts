@@ -57,8 +57,9 @@ export interface INode<SC extends BaseShaderController = BaseShaderController>
 /**
  * Properties used to animate() a Node
  */
-export interface INodeAnimateProps<SC extends BaseShaderController>
-  extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
+export interface INodeAnimateProps<
+  SC extends BaseShaderController = BaseShaderController,
+> extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
   shaderProps: Partial<SC['props']>;
 }
 
