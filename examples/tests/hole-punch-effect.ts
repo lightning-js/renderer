@@ -40,7 +40,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'holePunch',
           props: {
             width: 200,
@@ -64,7 +63,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'holePunch',
           props: {
             width: 200,
@@ -75,7 +73,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
-          name: 'e2',
           type: 'linearGradient',
           props: {
             angle: degToRad(40),
@@ -99,7 +96,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'linearGradient',
           props: {
             angle: degToRad(40),
@@ -110,7 +106,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
-          name: 'e2',
           type: 'holePunch',
           props: {
             width: 400,
@@ -134,7 +129,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'holePunch',
           props: {
             width: 400,

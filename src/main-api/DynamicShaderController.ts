@@ -8,20 +8,24 @@ import type { ExtractProps } from '../core/CoreTextureManager.js';
 import type { EffectDesc } from '../core/renderers/webgl/shaders/DynamicShader.js';
 import type { BaseShaderController } from './ShaderController.js';
 
+type OptionalName<T> = T extends string ? T : never;
+
 type MapEffectProps<
-  Effects extends [...{ name: string; type: keyof EffectMap }[]],
+  Effects extends [...{ name?: string; type: keyof EffectMap }[]],
 > = {
-  [K in Effects[number] as K['name']]: ExtractProps<EffectMap[K['type']]>;
+  [K in Effects[number] as OptionalName<K['name']>]: ExtractProps<
+    EffectMap[K['type']]
+  >;
 };
 
 export type DynamicEffects<
-  T extends [...{ name: string; type: keyof EffectMap }[]],
+  T extends [...{ name?: string; type: keyof EffectMap }[]],
 > = {
   [K in keyof T]: EffectDesc<T[K]>;
 };
 
 export class DynamicShaderController<
-  Effects extends [...{ name: string; type: keyof EffectMap }[]],
+  Effects extends [...{ name?: string; type: keyof EffectMap }[]],
 > implements BaseShaderController
 {
   private resolvedProps: ExtractProps<ShaderMap['DynamicShader']>;
@@ -81,11 +85,13 @@ export class DynamicShaderController<
         });
       }
 
-      Object.defineProperty(definedProps, effectName, {
-        get: () => {
-          return definedEffectProps;
-        },
-      });
+      if (effectName) {
+        Object.defineProperty(definedProps, effectName, {
+          get: () => {
+            return definedEffectProps;
+          },
+        });
+      }
     }
 
     this.props = definedProps as MapEffectProps<Effects>;

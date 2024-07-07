@@ -34,19 +34,19 @@ import type { EffectMap } from '../../../CoreShaderManager.js';
 import { assertTruthy } from '../../../../utils.js';
 
 export interface BaseEffectDesc {
-  name: string;
+  name?: string;
   type: keyof EffectMap;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   props: Record<string, any>;
 }
 
 export interface EffectDesc<
-  T extends { name: string; type: keyof EffectMap } = {
-    name: string;
+  T extends { name?: string; type: keyof EffectMap } = {
+    name?: string;
     type: keyof EffectMap;
   },
 > extends BaseEffectDesc {
-  name: T['name'];
+  name?: T['name'];
   type: T['type'];
   props: ExtractProps<EffectMap[T['type']]>;
 }

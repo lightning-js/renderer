@@ -44,7 +44,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'radius',
           props: {
             radius: 400 / 2,
@@ -73,14 +72,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'radius',
           props: {
             radius: 400 / 2,
           },
         },
         {
-          name: 'e2',
           type: 'border',
           props: {
             width: 6,
@@ -110,7 +107,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'radius',
           props: {
             radius: 152 / 2,
@@ -139,14 +135,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
-          name: 'e1',
           type: 'radius',
           props: {
             radius: 152 / 2,
           },
         },
         {
-          name: 'e2',
           type: 'border',
           props: {
             width: 6,

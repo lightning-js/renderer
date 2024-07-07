@@ -470,18 +470,61 @@ export class RendererMain extends EventEmitter {
     return this.stage.shManager.loadShader(shaderType, props);
   }
 
+  /**
+   * Create a new Dynamic Shader controller
+   *
+   * @remarks
+   * A Dynamic Shader is a shader that can be composed of an array of mulitple
+   * effects. Each effect can be animated or changed after creation (provided
+   * the effect is given a name).
+   *
+   * Example:
+   * ```ts
+   * renderer.createNode({
+   *   shader: renderer.createDynamicShader([
+   *     renderer.createEffect('radius', {
+   *       radius: 0
+   *     }, 'effect1'),
+   *     renderer.createEffect('border', {
+   *       color: 0xff00ffff,
+   *       width: 10,
+   *     }, 'effect2'),
+   *   ]),
+   * });
+   * ```
+   *
+   * @param effects
+   * @returns
+   */
   createDynamicShader<
-    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
   >(effects: [...T]): DynamicShaderController<T> {
     return this.stage.shManager.loadDynamicShader({
       effects: effects as EffectDescUnion[],
     });
   }
 
-  createEffect<Name extends string, Type extends keyof EffectMap>(
-    name: Name,
+  /**
+   * Create an effect to be used in a Dynamic Shader
+   *
+   * @remark
+   * The {name} parameter is optional but required if you want to animate the effect
+   * or change the effect's properties after creation.
+   *
+   * See {@link createDynamicShader} for an example.
+   *
+   * @param type
+   * @param props
+   * @param name
+   * @returns
+   */
+  createEffect<
+    Type extends keyof EffectMap,
+    Name extends string | undefined = undefined,
+  >(
     type: Type,
     props: EffectDesc<{ name: Name; type: Type }>['props'],
+    name?: Name,
   ): EffectDesc<{ name: Name; type: Type }> {
     return {
       name,

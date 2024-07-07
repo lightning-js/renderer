@@ -67,13 +67,21 @@ export default async function test({
     y: 540,
     color: 0x00ff00ff,
     shader: renderer.createDynamicShader([
-      renderer.createEffect('r1', 'radius', {
-        radius: 0,
-      }),
-      renderer.createEffect('e1', 'border', {
-        color: 0xff00ffff,
-        width: 10,
-      }),
+      renderer.createEffect(
+        'radius',
+        {
+          radius: 0,
+        },
+        'r1',
+      ),
+      renderer.createEffect(
+        'border',
+        {
+          color: 0xff00ffff,
+          width: 10,
+        },
+        'e1',
+      ),
     ]),
     parent: testRoot,
   });
