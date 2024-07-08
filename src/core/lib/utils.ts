@@ -17,7 +17,10 @@
  * limitations under the License.
  */
 
+export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
+
 export type RGBA = [r: number, g: number, b: number, a: number];
+
 export const getNormalizedRgbaComponents = (rgba: number): RGBA => {
   const r = rgba >>> 24;
   const g = (rgba >>> 16) & 0xff;
@@ -247,4 +250,29 @@ export function isBoundPositive(bound: Bound): boolean {
 
 export function isRectPositive(rect: Rect): boolean {
   return rect.width > 0 && rect.height > 0;
+}
+
+export function convertUrlToAbsolute(url: string): string {
+  // handle local file imports if the url isn't remote resource or data blob
+  if (self.location.protocol === 'file:' && !PROTOCOL_REGEX.test(url)) {
+    const path = self.location.pathname.split('/');
+    path.pop();
+    const basePath = path.join('/');
+    const baseUrl = self.location.protocol + '//' + basePath;
+
+    // check if url has a leading dot
+    if (url.charAt(0) === '.') {
+      url = url.slice(1);
+    }
+
+    // check if url has a leading slash
+    if (url.charAt(0) === '/') {
+      url = url.slice(1);
+    }
+
+    return baseUrl + '/' + url;
+  }
+
+  const absoluteUrl = new URL(url, self.location.href);
+  return absoluteUrl.href;
 }

@@ -51,6 +51,8 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
+import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
 const QUAD_BUFFER_SIZE = 4 * 1024 * 1024;
@@ -81,6 +83,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
+  defShaderCtrl: BaseShaderController;
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
@@ -104,7 +107,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.defaultTexture = new ColorTexture(this.txManager);
 
     // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being garbage collected.
+    // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
     this.defaultTexture.setRenderableOwner(this, true);
 
@@ -130,7 +133,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
+    this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
+    this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -305,6 +309,32 @@ export class WebGlCoreRenderer extends CoreRenderer {
       texCoordY1 = ty / parentH;
       texCoordY2 = texCoordY1 + th / parentH;
       texture = texture.parentTexture;
+    }
+
+    const resizeMode = textureOptions?.resizeMode ?? false;
+
+    if (texture instanceof ImageTexture) {
+      if (resizeMode && texture.dimensions) {
+        const { width: tw, height: th } = texture.dimensions;
+        if (resizeMode.type === 'cover') {
+          const scaleX = width / tw;
+          const scaleY = height / th;
+          const scale = Math.max(scaleX, scaleY);
+          const precision = 1 / scale;
+          // Determine based on width
+          if (scale && scaleX && scaleX < scale) {
+            const desiredSize = precision * width;
+            texCoordX1 = (1 - desiredSize / tw) * (resizeMode.clipX ?? 0.5);
+            texCoordX2 = texCoordX1 + desiredSize / tw;
+          }
+          // Determine based on height
+          if (scale && scaleY && scaleY < scale) {
+            const desiredSize = precision * height;
+            texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
+            texCoordY2 = texCoordY1 + desiredSize / th;
+          }
+        }
+      }
     }
 
     // Flip texture coordinates if dictated by texture options
@@ -674,5 +704,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       totalUsed: this.quadBufferUsage,
     };
     return bufferInfo;
+  }
+
+  override getDefShaderCtr(): BaseShaderController {
+    return this.defShaderCtrl;
   }
 }

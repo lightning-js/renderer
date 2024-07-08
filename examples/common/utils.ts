@@ -20,15 +20,15 @@
 import type {
   Dimensions,
   NodeTextLoadedPayload,
-  CoreNode,
+  INode,
+  ITextNode,
 } from '@lightningjs/renderer';
-import type { CoreTextNode } from '../../dist/src/core/CoreTextNode.js';
 
 export async function waitForLoadedDimensions(
-  node: CoreNode | CoreTextNode,
+  node: INode | ITextNode,
 ): Promise<Dimensions> {
   return new Promise((resolve) => {
-    node.once('loaded', (_node: CoreNode, payload: NodeTextLoadedPayload) => {
+    node.once('loaded', (_node: INode, payload: NodeTextLoadedPayload) => {
       const { width, height } = payload.dimensions;
       resolve({
         width,

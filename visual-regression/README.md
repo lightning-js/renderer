@@ -36,6 +36,7 @@ Options:
   -p, --port       Port to serve examples on           [number] [default: 50535]
   -i, --ci         Run in docker container with `ci` runtime environment
                                                       [boolean] [default: false]
+  -f, --filter     Tests to run ("*" wildcard pattern)   [string] [default: "*"]
 ```
 
 The test runner may be launched in local mode with:
@@ -209,3 +210,16 @@ export async function automation(settings: ExampleSettings) {
 Method 2 allows more flexibility in how snapshots are defined but should only
 be used if Method 1 does not satisfy the requirements for the snapshots to be
 taken.
+
+### Math.random()
+
+In order to allow for consistent snapshots when random numbers are convenient in
+writing tests, Example Tests that are run by the Visual Regression Test Runner
+receive a consistent constant [seeded implementation](https://github.com/stdlib-js/random-base-mt19937)
+of `Math.random()`.
+
+This means that for each Example Test that is run, `Math.random()` will
+produce the same sequence of random numbers.
+
+`Math.random()` operates as it normally does when the Example Tests are run
+directly in the browser (without the VRT Runnner).

@@ -21,15 +21,22 @@ import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { Texture } from '../textures/Texture.js';
 
 export abstract class CoreContextTexture {
-  readonly memManager: TextureMemoryManager;
   readonly textureSource: Texture;
+  private memManager: TextureMemoryManager;
 
   constructor(memManager: TextureMemoryManager, textureSource: Texture) {
     this.memManager = memManager;
     this.textureSource = textureSource;
   }
 
+  protected setTextureMemUse(byteSize: number): void {
+    this.memManager.setTextureMemUse(this.textureSource, byteSize);
+  }
+
   abstract load(): void;
   abstract free(): void;
-  abstract get renderable(): boolean;
+
+  get renderable(): boolean {
+    return this.textureSource.renderable;
+  }
 }

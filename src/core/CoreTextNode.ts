@@ -25,11 +25,7 @@ import type {
   TrFailedEventHandler,
   TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
-import {
-  CoreNode,
-  UpdateType,
-  type CoreNodeWritableProps,
-} from './CoreNode.js';
+import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
@@ -40,9 +36,7 @@ import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
-export interface CoreTextNodeWritableProps
-  extends CoreNodeWritableProps,
-    TrProps {
+export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
    *
@@ -75,16 +69,13 @@ export interface CoreTextNodeWritableProps
  *
  * For non-text rendering, see {@link CoreNode}.
  */
-export class CoreTextNode
-  extends CoreNode
-  implements CoreTextNodeWritableProps
-{
+export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   textRenderer: TextRenderer;
   trState: TextRendererState;
-  private _textRendererOverride: CoreTextNodeWritableProps['textRendererOverride'] =
+  private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
     null;
 
-  constructor(stage: Stage, props: CoreTextNodeWritableProps) {
+  constructor(stage: Stage, props: CoreTextNodeProps) {
     super(stage, props);
     this._textRendererOverride = props.textRendererOverride;
     const { resolvedTextRenderer, textRendererState } =
@@ -202,13 +193,11 @@ export class CoreTextNode
     this.textRenderer.set.text(this.trState, value);
   }
 
-  get textRendererOverride(): CoreTextNodeWritableProps['textRendererOverride'] {
+  get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
     return this._textRendererOverride;
   }
 
-  set textRendererOverride(
-    value: CoreTextNodeWritableProps['textRendererOverride'],
-  ) {
+  set textRendererOverride(value: CoreTextNodeProps['textRendererOverride']) {
     this._textRendererOverride = value;
 
     this.textRenderer.destroyState(this.trState);
@@ -219,149 +208,149 @@ export class CoreTextNode
     this.trState = textRendererState;
   }
 
-  get fontSize(): CoreTextNodeWritableProps['fontSize'] {
+  get fontSize(): CoreTextNodeProps['fontSize'] {
     return this.trState.props.fontSize;
   }
 
-  set fontSize(value: CoreTextNodeWritableProps['fontSize']) {
+  set fontSize(value: CoreTextNodeProps['fontSize']) {
     this.textRenderer.set.fontSize(this.trState, value);
   }
 
-  get fontFamily(): CoreTextNodeWritableProps['fontFamily'] {
+  get fontFamily(): CoreTextNodeProps['fontFamily'] {
     return this.trState.props.fontFamily;
   }
 
-  set fontFamily(value: CoreTextNodeWritableProps['fontFamily']) {
+  set fontFamily(value: CoreTextNodeProps['fontFamily']) {
     this.textRenderer.set.fontFamily(this.trState, value);
   }
 
-  get fontStretch(): CoreTextNodeWritableProps['fontStretch'] {
+  get fontStretch(): CoreTextNodeProps['fontStretch'] {
     return this.trState.props.fontStretch;
   }
 
-  set fontStretch(value: CoreTextNodeWritableProps['fontStretch']) {
+  set fontStretch(value: CoreTextNodeProps['fontStretch']) {
     this.textRenderer.set.fontStretch(this.trState, value);
   }
 
-  get fontStyle(): CoreTextNodeWritableProps['fontStyle'] {
+  get fontStyle(): CoreTextNodeProps['fontStyle'] {
     return this.trState.props.fontStyle;
   }
 
-  set fontStyle(value: CoreTextNodeWritableProps['fontStyle']) {
+  set fontStyle(value: CoreTextNodeProps['fontStyle']) {
     this.textRenderer.set.fontStyle(this.trState, value);
   }
 
-  get fontWeight(): CoreTextNodeWritableProps['fontWeight'] {
+  get fontWeight(): CoreTextNodeProps['fontWeight'] {
     return this.trState.props.fontWeight;
   }
 
-  set fontWeight(value: CoreTextNodeWritableProps['fontWeight']) {
+  set fontWeight(value: CoreTextNodeProps['fontWeight']) {
     this.textRenderer.set.fontWeight(this.trState, value);
   }
 
-  get textAlign(): CoreTextNodeWritableProps['textAlign'] {
+  get textAlign(): CoreTextNodeProps['textAlign'] {
     return this.trState.props.textAlign;
   }
 
-  set textAlign(value: CoreTextNodeWritableProps['textAlign']) {
+  set textAlign(value: CoreTextNodeProps['textAlign']) {
     this.textRenderer.set.textAlign(this.trState, value);
   }
 
-  get contain(): CoreTextNodeWritableProps['contain'] {
+  get contain(): CoreTextNodeProps['contain'] {
     return this.trState.props.contain;
   }
 
-  set contain(value: CoreTextNodeWritableProps['contain']) {
+  set contain(value: CoreTextNodeProps['contain']) {
     this.textRenderer.set.contain(this.trState, value);
   }
 
-  get scrollable(): CoreTextNodeWritableProps['scrollable'] {
+  get scrollable(): CoreTextNodeProps['scrollable'] {
     return this.trState.props.scrollable;
   }
 
-  set scrollable(value: CoreTextNodeWritableProps['scrollable']) {
+  set scrollable(value: CoreTextNodeProps['scrollable']) {
     this.textRenderer.set.scrollable(this.trState, value);
   }
 
-  get scrollY(): CoreTextNodeWritableProps['scrollY'] {
+  get scrollY(): CoreTextNodeProps['scrollY'] {
     return this.trState.props.scrollY;
   }
 
-  set scrollY(value: CoreTextNodeWritableProps['scrollY']) {
+  set scrollY(value: CoreTextNodeProps['scrollY']) {
     this.textRenderer.set.scrollY(this.trState, value);
   }
 
-  get offsetY(): CoreTextNodeWritableProps['offsetY'] {
+  get offsetY(): CoreTextNodeProps['offsetY'] {
     return this.trState.props.offsetY;
   }
 
-  set offsetY(value: CoreTextNodeWritableProps['offsetY']) {
+  set offsetY(value: CoreTextNodeProps['offsetY']) {
     this.textRenderer.set.offsetY(this.trState, value);
   }
 
-  get letterSpacing(): CoreTextNodeWritableProps['letterSpacing'] {
+  get letterSpacing(): CoreTextNodeProps['letterSpacing'] {
     return this.trState.props.letterSpacing;
   }
 
-  set letterSpacing(value: CoreTextNodeWritableProps['letterSpacing']) {
+  set letterSpacing(value: CoreTextNodeProps['letterSpacing']) {
     this.textRenderer.set.letterSpacing(this.trState, value);
   }
 
-  get lineHeight(): CoreTextNodeWritableProps['lineHeight'] {
+  get lineHeight(): CoreTextNodeProps['lineHeight'] {
     return this.trState.props.lineHeight;
   }
 
-  set lineHeight(value: CoreTextNodeWritableProps['lineHeight']) {
+  set lineHeight(value: CoreTextNodeProps['lineHeight']) {
     if (this.textRenderer.set.lineHeight) {
       this.textRenderer.set.lineHeight(this.trState, value);
     }
   }
 
-  get maxLines(): CoreTextNodeWritableProps['maxLines'] {
+  get maxLines(): CoreTextNodeProps['maxLines'] {
     return this.trState.props.maxLines;
   }
 
-  set maxLines(value: CoreTextNodeWritableProps['maxLines']) {
+  set maxLines(value: CoreTextNodeProps['maxLines']) {
     if (this.textRenderer.set.maxLines) {
       this.textRenderer.set.maxLines(this.trState, value);
     }
   }
 
-  get textBaseline(): CoreTextNodeWritableProps['textBaseline'] {
+  get textBaseline(): CoreTextNodeProps['textBaseline'] {
     return this.trState.props.textBaseline;
   }
 
-  set textBaseline(value: CoreTextNodeWritableProps['textBaseline']) {
+  set textBaseline(value: CoreTextNodeProps['textBaseline']) {
     if (this.textRenderer.set.textBaseline) {
       this.textRenderer.set.textBaseline(this.trState, value);
     }
   }
 
-  get verticalAlign(): CoreTextNodeWritableProps['verticalAlign'] {
+  get verticalAlign(): CoreTextNodeProps['verticalAlign'] {
     return this.trState.props.verticalAlign;
   }
 
-  set verticalAlign(value: CoreTextNodeWritableProps['verticalAlign']) {
+  set verticalAlign(value: CoreTextNodeProps['verticalAlign']) {
     if (this.textRenderer.set.verticalAlign) {
       this.textRenderer.set.verticalAlign(this.trState, value);
     }
   }
 
-  get overflowSuffix(): CoreTextNodeWritableProps['overflowSuffix'] {
+  get overflowSuffix(): CoreTextNodeProps['overflowSuffix'] {
     return this.trState.props.overflowSuffix;
   }
 
-  set overflowSuffix(value: CoreTextNodeWritableProps['overflowSuffix']) {
+  set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
     if (this.textRenderer.set.overflowSuffix) {
       this.textRenderer.set.overflowSuffix(this.trState, value);
     }
   }
 
-  get debug(): CoreTextNodeWritableProps['debug'] {
+  get debug(): CoreTextNodeProps['debug'] {
     return this.trState.props.debug;
   }
 
-  set debug(value: CoreTextNodeWritableProps['debug']) {
+  set debug(value: CoreTextNodeProps['debug']) {
     this.textRenderer.set.debug(this.trState, value);
   }
 
@@ -389,6 +378,15 @@ export class CoreTextNode
 
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
+
+    // If the text renderer does not support rendering quads, fallback to the
+    // default renderQuads method
+    if (!this.textRenderer.renderQuads) {
+      super.renderQuads(renderer);
+      return;
+    }
+
+    // If the text renderer does support rendering quads, use it...
 
     // Prevent quad rendering if parent has a render texture
     // and this node is not the render texture
@@ -444,7 +442,7 @@ export class CoreTextNode
       this._textRendererOverride,
     );
 
-    const textRendererState = resolvedTextRenderer.createState(props);
+    const textRendererState = resolvedTextRenderer.createState(props, this);
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);

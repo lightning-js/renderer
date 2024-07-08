@@ -61,7 +61,6 @@ export interface TrFontFaceDescriptors {
   unicodeRange?: string;
   display?: FontDisplay;
   featureSettings?: string;
-  variant?: string;
 }
 
 export interface FontMetrics {
@@ -182,7 +181,6 @@ export class TrFontFace extends EventEmitter {
           : descriptors.weight,
       stretch: descriptors.stretch,
       unicodeRange: descriptors.unicodeRange,
-      variant: descriptors.variant,
       featureSettings: descriptors.featureSettings,
       display: descriptors.display,
     };

@@ -38,12 +38,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialProgress',
           props: {
             progress: 0.6,
           },
         },
         {
+          name: 'e2',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
@@ -64,6 +66,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialProgress',
           props: {
             progress: 1,
@@ -71,12 +74,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'radialProgress',
           props: {
             progress: 0.2,
           },
         },
         {
+          name: 'e3',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
@@ -97,6 +102,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialProgress',
           props: {
             progress: 1,
@@ -105,6 +111,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'radialProgress',
           props: {
             progress: 0.2,
@@ -112,6 +119,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e3',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
@@ -132,6 +140,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialProgress',
           props: {
             progress: 1,
@@ -141,6 +150,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'radialProgress',
           props: {
             progress: 0.2,
@@ -149,6 +159,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e3',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),
@@ -169,6 +180,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('DynamicShader', {
       effects: [
         {
+          name: 'e1',
           type: 'radialProgress',
           props: {
             progress: 1,
@@ -179,6 +191,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e2',
           type: 'radialProgress',
           props: {
             progress: 0.2,
@@ -188,6 +201,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           },
         },
         {
+          name: 'e3',
           type: 'linearGradient',
           props: {
             angle: degToRad(90),

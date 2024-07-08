@@ -360,7 +360,8 @@ export function layoutText(
 
       const xOffset = (vertexTextW - lineWidth) / 2;
       for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
-        vertexBuffer[j] += xOffset;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        vertexBuffer[j]! += xOffset;
       }
     }
   } else if (textAlign === 'right') {
@@ -376,7 +377,8 @@ export function layoutText(
 
       const xOffset = vertexTextW - lineWidth;
       for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
-        vertexBuffer[j] += xOffset;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        vertexBuffer[j]! += xOffset;
       }
     }
   }

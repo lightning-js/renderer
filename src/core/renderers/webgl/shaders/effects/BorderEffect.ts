@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { getNormalizedRgbaComponents } from '../../../../lib/utils.js';
+import { updateShaderEffectColor } from './EffectUtils.js';
 import {
   ShaderEffect,
   type DefaultEffectProps,
@@ -69,14 +69,15 @@ export class BorderEffect extends ShaderEffect {
     },
     color: {
       value: 0xffffffff,
-      validator: (rgba): number[] => getNormalizedRgbaComponents(rgba),
+      updateProgramValue: updateShaderEffectColor,
       method: 'uniform4fv',
       type: 'vec4',
     },
   };
 
   static override onEffectMask = `
-  float mask = clamp(shaderMask + width, 0.0, 1.0) - clamp(shaderMask, 0.0, 1.0);
+  float intR = shaderMask + 1.0;
+  float mask = clamp(intR + width, 0.0, 1.0) - clamp(intR, 0.0, 1.0);
   return mix(shaderColor, mix(shaderColor, maskColor, maskColor.a), mask);
   `;
 

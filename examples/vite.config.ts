@@ -46,7 +46,8 @@ const devTarget = 'es2020';
 /**
  * Vite Config
  */
-export default defineConfig(({ command, mode, ssrBuild }) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default defineConfig(({ command, mode, isSsrBuild }) => {
   return {
     worker: {
       format: 'es',

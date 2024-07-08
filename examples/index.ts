@@ -24,12 +24,14 @@ import {
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
 import { assertTruthy } from '@lightningjs/renderer/utils';
+import * as mt19937 from '@stdlib/random-base-mt19937';
 import type {
   ExampleSettings,
   SnapshotOptions,
 } from './common/ExampleSettings.js';
 import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
+import { MemMonitor } from './common/MemMonitor.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -70,6 +72,7 @@ const defaultPhysicalPixelRatio = 1;
    */
   const test = urlParams.get('test') || (automation ? '*' : 'test');
   const showOverlay = urlParams.get('overlay') !== 'false';
+  const showMemMonitor = urlParams.get('monitor') === 'true';
   const logFps = urlParams.get('fps') === 'true';
   const enableContextSpy = urlParams.get('contextSpy') === 'true';
   const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
@@ -90,6 +93,7 @@ const defaultPhysicalPixelRatio = 1;
       renderMode,
       urlParams,
       showOverlay,
+      showMemMonitor,
       logicalPixelRatio,
       physicalPixelRatio,
       logFps,
@@ -110,6 +114,7 @@ async function runTest(
   renderMode: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
+  showMemMonitor: boolean,
   logicalPixelRatio: number,
   physicalPixelRatio: number,
   logFps: boolean,
@@ -140,6 +145,8 @@ async function runTest(
     customSettings,
   );
 
+  let testRoot = renderer.root;
+
   if (showOverlay) {
     const overlayText = renderer.createTextNode({
       color: 0xff0000ff,
@@ -157,17 +164,41 @@ async function runTest(
     );
   }
 
+  let memMonitor: MemMonitor | null = null;
+  if (showMemMonitor) {
+    memMonitor = new MemMonitor(renderer, {
+      mount: 1,
+      x: renderer.settings.appWidth - 20,
+      y: renderer.settings.appHeight - 100,
+      parent: renderer.root,
+      zIndex: 99999,
+    });
+  }
+
+  if (showOverlay || showMemMonitor) {
+    // If we're showing the overlay text or mem monitor, create a new root node
+    // for the test content so it doesn't interfere with the overlay.
+    testRoot = renderer.createNode({
+      parent: renderer.root,
+      x: renderer.root.x,
+      y: renderer.root.y,
+      width: renderer.settings.appWidth,
+      height: renderer.settings.appHeight - 100,
+      color: 0x00000000,
+    });
+  }
+
   const exampleSettings: ExampleSettings = {
     testName: test,
     renderer,
     appElement,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    testRoot: renderer.root,
+    testRoot,
     automation: false,
     perfMultiplier: perfMultiplier,
     snapshot: async () => {
       // No-op
     },
+    memMonitor,
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
@@ -327,6 +358,13 @@ async function runAutomation(
     console.log(`Attempting to run automation for ${testName}...`);
     if (automation) {
       console.log(`Running automation for ${testName}...`);
+      // Override Math.random() as stable random number generator
+      // - Each test gets the same sequence of random numbers
+      // - This only is in effect when tests are run in automation mode
+      const rand = mt19937.factory({ seed: 1234 });
+      Math.random = function () {
+        return rand() / rand.MAX;
+      };
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {
@@ -380,6 +418,7 @@ async function runAutomation(
               );
             }
           },
+          memMonitor: null,
         };
         await automation(exampleSettings);
         testRoot.parent = null;

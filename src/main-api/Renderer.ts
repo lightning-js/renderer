@@ -18,7 +18,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { ShaderMap } from '../core/CoreShaderManager.js';
+import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type {
   ExtractProps,
   TextureTypeMap,
@@ -26,19 +26,24 @@ import type {
 } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
-import { santizeCustomDataMap } from './utils.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
-import {
-  Stage,
-  type StageFpsUpdateHandler,
-  type StageFrameTickHandler,
-} from '../core/Stage.js';
-import { getNewId } from '../utils.js';
-import { CoreNode, type CoreNodeWritableProps } from '../core/CoreNode.js';
-import {
-  CoreTextNode,
-  type CoreTextNodeWritableProps,
-} from '../core/CoreTextNode.js';
+import { Stage } from '../core/Stage.js';
+import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
+import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
+import type {
+  BaseShaderController,
+  ShaderController,
+} from './ShaderController.js';
+import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
+import type {
+  DynamicEffects,
+  DynamicShaderController,
+} from './DynamicShaderController.js';
+import type {
+  EffectDesc,
+  EffectDescUnion,
+} from '../core/renderers/webgl/shaders/DynamicShader.js';
+import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -92,19 +97,12 @@ export interface RendererMainSettings {
   appHeight?: number;
 
   /**
-   * Texture Memory Byte Threshold
-   *
-   * @remarks
-   * When the amount of GPU VRAM used by textures exceeds this threshold,
-   * the Renderer will free up all the textures that are current not visible
-   * within the configured `boundsMargin`.
-   *
-   * When set to `0`, the threshold-based texture memory manager is disabled.
+   * Texture Memory Manager Settings
    */
-  txMemByteThreshold?: number;
+  textureMemory?: Partial<TextureMemoryManagerSettings>;
 
   /**
-   * Bounds margin to extend the boundary in which a CoreNode is added as Quad.
+   * Bounds margin to extend the boundary in which a Node is added as Quad.
    */
   boundsMargin?: number | [number, number, number, number];
 
@@ -227,9 +225,33 @@ export interface RendererMainSettings {
  *   new MainCoreDriver(),
  * );
  * ```
+ *
+ * ## Events
+ * - `fpsUpdate`
+ *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
+ * - `frameTick`
+ *   - Emitted every frame tick
+ * - `idle`
+ *   - Emitted when the renderer is idle (no changes to the scene
+ *     graph/animations running)
+ * - `criticalCleanup`
+ *  - Emitted when the Texture Memory Manager Cleanup process is triggered
+ *  - Payload: { memUsed: number, criticalThreshold: number }
+ *    - `memUsed` - The amount of memory (in bytes) used by textures before the
+ *       cleanup process
+ *    - `criticalThreshold` - The critical threshold (in bytes)
+ * - `criticalCleanupFailed`
+ *   - Emitted when the Texture Memory Manager Cleanup process is unable to free
+ *     up enough texture memory to reach below the critical threshold.
+ *     This can happen when there is not enough non-renderable textures to
+ *     free up.
+ *   - Payload (object with keys):
+ *     - `memUsed` - The amount of memory (in bytes) used by textures after
+ *       the cleanup process
+ *     - `criticalThreshold` - The critical threshold (in bytes)
  */
 export class RendererMain extends EventEmitter {
-  readonly root: CoreNode;
+  readonly root: INode<ShaderController<'DefaultShader'>>;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
@@ -244,10 +266,16 @@ export class RendererMain extends EventEmitter {
    */
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
+    const resolvedTxSettings: TextureMemoryManagerSettings = {
+      criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
+      targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
+      cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
+      debugLogging: settings.textureMemory?.debugLogging || false,
+    };
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
-      txMemByteThreshold: settings.txMemByteThreshold || 124e6,
+      textureMemory: resolvedTxSettings,
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
@@ -288,33 +316,20 @@ export class RendererMain extends EventEmitter {
       boundsMargin: this.settings.boundsMargin,
       clearColor: this.settings.clearColor,
       canvas: this.canvas,
-      debug: {
-        monitorTextureCache: false,
-      },
       deviceLogicalPixelRatio: this.settings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: this.settings.devicePhysicalPixelRatio,
       enableContextSpy: this.settings.enableContextSpy,
       fpsUpdateInterval: this.settings.fpsUpdateInterval,
       numImageWorkers: this.settings.numImageWorkers,
       renderMode: this.settings.renderMode,
-      txMemByteThreshold: this.settings.txMemByteThreshold,
-    });
-
-    // Forward fpsUpdate events from the stage to RendererMain
-    this.stage.on('fpsUpdate', ((stage, fpsData) => {
-      this.emit('fpsUpdate', fpsData);
-    }) satisfies StageFpsUpdateHandler);
-
-    this.stage.on('frameTick', ((stage, frameTickData) => {
-      this.emit('frameTick', frameTickData);
-    }) satisfies StageFrameTickHandler);
-
-    this.stage.on('idle', () => {
-      this.emit('idle');
+      textureMemory: resolvedTxSettings,
+      eventBus: this,
     });
 
     // Extract the root node
-    this.root = this.stage.root;
+    this.root = this.stage.root as unknown as INode<
+      ShaderController<'DefaultShader'>
+    >;
 
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
@@ -351,23 +366,20 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode(props: Partial<CoreNodeWritableProps>): CoreNode {
+  createNode<
+    ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
+  >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
-    const resolvedProps = this.resolveNodeDefaults(props);
-    const node = new CoreNode(this.stage, {
-      ...resolvedProps,
-      shaderProps: null,
-    });
+    const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
-      return this.inspector.createNode(node, resolvedProps);
+      return this.inspector.createNode(node) as unknown as INode<ShCtr>;
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
-
-    return node;
+    return node as unknown as INode<ShCtr>;
   }
 
   /**
@@ -384,107 +396,14 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<CoreTextNodeWritableProps>): CoreTextNode {
-    const fontSize = props.fontSize ?? 16;
-    const data = {
-      ...this.resolveNodeDefaults(props),
-      id: getNewId(),
-      text: props.text ?? '',
-      textRendererOverride: props.textRendererOverride ?? null,
-      fontSize,
-      fontFamily: props.fontFamily ?? 'sans-serif',
-      fontStyle: props.fontStyle ?? 'normal',
-      fontWeight: props.fontWeight ?? 'normal',
-      fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
-      contain: props.contain ?? 'none',
-      scrollable: props.scrollable ?? false,
-      scrollY: props.scrollY ?? 0,
-      offsetY: props.offsetY ?? 0,
-      letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight, // `undefined` is a valid value
-      maxLines: props.maxLines ?? 0,
-      textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
-      overflowSuffix: props.overflowSuffix ?? '...',
-      debug: props.debug ?? {},
-      shaderProps: null,
-    };
-
-    assertTruthy(this.stage);
-    const textNode = new CoreTextNode(this.stage, data);
+  createTextNode(props: Partial<ITextNodeProps>): ITextNode {
+    const textNode = this.stage.createTextNode(props as CoreTextNodeProps);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode, data);
+      return this.inspector.createTextNode(textNode);
     }
 
-    return textNode;
-  }
-
-  /**
-   * Resolves the default property values for a Node
-   *
-   * @remarks
-   * This method is used internally by the RendererMain to resolve the default
-   * property values for a Node. It is exposed publicly so that it can be used
-   * by Core Driver implementations.
-   *
-   * @param props
-   * @returns
-   */
-  resolveNodeDefaults(
-    props: Partial<CoreNodeWritableProps>,
-  ): CoreNodeWritableProps {
-    const color = props.color ?? 0xffffffff;
-    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
-    const colorTr =
-      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
-    const colorBl =
-      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
-    const colorBr =
-      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
-    const data = santizeCustomDataMap(props.data ?? {});
-
-    return {
-      x: props.x ?? 0,
-      y: props.y ?? 0,
-      width: props.width ?? 0,
-      height: props.height ?? 0,
-      alpha: props.alpha ?? 1,
-      autosize: props.autosize ?? false,
-      clipping: props.clipping ?? false,
-      color,
-      colorTop: props.colorTop ?? color,
-      colorBottom: props.colorBottom ?? color,
-      colorLeft: props.colorLeft ?? color,
-      colorRight: props.colorRight ?? color,
-      colorBl,
-      colorBr,
-      colorTl,
-      colorTr,
-      zIndex: props.zIndex ?? 0,
-      zIndexLocked: props.zIndexLocked ?? 0,
-      parent: props.parent ?? null,
-      texture: props.texture ?? null,
-      textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? null,
-      shaderProps: props.shaderProps ?? null,
-      // Since setting the `src` will trigger a texture load, we need to set it after
-      // we set the texture. Otherwise, problems happen.
-      src: props.src ?? '',
-      scale: props.scale ?? null,
-      scaleX: props.scaleX ?? props.scale ?? 1,
-      scaleY: props.scaleY ?? props.scale ?? 1,
-      mount: props.mount ?? 0,
-      mountX: props.mountX ?? props.mount ?? 0,
-      mountY: props.mountY ?? props.mount ?? 0,
-      pivot: props.pivot ?? 0.5,
-      pivotX: props.pivotX ?? props.pivot ?? 0.5,
-      pivotY: props.pivotY ?? props.pivot ?? 0.5,
-      rotation: props.rotation ?? 0,
-      rtt: props.rtt ?? false,
-      data: data,
-    };
+    return textNode as unknown as ITextNode;
   }
 
   /**
@@ -496,7 +415,7 @@ export class RendererMain extends EventEmitter {
    * @param node
    * @returns
    */
-  destroyNode(node: CoreNode) {
+  destroyNode(node: INode) {
     if (this.inspector) {
       this.inspector.destroyNode(node.id);
     }
@@ -530,11 +449,13 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
-   * Create a new shader reference
+   * Create a new shader controller for a shader type
    *
    * @remarks
-   * This method creates a new reference to a shader. The shader is not
-   * loaded until it is used on a Node.
+   * This method creates a new Shader Controller for a specific shader type.
+   *
+   * If the shader has not been loaded yet, it will be loaded. Otherwise, the
+   * existing shader will be reused.
    *
    * It can be assigned to a Node's `shader` property.
    *
@@ -545,11 +466,27 @@ export class RendererMain extends EventEmitter {
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
     props?: ExtractProps<ShaderMap[ShType]>,
-  ): SpecificShaderRef<ShType> {
+  ): ShaderController<ShType> {
+    return this.stage.shManager.loadShader(shaderType, props);
+  }
+
+  createDynamicShader<
+    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+  >(effects: [...T]): DynamicShaderController<T> {
+    return this.stage.shManager.loadDynamicShader({
+      effects: effects as EffectDescUnion[],
+    });
+  }
+
+  createEffect<Name extends string, Type extends keyof EffectMap>(
+    name: Name,
+    type: Type,
+    props: EffectDesc<{ name: Name; type: Type }>['props'],
+  ): EffectDesc<{ name: Name; type: Type }> {
     return {
-      descType: 'shader',
-      shType: shaderType,
-      props: props as SpecificShaderRef<ShType>['props'],
+      name,
+      type,
+      props,
     };
   }
 

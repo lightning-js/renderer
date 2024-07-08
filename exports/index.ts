@@ -37,8 +37,7 @@
  * @module
  */
 
-export * from '../src/core/CoreNode.js';
-export * from '../src/core/CoreTextNode.js';
+export * from '../src/main-api/INode.js';
 export * from '../src/main-api/Renderer.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
@@ -46,6 +45,7 @@ export * from '../src/common/CommonTypes.js';
 // Selected types exported from the Core Renderer that can be used in the
 // context of the main API.
 export type { TextureMap } from '../src/core/CoreTextureManager.js';
+export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';

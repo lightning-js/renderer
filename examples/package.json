@@ -20,10 +20,11 @@
   "author": "Frank Weindel",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lightningjs/renderer": "link:.."
+    "@lightningjs/renderer": "link:..",
+    "@stdlib/random-base-mt19937": "^0.2.1"
   },
   "devDependencies": {
-    "vite": "^4.4.9"
+    "vite": "^5.0.0"
   },
   "engines": {
     "npm": "please-use-pnpm"

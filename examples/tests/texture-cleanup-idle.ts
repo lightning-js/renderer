@@ -17,18 +17,15 @@
  * limitations under the License.
  */
 
-import type { CoreNode, RendererMainSettings } from '@lightningjs/renderer';
+import type { INode, RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-// !!! TEST threshold-texture-memory
-export function customSettings(
-  urlParams: URLSearchParams,
-): Partial<RendererMainSettings> {
-  const txMemByteThreshold = urlParams.get('txMemByteThreshold');
+export function customSettings(): Partial<RendererMainSettings> {
   return {
-    txMemByteThreshold: txMemByteThreshold
-      ? Number(txMemByteThreshold)
-      : 100000000 /* 100MB */,
+    textureMemory: {
+      cleanupInterval: 5000,
+      debugLogging: true,
+    },
   };
 }
 
@@ -57,7 +54,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 0,
     y: 0,
-    text: 'Threshold-based Texture Memory Management Test',
+    text: 'Idle Texture Memory Cleanup Test',
     parent: testRoot,
     fontFamily: 'Ubuntu',
     fontSize: 60,
@@ -69,7 +66,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     width: renderer.settings.appWidth,
     contain: 'width',
-    text: `This test will create and display a grid of random NoiseTexture nodes and move them off of the bounds margin every 100ms.
+    text: `This test will create and display a grid of random NoiseTexture nodes and move them off of the bounds margin every second.
+
+The Texture Memory Manager should perform Idle Texture Cleanup roughly every 5 seconds.
 
 See docs/ManualRegressionTests.md for more information.
     `,
@@ -88,7 +87,7 @@ See docs/ManualRegressionTests.md for more information.
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const curNodes: CoreNode[] = [];
+    const curNodes: INode[] = [];
     // Create a 4x2 grid of nodes
     for (let i = 0; i < gridWidth; i++) {
       for (let j = 0; j < gridHeight; j++) {
@@ -111,12 +110,12 @@ See docs/ManualRegressionTests.md for more information.
         curNodes.push(node);
       }
     }
-    await delay(100);
+    await delay(1000);
     // Move all nodes offscreen beyond the bounds margin
     for (const node of curNodes) {
       node.x = -screenWidth * 2;
       node.y = -screenHeight * 2;
-      node.on('freed', (thisNode: CoreNode) => {
+      node.on('freed', (thisNode: INode) => {
         thisNode.destroy();
       });
     }

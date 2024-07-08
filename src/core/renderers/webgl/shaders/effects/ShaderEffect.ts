@@ -1,4 +1,8 @@
 import type {
+  AlphaShaderProp,
+  DimensionsShaderProp,
+} from '../../WebGlCoreShader.js';
+import type {
   UniformInfo,
   UniformMethodMap,
 } from '../../internal/ShaderUtils.js';
@@ -9,10 +13,26 @@ export interface ShaderEffectUniform {
   method: keyof UniformMethodMap;
   name?: string;
   size?: (value: Record<string, unknown>) => number;
+  updateOnBind?: boolean;
+  updateProgramValue?: (
+    programValues: ShaderEffectValueMap,
+    shaderProps?: Record<string, unknown>,
+  ) => void;
   validator?: (
     value: any,
     props: Record<string, unknown>,
   ) => number | number[] | number[][];
+}
+
+export interface ShaderEffectValueMap
+  extends DimensionsShaderProp,
+    AlphaShaderProp {
+  value: ShaderEffectUniform['value'];
+  programValue: number | Float32Array | undefined;
+  hasValidator: boolean;
+  hasProgramValueUpdater: boolean;
+  updateOnBind: boolean;
+  validatedValue?: number | number[];
 }
 
 export interface ShaderEffectUniforms {

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { type CoreNode } from '@lightningjs/renderer';
+import { type INode } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 const randomIntBetween = (from: number, to: number) =>
@@ -30,7 +30,7 @@ export default async function ({
 }: ExampleSettings) {
   // create 100 nodes
   const numOuterNodes = 100 * perfMultiplier;
-  const nodes: CoreNode[] = [];
+  const nodes: INode[] = [];
 
   const startMin = -1000;
   const startMax = 3000;

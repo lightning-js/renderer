@@ -22,10 +22,8 @@ import {
   getNewId,
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
-import type { ShaderMap } from './CoreShaderManager.js';
-import type { ExtractProps, TextureOptions } from './CoreTextureManager.js';
+import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
 import type {
   Texture,
@@ -54,7 +52,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type { ShaderRef } from '../main-api/Renderer.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -206,7 +204,7 @@ export type CustomDataMap = {
 /**
  * Writable properties of a Node.
  */
-export interface CoreNodeWritableProps {
+export interface CoreNodeProps {
   /**
    * The x coordinate of the Node's Mount Point.
    *
@@ -426,11 +424,7 @@ export interface CoreNodeWritableProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: ShaderRef | null;
-  /**
-   * Shader properties
-   */
-  shaderProps: Record<string, unknown> | null;
+  shader: BaseShaderController;
   /**
    * Image URL
    *
@@ -622,32 +616,35 @@ export interface CoreNodeWritableProps {
 }
 
 /**
- * Animatable properties of a Node
+ * Grab all the number properties of type T
  */
-export type CoreNodeAnimatableProps = {
-  [Key in keyof CoreNodeWritableProps as NonNullable<
-    CoreNodeWritableProps[Key]
-  > extends number
-    ? Key
-    : never]: number;
+type NumberProps<T> = {
+  [Key in keyof T as NonNullable<T[Key]> extends number ? Key : never]: number;
 };
+
+/**
+ * Properties of a Node used by the animate() function
+ */
+export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
+  /**
+   * Shader properties to animate
+   */
+  shaderProps: Record<string, number>;
+  // TODO: textureProps: Record<string, number>;
+}
 
 /**
  * A visual Node in the Renderer scene graph.
  *
  * @remarks
- * A Node is a basic building block of the Renderer scene graph. It can be a
- * container for other Nodes, or it can be a leaf Node that renders a solid
- * color, gradient, image, or specific texture, using a specific shader.
- *
- * For text rendering, see {@link CoreTextNode}.
- *
- * This is named `CoreNode` because the browser already defines a `Node` class.
+ * CoreNode is an internally used class that represents a Renderer Node in the
+ * scene graph. See INode.ts for the public APIs exposed to Renderer users
+ * that include generic types for Shaders.
  */
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
-  protected props: Required<CoreNodeWritableProps>;
+  readonly props: Required<CoreNodeProps>;
 
   public updateType = UpdateType.All;
 
@@ -676,18 +673,16 @@ export class CoreNode extends EventEmitter {
   public calcZIndex = 0;
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
+  private _src = '';
 
-  public _shader: CoreShader | null = null;
-  public _src = '';
-
-  constructor(protected stage: Stage, props: CoreNodeWritableProps) {
+  constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
     this.props = {
       ...props,
       parent: null,
       texture: null,
-      shader: null,
+      shader: stage.defShaderCtr,
       src: '',
       rtt: false,
       data: props.data || {},
@@ -720,9 +715,11 @@ export class CoreNode extends EventEmitter {
         texture.ctxTexture.load();
       }
       if (texture.state === 'loaded') {
-        this.onTextureLoaded(texture, texture.dimensions!);
+        assertTruthy(texture.dimensions);
+        this.onTextureLoaded(texture, texture.dimensions);
       } else if (texture.state === 'failed') {
-        this.onTextureFailed(texture, texture.error!);
+        assertTruthy(texture.error);
+        this.onTextureFailed(texture, texture.error);
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
       }
@@ -748,8 +745,9 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+  private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
+
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
@@ -764,33 +762,26 @@ export class CoreNode extends EventEmitter {
       type: 'texture',
       dimensions,
     } satisfies NodeTextureLoadedPayload);
+
+    // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
+    if (this.props.textureOptions?.resizeMode?.type === 'contain') {
+      this.setUpdateType(UpdateType.Local);
+    }
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (target, error) => {
+  private onTextureFailed: TextureFailedEventHandler = (_, error) => {
     this.emit('failed', {
       type: 'texture',
       error,
     } satisfies NodeTextureFailedPayload);
   };
 
-  private onTextureFreed: TextureFreedEventHandler = (target: Texture) => {
+  private onTextureFreed: TextureFreedEventHandler = () => {
     this.emit('freed', {
       type: 'texture',
     } satisfies NodeTextureFreedPayload);
   };
   //#endregion Textures
-
-  loadShader<Type extends keyof ShaderMap>(
-    shaderType: Type,
-    props: ExtractProps<ShaderMap[Type]>,
-  ): void {
-    const shManager = this.stage.renderer.getShaderManager();
-    assertTruthy(shManager);
-    const { shader, props: p } = shManager.loadShader(shaderType, props);
-    this._shader = shader;
-    this.props.shaderProps = p;
-    this.setUpdateType(UpdateType.IsRenderable);
-  }
 
   /**
    * Change types types is used to determine the scope of the changes being applied
@@ -821,26 +812,81 @@ export class CoreNode extends EventEmitter {
   }
 
   updateScaleRotateTransform() {
+    const { rotation, scaleX, scaleY } = this.props;
+
+    // optimize simple translation cases
+    if (rotation === 0 && scaleX === 1 && scaleY === 1) {
+      this.scaleRotateTransform = undefined;
+      return;
+    }
+
     this.scaleRotateTransform = Matrix3d.rotate(
-      this.props.rotation,
+      rotation,
       this.scaleRotateTransform,
-    ).scale(this.props.scaleX, this.props.scaleY);
+    ).scale(scaleX, scaleY);
   }
 
   updateLocalTransform() {
-    assertTruthy(this.scaleRotateTransform);
-    const pivotTranslateX = this.props.pivotX * this.props.width;
-    const pivotTranslateY = this.props.pivotY * this.props.height;
-    const mountTranslateX = this.props.mountX * this.props.width;
-    const mountTranslateY = this.props.mountY * this.props.height;
+    const { x, y, width, height } = this.props;
+    const mountTranslateX = this.props.mountX * width;
+    const mountTranslateY = this.props.mountY * height;
 
-    this.localTransform = Matrix3d.translate(
-      pivotTranslateX - mountTranslateX + this.props.x,
-      pivotTranslateY - mountTranslateY + this.props.y,
-      this.localTransform,
-    )
-      .multiply(this.scaleRotateTransform)
-      .translate(-pivotTranslateX, -pivotTranslateY);
+    if (this.scaleRotateTransform) {
+      const pivotTranslateX = this.props.pivotX * width;
+      const pivotTranslateY = this.props.pivotY * height;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .multiply(this.scaleRotateTransform)
+        .translate(-pivotTranslateX, -pivotTranslateY);
+    } else {
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX,
+        y - mountTranslateY,
+        this.localTransform,
+      );
+    }
+
+    // Handle 'contain' resize mode
+    const texture = this.props.texture;
+    if (
+      texture &&
+      texture.dimensions &&
+      this.props.textureOptions?.resizeMode?.type === 'contain'
+    ) {
+      let resizeModeScaleX = 1;
+      let resizeModeScaleY = 1;
+      let extraX = 0;
+      let extraY = 0;
+      const { width: tw, height: th } = texture.dimensions;
+      const txAspectRatio = tw / th;
+      const nodeAspectRatio = width / height;
+      if (txAspectRatio > nodeAspectRatio) {
+        // Texture is wider than node
+        // Center the node vertically (shift down by extraY)
+        // Scale the node vertically to maintain original aspect ratio
+        const scaleX = width / tw;
+        const scaledTxHeight = th * scaleX;
+        extraY = (height - scaledTxHeight) / 2;
+        resizeModeScaleY = scaledTxHeight / height;
+      } else {
+        // Texture is taller than node (or equal)
+        // Center the node horizontally (shift right by extraX)
+        // Scale the node horizontally to maintain original aspect ratio
+        const scaleY = height / th;
+        const scaledTxWidth = tw * scaleY;
+        extraX = (width - scaledTxWidth) / 2;
+        resizeModeScaleX = scaledTxWidth / width;
+      }
+
+      // Apply the extra translation and scale to the local transform
+      this.localTransform
+        .translate(extraX, extraY)
+        .scale(resizeModeScaleX, resizeModeScaleY);
+    }
 
     this.setUpdateType(UpdateType.Global);
   }
@@ -1016,7 +1062,7 @@ export class CoreNode extends EventEmitter {
       return false;
     }
 
-    if (this._shader) {
+    if (this.props.shader === this.stage.defShaderCtr) {
       return true;
     }
 
@@ -1264,22 +1310,25 @@ export class CoreNode extends EventEmitter {
     delete this.localTransform;
 
     this.props.texture = null;
-    this.props.shader = null;
-    this.props.shaderProps = null;
-    this._shader = null;
+    this.props.shader = this.stage.defShaderCtr;
+
+    const children = [...this.children];
+    for (let i = 0; i < children.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      children[i]!.destroy();
+    }
+    // This very action will also remove the node from the parent's children array
+    this.parent = null;
 
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
     }
 
     this.removeAllListeners();
-    this.parent = null;
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { texture, width, height, textureOptions, shaderProps, rtt } =
-      this.props;
-    const shader = this._shader;
+    const { texture, width, height, textureOptions, rtt, shader } = this.props;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
@@ -1322,8 +1371,8 @@ export class CoreNode extends EventEmitter {
       texture,
       textureOptions,
       zIndex,
-      shader,
-      shaderProps,
+      shader: shader.shader,
+      shaderProps: shader.getResolvedProps(),
       alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,
@@ -1564,17 +1613,10 @@ export class CoreNode extends EventEmitter {
   }
 
   set color(value: number) {
-    if (
-      this.props.colorTl !== value ||
-      this.props.colorTr !== value ||
-      this.props.colorBl !== value ||
-      this.props.colorBr !== value
-    ) {
-      this.colorTl = value;
-      this.colorTr = value;
-      this.colorBl = value;
-      this.colorBr = value;
-    }
+    this.colorTop = value;
+    this.colorBottom = value;
+    this.colorLeft = value;
+    this.colorRight = value;
     this.props.color = value;
 
     this.setUpdateType(UpdateType.PremultipliedColors);
@@ -1777,33 +1819,20 @@ export class CoreNode extends EventEmitter {
     this.stage.renderer?.renderToTexture(this);
   }
 
-  get shader(): ShaderRef | null {
+  get shader(): BaseShaderController {
     return this.props.shader;
   }
 
-  set shader(value: ShaderRef | null) {
-    if (value === null && this._shader === null) {
-      return;
-    }
-
-    if (value === null) {
-      this._shader = null;
-      this.props.shader = null;
-      this.setUpdateType(UpdateType.IsRenderable);
+  set shader(value: BaseShaderController) {
+    if (this.props.shader === value) {
       return;
     }
 
     this.props.shader = value;
-    assertTruthy(value);
-    this.loadShader(value.shType, value.props);
-  }
 
-  get shaderProps(): Record<string, unknown> | null {
-    return this.props.shaderProps;
-  }
-
-  set shaderProps(value: Record<string, unknown> | null) {
-    this.props.shaderProps = value;
+    if (value === this.stage.defShaderCtr) {
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
   }
 
   get src(): string {
@@ -1889,7 +1918,7 @@ export class CoreNode extends EventEmitter {
   }
 
   animate(
-    props: Partial<CoreNodeAnimatableProps>,
+    props: Partial<CoreNodeAnimateProps>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this, props, settings);

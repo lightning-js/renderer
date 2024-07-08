@@ -18,7 +18,7 @@
  */
 
 import {
-  type CoreNode,
+  type INode,
   type Dimensions,
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
@@ -28,14 +28,19 @@ import elevatorImg from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export async function automation(settings: ExampleSettings) {
+  await test(settings);
+  await settings.snapshot();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const FONT_SIZE = 45;
   const BEGIN_Y = FONT_SIZE;
 
   const header = renderer.createTextNode({
+    fontFamily: 'Ubuntu',
     text: `Texture Test`,
     fontSize: FONT_SIZE,
-    offsetY: -5,
     parent: testRoot,
   });
 
@@ -195,7 +200,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   await execFailureTest(subTxFailure2);
 
-  function waitForTxLoaded(imgNode: CoreNode) {
+  function waitForTxLoaded(imgNode: INode) {
     return new Promise<Dimensions>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
@@ -206,7 +211,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
-  function waitForTxFailed(imgNode: CoreNode) {
+  function waitForTxFailed(imgNode: INode) {
     return new Promise<boolean>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('TIMEOUT'));
@@ -218,15 +223,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   async function execLoadingTest(
-    imgNode: CoreNode,
+    imgNode: INode,
     expectedWidth: number,
     expectedHeight: number,
   ) {
     const textNode = renderer.createTextNode({
+      fontFamily: 'Ubuntu',
       x: curX,
       text: '',
       fontSize: FONT_SIZE,
-      offsetY: -5,
       parent: testRoot,
     });
 
@@ -265,12 +270,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     curTest++;
   }
 
-  async function execFailureTest(imgNode: CoreNode) {
+  async function execFailureTest(imgNode: INode) {
     const textNode = renderer.createTextNode({
+      fontFamily: 'Ubuntu',
       x: curX,
       text: '',
       fontSize: FONT_SIZE,
-      offsetY: -5,
       parent: testRoot,
     });
 

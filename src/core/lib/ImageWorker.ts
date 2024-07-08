@@ -20,6 +20,84 @@
 import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
+interface getImageReturn {
+  data: ImageBitmap;
+  premultiplyAlpha: boolean | null;
+}
+
+/**
+ * Note that, within the createImageWorker function, we must only use ES5 code to keep it ES5-valid after babelifying, as
+ *  the converted code of this section is converted to a blob and used as the js of the web worker thread.
+ *
+ * The createImageWorker function is a web worker that fetches an image from a URL and returns an ImageBitmap object.
+ * The eslint @typescript rule is disabled for the entire function because the function is converted to a blob and used as the
+ * js of the web worker thread, so the typescript syntax is not valid in this context.
+ */
+
+/* eslint-disable */
+const createImageWorker = function worker() {
+  function hasAlphaChannel(mimeType: string) {
+    return mimeType.indexOf('image/png') !== -1;
+  }
+
+  function getImage(
+    src: string,
+    premultiplyAlpha: boolean | null,
+  ): Promise<getImageReturn> {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', src, true);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function () {
+        if (xhr.status !== 200) {
+          return reject(new Error('Failed to load image: ' + xhr.statusText));
+        }
+
+        var blob = xhr.response;
+        var withAlphaChannel =
+          premultiplyAlpha !== undefined
+            ? premultiplyAlpha
+            : hasAlphaChannel(blob.type);
+
+        createImageBitmap(blob, {
+          premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        })
+          .then(function (data) {
+            resolve({ data, premultiplyAlpha: premultiplyAlpha });
+          })
+          .catch(function (error) {
+            reject(error);
+          });
+      };
+
+      xhr.onerror = function () {
+        reject(
+          new Error('Network error occurred while trying to fetch the image.'),
+        );
+      };
+
+      xhr.send();
+    });
+  }
+
+  self.onmessage = (event) => {
+    var src = event.data.src;
+    var id = event.data.id;
+    var premultiplyAlpha = event.data.premultiplyAlpha;
+
+    getImage(src, premultiplyAlpha)
+      .then(function (data) {
+        self.postMessage({ id: id, src: src, data: data });
+      })
+      .catch(function (error) {
+        self.postMessage({ id: id, src: src, error: error.message });
+      });
+  };
+};
+/* eslint-enable */
 
 export class ImageWorkerManager {
   imageWorkersEnabled = true;
@@ -55,58 +133,7 @@ export class ImageWorkerManager {
   }
 
   private createWorkers(numWorkers = 1): Worker[] {
-    const workerCode = `
-      function hasAlphaChannel(mimeType) {
-          return (mimeType.indexOf("image/png") !== -1);
-      }
-
-      function getImage(src, premultiplyAlpha) {
-        return new Promise(function(resolve, reject) {
-          var xhr = new XMLHttpRequest();
-          xhr.open('GET', src, true);
-          xhr.responseType = 'blob';
-
-          xhr.onload = function() {
-            if (xhr.status === 200) {
-              var blob = xhr.response;
-              var hasAlphaChannel = premultiplyAlpha !== undefined ? premultiplyAlpha : hasAlphaChannel(blob.type);
-
-              createImageBitmap(blob, {
-                premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-                colorSpaceConversion: 'none',
-                imageOrientation: 'none'
-              }).then(function(data) {
-                resolve({ data: data, premultiplyAlpha: premultiplyAlpha });
-              }).catch(function(error) {
-                reject(error);
-              });
-            } else {
-              reject(new Error('Failed to load image: ' + xhr.statusText));
-            }
-          };
-
-          xhr.onerror = function() {
-            reject(new Error('Network error occurred while trying to fetch the image.'));
-          };
-
-          xhr.send();
-        });
-      }
-
-      self.onmessage = (event) => {
-        var id = event.data.id;
-        var src = event.data.src;
-        var premultiplyAlpha = event.data.premultiplyAlpha;
-
-        getImage(src, premultiplyAlpha)
-          .then(function(data) {
-              self.postMessage({ id: id, data: data }, [data.data]);
-          })
-          .catch(function(error) {
-              self.postMessage({ id: id, error: error.message });
-          });
-      };
-    `;
+    const workerCode = `${createImageWorker.toString()} worker()`;
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
@@ -125,11 +152,6 @@ export class ImageWorkerManager {
     return worker;
   }
 
-  private convertUrlToAbsolute(url: string): string {
-    const absoluteUrl = new URL(url, self.location.href);
-    return absoluteUrl.href;
-  }
-
   getImage(
     src: string,
     premultiplyAlpha: boolean | null,
@@ -137,14 +159,13 @@ export class ImageWorkerManager {
     return new Promise((resolve, reject) => {
       try {
         if (this.workers) {
-          const absoluteSrcUrl = this.convertUrlToAbsolute(src);
           const id = this.nextId++;
           this.messageManager[id] = [resolve, reject];
           const nextWorker = this.getNextWorker();
           if (nextWorker) {
             nextWorker.postMessage({
               id,
-              src: absoluteSrcUrl,
+              src: src,
               premultiplyAlpha,
             });
           }

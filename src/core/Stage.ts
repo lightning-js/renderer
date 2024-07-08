@@ -20,10 +20,10 @@ import { startLoop, getTimeStamp } from './platform.js';
 import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
-import { CoreNode } from './CoreNode.js';
+import { CoreNode, type CoreNodeProps } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager } from './CoreShaderManager.js';
+import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
 import type {
   TextRenderer,
   TextRendererMap,
@@ -37,17 +37,23 @@ import type {
   FpsUpdatePayload,
   FrameTickPayload,
 } from '../common/CommonTypes.js';
-import { TextureMemoryManager } from './TextureMemoryManager.js';
+import {
+  TextureMemoryManager,
+  type TextureMemoryManagerSettings,
+} from './TextureMemoryManager.js';
 import type {
   CoreRenderer,
   CoreRendererOptions,
 } from './renderers/CoreRenderer.js';
 import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
+import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
+import { santizeCustomDataMap } from '../main-api/utils.js';
 
 export interface StageOptions {
   appWidth: number;
   appHeight: number;
-  txMemByteThreshold: number;
+  textureMemory: TextureMemoryManagerSettings;
   boundsMargin: number | [number, number, number, number];
   deviceLogicalPixelRatio: number;
   devicePhysicalPixelRatio: number;
@@ -57,10 +63,7 @@ export interface StageOptions {
   enableContextSpy: boolean;
   numImageWorkers: number;
   renderMode: 'webgl' | 'canvas';
-
-  debug?: {
-    monitorTextureCache?: boolean;
-  };
+  eventBus: EventEmitter;
 }
 
 export type StageFpsUpdateHandler = (
@@ -76,7 +79,7 @@ export type StageFrameTickHandler = (
 const bufferMemory = 2e6;
 const autoStart = true;
 
-export class Stage extends EventEmitter {
+export class Stage {
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -87,6 +90,17 @@ export class Stage extends EventEmitter {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
+  public readonly defShaderCtr: BaseShaderController;
+
+  /**
+   * Renderer Event Bus for the Stage to emit events onto
+   *
+   * @remarks
+   * In reality this is just the RendererMain instance, which is an EventEmitter.
+   * this allows us to directly emit events from the Stage to RendererMain
+   * without having to set up forwarding handlers.
+   */
+  public readonly eventBus: EventEmitter;
 
   /// State
   deltaTime = 0;
@@ -95,6 +109,7 @@ export class Stage extends EventEmitter {
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
+  private frameEventQueue: [name: string, payload: unknown][] = [];
 
   /// Debug data
   contextSpy: ContextSpy | null = null;
@@ -103,22 +118,21 @@ export class Stage extends EventEmitter {
    * Stage constructor
    */
   constructor(readonly options: StageOptions) {
-    super();
     const {
       canvas,
       clearColor,
-      debug,
       appWidth,
       appHeight,
       boundsMargin,
       enableContextSpy,
       numImageWorkers,
-      txMemByteThreshold,
+      textureMemory,
       renderMode,
     } = options;
 
+    this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(numImageWorkers);
-    this.txMemManager = new TextureMemoryManager(txMemByteThreshold);
+    this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
@@ -130,14 +144,6 @@ export class Stage extends EventEmitter {
         : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
     }
     this.boundsMargin = bm;
-
-    if (debug?.monitorTextureCache) {
-      setInterval(() => {
-        assertTruthy(this.txManager);
-        const debugInfo = this.txManager.getDebugInfo();
-        console.log('Texture Key Cache Size: ', debugInfo.keyCacheSize);
-      }, 1000);
-    }
 
     const rendererOptions: CoreRendererOptions = {
       stage: this,
@@ -157,6 +163,7 @@ export class Stage extends EventEmitter {
     } else {
       this.renderer = new WebGlCoreRenderer(rendererOptions);
     }
+    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -205,8 +212,7 @@ export class Stage extends EventEmitter {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: null,
-      shaderProps: null,
+      shader: this.defShaderCtr,
       rtt: false,
       src: null,
       scale: 1,
@@ -220,6 +226,24 @@ export class Stage extends EventEmitter {
     }
   }
 
+  updateFrameTime() {
+    const newFrameTime = getTimeStamp();
+    this.lastFrameTime = this.currentFrameTime;
+    this.currentFrameTime = newFrameTime;
+    this.deltaTime = !this.lastFrameTime
+      ? 100 / 6
+      : newFrameTime - this.lastFrameTime;
+    this.txManager.frameTime = newFrameTime;
+    this.txMemManager.frameTime = newFrameTime;
+
+    // This event is emitted at the beginning of the frame (before any updates
+    // or rendering), so no need to to use `stage.queueFrameEvent` here.
+    this.eventBus.emit('frameTick', {
+      time: this.currentFrameTime,
+      delta: this.deltaTime,
+    });
+  }
+
   /**
    * Update animations
    */
@@ -228,17 +252,6 @@ export class Stage extends EventEmitter {
     if (!this.root) {
       return;
     }
-    this.lastFrameTime = this.currentFrameTime;
-    this.currentFrameTime = getTimeStamp();
-
-    this.deltaTime = !this.lastFrameTime
-      ? 100 / 6
-      : this.currentFrameTime - this.lastFrameTime;
-
-    this.emit('frameTick', {
-      time: this.currentFrameTime,
-      delta: this.deltaTime,
-    });
     // step animation
     animationManager.update(this.deltaTime);
   }
@@ -265,9 +278,9 @@ export class Stage extends EventEmitter {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to garbage collect
-    if (renderer.txMemManager.gcRequested) {
-      renderer.txMemManager.gc();
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested) {
+      this.txMemManager.cleanup();
     }
 
     // If we have RTT nodes draw them first
@@ -290,6 +303,40 @@ export class Stage extends EventEmitter {
     }
   }
 
+  /**
+   * Queue an event to be emitted after the current/next frame is rendered
+   *
+   * @remarks
+   * When we are operating in the context of the render loop, we may want to
+   * emit events that are related to the current frame. However, we generally do
+   * NOT want to emit events directly in the middle of the render loop, since
+   * this could enable event handlers to modify the scene graph and cause
+   * unexpected behavior. Instead, we queue up events to be emitted and then
+   * flush the queue after the frame has been rendered.
+   *
+   * @param name
+   * @param data
+   */
+  queueFrameEvent(name: string, data: unknown) {
+    this.frameEventQueue.push([name, data]);
+  }
+
+  /**
+   * Emit all queued frame events
+   *
+   * @remarks
+   * This method should be called after the frame has been rendered to emit
+   * all events that were queued during the frame.
+   *
+   * See {@link queueFrameEvent} for more information.
+   */
+  flushFrameEvents() {
+    for (const [name, data] of this.frameEventQueue) {
+      this.eventBus.emit(name, data);
+    }
+    this.frameEventQueue = [];
+  }
+
   calculateFps() {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
@@ -303,7 +350,7 @@ export class Stage extends EventEmitter {
         );
         this.fpsNumFrames = 0;
         this.fpsElapsedTime = 0;
-        this.emit('fpsUpdate', {
+        this.queueFrameEvent('fpsUpdate', {
           fps,
           contextSpyData: this.contextSpy?.getData() ?? null,
         } satisfies FpsUpdatePayload);
@@ -404,5 +451,116 @@ export class Stage extends EventEmitter {
     // Need to explicitly cast to TextRenderer because TS doesn't like
     // the covariant state argument in the setter method map
     return resolvedTextRenderer as unknown as TextRenderer;
+  }
+
+  /**
+   * Create a shader controller instance
+   *
+   * @param type
+   * @param props
+   * @returns
+   */
+  createShaderCtr(
+    type: keyof ShaderMap,
+    props: Record<string, unknown>,
+  ): BaseShaderController {
+    return this.shManager.loadShader(type, props);
+  }
+
+  createNode(props: Partial<CoreNodeProps>) {
+    const resolvedProps = this.resolveNodeDefaults(props);
+    return new CoreNode(this, resolvedProps);
+  }
+
+  createTextNode(props: Partial<CoreTextNodeProps>) {
+    const fontSize = props.fontSize ?? 16;
+    const resolvedProps = {
+      ...this.resolveNodeDefaults(props),
+      text: props.text ?? '',
+      textRendererOverride: props.textRendererOverride ?? null,
+      fontSize,
+      fontFamily: props.fontFamily ?? 'sans-serif',
+      fontStyle: props.fontStyle ?? 'normal',
+      fontWeight: props.fontWeight ?? 'normal',
+      fontStretch: props.fontStretch ?? 'normal',
+      textAlign: props.textAlign ?? 'left',
+      contain: props.contain ?? 'none',
+      scrollable: props.scrollable ?? false,
+      scrollY: props.scrollY ?? 0,
+      offsetY: props.offsetY ?? 0,
+      letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight, // `undefined` is a valid value
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'middle',
+      overflowSuffix: props.overflowSuffix ?? '...',
+      debug: props.debug ?? {},
+      shaderProps: null,
+    };
+
+    return new CoreTextNode(this, resolvedProps);
+  }
+
+  /**
+   * Resolves the default property values for a Node
+   *
+   * @remarks
+   * This method is used internally by the RendererMain to resolve the default
+   * property values for a Node. It is exposed publicly so that it can be used
+   * by Core Driver implementations.
+   *
+   * @param props
+   * @returns
+   */
+  protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
+    const color = props.color ?? 0xffffffff;
+    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
+    const colorTr =
+      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
+    const colorBl =
+      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
+    const colorBr =
+      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const data = santizeCustomDataMap(props.data ?? {});
+
+    return {
+      x: props.x ?? 0,
+      y: props.y ?? 0,
+      width: props.width ?? 0,
+      height: props.height ?? 0,
+      alpha: props.alpha ?? 1,
+      autosize: props.autosize ?? false,
+      clipping: props.clipping ?? false,
+      color,
+      colorTop: props.colorTop ?? color,
+      colorBottom: props.colorBottom ?? color,
+      colorLeft: props.colorLeft ?? color,
+      colorRight: props.colorRight ?? color,
+      colorBl,
+      colorBr,
+      colorTl,
+      colorTr,
+      zIndex: props.zIndex ?? 0,
+      zIndexLocked: props.zIndexLocked ?? 0,
+      parent: props.parent ?? null,
+      texture: props.texture ?? null,
+      textureOptions: props.textureOptions ?? {},
+      shader: props.shader ?? this.defShaderCtr,
+      // Since setting the `src` will trigger a texture load, we need to set it after
+      // we set the texture. Otherwise, problems happen.
+      src: props.src ?? '',
+      scale: props.scale ?? null,
+      scaleX: props.scaleX ?? props.scale ?? 1,
+      scaleY: props.scaleY ?? props.scale ?? 1,
+      mount: props.mount ?? 0,
+      mountX: props.mountX ?? props.mount ?? 0,
+      mountY: props.mountY ?? props.mount ?? 0,
+      pivot: props.pivot ?? 0.5,
+      pivotX: props.pivotX ?? props.pivot ?? 0.5,
+      pivotY: props.pivotY ?? props.pivot ?? 0.5,
+      rotation: props.rotation ?? 0,
+      rtt: props.rtt ?? false,
+      data: data,
+    };
   }
 }
