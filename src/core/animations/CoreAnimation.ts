@@ -45,7 +45,7 @@ export class CoreAnimation extends EventEmitter {
   private timingFunction: (t: number) => number | undefined;
 
   propValuesMap: PropValuesMap = {};
-  dynPropValuesMap: PropValuesMap = {};
+  dynPropValuesMap: PropValuesMap | undefined = undefined;
 
   constructor(
     private node: CoreNode,
@@ -76,16 +76,15 @@ export class CoreAnimation extends EventEmitter {
       } else {
         const shaderPropKeys = Object.keys(props.shaderProps!);
         const spLength = shaderPropKeys.length;
-        let j = 0;
-        for (; j < spLength; j++) {
+        this.dynPropValuesMap = {};
+        for (let j = 0; j < spLength; j++) {
           const effectName = shaderPropKeys[j]!;
           const effect = props.shaderProps![effectName]!;
           this.dynPropValuesMap[effectName] = {};
           const effectProps = Object.entries(effect);
           const eLength = effectProps.length;
 
-          let k = 0;
-          for (; k < eLength; k++) {
+          for (let k = 0; k < eLength; k++) {
             const [key, value] = effectProps[k]!;
             this.dynPropValuesMap[effectName]![key] = {
               start: node.shader.props[effectName][key],
@@ -145,16 +144,17 @@ export class CoreAnimation extends EventEmitter {
       );
     }
 
-    const dynEntries = Object.keys(this.dynPropValuesMap);
-    const dynEntriesL = dynEntries.length;
-    if (dynEntriesL > 0) {
-      let i = 0;
-      for (; i < dynEntriesL; i++) {
-        const key = dynEntries[i]!;
-        this.restoreValues(
-          this.node.shader.props[key],
-          this.dynPropValuesMap[key]!,
-        );
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.restoreValues(
+            this.node.shader.props[key],
+            this.dynPropValuesMap[key]!,
+          );
+        }
       }
     }
   }
@@ -182,13 +182,14 @@ export class CoreAnimation extends EventEmitter {
       this.reverseValues(this.propValuesMap['shaderProps']);
     }
 
-    const dynEntries = Object.keys(this.dynPropValuesMap);
-    const dynEntriesL = dynEntries.length;
-    if (dynEntriesL > 0) {
-      let i = 0;
-      for (; i < dynEntriesL; i++) {
-        const key = dynEntries[i]!;
-        this.reverseValues(this.dynPropValuesMap[key]!);
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.reverseValues(this.dynPropValuesMap[key]!);
+        }
       }
     }
 
@@ -309,17 +310,18 @@ export class CoreAnimation extends EventEmitter {
       );
     }
 
-    const dynEntries = Object.keys(this.dynPropValuesMap);
-    const dynEntriesL = dynEntries.length;
-    if (dynEntriesL > 0) {
-      let i = 0;
-      for (; i < dynEntriesL; i++) {
-        const key = dynEntries[i]!;
-        this.updateValues(
-          this.node.shader.props[key],
-          this.dynPropValuesMap[key]!,
-          easing,
-        );
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.updateValues(
+            this.node.shader.props[key],
+            this.dynPropValuesMap[key]!,
+            easing,
+          );
+        }
       }
     }
 
