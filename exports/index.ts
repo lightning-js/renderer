@@ -39,6 +39,8 @@
 
 export * from '../src/main-api/INode.js';
 export * from '../src/main-api/Renderer.js';
+export * from '../src/main-api/ShaderController.js';
+export * from '../src/main-api/DynamicShaderController.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 
