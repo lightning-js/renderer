@@ -51,6 +51,9 @@ export class DynamicShaderController<
         props: effectProps,
         type: effectType,
       } = effects[i]!;
+      if (effectName === undefined) {
+        continue;
+      }
       const definedEffectProps = {};
       const propEntries = Object.keys(effectProps);
       const propEntriesLength = propEntries.length;
@@ -85,13 +88,11 @@ export class DynamicShaderController<
         });
       }
 
-      if (effectName) {
-        Object.defineProperty(definedProps, effectName, {
-          get: () => {
-            return definedEffectProps;
-          },
-        });
-      }
+      Object.defineProperty(definedProps, effectName, {
+        get: () => {
+          return definedEffectProps;
+        },
+      });
     }
 
     this.props = definedProps as MapEffectProps<Effects>;
