@@ -1312,12 +1312,19 @@ export class CoreNode extends EventEmitter {
     this.props.texture = null;
     this.props.shader = this.stage.defShaderCtr;
 
+    const children = [...this.children];
+    for (let i = 0; i < children.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      children[i]!.destroy();
+    }
+    // This very action will also remove the node from the parent's children array
+    this.parent = null;
+
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
     }
 
     this.removeAllListeners();
-    this.parent = null;
   }
 
   renderQuads(renderer: CoreRenderer): void {
