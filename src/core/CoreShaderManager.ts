@@ -230,7 +230,7 @@ export class CoreShaderManager {
   }
 
   loadDynamicShader<
-    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
   >(props: DynamicShaderProps): DynamicShaderController<T> {
     if (!this.renderer) {
       throw new Error(`Renderer is not been defined`);
@@ -270,7 +270,7 @@ export class CoreShaderManager {
   }
 
   private _createDynShaderCtr<
-    T extends DynamicEffects<[...{ name: string; type: keyof EffectMap }[]]>,
+    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
   >(
     shader: InstanceType<ShaderMap['DynamicShader']>,
     props: ExtractProps<ShaderMap['DynamicShader']>,
