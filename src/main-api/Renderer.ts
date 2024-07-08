@@ -29,7 +29,7 @@ import { Inspector } from './Inspector.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
-import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
+import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type {
   BaseShaderController,
   ShaderController,
@@ -42,7 +42,7 @@ import type {
 import type {
   EffectDesc,
   EffectDescUnion,
-} from '../core/renderers/webgl/shaders/DynamicShader.js';
+} from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 
 /**

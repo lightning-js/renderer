@@ -5,7 +5,7 @@ import type {
   ShaderMap,
 } from '../core/CoreShaderManager.js';
 import type { ExtractProps } from '../core/CoreTextureManager.js';
-import type { EffectDesc } from '../core/renderers/webgl/shaders/DynamicShader.js';
+import type { EffectDesc } from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { BaseShaderController } from './ShaderController.js';
 
 type OptionalName<T> = T extends string ? T : never;
