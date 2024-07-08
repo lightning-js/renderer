@@ -548,7 +548,7 @@ export class Stage {
       shader: props.shader ?? this.defShaderCtr,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
-      src: props.src ?? '',
+      src: props.src ?? null,
       scale: props.scale ?? null,
       scaleX: props.scaleX ?? props.scale ?? 1,
       scaleY: props.scaleY ?? props.scale ?? 1,

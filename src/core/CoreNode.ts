@@ -644,7 +644,7 @@ export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
-  readonly props: Required<CoreNodeProps>;
+  readonly props: CoreNodeProps;
 
   public updateType = UpdateType.All;
 
@@ -673,7 +673,6 @@ export class CoreNode extends EventEmitter {
   public calcZIndex = 0;
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
-  private _src = '';
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
@@ -682,19 +681,14 @@ export class CoreNode extends EventEmitter {
       ...props,
       parent: null,
       texture: null,
-      shader: stage.defShaderCtr,
-      src: '',
+      src: null,
       rtt: false,
-      data: props.data || {},
     };
 
     // Assign props to instance
     this.parent = props.parent;
-    this.shader = props.shader;
     this.texture = props.texture;
-    this.src = props.src || '';
-    // FIXME
-    // this.data = props.data;
+    this.src = props.src;
     this.rtt = props.rtt;
 
     this.updateScaleRotateTransform();
@@ -1062,7 +1056,7 @@ export class CoreNode extends EventEmitter {
       return false;
     }
 
-    if (this.props.shader === this.stage.defShaderCtr) {
+    if (this.props.shader !== this.stage.defShaderCtr) {
       return true;
     }
 
@@ -1830,21 +1824,19 @@ export class CoreNode extends EventEmitter {
 
     this.props.shader = value;
 
-    if (value === this.stage.defShaderCtr) {
-      this.setUpdateType(UpdateType.IsRenderable);
-    }
+    this.setUpdateType(UpdateType.IsRenderable);
   }
 
-  get src(): string {
-    return this._src;
+  get src(): string | null {
+    return this.props.src;
   }
 
-  set src(imageUrl: string) {
-    if (this._src === imageUrl) {
+  set src(imageUrl: string | null) {
+    if (this.props.src === imageUrl) {
       return;
     }
 
-    this._src = imageUrl;
+    this.props.src = imageUrl;
 
     if (!imageUrl) {
       this.texture = null;
