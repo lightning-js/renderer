@@ -616,7 +616,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
-    this.quadBufferUsage = this.curBufferIdx;
+    this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
   }
 
   renderToTexture(node: CoreNode) {
