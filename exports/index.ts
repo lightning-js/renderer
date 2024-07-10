@@ -46,7 +46,11 @@ export * from '../src/common/CommonTypes.js';
 
 // Selected types exported from the Core Renderer that can be used in the
 // context of the main API.
-export type { TextureMap } from '../src/core/CoreTextureManager.js';
+export {
+  CoreTextureManager,
+  type TextureTypeMap,
+  type TextureMap,
+} from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
@@ -61,10 +65,13 @@ export type {
   GlitchEffectProps,
   RadialProgressEffectProps,
 } from '../src/core/CoreShaderManager.js';
+export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
+export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
 export * from '../src/core/renderers/webgl/shaders/effects/ShaderEffect.js';
+export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/ShaderUtils.js';
 
 // Textures
 export * from '../src/core/textures/Texture.js';

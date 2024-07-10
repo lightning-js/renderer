@@ -38,4 +38,5 @@
  * @packageDocumentation
  */
 export { assertTruthy, mergeColorAlpha, deg2Rad } from '../src/utils.js';
+export { getNormalizedRgbaComponents } from '../src/core/lib/utils.js';
 export { EventEmitter } from '../src/common/EventEmitter.js';
