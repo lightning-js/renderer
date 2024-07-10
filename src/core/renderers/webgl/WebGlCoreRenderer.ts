@@ -20,6 +20,7 @@
 import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import {
   CoreRenderer,
+  type BufferInfo,
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
@@ -54,6 +55,7 @@ import type { BaseShaderController } from '../../../main-api/ShaderController.js
 import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
+const QUAD_BUFFER_SIZE = 4 * 1024 * 1024;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlCoreRendererOptions = CoreRendererOptions;
@@ -69,7 +71,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   system: CoreWebGlSystem;
 
   //// Persistent data
-  quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
+  quadBuffer: ArrayBuffer = new ArrayBuffer(QUAD_BUFFER_SIZE);
   fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
   uiQuadBuffer: Uint32Array = new Uint32Array(this.quadBuffer);
   renderOps: WebGlCoreRenderOp[] = [];
@@ -90,6 +92,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   defaultTexture: Texture;
 
+  quadBufferUsage = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -613,6 +616,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
+    this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
   }
 
   renderToTexture(node: CoreNode) {
@@ -692,6 +696,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+
+  getBufferInfo(): BufferInfo | null {
+    const bufferInfo: BufferInfo = {
+      totalAvailable: QUAD_BUFFER_SIZE,
+      totalUsed: this.quadBufferUsage,
+    };
+    return bufferInfo;
   }
 
   override getDefShaderCtr(): BaseShaderController {

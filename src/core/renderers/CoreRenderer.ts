@@ -72,6 +72,11 @@ export interface CoreRendererOptions {
   contextSpy: ContextSpy | null;
 }
 
+export interface BufferInfo {
+  totalUsed: number;
+  totalAvailable: number;
+}
+
 export abstract class CoreRenderer {
   public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
@@ -102,5 +107,6 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
+  abstract getBufferInfo(): BufferInfo | null;
   abstract getDefShaderCtr(): BaseShaderController;
 }

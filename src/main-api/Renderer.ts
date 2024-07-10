@@ -571,6 +571,10 @@ export class RendererMain extends EventEmitter {
     throw new Error('Not implemented');
   }
 
+  getBufferInfo() {
+    return this.stage.renderer.getBufferInfo();
+  }
+
   /**
    * Re-render the current frame without advancing any running animations.
    *
