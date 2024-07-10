@@ -26,11 +26,7 @@ export class MyCustomTexture extends Texture {
 
   constructor(txManager: CoreTextureManager, props: MyCustomTextureProps) {
     super(txManager);
-    this.props = {
-      percent: props.percent ?? 25,
-      width: props.width,
-      height: props.height,
-    };
+    this.props = MyCustomTexture.resolveDefaults(props);
   }
 
   override async getTextureData(): Promise<TextureData> {
@@ -54,6 +50,23 @@ export class MyCustomTexture extends Texture {
     ctx.fill();
     return {
       data: ctx.getImageData(0, 0, canvas.width, canvas.height),
+    };
+  }
+
+  static override makeCacheKey(props: MyCustomTextureProps): string | false {
+    // // Cache by props (only do this if could be helpful, otherwise leave it uncached)
+    // const rprops = MyCustomTexture.resolveDefaults(props)
+    // return `MyCustomTexture,${rprops.percent},${rprops.width},${rprops.height},`;
+    return false; // <-- Don't cache at all
+  }
+
+  static override resolveDefaults(
+    props: MyCustomTextureProps,
+  ): Required<MyCustomTextureProps> {
+    return {
+      percent: props.percent ?? 20,
+      width: props.width,
+      height: props.height,
     };
   }
 }
