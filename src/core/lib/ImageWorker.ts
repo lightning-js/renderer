@@ -35,7 +35,7 @@ interface getImageReturn {
  */
 
 /* eslint-disable */
-const createImageWorker = function worker() {
+function createImageWorker() {
   function hasAlphaChannel(mimeType: string) {
     return mimeType.indexOf('image/png') !== -1;
   }
@@ -96,7 +96,7 @@ const createImageWorker = function worker() {
         self.postMessage({ id: id, src: src, error: error.message });
       });
   };
-};
+}
 /* eslint-enable */
 
 export class ImageWorkerManager {
@@ -133,7 +133,7 @@ export class ImageWorkerManager {
   }
 
   private createWorkers(numWorkers = 1): Worker[] {
-    const workerCode = `${createImageWorker.toString()} worker()`;
+    const workerCode = `(${createImageWorker.toString()})()`;
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
