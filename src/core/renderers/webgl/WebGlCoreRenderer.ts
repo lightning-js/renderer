@@ -55,7 +55,6 @@ import type { BaseShaderController } from '../../../main-api/ShaderController.js
 import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
-const QUAD_BUFFER_SIZE = 4 * 1024 * 1024;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlCoreRendererOptions = CoreRendererOptions;
@@ -71,9 +70,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
   system: CoreWebGlSystem;
 
   //// Persistent data
-  quadBuffer: ArrayBuffer = new ArrayBuffer(QUAD_BUFFER_SIZE);
-  fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
-  uiQuadBuffer: Uint32Array = new Uint32Array(this.quadBuffer);
+  quadBuffer: ArrayBuffer;
+  fQuadBuffer: Float32Array;
+  uiQuadBuffer: Uint32Array;
   renderOps: WebGlCoreRenderOp[] = [];
 
   //// Render Op / Buffer Filling State
@@ -93,6 +92,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultTexture: Texture;
 
   quadBufferUsage = 0;
+  quadBufferSize: number;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -100,6 +100,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options);
+
+    this.quadBufferSize = this.stage.options.quadBufferSize;
+    this.quadBuffer = new ArrayBuffer(this.quadBufferSize);
+    this.fQuadBuffer = new Float32Array(this.quadBuffer);
+    this.uiQuadBuffer = new Uint32Array(this.quadBuffer);
+
     this.mode = 'webgl';
 
     const { canvas, clearColor, bufferMemory } = options;
@@ -700,7 +706,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   getBufferInfo(): BufferInfo | null {
     const bufferInfo: BufferInfo = {
-      totalAvailable: QUAD_BUFFER_SIZE,
+      totalAvailable: this.quadBufferSize,
       totalUsed: this.quadBufferUsage,
     };
     return bufferInfo;

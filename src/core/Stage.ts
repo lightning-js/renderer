@@ -64,6 +64,7 @@ export interface StageOptions {
   numImageWorkers: number;
   renderMode: 'webgl' | 'canvas';
   eventBus: EventEmitter;
+  quadBufferSize: number;
 }
 
 export type StageFpsUpdateHandler = (
