@@ -56,6 +56,7 @@ export function layoutText(
   scrollable: TrProps['scrollable'],
   overflowSuffix: TrProps['overflowSuffix'],
   maxLines: TrProps['maxLines'],
+  wrapWord: TrProps['wrapWord'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;

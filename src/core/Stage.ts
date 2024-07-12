@@ -496,6 +496,7 @@ export class Stage {
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
       shaderProps: null,
+      wrapWord: props.wrapWord ?? false,
     };
 
     return new CoreTextNode(this, resolvedProps);

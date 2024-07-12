@@ -221,6 +221,12 @@ export interface TrProps extends TrFontProps {
    * @default 'none'
    */
   contain: 'none' | 'width' | 'both';
+  /**
+   * Word wrap option
+   *
+   * @default false
+   */
+  wrapWord: boolean;
   width: number;
   height: number;
   /**
@@ -369,6 +375,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   contain: (state, value) => {
     state.props.contain = value;
+  },
+  wrapWord: (state, value) => {
+    state.props.wrapWord = value;
   },
   offsetY: (state, value) => {
     state.props.offsetY = value;
