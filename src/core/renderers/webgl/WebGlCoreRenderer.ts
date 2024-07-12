@@ -92,7 +92,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultTexture: Texture;
 
   quadBufferUsage = 0;
-  quadBufferSize: number;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -101,8 +100,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   constructor(options: WebGlCoreRendererOptions) {
     super(options);
 
-    this.quadBufferSize = this.stage.options.quadBufferSize;
-    this.quadBuffer = new ArrayBuffer(this.quadBufferSize);
+    this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
     this.fQuadBuffer = new Float32Array(this.quadBuffer);
     this.uiQuadBuffer = new Uint32Array(this.quadBuffer);
 
@@ -706,7 +704,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   getBufferInfo(): BufferInfo | null {
     const bufferInfo: BufferInfo = {
-      totalAvailable: this.quadBufferSize,
+      totalAvailable: this.stage.options.quadBufferSize,
       totalUsed: this.quadBufferUsage,
     };
     return bufferInfo;
