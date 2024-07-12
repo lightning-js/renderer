@@ -200,6 +200,13 @@ export interface RendererMainSettings {
    * Renderer mode
    */
   renderMode?: 'webgl' | 'canvas';
+
+  /**
+   * Quad buffer size in bytes
+   *
+   * @defaultValue 4 * 1024 * 1024
+   */
+  quadBufferSize?: number;
 }
 
 /**
@@ -287,6 +294,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
       renderMode: settings.renderMode ?? 'webgl',
+      quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
     };
     this.settings = resolvedSettings;
 
@@ -324,6 +332,7 @@ export class RendererMain extends EventEmitter {
       renderMode: this.settings.renderMode,
       textureMemory: resolvedTxSettings,
       eventBus: this,
+      quadBufferSize: this.settings.quadBufferSize,
     });
 
     // Extract the root node
