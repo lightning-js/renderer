@@ -19,11 +19,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
-import type {
-  ExtractProps,
-  TextureTypeMap,
-  TextureMap,
-} from '../core/CoreTextureManager.js';
+import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { Inspector } from './Inspector.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
@@ -447,14 +443,11 @@ export class RendererMain extends EventEmitter {
    * @param options
    * @returns
    */
-  createTexture<TxType extends keyof TextureTypeMap>(
+  createTexture<TxType extends keyof TextureMap>(
     textureType: TxType,
-    props: ExtractProps<TextureTypeMap[TxType]>,
-  ): TextureMap[TxType] {
-    return this.stage.txManager.loadTexture(
-      textureType,
-      props,
-    ) as TextureMap[TxType];
+    props: ExtractProps<TextureMap[TxType]>,
+  ): InstanceType<TextureMap[TxType]> {
+    return this.stage.txManager.loadTexture(textureType, props);
   }
 
   /**

@@ -8,7 +8,7 @@ import { assertTruthy } from '@lightningjs/renderer/utils';
  * Augment the EffectMap interface to include the CustomEffect
  */
 declare module '@lightningjs/renderer' {
-  interface TextureTypeMap {
+  interface TextureMap {
     MyCustomTexture: typeof MyCustomTexture;
   }
 }

@@ -34,20 +34,13 @@ import type { Texture } from './textures/Texture.js';
  * texture types. The ones included directly here are the ones that are
  * included in the core library.
  */
-export interface TextureTypeMap {
+export interface TextureMap {
   ColorTexture: typeof ColorTexture;
   ImageTexture: typeof ImageTexture;
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
   RenderTexture: typeof RenderTexture;
 }
-
-/**
- * Map of texture instance types
- */
-export type TextureMap = {
-  [K in keyof TextureTypeMap]: InstanceType<TextureTypeMap[K]>;
-};
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
   ? Props
@@ -159,7 +152,7 @@ export class CoreTextureManager {
   /**
    * Map of texture constructors by their type name
    */
-  txConstructors: Partial<TextureTypeMap> = {};
+  txConstructors: Partial<TextureMap> = {};
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
@@ -203,17 +196,17 @@ export class CoreTextureManager {
     this.registerTextureType('RenderTexture', RenderTexture);
   }
 
-  registerTextureType<Type extends keyof TextureTypeMap>(
+  registerTextureType<Type extends keyof TextureMap>(
     textureType: Type,
-    textureClass: TextureTypeMap[Type],
+    textureClass: TextureMap[Type],
   ): void {
     this.txConstructors[textureType] = textureClass;
   }
 
-  loadTexture<Type extends keyof TextureTypeMap>(
+  loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
-    props: ExtractProps<TextureTypeMap[Type]>,
-  ): InstanceType<TextureTypeMap[Type]> {
+    props: ExtractProps<TextureMap[Type]>,
+  ): InstanceType<TextureMap[Type]> {
     let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
@@ -234,7 +227,7 @@ export class CoreTextureManager {
         }
       }
     }
-    return texture as InstanceType<TextureTypeMap[Type]>;
+    return texture as InstanceType<TextureMap[Type]>;
   }
 
   private initTextureToCache(texture: Texture, cacheKey: string) {
