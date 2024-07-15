@@ -33,17 +33,13 @@ export async function automation(settings: ExampleSettings) {
   await settings.snapshot();
 }
 
-export default async function test({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const FONT_SIZE = 45;
   const BEGIN_Y = FONT_SIZE;
 
   const header = renderer.createTextNode({
     fontFamily: 'Ubuntu',
-    text: `Texture Test (${driverName})`,
+    text: `Texture Test`,
     fontSize: FONT_SIZE,
     parent: testRoot,
   });

@@ -25,11 +25,7 @@ export async function automation(settings: ExampleSettings) {
   await settings.snapshot();
 }
 
-export default async function test({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const randomColor = () => {
     const randomInt = Math.floor(Math.random() * Math.pow(2, 32));
     const hexString = randomInt.toString(16).padStart(8, '0');
@@ -43,7 +39,7 @@ export default async function test({
   const FONT_SIZE = 45;
 
   renderer.createTextNode({
-    text: `Texture Factory Test (${driverName})`,
+    text: `Texture Factory Test`,
     fontSize: FONT_SIZE,
     offsetY: -5,
     parent: testRoot,

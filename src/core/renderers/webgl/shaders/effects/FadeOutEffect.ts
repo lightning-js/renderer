@@ -17,9 +17,14 @@
  * limitations under the License.
  */
 import {
+  updateFloat32ArrayLength4,
+  validateArrayLength4,
+} from './EffectUtils.js';
+import {
   ShaderEffect,
   type DefaultEffectProps,
   type ShaderEffectUniforms,
+  type ShaderEffectValueMap,
 } from './ShaderEffect.js';
 
 /**
@@ -63,21 +68,8 @@ export class FadeOutEffect extends ShaderEffect {
       value: 0,
       method: 'uniform4fv',
       type: 'vec4',
-      validator: (value: number | number[]) => {
-        let r = value;
-        if (Array.isArray(r)) {
-          if (r.length === 2) {
-            r = [r[0], r[1], r[0], r[1]] as number[];
-          } else if (r.length === 3) {
-            r = [r[0], r[1], r[2], r[0]] as number[];
-          } else if (r.length !== 4) {
-            r = [r[0], r[0], r[0], r[0]] as number[];
-          }
-        } else if (typeof r === 'number') {
-          r = [r, r, r, r];
-        }
-        return r;
-      },
+      validator: validateArrayLength4,
+      updateProgramValue: updateFloat32ArrayLength4,
     },
   };
 

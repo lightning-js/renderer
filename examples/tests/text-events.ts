@@ -33,13 +33,9 @@ const FONT_SIZE = 60;
 const BUTTON_PADDING = 10;
 const BEGIN_Y = HEADER_SIZE;
 
-export default async function ({
-  renderer,
-  driverName,
-  testRoot,
-}: ExampleSettings) {
+export default async function ({ renderer, testRoot }: ExampleSettings) {
   const header = renderer.createTextNode({
-    text: `Text Event Test (${driverName})`,
+    text: `Text Event Test`,
     fontSize: HEADER_SIZE,
     offsetY: -5,
     parent: testRoot,

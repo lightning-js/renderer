@@ -32,21 +32,44 @@ import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { Rect, RectWithValid } from './lib/utils.js';
+import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
-  text: string;
+  /**
+   * Force Text Node to use a specific Text Renderer
+   *
+   * @remarks
+   * By default, Text Nodes resolve the Text Renderer to use based on the font
+   * that is matched using the font family and other font selection properties.
+   *
+   * If two fonts supported by two separate Text Renderers are matched setting
+   * this override forces the Text Node to resolve to the Text Renderer defined
+   * here.
+   *
+   * @default null
+   */
   textRendererOverride: keyof TextRendererMap | null;
 }
 
-type ICoreTextNode = Omit<
-  CoreTextNodeProps,
-  'texture' | 'textureOptions' | 'shader' | 'shaderProps'
->;
-
-export class CoreTextNode extends CoreNode implements ICoreTextNode {
+/**
+ * An CoreNode in the Renderer scene graph that renders text.
+ *
+ * @remarks
+ * A Text Node is the second graphical building block of the Renderer scene
+ * graph. It renders text using a specific text renderer that is automatically
+ * chosen based on the font requested and what type of fonts are installed
+ * into an app.
+ *
+ * The text renderer can be overridden by setting the `textRendererOverride`
+ *
+ * The `texture` and `shader` properties are managed by loaded text renderer and
+ * should not be set directly.
+ *
+ * For non-text rendering, see {@link CoreNode}.
+ */
+export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   textRenderer: TextRenderer;
   trState: TextRendererState;
   private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
@@ -356,6 +379,15 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
   override renderQuads(renderer: CoreRenderer) {
     assertTruthy(this.globalTransform);
 
+    // If the text renderer does not support rendering quads, fallback to the
+    // default renderQuads method
+    if (!this.textRenderer.renderQuads) {
+      super.renderQuads(renderer);
+      return;
+    }
+
+    // If the text renderer does support rendering quads, use it...
+
     // Prevent quad rendering if parent has a render texture
     // and this node is not the render texture
     if (this.parentHasRenderTexture) {
@@ -410,7 +442,7 @@ export class CoreTextNode extends CoreNode implements ICoreTextNode {
       this._textRendererOverride,
     );
 
-    const textRendererState = resolvedTextRenderer.createState(props);
+    const textRendererState = resolvedTextRenderer.createState(props, this);
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);

@@ -17,14 +17,11 @@
  * limitations under the License.
  */
 
+import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
 import { waitForLoadedDimensions } from '../common/utils.js';
-import type {
-  ITextNodeWritableProps,
-  RendererMain,
-} from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 
 export async function automation(settings: ExampleSettings) {
@@ -56,7 +53,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 50,
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 function generateRotationTest(
   renderer: RendererMain,
@@ -69,7 +66,7 @@ function generateRotationTest(
         const nodeProps = {
           ...NODE_PROPS,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -120,7 +117,7 @@ function generateRotationTest(
           x: 100,
           y: 100,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode }, [
           renderer.createTextNode({
@@ -154,7 +151,7 @@ function generateRotationTest(
           ...NODE_PROPS,
           mount: 1,
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

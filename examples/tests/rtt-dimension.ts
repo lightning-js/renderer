@@ -185,6 +185,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       width: 100,
       height: 100,
       texture: nestedRTTNode1.texture,
+      // Flip every other one of them
+      textureOptions: {
+        flipY: i % 2 === 1,
+      },
     });
   }
 

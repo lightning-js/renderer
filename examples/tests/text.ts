@@ -18,7 +18,7 @@
  */
 
 import {
-  type ITextNodeWritableProps,
+  type ITextNodeProps,
   type TextRendererMap,
   type TrFontFaceMap,
   type NodeLoadedEventHandler,
@@ -35,7 +35,7 @@ const FONT_FAMILY = 'Ubuntu';
 const HEADER_SIZE = 45;
 const FONT_SIZE = 40;
 
-const initialMutableProps: Partial<ITextNodeWritableProps> = {
+const initialMutableProps: Partial<ITextNodeProps> = {
   x: 0,
   y: 0,
   fontFamily: FONT_FAMILY,
@@ -57,7 +57,7 @@ export const Colors = {
 };
 
 interface LocalStorageData {
-  mutableProps: Partial<ITextNodeWritableProps>;
+  mutableProps: Partial<ITextNodeProps>;
   curMode: number;
   moveStep: number;
   curColorIdx: number;
@@ -87,7 +87,7 @@ export default async function ({
 
   const text = getLoremIpsum();
 
-  const initialProps: Partial<ITextNodeWritableProps> = {
+  const initialProps: Partial<ITextNodeProps> = {
     ...(savedState?.mutableProps || initialMutableProps),
     fontFamily: FONT_FAMILY,
     contain: 'both',

@@ -20,6 +20,7 @@
 import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import {
   CoreRenderer,
+  type BufferInfo,
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
@@ -50,6 +51,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
@@ -68,9 +70,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
   system: CoreWebGlSystem;
 
   //// Persistent data
-  quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
-  fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
-  uiQuadBuffer: Uint32Array = new Uint32Array(this.quadBuffer);
+  quadBuffer: ArrayBuffer;
+  fQuadBuffer: Float32Array;
+  uiQuadBuffer: Uint32Array;
   renderOps: WebGlCoreRenderOp[] = [];
 
   //// Render Op / Buffer Filling State
@@ -80,6 +82,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
+  defShaderCtrl: BaseShaderController;
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
@@ -88,6 +91,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   defaultTexture: Texture;
 
+  quadBufferUsage = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -95,6 +99,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options);
+
+    this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
+    this.fQuadBuffer = new Float32Array(this.quadBuffer);
+    this.uiQuadBuffer = new Uint32Array(this.quadBuffer);
+
     this.mode = 'webgl';
 
     const { canvas, clearColor, bufferMemory } = options;
@@ -102,7 +111,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.defaultTexture = new ColorTexture(this.txManager);
 
     // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being garbage collected.
+    // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
     this.defaultTexture.setRenderableOwner(this, true);
 
@@ -128,7 +137,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
+    this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
+    this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -235,6 +245,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       tb,
       tc,
       td,
+      renderCoords,
       rtt: renderToTexture,
       parentHasRenderTexture,
       framebufferDimensions,
@@ -281,7 +292,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const flipX = textureOptions?.flipX ?? false;
-    const flipY = textureOptions?.flipY ?? false;
+    let flipY = textureOptions?.flipY ?? false;
+
+    // always flip flipY for render textures
+    if (texture instanceof RenderTexture) {
+      flipY = !flipY;
+    }
 
     let texCoordX1 = 0;
     let texCoordY1 = 0;
@@ -333,16 +349,46 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const { txManager } = this.stage;
-    const ctxTexture = txManager.getCtxTexture(texture);
+    const ctxTexture = texture.ctxTexture;
     assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     curRenderOp = this.curRenderOp;
     assertTruthy(curRenderOp);
+    if (renderCoords) {
+      const { x1, y1, x2, y2, x3, y3, x4, y4 } = renderCoords;
+      // Upper-Left
+      fQuadBuffer[bufferIdx++] = x1; // vertexX
+      fQuadBuffer[bufferIdx++] = y1; // vertexY
+      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
+      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+      uiQuadBuffer[bufferIdx++] = colorTl; // color
+      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
 
-    // render quad advanced
-    if (tb !== 0 || tc !== 0) {
+      // Upper-Right
+      fQuadBuffer[bufferIdx++] = x2;
+      fQuadBuffer[bufferIdx++] = y2;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY1;
+      uiQuadBuffer[bufferIdx++] = colorTr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Left
+      fQuadBuffer[bufferIdx++] = x4;
+      fQuadBuffer[bufferIdx++] = y4;
+      fQuadBuffer[bufferIdx++] = texCoordX1;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBl;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+
+      // Lower-Right
+      fQuadBuffer[bufferIdx++] = x3;
+      fQuadBuffer[bufferIdx++] = y3;
+      fQuadBuffer[bufferIdx++] = texCoordX2;
+      fQuadBuffer[bufferIdx++] = texCoordY2;
+      uiQuadBuffer[bufferIdx++] = colorBr;
+      fQuadBuffer[bufferIdx++] = textureIdx;
+    } else if (tb !== 0 || tc !== 0) {
       // Upper-Left
       fQuadBuffer[bufferIdx++] = tx; // vertexX
       fQuadBuffer[bufferIdx++] = ty; // vertexY
@@ -412,7 +458,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       uiQuadBuffer[bufferIdx++] = colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
     }
-
     // Update the length of the current render op
     curRenderOp.length += WORDS_PER_QUAD;
     curRenderOp.numQuads++;
@@ -575,6 +620,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
+    this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
   }
 
   renderToTexture(node: CoreNode) {
@@ -605,7 +651,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.activeRttNode = node;
 
       assertTruthy(node.texture, 'RTT node missing texture');
-      const ctxTexture = txManager.getCtxTexture(node.texture);
+      const ctxTexture = node.texture.ctxTexture;
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
       this.renderToTextureActive = true;
 
@@ -654,5 +700,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+
+  getBufferInfo(): BufferInfo | null {
+    const bufferInfo: BufferInfo = {
+      totalAvailable: this.stage.options.quadBufferSize,
+      totalUsed: this.quadBufferUsage,
+    };
+    return bufferInfo;
+  }
+
+  override getDefShaderCtr(): BaseShaderController {
+    return this.defShaderCtrl;
   }
 }

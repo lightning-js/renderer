@@ -57,7 +57,6 @@ export class WebTrFontFace extends TrFontFace {
           : determinedDescriptors.weight,
       stretch: determinedDescriptors.stretch,
       unicodeRange: determinedDescriptors.unicodeRange,
-      variant: determinedDescriptors.variant,
       featureSettings: determinedDescriptors.featureSettings,
       display: determinedDescriptors.display,
     };

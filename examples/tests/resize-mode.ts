@@ -20,7 +20,7 @@
 import testscreenImg from '../assets/testscreen.png';
 import testscreenRImg from '../assets/testscreen_rotated.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import type { INodeWritableProps } from '@lightningjs/renderer';
+import type { INodeProps } from '@lightningjs/renderer';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
 import { deg2Rad } from '../../dist/src/utils.js';
@@ -53,17 +53,16 @@ export default async function test(settings: ExampleSettings) {
             x: curX,
             width: SQUARE_SIZE,
             height: SQUARE_SIZE - 300,
-            texture: renderer.createTexture(
-              'ImageTexture',
-              { src: testscreenImg },
-              {
-                resizeMode: {
-                  type: 'cover',
-                  clipY: [0, 0.5, 1][i],
-                  clipX: [0, 0.5, 1][i],
-                },
+            texture: renderer.createTexture('ImageTexture', {
+              src: testscreenImg,
+            }),
+            textureOptions: {
+              resizeMode: {
+                type: 'cover',
+                clipY: [0, 0.5, 1][i],
+                clipX: [0, 0.5, 1][i],
               },
-            ),
+            },
             parent: rowNode,
           });
           curX += SQUARE_SIZE + PADDING;
@@ -84,17 +83,16 @@ export default async function test(settings: ExampleSettings) {
             x: curX,
             width: SQUARE_SIZE,
             height: SQUARE_SIZE - 200,
-            texture: renderer.createTexture(
-              'ImageTexture',
-              { src: testscreenImg },
-              {
-                resizeMode: {
-                  type: 'cover',
-                  clipY: [0, 0.5, 1][i],
-                  clipX: [0, 0.5, 1][i],
-                },
+            texture: renderer.createTexture('ImageTexture', {
+              src: testscreenImg,
+            }),
+            textureOptions: {
+              resizeMode: {
+                type: 'cover',
+                clipY: [0, 0.5, 1][i],
+                clipX: [0, 0.5, 1][i],
               },
-            ),
+            },
             parent: rowNode,
           });
           curX += SQUARE_SIZE + PADDING;
@@ -115,17 +113,16 @@ export default async function test(settings: ExampleSettings) {
             x: curX,
             width: SQUARE_SIZE,
             height: SQUARE_SIZE - 300,
-            texture: renderer.createTexture(
-              'ImageTexture',
-              { src: testscreenRImg },
-              {
-                resizeMode: {
-                  type: 'cover',
-                  clipY: [0, 0.5, 1][i],
-                  clipX: [0, 0.5, 1][i],
-                },
+            texture: renderer.createTexture('ImageTexture', {
+              src: testscreenRImg,
+            }),
+            textureOptions: {
+              resizeMode: {
+                type: 'cover',
+                clipY: [0, 0.5, 1][i],
+                clipX: [0, 0.5, 1][i],
               },
-            ),
+            },
             parent: rowNode,
           });
           curX += SQUARE_SIZE + PADDING;
@@ -146,17 +143,16 @@ export default async function test(settings: ExampleSettings) {
             x: curX,
             width: SQUARE_SIZE - 400,
             height: SQUARE_SIZE - 100,
-            texture: renderer.createTexture(
-              'ImageTexture',
-              { src: testscreenRImg },
-              {
-                resizeMode: {
-                  type: 'cover',
-                  clipX: [0, 0.25, 0.5, 0.75, 1][i],
-                  clipY: [0, 0.25, 0.5, 0.75, 1][i],
-                },
+            texture: renderer.createTexture('ImageTexture', {
+              src: testscreenRImg,
+            }),
+            textureOptions: {
+              resizeMode: {
+                type: 'cover',
+                clipX: [0, 0.25, 0.5, 0.75, 1][i],
+                clipY: [0, 0.25, 0.5, 0.75, 1][i],
               },
-            ),
+            },
             parent: rowNode,
           });
           curX += SQUARE_SIZE + PADDING - 330;
@@ -177,22 +173,21 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
           height: containerProps.height,
           clipping: true,
-          texture: renderer.createTexture(
-            'ImageTexture',
-            { src: testscreenImg },
-            {
-              resizeMode: {
-                type: 'contain',
-              },
+          texture: renderer.createTexture('ImageTexture', {
+            src: testscreenImg,
+          }),
+          textureOptions: {
+            resizeMode: {
+              type: 'contain',
             },
-          ),
-        } satisfies Partial<INodeWritableProps>;
+          },
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -221,22 +216,21 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
           height: containerProps.height,
           clipping: true,
-          texture: renderer.createTexture(
-            'ImageTexture',
-            { src: testscreenImg },
-            {
-              resizeMode: {
-                type: 'contain',
-              },
+          texture: renderer.createTexture('ImageTexture', {
+            src: testscreenImg,
+          }),
+          textureOptions: {
+            resizeMode: {
+              type: 'contain',
             },
-          ),
-        } satisfies Partial<INodeWritableProps>;
+          },
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -263,22 +257,21 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
           height: containerProps.height,
           clipping: true,
-          texture: renderer.createTexture(
-            'ImageTexture',
-            { src: testscreenRImg },
-            {
-              resizeMode: {
-                type: 'contain',
-              },
+          texture: renderer.createTexture('ImageTexture', {
+            src: testscreenRImg,
+          }),
+          textureOptions: {
+            resizeMode: {
+              type: 'contain',
             },
-          ),
-        } satisfies Partial<INodeWritableProps>;
+          },
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -322,22 +315,21 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<INodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
           height: containerProps.height,
           clipping: true,
-          texture: renderer.createTexture(
-            'ImageTexture',
-            { src: testscreenRImg },
-            {
-              resizeMode: {
-                type: 'contain',
-              },
+          texture: renderer.createTexture('ImageTexture', {
+            src: testscreenRImg,
+          }),
+          textureOptions: {
+            resizeMode: {
+              type: 'contain',
             },
-          ),
-        } satisfies Partial<INodeWritableProps>;
+          },
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
