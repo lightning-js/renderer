@@ -34,7 +34,7 @@ export class Character {
   constructor(
     private props: Partial<INodeProps>,
     private renderer: RendererMain,
-    private rightFrames: TextureMap['SubTexture'][],
+    private rightFrames: InstanceType<TextureMap['SubTexture']>[],
   ) {
     this.node = renderer.createNode({
       x: props.x,

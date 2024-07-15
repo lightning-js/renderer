@@ -48,7 +48,6 @@ export * from '../src/common/CommonTypes.js';
 // context of the main API.
 export {
   CoreTextureManager,
-  type TextureTypeMap,
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
