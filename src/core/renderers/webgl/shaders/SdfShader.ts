@@ -146,7 +146,7 @@ export class SdfShader extends WebGlCoreShader {
       }
     `,
     fragment: `
-      # ifdef GL_FRAGMENT_PRESICISON_HIGH
+      # ifdef GL_FRAGMENT_PRECISION_HIGH
       precision highp float;
       # else
       precision mediump float;
