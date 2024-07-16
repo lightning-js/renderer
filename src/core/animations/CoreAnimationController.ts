@@ -119,6 +119,7 @@ export class CoreAnimationController
     const { loop, stopMethod } = this.animation.settings;
 
     if (stopMethod === 'reverse') {
+      this.animation.once('finished', this.onFinished);
       this.animation.reverse();
       return;
     }
