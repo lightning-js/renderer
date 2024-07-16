@@ -146,8 +146,11 @@ export class SdfShader extends WebGlCoreShader {
       }
     `,
     fragment: `
+      # ifdef GL_FRAGMENT_PRESICISON_HIGH
       precision highp float;
-
+      # else
+      precision mediump float;
+      # endif
       uniform vec4 u_color;
       uniform sampler2D u_texture;
       uniform float u_distanceRange;
