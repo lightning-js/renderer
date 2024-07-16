@@ -120,6 +120,11 @@ export class SdfShader extends WebGlCoreShader {
 
   static override shaderSources: ShaderProgramSources = {
     vertex: `
+      # ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+      # else
+      precision mediump float;
+      # endif
       // an attribute is an input (in) to a vertex shader.
       // It will receive data from a buffer
       attribute vec2 a_position;
