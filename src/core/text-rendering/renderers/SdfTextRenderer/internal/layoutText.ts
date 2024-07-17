@@ -293,6 +293,24 @@ export function layoutText(
           maxX = Math.max(maxX, quadX + glyph.width);
           curX += glyph.xAdvance;
         }
+        if (
+          wrapWord &&
+          charEndX + glyph.width >= lineVertexW &&
+          contain != 'none'
+        ) {
+          if (curLineBufferStart !== -1 && lineIsWithinWindow) {
+            bufferLineInfos.push({
+              bufferStart: curLineBufferStart,
+              bufferEnd: bufferOffset,
+            });
+            curLineBufferStart = -1;
+          }
+          curX = 0;
+          curY += vertexLineHeight;
+          curLineIndex++;
+          lastWord.codepointIndex = -1;
+          xStartLastWordBoundary = 0;
+        }
       } else {
         // Unmapped character
 
