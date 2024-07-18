@@ -21,7 +21,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { IEventEmitter } from '@lightningjs/threadx';
+import type { IEventEmitter } from './IEventEmitter.js';
 
 /**
  * EventEmitter base class
