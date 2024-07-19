@@ -67,17 +67,21 @@ export class WebTrFontFace extends TrFontFace {
       cssDescriptors,
     );
 
-    // Temperary Fix for error in FontFace.load() when fontUrl is empty caused by default renderer font
-    if (fontUrlWithoutParentheses.length > 0) {
-      fontFace
-        .load()
-        .then(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-          (this.loaded as boolean) = true;
-          this.emit('loaded');
-        })
-        .catch(console.error);
-    }
+    fontFace
+      .load()
+      .then(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.loaded as boolean) = true;
+        this.emit('loaded');
+      })
+      .catch((error) => {
+        if (fontUrlWithoutParentheses.length > 0) return console.error(error);
+        // Default font
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.loaded as boolean) = true;
+        this.emit('loaded');
+      });
+
     this.fontFace = fontFace;
     this.fontUrl = fontUrl;
   }
