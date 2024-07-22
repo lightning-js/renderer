@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode, CoreNodeAnimatableProps } from '../CoreNode.js';
+import { type CoreNode, type CoreNodeAnimateProps } from '../CoreNode.js';
 import { getTimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -32,26 +32,68 @@ export interface AnimationSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
+type PropValues = {
+  start: number;
+  target: number;
+};
+type PropValuesMap = Record<string, Record<string, PropValues>>;
+
 export class CoreAnimation extends EventEmitter {
-  public propStartValues: Partial<CoreNodeAnimatableProps> = {};
-  public restoreValues: Partial<CoreNodeAnimatableProps> = {};
   public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
   private timingFunction: (t: number) => number | undefined;
-  private propsList: Array<keyof CoreNodeAnimatableProps>; //fixme - aint got not time for this
+
+  propValuesMap: PropValuesMap = {};
+  dynPropValuesMap: PropValuesMap | undefined = undefined;
 
   constructor(
     private node: CoreNode,
-    private props: Partial<CoreNodeAnimatableProps>,
+    private props: Partial<CoreNodeAnimateProps>,
     settings: Partial<AnimationSettings>,
   ) {
     super();
-    this.propStartValues = {};
-    this.propsList = Object.keys(props) as Array<keyof CoreNodeAnimatableProps>;
-    this.propsList.forEach((propName) => {
-      this.propStartValues[propName] = node[propName];
-    });
+
+    for (const key in props) {
+      if (key !== 'shaderProps') {
+        if (this.propValuesMap['props'] === undefined) {
+          this.propValuesMap['props'] = {};
+        }
+        this.propValuesMap['props'][key] = {
+          start: node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>],
+          target: props[
+            key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
+          ] as number,
+        };
+      } else if (node.shader.type !== 'DynamicShader') {
+        this.propValuesMap['shaderProps'] = {};
+        for (const key in props.shaderProps) {
+          this.propValuesMap['shaderProps'][key] = {
+            start: node.shader.props[key] as number,
+            target: props.shaderProps[key] as number,
+          };
+        }
+      } else {
+        const shaderPropKeys = Object.keys(props.shaderProps!);
+        const spLength = shaderPropKeys.length;
+        this.dynPropValuesMap = {};
+        for (let j = 0; j < spLength; j++) {
+          const effectName = shaderPropKeys[j]!;
+          const effect = props.shaderProps![effectName]!;
+          this.dynPropValuesMap[effectName] = {};
+          const effectProps = Object.entries(effect);
+          const eLength = effectProps.length;
+
+          for (let k = 0; k < eLength; k++) {
+            const [key, value] = effectProps[k]!;
+            this.dynPropValuesMap[effectName]![key] = {
+              start: node.shader.props[effectName][key],
+              target: value,
+            };
+          }
+        }
+      }
+    }
 
     const easing = settings.easing || 'linear';
     const delay = settings.delay ?? 0;
@@ -74,28 +116,82 @@ export class CoreAnimation extends EventEmitter {
     this.update(0);
   }
 
+  private restoreValues(
+    target: Record<string, number>,
+    valueMap: Record<string, PropValues>,
+  ) {
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      target[key] = value.start;
+    }
+  }
+
   restore() {
     this.reset();
-    (Object.keys(this.props) as Array<keyof CoreNodeAnimatableProps>).forEach(
-      (propName) => {
-        this.node[propName] = this.propStartValues[propName] as number;
-      },
-    );
+    if (this.propValuesMap['props'] !== undefined) {
+      this.restoreValues(
+        this.node as unknown as Record<string, number>,
+        this.propValuesMap['props'],
+      );
+    }
+    if (this.propValuesMap['shaderProps'] !== undefined) {
+      this.restoreValues(
+        this.node.shader.props as Record<string, number>,
+        this.propValuesMap['shaderProps'],
+      );
+    }
+
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.restoreValues(
+            this.node.shader.props[key],
+            this.dynPropValuesMap[key]!,
+          );
+        }
+      }
+    }
+  }
+
+  private reverseValues(valueMap: Record<string, PropValues>) {
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      valueMap[key] = {
+        start: value.target,
+        target: value.start,
+      };
+    }
   }
 
   reverse() {
     this.progress = 0;
-    (Object.keys(this.props) as Array<keyof CoreNodeAnimatableProps>).forEach(
-      (propName) => {
-        // set the start value to the current value
-        const startValue = this.props[propName];
-        const endValue = this.propStartValues[propName] as number;
 
-        // swap the start and end values
-        this.props[propName] = endValue;
-        this.propStartValues[propName] = startValue;
-      },
-    );
+    if (this.propValuesMap['props'] !== undefined) {
+      this.reverseValues(this.propValuesMap['props']);
+    }
+    if (this.propValuesMap['shaderProps'] !== undefined) {
+      this.reverseValues(this.propValuesMap['shaderProps']);
+    }
+
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.reverseValues(this.dynPropValuesMap[key]!);
+        }
+      }
+    }
 
     // restore stop method if we are not looping
     if (!this.settings.loop) {
@@ -105,6 +201,53 @@ export class CoreAnimation extends EventEmitter {
 
   private applyEasing(p: number, s: number, e: number): number {
     return (this.timingFunction(p) || p) * (e - s) + s;
+  }
+
+  updateValue(
+    propName: string,
+    propValue: number,
+    startValue: number,
+    easing: string | undefined,
+  ): number {
+    if (this.progress === 1) {
+      return propValue;
+    }
+    if (this.progress === 0) {
+      return startValue;
+    }
+
+    const endValue = propValue;
+    if (propName.indexOf('color') !== -1) {
+      if (startValue === endValue) {
+        return startValue;
+      }
+
+      if (easing) {
+        const easingProgressValue =
+          this.timingFunction(this.progress) || this.progress;
+        return mergeColorProgress(startValue, endValue, easingProgressValue);
+      }
+      return mergeColorProgress(startValue, endValue, this.progress);
+    }
+
+    if (easing) {
+      return this.applyEasing(this.progress, startValue, endValue);
+    }
+    return startValue + (endValue - startValue) * this.progress;
+  }
+
+  private updateValues(
+    target: Record<string, number>,
+    valueMap: Record<string, PropValues>,
+    easing: string | undefined,
+  ) {
+    const entries = Object.entries(valueMap);
+    const eLength = entries.length;
+
+    for (let i = 0; i < eLength; i++) {
+      const [key, value] = entries[i]!;
+      target[key] = this.updateValue(key, value.target, value.start, easing);
+    }
   }
 
   update(dt: number) {
@@ -152,51 +295,36 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    for (let i = 0; i < this.propsList.length; i++) {
-      const propName = this.propsList[i] as keyof CoreNodeAnimatableProps;
-      const propValue = this.props[propName] as number;
-      const startValue = this.propStartValues[propName] as number;
-      const endValue = propValue;
-
-      if (propName.indexOf('color') !== -1) {
-        // check if we have to change the color to begin with
-        if (startValue === endValue) {
-          this.node[propName] = startValue;
-          continue;
-        }
-
-        if (easing) {
-          const easingProgressValue =
-            this.timingFunction(this.progress) || this.progress;
-          const easingColorValue = mergeColorProgress(
-            startValue,
-            endValue,
-            easingProgressValue,
-          );
-          this.node[propName] = easingColorValue;
-          continue;
-        }
-
-        this.node[propName] = mergeColorProgress(
-          startValue,
-          endValue,
-          this.progress,
-        );
-        continue;
-      }
-
-      if (easing) {
-        this.node[propName] = this.applyEasing(
-          this.progress,
-          startValue,
-          endValue,
-        );
-        continue;
-      }
-
-      this.node[propName] =
-        startValue + (endValue - startValue) * this.progress;
+    if (this.propValuesMap['props'] !== undefined) {
+      this.updateValues(
+        this.node as unknown as Record<string, number>,
+        this.propValuesMap['props'],
+        easing,
+      );
     }
+    if (this.propValuesMap['shaderProps'] !== undefined) {
+      this.updateValues(
+        this.node.shader.props as Record<string, number>,
+        this.propValuesMap['shaderProps'],
+        easing,
+      );
+    }
+
+    if (this.dynPropValuesMap !== undefined) {
+      const dynEntries = Object.keys(this.dynPropValuesMap);
+      const dynEntriesL = dynEntries.length;
+      if (dynEntriesL > 0) {
+        for (let i = 0; i < dynEntriesL; i++) {
+          const key = dynEntries[i]!;
+          this.updateValues(
+            this.node.shader.props[key],
+            this.dynPropValuesMap[key]!,
+            easing,
+          );
+        }
+      }
+    }
+
     if (this.progress === 1) {
       this.emit('finished', {});
     }

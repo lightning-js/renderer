@@ -89,63 +89,42 @@ See [docs/ManualRegressionTests.md].
 
 See [RELEASE.md](./RELEASE.md)
 
-## Core Extensions
+## Installing Fonts
 
-To load fonts, and/or other custom code into the Core Space, you must write a
-Core Extension and pass it via dynamically importable URL to the initialization
-of the Renderer.
-
-Just like with loading the ThreadX Core Web Worker for the ThreadX, you import
-your core extension using the `@lightningjs/vite-plugin-import-chunk-url` plugin so that
-it's code is bundled and loaded seperately from your main app's bundle.
-
-You can write a Core Extension by extending the CoreExtension class from the
-Core API like so:
+Fonts can be installed into the Font Manager exposed by the Renderer's Stage.
+There are two types of fonts that you can install, Web/Canvas2D fonts (WebTrFontFace)
+and SDF fonts (SdfTrFontFace). Install that fonts that your applications needs
+at start up so they are ready when your application is rendered.
 
 ```ts
 import {
-  CoreExtension,
+  RendererMain,
   WebTrFontFace,
   SdfTrFontFace,
-  type Stage,
-} from '@lightning/renderer/core';
+} from '@lightningjs/renderer';
 
-export default class MyCoreExtension extends CoreExtension {
-  async run(stage: Stage) {
-    // Load fonts into core
-    stage.fontManager.addFontFace(
-      new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
-    );
-
-    stage.fontManager.addFontFace(
-      new SdfTrFontFace(
-        'Ubuntu',
-        {},
-        'msdf',
-        stage,
-        '/fonts/Ubuntu-Regular.msdf.png',
-        '/fonts/Ubuntu-Regular.msdf.json',
-      ),
-    );
-  }
-}
-```
-
-And then in your application's main entry point you can import it using
-`@lightningjs/vite-plugin-import-chunk-url`:
-
-```ts
-import coreExtensionModuleUrl from './MyCoreExtension.js?importChunkUrl';
-
-// Set up driver, etc.
-
-// Initialize the Renderer
 const renderer = new RendererMain(
   {
-    // Other Renderer Config...
-    coreExtensionModule: coreExtensionModuleUrl,
+    appWidth: 1920,
+    appHeight: 1080,
+    // ...Other Renderer Config
   },
-  'app',
-  driver,
+  'app', // id of div to insert Canvas.
+);
+
+// Load fonts into renderer
+renderer.stage.fontManager.addFontFace(
+  new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
+);
+
+renderer.stage.fontManager.addFontFace(
+  new SdfTrFontFace(
+    'Ubuntu',
+    {},
+    'msdf',
+    stage,
+    '/fonts/Ubuntu-Regular.msdf.png',
+    '/fonts/Ubuntu-Regular.msdf.json',
+  ),
 );
 ```

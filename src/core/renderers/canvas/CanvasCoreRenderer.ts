@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 import type { CoreNode } from '../../CoreNode.js';
 import type { CoreShaderManager } from '../../CoreShaderManager.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
@@ -35,6 +36,7 @@ import {
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
+import { UnsupportedShader } from './shaders/UnsupportedShader.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -43,6 +45,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
   private clearColor: RGBA | undefined;
   public renderToTextureActive = false;
   activeRttNode: CoreNode | null = null;
+  private defShaderCtr: BaseShaderController;
+
   constructor(options: CoreRendererOptions) {
     super(options);
 
@@ -54,6 +58,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = pixelRatio;
     this.clearColor = clearColor ? getRgbaComponents(clearColor) : undefined;
+
+    // Stub for default shader controller since the canvas renderer does not
+    // (really) support the concept of a shader (yet)
+    this.defShaderCtr = {
+      type: 'DefaultShader',
+      props: {},
+      shader: new UnsupportedShader('DefaultShader'),
+      getResolvedProps: () => () => {
+        return {};
+      },
+    };
   }
 
   reset(): void {
@@ -209,6 +224,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
     return this.shManager;
   }
 
+  override getDefShaderCtr(): BaseShaderController {
+    return this.defShaderCtr;
+  }
+
   renderRTTNodes(): void {
     // noop
   }
@@ -219,5 +238,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
   renderToTexture(node: CoreNode): void {
     // noop
+  }
+  getBufferInfo(): null {
+    return null;
   }
 }

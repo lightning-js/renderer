@@ -18,17 +18,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  CoreNode,
-  type CoreNodeWritableProps,
-  UpdateType,
-} from './CoreNode.js';
+import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { type TextureOptions } from './CoreTextureManager.js';
+import { type BaseShaderController } from '../main-api/ShaderController';
 
 describe('set color()', () => {
-  const defaultProps: CoreNodeWritableProps = {
+  const defaultProps: CoreNodeProps = {
     alpha: 0,
     autosize: false,
     clipping: false,
@@ -54,8 +51,7 @@ describe('set color()', () => {
     scale: 0,
     scaleX: 0,
     scaleY: 0,
-    shader: null,
-    shaderProps: null,
+    shader: mock<BaseShaderController>(),
     src: '',
     texture: null,
     textureOptions: {} as TextureOptions,

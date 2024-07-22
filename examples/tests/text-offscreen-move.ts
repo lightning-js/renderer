@@ -18,8 +18,8 @@
  */
 
 import type {
-  CoreNode,
-  CoreTextNodeWritableProps,
+  INode,
+  ITextNodeProps,
   RendererMain,
 } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
@@ -68,14 +68,14 @@ const commonTextProps = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'canvas',
   fontSize: 50,
-} satisfies Partial<CoreTextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 function createTestCase(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
-  contain: CoreTextNodeWritableProps['contain'],
+  contain: ITextNodeProps['contain'],
 ) {
-  return async function (page: CoreNode) {
+  return async function (page: INode) {
     const subheader = renderer.createTextNode({
       x: 0,
       y: 10,

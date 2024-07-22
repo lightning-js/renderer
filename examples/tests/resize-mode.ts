@@ -20,7 +20,7 @@
 import testscreenImg from '../assets/testscreen.png';
 import testscreenRImg from '../assets/testscreen_rotated.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import type { CoreNodeWritableProps } from '@lightningjs/renderer';
+import type { INodeProps } from '@lightningjs/renderer';
 import { paginateTestRows } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
 import { deg2Rad } from '../../dist/src/utils.js';
@@ -173,7 +173,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
@@ -187,7 +187,7 @@ export default async function test(settings: ExampleSettings) {
               type: 'contain',
             },
           },
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -216,7 +216,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
@@ -230,7 +230,7 @@ export default async function test(settings: ExampleSettings) {
               type: 'contain',
             },
           },
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -257,7 +257,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
@@ -271,7 +271,7 @@ export default async function test(settings: ExampleSettings) {
               type: 'contain',
             },
           },
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,
@@ -315,7 +315,7 @@ export default async function test(settings: ExampleSettings) {
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
           width: containerProps.width,
@@ -329,7 +329,7 @@ export default async function test(settings: ExampleSettings) {
               type: 'contain',
             },
           },
-        } satisfies Partial<CoreNodeWritableProps>;
+        } satisfies Partial<INodeProps>;
 
         const container1 = renderer.createNode({
           ...containerProps,

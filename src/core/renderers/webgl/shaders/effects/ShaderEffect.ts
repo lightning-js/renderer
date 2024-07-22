@@ -1,7 +1,71 @@
+import type { EffectMap } from '../../../../CoreShaderManager.js';
+import type { ExtractProps } from '../../../../CoreTextureManager.js';
+import type {
+  AlphaShaderProp,
+  DimensionsShaderProp,
+} from '../../WebGlCoreShader.js';
 import type {
   UniformInfo,
   UniformMethodMap,
 } from '../../internal/ShaderUtils.js';
+
+export interface BaseEffectDesc {
+  name?: string;
+  type: keyof EffectMap;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  props: Record<string, any>;
+}
+
+export interface EffectDesc<
+  T extends { name?: string; type: keyof EffectMap } = {
+    name?: string;
+    type: keyof EffectMap;
+  },
+> extends BaseEffectDesc {
+  name?: T['name'];
+  type: T['type'];
+  props: ExtractProps<EffectMap[T['type']]>;
+}
+
+/**
+ * Allows the `keyof EffectMap` to be mapped over and form an discriminated
+ * union of all the EffectDescs structures individually.
+ *
+ * @remarks
+ * When used like the following:
+ * ```
+ * MapEffectDescs<keyof EffectMap>[]
+ * ```
+ * The resultant type will be a discriminated union like so:
+ * ```
+ * (
+ *   {
+ *     name: 'effect1',
+ *     type: 'radius',
+ *     props?: {
+ *       radius?: number | number[];
+ *     }
+ *   } |
+ *   {
+ *     name: 'effect2',
+ *     type: 'border',
+ *     props?: {
+ *       width?: number;
+ *       color?: number;
+ *     }
+ *   } |
+ *   // ...
+ * )[]
+ * ```
+ * Which means TypeScript will now base its type checking on the `type` field
+ * and will know exactly what the `props` field should be based on the `type`
+ * field.
+ */
+type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
+  ? EffectDesc<{ type: T; name: string }>
+  : never;
+
+export type EffectDescUnion = MapEffectDescs<keyof EffectMap>;
 
 export interface ShaderEffectUniform {
   value: number | number[] | boolean | string;
@@ -9,10 +73,26 @@ export interface ShaderEffectUniform {
   method: keyof UniformMethodMap;
   name?: string;
   size?: (value: Record<string, unknown>) => number;
+  updateOnBind?: boolean;
+  updateProgramValue?: (
+    programValues: ShaderEffectValueMap,
+    shaderProps?: Record<string, unknown>,
+  ) => void;
   validator?: (
     value: any,
     props: Record<string, unknown>,
   ) => number | number[] | number[][];
+}
+
+export interface ShaderEffectValueMap
+  extends DimensionsShaderProp,
+    AlphaShaderProp {
+  value: ShaderEffectUniform['value'];
+  programValue: number | Float32Array | undefined;
+  hasValidator: boolean;
+  hasProgramValueUpdater: boolean;
+  updateOnBind: boolean;
+  validatedValue?: number | number[];
 }
 
 export interface ShaderEffectUniforms {

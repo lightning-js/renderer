@@ -18,9 +18,9 @@
  */
 
 import type {
-  CoreNode,
-  CoreNodeWritableProps,
-  CoreTextNode,
+  INode,
+  INodeProps,
+  ITextNode,
   RendererMain,
 } from '@lightningjs/renderer';
 import { Component } from './Component.js';
@@ -35,24 +35,24 @@ function bytesToMb(bytes: number) {
   return (bytes / 1024 / 1024).toFixed(2);
 }
 
-export interface MemMonitorProps extends Partial<CoreNodeWritableProps> {
+export interface MemMonitorProps extends Partial<INodeProps> {
   interval?: number;
 }
 
 export class MemMonitor extends Component {
-  // private memTextNode: CoreTextNode;
-  private bar: CoreNode;
-  private renderableMemBar: CoreNode;
-  private memUsedBar: CoreNode;
-  private criticalText: CoreTextNode;
-  private criticalTick: CoreNode;
-  private targetText: CoreTextNode;
-  private targetTick: CoreNode;
-  private criticalInfoText: CoreTextNode;
-  private targetInfoText: CoreTextNode;
-  private memUsedText: CoreTextNode;
-  private renderableMemUsedText: CoreTextNode;
-  private cacheInfoText: CoreTextNode;
+  // private memTextNode: ITextNode;
+  private bar: INode;
+  private renderableMemBar: INode;
+  private memUsedBar: INode;
+  private criticalText: ITextNode;
+  private criticalTick: INode;
+  private targetText: ITextNode;
+  private targetTick: INode;
+  private criticalInfoText: ITextNode;
+  private targetInfoText: ITextNode;
+  private memUsedText: ITextNode;
+  private renderableMemUsedText: ITextNode;
+  private cacheInfoText: ITextNode;
   private intervalHandle: NodeJS.Timeout | null = null;
   private _interval = 0;
 
@@ -99,6 +99,7 @@ export class MemMonitor extends Component {
       shader: renderer.createShader('DynamicShader', {
         effects: [
           {
+            name: 'e1',
             type: 'border',
             props: {
               color: 0x000000cc,

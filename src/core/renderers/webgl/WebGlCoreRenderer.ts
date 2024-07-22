@@ -20,6 +20,7 @@
 import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
 import {
   CoreRenderer,
+  type BufferInfo,
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
@@ -50,6 +51,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
@@ -68,9 +70,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
   system: CoreWebGlSystem;
 
   //// Persistent data
-  quadBuffer: ArrayBuffer = new ArrayBuffer(1024 * 1024 * 4);
-  fQuadBuffer: Float32Array = new Float32Array(this.quadBuffer);
-  uiQuadBuffer: Uint32Array = new Uint32Array(this.quadBuffer);
+  quadBuffer: ArrayBuffer;
+  fQuadBuffer: Float32Array;
+  uiQuadBuffer: Uint32Array;
   renderOps: WebGlCoreRenderOp[] = [];
 
   //// Render Op / Buffer Filling State
@@ -80,6 +82,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
+  defShaderCtrl: BaseShaderController;
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
@@ -88,6 +91,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   defaultTexture: Texture;
 
+  quadBufferUsage = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -95,6 +99,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   constructor(options: WebGlCoreRendererOptions) {
     super(options);
+
+    this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
+    this.fQuadBuffer = new Float32Array(this.quadBuffer);
+    this.uiQuadBuffer = new Uint32Array(this.quadBuffer);
+
     this.mode = 'webgl';
 
     const { canvas, clearColor, bufferMemory } = options;
@@ -128,7 +137,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
+    this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
+    this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -610,6 +620,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
       renderOp.draw();
     });
+    this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
   }
 
   renderToTexture(node: CoreNode) {
@@ -689,5 +700,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+
+  getBufferInfo(): BufferInfo | null {
+    const bufferInfo: BufferInfo = {
+      totalAvailable: this.stage.options.quadBufferSize,
+      totalUsed: this.quadBufferUsage,
+    };
+    return bufferInfo;
+  }
+
+  override getDefShaderCtr(): BaseShaderController {
+    return this.defShaderCtrl;
   }
 }

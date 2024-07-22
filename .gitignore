@@ -3,8 +3,7 @@ node_modules
 .idea
 typedocs
 dist
-dist-cfg
-dist-vitest
+dist-*
 examples/dist-tsc
 visual-regression/failed-results
 visual-regression/certified-snapshots/*-local

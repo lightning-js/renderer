@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": [],
+    "lib": ["ES2022", "DOM"],
+    "outDir": "dist-tsc",
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+
+    // Type Checking / Syntax Rules
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "composite": true,
+  },
+  "include": [
+    "./src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "./**/*.test.ts"],
+  "references": [
+    {
+      "path": "./tsconfig.cfg.json"
+    }
+  ],
+}
+

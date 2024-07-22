@@ -18,6 +18,7 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
+import type { BaseShaderController } from '../../main-api/ShaderController.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type {
@@ -29,7 +30,6 @@ import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
-import { ColorTexture } from '../textures/ColorTexture.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShader } from './CoreShader.js';
@@ -72,11 +72,16 @@ export interface CoreRendererOptions {
   contextSpy: ContextSpy | null;
 }
 
+export interface BufferInfo {
+  totalUsed: number;
+  totalAvailable: number;
+}
+
 export abstract class CoreRenderer {
   public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
 
-  protected stage: Stage;
+  readonly stage: Stage;
 
   //// Core Managers
   txManager: CoreTextureManager;
@@ -102,4 +107,6 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
+  abstract getBufferInfo(): BufferInfo | null;
+  abstract getDefShaderCtr(): BaseShaderController;
 }

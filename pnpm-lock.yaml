@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@lightningjs/threadx':
-        specifier: ^0.3.5
-        version: 0.3.5
       '@protobufjs/eventemitter':
         specifier: ^1.1.0
         version: 1.1.0
@@ -469,10 +466,6 @@ packages:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
-
-  /@lightningjs/threadx@0.3.5:
-    resolution: {integrity: sha512-aUIUfP/d3S0Vg/Ror7CLbqQR6qu5AAdGRnQ5RQuSQz4t9X2p8TomKD7ShRxI1/FnRR7om2MwKIe1Dix/Axdgpg==}
-    dev: false
 
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}

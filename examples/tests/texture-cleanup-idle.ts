@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CoreNode, RendererMainSettings } from '@lightningjs/renderer';
+import type { INode, RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export function customSettings(): Partial<RendererMainSettings> {
@@ -87,7 +87,7 @@ See docs/ManualRegressionTests.md for more information.
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const curNodes: CoreNode[] = [];
+    const curNodes: INode[] = [];
     // Create a 4x2 grid of nodes
     for (let i = 0; i < gridWidth; i++) {
       for (let j = 0; j < gridHeight; j++) {
@@ -115,7 +115,7 @@ See docs/ManualRegressionTests.md for more information.
     for (const node of curNodes) {
       node.x = -screenWidth * 2;
       node.y = -screenHeight * 2;
-      node.on('freed', (thisNode: CoreNode) => {
+      node.on('freed', (thisNode: INode) => {
         thisNode.destroy();
       });
     }

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { getNormalizedRgbaComponents } from '../../../../lib/utils.js';
+import { updateShaderEffectColor } from './EffectUtils.js';
 import {
   ShaderEffect,
   type DefaultEffectProps,
@@ -69,7 +69,7 @@ export class BorderRightEffect extends ShaderEffect {
     },
     color: {
       value: 0xffffffff,
-      validator: (rgba): number[] => getNormalizedRgbaComponents(rgba),
+      updateProgramValue: updateShaderEffectColor,
       method: 'uniform4fv',
       type: 'vec4',
     },
