@@ -24,13 +24,12 @@ import { CoreNode, type CoreNodeProps } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
 import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
-import type {
+import {
   TextRenderer,
-  TextRendererMap,
-  TrProps,
+  type TextRendererMap,
+  type TrProps,
 } from './text-rendering/renderers/TextRenderer.js';
-import { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+
 import { EventEmitter } from '../common/EventEmitter.js';
 import { ContextSpy } from './lib/ContextSpy.js';
 import type {
@@ -49,6 +48,8 @@ import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 import type { BaseShaderController } from '../main-api/ShaderController.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
+import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -65,6 +66,7 @@ export interface StageOptions {
   renderMode: 'webgl' | 'canvas';
   eventBus: EventEmitter;
   quadBufferSize: number;
+  fontEngines: (CanvasTextRenderer | SdfTextRenderer)[];
 }
 
 export type StageFpsUpdateHandler = (
@@ -111,6 +113,8 @@ export class Stage {
   private fpsElapsedTime = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
+  private fontResolveMap: Record<string, CanvasTextRenderer | SdfTextRenderer> =
+    {};
 
   /// Debug data
   contextSpy: ContextSpy | null = null;
@@ -129,6 +133,7 @@ export class Stage {
       numImageWorkers,
       textureMemory,
       renderMode,
+      fontEngines,
     } = options;
 
     this.eventBus = options.eventBus;
@@ -170,15 +175,41 @@ export class Stage {
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    this.textRenderers =
-      renderMode === 'webgl'
-        ? {
-            canvas: new CanvasTextRenderer(this),
-            sdf: new SdfTextRenderer(this),
-          }
-        : {
-            canvas: new CanvasTextRenderer(this),
-          };
+    // Create text renderers
+    this.textRenderers = {};
+    fontEngines &&
+      fontEngines.forEach((tr) => {
+        if (tr === undefined) {
+          return;
+        }
+
+        // Using the constructor name to check the class type
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access,
+        const className = tr.name;
+
+        if (renderMode === 'canvas' && className === 'SdfTextRenderer') {
+          console.warn('Cannot use SDF text renderer in canvas mode.');
+          return;
+        }
+
+        if (
+          className === 'CanvasTextRenderer' ||
+          className === 'SdfTextRenderer'
+        ) {
+          // Assuming `type` is defined elsewhere in your code to determine the key for `this.textRenderers`
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment, @typescript-eslint/no-unsafe-call
+          this.textRenderers[className] = new tr(this);
+        }
+      });
+
+    if (Object.keys(this.textRenderers).length === 0) {
+      console.warn('No text renderers available. Your text will not render.');
+    }
+
     this.fontManager = new TrFontManager(this.textRenderers);
 
     // create root node
@@ -393,7 +424,7 @@ export class Stage {
    * Given a font name, and possible renderer override, return the best compatible text renderer.
    *
    * @remarks
-   * Will always return at least a canvas renderer if no other suitable renderer can be resolved.
+   * Will try to return a canvas renderer if no other suitable renderer can be resolved.
    *
    * @param fontFamily
    * @param textRendererOverride
@@ -402,10 +433,18 @@ export class Stage {
   resolveTextRenderer(
     trProps: TrProps,
     textRendererOverride: keyof TextRendererMap | null = null,
-  ): TextRenderer {
-    let rendererId = textRendererOverride;
+  ): TextRenderer | null {
+    const fontCacheString = `${trProps.fontFamily}${trProps.fontStyle}${trProps.fontWeight}${trProps.fontStretch}`;
 
+    // check our resolve cache first
+    if (this.fontResolveMap[fontCacheString] !== undefined) {
+      return this.fontResolveMap[fontCacheString] as unknown as TextRenderer;
+    }
+
+    // Resolve the text renderer
+    let rendererId = textRendererOverride;
     let overrideFallback = false;
+
     // Check if the override is valid (if one is provided)
     if (rendererId) {
       const possibleRenderer = this.textRenderers[rendererId];
@@ -426,16 +465,12 @@ export class Stage {
     if (!rendererId) {
       // Iterate through the text renderers and find the first one that can render the font
       for (const [trId, tr] of Object.entries(this.textRenderers)) {
-        if (trId === 'canvas') {
-          // Canvas is always a fallback
-          continue;
-        }
         if (tr.canRenderFont(trProps)) {
           rendererId = trId as keyof TextRendererMap;
           break;
         }
       }
-      if (!rendererId) {
+      if (!rendererId && this.textRenderers.canvas !== undefined) {
         // If no renderer can be found, use the canvas renderer
         rendererId = 'canvas';
       }
@@ -445,9 +480,18 @@ export class Stage {
       console.warn(`Falling back to text renderer ${String(rendererId)}`);
     }
 
+    if (!rendererId) {
+      // silently fail if no renderer can be found, the error is already created
+      // at the constructor level
+      return null;
+    }
+
     // By now we are guaranteed to have a valid rendererId (at least Canvas);
     const resolvedTextRenderer = this.textRenderers[rendererId];
     assertTruthy(resolvedTextRenderer, 'resolvedTextRenderer undefined');
+
+    // cache the resolved renderer for future use with these trProps
+    this.fontResolveMap[fontCacheString] = resolvedTextRenderer;
 
     // Need to explicitly cast to TextRenderer because TS doesn't like
     // the covariant state argument in the setter method map

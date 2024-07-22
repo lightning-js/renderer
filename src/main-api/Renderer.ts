@@ -40,6 +40,8 @@ import type {
   EffectDescUnion,
 } from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
+import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
+import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -203,6 +205,32 @@ export interface RendererMainSettings {
    * @defaultValue 4 * 1024 * 1024
    */
   quadBufferSize?: number;
+
+  /**
+   * Font Engines
+   *
+   * @remarks
+   * The font engines to use for text rendering. CanvasTextRenderer is the default
+   * and is supported on all platforms. SdfTextRenderer is a more performant renderer.
+   * When using `renderMode='canvas'` you can only use `CanvasTextRenderer`.
+   *
+   * This setting is used to enable tree shaking of non-used font engines. Please
+   * import your text font engine as follows:
+   * ```
+   * import { CanvasTextRenderer } from '@lightning/renderer';
+   * import { SdfTextRenderer } from '@lightning/renderer';
+   * ```
+   *
+   * If both CanvasTextRenderer and SdfTextRenderer are provided, the CanvasTextRenderer
+   * will be used as fallback incase the SdfTextRenderer does not support the font.
+   *
+   * If no font engines are provided, CoreTextNodes will not be able to render text.
+   *
+   * @defaultValue '[]'
+   *
+   *
+   */
+  fontEngines: (CanvasTextRenderer | SdfTextRenderer)[];
 }
 
 /**
@@ -291,6 +319,7 @@ export class RendererMain extends EventEmitter {
       enableInspector: settings.enableInspector ?? false,
       renderMode: settings.renderMode ?? 'webgl',
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
+      fontEngines: settings.fontEngines,
     };
     this.settings = resolvedSettings;
 
@@ -329,6 +358,7 @@ export class RendererMain extends EventEmitter {
       textureMemory: resolvedTxSettings,
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
+      fontEngines: this.settings.fontEngines,
     });
 
     // Extract the root node
