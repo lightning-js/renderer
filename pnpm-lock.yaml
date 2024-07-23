@@ -11,9 +11,6 @@ importers:
       '@protobufjs/eventemitter':
         specifier: ^1.1.0
         version: 1.1.0
-      memize:
-        specifier: ^2.1.0
-        version: 2.1.0
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -3072,10 +3069,6 @@ packages:
     engines: {node: '>= 12'}
     hasBin: true
     dev: true
-
-  /memize@2.1.0:
-    resolution: {integrity: sha512-yywVJy8ctVlN5lNPxsep5urnZ6TTclwPEyigM9M3Bi8vseJBOfqNrGWN/r8NzuIt3PovM323W04blJfGQfQSVg==}
-    dev: false
 
   /merge-stream@2.0.0:
     resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}

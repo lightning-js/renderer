@@ -19,7 +19,8 @@
 
 import type { TrFontFace } from './font-face-types/TrFontFace.js';
 import type { TextRendererMap, TrFontProps } from './renderers/TextRenderer.js';
-import memize from 'memize';
+
+const fontCache = new Map<string, TrFontFace>();
 
 const weightConversions: { [key: string]: number } = {
   normal: 400,
@@ -36,7 +37,7 @@ const fontWeightToNumber = (weight: string | number): number => {
   return weightConversions[weight] || 400;
 };
 
-function rawResolveFontToUse(
+function resolveFontToUse(
   familyMapsByPriority: FontFamilyMap[],
   family: string,
   weightIn: string | number,
@@ -119,7 +120,6 @@ function rawResolveFontToUse(
 
   return;
 }
-const resolveFontToUse = memize(rawResolveFontToUse);
 
 /**
  * Structure mapping font family names to a set of font faces.
@@ -159,12 +159,23 @@ export class TrFontManager {
     props: TrFontProps,
   ): TrFontFace | undefined {
     const { fontFamily, fontWeight, fontStyle, fontStretch } = props;
-    return resolveFontToUse(
+    const fontCacheString = `${fontFamily}${fontStyle}${fontWeight}${fontStretch}`;
+
+    if (fontCache.has(fontCacheString) === true) {
+      return fontCache.get(fontCacheString);
+    }
+
+    const resolvedFont = resolveFontToUse(
       familyMapsByPriority,
       fontFamily,
       fontWeight,
       fontStyle,
       fontStretch,
     );
+    if (resolvedFont !== undefined) {
+      fontCache.set(fontCacheString, resolvedFont);
+    }
+
+    return resolvedFont;
   }
 }
