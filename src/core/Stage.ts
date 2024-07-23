@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 import { startLoop, getTimeStamp } from './platform.js';
-import { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import { CoreNode, type CoreNodeProps } from './CoreNode.js';
@@ -40,11 +39,10 @@ import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
-import type {
-  CoreRenderer,
-  CoreRendererOptions,
-} from './renderers/CoreRenderer.js';
-import { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
+import { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
+import type { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
 import type { BaseShaderController } from '../main-api/ShaderController.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
@@ -63,7 +61,7 @@ export interface StageOptions {
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
   numImageWorkers: number;
-  renderMode: 'webgl' | 'canvas';
+  renderEngine: WebGlCoreRenderer | CanvasCoreRenderer;
   eventBus: EventEmitter;
   quadBufferSize: number;
   fontEngines: (CanvasTextRenderer | SdfTextRenderer)[];
@@ -132,7 +130,7 @@ export class Stage {
       enableContextSpy,
       numImageWorkers,
       textureMemory,
-      renderMode,
+      renderEngine,
       fontEngines,
     } = options;
 
@@ -164,11 +162,12 @@ export class Stage {
       contextSpy: this.contextSpy,
     };
 
-    if (renderMode === 'canvas') {
-      this.renderer = new CanvasCoreRenderer(rendererOptions);
-    } else {
-      this.renderer = new WebGlCoreRenderer(rendererOptions);
-    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    this.renderer = new renderEngine(rendererOptions);
+    const renderMode = this.renderer.mode || 'webgl';
+
     this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
@@ -178,31 +177,24 @@ export class Stage {
     // Create text renderers
     this.textRenderers = {};
     fontEngines &&
-      fontEngines.forEach((tr) => {
-        if (tr === undefined) {
+      fontEngines.forEach((fontEngineConstructor) => {
+        if (fontEngineConstructor === undefined) {
           return;
         }
 
-        // Using the constructor name to check the class type
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access,
-        const className = tr.name;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const fontEngineInstance = new fontEngineConstructor(this);
 
-        if (renderMode === 'canvas' && className === 'SdfTextRenderer') {
-          console.warn('Cannot use SDF text renderer in canvas mode.');
-          return;
-        }
+        if (fontEngineInstance instanceof TextRenderer) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const className = fontEngineInstance.constructor.name;
 
-        if (
-          className === 'CanvasTextRenderer' ||
-          className === 'SdfTextRenderer'
-        ) {
-          // Assuming `type` is defined elsewhere in your code to determine the key for `this.textRenderers`
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment, @typescript-eslint/no-unsafe-call
-          this.textRenderers[className] = new tr(this);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          this.textRenderers[className] = fontEngineInstance;
         }
       });
 

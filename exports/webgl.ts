@@ -35,3 +35,4 @@
  */
 
 export { SdfTextRenderer } from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+export { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';

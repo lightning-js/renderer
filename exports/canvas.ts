@@ -34,3 +34,4 @@
  */
 
 export { CanvasTextRenderer } from '../src/core/text-rendering/renderers/CanvasTextRenderer.js';
+export { CanvasCoreRenderer } from '../src/core/renderers/canvas/CanvasCoreRenderer.js';

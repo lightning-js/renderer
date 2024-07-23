@@ -42,6 +42,8 @@ import type {
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
+import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -195,9 +197,19 @@ export interface RendererMainSettings {
   enableInspector?: boolean;
 
   /**
-   * Renderer mode
+   * Renderer Engine
+   *
+   * @remarks
+   * The renderer engine to use. Spawns a WebGL or Canvas renderer.
+   * WebGL is more performant and supports more features. Canvas is
+   * supported on most platforms.
+   *
+   * Note: When using `renderEngine=CanvasCoreRenderer` you can only use
+   * `CanvasTextRenderer`. The `renderEngine=WebGLCoreRenderer` supports
+   * both `CanvasTextRenderer` and `SdfTextRenderer` for TextRendering.
+   *
    */
-  renderMode?: 'webgl' | 'canvas';
+  renderEngine: CanvasCoreRenderer | WebGlCoreRenderer;
 
   /**
    * Quad buffer size in bytes
@@ -210,15 +222,16 @@ export interface RendererMainSettings {
    * Font Engines
    *
    * @remarks
-   * The font engines to use for text rendering. CanvasTextRenderer is the default
-   * and is supported on all platforms. SdfTextRenderer is a more performant renderer.
-   * When using `renderMode='canvas'` you can only use `CanvasTextRenderer`.
+   * The font engines to use for text rendering. CanvasTextRenderer is supported
+   * on all platforms. SdfTextRenderer is a more performant renderer.
+   * When using `renderEngine=CanvasCoreRenderer` you can only use `CanvasTextRenderer`.
+   * The `renderEngine=WebGLCoreRenderer` supports both `CanvasTextRenderer` and `SdfTextRenderer`.
    *
    * This setting is used to enable tree shaking of non-used font engines. Please
    * import your text font engine as follows:
    * ```
-   * import { CanvasTextRenderer } from '@lightning/renderer';
-   * import { SdfTextRenderer } from '@lightning/renderer';
+   * import { CanvasTextRenderer } from '@lightning/renderer/canvas';
+   * import { SdfTextRenderer } from '@lightning/renderer/webgl';
    * ```
    *
    * If both CanvasTextRenderer and SdfTextRenderer are provided, the CanvasTextRenderer
@@ -317,7 +330,7 @@ export class RendererMain extends EventEmitter {
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
       enableInspector: settings.enableInspector ?? false,
-      renderMode: settings.renderMode ?? 'webgl',
+      renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
     };
@@ -354,7 +367,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: this.settings.enableContextSpy,
       fpsUpdateInterval: this.settings.fpsUpdateInterval,
       numImageWorkers: this.settings.numImageWorkers,
-      renderMode: this.settings.renderMode,
+      renderEngine: this.settings.renderEngine,
       textureMemory: resolvedTxSettings,
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
