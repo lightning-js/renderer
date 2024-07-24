@@ -91,6 +91,7 @@ export interface TextureData {
     | SubTextureProps
     | CompressedData
     | HTMLImageElement
+    | HTMLCanvasElement
     | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
@@ -263,7 +264,7 @@ export abstract class Texture extends EventEmitter {
    * @returns
    * The texture data for this texture.
    */
-  abstract getTextureData(): Promise<TextureData>;
+  abstract getTextureData(): Promise<TextureData> | TextureData;
 
   /**
    * Make a cache key for this texture.

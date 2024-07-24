@@ -22,7 +22,7 @@ import type { EventEmitter } from '../../../common/EventEmitter.js';
 import type { CoreTextNode } from '../../CoreTextNode.js';
 import type { Stage } from '../../Stage.js';
 import type { Matrix3d } from '../../lib/Matrix3d.js';
-import type { Rect, RectWithValid } from '../../lib/utils.js';
+import type { RectWithValid } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
@@ -422,6 +422,8 @@ export abstract class TextRenderer<
   StateT extends TextRendererState = TextRendererState,
 > {
   readonly set: Readonly<TrPropSetters<StateT>>;
+  private updateScheduled = false;
+  private updateQueue: StateT[] = [];
 
   constructor(protected stage: Stage) {
     const propSetters = {
@@ -533,15 +535,27 @@ export abstract class TextRenderer<
       return;
     }
     state.updateScheduled = true;
-    queueMicrotask(() => {
+    this.updateQueue.push(state);
+    if (this.updateScheduled) {
+      return;
+    }
+    this.updateScheduled = true;
+    queueMicrotask(this.runUpdates);
+  }
+
+  private runUpdates = () => {
+    this.updateScheduled = false;
+    const updates = this.updateQueue;
+    this.updateQueue = [];
+    for (const state of updates) {
       // If the state has been destroyed, don't update it
       if (state.status === 'destroyed') {
-        return;
+        continue;
       }
       state.updateScheduled = false;
       this.updateState(state);
-    });
-  }
+    }
+  };
 
   abstract updateState(state: StateT): void;
 

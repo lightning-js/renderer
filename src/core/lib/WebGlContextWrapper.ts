@@ -317,6 +317,7 @@ export class WebGlContextWrapper {
   ) {
     const { gl } = this;
     if (format) {
+      // console.log('texImage2D-1', level, internalFormat, widthOrFormat, heightOrType, borderOrSource, format, type, pixels);
       gl.texImage2D(
         gl.TEXTURE_2D,
         level,
@@ -329,6 +330,7 @@ export class WebGlContextWrapper {
         pixels,
       );
     } else {
+      // console.log('texImage2D-2', level, internalFormat, widthOrFormat, heightOrType, borderOrSource);
       gl.texImage2D(
         gl.TEXTURE_2D,
         level,
@@ -378,19 +380,6 @@ export class WebGlContextWrapper {
   pixelStorei(pname: GLenum, param: GLint | GLboolean) {
     const { gl } = this;
     gl.pixelStorei(pname, param);
-  }
-
-  /**
-   * ```
-   * gl.generateMipmap(gl.TEXTURE_2D);
-   * ```
-   *
-   * @remarks
-   * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
-   */
-  generateMipmap() {
-    const { gl } = this;
-    gl.generateMipmap(gl.TEXTURE_2D);
   }
 
   /**

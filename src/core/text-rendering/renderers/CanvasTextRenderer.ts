@@ -74,15 +74,11 @@ export interface CanvasTextRendererState extends TextRendererState {
       }
     | undefined;
   textureNode: CoreNode | undefined;
-  lightning2TextRenderer: LightningTextTextureRenderer;
-  renderInfo: RenderInfo | undefined;
 }
 
 export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
-  protected canvas: OffscreenCanvas | HTMLCanvasElement;
-  protected context:
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D;
+  // protected canvas: HTMLCanvasElement;
+  // protected context: CanvasRenderingContext2D;
   /**
    * Font family map used to store web font faces that were added to the
    * canvas text renderer.
@@ -92,26 +88,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   constructor(stage: Stage) {
     super(stage);
-    if (typeof OffscreenCanvas !== 'undefined') {
-      this.canvas = new OffscreenCanvas(0, 0);
-    } else {
-      this.canvas = document.createElement('canvas');
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    let context = this.canvas.getContext('2d', {
-      willReadFrequently: true,
-    }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
-    if (!context) {
-      // A browser may appear to support OffscreenCanvas but not actually support the Canvas '2d' context
-      // Here we try getting the context again after falling back to an HTMLCanvasElement.
-      // See: https://github.com/lightning-js/renderer/issues/26#issuecomment-1750438486
-      this.canvas = document.createElement('canvas');
-      context = this.canvas.getContext('2d', {
-        willReadFrequently: true,
-      });
-    }
-    assertTruthy(context);
-    this.context = context;
+    // this.canvas = document.createElement('canvas');
+    // const context = this.canvas.getContext('2d', {
+    //   willReadFrequently: true,
+    // });
+    // assertTruthy(context);
+    // this.context = context;
 
     // Install the default 'san-serif' font face
     this.addFontFace(
@@ -265,6 +247,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     props: TrProps,
     node: CoreTextNode,
   ): CanvasTextRendererState {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    assertTruthy(context);
     return {
       node,
       props,
@@ -272,11 +257,6 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       updateScheduled: false,
       emitter: new EventEmitter(),
       textureNode: undefined,
-      lightning2TextRenderer: new LightningTextTextureRenderer(
-        this.canvas,
-        this.context,
-      ),
-      renderInfo: undefined,
       forceFullLayoutCalc: false,
       textW: 0,
       textH: 0,
@@ -311,7 +291,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
     // If fontInfo is invalid, we need to establish it
     if (!state.fontInfo) {
-      return this.loadFont(state);
+      state.fontInfo = this.loadFont(state);
     }
 
     // If we're waiting for a font face to load, don't render anything
@@ -319,12 +299,12 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       return;
     }
 
-    if (!state.renderInfo) {
-      state.renderInfo = this.calculateRenderInfo(state);
-      state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
-      state.textW = state.renderInfo.width;
-      this.renderSingleCanvasPage(state);
-    }
+    // if (!state.renderInfo) {
+    // state.renderInfo = this.calculateRenderInfo(state);
+    // state.textH = state.renderInfo.lineHeight * state.renderInfo.lines.length;
+    // state.textW = state.renderInfo.width;
+    this.renderSingleCanvasPage(state);
+    // }
 
     // handle scrollable text !!!
     // if (state.isScrollable === true) {
@@ -335,33 +315,46 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   }
 
   renderSingleCanvasPage(state: CanvasTextRendererState): void {
-    assertTruthy(state.renderInfo);
     const node = state.node;
 
     const texture = this.stage.txManager.loadTexture('ImageTexture', {
-      src: function (
-        this: CanvasTextRenderer,
-        lightning2TextRenderer: LightningTextTextureRenderer,
-        renderInfo: RenderInfo,
-      ) {
-        // load the canvas texture
-        assertTruthy(renderInfo);
-        lightning2TextRenderer.draw(renderInfo, {
-          lines: renderInfo.lines,
-          lineWidths: renderInfo.lineWidths,
+      src: function (this: CanvasTextRenderer, state: CanvasTextRendererState) {
+        const canvas = document.createElement('canvas');
+        const textureRenderer = new LightningTextTextureRenderer(canvas, {
+          text: state.props.text,
+          textAlign: state.props.textAlign,
+          fontFamily: state.props.fontFamily,
+          trFontFace: state.fontInfo?.fontFace,
+          fontSize: state.props.fontSize,
+          fontStyle: [
+            state.props.fontStretch,
+            state.props.fontStyle,
+            state.props.fontWeight,
+          ].join(' '),
+          textColor: getNormalizedRgbaComponents(state.props.color),
+          offsetY: state.props.offsetY,
+          wordWrap: state.props.contain !== 'none',
+          wordWrapWidth:
+            state.props.contain === 'none' ? undefined : state.props.width,
+          letterSpacing: state.props.letterSpacing,
+          lineHeight: state.props.lineHeight ?? null,
+          maxLines: state.props.maxLines,
+          maxHeight:
+            state.props.contain === 'both'
+              ? state.props.height - state.props.offsetY
+              : null,
+          textBaseline: state.props.textBaseline,
+          verticalAlign: state.props.verticalAlign,
+          overflowSuffix: state.props.overflowSuffix,
+          w: state.props.contain !== 'none' ? state.props.width : undefined,
         });
-        if (this.canvas.width === 0 || this.canvas.height === 0) {
-          return null;
-        }
-        return this.context.getImageData(
-          0,
-          0,
-          this.canvas.width,
-          this.canvas.height,
-        );
-      }.bind(this, state.lightning2TextRenderer, state.renderInfo),
+        textureRenderer.draw();
+        return textureRenderer.canvas;
+      }.bind(this, state),
     });
     if (state.textureNode) {
+      // Free the existing texture
+      state.textureNode.texture!.ctxTexture.free();
       // Use the existing texture node
       state.textureNode.texture = texture;
     } else {
@@ -369,6 +362,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       const textureNode = this.stage.createNode({
         parent: node,
         texture,
+        // textureOptions: {
+        //   preload: true,
+        // },
         autosize: true,
         // The alpha channel of the color is ignored when rasterizing the text
         // texture so we need to pass it directly to the texture node.
@@ -380,60 +376,27 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  loadFont = (state: CanvasTextRendererState): void => {
+  private loadFont(state: CanvasTextRendererState) {
     const cssString = getFontCssString(state.props);
     const trFontFace = TrFontManager.resolveFontFace(
       this.fontFamilyArray,
       state.props,
     ) as WebTrFontFace | undefined;
     assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
-    state.fontInfo = {
+    const fontInfo = {
       fontFace: trFontFace,
       cssString: cssString,
       // TODO: For efficiency we would use this here but it's not reliable on WPE -> document.fonts.check(cssString),
-      loaded: false,
+      loaded: globalFontSet.check(cssString),
     };
     // If font is not loaded, set up a handler to update the font info when the font loads
-    if (!state.fontInfo.loaded) {
+    if (!fontInfo.loaded) {
       globalFontSet
         .load(cssString)
         .then(this.onFontLoaded.bind(this, state, cssString))
         .catch(this.onFontLoadError.bind(this, state, cssString));
-      return;
     }
-  };
-
-  calculateRenderInfo(state: CanvasTextRendererState): RenderInfo {
-    state.lightning2TextRenderer.settings = {
-      text: state.props.text,
-      textAlign: state.props.textAlign,
-      fontFamily: state.props.fontFamily,
-      trFontFace: state.fontInfo?.fontFace,
-      fontSize: state.props.fontSize,
-      fontStyle: [
-        state.props.fontStretch,
-        state.props.fontStyle,
-        state.props.fontWeight,
-      ].join(' '),
-      textColor: getNormalizedRgbaComponents(state.props.color),
-      offsetY: state.props.offsetY,
-      wordWrap: state.props.contain !== 'none',
-      wordWrapWidth:
-        state.props.contain === 'none' ? undefined : state.props.width,
-      letterSpacing: state.props.letterSpacing,
-      lineHeight: state.props.lineHeight ?? null,
-      maxLines: state.props.maxLines,
-      maxHeight:
-        state.props.contain === 'both'
-          ? state.props.height - state.props.offsetY
-          : null,
-      textBaseline: state.props.textBaseline,
-      verticalAlign: state.props.verticalAlign,
-      overflowSuffix: state.props.overflowSuffix,
-      w: state.props.contain !== 'none' ? state.props.width : undefined,
-    };
-    state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();
-    return state.renderInfo;
+    return fontInfo;
   }
 
   override renderQuads(): void {
@@ -449,10 +412,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     super.destroyState(state);
 
     if (state.textureNode) {
+      state.textureNode.texture?.ctxTexture.free();
       state.textureNode.destroy();
-      delete state.textureNode;
+      state.textureNode = undefined;
     }
-    delete state.renderInfo;
   }
   //#endregion Overrides
 
@@ -466,7 +429,6 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
    * @param state
    */
   private invalidateLayoutCache(state: CanvasTextRendererState): void {
-    state.renderInfo = undefined;
     this.setStatus(state, 'loading');
     this.scheduleUpdateState(state);
   }

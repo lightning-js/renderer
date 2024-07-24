@@ -26,14 +26,14 @@ export function createWebGLContext(
   const config: WebGLContextAttributes = {
     alpha: true,
     antialias: false,
-    depth: false,
     stencil: true,
-    desynchronized: false,
-    // Disabled because it prevents Visual Regression Tests from working
-    // failIfMajorPerformanceCaveat: true,
-    powerPreference: 'high-performance',
     premultipliedAlpha: true,
     preserveDrawingBuffer: false,
+    // The below settings are identical to Lightning 2
+    // There seems to be some settings here that slow things down on some browsers
+    // depth: false,
+    // desynchronized: false,
+    // powerPreference: 'high-performance',
   };
   const gl =
     // TODO: Remove this assertion once this issue is fixed in TypeScript
