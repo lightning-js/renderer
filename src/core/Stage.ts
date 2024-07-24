@@ -174,20 +174,23 @@ export class Stage {
     // Create text renderers
     this.textRenderers = {};
     fontEngines.forEach((fontEngineConstructor) => {
-      const className = fontEngineConstructor.name;
-      if (className === 'SdfTextRenderer' && renderMode === 'canvas') {
+      // const className = fontEngineConstructor.name;
+      const fontEngineInstance = new fontEngineConstructor(this);
+      const className = fontEngineInstance.type;
+
+      if (className === 'sdf' && renderMode === 'canvas') {
         console.warn(
           'SdfTextRenderer is not compatible with Canvas renderer. Skipping...',
         );
         return;
       }
 
-      const fontEngineInstance = new fontEngineConstructor(this);
+      // const fontEngineInstance = new fontEngineConstructor(this);
       if (fontEngineInstance instanceof TextRenderer) {
-        if (className === 'CanvasTextRenderer') {
+        if (className === 'canvas') {
           this.textRenderers['canvas'] =
             fontEngineInstance as CanvasTextRenderer;
-        } else if (className === 'SdfTextRenderer') {
+        } else if (className === 'sdf') {
           this.textRenderers['sdf'] = fontEngineInstance as SdfTextRenderer;
         }
       }
