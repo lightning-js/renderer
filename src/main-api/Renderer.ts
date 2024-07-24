@@ -204,12 +204,12 @@ export interface RendererMainSettings {
    * WebGL is more performant and supports more features. Canvas is
    * supported on most platforms.
    *
-   * Note: When using `renderEngine=CanvasCoreRenderer` you can only use
-   * `CanvasTextRenderer`. The `renderEngine=WebGLCoreRenderer` supports
-   * both `CanvasTextRenderer` and `SdfTextRenderer` for TextRendering.
+   * Note: When using CanvasCoreRenderer you can only use
+   * CanvasTextRenderer. The WebGLCoreRenderer supports
+   * both CanvasTextRenderer and SdfTextRenderer for Text Rendering.
    *
    */
-  renderEngine: CanvasCoreRenderer | WebGlCoreRenderer;
+  renderEngine: typeof CanvasCoreRenderer | typeof WebGlCoreRenderer;
 
   /**
    * Quad buffer size in bytes
@@ -243,7 +243,7 @@ export interface RendererMainSettings {
    *
    *
    */
-  fontEngines: (CanvasTextRenderer | SdfTextRenderer)[];
+  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
 }
 
 /**

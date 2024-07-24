@@ -61,10 +61,10 @@ export interface StageOptions {
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
   numImageWorkers: number;
-  renderEngine: WebGlCoreRenderer | CanvasCoreRenderer;
+  renderEngine: typeof WebGlCoreRenderer | typeof CanvasCoreRenderer;
   eventBus: EventEmitter;
   quadBufferSize: number;
-  fontEngines: (CanvasTextRenderer | SdfTextRenderer)[];
+  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
 }
 
 export type StageFpsUpdateHandler = (
@@ -162,9 +162,6 @@ export class Stage {
       contextSpy: this.contextSpy,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.renderer = new renderEngine(rendererOptions);
     const renderMode = this.renderer.mode || 'webgl';
 
@@ -176,27 +173,25 @@ export class Stage {
 
     // Create text renderers
     this.textRenderers = {};
-    fontEngines &&
-      fontEngines.forEach((fontEngineConstructor) => {
-        if (fontEngineConstructor === undefined) {
-          return;
+    fontEngines.forEach((fontEngineConstructor) => {
+      const className = fontEngineConstructor.name;
+      if (className === 'SdfTextRenderer' && renderMode === 'canvas') {
+        console.warn(
+          'SdfTextRenderer is not compatible with Canvas renderer. Skipping...',
+        );
+        return;
+      }
+
+      const fontEngineInstance = new fontEngineConstructor(this);
+      if (fontEngineInstance instanceof TextRenderer) {
+        if (className === 'CanvasTextRenderer') {
+          this.textRenderers['canvas'] =
+            fontEngineInstance as CanvasTextRenderer;
+        } else if (className === 'SdfTextRenderer') {
+          this.textRenderers['sdf'] = fontEngineInstance as SdfTextRenderer;
         }
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const fontEngineInstance = new fontEngineConstructor(this);
-
-        if (fontEngineInstance instanceof TextRenderer) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const className = fontEngineInstance.constructor.name;
-
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          this.textRenderers[className] = fontEngineInstance;
-        }
-      });
+      }
+    });
 
     if (Object.keys(this.textRenderers).length === 0) {
       console.warn('No text renderers available. Your text will not render.');
