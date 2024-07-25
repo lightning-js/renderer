@@ -227,23 +227,26 @@ export interface RendererMainSettings {
    * When using `renderEngine=CanvasCoreRenderer` you can only use `CanvasTextRenderer`.
    * The `renderEngine=WebGLCoreRenderer` supports both `CanvasTextRenderer` and `SdfTextRenderer`.
    *
-   * This setting is used to enable tree shaking of non-used font engines. Please
-   * import your text font engine as follows:
+   * This setting is used to enable tree shaking of unused font engines. Please
+   * import your font engine(s) as follows:
    * ```
    * import { CanvasTextRenderer } from '@lightning/renderer/canvas';
    * import { SdfTextRenderer } from '@lightning/renderer/webgl';
    * ```
    *
-   * If both CanvasTextRenderer and SdfTextRenderer are provided, the CanvasTextRenderer
-   * will be used as fallback incase the SdfTextRenderer does not support the font.
+   * If both CanvasTextRenderer and SdfTextRenderer are provided, the first renderer
+   * provided will be asked first if it can render the font. If it cannot render the
+   * font, the next renderer will be asked. If no renderer can render the font, the
+   * text will not be rendered.
    *
-   * If no font engines are provided, CoreTextNodes will not be able to render text.
+   * **Note** that if you have fonts available in both engines the second font engine
+   * will not be used. This is because the first font engine will always be asked first.
    *
    * @defaultValue '[]'
    *
    *
    */
-  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
+  fontEngines: (typeof SdfTextRenderer | typeof CanvasTextRenderer)[];
 }
 
 /**

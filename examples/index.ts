@@ -236,7 +236,7 @@ async function initRenderer(
       enableInspector,
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
-      fontEngines: [CanvasTextRenderer, SdfTextRenderer],
+      fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       ...customSettings,
     },
     'app',
