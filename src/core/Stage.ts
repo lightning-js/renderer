@@ -174,7 +174,6 @@ export class Stage {
     // Create text renderers
     this.textRenderers = {};
     fontEngines.forEach((fontEngineConstructor) => {
-      // const className = fontEngineConstructor.name;
       const fontEngineInstance = new fontEngineConstructor(this);
       const className = fontEngineInstance.type;
 
@@ -185,7 +184,6 @@ export class Stage {
         return;
       }
 
-      // const fontEngineInstance = new fontEngineConstructor(this);
       if (fontEngineInstance instanceof TextRenderer) {
         if (className === 'canvas') {
           this.textRenderers['canvas'] =
@@ -424,7 +422,9 @@ export class Stage {
     trProps: TrProps,
     textRendererOverride: keyof TextRendererMap | null = null,
   ): TextRenderer | null {
-    const fontCacheString = `${trProps.fontFamily}${trProps.fontStyle}${trProps.fontWeight}${trProps.fontStretch}`;
+    const fontCacheString = `${trProps.fontFamily}${trProps.fontStyle}${
+      trProps.fontWeight
+    }${trProps.fontStretch}${textRendererOverride ? textRendererOverride : ''}`;
 
     // check our resolve cache first
     if (this.fontResolveMap[fontCacheString] !== undefined) {

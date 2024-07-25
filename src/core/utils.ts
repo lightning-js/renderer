@@ -225,19 +225,3 @@ export const getTimingFunction = (
 export function bytesToMb(bytes: number) {
   return (bytes / 1024 / 1024).toFixed(2);
 }
-
-/**
- * Serialize a property object to a string
- *
- * @param obj
- * @returns
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function serializeObjectValuesToString(obj: Record<string, any>) {
-  return (
-    Object.keys(obj)
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      .map((key) => `${obj[key]}`)
-      .join('')
-  );
-}
