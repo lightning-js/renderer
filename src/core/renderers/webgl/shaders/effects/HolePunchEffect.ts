@@ -16,10 +16,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { DynamicShaderProps } from '../DynamicShader.js';
+import { updateWebSafeRadius, validateArrayLength4 } from './EffectUtils.js';
 import {
   ShaderEffect,
   type DefaultEffectProps,
   type ShaderEffectUniforms,
+  type ShaderEffectValueMap,
 } from './ShaderEffect.js';
 
 /**
@@ -103,21 +106,9 @@ export class HolePunchEffect extends ShaderEffect {
       value: 0,
       method: 'uniform4fv',
       type: 'vec4',
-      validator: (value: number | number[]) => {
-        let r = value;
-        if (Array.isArray(r)) {
-          if (r.length === 2) {
-            r = [r[0], r[1], r[0], r[1]] as number[];
-          } else if (r.length === 3) {
-            r = [r[0], r[1], r[2], r[0]] as number[];
-          } else if (r.length !== 4) {
-            r = [r[0], r[0], r[0], r[0]] as number[];
-          }
-        } else if (typeof r === 'number') {
-          r = [r, r, r, r];
-        }
-        return r;
-      },
+      updateOnBind: true,
+      validator: validateArrayLength4,
+      updateProgramValue: updateWebSafeRadius,
     },
   };
 

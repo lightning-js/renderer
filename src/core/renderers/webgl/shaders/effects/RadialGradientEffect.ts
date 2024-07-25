@@ -18,6 +18,10 @@
  */
 import { getNormalizedRgbaComponents } from '../../../../lib/utils.js';
 import {
+  updateFloat32ArrayLength2,
+  updateFloat32ArrayLengthN,
+} from './EffectUtils.js';
+import {
   type DefaultEffectProps,
   ShaderEffect,
   type ShaderEffectUniforms,
@@ -105,15 +109,19 @@ export class RadialGradientEffect extends ShaderEffect {
     },
     pivot: {
       value: [0.5, 0.5],
+      updateProgramValue: updateFloat32ArrayLength2,
       method: 'uniform2fv',
       type: 'vec2',
     },
     colors: {
       value: 0xffffffff,
       validator: (rgbas: number[]): number[] => {
-        const cols = rgbas.map((rgbas) => getNormalizedRgbaComponents(rgbas));
-        return cols.reduce((acc, val) => acc.concat(val), [] as number[]);
+        return rgbas.reduce(
+          (acc, val) => acc.concat(getNormalizedRgbaComponents(val)),
+          [] as number[],
+        );
       },
+      updateProgramValue: updateFloat32ArrayLengthN,
       size: (props: RadialGradientEffectProps) => props.colors!.length,
       method: 'uniform4fv',
       type: 'vec4',

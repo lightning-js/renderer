@@ -67,6 +67,11 @@ import {
 } from './renderers/webgl/shaders/effects/HolePunchEffect.js';
 import { WebGlCoreShader } from './renderers/webgl/WebGlCoreShader.js';
 import { UnsupportedShader } from './renderers/canvas/shaders/UnsupportedShader.js';
+import { ShaderController } from '../main-api/ShaderController.js';
+import {
+  DynamicShaderController,
+  type DynamicEffects,
+} from '../main-api/DynamicShaderController.js';
 
 export type { FadeOutEffectProps };
 export type { LinearGradientEffectProps };
@@ -85,11 +90,6 @@ export interface ShaderMap {
   SdfShader: typeof SdfShader;
   UnsupportedShader: typeof UnsupportedShader;
 }
-
-export type ShaderNode<Type extends keyof ShaderMap> = {
-  shader: InstanceType<ShaderMap[Type]>;
-  props: Record<string, unknown>;
-};
 
 export interface EffectMap {
   radius: typeof RadiusEffect;
@@ -169,10 +169,17 @@ export class CoreShaderManager {
     return this.shConstructors;
   }
 
+  /**
+   * Loads a shader (if not already loaded) and returns a controller for it.
+   *
+   * @param shType
+   * @param props
+   * @returns
+   */
   loadShader<Type extends keyof ShaderMap>(
     shType: Type,
     props?: ExtractProps<ShaderMap[Type]>,
-  ): ShaderNode<Type> {
+  ): ShaderController<Type> {
     if (!this.renderer) {
       throw new Error(`Renderer is not been defined`);
     }
@@ -185,14 +192,17 @@ export class CoreShaderManager {
       this.renderer.mode === 'canvas' &&
       ShaderClass.prototype instanceof WebGlCoreShader
     ) {
-      return {
-        shader: new UnsupportedShader(shType) as InstanceType<ShaderMap[Type]>,
-        props: props as Record<string, unknown>,
-      };
+      return this._createShaderCtr(
+        shType,
+        new UnsupportedShader(shType) as InstanceType<ShaderMap[Type]>,
+        props as ExtractProps<ShaderMap[Type]>,
+      );
     }
 
     if (shType === 'DynamicShader') {
-      return this.loadDynamicShader(props!);
+      return this.loadDynamicShader(
+        props!,
+      ) as unknown as ShaderController<Type>;
     }
 
     const resolvedProps = ShaderClass.resolveDefaults(
@@ -201,10 +211,11 @@ export class CoreShaderManager {
     const cacheKey =
       ShaderClass.makeCacheKey(resolvedProps) || ShaderClass.name;
     if (cacheKey && this.shCache.has(cacheKey)) {
-      return {
-        shader: this.shCache.get(cacheKey) as InstanceType<ShaderMap[Type]>,
-        props: resolvedProps,
-      };
+      return this._createShaderCtr(
+        shType,
+        this.shCache.get(cacheKey) as InstanceType<ShaderMap[Type]>,
+        resolvedProps as ExtractProps<ShaderMap[Type]>,
+      );
     }
 
     // @ts-expect-error ShaderClass WILL accept a Renderer
@@ -214,15 +225,16 @@ export class CoreShaderManager {
     if (cacheKey) {
       this.shCache.set(cacheKey, shader);
     }
-    return {
+    return this._createShaderCtr(
+      shType,
       shader,
-      props: resolvedProps,
-    };
+      resolvedProps as ExtractProps<ShaderMap[Type]>,
+    );
   }
 
-  loadDynamicShader<Type extends keyof ShaderMap>(
-    props: DynamicShaderProps,
-  ): ShaderNode<Type> {
+  loadDynamicShader<
+    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
+  >(props: DynamicShaderProps): DynamicShaderController<T> {
     if (!this.renderer) {
       throw new Error(`Renderer is not been defined`);
     }
@@ -235,10 +247,10 @@ export class CoreShaderManager {
       this.effectConstructors,
     );
     if (cacheKey && this.shCache.has(cacheKey)) {
-      return {
-        shader: this.shCache.get(cacheKey) as InstanceType<ShaderMap[Type]>,
-        props: resolvedProps,
-      };
+      return this._createDynShaderCtr(
+        this.shCache.get(cacheKey) as InstanceType<ShaderMap['DynamicShader']>,
+        resolvedProps,
+      );
     }
     const shader = new DynamicShader(
       this.renderer as WebGlCoreRenderer,
@@ -248,10 +260,25 @@ export class CoreShaderManager {
     if (cacheKey) {
       this.shCache.set(cacheKey, shader);
     }
-    return {
-      shader: shader as InstanceType<ShaderMap[Type]>,
-      props: resolvedProps,
-    };
+
+    return this._createDynShaderCtr(shader, resolvedProps);
+  }
+
+  private _createShaderCtr<Type extends keyof ShaderMap>(
+    type: Type,
+    shader: InstanceType<ShaderMap[Type]>,
+    props: ExtractProps<ShaderMap[Type]>,
+  ): ShaderController<Type> {
+    return new ShaderController(type, shader, props, this.renderer.stage);
+  }
+
+  private _createDynShaderCtr<
+    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
+  >(
+    shader: InstanceType<ShaderMap['DynamicShader']>,
+    props: ExtractProps<ShaderMap['DynamicShader']>,
+  ): DynamicShaderController<T> {
+    return new DynamicShaderController(shader, props, this);
   }
 
   useShader(shader: CoreShader): void {

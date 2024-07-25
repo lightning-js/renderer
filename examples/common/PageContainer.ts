@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
+import type { INode, ITextNode } from '@lightningjs/renderer';
 import { Component } from './Component.js';
 import { loadStorage, saveStorage } from '../common/LocalStorage.js';
 import type { ExampleSettings } from './ExampleSettings.js';

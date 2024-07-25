@@ -19,9 +19,9 @@
 
 import type {
   Dimensions,
-  ITextNode,
-  INode,
   NodeTextLoadedPayload,
+  INode,
+  ITextNode,
 } from '@lightningjs/renderer';
 
 export async function waitForLoadedDimensions(

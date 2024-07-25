@@ -17,19 +17,12 @@
  * limitations under the License.
  */
 
-import type {
-  INode,
-  INodeWritableProps,
-  RendererMain,
-} from '@lightningjs/renderer';
+import type { INode, INodeProps, RendererMain } from '@lightningjs/renderer';
 
 export class Component {
   readonly node: INode;
 
-  constructor(
-    readonly renderer: RendererMain,
-    nodeProps: Partial<INodeWritableProps>,
-  ) {
+  constructor(readonly renderer: RendererMain, nodeProps: Partial<INodeProps>) {
     this.node = renderer.createNode({
       ...nodeProps,
     });

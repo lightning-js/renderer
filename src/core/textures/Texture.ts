@@ -21,6 +21,7 @@ import type { CoreTextureManager } from '../CoreTextureManager.js';
 import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -145,6 +146,10 @@ export abstract class Texture extends EventEmitter {
 
   readonly renderableOwners = new Set<unknown>();
 
+  readonly renderable: boolean = false;
+
+  readonly lastRenderableChangeTime = 0;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }
@@ -164,18 +169,56 @@ export abstract class Texture extends EventEmitter {
    * @param renderable
    */
   setRenderableOwner(owner: unknown, renderable: boolean): void {
+    const oldSize = this.renderableOwners.size;
     if (renderable) {
       this.renderableOwners.add(owner);
+      const newSize = this.renderableOwners.size;
+      if (newSize > oldSize && newSize === 1) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.renderable as boolean) = true;
+        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
+        this.onChangeIsRenderable?.(true);
+      }
     } else {
       this.renderableOwners.delete(owner);
+      const newSize = this.renderableOwners.size;
+      if (newSize < oldSize && newSize === 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        (this.renderable as boolean) = false;
+        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
+        this.onChangeIsRenderable?.(false);
+      }
     }
   }
 
   /**
-   * Returns true if the texture is assigned to any Nodes that are renderable.
+   * Event called when the Texture becomes renderable or unrenderable.
+   *
+   * @remarks
+   * Used by subclasses like SubTexture propogate then renderability of the
+   * Texture to other referenced Textures.
+   *
+   * @param isRenderable `true` if this Texture has renderable owners.
    */
-  get renderable(): boolean {
-    return this.renderableOwners.size > 0;
+  onChangeIsRenderable?(isRenderable: boolean): void;
+
+  /**
+   * Get the CoreContextTexture for this Texture
+   *
+   * @remarks
+   * Each Texture has a corresponding CoreContextTexture that is used to
+   * manage the texture's native data depending on the renderer's mode
+   * (WebGL, Canvas, etc).
+   *
+   * The Texture and CoreContextTexture are always linked together in a 1:1
+   * relationship.
+   */
+  get ctxTexture() {
+    // The first time this is called, create the ctxTexture
+    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
+    // And replace this getter with the value for future calls
+    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
+    return ctxTexture;
   }
 
   /**

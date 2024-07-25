@@ -1,15 +1,13 @@
-import type {
-  INode,
-  INodeAnimatableProps,
-  INodeWritableProps,
-  ITextNode,
-  ITextNodeWritableProps,
-} from './INode.js';
-import type { ICoreDriver } from './ICoreDriver.js';
-import { type RendererMainSettings } from './RendererMain.js';
+import {
+  CoreNode,
+  type CoreNodeAnimateProps,
+  type CoreNodeProps,
+} from '../core/CoreNode.js';
+import { type RendererMainSettings } from './Renderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 
 /**
  * Inspector
@@ -219,31 +217,28 @@ export class Inspector {
   }
 
   createDiv(
-    node: INode | ITextNode,
-    properties: INodeWritableProps | ITextNodeWritableProps,
+    id: number,
+    properties: CoreNodeProps | CoreTextNodeProps,
   ): HTMLElement {
     const div = document.createElement('div');
     div.style.position = 'absolute';
-    div.id = node.id.toString();
+    div.id = id.toString();
 
     // set initial properties
     for (const key in properties) {
       this.updateNodeProperty(
         div,
         // really typescript? really?
-        key as keyof (INodeWritableProps & ITextNodeWritableProps),
-        (properties as INodeWritableProps & ITextNodeWritableProps)[
-          key as keyof (INodeWritableProps & ITextNodeWritableProps)
-        ],
+        key as keyof CoreNodeProps,
+        properties[key as keyof CoreNodeProps],
       );
     }
 
     return div;
   }
 
-  createNode(driver: ICoreDriver, properties: INodeWritableProps): INode {
-    const node = driver.createNode(properties);
-    const div = this.createDiv(node, properties);
+  createNode(node: CoreNode): CoreNode {
+    const div = this.createDiv(node.id, node.props);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
@@ -254,40 +249,39 @@ export class Inspector {
     return this.createProxy(node, div);
   }
 
-  createTextNode(
-    driver: ICoreDriver,
-    properties: ITextNodeWritableProps,
-  ): ITextNode {
-    const node = driver.createTextNode(properties);
-    const div = this.createDiv(node, properties);
+  createTextNode(node: CoreNode): CoreTextNode {
+    const div = this.createDiv(node.id, node.props);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (node as any).div = div;
-    return this.createProxy(node, div) as ITextNode;
+    return this.createProxy(node, div) as CoreTextNode;
   }
 
-  createProxy(node: INode | ITextNode, div: HTMLElement): INode | ITextNode {
+  createProxy(
+    node: CoreNode | CoreTextNode,
+    div: HTMLElement,
+  ): CoreNode | CoreTextNode {
     return new Proxy(node, {
-      set: (target, property: keyof INodeWritableProps, value) => {
+      set: (target, property: keyof CoreNodeProps, value) => {
         this.updateNodeProperty(div, property, value);
         return Reflect.set(target, property, value);
       },
-      get: (target, property: keyof INode, receiver: any): any => {
+      get: (target, property: keyof CoreNode, receiver: any): any => {
         if (property === 'destroy') {
-          this.destroyNode(target);
+          this.destroyNode(target.id);
         }
 
         if (property === 'animate') {
-          return (props: INodeAnimatableProps, settings: AnimationSettings) => {
+          return (props: CoreNodeAnimateProps, settings: AnimationSettings) => {
             const anim = target.animate(props, settings);
 
             // Trap the animate start function so we can update the inspector accordingly
             return new Proxy(anim, {
               get: (target, property: keyof IAnimationController, receiver) => {
                 if (property === 'start') {
-                  this.animateNode(div, node, props, settings);
+                  this.animateNode(div, props, settings);
                 }
 
                 return Reflect.get(target, property, receiver);
@@ -301,14 +295,14 @@ export class Inspector {
     });
   }
 
-  destroyNode(node: INode | ITextNode) {
-    const div = document.getElementById(node.id.toString());
+  destroyNode(id: number) {
+    const div = document.getElementById(id.toString());
     div?.remove();
   }
 
   updateNodeProperty(
     div: HTMLElement,
-    property: keyof INodeWritableProps | keyof ITextNodeWritableProps,
+    property: keyof CoreNodeProps | keyof CoreTextNodeProps,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
   ) {
@@ -320,7 +314,7 @@ export class Inspector {
      * Special case for parent property
      */
     if (property === 'parent') {
-      const parentId: number = (value as INode).id;
+      const parentId: number = value.id;
 
       // only way to detect if the parent is the root node
       // if you are reading this and have a better way, please let me know
@@ -385,7 +379,12 @@ export class Inspector {
 
     // DOM properties
     if (domPropertyMap[property]) {
-      div.setAttribute(String(stylePropertyMap[property]), String(value));
+      const domProperty = domPropertyMap[property];
+      if (!domProperty) {
+        return;
+      }
+
+      div.setAttribute(String(domProperty), String(value));
       return;
     }
 
@@ -407,8 +406,7 @@ export class Inspector {
   // simple animation handler
   animateNode(
     div: HTMLElement,
-    node: INode,
-    props: INodeAnimatableProps,
+    props: CoreNodeAnimateProps,
     settings: AnimationSettings,
   ) {
     const {

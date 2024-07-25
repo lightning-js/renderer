@@ -17,13 +17,10 @@
  * limitations under the License.
  */
 
+import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import type {
-  ITextNodeWritableProps,
-  RendererMain,
-} from '../../dist/exports/main-api.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 import { getLoremIpsum } from '../common/LoremIpsum.js';
 
@@ -59,7 +56,7 @@ const BASE_NODE_PROPS = {
   fontSize: 20,
   lineHeight: 28,
   contain: 'width',
-} satisfies Partial<ITextNodeWritableProps>;
+} satisfies Partial<ITextNodeProps>;
 
 function generateMaxLinesTest(
   renderer: RendererMain,
@@ -73,7 +70,7 @@ function generateMaxLinesTest(
           ...BASE_NODE_PROPS,
           text: 'Line1 Line1_Line1_Line1\nLine2 Line2____Line2\nLine 3\nLine 4',
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
@@ -129,7 +126,7 @@ function generateMaxLinesTest(
           ...BASE_NODE_PROPS,
           text: getLoremIpsum(100),
           textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeWritableProps>;
+        } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,

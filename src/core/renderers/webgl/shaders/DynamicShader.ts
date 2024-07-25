@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { ExtractProps } from '../../../CoreTextureManager.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import {
   WebGlCoreShader,
@@ -25,80 +24,85 @@ import {
 } from '../WebGlCoreShader.js';
 import type { UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import { ShaderEffect } from './effects/ShaderEffect.js';
+import {
+  ShaderEffect,
+  type EffectDescUnion,
+  type ShaderEffectUniform,
+  type ShaderEffectValueMap,
+  type BaseEffectDesc,
+} from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
-import memize from 'memize';
-
-/**
- * Allows the `keyof EffectMap` to be mapped over and form an discriminated
- * union of all the EffectDescs structures individually.
- *
- * @remarks
- * When used like the following:
- * ```
- * MapEffectDescs<keyof EffectMap>[]
- * ```
- * The resultant type will be a discriminated union like so:
- * ```
- * (
- *   {
- *     type: 'radius',
- *     props?: {
- *       radius?: number | number[];
- *     }
- *   } |
- *   {
- *     type: 'border',
- *     props?: {
- *       width?: number;
- *       color?: number;
- *     }
- *   } |
- *   // ...
- * )[]
- * ```
- * Which means TypeScript will now base its type checking on the `type` field
- * and will know exactly what the `props` field should be based on the `type`
- * field.
- */
-type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
-  ? SpecificEffectDesc<T>
-  : never;
-
-export type EffectDesc = MapEffectDescs<keyof EffectMap>;
+import { assertTruthy } from '../../../../utils.js';
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,
     AlphaShaderProp {
-  effects?: EffectDesc[];
+  effects?: EffectDescUnion[];
 }
 
-export interface SpecificEffectDesc<
-  FxType extends keyof EffectMap = keyof EffectMap,
-> {
-  type: FxType;
-  props?: ExtractProps<EffectMap[FxType]>;
-}
-
-const effectCache = new Map<string, EffectDesc[]>();
+const effectCache = new Map<string, BaseEffectDesc[]>();
 const getResolvedEffect = (
-  effects: EffectDesc[] | undefined,
-  effectContructors: Partial<EffectMap> | undefined,
-): EffectDesc[] => {
+  effects: BaseEffectDesc[],
+  effectContructors: Partial<EffectMap>,
+): BaseEffectDesc[] => {
   const key = JSON.stringify(effects);
   if (effectCache.has(key)) {
     return effectCache.get(key)!;
   }
+  effects = effects ?? [];
+  const resolvedEffects = [];
+  const effectsLength = effects.length;
+  let i = 0;
+  for (; i < effectsLength; i++) {
+    const { name, type, props } = effects[i] as BaseEffectDesc;
+    const resolvedEffect = {
+      name,
+      type,
+      props: {} as Record<string, any>,
+    };
 
-  const value = (effects ?? []).map((effect) => ({
-    type: effect.type,
-    props: effectContructors![effect.type]!.resolveDefaults(
-      (effect.props || {}) as any,
-    ),
-  })) as EffectDesc[];
+    const effectConstructor = effectContructors[type]!;
+    const defaultPropValues = effectConstructor.resolveDefaults(props);
+    const uniforms = effectConstructor.uniforms;
+    const uniformKeys = Object.keys(uniforms);
+    const uniformsLength = uniformKeys.length;
+    let j = 0;
+    for (; j < uniformsLength; j++) {
+      const key = uniformKeys[j]!;
+      const uniform = uniforms[key]!;
 
-  effectCache.set(key, value);
-  return value;
+      const result: ShaderEffectValueMap = {
+        value: defaultPropValues[key] as ShaderEffectUniform['value'],
+        programValue: undefined,
+        updateOnBind: uniform.updateOnBind || false,
+        hasValidator: uniform.validator !== undefined,
+        hasProgramValueUpdater: uniform.updateProgramValue !== undefined,
+      };
+
+      const validatedValue =
+        (result.hasValidator &&
+          uniform.validator!(defaultPropValues[key], defaultPropValues)) ||
+        defaultPropValues[key];
+
+      if (defaultPropValues[key] !== validatedValue) {
+        result.validatedValue = validatedValue as number | number[];
+      }
+
+      if (result.hasProgramValueUpdater) {
+        uniform.updateProgramValue!(result);
+      }
+
+      if (result.programValue === undefined) {
+        result.programValue = result.value as number;
+      }
+
+      resolvedEffect.props[key] = result;
+    }
+    resolvedEffects.push(resolvedEffect);
+  }
+
+  effectCache.set(key, resolvedEffects);
+  return resolvedEffects;
 };
 
 export class DynamicShader extends WebGlCoreShader {
@@ -130,8 +134,6 @@ export class DynamicShader extends WebGlCoreShader {
     this.effects = shader.effects as Array<
       InstanceType<EffectMap[keyof EffectMap]>
     >;
-
-    this.calculateProps = memize(this.calculateProps.bind(this));
   }
 
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
@@ -140,34 +142,29 @@ export class DynamicShader extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  private calculateProps(effects: EffectDesc[]) {
-    const regEffects = this.renderer.shManager.getRegisteredEffects();
-    const results: { name: string; value: unknown }[] = [];
-    effects?.forEach((eff, index) => {
-      const effect = this.effects[index]!;
-      const fxClass = regEffects[effect.name as keyof EffectMap]!;
-      const props = eff.props ?? {};
-      const uniInfo = effect.uniformInfo;
-      Object.keys(props).forEach((p) => {
-        const fxProp = fxClass.uniforms[p]!;
-        const propInfo = uniInfo[p]!;
-        let value = fxProp.validator
-          ? fxProp.validator(props[p], props)
-          : props[p];
-        if (Array.isArray(value)) {
-          value = new Float32Array(value);
-        }
-        results.push({ name: propInfo.name, value });
-      });
-    });
-    return results;
-  }
-
   protected override bindProps(props: Required<DynamicShaderProps>): void {
-    const results = this.calculateProps(props.effects);
-    results.forEach((r) => {
-      this.setUniform(r.name, r.value);
-    });
+    const effects = props.effects;
+    const effectsL = effects.length;
+    let i = 0;
+    for (; i < effectsL; i++) {
+      const effect = effects[i]! as Record<string, any>;
+      const uniformInfo = this.effects[i]!.uniformInfo;
+      const propKeys = Object.keys(effect.props);
+      const propsLength = propKeys.length;
+      let j = 0;
+      for (; j < propsLength; j++) {
+        const key = propKeys[j]!;
+        const prop = effect.props[key]!;
+        if (prop.updateOnBind === true) {
+          const uniform =
+            this.renderer.shManager.getRegisteredEffects()[
+              effect.type as keyof EffectMap
+            ]?.uniforms[key];
+          uniform?.updateProgramValue!(effect.props[key], props);
+        }
+        this.setUniform(uniformInfo[key]!.name, effect.props[key].programValue);
+      }
+    }
   }
 
   override canBatchShaderProps(
@@ -192,7 +189,8 @@ export class DynamicShader extends WebGlCoreShader {
       for (const key in effectA.props) {
         if (
           (effectB.props && !effectB.props[key]) ||
-          effectA.props[key] !== effectB.props![key]
+          (effectA.props[key] as ShaderEffectValueMap).value !==
+            (effectB.props[key] as ShaderEffectValueMap).value
         ) {
           return false;
         }
@@ -396,8 +394,12 @@ export class DynamicShader extends WebGlCoreShader {
     props: DynamicShaderProps,
     effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
+    assertTruthy(effectContructors);
     return {
-      effects: getResolvedEffect(props.effects, effectContructors),
+      effects: getResolvedEffect(
+        props.effects ?? [],
+        effectContructors,
+      ) as EffectDescUnion[],
       $dimensions: {
         width: 0,
         height: 0,
@@ -422,7 +424,7 @@ export class DynamicShader extends WebGlCoreShader {
   static z$__type__Props: DynamicShaderProps;
 
   static vertex = () => `
-    # ifdef GL_FRAGMENT_PRESICISON_HIGH
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
     precision mediump float;
@@ -461,7 +463,7 @@ export class DynamicShader extends WebGlCoreShader {
     effectMethods: string,
     drawEffects: string,
   ) => `
-    # ifdef GL_FRAGMENT_PRESICISON_HIGH
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
     precision mediump float;

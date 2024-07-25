@@ -197,10 +197,11 @@ export const getTimingFunction = (
     };
   }
 
-  if (timingLookup[str] !== undefined) {
+  const lookup = timingLookup[str];
+  if (lookup !== undefined) {
+    const [a, b, c, d] = lookup;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - TS doesn't understand that we've checked for undefined
-    const [a, b, c, d] = timingLookup[str];
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const timing = getTimingBezier(a, b, c, d);
     timingMapping[str] = timing;
@@ -215,12 +216,12 @@ export const getTimingFunction = (
   return defaultTiming;
 };
 
-if (!Math.hypot)
-  Math.hypot = (...args: number[]) => {
-    let y = 0,
-      i = args.length;
-    while (i--) {
-      y += args[i]! * args[i]!;
-    }
-    return Math.sqrt(y);
-  };
+/**
+ * Convert bytes to string of megabytes with 2 decimal points
+ *
+ * @param bytes
+ * @returns
+ */
+export function bytesToMb(bytes: number) {
+  return (bytes / 1024 / 1024).toFixed(2);
+}

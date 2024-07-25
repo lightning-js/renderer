@@ -34,7 +34,6 @@ import {
   type UniformMethodMap,
   type ShaderProgramSources,
 } from './internal/ShaderUtils.js';
-import { isWebGl2 } from './internal/WebGlUtils.js';
 
 /**
  * Automatic shader prop for the dimensions of the Node being rendered

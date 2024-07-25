@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, RendererMain } from '../../dist/exports/main-api.js';
+import type { INode, RendererMain } from '@lightningjs/renderer';
 import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;

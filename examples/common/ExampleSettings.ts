@@ -18,6 +18,7 @@
  */
 
 import type { INode, RendererMain } from '@lightningjs/renderer';
+import type { MemMonitor } from './MemMonitor.js';
 
 /**
  * Keep in sync with `visual-regression/src/index.ts`
@@ -52,10 +53,6 @@ export interface ExampleSettings {
    */
   renderer: RendererMain;
   /**
-   * Core Driver being used by the test.
-   */
-  driverName: 'main' | 'threadx';
-  /**
    * The HTML Element that the Renderer's canvas is a child of
    */
   appElement: HTMLDivElement;
@@ -87,4 +84,8 @@ export interface ExampleSettings {
    * This method will be a no-op if the test is not run in automation mode.
    */
   snapshot(options?: SnapshotOptions): Promise<void>;
+  /**
+   * The MemMonitor instance for the test (if enabled)
+   */
+  memMonitor: MemMonitor | null;
 }

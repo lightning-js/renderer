@@ -18,8 +18,8 @@
  */
 
 import type { INode } from '@lightningjs/renderer';
-import { PageContainer } from './PageContainer.js';
 import { assertTruthy } from '@lightningjs/renderer/utils';
+import { PageContainer } from './PageContainer.js';
 
 const HEADER_FONT_SIZE = 30;
 const PADDING = 20;

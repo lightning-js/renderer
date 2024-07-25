@@ -19,17 +19,11 @@
 
 import {
   assertTruthy,
+  getNewId,
   mergeColorAlphaPremultiplied,
-  getImageAspectRatio,
 } from '../utils.js';
-import type { ShaderMap } from './CoreShaderManager.js';
-import type {
-  ExtractProps,
-  TextureMap,
-  TextureOptions,
-} from './CoreTextureManager.js';
+import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { CoreShader } from './renderers/CoreShader.js';
 import type { Stage } from './Stage.js';
 import type {
   Texture,
@@ -37,7 +31,6 @@ import type {
   TextureFreedEventHandler,
   TextureLoadedEventHandler,
 } from './textures/Texture.js';
-import { RenderTexture } from './textures/RenderTexture.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -55,6 +48,11 @@ import {
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
+import type { AnimationSettings } from './animations/CoreAnimation.js';
+import type { IAnimationController } from '../common/IAnimationController.js';
+import { CoreAnimation } from './animations/CoreAnimation.js';
+import { CoreAnimationController } from './animations/CoreAnimationController.js';
+import type { BaseShaderController } from '../main-api/ShaderController.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -68,50 +66,6 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
-
-export interface CoreNodeProps {
-  id: number;
-  // External facing properties whose defaults are determined by
-  // RendererMain's resolveNodeDefaults() method
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  alpha: number;
-  autosize: boolean;
-  clipping: boolean;
-  color: number;
-  colorTop: number;
-  colorBottom: number;
-  colorLeft: number;
-  colorRight: number;
-  colorTl: number;
-  colorTr: number;
-  colorBl: number;
-  colorBr: number;
-  parent: CoreNode | null;
-  zIndex: number;
-  texture: Texture | null;
-  textureOptions: TextureOptions | null;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
-  zIndexLocked: number;
-  scaleX: number;
-  scaleY: number;
-  mount: number;
-  mountX: number;
-  mountY: number;
-  pivot: number;
-  pivotX: number;
-  pivotY: number;
-  rotation: number;
-  rtt: boolean;
-}
-
-type ICoreNode = Omit<
-  CoreNodeProps,
-  'texture' | 'textureOptions' | 'shader' | 'shaderProps'
->;
 
 export enum UpdateType {
   /**
@@ -235,9 +189,462 @@ export enum UpdateType {
   All = 8191,
 }
 
-export class CoreNode extends EventEmitter implements ICoreNode {
+/**
+ * A custom data map which can be stored on an CoreNode
+ *
+ * @remarks
+ * This is a map of key-value pairs that can be stored on an INode. It is used
+ * to store custom data that can be used by the application.
+ * The data stored can only be of type string, number or boolean.
+ */
+export type CustomDataMap = {
+  [key: string]: string | number | boolean | undefined;
+};
+
+/**
+ * Writable properties of a Node.
+ */
+export interface CoreNodeProps {
+  /**
+   * The x coordinate of the Node's Mount Point.
+   *
+   * @remarks
+   * See {@link mountX} and {@link mountY} for more information about setting
+   * the Mount Point.
+   *
+   * @default `0`
+   */
+  x: number;
+  /**
+   * The y coordinate of the Node's Mount Point.
+   *
+   * @remarks
+   * See {@link mountX} and {@link mountY} for more information about setting
+   * the Mount Point.
+   *
+   * @default `0`
+   */
+  y: number;
+  /**
+   * The width of the Node.
+   *
+   * @default `0`
+   */
+  width: number;
+  /**
+   * The height of the Node.
+   *
+   * @default `0`
+   */
+  height: number;
+  /**
+   * The alpha opacity of the Node.
+   *
+   * @remarks
+   * The alpha value is a number between 0 and 1, where 0 is fully transparent
+   * and 1 is fully opaque.
+   *
+   * @default `1`
+   */
+  alpha: number;
+  /**
+   * Autosize mode
+   *
+   * @remarks
+   * When enabled, when a texture is loaded into the Node, the Node will
+   * automatically resize to the dimensions of the texture.
+   *
+   * Text Nodes are always autosized based on their text content regardless
+   * of this mode setting.
+   *
+   * @default `false`
+   */
+  autosize: boolean;
+  /**
+   * Clipping Mode
+   *
+   * @remarks
+   * Enable Clipping Mode when you want to prevent the drawing of a Node and
+   * its descendants from overflowing outside of the Node's x/y/width/height
+   * bounds.
+   *
+   * For WebGL, clipping is implemented using the high-performance WebGL
+   * operation scissor. As a consequence, clipping does not work for
+   * non-rectangular areas. So, if the element is rotated
+   * (by itself or by any of its ancestors), clipping will not work as intended.
+   *
+   * TODO: Add support for non-rectangular clipping either automatically or
+   * via Render-To-Texture.
+   *
+   * @default `false`
+   */
+  clipping: boolean;
+  /**
+   * The color of the Node.
+   *
+   * @remarks
+   * The color value is a number in the format 0xRRGGBBAA, where RR is the red
+   * component, GG is the green component, BB is the blue component, and AA is
+   * the alpha component.
+   *
+   * Gradient colors may be set by setting the different color sub-properties:
+   * {@link colorTop}, {@link colorBottom}, {@link colorLeft}, {@link colorRight},
+   * {@link colorTl}, {@link colorTr}, {@link colorBr}, {@link colorBl} accordingly.
+   *
+   * @default `0xffffffff` (opaque white)
+   */
+  color: number;
+  /**
+   * The color of the top edge of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorTop: number;
+  /**
+   * The color of the bottom edge of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorBottom: number;
+  /**
+   * The color of the left edge of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorLeft: number;
+  /**
+   * The color of the right edge of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorRight: number;
+  /**
+   * The color of the top-left corner of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorTl: number;
+  /**
+   * The color of the top-right corner of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorTr: number;
+  /**
+   * The color of the bottom-right corner of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorBr: number;
+  /**
+   * The color of the bottom-left corner of the Node for gradient rendering.
+   *
+   * @remarks
+   * See {@link color} for more information about color values and gradient
+   * rendering.
+   */
+  colorBl: number;
+  /**
+   * The Node's parent Node.
+   *
+   * @remarks
+   * The value `null` indicates that the Node has no parent. This may either be
+   * because the Node is the root Node of the scene graph, or because the Node
+   * has been removed from the scene graph.
+   *
+   * In order to make sure that a Node can be rendered on the screen, it must
+   * be added to the scene graph by setting it's parent property to a Node that
+   * is already in the scene graph such as the root Node.
+   *
+   * @default `null`
+   */
+  parent: CoreNode | null;
+  /**
+   * The Node's z-index.
+   *
+   * @remarks
+   * TBD
+   */
+  zIndex: number;
+  /**
+   * The Node's Texture.
+   *
+   * @remarks
+   * The `texture` defines a rasterized image that is contained within the
+   * {@link width} and {@link height} dimensions of the Node. If null, the
+   * Node will use an opaque white {@link ColorTexture} when being drawn, which
+   * essentially enables colors (including gradients) to be drawn.
+   *
+   * If set, by default, the texture will be drawn, as is, stretched to the
+   * dimensions of the Node. This behavior can be modified by setting the TBD
+   * and TBD properties.
+   *
+   * To create a Texture in order to set it on this property, call
+   * {@link RendererMain.createTexture}.
+   *
+   * If the {@link src} is set on a Node, the Node will use the
+   * {@link ImageTexture} by default and the Node will simply load the image at
+   * the specified URL.
+   *
+   * Note: If this is a Text Node, the Texture will be managed by the Node's
+   * {@link TextRenderer} and should not be set explicitly.
+   */
+  texture: Texture | null;
+
+  /**
+   * Options to associate with the Node's Texture
+   */
+  textureOptions: TextureOptions;
+
+  /**
+   * The Node's shader
+   *
+   * @remarks
+   * The `shader` defines a {@link Shader} used to draw the Node. By default,
+   * the Default Shader is used which simply draws the defined {@link texture}
+   * or {@link color}(s) within the Node without any special effects.
+   *
+   * To create a Shader in order to set it on this property, call
+   * {@link RendererMain.createShader}.
+   *
+   * Note: If this is a Text Node, the Shader will be managed by the Node's
+   * {@link TextRenderer} and should not be set explicitly.
+   */
+  shader: BaseShaderController;
+  /**
+   * Image URL
+   *
+   * @remarks
+   * When set, the Node's {@link texture} is automatically set to an
+   * {@link ImageTexture} using the source image URL provided (with all other
+   * settings being defaults)
+   */
+  src: string | null;
+  zIndexLocked: number;
+  /**
+   * Scale to render the Node at
+   *
+   * @remarks
+   * The scale value multiplies the provided {@link width} and {@link height}
+   * of the Node around the Node's Pivot Point (defined by the {@link pivot}
+   * props).
+   *
+   * Behind the scenes, setting this property sets both the {@link scaleX} and
+   * {@link scaleY} props to the same value.
+   *
+   * NOTE: When the scaleX and scaleY props are explicitly set to different values,
+   * this property returns `null`. Setting `null` on this property will have no
+   * effect.
+   *
+   * @default 1.0
+   */
+  scale: number | null;
+  /**
+   * Scale to render the Node at (X-Axis)
+   *
+   * @remarks
+   * The scaleX value multiplies the provided {@link width} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleX: number;
+  /**
+   * Scale to render the Node at (Y-Axis)
+   *
+   * @remarks
+   * The scaleY value multiplies the provided {@link height} of the Node around
+   * the Node's Pivot Point (defined by the {@link pivot} props).
+   *
+   * @default 1.0
+   */
+  scaleY: number;
+  /**
+   * Combined position of the Node's Mount Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Mount Point at the top-left corner of the Node.
+   * - `0.5` defines it at the center of the Node.
+   * - `1.0` defines it at the bottom-right corner of the node.
+   *
+   * Use the {@link mountX} and {@link mountY} props seperately for more control
+   * of the Mount Point.
+   *
+   * When assigned, the same value is also passed to both the {@link mountX} and
+   * {@link mountY} props.
+   *
+   * @default 0 (top-left)
+   */
+  mount: number;
+  /**
+   * X position of the Node's Mount Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Mount Point's X position as the left-most edge of the
+   *   Node
+   * - `0.5` defines it as the horizontal center of the Node
+   * - `1.0` defines it as the right-most edge of the Node.
+   *
+   * The combination of {@link mountX} and {@link mountY} define the Mount Point
+   *
+   * @default 0 (left-most edge)
+   */
+  mountX: number;
+  /**
+   * Y position of the Node's Mount Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Mount Point's Y position as the top-most edge of the
+   *   Node
+   * - `0.5` defines it as the vertical center of the Node
+   * - `1.0` defines it as the bottom-most edge of the Node.
+   *
+   * The combination of {@link mountX} and {@link mountY} define the Mount Point
+   *
+   * @default 0 (top-most edge)
+   */
+  mountY: number;
+  /**
+   * Combined position of the Node's Pivot Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Pivot Point at the top-left corner of the Node.
+   * - `0.5` defines it at the center of the Node.
+   * - `1.0` defines it at the bottom-right corner of the node.
+   *
+   * Use the {@link pivotX} and {@link pivotY} props seperately for more control
+   * of the Pivot Point.
+   *
+   * When assigned, the same value is also passed to both the {@link pivotX} and
+   * {@link pivotY} props.
+   *
+   * @default 0.5 (center)
+   */
+  pivot: number;
+  /**
+   * X position of the Node's Pivot Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Pivot Point's X position as the left-most edge of the
+   *   Node
+   * - `0.5` defines it as the horizontal center of the Node
+   * - `1.0` defines it as the right-most edge of the Node.
+   *
+   * The combination of {@link pivotX} and {@link pivotY} define the Pivot Point
+   *
+   * @default 0.5 (centered on x-axis)
+   */
+  pivotX: number;
+  /**
+   * Y position of the Node's Pivot Point
+   *
+   * @remarks
+   * The value can be any number between `0.0` and `1.0`:
+   * - `0.0` defines the Pivot Point's Y position as the top-most edge of the
+   *   Node
+   * - `0.5` defines it as the vertical center of the Node
+   * - `1.0` defines it as the bottom-most edge of the Node.
+   *
+   * The combination of {@link pivotX} and {@link pivotY} define the Pivot Point
+   *
+   * @default 0.5 (centered on y-axis)
+   */
+  pivotY: number;
+  /**
+   * Rotation of the Node (in Radians)
+   *
+   * @remarks
+   * Sets the amount to rotate the Node by around it's Pivot Point (defined by
+   * the {@link pivot} props). Positive values rotate the Node clockwise, while
+   * negative values rotate it counter-clockwise.
+   *
+   * Example values:
+   * - `-Math.PI / 2`: 90 degree rotation counter-clockwise
+   * - `0`: No rotation
+   * - `Math.PI / 2`: 90 degree rotation clockwise
+   * - `Math.PI`: 180 degree rotation clockwise
+   * - `3 * Math.PI / 2`: 270 degree rotation clockwise
+   * - `2 * Math.PI`: 360 rotation clockwise
+   */
+  rotation: number;
+
+  /**
+   * Whether the Node is rendered to a texture
+   *
+   * @remarks
+   * TBD
+   *
+   * @default false
+   */
+  rtt: boolean;
+
+  /**
+   * Node data element for custom data storage (optional)
+   *
+   * @remarks
+   * This property is used to store custom data on the Node as a key/value data store.
+   * Data values are limited to string, numbers, booleans. Strings will be truncated
+   * to a 2048 character limit for performance reasons.
+   *
+   * This is not a data storage mechanism for large amounts of data please use a
+   * dedicated data storage mechanism for that.
+   *
+   * The custom data will be reflected in the inspector as part of `data-*` attributes
+   *
+   * @default `undefined`
+   */
+  data?: CustomDataMap;
+}
+
+/**
+ * Grab all the number properties of type T
+ */
+type NumberProps<T> = {
+  [Key in keyof T as NonNullable<T[Key]> extends number ? Key : never]: number;
+};
+
+/**
+ * Properties of a Node used by the animate() function
+ */
+export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
+  /**
+   * Shader properties to animate
+   */
+  shaderProps: Record<string, number>;
+  // TODO: textureProps: Record<string, number>;
+}
+
+/**
+ * A visual Node in the Renderer scene graph.
+ *
+ * @remarks
+ * CoreNode is an internally used class that represents a Renderer Node in the
+ * scene graph. See INode.ts for the public APIs exposed to Renderer users
+ * that include generic types for Shaders.
+ */
+export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
-  protected props: Required<CoreNodeProps>;
+  protected _id: number = getNewId();
+  readonly props: CoreNodeProps;
 
   public updateType = UpdateType.All;
 
@@ -267,47 +674,46 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
 
-  constructor(protected stage: Stage, props: CoreNodeProps) {
+  constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
+
     this.props = {
       ...props,
       parent: null,
+      texture: null,
+      src: null,
+      rtt: false,
     };
-    // Allow for parent to be processed appropriately
-    this.parent = props.parent;
 
-    // Allow for Render Texture to be processed appropriately
+    // Assign props to instance
+    this.parent = props.parent;
+    this.texture = props.texture;
+    this.src = props.src;
     this.rtt = props.rtt;
 
     this.updateScaleRotateTransform();
   }
 
   //#region Textures
-  loadTexture<Type extends keyof TextureMap>(
-    textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
-    options: TextureOptions | null = null,
-  ): void {
-    // First unload any existing texture
-    if (this.props.texture) {
-      this.unloadTexture();
-    }
-    const { txManager } = this.stage;
-    const texture = txManager.loadTexture(textureType, props, options);
-
-    this.props.texture = texture;
-    this.props.textureOptions = options;
-    this.setUpdateType(UpdateType.IsRenderable);
+  loadTexture(): void {
+    const { texture } = this.props;
+    assertTruthy(texture);
 
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
+      // Preload texture if required
+      if (this.textureOptions.preload) {
+        texture.ctxTexture.load();
+      }
       if (texture.state === 'loaded') {
-        this.onTextureLoaded(texture, texture.dimensions!);
+        assertTruthy(texture.dimensions);
+        this.onTextureLoaded(texture, texture.dimensions);
       } else if (texture.state === 'failed') {
-        this.onTextureFailed(texture, texture.error!);
+        assertTruthy(texture.error);
+        this.onTextureFailed(texture, texture.error);
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
       }
@@ -318,16 +724,12 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   unloadTexture(): void {
-    if (this.props.texture) {
-      const { texture } = this.props;
-      texture.off('loaded', this.onTextureLoaded);
-      texture.off('failed', this.onTextureFailed);
-      texture.off('freed', this.onTextureFreed);
-      texture.setRenderableOwner(this, false);
+    if (this.texture) {
+      this.texture.off('loaded', this.onTextureLoaded);
+      this.texture.off('failed', this.onTextureFailed);
+      this.texture.off('freed', this.onTextureFreed);
+      this.texture.setRenderableOwner(this, false);
     }
-    this.props.texture = null;
-    this.props.textureOptions = null;
-    this.setUpdateType(UpdateType.IsRenderable);
   }
 
   autosizeNode(dimensions: Dimensions) {
@@ -337,7 +739,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (target, dimensions) => {
+  private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
@@ -361,31 +763,19 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     }
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (target, error) => {
+  private onTextureFailed: TextureFailedEventHandler = (_, error) => {
     this.emit('failed', {
       type: 'texture',
       error,
     } satisfies NodeTextureFailedPayload);
   };
 
-  private onTextureFreed: TextureFreedEventHandler = (target: Texture) => {
+  private onTextureFreed: TextureFreedEventHandler = () => {
     this.emit('freed', {
       type: 'texture',
     } satisfies NodeTextureFreedPayload);
   };
   //#endregion Textures
-
-  loadShader<Type extends keyof ShaderMap>(
-    shaderType: Type,
-    props: ExtractProps<ShaderMap[Type]>,
-  ): void {
-    const shManager = this.stage.renderer.getShaderManager();
-    assertTruthy(shManager);
-    const { shader, props: p } = shManager.loadShader(shaderType, props);
-    this.props.shader = shader;
-    this.props.shaderProps = p;
-    this.setUpdateType(UpdateType.IsRenderable);
-  }
 
   /**
    * Change types types is used to determine the scope of the changes being applied
@@ -416,29 +806,45 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   updateScaleRotateTransform() {
+    const { rotation, scaleX, scaleY } = this.props;
+
+    // optimize simple translation cases
+    if (rotation === 0 && scaleX === 1 && scaleY === 1) {
+      this.scaleRotateTransform = undefined;
+      return;
+    }
+
     this.scaleRotateTransform = Matrix3d.rotate(
-      this.props.rotation,
+      rotation,
       this.scaleRotateTransform,
-    ).scale(this.props.scaleX, this.props.scaleY);
+    ).scale(scaleX, scaleY);
   }
 
   updateLocalTransform() {
-    assertTruthy(this.scaleRotateTransform);
-    const pivotTranslateX = this.props.pivotX * this.props.width;
-    const pivotTranslateY = this.props.pivotY * this.props.height;
-    const mountTranslateX = this.props.mountX * this.props.width;
-    const mountTranslateY = this.props.mountY * this.props.height;
+    const { x, y, width, height } = this.props;
+    const mountTranslateX = this.props.mountX * width;
+    const mountTranslateY = this.props.mountY * height;
 
-    this.localTransform = Matrix3d.translate(
-      pivotTranslateX - mountTranslateX + this.props.x,
-      pivotTranslateY - mountTranslateY + this.props.y,
-      this.localTransform,
-    )
-      .multiply(this.scaleRotateTransform)
-      .translate(-pivotTranslateX, -pivotTranslateY);
+    if (this.scaleRotateTransform) {
+      const pivotTranslateX = this.props.pivotX * width;
+      const pivotTranslateY = this.props.pivotY * height;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .multiply(this.scaleRotateTransform)
+        .translate(-pivotTranslateX, -pivotTranslateY);
+    } else {
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX,
+        y - mountTranslateY,
+        this.localTransform,
+      );
+    }
 
     // Handle 'contain' resize mode
-    const { width, height } = this.props;
     const texture = this.props.texture;
     if (
       texture &&
@@ -650,7 +1056,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       return false;
     }
 
-    if (this.props.shader) {
+    if (this.props.shader !== this.stage.defShaderCtr) {
       return true;
     }
 
@@ -710,18 +1116,18 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.strictBound,
     );
 
-    const renderM = this.stage.boundsMargin;
-    this.preloadBound = createBound(
-      parentClippingRect.x - renderM[3],
-      parentClippingRect.y - renderM[0],
-      parentClippingRect.x + rectW + renderM[1],
-      parentClippingRect.y + rectH + renderM[2],
-      this.preloadBound,
-    );
-
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
+
+    const renderM = this.stage.boundsMargin;
+    this.preloadBound = createBound(
+      this.strictBound.x1 - renderM[3],
+      this.strictBound.y1 - renderM[0],
+      this.strictBound.x2 + renderM[1],
+      this.strictBound.y2 + renderM[2],
+      this.preloadBound,
+    );
 
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
@@ -731,48 +1137,19 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   updateRenderState(parentClippingRect: RectWithValid) {
     const renderState = this.checkRenderBounds(parentClippingRect);
-    if (renderState !== this.renderState) {
-      let previous = this.renderState;
-      this.renderState = renderState;
-      if (previous === CoreNodeRenderState.InViewport) {
-        this.emit('outOfViewport', {
-          previous,
-          current: renderState,
-        });
-      }
-      if (
-        previous < CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.InViewport
-      ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
-        previous = CoreNodeRenderState.InBounds;
-      } else if (
-        previous > CoreNodeRenderState.InBounds &&
-        renderState === CoreNodeRenderState.OutOfBounds
-      ) {
-        this.emit(CoreNodeRenderStateMap.get(CoreNodeRenderState.InBounds)!, {
-          previous,
-          current: renderState,
-        });
-        previous = CoreNodeRenderState.InBounds;
-      }
-      const event = CoreNodeRenderStateMap.get(renderState);
-      assertTruthy(event);
-      this.emit(event, {
-        previous,
-        current: renderState,
-      });
-    }
-  }
 
-  setRenderState(state: CoreNodeRenderState) {
-    if (state !== this.renderState) {
-      this.renderState = state;
-      this.emit(CoreNodeRenderState[state]);
+    if (renderState === this.renderState) {
+      return;
     }
+
+    const previous = this.renderState;
+    this.renderState = renderState;
+    const event = CoreNodeRenderStateMap.get(renderState);
+    assertTruthy(event);
+    this.emit(event, {
+      previous,
+      current: renderState,
+    });
   }
 
   /**
@@ -794,7 +1171,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   onChangeIsRenderable(isRenderable: boolean) {
-    this.props.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this, isRenderable);
   }
 
   calculateRenderCoords() {
@@ -927,19 +1304,25 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     delete this.localTransform;
 
     this.props.texture = null;
-    this.props.shader = null;
+    this.props.shader = this.stage.defShaderCtr;
+
+    const children = [...this.children];
+    for (let i = 0; i < children.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      children[i]!.destroy();
+    }
+    // This very action will also remove the node from the parent's children array
+    this.parent = null;
 
     if (this.rtt) {
       this.stage.renderer.removeRTTNode(this);
     }
 
     this.removeAllListeners();
-    this.parent = null;
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { width, height, texture, textureOptions, shader, shaderProps, rtt } =
-      this.props;
+    const { texture, width, height, textureOptions, rtt, shader } = this.props;
 
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
@@ -960,9 +1343,16 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       premultipliedColorBr,
     } = this;
 
-    const { zIndex, worldAlpha, globalTransform: gt, clippingRect } = this;
+    const {
+      zIndex,
+      worldAlpha,
+      globalTransform: gt,
+      clippingRect,
+      renderCoords,
+    } = this;
 
     assertTruthy(gt);
+    assertTruthy(renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -975,8 +1365,8 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       texture,
       textureOptions,
       zIndex,
-      shader,
-      shaderProps,
+      shader: shader.shader,
+      shaderProps: shader.getResolvedProps(),
       alpha: worldAlpha,
       clippingRect,
       tx: gt.tx,
@@ -985,6 +1375,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       tb: gt.tb,
       tc: gt.tc,
       td: gt.td,
+      renderCoords,
       rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
@@ -993,7 +1384,7 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
   //#region Properties
   get id(): number {
-    return this.props.id;
+    return this._id;
   }
 
   get x(): number {
@@ -1039,6 +1430,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions.preload = true;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1054,6 +1450,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
+        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+          width: this.width,
+          height: this.height,
+        });
+        this.textureOptions.preload = true;
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1206,17 +1607,10 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set color(value: number) {
-    if (
-      this.props.colorTl !== value ||
-      this.props.colorTr !== value ||
-      this.props.colorBl !== value ||
-      this.props.colorBr !== value
-    ) {
-      this.colorTl = value;
-      this.colorTr = value;
-      this.colorBl = value;
-      this.colorBr = value;
-    }
+    this.colorTop = value;
+    this.colorBottom = value;
+    this.colorLeft = value;
+    this.colorRight = value;
     this.props.color = value;
 
     this.setUpdateType(UpdateType.PremultipliedColors);
@@ -1378,9 +1772,11 @@ export class CoreNode extends EventEmitter implements ICoreNode {
   }
 
   set rtt(value: boolean) {
-    if (!value) {
-      if (this.props.rtt) {
-        this.props.rtt = false;
+    if (this.props.rtt === true) {
+      this.props.rtt = value;
+
+      // unload texture if we used to have a render texture
+      if (value === false && this.texture !== null) {
         this.unloadTexture();
         this.setUpdateType(UpdateType.All);
 
@@ -1389,9 +1785,21 @@ export class CoreNode extends EventEmitter implements ICoreNode {
         });
 
         this.stage.renderer?.removeRTTNode(this);
+        return;
       }
+    }
+
+    // if the new value is false and we didnt have rtt previously, we don't need to do anything
+    if (value === false) {
       return;
     }
+
+    // load texture
+    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+      width: this.width,
+      height: this.height,
+    });
+    this.textureOptions.preload = true;
 
     this.props.rtt = true;
     this.hasRTTupdates = true;
@@ -1403,6 +1811,41 @@ export class CoreNode extends EventEmitter implements ICoreNode {
 
     // Store RTT nodes in a separate list
     this.stage.renderer?.renderToTexture(this);
+  }
+
+  get shader(): BaseShaderController {
+    return this.props.shader;
+  }
+
+  set shader(value: BaseShaderController) {
+    if (this.props.shader === value) {
+      return;
+    }
+
+    this.props.shader = value;
+
+    this.setUpdateType(UpdateType.IsRenderable);
+  }
+
+  get src(): string | null {
+    return this.props.src;
+  }
+
+  set src(imageUrl: string | null) {
+    if (this.props.src === imageUrl) {
+      return;
+    }
+
+    this.props.src = imageUrl;
+
+    if (!imageUrl) {
+      this.texture = null;
+      return;
+    }
+
+    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
+      src: imageUrl,
+    });
   }
 
   /**
@@ -1436,9 +1879,53 @@ export class CoreNode extends EventEmitter implements ICoreNode {
     return this.props.texture;
   }
 
+  set texture(value: Texture | null) {
+    if (this.props.texture === value) {
+      return;
+    }
+    const oldTexture = this.props.texture;
+    if (oldTexture) {
+      oldTexture.setRenderableOwner(this, false);
+      this.unloadTexture();
+    }
+    this.props.texture = value;
+    if (value) {
+      value.setRenderableOwner(this, this.isRenderable);
+      this.loadTexture();
+    }
+    this.setUpdateType(UpdateType.IsRenderable);
+  }
+
+  set textureOptions(value: TextureOptions) {
+    this.props.textureOptions = value;
+  }
+
+  get textureOptions(): TextureOptions {
+    return this.props.textureOptions;
+  }
+
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
+
+  animate(
+    props: Partial<CoreNodeAnimateProps>,
+    settings: Partial<AnimationSettings>,
+  ): IAnimationController {
+    const animation = new CoreAnimation(this, props, settings);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const controller = new CoreAnimationController(
+      this.stage.animationManager,
+      animation,
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return controller;
+  }
+
+  flush() {
+    // no-op
+  }
+
   //#endregion Properties
 }

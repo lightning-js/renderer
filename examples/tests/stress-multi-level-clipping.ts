@@ -18,7 +18,6 @@
  */
 
 import { type INode } from '@lightningjs/renderer';
-import logo from '../assets/lightning.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import robotImg from '../assets/robot/robot.png';
 

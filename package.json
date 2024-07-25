@@ -1,14 +1,12 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "0.9.3",
+  "version": "1.0.1",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
   "exports": {
-    ".": "./dist/exports/main-api.js",
-    "./core": "./dist/exports/core-api.js",
-    "./utils": "./dist/exports/utils.js",
-    "./workers/renderer": "./dist/src/render-drivers/threadx/worker/renderer.js"
+    ".": "./dist/exports/index.js",
+    "./utils": "./dist/exports/utils.js"
   },
   "scripts": {
     "preinstall": "node scripts/please-use-pnpm.js",
@@ -18,6 +16,7 @@
     "build:docker": "docker build -t visual-regression .",
     "watch": "tsc --build --watch",
     "test": "vitest",
+    "coverage": "vitest run --coverage",
     "test:visual": "cd visual-regression && pnpm test:visual",
     "lint": "pnpm run lint:prettier && pnpm run lint:eslint",
     "lint:fix": "pnpm run lint:fix:prettier && pnpm run lint:fix:eslint",
@@ -49,9 +48,10 @@
   },
   "homepage": "https://github.com/lightning-js/renderer#readme",
   "devDependencies": {
-    "@types/node": "^18.14.6",
+    "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.55.0",
+    "@vitest/coverage-v8": "^1.6.0",
     "concurrently": "^8.0.1",
     "eslint": "^8.35.0",
     "eslint-config-prettier": "^8.7.0",
@@ -60,10 +60,10 @@
     "prettier": "^2.8.4",
     "typedoc": "^0.25.1",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.2"
+    "vitest": "^1.6.0",
+    "vitest-mock-extended": "^1.3.1"
   },
   "dependencies": {
-    "@lightningjs/threadx": "^0.3.5",
     "@protobufjs/eventemitter": "^1.1.0",
     "memize": "^2.1.0"
   },

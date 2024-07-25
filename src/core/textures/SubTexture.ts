@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import type { TextureRef } from '../../main-api/RendererMain.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import {
   Texture,
@@ -33,7 +32,7 @@ export interface SubTextureProps {
   /**
    * The texture that this sub-texture is a sub-region of.
    */
-  texture: TextureRef;
+  texture: Texture;
 
   /**
    * The x pixel position of the top-left of the sub-texture within the parent
@@ -80,12 +79,8 @@ export class SubTexture extends Texture {
 
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
-    this.parentTexture = this.txManager.loadTexture(
-      props.texture.txType,
-      props.texture.props,
-      props.texture.options,
-    );
     this.props = SubTexture.resolveDefaults(props || {});
+    this.parentTexture = this.props.texture;
 
     // If parent texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -115,6 +110,11 @@ export class SubTexture extends Texture {
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
     this.setState('failed', error);
   };
+
+  override onChangeIsRenderable(isRenderable: boolean): void {
+    // Propagate the renderable owner change to the parent texture
+    this.parentTexture.setRenderableOwner(this, isRenderable);
+  }
 
   override async getTextureData(): Promise<TextureData> {
     return {
