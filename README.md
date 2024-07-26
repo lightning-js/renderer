@@ -103,10 +103,18 @@ import {
   SdfTrFontFace,
 } from '@lightningjs/renderer';
 
+import {
+  WebGlCoreRenderer,
+  SdfTextRenderer,
+} from '@lightningjs/renderer/webgl';
+import { CanvasTextRenderer } from '@lightningjs/renderer/canvas';
+
 const renderer = new RendererMain(
   {
     appWidth: 1920,
     appHeight: 1080,
+    renderEngine: WebGlCoreRenderer,
+    fontEngines: [SdfTextRenderer, CanvasTextRenderer],
     // ...Other Renderer Config
   },
   'app', // id of div to insert Canvas.
@@ -128,3 +136,12 @@ renderer.stage.fontManager.addFontFace(
   ),
 );
 ```
+
+Please note that the WebGL renderer supports both SDF Fonts and Web Fonts, however the
+Canvas renderer only supports Web Fonts:
+
+| Font Type Renderer | SDF Font | Web Font |
+| ------------------ | -------- | -------- |
+| WebGL              | Y        | Y        |
+| Canvas             | N        | Y        |
+|                    |          |          |

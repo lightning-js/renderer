@@ -142,6 +142,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   private sdfShader: SdfShader;
   private rendererBounds: Bound;
 
+  public type: 'canvas' | 'sdf' = 'sdf';
+
   constructor(stage: Stage) {
     super(stage);
     this.sdfShader = this.stage.shManager.loadShader('SdfShader').shader;
