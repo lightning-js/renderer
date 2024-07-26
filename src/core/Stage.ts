@@ -533,7 +533,18 @@ export class Stage {
       shaderProps: null,
     };
 
-    return new CoreTextNode(this, resolvedProps);
+    const resolvedTextRenderer = this.resolveTextRenderer(
+      resolvedProps,
+      props.textRendererOverride,
+    );
+
+    if (!resolvedTextRenderer) {
+      throw new Error(
+        `No compatible text renderer found for ${resolvedProps.fontFamily}`,
+      );
+    }
+
+    return new CoreTextNode(this, resolvedProps, resolvedTextRenderer);
   }
 
   /**

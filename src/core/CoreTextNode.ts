@@ -35,7 +35,6 @@ import type {
 import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
-import { EventEmitter } from '../common/EventEmitter.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
@@ -71,43 +70,46 @@ export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
  * For non-text rendering, see {@link CoreNode}.
  */
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
-  textRenderer: TextRenderer | null = null;
+  textRenderer: TextRenderer;
   trState: TextRendererState;
   private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
     null;
 
-  constructor(stage: Stage, props: CoreTextNodeProps) {
+  constructor(
+    stage: Stage,
+    props: CoreTextNodeProps,
+    textRenderer: TextRenderer,
+  ) {
     super(stage, props);
     this._textRendererOverride = props.textRendererOverride;
-    const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState({
-        x: this.absX,
-        y: this.absY,
-        width: props.width,
-        height: props.height,
-        textAlign: props.textAlign,
-        color: props.color,
-        zIndex: props.zIndex,
-        contain: props.contain,
-        scrollable: props.scrollable,
-        scrollY: props.scrollY,
-        offsetY: props.offsetY,
-        letterSpacing: props.letterSpacing,
-        debug: props.debug,
-        fontFamily: props.fontFamily,
-        fontSize: props.fontSize,
-        fontStretch: props.fontStretch,
-        fontStyle: props.fontStyle,
-        fontWeight: props.fontWeight,
-        text: props.text,
-        lineHeight: props.lineHeight,
-        maxLines: props.maxLines,
-        textBaseline: props.textBaseline,
-        verticalAlign: props.verticalAlign,
-        overflowSuffix: props.overflowSuffix,
-      });
+    this.textRenderer = textRenderer;
+    const textRendererState = this.createState({
+      x: this.absX,
+      y: this.absY,
+      width: props.width,
+      height: props.height,
+      textAlign: props.textAlign,
+      color: props.color,
+      zIndex: props.zIndex,
+      contain: props.contain,
+      scrollable: props.scrollable,
+      scrollY: props.scrollY,
+      offsetY: props.offsetY,
+      letterSpacing: props.letterSpacing,
+      debug: props.debug,
+      fontFamily: props.fontFamily,
+      fontSize: props.fontSize,
+      fontStretch: props.fontStretch,
+      fontStyle: props.fontStyle,
+      fontWeight: props.fontWeight,
+      text: props.text,
+      lineHeight: props.lineHeight,
+      maxLines: props.maxLines,
+      textBaseline: props.textBaseline,
+      verticalAlign: props.verticalAlign,
+      overflowSuffix: props.overflowSuffix,
+    });
 
-    this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
   }
 
@@ -155,7 +157,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override set width(value: number) {
     this.props.width = value;
-    this.textRenderer?.set.width(this.trState, value);
+    this.textRenderer.set.width(this.trState, value);
 
     // If not containing, we must update the local transform to account for the
     // new width
@@ -170,7 +172,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override set height(value: number) {
     this.props.height = value;
-    this.textRenderer?.set.height(this.trState, value);
+    this.textRenderer.set.height(this.trState, value);
 
     // If not containing in the horizontal direction, we must update the local
     // transform to account for the new height
@@ -184,7 +186,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override set color(value: number) {
-    this.textRenderer?.set.color(this.trState, value);
+    this.textRenderer.set.color(this.trState, value);
   }
 
   get text(): string {
@@ -192,7 +194,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set text(value: string) {
-    this.textRenderer?.set.text(this.trState, value);
+    this.textRenderer.set.text(this.trState, value);
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
@@ -201,13 +203,23 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set textRendererOverride(value: CoreTextNodeProps['textRendererOverride']) {
     this._textRendererOverride = value;
+    this.textRenderer.destroyState(this.trState);
 
-    this.textRenderer?.destroyState(this.trState);
+    const textRenderer = this.stage.resolveTextRenderer(
+      this.trState.props,
+      this._textRendererOverride,
+    );
 
-    const { resolvedTextRenderer, textRendererState } =
-      this.resolveTextRendererAndState(this.trState.props);
-    this.textRenderer = resolvedTextRenderer;
-    this.trState = textRendererState;
+    if (!textRenderer) {
+      console.warn(
+        'Text Renderer not found for font',
+        this.trState.props.fontFamily,
+      );
+      return;
+    }
+
+    this.textRenderer = textRenderer;
+    this.trState = this.createState(this.trState.props);
   }
 
   get fontSize(): CoreTextNodeProps['fontSize'] {
@@ -215,7 +227,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontSize(value: CoreTextNodeProps['fontSize']) {
-    this.textRenderer?.set.fontSize(this.trState, value);
+    this.textRenderer.set.fontSize(this.trState, value);
   }
 
   get fontFamily(): CoreTextNodeProps['fontFamily'] {
@@ -223,7 +235,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontFamily(value: CoreTextNodeProps['fontFamily']) {
-    this.textRenderer?.set.fontFamily(this.trState, value);
+    this.textRenderer.set.fontFamily(this.trState, value);
   }
 
   get fontStretch(): CoreTextNodeProps['fontStretch'] {
@@ -231,7 +243,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontStretch(value: CoreTextNodeProps['fontStretch']) {
-    this.textRenderer?.set.fontStretch(this.trState, value);
+    this.textRenderer.set.fontStretch(this.trState, value);
   }
 
   get fontStyle(): CoreTextNodeProps['fontStyle'] {
@@ -239,7 +251,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontStyle(value: CoreTextNodeProps['fontStyle']) {
-    this.textRenderer?.set.fontStyle(this.trState, value);
+    this.textRenderer.set.fontStyle(this.trState, value);
   }
 
   get fontWeight(): CoreTextNodeProps['fontWeight'] {
@@ -247,7 +259,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontWeight(value: CoreTextNodeProps['fontWeight']) {
-    this.textRenderer?.set.fontWeight(this.trState, value);
+    this.textRenderer.set.fontWeight(this.trState, value);
   }
 
   get textAlign(): CoreTextNodeProps['textAlign'] {
@@ -255,7 +267,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set textAlign(value: CoreTextNodeProps['textAlign']) {
-    this.textRenderer?.set.textAlign(this.trState, value);
+    this.textRenderer.set.textAlign(this.trState, value);
   }
 
   get contain(): CoreTextNodeProps['contain'] {
@@ -263,7 +275,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set contain(value: CoreTextNodeProps['contain']) {
-    this.textRenderer?.set.contain(this.trState, value);
+    this.textRenderer.set.contain(this.trState, value);
   }
 
   get scrollable(): CoreTextNodeProps['scrollable'] {
@@ -271,7 +283,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set scrollable(value: CoreTextNodeProps['scrollable']) {
-    this.textRenderer?.set.scrollable(this.trState, value);
+    this.textRenderer.set.scrollable(this.trState, value);
   }
 
   get scrollY(): CoreTextNodeProps['scrollY'] {
@@ -279,7 +291,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set scrollY(value: CoreTextNodeProps['scrollY']) {
-    this.textRenderer?.set.scrollY(this.trState, value);
+    this.textRenderer.set.scrollY(this.trState, value);
   }
 
   get offsetY(): CoreTextNodeProps['offsetY'] {
@@ -287,7 +299,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set offsetY(value: CoreTextNodeProps['offsetY']) {
-    this.textRenderer?.set.offsetY(this.trState, value);
+    this.textRenderer.set.offsetY(this.trState, value);
   }
 
   get letterSpacing(): CoreTextNodeProps['letterSpacing'] {
@@ -295,7 +307,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set letterSpacing(value: CoreTextNodeProps['letterSpacing']) {
-    this.textRenderer?.set.letterSpacing(this.trState, value);
+    this.textRenderer.set.letterSpacing(this.trState, value);
   }
 
   get lineHeight(): CoreTextNodeProps['lineHeight'] {
@@ -303,9 +315,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set lineHeight(value: CoreTextNodeProps['lineHeight']) {
-    if (this.textRenderer?.set.lineHeight) {
-      this.textRenderer.set.lineHeight(this.trState, value);
-    }
+    this.textRenderer.set.lineHeight(this.trState, value);
   }
 
   get maxLines(): CoreTextNodeProps['maxLines'] {
@@ -313,9 +323,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set maxLines(value: CoreTextNodeProps['maxLines']) {
-    if (this.textRenderer?.set.maxLines) {
-      this.textRenderer.set.maxLines(this.trState, value);
-    }
+    this.textRenderer.set.maxLines(this.trState, value);
   }
 
   get textBaseline(): CoreTextNodeProps['textBaseline'] {
@@ -323,9 +331,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set textBaseline(value: CoreTextNodeProps['textBaseline']) {
-    if (this.textRenderer?.set.textBaseline) {
-      this.textRenderer.set.textBaseline(this.trState, value);
-    }
+    this.textRenderer.set.textBaseline(this.trState, value);
   }
 
   get verticalAlign(): CoreTextNodeProps['verticalAlign'] {
@@ -333,9 +339,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set verticalAlign(value: CoreTextNodeProps['verticalAlign']) {
-    if (this.textRenderer?.set.verticalAlign) {
-      this.textRenderer.set.verticalAlign(this.trState, value);
-    }
+    this.textRenderer.set.verticalAlign(this.trState, value);
   }
 
   get overflowSuffix(): CoreTextNodeProps['overflowSuffix'] {
@@ -343,9 +347,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
-    if (this.textRenderer?.set.overflowSuffix) {
-      this.textRenderer.set.overflowSuffix(this.trState, value);
-    }
+    this.textRenderer.set.overflowSuffix(this.trState, value);
   }
 
   get debug(): CoreTextNodeProps['debug'] {
@@ -353,7 +355,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set debug(value: CoreTextNodeProps['debug']) {
-    this.textRenderer?.set.debug(this.trState, value);
+    this.textRenderer.set.debug(this.trState, value);
   }
 
   override update(delta: number, parentClippingRect: RectWithValid) {
@@ -362,12 +364,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     assertTruthy(this.globalTransform);
 
     // globalTransform is updated in super.update(delta)
-    this.textRenderer?.set.x(this.trState, this.globalTransform.tx);
-    this.textRenderer?.set.y(this.trState, this.globalTransform.ty);
+    this.textRenderer.set.x(this.trState, this.globalTransform.tx);
+    this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
   override checkRenderProps(): boolean {
-    if (this.trState.props.text !== '') {
+    if (this.trState && this.trState.props.text !== '') {
       return true;
     }
     return super.checkRenderProps();
@@ -375,7 +377,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override onChangeIsRenderable(isRenderable: boolean) {
     super.onChangeIsRenderable(isRenderable);
-    this.textRenderer?.setIsRenderable(this.trState, isRenderable);
+    this.textRenderer.setIsRenderable(this.trState, isRenderable);
   }
 
   override renderQuads(renderer: CoreRenderer) {
@@ -383,7 +385,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // If the text renderer does not support rendering quads, fallback to the
     // default renderQuads method
-    if (!this.textRenderer?.renderQuads) {
+    if (!this.textRenderer.renderQuads) {
       super.renderQuads(renderer);
       return;
     }
@@ -427,29 +429,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   override destroy(): void {
     super.destroy();
 
-    this.textRenderer?.destroyState(this.trState);
-  }
-
-  private createDummystate(props: TrProps): TextRendererState {
-    return {
-      props,
-      updateScheduled: false,
-      status: 'initialState',
-      emitter: new EventEmitter(),
-      forceFullLayoutCalc: false,
-      textW: undefined, // Assuming textW can be undefined initially
-      textH: undefined, // Assuming textH can be undefined initially
-      isRenderable: false, // Assuming the text is not renderable initially
-      debugData: {
-        updateCount: 0, // Initial value for updateCount
-        layoutCount: 0, // Initial value for layoutCount
-        drawCount: 0, // Initial value for drawCount
-        lastLayoutNumCharacters: 0, // Initial value for lastLayoutNumCharacters
-        layoutSum: 0, // Initial value for layoutSum
-        drawSum: 0, // Initial value for drawSum
-        bufferSize: 0, // Initial value for bufferSize
-      },
-    };
+    this.textRenderer.destroyState(this.trState);
   }
 
   /**
@@ -457,33 +437,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * @param props
    * @returns
    */
-  private resolveTextRendererAndState(props: TrProps): {
-    resolvedTextRenderer: TextRenderer | null;
-    textRendererState: TextRendererState;
-  } {
-    const resolvedTextRenderer = this.stage.resolveTextRenderer(
-      props,
-      this._textRendererOverride,
-    );
-
-    if (!resolvedTextRenderer) {
-      // return early and dont set any listeners or state updates, as there is
-      // no text renderer to use.
-      return {
-        resolvedTextRenderer: null,
-        textRendererState: this.createDummystate(props),
-      };
-    }
-    const textRendererState = resolvedTextRenderer.createState(props, this);
+  private createState(props: TrProps) {
+    const textRendererState = this.textRenderer.createState(props, this);
 
     textRendererState.emitter.on('loaded', this.onTextLoaded);
     textRendererState.emitter.on('failed', this.onTextFailed);
 
-    resolvedTextRenderer.scheduleUpdateState(textRendererState);
+    this.textRenderer.scheduleUpdateState(textRendererState);
 
-    return {
-      resolvedTextRenderer,
-      textRendererState,
-    };
+    return textRendererState;
   }
 }
