@@ -224,9 +224,9 @@ export interface TrProps extends TrFontProps {
   /**
    * Word wrap option
    *
-   * @default false
+   * @default normal
    */
-  wrapWord: boolean;
+  wrapWord: 'normal' | 'break';
   width: number;
   height: number;
   /**

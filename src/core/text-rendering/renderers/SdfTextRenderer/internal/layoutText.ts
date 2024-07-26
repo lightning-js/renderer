@@ -294,7 +294,7 @@ export function layoutText(
           curX += glyph.xAdvance;
         }
         if (
-          wrapWord &&
+          wrapWord == 'break' &&
           charEndX + glyph.width >= lineVertexW &&
           contain != 'none'
         ) {
