@@ -54,7 +54,8 @@ export default async function test(settings: ExampleSettings) {
     fontFamily: 'Ubuntu',
     textRendererOverride: 'sdf',
     fontSize: 20,
-    text: `Lorem ipsum dolor sit e
+    text: `LoremipsumdolorsiteConsecteturadipiscingelit.Vivamusid.
+Lorem ipsum dolor sit e
 Consectetur adipiscing elit. Vivamus id.
 Suspendisse sollicitudin posuere felis.
 Vivamus consectetur ex magna, non mollis.`,
@@ -132,6 +133,7 @@ Vivamus consectetur ex magna, non mollis.`,
       // SDF, contain none
       text1.textRendererOverride = 'sdf';
       text1.contain = 'none';
+      text1.wrapWord = 'normal';
       text1.width = 0;
       text1.height = 0;
     },
@@ -154,10 +156,16 @@ Vivamus consectetur ex magna, non mollis.`,
       text1.height = 204;
     },
     () => {
+      // SDF, contain both (1 pixel larger to show another line), wrap word
+      text1.contain = 'width';
+      text1.wrapWord = 'break';
+    },
+
+    () => {
       // Canvas, contain none
       text1.textRendererOverride = 'canvas';
       text1.contain = 'none';
-      text1.width = 0;
+      (text1.wrapWord = 'normal'), (text1.width = 0);
       text1.height = 0;
     },
     () => {
@@ -179,6 +187,11 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
       text1.height = 204;
+    },
+    () => {
+      // Canvas, contain both (1 pixel larger to show another line), wrap word
+      text1.contain = 'width';
+      text1.wrapWord = 'break';
     },
   ];
   /**
@@ -202,6 +215,7 @@ Vivamus consectetur ex magna, non mollis.`,
       text1.contain,
       text1.width,
       text1.height,
+      text1.wrapWord,
     );
     indexInfo.text = (i + 1).toString();
     textSetDimsInfo.text = `Set size: ${Math.round(text1.width)}x${Math.round(
@@ -237,6 +251,7 @@ function makeHeader(
   contain: string,
   width: number,
   height: number,
+  wrapWord: string,
 ) {
-  return `${renderer}, contain = ${contain}`;
+  return `${renderer}, contain = ${contain}, wrapWord = ${wrapWord}`;
 }
