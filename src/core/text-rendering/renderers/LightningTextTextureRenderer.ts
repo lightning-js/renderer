@@ -323,6 +323,7 @@ export class LightningTextTextureRenderer {
         wordWrapWidth,
         letterSpacing,
         textIndent,
+        this._settings.wordBreak,
       );
     } else {
       linesInfo = { l: this._settings.text.split(/(?:\r\n|\r|\n)/), n: [] };
@@ -347,6 +348,7 @@ export class LightningTextTextureRenderer {
           wordWrapWidth - w,
           letterSpacing,
           textIndent,
+          this._settings.wordBreak,
         );
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
           this._settings.overflowSuffix
@@ -681,6 +683,7 @@ export class LightningTextTextureRenderer {
     wordWrapWidth: number,
     letterSpacing: number,
     indent = 0,
+    wordBreak: boolean,
   ) {
     // Greedy wrapping algorithm that will wrap words as the line grows longer.
     // than its horizontal bounds.
@@ -718,6 +721,18 @@ export class LightningTextTextureRenderer {
 
       if (i < lines.length - 1) {
         realNewlines.push(allLines.length);
+      }
+    }
+    if (wordBreak) {
+      for (let i = 0; i < allLines.length; i++) {
+        let newline = '';
+        while (this.measureText(allLines[i]!, letterSpacing) > wordWrapWidth) {
+          newline = allLines[i]!.slice(-1) + newline;
+          allLines[i] = allLines[i]!.slice(0, -1);
+        }
+        if (newline.length > 0) {
+          allLines.splice(i + 1, 0, newline);
+        }
       }
     }
 
