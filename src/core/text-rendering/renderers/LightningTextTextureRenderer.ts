@@ -699,6 +699,16 @@ export class LightningTextTextureRenderer {
         const wordWidth = this.measureText(words[j]!, letterSpacing);
         const wordWidthWithSpace =
           wordWidth + this.measureText(' ', letterSpacing);
+        if (wordWidthWithSpace > wordWrapWidth && wordBreak) {
+          let remainder = '';
+          while (this.measureText(words[j]!) > wordWrapWidth) {
+            remainder = words[j]!.slice(-1) + remainder;
+            words[j] = words[j]!.slice(0, -1);
+          }
+          if (remainder.length > 0) {
+            words.splice(j + 1, 0, remainder);
+          }
+        }
         if (j === 0 || wordWidthWithSpace > spaceLeft) {
           // Skip printing the newline if it's the first word of the line that is.
           // greater than the word wrap width.
@@ -723,19 +733,6 @@ export class LightningTextTextureRenderer {
         realNewlines.push(allLines.length);
       }
     }
-    if (wordBreak) {
-      for (let i = 0; i < allLines.length; i++) {
-        let newline = '';
-        while (this.measureText(allLines[i]!, letterSpacing) > wordWrapWidth) {
-          newline = allLines[i]!.slice(-1) + newline;
-          allLines[i] = allLines[i]!.slice(0, -1);
-        }
-        if (newline.length > 0) {
-          allLines.splice(i + 1, 0, newline);
-        }
-      }
-    }
-
     return { l: allLines, n: realNewlines };
   }
 
