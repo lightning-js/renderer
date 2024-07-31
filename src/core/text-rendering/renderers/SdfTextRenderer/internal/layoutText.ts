@@ -295,8 +295,8 @@ export function layoutText(
         }
         if (
           wrapWord == 'break' &&
-          charEndX + glyph.width >= lineVertexW &&
-          contain != 'none'
+          contain != 'none' &&
+          charEndX + glyph.width >= lineVertexW
         ) {
           if (curLineBufferStart !== -1 && lineIsWithinWindow) {
             bufferLineInfos.push({

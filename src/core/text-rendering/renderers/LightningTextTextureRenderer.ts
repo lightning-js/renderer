@@ -699,7 +699,7 @@ export class LightningTextTextureRenderer {
         const wordWidth = this.measureText(words[j]!, letterSpacing);
         const wordWidthWithSpace =
           wordWidth + this.measureText(' ', letterSpacing);
-        if (wordWidthWithSpace > wordWrapWidth && wordBreak) {
+        if (wordBreak && wordWidthWithSpace > wordWrapWidth) {
           let remainder = '';
           while (this.measureText(words[j]!) > wordWrapWidth) {
             remainder = words[j]!.slice(-1) + remainder;
