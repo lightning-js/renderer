@@ -431,6 +431,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       scrollable,
       overflowSuffix,
       maxLines,
+      wrapWord,
     } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
@@ -569,6 +570,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       scrollable,
       overflowSuffix,
       maxLines,
+      wrapWord,
     );
 
     state.bufferUploaded = false;

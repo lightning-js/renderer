@@ -56,6 +56,7 @@ export function layoutText(
   scrollable: TrProps['scrollable'],
   overflowSuffix: TrProps['overflowSuffix'],
   maxLines: TrProps['maxLines'],
+  wrapWord: TrProps['wrapWord'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;
@@ -291,6 +292,24 @@ export function layoutText(
           maxY = Math.max(maxY, quadY + glyph.height);
           maxX = Math.max(maxX, quadX + glyph.width);
           curX += glyph.xAdvance;
+        }
+        if (
+          wrapWord == 'break' &&
+          contain != 'none' &&
+          charEndX + glyph.width >= lineVertexW
+        ) {
+          if (curLineBufferStart !== -1 && lineIsWithinWindow) {
+            bufferLineInfos.push({
+              bufferStart: curLineBufferStart,
+              bufferEnd: bufferOffset,
+            });
+            curLineBufferStart = -1;
+          }
+          curX = 0;
+          curY += vertexLineHeight;
+          curLineIndex++;
+          lastWord.codepointIndex = -1;
+          xStartLastWordBoundary = 0;
         }
       } else {
         // Unmapped character

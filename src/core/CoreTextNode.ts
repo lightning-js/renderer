@@ -104,6 +104,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         textBaseline: props.textBaseline,
         verticalAlign: props.verticalAlign,
         overflowSuffix: props.overflowSuffix,
+        wrapWord: props.wrapWord,
       });
     this.textRenderer = resolvedTextRenderer;
     this.trState = textRendererState;
@@ -343,6 +344,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
     if (this.textRenderer.set.overflowSuffix) {
       this.textRenderer.set.overflowSuffix(this.trState, value);
+    }
+  }
+
+  get wrapWord(): CoreTextNodeProps['wrapWord'] {
+    return this.trState.props.wrapWord;
+  }
+
+  set wrapWord(value: CoreTextNodeProps['wrapWord']) {
+    if (this.textRenderer.set.wrapWord) {
+      this.textRenderer.set.wrapWord(this.trState, value);
     }
   }
 

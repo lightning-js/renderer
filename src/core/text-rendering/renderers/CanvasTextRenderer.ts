@@ -417,6 +417,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       ].join(' '),
       textColor: getNormalizedRgbaComponents(state.props.color),
       offsetY: state.props.offsetY,
+      wordBreak: state.props.wrapWord == 'break',
       wordWrap: state.props.contain !== 'none',
       wordWrapWidth:
         state.props.contain === 'none' ? undefined : state.props.width,

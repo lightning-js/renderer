@@ -323,6 +323,7 @@ export class LightningTextTextureRenderer {
         wordWrapWidth,
         letterSpacing,
         textIndent,
+        this._settings.wordBreak,
       );
     } else {
       linesInfo = { l: this._settings.text.split(/(?:\r\n|\r|\n)/), n: [] };
@@ -347,6 +348,7 @@ export class LightningTextTextureRenderer {
           wordWrapWidth - w,
           letterSpacing,
           textIndent,
+          this._settings.wordBreak,
         );
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
           this._settings.overflowSuffix
@@ -681,6 +683,7 @@ export class LightningTextTextureRenderer {
     wordWrapWidth: number,
     letterSpacing: number,
     indent = 0,
+    wordBreak: boolean,
   ) {
     // Greedy wrapping algorithm that will wrap words as the line grows longer.
     // than its horizontal bounds.
@@ -691,11 +694,21 @@ export class LightningTextTextureRenderer {
       const resultLines = [];
       let result = '';
       let spaceLeft = wordWrapWidth - indent;
-      const words = lines[i]!.split(' ');
+      const words = wordBreak ? [lines[i]!] : lines[i]!.split(' ');
       for (let j = 0; j < words.length; j++) {
         const wordWidth = this.measureText(words[j]!, letterSpacing);
         const wordWidthWithSpace =
           wordWidth + this.measureText(' ', letterSpacing);
+        if (wordBreak && wordWidthWithSpace > wordWrapWidth) {
+          let remainder = '';
+          while (this.measureText(words[j]!) > wordWrapWidth) {
+            remainder = words[j]!.slice(-1) + remainder;
+            words[j] = words[j]!.slice(0, -1);
+          }
+          if (remainder.length > 0) {
+            words.splice(j + 1, 0, remainder);
+          }
+        }
         if (j === 0 || wordWidthWithSpace > spaceLeft) {
           // Skip printing the newline if it's the first word of the line that is.
           // greater than the word wrap width.
@@ -720,7 +733,6 @@ export class LightningTextTextureRenderer {
         realNewlines.push(allLines.length);
       }
     }
-
     return { l: allLines, n: realNewlines };
   }
 
