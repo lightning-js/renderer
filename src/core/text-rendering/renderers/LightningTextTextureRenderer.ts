@@ -694,7 +694,7 @@ export class LightningTextTextureRenderer {
       const resultLines = [];
       let result = '';
       let spaceLeft = wordWrapWidth - indent;
-      const words = lines[i]!.split(' ');
+      const words = wordBreak ? [lines[i]!] : lines[i]!.split(' ');
       for (let j = 0; j < words.length; j++) {
         const wordWidth = this.measureText(words[j]!, letterSpacing);
         const wordWidthWithSpace =
