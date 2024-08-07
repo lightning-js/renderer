@@ -261,7 +261,10 @@ export class Stage {
    * Check if the scene has updates
    */
   hasSceneUpdates() {
-    return !!this.root.updateType || this.renderRequested;
+    return (
+      Object.keys(this.root.updateFunctionQueue).length > 0 ||
+      this.renderRequested
+    );
   }
 
   /**
@@ -272,7 +275,7 @@ export class Stage {
     assertTruthy(renderer);
 
     // Update tree if needed
-    if (this.root.updateType !== 0) {
+    if (Object.keys(this.root.updateFunctionQueue).length !== 0) {
       this.root.update(this.deltaTime, this.root.clippingRect);
     }
 
