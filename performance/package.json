@@ -1,0 +1,17 @@
+{
+  "name": "performance",
+  "version": "1.0.0",
+  "author": "",
+  "main": "index.js",
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "sinon": "^18.0.0",
+    "tinybench": "^2.9.0",
+    "ts-sinon": "^2.0.2"
+  }
+}
