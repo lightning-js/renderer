@@ -24,6 +24,7 @@ import {
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
 import { convertUrlToAbsolute } from '../lib/utils.js';
+import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -85,7 +86,7 @@ export class ImageTexture extends Texture {
 
   override async getTextureData(): Promise<TextureData> {
     const { src, premultiplyAlpha } = this.props;
-    if (!src) {
+    if (src === undefined) {
       return {
         data: null,
       };
@@ -104,13 +105,17 @@ export class ImageTexture extends Texture {
       };
     }
 
-    // Handle compressed textures
-    if (isCompressedTextureContainer(src)) {
-      return loadCompressedTexture(src);
-    }
-
     // Convert relative URL to absolute URL
     const absoluteSrc = convertUrlToAbsolute(src);
+
+    // Handle compressed textures
+    if (isCompressedTextureContainer(src) === true) {
+      return loadCompressedTexture(absoluteSrc);
+    }
+
+    if (isSvgImage(src) === true) {
+      return loadSvg(absoluteSrc);
+    }
 
     if (this.txManager.imageWorkerManager) {
       return await this.txManager.imageWorkerManager.getImage(
