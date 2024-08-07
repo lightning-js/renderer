@@ -25,6 +25,7 @@ const config = {
       './tsconfig.cfg.json',
       './examples/tsconfig.json',
       './visual-regression/tsconfig.json',
+      './performance/tsconfig.json',
     ],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     tsconfigRootDir: __dirname,
