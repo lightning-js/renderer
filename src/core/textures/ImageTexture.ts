@@ -56,6 +56,12 @@ export interface ImageTextureProps {
    * `ImageData` textures are not cached unless a `key` is provided
    */
   key?: string | null;
+  /**
+   * Type, indicate an image type for overriding type detection
+   *
+   * @default null
+   */
+  type?: 'regular' | 'compressed' | 'svg' | null;
 }
 
 /**
@@ -84,9 +90,48 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
+  async loadImage(src: string, premultiplyAlpha: boolean | null) {
+    if (this.txManager.imageWorkerManager !== null) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+      );
+    } else if (this.txManager.hasCreateImageBitmap === true) {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const hasAlphaChannel =
+        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+        premultiplyAlpha: hasAlphaChannel,
+      };
+    } else {
+      const img = new Image();
+      if (!(src.substr(0, 5) === 'data:')) {
+        img.crossOrigin = 'Anonymous';
+      }
+      img.src = src;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image`));
+      }).catch((e) => {
+        console.error(e);
+      });
+
+      return {
+        data: img,
+        premultiplyAlpha: premultiplyAlpha ?? true,
+      };
+    }
+  }
+
   override async getTextureData(): Promise<TextureData> {
-    const { src, premultiplyAlpha } = this.props;
-    if (src === undefined) {
+    const { src, premultiplyAlpha, type } = this.props;
+    if (src === null) {
       return {
         data: null,
       };
@@ -105,54 +150,29 @@ export class ImageTexture extends Texture {
       };
     }
 
-    // Convert relative URL to absolute URL
     const absoluteSrc = convertUrlToAbsolute(src);
+    if (type === 'regular') {
+      return this.loadImage(absoluteSrc, premultiplyAlpha);
+    }
 
-    // Handle compressed textures
-    if (isCompressedTextureContainer(src) === true) {
-      return loadCompressedTexture(absoluteSrc);
+    if (type === 'svg') {
+      return loadSvg(absoluteSrc);
     }
 
     if (isSvgImage(src) === true) {
       return loadSvg(absoluteSrc);
     }
 
-    if (this.txManager.imageWorkerManager) {
-      return await this.txManager.imageWorkerManager.getImage(
-        absoluteSrc,
-        premultiplyAlpha,
-      );
-    } else if (this.txManager.hasCreateImageBitmap) {
-      const response = await fetch(absoluteSrc);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
-      return {
-        data: await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }),
-        premultiplyAlpha: hasAlphaChannel,
-      };
-    } else {
-      const img = new Image();
-      if (!(src.substr(0, 5) === 'data:')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.src = absoluteSrc;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
-      });
-
-      return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
-      };
+    if (type === 'compressed') {
+      return loadCompressedTexture(absoluteSrc);
     }
+
+    if (isCompressedTextureContainer(src) === true) {
+      return loadCompressedTexture(absoluteSrc);
+    }
+
+    // default
+    return this.loadImage(absoluteSrc, premultiplyAlpha);
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
@@ -172,6 +192,7 @@ export class ImageTexture extends Texture {
       src: props.src ?? '',
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
       key: props.key ?? null,
+      type: props.type ?? null,
     };
   }
 

@@ -613,6 +613,22 @@ export interface CoreNodeProps {
    * @default `undefined`
    */
   data?: CustomDataMap;
+
+  /**
+   * Image Type to explicitly set the image type that is being loaded
+   *
+   * @remarks
+   * This property must be used with a `src` that points at an image. In some cases
+   * the extension doesn't provide a reliable representation of the image type. In such
+   * cases set the ImageType explicitly.
+   *
+   * `regular` is used for normal images such as png, jpg, etc
+   * `compressed` is used for ETC1/ETC2 compressed images with a PVR or KTX container
+   * `svg` is used for scalable vector graphics
+   *
+   * @default `undefined`
+   */
+  imageType?: 'regular' | 'compressed' | 'svg' | null;
 }
 
 /**
@@ -1845,7 +1861,20 @@ export class CoreNode extends EventEmitter {
 
     this.texture = this.stage.txManager.loadTexture('ImageTexture', {
       src: imageUrl,
+      type: this.props.imageType,
     });
+  }
+
+  set imageType(type: 'regular' | 'compressed' | 'svg' | null) {
+    if (this.props.imageType === type) {
+      return;
+    }
+
+    this.props.imageType = type;
+  }
+
+  get imageType() {
+    return this.props.imageType || null;
   }
 
   /**
