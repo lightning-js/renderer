@@ -22,11 +22,11 @@ import { Bench } from 'tinybench';
 import * as sinon from 'ts-sinon';
 
 // src files
-import { CoreNode, type CoreNodeProps } from '../src/core/CoreNode.js';
-import { Stage } from '../src/core/Stage.js';
-import { type TextureOptions } from '../src/core/CoreTextureManager.js';
-import { type BaseShaderController } from '../src/main-api/ShaderController';
-import { type RectWithValid } from '../src/core/lib/utils.js';
+import { CoreNode, type CoreNodeProps } from '../../src/core/CoreNode.js';
+import { Stage } from '../../src/core/Stage.js';
+import { type TextureOptions } from '../../src/core/CoreTextureManager.js';
+import { type BaseShaderController } from '../../src/main-api/ShaderController.js';
+import { type RectWithValid } from '../../src/core/lib/utils.js';
 
 const bench = new Bench();
 const mock = sinon.stubInterface;
