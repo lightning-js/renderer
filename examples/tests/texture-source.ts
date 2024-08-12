@@ -23,8 +23,9 @@ import {
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
 } from '@lightningjs/renderer';
-import rockoSvg from '../assets/rocko.svg';
-import elevatorSvg from '../assets/elevator.svg';
+import rockoPng from '../assets/rocko.png';
+import lightningPng from '../assets/lightning.png';
+import elevatorPng from '../assets/elevator.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export async function automation(settings: ExampleSettings) {
@@ -50,7 +51,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rocko = renderer.createNode({
     x: curX,
     y: curY,
-    src: rockoSvg,
+    src: rockoPng,
     parent: testRoot,
   });
 
@@ -59,21 +60,26 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const elevator = renderer.createNode({
     x: curX,
     y: curY,
-    src: elevatorSvg,
+    src: elevatorPng,
     parent: testRoot,
+    srcX: 120,
+    srcY: 0,
+    srcHeight: 268,
+    srcWidth: 100,
   });
 
-  await execLoadingTest(elevator, 200, 268);
+  await execLoadingTest(elevator, 100, 268);
 
-  // Test: Check that we capture a texture load failure
-  const failure = renderer.createNode({
+  const lightningNode = renderer.createNode({
     x: curX,
     y: curY,
-    src: 'does-not-exist.svg',
+    src: lightningPng,
+    srcHeight: 100,
+    srcWidth: 100,
     parent: testRoot,
   });
 
-  await execFailureTest(failure);
+  await execLoadingTest(lightningNode, 100, 100);
 
   function waitForTxLoaded(imgNode: INode) {
     return new Promise<Dimensions>((resolve, reject) => {
