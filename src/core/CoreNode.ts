@@ -629,6 +629,29 @@ export interface CoreNodeProps {
    * @default `undefined`
    */
   imageType?: 'regular' | 'compressed' | 'svg' | null;
+
+  /**
+   * Source width of the image. If not provided, the image's source natural
+   * width will be used.
+   */
+  srcWidth?: number;
+  /**
+   * Source height of the image. If not provided, the image's source natural
+   * height will be used.
+   */
+  srcHeight?: number;
+  /**
+   * Source X coordinate of the image to be used as a texture. Only used when
+   * `width` and `height` are provided. And only works when createImageBitmap
+   * is available.
+   */
+  srcX?: number;
+  /**
+   * Source Y coordinate of the image to be used as a texture. Only used when
+   * source `srcWidth` width and `srcHeight` height are provided. Only works when
+   * createImageBitmap is supported on the browser.
+   */
+  srcY?: number;
 }
 
 /**
@@ -1862,6 +1885,10 @@ export class CoreNode extends EventEmitter {
     this.texture = this.stage.txManager.loadTexture('ImageTexture', {
       src: imageUrl,
       type: this.props.imageType,
+      sx: this.props.srcX,
+      sy: this.props.srcY,
+      sw: this.props.srcWidth,
+      sh: this.props.srcHeight,
     });
   }
 
@@ -1875,6 +1902,38 @@ export class CoreNode extends EventEmitter {
 
   get imageType() {
     return this.props.imageType || null;
+  }
+
+  get srcHeight(): number | undefined {
+    return this.props.srcHeight;
+  }
+
+  set srcHeight(value: number) {
+    this.props.srcHeight = value;
+  }
+
+  get srcWidth(): number | undefined {
+    return this.props.srcWidth;
+  }
+
+  set srcWidth(value: number) {
+    this.props.srcWidth = value;
+  }
+
+  get srcX(): number | undefined {
+    return this.props.srcX;
+  }
+
+  set srcX(value: number) {
+    this.props.srcX = value;
+  }
+
+  get srcY(): number | undefined {
+    return this.props.srcY;
+  }
+
+  set srcY(value: number) {
+    this.props.srcY = value;
   }
 
   /**

@@ -550,6 +550,10 @@ export class Stage {
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,
+      srcHeight: props.srcHeight,
+      srcWidth: props.srcWidth,
+      srcX: props.srcX,
+      srcY: props.srcY,
       scale: props.scale ?? null,
       scaleX: props.scaleX ?? props.scale ?? 1,
       scaleY: props.scaleY ?? props.scale ?? 1,
@@ -562,6 +566,7 @@ export class Stage {
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
       data: data,
+      imageType: props.imageType,
     };
   }
 }

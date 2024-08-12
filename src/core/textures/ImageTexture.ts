@@ -62,6 +62,36 @@ export interface ImageTextureProps {
    * @default null
    */
   type?: 'regular' | 'compressed' | 'svg' | null;
+  /**
+   * Source width of the image. If not provided, the image's source natural
+   * width will be used.
+   *
+   * @default null
+   */
+  sw?: number | null;
+  /**
+   * Source height of the image. If not provided, the image's source natural
+   * height will be used.
+   *
+   * @default null
+   */
+  sh?: number | null;
+  /**
+   * Source X coordinate of the image to be used as a texture. Only used when
+   * `width` and `height` are provided. And only works when createImageBitmap
+   * is available.
+   *
+   * @default null
+   */
+  sx?: number | null;
+  /**
+   * Source Y coordinate of the image to be used as a texture. Only used when
+   * source `sw` width and `sh` height are provided. Only works when
+   * createImageBitmap is supported on the browser.
+   *
+   * @default null
+   */
+  sy?: number | null;
 }
 
 /**
@@ -90,17 +120,40 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  async loadImage(src: string, premultiplyAlpha: boolean | null) {
+  async loadImage(
+    src: string,
+    premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
+  ) {
     if (this.txManager.imageWorkerManager !== null) {
       return await this.txManager.imageWorkerManager.getImage(
         src,
         premultiplyAlpha,
+        sx,
+        sy,
+        sw,
+        sh,
       );
     } else if (this.txManager.hasCreateImageBitmap === true) {
       const response = await fetch(src);
       const blob = await response.blob();
       const hasAlphaChannel =
         premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+
+      if (sw !== null && sh !== null) {
+        return {
+          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
+            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          }),
+          premultiplyAlpha: hasAlphaChannel,
+        };
+      }
+
       return {
         data: await createImageBitmap(blob, {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
@@ -110,7 +163,7 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {
-      const img = new Image();
+      const img = new Image(sw ?? undefined, sh ?? undefined);
       if (!(src.substr(0, 5) === 'data:')) {
         img.crossOrigin = 'Anonymous';
       }
@@ -130,7 +183,7 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureData(): Promise<TextureData> {
-    const { src, premultiplyAlpha, type } = this.props;
+    const { src, premultiplyAlpha, type, sx, sy, sw, sh } = this.props;
     if (src === null) {
       return {
         data: null,
@@ -152,15 +205,15 @@ export class ImageTexture extends Texture {
 
     const absoluteSrc = convertUrlToAbsolute(src);
     if (type === 'regular') {
-      return this.loadImage(absoluteSrc, premultiplyAlpha);
+      return this.loadImage(absoluteSrc, premultiplyAlpha, sx, sy, sw, sh);
     }
 
     if (type === 'svg') {
-      return loadSvg(absoluteSrc);
+      return loadSvg(absoluteSrc, sx, sy, sw, sh);
     }
 
     if (isSvgImage(src) === true) {
-      return loadSvg(absoluteSrc);
+      return loadSvg(absoluteSrc, sx, sy, sw, sh);
     }
 
     if (type === 'compressed') {
@@ -172,7 +225,7 @@ export class ImageTexture extends Texture {
     }
 
     // default
-    return this.loadImage(absoluteSrc, premultiplyAlpha);
+    return this.loadImage(absoluteSrc, premultiplyAlpha, sx, sy, sw, sh);
   }
 
   static override makeCacheKey(props: ImageTextureProps): string | false {
@@ -193,6 +246,10 @@ export class ImageTexture extends Texture {
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
       key: props.key ?? null,
       type: props.type ?? null,
+      sx: props.sx ?? null,
+      sy: props.sy ?? null,
+      sw: props.sw ?? null,
+      sh: props.sh ?? null,
     };
   }
 

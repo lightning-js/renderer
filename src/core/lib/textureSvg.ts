@@ -37,7 +37,13 @@ export function isSvgImage(url: string): boolean {
  * @param url
  * @returns
  */
-export const loadSvg = (url: string): Promise<TextureData> => {
+export const loadSvg = (
+  url: string,
+  sx: number | null,
+  sy: number | null,
+  sw: number | null,
+  sh: number | null,
+): Promise<TextureData> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -46,12 +52,17 @@ export const loadSvg = (url: string): Promise<TextureData> => {
     ctx.imageSmoothingEnabled = true;
     const img = new Image();
     img.onload = () => {
+      const x = sx ?? 0;
+      const y = sy ?? 0;
+      const width = sw ?? img.width;
+      const height = sh ?? img.height;
+
       canvas.width = img.width;
       canvas.height = img.height;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, img.width, img.height);
 
       resolve({
-        data: ctx.getImageData(0, 0, canvas.width, canvas.height),
+        data: ctx.getImageData(x, y, width, height),
         premultiplyAlpha: false,
       });
     };
