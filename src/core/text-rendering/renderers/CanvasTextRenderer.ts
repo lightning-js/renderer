@@ -90,6 +90,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   private fontFamilies: FontFamilyMap = {};
   private fontFamilyArray: FontFamilyMap[] = [this.fontFamilies];
 
+  public type: 'canvas' | 'sdf' = 'canvas';
+
   constructor(stage: Stage) {
     super(stage);
     if (typeof OffscreenCanvas !== 'undefined') {
