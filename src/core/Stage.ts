@@ -562,6 +562,7 @@ export class Stage {
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
       data: data,
+      preventCleanup: props.preventCleanup ?? false,
     };
   }
 }

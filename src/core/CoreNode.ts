@@ -406,6 +406,10 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
+   * Whether to prevent the node from being cleaned up
+   */
+  preventCleanup?: boolean;
+  /**
    * Options to associate with the Node's Texture
    */
   textureOptions: TextureOptions;
@@ -704,6 +708,7 @@ export class CoreNode extends EventEmitter {
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
+      texture.preventCleanup = this.props.preventCleanup || false;
       // Preload texture if required
       if (this.textureOptions.preload) {
         texture.ctxTexture.load();
