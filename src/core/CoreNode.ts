@@ -1387,6 +1387,14 @@ export class CoreNode extends EventEmitter {
     return this._id;
   }
 
+  get data(): CustomDataMap | undefined {
+    return this.props.data;
+  }
+
+  set data(d: CustomDataMap | undefined) {
+    this.props.data = d;
+  }
+
   get x(): number {
     return this.props.x;
   }
