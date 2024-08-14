@@ -407,8 +407,9 @@ export interface CoreNodeProps {
 
   /**
    * Whether to prevent the node from being cleaned up
+   * @default false
    */
-  preventCleanup?: boolean;
+  preventCleanup: boolean;
   /**
    * Options to associate with the Node's Texture
    */
@@ -1770,6 +1771,14 @@ export class CoreNode extends EventEmitter {
       }
     }
     this.updateScaleRotateTransform();
+  }
+
+  get preventCleanup(): boolean {
+    return this.props.preventCleanup;
+  }
+
+  set preventCleanup(value: boolean) {
+    this.props.preventCleanup = value;
   }
 
   get rtt(): boolean {

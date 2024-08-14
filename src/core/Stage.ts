@@ -217,6 +217,7 @@ export class Stage {
       rtt: false,
       src: null,
       scale: 1,
+      preventCleanup: false,
     });
 
     this.root = rootNode;
