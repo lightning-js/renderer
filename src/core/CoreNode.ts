@@ -709,7 +709,7 @@ export class CoreNode extends EventEmitter {
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
-      texture.preventCleanup = this.props.preventCleanup || false;
+      texture.preventCleanup = this.props.preventCleanup;
       // Preload texture if required
       if (this.textureOptions.preload) {
         texture.ctxTexture.load();
