@@ -227,7 +227,7 @@ export class TextureMemoryManager {
         // We don't want to free renderable textures because they will just likely be reloaded in the next frame
         break;
       }
-      if (!texture.preventCleanup) {
+      if (texture.preventCleanup === false) {
         texture.ctxTexture.free();
         txManager.removeTextureFromCache(texture);
       }
