@@ -33,12 +33,14 @@ export function isSvgImage(url: string): boolean {
 }
 
 /**
- * Loads a compressed texture container
+ * Loads a SVG image
  * @param url
  * @returns
  */
 export const loadSvg = (
   url: string,
+  width: number | null,
+  height: number | null,
   sx: number | null,
   sy: number | null,
   sw: number | null,
@@ -54,15 +56,15 @@ export const loadSvg = (
     img.onload = () => {
       const x = sx ?? 0;
       const y = sy ?? 0;
-      const width = sw ?? img.width;
-      const height = sh ?? img.height;
+      const w = width || img.width;
+      const h = height || img.height;
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0, img.width, img.height);
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
 
       resolve({
-        data: ctx.getImageData(x, y, width, height),
+        data: ctx.getImageData(x, y, sw ?? w, sh ?? h),
         premultiplyAlpha: false,
       });
     };

@@ -21,7 +21,6 @@ import {
   type INode,
   type Dimensions,
   type NodeLoadedEventHandler,
-  type NodeFailedEventHandler,
 } from '@lightningjs/renderer';
 import rockoPng from '../assets/rocko.png';
 import lightningPng from '../assets/lightning.png';
@@ -39,7 +38,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   const header = renderer.createTextNode({
     fontFamily: 'Ubuntu',
-    text: `SVG Test`,
+    text: `PNG Source Test`,
     fontSize: FONT_SIZE,
     parent: testRoot,
   });
@@ -92,17 +91,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
-  function waitForTxFailed(imgNode: INode) {
-    return new Promise<boolean>((resolve, reject) => {
-      setTimeout(() => {
-        reject(new Error('TIMEOUT'));
-      }, 1000);
-      imgNode.once('failed', (() => {
-        resolve(true);
-      }) satisfies NodeFailedEventHandler);
-    });
-  }
-
   async function execLoadingTest(
     imgNode: INode,
     expectedWidth: number,
@@ -147,41 +135,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       }
     }
     textNode.text = `${curTest}. Loaded Event Test: ${result} (${imgNode.width}x${imgNode.height})${expectedPostfix}`;
-    curY = textNode.y + FONT_SIZE;
-    curTest++;
-  }
-
-  async function execFailureTest(imgNode: INode) {
-    const textNode = renderer.createTextNode({
-      fontFamily: 'Ubuntu',
-      x: curX,
-      text: '',
-      fontSize: FONT_SIZE,
-      parent: testRoot,
-    });
-
-    let failureTestPass = false;
-    let exception: string | false = false;
-    try {
-      failureTestPass = await waitForTxFailed(imgNode);
-    } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      exception = (e as any)?.message ?? 'Unknown';
-    }
-
-    textNode.y = imgNode.y + imgNode.height;
-    let result = '';
-    if (!exception && failureTestPass) {
-      textNode.color = 0x00ff00ff;
-      result = 'Pass';
-    } else {
-      textNode.color = 0xff0000ff;
-      result = 'Fail';
-      if (exception) {
-        result += ` (exception: ${exception})`;
-      }
-    }
-    textNode.text = `${curTest}. Failure Event Test: ${result}`;
     curY = textNode.y + FONT_SIZE;
     curTest++;
   }

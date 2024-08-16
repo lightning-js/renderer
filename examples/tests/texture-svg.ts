@@ -22,6 +22,7 @@ import {
   type Dimensions,
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
+  Texture,
 } from '@lightningjs/renderer';
 import rockoSvg from '../assets/rocko.svg';
 import lightning from '../assets/lightning.svg';
@@ -71,12 +72,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: curX,
     y: curY,
     src: lightning,
-    srcHeight: 100,
-    srcWidth: 100,
+    height: 25,
+    width: 125,
     parent: testRoot,
   });
 
-  await execLoadingTest(lightningNode, 100, 100);
+  await execLoadingTest(lightningNode, 125, 25);
 
   const partialSvg = renderer.createNode({
     x: curX,

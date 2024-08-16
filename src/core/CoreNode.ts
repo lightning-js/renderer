@@ -631,25 +631,27 @@ export interface CoreNodeProps {
   imageType?: 'regular' | 'compressed' | 'svg' | null;
 
   /**
-   * Source width of the image. If not provided, the image's source natural
+   * She width of the rectangle from which the Image Texture will be extracted.
+   * This value can be negative. If not provided, the image's source natural
    * width will be used.
    */
   srcWidth?: number;
   /**
-   * Source height of the image. If not provided, the image's source natural
+   * The height of the rectangle from which the Image Texture will be extracted.
+   * This value can be negative. If not provided, the image's source natural
    * height will be used.
    */
   srcHeight?: number;
   /**
-   * Source X coordinate of the image to be used as a texture. Only used when
-   * `width` and `height` are provided. And only works when createImageBitmap
-   * is available.
+   * The x coordinate of the reference point of the rectangle from which the Texture
+   * will be extracted.  `width` and `height` are provided. And only works when
+   * createImageBitmap is available. Only works when createImageBitmap is supported on the browser.
    */
   srcX?: number;
   /**
-   * Source Y coordinate of the image to be used as a texture. Only used when
-   * source `srcWidth` width and `srcHeight` height are provided. Only works when
-   * createImageBitmap is supported on the browser.
+   * The y coordinate of the reference point of the rectangle from which the Texture
+   * will be extracted. Only used when source `srcWidth` width and `srcHeight` height
+   * are provided. Only works when createImageBitmap is supported on the browser.
    */
   srcY?: number;
 }
@@ -1884,6 +1886,8 @@ export class CoreNode extends EventEmitter {
 
     this.texture = this.stage.txManager.loadTexture('ImageTexture', {
       src: imageUrl,
+      width: this.props.width,
+      height: this.props.height,
       type: this.props.imageType,
       sx: this.props.srcX,
       sy: this.props.srcY,
