@@ -24,6 +24,7 @@ import {
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
 import { convertUrlToAbsolute } from '../lib/utils.js';
+import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -55,6 +56,52 @@ export interface ImageTextureProps {
    * `ImageData` textures are not cached unless a `key` is provided
    */
   key?: string | null;
+  /**
+   * Width of the image to be used as a texture. If not provided, the image's
+   * natural width will be used.
+   */
+  width?: number | null;
+  /**
+   * Height of the image to be used as a texture. If not provided, the image's
+   * natural height will be used.
+   */
+  height?: number | null;
+  /**
+   * Type, indicate an image type for overriding type detection
+   *
+   * @default null
+   */
+  type?: 'regular' | 'compressed' | 'svg' | null;
+  /**
+   * The width of the rectangle from which the ImageBitmap will be extracted. This value
+   * can be negative. Only works when createImageBitmap is supported on the browser.
+   *
+   * @default null
+   */
+  sw?: number | null;
+  /**
+   * The height of the rectangle from which the ImageBitmap will be extracted. This value
+   * can be negative. Only works when createImageBitmap is supported on the browser.
+   *
+   * @default null
+   */
+  sh?: number | null;
+  /**
+   * The y coordinate of the reference point of the rectangle from which the ImageBitmap
+   * will be extracted. Only used when `sw` and `sh` are provided. And only works when
+   * createImageBitmap is available.
+   *
+   * @default null
+   */
+  sx?: number | null;
+  /**
+   * The x coordinate of the reference point of the rectangle from which the
+   * ImageBitmap will be extracted. Only used when source `sw` width and `sh` height
+   * are provided. Only works when createImageBitmap is supported on the browser.
+   *
+   * @default null
+   */
+  sy?: number | null;
 }
 
 /**
@@ -83,9 +130,66 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
+  async loadImage(src: string) {
+    const { premultiplyAlpha, sx, sy, sw, sh, width, height } = this.props;
+
+    if (this.txManager.imageWorkerManager !== null) {
+      return await this.txManager.imageWorkerManager.getImage(
+        src,
+        premultiplyAlpha,
+        sx,
+        sy,
+        sw,
+        sh,
+      );
+    } else if (this.txManager.hasCreateImageBitmap === true) {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const hasAlphaChannel =
+        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+
+      if (sw !== null && sh !== null) {
+        return {
+          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
+            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          }),
+          premultiplyAlpha: hasAlphaChannel,
+        };
+      }
+
+      return {
+        data: await createImageBitmap(blob, {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }),
+        premultiplyAlpha: hasAlphaChannel,
+      };
+    } else {
+      const img = new Image(width || undefined, height || undefined);
+      if (!(src.substr(0, 5) === 'data:')) {
+        img.crossOrigin = 'Anonymous';
+      }
+      img.src = src;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image`));
+      }).catch((e) => {
+        console.error(e);
+      });
+
+      return {
+        data: img,
+        premultiplyAlpha: premultiplyAlpha ?? true,
+      };
+    }
+  }
+
   override async getTextureData(): Promise<TextureData> {
-    const { src, premultiplyAlpha } = this.props;
-    if (!src) {
+    const { src, premultiplyAlpha, type } = this.props;
+    if (src === null) {
       return {
         data: null,
       };
@@ -104,52 +208,52 @@ export class ImageTexture extends Texture {
       };
     }
 
-    // Handle compressed textures
-    if (isCompressedTextureContainer(src)) {
-      return loadCompressedTexture(src);
-    }
-
-    // Convert relative URL to absolute URL
     const absoluteSrc = convertUrlToAbsolute(src);
-
-    if (this.txManager.imageWorkerManager) {
-      return await this.txManager.imageWorkerManager.getImage(
-        absoluteSrc,
-        premultiplyAlpha,
-      );
-    } else if (this.txManager.hasCreateImageBitmap) {
-      const response = await fetch(absoluteSrc);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
-      return {
-        data: await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }),
-        premultiplyAlpha: hasAlphaChannel,
-      };
-    } else {
-      const img = new Image();
-      if (!(src.substr(0, 5) === 'data:')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.src = absoluteSrc;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
-      });
-
-      return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
-      };
+    if (type === 'regular') {
+      return this.loadImage(absoluteSrc);
     }
+
+    if (type === 'svg') {
+      return loadSvg(
+        absoluteSrc,
+        this.props.width,
+        this.props.height,
+        this.props.sx,
+        this.props.sy,
+        this.props.sw,
+        this.props.sh,
+      );
+    }
+
+    if (isSvgImage(src) === true) {
+      return loadSvg(
+        absoluteSrc,
+        this.props.width,
+        this.props.height,
+        this.props.sx,
+        this.props.sy,
+        this.props.sw,
+        this.props.sh,
+      );
+    }
+
+    if (type === 'compressed') {
+      return loadCompressedTexture(absoluteSrc);
+    }
+
+    if (isCompressedTextureContainer(src) === true) {
+      return loadCompressedTexture(absoluteSrc);
+    }
+
+    // default
+    return this.loadImage(absoluteSrc);
   }
 
+  /**
+   * Generates a cache key for the ImageTexture based on the provided props.
+   * @param props - The props used to generate the cache key.
+   * @returns The cache key as a string, or `false` if the key cannot be generated.
+   */
   static override makeCacheKey(props: ImageTextureProps): string | false {
     const resolvedProps = ImageTexture.resolveDefaults(props);
     // Only cache key-able textures; prioritise key
@@ -157,7 +261,20 @@ export class ImageTexture extends Texture {
     if (typeof key !== 'string') {
       return false;
     }
-    return `ImageTexture,${key},${resolvedProps.premultiplyAlpha ?? 'true'}`;
+
+    // if we have source dimensions, cache the texture separately
+    let dimensionProps = '';
+    if (resolvedProps.sh !== null && resolvedProps.sw !== null) {
+      dimensionProps += ',';
+      dimensionProps += resolvedProps.sx ?? '';
+      dimensionProps += resolvedProps.sy ?? '';
+      dimensionProps += resolvedProps.sw || '';
+      dimensionProps += resolvedProps.sh || '';
+    }
+
+    return `ImageTexture,${key},${
+      resolvedProps.premultiplyAlpha ?? 'true'
+    }${dimensionProps}`;
   }
 
   static override resolveDefaults(
@@ -167,6 +284,13 @@ export class ImageTexture extends Texture {
       src: props.src ?? '',
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
       key: props.key ?? null,
+      type: props.type ?? null,
+      width: props.width ?? null,
+      height: props.height ?? null,
+      sx: props.sx ?? null,
+      sy: props.sy ?? null,
+      sw: props.sw ?? null,
+      sh: props.sh ?? null,
     };
   }
 

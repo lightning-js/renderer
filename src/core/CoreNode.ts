@@ -613,6 +613,47 @@ export interface CoreNodeProps {
    * @default `undefined`
    */
   data?: CustomDataMap;
+
+  /**
+   * Image Type to explicitly set the image type that is being loaded
+   *
+   * @remarks
+   * This property must be used with a `src` that points at an image. In some cases
+   * the extension doesn't provide a reliable representation of the image type. In such
+   * cases set the ImageType explicitly.
+   *
+   * `regular` is used for normal images such as png, jpg, etc
+   * `compressed` is used for ETC1/ETC2 compressed images with a PVR or KTX container
+   * `svg` is used for scalable vector graphics
+   *
+   * @default `undefined`
+   */
+  imageType?: 'regular' | 'compressed' | 'svg' | null;
+
+  /**
+   * She width of the rectangle from which the Image Texture will be extracted.
+   * This value can be negative. If not provided, the image's source natural
+   * width will be used.
+   */
+  srcWidth?: number;
+  /**
+   * The height of the rectangle from which the Image Texture will be extracted.
+   * This value can be negative. If not provided, the image's source natural
+   * height will be used.
+   */
+  srcHeight?: number;
+  /**
+   * The x coordinate of the reference point of the rectangle from which the Texture
+   * will be extracted.  `width` and `height` are provided. And only works when
+   * createImageBitmap is available. Only works when createImageBitmap is supported on the browser.
+   */
+  srcX?: number;
+  /**
+   * The y coordinate of the reference point of the rectangle from which the Texture
+   * will be extracted. Only used when source `srcWidth` width and `srcHeight` height
+   * are provided. Only works when createImageBitmap is supported on the browser.
+   */
+  srcY?: number;
 }
 
 /**
@@ -1853,7 +1894,58 @@ export class CoreNode extends EventEmitter {
 
     this.texture = this.stage.txManager.loadTexture('ImageTexture', {
       src: imageUrl,
+      width: this.props.width,
+      height: this.props.height,
+      type: this.props.imageType,
+      sx: this.props.srcX,
+      sy: this.props.srcY,
+      sw: this.props.srcWidth,
+      sh: this.props.srcHeight,
     });
+  }
+
+  set imageType(type: 'regular' | 'compressed' | 'svg' | null) {
+    if (this.props.imageType === type) {
+      return;
+    }
+
+    this.props.imageType = type;
+  }
+
+  get imageType() {
+    return this.props.imageType || null;
+  }
+
+  get srcHeight(): number | undefined {
+    return this.props.srcHeight;
+  }
+
+  set srcHeight(value: number) {
+    this.props.srcHeight = value;
+  }
+
+  get srcWidth(): number | undefined {
+    return this.props.srcWidth;
+  }
+
+  set srcWidth(value: number) {
+    this.props.srcWidth = value;
+  }
+
+  get srcX(): number | undefined {
+    return this.props.srcX;
+  }
+
+  set srcX(value: number) {
+    this.props.srcX = value;
+  }
+
+  get srcY(): number | undefined {
+    return this.props.srcY;
+  }
+
+  set srcY(value: number) {
+    this.props.srcY = value;
   }
 
   /**
