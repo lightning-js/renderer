@@ -25,6 +25,17 @@ interface getImageReturn {
   premultiplyAlpha: boolean | null;
 }
 
+interface ImageWorkerMessage {
+  id: number;
+  src: string;
+  data: getImageReturn;
+  error: string;
+  sx: number | null;
+  sy: number | null;
+  sw: number | null;
+  sh: number | null;
+}
+
 /**
  * Note that, within the createImageWorker function, we must only use ES5 code to keep it ES5-valid after babelifying, as
  *  the converted code of this section is converted to a blob and used as the js of the web worker thread.
@@ -43,6 +54,10 @@ function createImageWorker() {
   function getImage(
     src: string,
     premultiplyAlpha: boolean | null,
+    x: number | null,
+    y: number | null,
+    width: number | null,
+    height: number | null,
   ): Promise<getImageReturn> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
@@ -59,6 +74,21 @@ function createImageWorker() {
           premultiplyAlpha !== undefined
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
+
+        if (width !== null && height !== null) {
+          createImageBitmap(blob, x || 0, y || 0, width, height, {
+            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          })
+            .then(function (data) {
+              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+            })
+            .catch(function (error) {
+              reject(error);
+            });
+          return;
+        }
 
         createImageBitmap(blob, {
           premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
@@ -87,8 +117,12 @@ function createImageWorker() {
     var src = event.data.src;
     var id = event.data.id;
     var premultiplyAlpha = event.data.premultiplyAlpha;
+    var x = event.data.sx;
+    var y = event.data.sy;
+    var width = event.data.sw;
+    var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha)
+    getImage(src, premultiplyAlpha, x, y, width, height)
       .then(function (data) {
         self.postMessage({ id: id, src: src, data: data });
       })
@@ -114,12 +148,7 @@ export class ImageWorkerManager {
   }
 
   private handleMessage(event: MessageEvent) {
-    const { id, data, error } = event.data as {
-      id: number;
-      src: string;
-      data?: any;
-      error?: string;
-    };
+    const { id, data, error } = event.data as ImageWorkerMessage;
     const msg = this.messageManager[id];
     if (msg) {
       const [resolve, reject] = msg;
@@ -155,6 +184,10 @@ export class ImageWorkerManager {
   getImage(
     src: string,
     premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
   ): Promise<TextureData> {
     return new Promise((resolve, reject) => {
       try {
@@ -167,6 +200,10 @@ export class ImageWorkerManager {
               id,
               src: src,
               premultiplyAlpha,
+              sx,
+              sy,
+              sw,
+              sh,
             });
           }
         }

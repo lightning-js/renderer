@@ -71,7 +71,7 @@ export default async function test(settings: ExampleSettings) {
       ] || 0xff0000ff;
   };
 
-  const spawn = (amount = 100) => {
+  const spawn = (amount = 1) => {
     for (let i = 0; i < amount; i++) {
       renderNode(i.toString());
     }

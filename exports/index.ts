@@ -63,6 +63,7 @@ export type {
   GrayscaleEffectProps,
   GlitchEffectProps,
   RadialProgressEffectProps,
+  HolePunchEffectProps,
 } from '../src/core/CoreShaderManager.js';
 export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
@@ -76,9 +77,7 @@ export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/
 export * from '../src/core/textures/Texture.js';
 
 // Text Rendering & Fonts
-export * from '../src/core/text-rendering/renderers/TextRenderer.js';
-export * from '../src/core/text-rendering/renderers/CanvasTextRenderer.js';
-export * from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+// export * from '../src/core/text-rendering/renderers/TextRenderer.js';
 export * from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export * from '../src/core/text-rendering/font-face-types/WebTrFontFace.js';
 export * from '../src/core/text-rendering/font-face-types/SdfTrFontFace/SdfTrFontFace.js';

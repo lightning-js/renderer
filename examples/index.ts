@@ -23,6 +23,15 @@ import {
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
+import {
+  WebGlCoreRenderer,
+  SdfTextRenderer,
+} from '@lightningjs/renderer/webgl';
+import {
+  CanvasCoreRenderer,
+  CanvasTextRenderer,
+} from '@lightningjs/renderer/canvas';
+
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import * as mt19937 from '@stdlib/random-base-mt19937';
 import type {
@@ -225,7 +234,9 @@ async function initRenderer(
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       enableInspector,
-      renderMode: renderMode as 'webgl' | 'canvas',
+      renderEngine:
+        renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
+      fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       ...customSettings,
     },
     'app',

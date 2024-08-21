@@ -422,6 +422,7 @@ export abstract class TextRenderer<
   StateT extends TextRendererState = TextRendererState,
 > {
   readonly set: Readonly<TrPropSetters<StateT>>;
+  abstract type: 'canvas' | 'sdf';
 
   constructor(protected stage: Stage) {
     const propSetters = {
