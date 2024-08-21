@@ -406,6 +406,11 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
+   * Whether to prevent the node from being cleaned up
+   * @default false
+   */
+  preventCleanup: boolean;
+  /**
    * Options to associate with the Node's Texture
    */
   textureOptions: TextureOptions;
@@ -745,6 +750,7 @@ export class CoreNode extends EventEmitter {
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
+      texture.preventCleanup = this.props.preventCleanup;
       // Preload texture if required
       if (this.textureOptions.preload) {
         texture.ctxTexture.load();
@@ -1814,6 +1820,14 @@ export class CoreNode extends EventEmitter {
       }
     }
     this.updateScaleRotateTransform();
+  }
+
+  get preventCleanup(): boolean {
+    return this.props.preventCleanup;
+  }
+
+  set preventCleanup(value: boolean) {
+    this.props.preventCleanup = value;
   }
 
   get rtt(): boolean {

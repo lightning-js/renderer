@@ -150,6 +150,8 @@ export abstract class Texture extends EventEmitter {
 
   readonly lastRenderableChangeTime = 0;
 
+  public preventCleanup = false;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }

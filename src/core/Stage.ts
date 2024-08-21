@@ -236,6 +236,7 @@ export class Stage {
       rtt: false,
       src: null,
       scale: 1,
+      preventCleanup: false,
     });
 
     this.root = rootNode;
@@ -611,6 +612,7 @@ export class Stage {
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
       data: data,
+      preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
     };
   }
