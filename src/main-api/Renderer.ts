@@ -185,14 +185,14 @@ export interface RendererMainSettings {
   numImageWorkers?: number;
 
   /**
-   * DOM Inspector Engine
+   * DOM Inspector
    *
    * @remarks
    * The inspector will replicate the state of the Nodes created
    * in the renderer and allow inspection of the state of the nodes.
    *
    */
-  inspectorEngine: typeof Inspector | undefined;
+  inspector: typeof Inspector | undefined;
 
   /**
    * Renderer Engine
@@ -330,7 +330,7 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
-      inspectorEngine: settings.inspectorEngine,
+      inspector: settings.inspector,
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
@@ -342,7 +342,7 @@ export class RendererMain extends EventEmitter {
       appHeight,
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
-      inspectorEngine,
+      inspector,
     } = resolvedSettings;
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
@@ -395,8 +395,8 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (inspectorEngine && !isProductionEnvironment()) {
-      this.inspector = new inspectorEngine(canvas, resolvedSettings);
+    if (inspector && !isProductionEnvironment()) {
+      this.inspector = new inspector(canvas, resolvedSettings);
     }
   }
 

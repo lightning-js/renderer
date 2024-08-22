@@ -224,8 +224,8 @@ async function initRenderer(
   enableInspector: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
-  let inspectorEngine: typeof Inspector | undefined;
-  if (enableInspector) inspectorEngine = Inspector;
+  let inspector: typeof Inspector | undefined;
+  if (enableInspector) inspector = Inspector;
   const renderer = new RendererMain(
     {
       appWidth,
@@ -236,7 +236,7 @@ async function initRenderer(
       clearColor: 0x00000000,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
-      inspectorEngine,
+      inspector,
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
