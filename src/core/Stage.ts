@@ -313,7 +313,7 @@ export class Stage {
     this.addQuads(this.root);
 
     // Perform render pass
-    renderer?.render();
+    renderer.render();
 
     this.calculateFps();
 
@@ -386,18 +386,13 @@ export class Stage {
       node.renderQuads(this.renderer);
     }
 
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
+    const childrenLength = node.children.length;
+    for (let i = 0; i < childrenLength; i++) {
+      const child = node.children[i] as CoreNode;
 
-      if (!child) {
-        continue;
+      if (child.worldAlpha !== 0) {
+        this.addQuads(child);
       }
-
-      if (child?.worldAlpha === 0) {
-        continue;
-      }
-
-      this.addQuads(child);
     }
   }
 
