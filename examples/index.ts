@@ -32,6 +32,7 @@ import {
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
+import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 import * as mt19937 from '@stdlib/random-base-mt19937';
 import type {
@@ -223,6 +224,8 @@ async function initRenderer(
   enableInspector: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
+  let inspectorEngine: typeof Inspector | undefined;
+  if (enableInspector) inspectorEngine = Inspector;
   const renderer = new RendererMain(
     {
       appWidth,
@@ -233,7 +236,7 @@ async function initRenderer(
       clearColor: 0x00000000,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
-      enableInspector,
+      inspectorEngine,
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],

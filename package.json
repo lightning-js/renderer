@@ -8,7 +8,8 @@
     ".": "./dist/exports/index.js",
     "./utils": "./dist/exports/utils.js",
     "./canvas": "./dist/exports/canvas.js",
-    "./webgl": "./dist/exports/webgl.js"
+    "./webgl": "./dist/exports/webgl.js",
+    "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {
     "preinstall": "node scripts/please-use-pnpm.js",

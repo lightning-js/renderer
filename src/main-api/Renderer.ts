@@ -21,7 +21,6 @@
 import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { Inspector } from './Inspector.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
@@ -44,6 +43,7 @@ import type { CanvasTextRenderer } from '../core/text-rendering/renderers/Canvas
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
+import type { Inspector } from './Inspector.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -185,16 +185,14 @@ export interface RendererMainSettings {
   numImageWorkers?: number;
 
   /**
-   * Enable inspector
+   * DOM Inspector Engine
    *
    * @remarks
-   * When enabled the renderer will spawn a inspector. The inspector will
-   * replicate the state of the Nodes created in the renderer and allow
-   * inspection of the state of the nodes.
+   * The inspector will replicate the state of the Nodes created
+   * in the renderer and allow inspection of the state of the nodes.
    *
-   * @defaultValue `false` (disabled)
    */
-  enableInspector?: boolean;
+  inspectorEngine: typeof Inspector | undefined;
 
   /**
    * Renderer Engine
@@ -332,7 +330,7 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
-      enableInspector: settings.enableInspector ?? false,
+      inspectorEngine: settings.inspectorEngine,
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
@@ -344,7 +342,7 @@ export class RendererMain extends EventEmitter {
       appHeight,
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
-      enableInspector,
+      inspectorEngine,
     } = resolvedSettings;
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
@@ -397,8 +395,8 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (enableInspector && !isProductionEnvironment()) {
-      this.inspector = new Inspector(canvas, resolvedSettings);
+    if (inspectorEngine && !isProductionEnvironment()) {
+      this.inspector = new inspectorEngine(canvas, resolvedSettings);
     }
   }
 
