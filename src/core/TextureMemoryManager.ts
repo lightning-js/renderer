@@ -227,8 +227,10 @@ export class TextureMemoryManager {
         // We don't want to free renderable textures because they will just likely be reloaded in the next frame
         break;
       }
-      texture.ctxTexture.free();
-      txManager.removeTextureFromCache(texture);
+      if (texture.preventCleanup === false) {
+        texture.ctxTexture.free();
+        txManager.removeTextureFromCache(texture);
+      }
       if (this.memUsed <= memTarget) {
         // Stop once we've freed enough textures to reach under the target threshold
         break;

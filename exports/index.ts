@@ -63,6 +63,7 @@ export type {
   GrayscaleEffectProps,
   GlitchEffectProps,
   RadialProgressEffectProps,
+  HolePunchEffectProps,
 } from '../src/core/CoreShaderManager.js';
 export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';

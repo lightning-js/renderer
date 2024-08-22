@@ -60,7 +60,8 @@ export class CoreAnimation extends EventEmitter {
           this.propValuesMap['props'] = {};
         }
         this.propValuesMap['props'][key] = {
-          start: node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>],
+          start:
+            node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
           target: props[
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
