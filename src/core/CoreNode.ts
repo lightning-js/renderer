@@ -1456,12 +1456,17 @@ export class CoreNode extends EventEmitter {
   get absX(): number {
     return (
       this.props.x +
+      -this.props.width * this.props.mountX +
       (this.props.parent?.absX || this.props.parent?.globalTransform?.tx || 0)
     );
   }
 
   get absY(): number {
-    return this.props.y + (this.props.parent?.absY ?? 0);
+    return (
+      this.props.y +
+      -this.props.height * this.props.mountY +
+      (this.props.parent?.absY ?? 0)
+    );
   }
 
   get y(): number {
