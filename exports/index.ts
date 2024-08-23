@@ -67,6 +67,7 @@ export type {
 } from '../src/core/CoreShaderManager.js';
 export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
+export type { Inspector } from '../src/main-api/Inspector.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlCoreShader.js';

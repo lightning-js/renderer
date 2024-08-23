@@ -128,7 +128,7 @@ const convertColorToRgba = (color: number) => {
 };
 
 const domPropertyMap: { [key: string]: string } = {
-  id: 'id',
+  id: 'test-id',
 };
 
 const gradientColorPropertyMap = [
@@ -163,7 +163,7 @@ export class Inspector {
     );
 
     this.width = Math.ceil(
-      settings.appWidth ?? 1900 / (settings.deviceLogicalPixelRatio ?? 1),
+      settings.appWidth ?? 1920 / (settings.deviceLogicalPixelRatio ?? 1),
     );
 
     this.scaleX = settings.deviceLogicalPixelRatio ?? 1;
