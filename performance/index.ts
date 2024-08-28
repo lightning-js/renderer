@@ -54,6 +54,22 @@ function getAllTests(): string[] {
 }
 
 function saveBaseline(results: TestResult[]): void {
+  const existingBaseline = loadBaseline();
+  const mergedResults = [...existingBaseline];
+
+  for (const newResult of results) {
+    const existingIndex = mergedResults.findIndex(
+      (r) => r.name === newResult.name,
+    );
+    if (existingIndex !== -1) {
+      mergedResults[existingIndex] = newResult;
+    } else {
+      mergedResults.push(newResult);
+    }
+  }
+
+  results = mergedResults;
+
   fs.writeFileSync('baseline.json', JSON.stringify(results, null, 2));
   console.log('Baseline saved to baseline.json');
 }
