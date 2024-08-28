@@ -57,26 +57,25 @@ bench
     new ImageTexture(txManager, {
       src: null,
     });
+  })
+  .add('regular type', () => {
+    new ImageTexture(txManager, {
+      src: 'https://somedomain.com/image.png',
+      type: 'regular',
+    });
+  })
+  .add('svg type', () => {
+    new ImageTexture(txManager, {
+      src: 'https://somedomain.com/image.svg',
+      type: 'svg',
+    });
+  })
+  .add('compressed type', () => {
+    new ImageTexture(txManager, {
+      src: 'https://somedomain.com/image.ktx',
+      type: 'compressed',
+    });
   });
-// TBD feat/svg branch
-// .add('regular type', () => {
-//   new ImageTexture(txManager, {
-//     src: 'https://somedomain.com/image.png',
-//     type: 'regular'
-//   });
-// })
-// .add('svg type', () => {
-//   new ImageTexture(txManager, {
-//     src: 'https://somedomain.com/image.svg',
-//     type: 'svg'
-//   });
-// })
-// .add('compressed type', () => {
-//   new ImageTexture(txManager, {
-//     src: 'https://somedomain.com/image.ktx',
-//     type: 'compressed'
-//   });
-// })
 
 await bench.warmup();
 await bench.run();
