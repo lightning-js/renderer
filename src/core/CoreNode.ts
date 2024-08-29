@@ -179,6 +179,11 @@ export enum UpdateType {
   ParentRenderTexture = 4096,
 
   /**
+   * Render Bounds update
+   */
+  RenderBounds = 8192,
+
+  /**
    * None
    */
   None = 0,
@@ -994,6 +999,46 @@ export class CoreNode extends EventEmitter {
       childUpdateType |= UpdateType.Global;
     }
 
+    if (this.updateType & UpdateType.RenderBounds) {
+      this.createRenderBounds();
+      this.setUpdateType(UpdateType.RenderState);
+    }
+
+    if (this.updateType & UpdateType.RenderState) {
+      this.checkRenderBounds();
+      this.updateRenderState();
+      this.setUpdateType(UpdateType.IsRenderable);
+    }
+
+    if (this.updateType & UpdateType.IsRenderable) {
+      this.updateIsRenderable();
+    }
+
+    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
+      this.updateType = 0;
+      return;
+    }
+
+    if (this.updateType & UpdateType.ParentRenderTexture) {
+      let p = this.parent;
+      while (p) {
+        if (p.rtt) {
+          this.parentHasRenderTexture = true;
+        }
+        p = p.parent;
+      }
+    }
+
+    // If we have render texture updates and not already running a full update
+    if (
+      this.updateType ^ UpdateType.All &&
+      this.updateType & UpdateType.RenderTexture
+    ) {
+      this.children.forEach((child) => {
+        child.setUpdateType(UpdateType.All);
+      });
+    }
+
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
       this.setUpdateType(UpdateType.Children);
@@ -1048,15 +1093,6 @@ export class CoreNode extends EventEmitter {
           true,
         );
       }
-    }
-
-    if (this.updateType & UpdateType.RenderState) {
-      this.updateRenderState(parentClippingRect);
-      this.setUpdateType(UpdateType.IsRenderable);
-    }
-
-    if (this.updateType & UpdateType.IsRenderable) {
-      this.updateIsRenderable();
     }
 
     // No need to update zIndex if there is no parent
@@ -1151,30 +1187,14 @@ export class CoreNode extends EventEmitter {
     return false;
   }
 
-  checkRenderBounds(parentClippingRect: RectWithValid): CoreNodeRenderState {
+  checkRenderBounds(): CoreNodeRenderState {
     assertTruthy(this.renderBound);
-    const rectW = parentClippingRect.width || this.stage.root.width;
-    const rectH = parentClippingRect.height || this.stage.root.height;
-    this.strictBound = createBound(
-      parentClippingRect.x,
-      parentClippingRect.y,
-      parentClippingRect.x + rectW,
-      parentClippingRect.y + rectH,
-      this.strictBound,
-    );
+    assertTruthy(this.strictBound);
+    assertTruthy(this.preloadBound);
 
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
-
-    const renderM = this.stage.boundsMargin;
-    this.preloadBound = createBound(
-      this.strictBound.x1 - renderM[3],
-      this.strictBound.y1 - renderM[0],
-      this.strictBound.x2 + renderM[1],
-      this.strictBound.y2 + renderM[2],
-      this.preloadBound,
-    );
 
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
@@ -1182,8 +1202,57 @@ export class CoreNode extends EventEmitter {
     return CoreNodeRenderState.OutOfBounds;
   }
 
-  updateRenderState(parentClippingRect: RectWithValid) {
-    const renderState = this.checkRenderBounds(parentClippingRect);
+  createPreloadBounds(strictBound: Bound): Bound {
+    const renderM = this.stage.boundsMargin;
+    return createBound(
+      strictBound.x1 - renderM[3],
+      strictBound.y1 - renderM[0],
+      strictBound.x2 + renderM[1],
+      strictBound.y2 + renderM[2],
+      this.preloadBound,
+    );
+  }
+
+  createRenderBounds(): void {
+    assertTruthy(this.stage);
+
+    // no clipping, use parent's bounds
+    if (this.clipping === false && this.parent !== null) {
+      this.strictBound =
+        this.parent.strictBound ??
+        createBound(0, 0, this.stage.root.width, this.stage.root.height);
+      this.preloadBound =
+        this.parent.preloadBound ?? this.createPreloadBounds(this.strictBound);
+      return;
+    }
+
+    // no parent, use stage's root bounds
+    if (this.parent === null) {
+      this.strictBound = createBound(
+        0,
+        0,
+        this.stage.root.width,
+        this.stage.root.height,
+      );
+      this.preloadBound = this.createPreloadBounds(this.strictBound);
+      return;
+    }
+
+    // clipping is enabled create our own bounds
+    const { x, y, width, height } = this.props;
+    this.strictBound = createBound(
+      x,
+      y,
+      x + width,
+      y + height,
+      this.strictBound,
+    );
+
+    this.preloadBound = this.createPreloadBounds(this.strictBound);
+  }
+
+  updateRenderState() {
+    const renderState = this.checkRenderBounds();
 
     if (renderState === this.renderState) {
       return;
@@ -1825,6 +1894,9 @@ export class CoreNode extends EventEmitter {
       }
     }
     this.updateScaleRotateTransform();
+
+    // fetch render bounds from parent
+    this.setUpdateType(UpdateType.RenderBounds);
   }
 
   get preventCleanup(): boolean {
