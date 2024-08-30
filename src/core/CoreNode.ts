@@ -743,6 +743,10 @@ export class CoreNode extends EventEmitter {
     this.rtt = props.rtt;
 
     this.updateScaleRotateTransform();
+
+    this.setUpdateType(
+      UpdateType.Global | UpdateType.RenderBounds | UpdateType.RenderState,
+    );
   }
 
   //#region Textures
@@ -993,15 +997,21 @@ export class CoreNode extends EventEmitter {
 
       this.calculateRenderCoords();
       this.updateBoundingRect();
+
       this.setUpdateType(
         UpdateType.Clipping | UpdateType.RenderState | UpdateType.Children,
       );
+
       childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.RenderBounds) {
       this.createRenderBounds();
       this.setUpdateType(UpdateType.RenderState);
+
+      if (this.clipping === true || parentClippingRect.valid === true) {
+        this.setUpdateType(UpdateType.Children);
+      }
     }
 
     if (this.updateType & UpdateType.RenderState) {
@@ -1041,8 +1051,11 @@ export class CoreNode extends EventEmitter {
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
-      this.setUpdateType(UpdateType.Children);
-      childUpdateType |= UpdateType.Clipping;
+
+      if (this.clipping === true || parentClippingRect.valid === true) {
+        this.setUpdateType(UpdateType.Children);
+        childUpdateType |= UpdateType.Clipping;
+      }
     }
 
     if (this.updateType & UpdateType.WorldAlpha) {
@@ -1369,7 +1382,7 @@ export class CoreNode extends EventEmitter {
 
     const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
-    if (clipping && !isRotated) {
+    if (clipping === true && isRotated === false) {
       clippingRect.x = gt.tx;
       clippingRect.y = gt.ty;
       clippingRect.width = this.width * gt.ta;
@@ -1379,10 +1392,10 @@ export class CoreNode extends EventEmitter {
       clippingRect.valid = false;
     }
 
-    if (parentClippingRect.valid && clippingRect.valid) {
+    if (parentClippingRect.valid === true && clippingRect.valid === true) {
       // Intersect parent clipping rect with node clipping rect
       intersectRect(parentClippingRect, clippingRect, clippingRect);
-    } else if (parentClippingRect.valid) {
+    } else if (parentClippingRect.valid === true) {
       // Copy parent clipping rect
       copyRect(parentClippingRect, clippingRect);
       clippingRect.valid = true;
@@ -1728,7 +1741,9 @@ export class CoreNode extends EventEmitter {
 
   set clipping(value: boolean) {
     this.props.clipping = value;
-    this.setUpdateType(UpdateType.Clipping);
+    this.setUpdateType(
+      UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
+    );
   }
 
   get color(): number {
@@ -1896,7 +1911,7 @@ export class CoreNode extends EventEmitter {
     this.updateScaleRotateTransform();
 
     // fetch render bounds from parent
-    this.setUpdateType(UpdateType.RenderBounds);
+    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
   }
 
   get preventCleanup(): boolean {
