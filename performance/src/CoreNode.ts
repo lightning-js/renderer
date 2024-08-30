@@ -27,9 +27,14 @@ import { Stage } from '../../src/core/Stage.js';
 import { type TextureOptions } from '../../src/core/CoreTextureManager.js';
 import { type BaseShaderController } from '../../src/main-api/ShaderController.js';
 import { type RectWithValid } from '../../src/core/lib/utils.js';
+import type { IndividualTestResult } from './utils/types.js';
 
 const bench = new Bench();
 const mock = sinon.stubInterface;
+
+// Grab command line arguments
+const args = process.argv.slice(2);
+const isTestRunnerTest = args.includes('--testRunner');
 
 const defaultProps: CoreNodeProps = {
   alpha: 0,
@@ -66,6 +71,7 @@ const defaultProps: CoreNodeProps = {
   y: 0,
   zIndex: 0,
   zIndexLocked: 0,
+  preventCleanup: false,
 };
 
 const renderableProps = {
@@ -103,6 +109,7 @@ const renderableProps = {
   y: 100,
   zIndex: 0,
   zIndexLocked: 0,
+  preventCleanup: false,
 };
 
 const stage = mock<Stage>();
@@ -184,4 +191,32 @@ bench
 await bench.warmup();
 await bench.run();
 
-console.table(bench.table());
+if (!isTestRunnerTest) {
+  console.table(bench.table());
+}
+
+if (isTestRunnerTest) {
+  const results: IndividualTestResult[] = [];
+
+  bench.tasks.forEach((task) => {
+    if (!task.result) {
+      return;
+    }
+
+    if (task.result.error) {
+      return;
+    }
+
+    results.push({
+      name: task.name,
+      opsPerSecond: task.result.hz,
+      avgTime: task.result.mean * 1000 * 1000,
+      margin: task.result.rme,
+      samples: task.result.samples.length,
+    });
+  });
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  process.send(results);
+}

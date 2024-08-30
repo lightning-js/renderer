@@ -1,6 +1,6 @@
 {
   "name": "performance",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "author": "",
   "main": "index.js",
   "description": "",
@@ -13,5 +13,8 @@
     "sinon": "^18.0.0",
     "tinybench": "^2.9.0",
     "ts-sinon": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.8"
   }
 }

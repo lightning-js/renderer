@@ -23,6 +23,11 @@ import { Bench } from 'tinybench';
 // src files
 import { ImageTexture } from '../../src/core/textures/ImageTexture.js';
 import { CoreTextureManager } from '../../src/core/CoreTextureManager.js';
+import type { IndividualTestResult } from './utils/types.js';
+
+// Grab command line arguments
+const args = process.argv.slice(2);
+const isTestRunnerTest = args.includes('--testRunner');
 
 const bench = new Bench();
 const txManager = new CoreTextureManager(0);
@@ -76,4 +81,32 @@ bench
 await bench.warmup();
 await bench.run();
 
-console.table(bench.table());
+if (!isTestRunnerTest) {
+  console.table(bench.table());
+}
+
+if (isTestRunnerTest) {
+  const results: IndividualTestResult[] = [];
+
+  bench.tasks.forEach((task) => {
+    if (!task.result) {
+      return;
+    }
+
+    if (task.result.error) {
+      return;
+    }
+
+    results.push({
+      name: task.name,
+      opsPerSecond: task.result.hz,
+      avgTime: task.result.mean * 1000 * 1000,
+      margin: task.result.rme,
+      samples: task.result.samples.length,
+    });
+  });
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  process.send(results);
+}

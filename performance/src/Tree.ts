@@ -3,18 +3,20 @@
 import { Bench } from 'tinybench';
 import * as sinon from 'ts-sinon';
 import { performance } from 'perf_hooks';
+import { type IndividualTestResult } from './utils/types.js';
 
 // src files
 import { CoreNode, type CoreNodeProps } from '../../src/core/CoreNode.js';
-import { CoreTextNode } from '../../src/core/CoreTextNode.js';
 import { Stage } from '../../src/core/Stage.js';
 import { type TextureOptions } from '../../src/core/CoreTextureManager.js';
 import { type BaseShaderController } from '../../src/main-api/ShaderController.js';
-import { type RectWithValid } from '../../src/core/lib/utils.js';
-import { i } from 'vitest/dist/reporters-yx5ZTtEV.js';
 
 const bench = new Bench();
 const mock = sinon.stubInterface;
+
+// Grab command line arguments
+const args = process.argv.slice(2);
+const isTestRunnerTest = args.includes('--testRunner');
 
 // local imports
 export const defaultProps: CoreNodeProps = {
@@ -153,4 +155,32 @@ bench.add(
 await bench.warmup();
 await bench.run();
 
-console.table(bench.table());
+if (!isTestRunnerTest) {
+  console.table(bench.table());
+}
+
+if (isTestRunnerTest) {
+  const results: IndividualTestResult[] = [];
+
+  bench.tasks.forEach((task) => {
+    if (!task.result) {
+      return;
+    }
+
+    if (task.result.error) {
+      return;
+    }
+
+    results.push({
+      name: task.name,
+      opsPerSecond: task.result.hz,
+      avgTime: task.result.mean * 1000 * 1000,
+      margin: task.result.rme,
+      samples: task.result.samples.length,
+    });
+  });
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  process.send(results);
+}
