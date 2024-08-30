@@ -745,7 +745,7 @@ export class CoreNode extends EventEmitter {
     this.updateScaleRotateTransform();
 
     this.setUpdateType(
-      UpdateType.Global | UpdateType.RenderBounds | UpdateType.RenderState,
+      UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
     );
   }
 
