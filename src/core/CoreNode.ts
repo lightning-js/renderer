@@ -998,9 +998,11 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      this.setUpdateType(
-        UpdateType.Clipping | UpdateType.RenderState | UpdateType.Children,
-      );
+      this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
+
+      if (this.clipping === true) {
+        this.setUpdateType(UpdateType.Clipping);
+      }
 
       childUpdateType |= UpdateType.Global;
     }
@@ -1008,14 +1010,10 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.RenderBounds) {
       this.createRenderBounds();
       this.setUpdateType(UpdateType.RenderState);
-
-      if (this.clipping === true || parentClippingRect.valid === true) {
-        this.setUpdateType(UpdateType.Children);
-      }
+      this.setUpdateType(UpdateType.Children);
     }
 
     if (this.updateType & UpdateType.RenderState) {
-      this.checkRenderBounds();
       this.updateRenderState();
       this.setUpdateType(UpdateType.IsRenderable);
     }
@@ -1051,11 +1049,10 @@ export class CoreNode extends EventEmitter {
 
     if (this.updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
+      this.setUpdateType(UpdateType.Children);
 
-      if (this.clipping === true || parentClippingRect.valid === true) {
-        this.setUpdateType(UpdateType.Children);
-        childUpdateType |= UpdateType.Clipping;
-      }
+      childUpdateType |= UpdateType.Clipping;
+      childUpdateType |= UpdateType.RenderBounds;
     }
 
     if (this.updateType & UpdateType.WorldAlpha) {
@@ -1109,7 +1106,7 @@ export class CoreNode extends EventEmitter {
     }
 
     // No need to update zIndex if there is no parent
-    if (parent && this.updateType & UpdateType.CalculatedZIndex) {
+    if (parent !== null && this.updateType & UpdateType.CalculatedZIndex) {
       this.calculateZIndex();
       // Tell parent to re-sort children
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
@@ -1117,8 +1114,8 @@ export class CoreNode extends EventEmitter {
 
     if (
       this.updateType & UpdateType.Children &&
-      this.children.length &&
-      !this.rtt
+      this.children.length > 0 &&
+      this.rtt === false
     ) {
       this.children.forEach((child) => {
         // Trigger the depenedent update types on the child
@@ -1212,6 +1209,7 @@ export class CoreNode extends EventEmitter {
     if (boundInsideBound(this.renderBound, this.preloadBound)) {
       return CoreNodeRenderState.InBounds;
     }
+
     return CoreNodeRenderState.OutOfBounds;
   }
 
@@ -1253,11 +1251,14 @@ export class CoreNode extends EventEmitter {
 
     // clipping is enabled create our own bounds
     const { x, y, width, height } = this.props;
+    const { tx, ty } = this.globalTransform || {};
+    const _x = tx ?? x;
+    const _y = ty ?? y;
     this.strictBound = createBound(
-      x,
-      y,
-      x + width,
-      y + height,
+      _x,
+      _y,
+      _x + width,
+      _y + height,
       this.strictBound,
     );
 
