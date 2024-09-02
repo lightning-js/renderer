@@ -192,7 +192,7 @@ export interface RendererMainSettings {
    * in the renderer and allow inspection of the state of the nodes.
    *
    */
-  inspector: typeof Inspector | undefined;
+  inspector?: typeof Inspector | false;
 
   /**
    * Renderer Engine
@@ -330,7 +330,7 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
-      inspector: settings.inspector,
+      inspector: settings.inspector ?? false,
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
