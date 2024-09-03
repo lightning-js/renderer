@@ -30,6 +30,8 @@
  * import { CanvasTextRenderer } from '@lightning/renderer';
  * ```
  *
+ * @module Canvas
+ *
  * @packageDocumentation
  */
 

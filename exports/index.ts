@@ -34,7 +34,7 @@
  * capabilities of the Renderer. The Main API code always runs from the main
  * thread.
  *
- * @module
+ * @module Renderer
  */
 
 export * from '../src/main-api/INode.js';
