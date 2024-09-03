@@ -1208,25 +1208,27 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.stage);
 
     // no clipping, use parent's bounds
-    if (this.clipping === false && this.parent !== null) {
-      this.strictBound =
-        this.parent.strictBound ??
-        createBound(0, 0, this.stage.root.width, this.stage.root.height);
-      this.preloadBound =
-        this.parent.preloadBound ?? this.createPreloadBounds(this.strictBound);
-      return;
-    }
+    if (this.clipping === false) {
+      if (this.parent !== null) {
+        this.strictBound =
+          this.parent.strictBound ??
+          createBound(0, 0, this.stage.root.width, this.stage.root.height);
 
-    // no parent, use stage's root bounds
-    if (this.parent === null) {
-      this.strictBound = createBound(
-        0,
-        0,
-        this.stage.root.width,
-        this.stage.root.height,
-      );
-      this.preloadBound = this.createPreloadBounds(this.strictBound);
-      return;
+        this.preloadBound =
+          this.parent.preloadBound ??
+          this.createPreloadBounds(this.strictBound);
+        return;
+      } else {
+        this.strictBound = createBound(
+          0,
+          0,
+          this.stage.root.width,
+          this.stage.root.height,
+        );
+
+        this.preloadBound = this.createPreloadBounds(this.strictBound);
+        return;
+      }
     }
 
     // clipping is enabled create our own bounds
