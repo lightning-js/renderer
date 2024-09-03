@@ -959,26 +959,6 @@ export class CoreNode extends EventEmitter {
     const parent = this.props.parent;
     let childUpdateType = UpdateType.None;
 
-    if (this.updateType & UpdateType.ParentRenderTexture) {
-      let p = this.parent;
-      while (p) {
-        if (p.rtt) {
-          this.parentHasRenderTexture = true;
-        }
-        p = p.parent;
-      }
-    }
-
-    // If we have render texture updates and not already running a full update
-    if (
-      this.updateType ^ UpdateType.All &&
-      this.updateType & UpdateType.RenderTexture
-    ) {
-      this.children.forEach((child) => {
-        child.setUpdateType(UpdateType.All);
-      });
-    }
-
     if (this.updateType & UpdateType.Global) {
       assertTruthy(this.localTransform);
 
