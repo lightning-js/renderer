@@ -2,8 +2,9 @@
 /** @type {import('typedoc').TypeDocOptions} */
 module.exports = {
   entryPoints: [
-    './exports/main-api.ts',
-    './exports/core-api.ts',
+    './exports/index.ts',
+    './exports/webgl.ts',
+    './exports/canvas.ts',
     './exports/utils.ts',
   ],
   out: 'typedocs',

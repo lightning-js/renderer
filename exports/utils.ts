@@ -36,6 +36,8 @@
  * Lightning Renderer, and not specific to any particular platform.
  *
  * @packageDocumentation
+ *
+ * @module Utils
  */
 export { assertTruthy, mergeColorAlpha, deg2Rad } from '../src/utils.js';
 export { getNormalizedRgbaComponents } from '../src/core/lib/utils.js';
