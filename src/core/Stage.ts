@@ -381,20 +381,20 @@ export class Stage {
   }
 
   addQuads(node: CoreNode) {
-    assertTruthy(this.renderer && node.globalTransform);
+    assertTruthy(this.renderer);
 
-    if (node.isRenderable) {
+    if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
     }
 
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i];
 
-      if (!child) {
+      if (child === undefined) {
         continue;
       }
 
-      if (child?.worldAlpha === 0) {
+      if (child.worldAlpha === 0) {
         continue;
       }
 
