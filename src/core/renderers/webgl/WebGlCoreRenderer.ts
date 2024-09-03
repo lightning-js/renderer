@@ -254,13 +254,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     /**
      * If the shader props contain any automatic properties, update it with the
-     * current dimensions that will be used to render the quad.
+     * current dimensions and or alpha that will be used to render the quad.
      */
-    if (shaderProps && hasOwn(shaderProps, '$dimensions')) {
-      const dimensions = shaderProps.$dimensions as Dimensions;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      dimensions.width = width;
-      dimensions.height = height;
+    if (shaderProps !== null) {
+      if (hasOwn(shaderProps, '$dimensions')) {
+        const dimensions = shaderProps.$dimensions as Dimensions;
+        dimensions.width = width;
+        dimensions.height = height;
+      }
+
+      if (hasOwn(shaderProps, '$alpha')) {
+        shaderProps.$alpha = alpha;
+      }
     }
 
     texture = texture ?? this.defaultTexture;

@@ -172,6 +172,7 @@ export class DynamicShader extends WebGlCoreShader {
     propsB: Required<DynamicShaderProps>,
   ): boolean {
     if (
+      propsA.$alpha !== propsB.$alpha ||
       propsA.$dimensions.width !== propsB.$dimensions.width ||
       propsA.$dimensions.height !== propsB.$dimensions.height ||
       propsA.effects.length !== propsB.effects.length
