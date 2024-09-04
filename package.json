@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
