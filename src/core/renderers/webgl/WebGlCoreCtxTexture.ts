@@ -134,7 +134,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
-      textureData.data instanceof ImageBitmap ||
+      (typeof ImageBitmap !== 'undefined' &&
+        textureData.data instanceof ImageBitmap) ||
       textureData.data instanceof ImageData ||
       // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(textureData.data)
