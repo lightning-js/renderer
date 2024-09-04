@@ -131,7 +131,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
       if (ctx) ctx.putImageData(data, 0, 0);
       this.image = canvas;
       return { width: data.width, height: data.height };
-    } else if (data instanceof ImageBitmap) {
+    } else if (window.ImageBitmap && data instanceof ImageBitmap) {
       this.image = data;
       return { width: data.width, height: data.height };
     }
