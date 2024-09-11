@@ -45,6 +45,7 @@ import {
   type RectWithValid,
   createBound,
   boundInsideBound,
+  boundLargeThanBound,
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
@@ -1195,6 +1196,19 @@ export class CoreNode extends EventEmitter {
       return CoreNodeRenderState.InBounds;
     }
 
+    // check if we're larger then our parent, we're definitely in the viewport
+    if (boundLargeThanBound(this.renderBound, this.strictBound)) {
+      return CoreNodeRenderState.InViewport;
+    }
+
+    // check if we dont have dimensions, take our parent's render state
+    if (
+      this.parent !== null &&
+      (this.props.width === 0 || this.props.height === 0)
+    ) {
+      return this.parent.renderState;
+    }
+
     return CoreNodeRenderState.OutOfBounds;
   }
 
@@ -1713,7 +1727,12 @@ export class CoreNode extends EventEmitter {
 
   set alpha(value: number) {
     this.props.alpha = value;
-    this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
+    this.setUpdateType(
+      UpdateType.PremultipliedColors |
+        UpdateType.WorldAlpha |
+        UpdateType.Children,
+    );
+    this.childUpdateType |= UpdateType.Global;
   }
 
   get autosize(): boolean {
@@ -1733,6 +1752,7 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
+    this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
   }
 
   get color(): number {
