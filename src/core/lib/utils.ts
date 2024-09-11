@@ -237,10 +237,8 @@ export function compareRect(a: Rect | null, b: Rect | null): boolean {
 
 export function boundInsideBound(bound1: Bound, bound2: Bound) {
   return (
-    bound1.x1 <= bound2.x2 &&
-    bound1.y1 <= bound2.y2 &&
-    bound1.x2 >= bound2.x1 &&
-    bound1.y2 >= bound2.y1
+    (bound1.x1 > bound2.x1 && bound1.y1 > bound2.y1) ||
+    (bound1.x2 < bound2.x2 && bound1.y2 < bound2.y2)
   );
 }
 
