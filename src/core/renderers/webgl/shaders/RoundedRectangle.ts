@@ -80,7 +80,10 @@ export class RoundedRectangle extends WebGlCoreShader {
     const radiusFactor =
       Math.min(props.$dimensions.width, props.$dimensions.height) /
       (2.0 * props.radius);
-    this.setUniform('u_radius', props.radius * Math.min(radiusFactor, 1));
+    this.glw.setUniform1f(
+      this.getUniformLocation('u_radius'),
+      props.radius * Math.min(radiusFactor, 1),
+    );
   }
 
   override canBatchShaderProps(

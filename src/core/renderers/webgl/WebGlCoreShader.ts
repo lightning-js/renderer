@@ -274,18 +274,23 @@ export abstract class WebGlCoreShader extends CoreShader {
       const { width, height } = renderOp.framebufferDimensions || {};
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
-      this.setUniform('u_pixelRatio', 1.0);
+      glw.setUniform1f(this.getUniformLocation('u_pixelRatio'), 1.0);
 
       // Set resolution to the framebuffer dimensions
-      this.setUniform(
-        'u_resolution',
-        new Float32Array([width ?? 0, height ?? 0]),
+      glw.setUniform2f(
+        this.getUniformLocation('u_resolution'),
+        width ?? 0,
+        height ?? 0,
       );
     } else {
-      this.setUniform('u_pixelRatio', renderOp.options.pixelRatio);
-      this.setUniform(
-        'u_resolution',
-        new Float32Array([glw.canvas.width, glw.canvas.height]),
+      glw.setUniform1f(
+        this.getUniformLocation('u_pixelRatio'),
+        renderOp.options.pixelRatio,
+      );
+      glw.setUniform2f(
+        this.getUniformLocation('u_resolution'),
+        glw.canvas.width,
+        glw.canvas.height,
       );
     }
 
@@ -297,14 +302,20 @@ export abstract class WebGlCoreShader extends CoreShader {
         if (!dimensions) {
           dimensions = renderOp.dimensions;
         }
-        this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
+        glw.setUniform2f(
+          this.getUniformLocation('u_dimensions'),
+          dimensions.width,
+          dimensions.height,
+        );
+        // this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
       }
       if (hasOwn(props, '$alpha')) {
         let alpha = props.$alpha as number | null;
         if (!alpha) {
           alpha = renderOp.alpha;
         }
-        this.setUniform('u_alpha', alpha);
+        glw.setUniform1f(this.getUniformLocation('u_alpha'), alpha);
+        // this.setUniform('u_alpha', alpha);
       }
       this.bindProps(props);
     }
@@ -317,6 +328,10 @@ export abstract class WebGlCoreShader extends CoreShader {
       this.uniformLocations[name]!,
       ...(value as any),
     );
+  }
+
+  getUniformLocation(name: string): WebGLUniformLocation | null {
+    return this.uniformLocations[name] || null;
   }
 
   bindBufferCollection(buffer: BufferCollection) {
