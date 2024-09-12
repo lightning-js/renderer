@@ -1,4 +1,10 @@
 import { RendererMain } from '@lightningjs/renderer';
+import {
+  SdfTextRenderer,
+  WebGlCoreRenderer,
+} from '@lightningjs/renderer/webgl';
+import { CanvasTextRenderer } from '@lightningjs/renderer/canvas';
+import { Inspector } from '@lightningjs/renderer/inspector';
 import { MyCustomEffect } from './MyCustomEffect.js';
 import { MyCustomShader } from './MyCustomShader.js';
 import { MyCustomTexture } from './MyCustomTexture.js';
@@ -13,8 +19,9 @@ import robotImg from './assets/robot.png';
       clearColor: 0x000000ff,
       fpsUpdateInterval: 1000,
       enableContextSpy: false,
-      enableInspector: false,
-      renderMode: 'webgl',
+      inspector: Inspector,
+      renderEngine: WebGlCoreRenderer,
+      fontEngines: [SdfTextRenderer, CanvasTextRenderer],
     },
     'app',
   );
