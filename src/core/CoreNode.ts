@@ -45,6 +45,7 @@ import {
   type RectWithValid,
   createBound,
   boundInsideBound,
+  boundLargeThanBound,
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
@@ -698,6 +699,7 @@ export class CoreNode extends EventEmitter {
   readonly props: CoreNodeProps;
 
   public updateType = UpdateType.All;
+  public childUpdateType = UpdateType.None;
 
   public globalTransform?: Matrix3d;
   public scaleRotateTransform?: Matrix3d;
@@ -847,7 +849,7 @@ export class CoreNode extends EventEmitter {
     // If we're updating this node at all, we need to inform the parent
     // (and all ancestors) that their children need updating as well
     const parent = this.props.parent;
-    if (parent && !(parent.updateType & UpdateType.Children)) {
+    if (parent !== null && !(parent.updateType & UpdateType.Children)) {
       parent.setUpdateType(UpdateType.Children);
     }
     // If node is part of RTT texture
@@ -957,7 +959,6 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.props.parent;
-    let childUpdateType = UpdateType.None;
 
     if (this.updateType & UpdateType.ParentRenderTexture) {
       let p = this.parent;
@@ -1004,7 +1005,7 @@ export class CoreNode extends EventEmitter {
         this.setUpdateType(UpdateType.Clipping);
       }
 
-      childUpdateType |= UpdateType.Global;
+      this.childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.RenderBounds) {
@@ -1023,7 +1024,6 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      this.updateType = 0;
       return;
     }
 
@@ -1031,8 +1031,8 @@ export class CoreNode extends EventEmitter {
       this.calculateClippingRect(parentClippingRect);
       this.setUpdateType(UpdateType.Children);
 
-      childUpdateType |= UpdateType.Clipping;
-      childUpdateType |= UpdateType.RenderBounds;
+      this.childUpdateType |= UpdateType.Clipping;
+      this.childUpdateType |= UpdateType.RenderBounds;
     }
 
     if (this.updateType & UpdateType.WorldAlpha) {
@@ -1046,7 +1046,7 @@ export class CoreNode extends EventEmitter {
           UpdateType.PremultipliedColors |
           UpdateType.IsRenderable,
       );
-      childUpdateType |= UpdateType.WorldAlpha;
+      this.childUpdateType |= UpdateType.WorldAlpha;
     }
 
     if (this.updateType & UpdateType.PremultipliedColors) {
@@ -1097,15 +1097,20 @@ export class CoreNode extends EventEmitter {
       this.children.length > 0 &&
       this.rtt === false
     ) {
-      this.children.forEach((child) => {
-        // Trigger the depenedent update types on the child
-        child.setUpdateType(childUpdateType);
-        // If child has no updates, skip
-        if (child.updateType === 0) {
-          return;
+      for (let i = 0; i < this.children.length; i++) {
+        const child = this.children[i];
+        if (child === undefined) {
+          continue;
         }
+
+        child.setUpdateType(this.childUpdateType);
+
+        if (child.updateType === 0) {
+          continue;
+        }
+
         child.update(delta, this.clippingRect);
-      });
+      }
     }
 
     // Sorting children MUST happen after children have been updated so
@@ -1117,6 +1122,7 @@ export class CoreNode extends EventEmitter {
 
     // reset update type
     this.updateType = 0;
+    this.childUpdateType = 0;
   }
 
   //check if CoreNode is renderable based on props
@@ -1190,6 +1196,19 @@ export class CoreNode extends EventEmitter {
       return CoreNodeRenderState.InBounds;
     }
 
+    // check if we're larger then our parent, we're definitely in the viewport
+    if (boundLargeThanBound(this.renderBound, this.strictBound)) {
+      return CoreNodeRenderState.InViewport;
+    }
+
+    // check if we dont have dimensions, take our parent's render state
+    if (
+      this.parent !== null &&
+      (this.props.width === 0 || this.props.height === 0)
+    ) {
+      return this.parent.renderState;
+    }
+
     return CoreNodeRenderState.OutOfBounds;
   }
 
@@ -1202,6 +1221,27 @@ export class CoreNode extends EventEmitter {
       strictBound.y2 + renderM[2],
       this.preloadBound,
     );
+  }
+
+  updateBoundingRect() {
+    const { renderCoords, globalTransform: transform } = this;
+    assertTruthy(transform);
+    assertTruthy(renderCoords);
+
+    const { tb, tc } = transform;
+    const { x1, y1, x3, y3 } = renderCoords;
+    if (tb === 0 || tc === 0) {
+      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
+    } else {
+      const { x2, x4, y2, y4 } = renderCoords;
+      this.renderBound = createBound(
+        Math.min(x1, x2, x3, x4),
+        Math.min(y1, y2, y3, y4),
+        Math.max(x1, x2, x3, x4),
+        Math.max(y1, y2, y3, y4),
+        this.renderBound,
+      );
+    }
   }
 
   createRenderBounds(): void {
@@ -1330,26 +1370,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  updateBoundingRect() {
-    const { renderCoords, globalTransform: transform } = this;
-    assertTruthy(transform);
-    assertTruthy(renderCoords);
-
-    const { tb, tc } = transform;
-    const { x1, y1, x3, y3 } = renderCoords;
-    if (tb === 0 || tc === 0) {
-      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
-    } else {
-      const { x2, x4, y2, y4 } = renderCoords;
-      this.renderBound = createBound(
-        Math.min(x1, x2, x3, x4),
-        Math.min(y1, y2, y3, y4),
-        Math.max(x1, x2, x3, x4),
-        Math.max(y1, y2, y3, y4),
-        this.renderBound,
-      );
-    }
-  }
   /**
    * This function calculates the clipping rectangle for a node.
    *
@@ -1707,7 +1727,12 @@ export class CoreNode extends EventEmitter {
 
   set alpha(value: number) {
     this.props.alpha = value;
-    this.setUpdateType(UpdateType.PremultipliedColors | UpdateType.WorldAlpha);
+    this.setUpdateType(
+      UpdateType.PremultipliedColors |
+        UpdateType.WorldAlpha |
+        UpdateType.Children,
+    );
+    this.childUpdateType |= UpdateType.Global;
   }
 
   get autosize(): boolean {
@@ -1727,6 +1752,7 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
+    this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
   }
 
   get color(): number {
