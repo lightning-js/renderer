@@ -959,6 +959,7 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.props.parent;
+    let renderState = null;
 
     if (this.updateType & UpdateType.ParentRenderTexture) {
       let p = this.parent;
@@ -1015,8 +1016,15 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.updateType & UpdateType.RenderState) {
-      this.updateRenderState();
+      renderState = this.checkRenderBounds();
       this.setUpdateType(UpdateType.IsRenderable);
+
+      // if we're not going out of bounds, update the render state
+      // this is done so the update loop can finish before we mark a node
+      // as out of bounds
+      if (renderState !== CoreNodeRenderState.OutOfBounds) {
+        this.updateRenderState(renderState);
+      }
     }
 
     if (this.updateType & UpdateType.IsRenderable) {
@@ -1118,6 +1126,13 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.ZIndexSortedChildren) {
       // reorder z-index
       this.sortChildren();
+    }
+
+    // If we're out of bounds, apply the render state now
+    // this is done so nodes can finish their entire update loop before
+    // being marked as out of bounds
+    if (renderState === CoreNodeRenderState.OutOfBounds) {
+      this.updateRenderState(renderState);
     }
 
     // reset update type
@@ -1287,9 +1302,7 @@ export class CoreNode extends EventEmitter {
     this.preloadBound = this.createPreloadBounds(this.strictBound);
   }
 
-  updateRenderState() {
-    const renderState = this.checkRenderBounds();
-
+  updateRenderState(renderState: CoreNodeRenderState) {
     if (renderState === this.renderState) {
       return;
     }
