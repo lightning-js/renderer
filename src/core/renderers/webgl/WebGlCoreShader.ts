@@ -307,7 +307,6 @@ export abstract class WebGlCoreShader extends CoreShader {
           dimensions.width,
           dimensions.height,
         );
-        // this.setUniform('u_dimensions', [dimensions.width, dimensions.height]);
       }
       if (hasOwn(props, '$alpha')) {
         let alpha = props.$alpha as number | null;
@@ -315,7 +314,6 @@ export abstract class WebGlCoreShader extends CoreShader {
           alpha = renderOp.alpha;
         }
         glw.uniform1f(this.getUniformLocation('u_alpha'), alpha);
-        // this.setUniform('u_alpha', alpha);
       }
       this.bindProps(props);
     }
