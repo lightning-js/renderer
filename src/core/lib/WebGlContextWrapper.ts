@@ -45,10 +45,6 @@ export class WebGlContextWrapper {
   private boundArrayBuffer: WebGLBuffer | null;
   private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
-  private programUniforms: WeakMap<
-    WebGLProgram,
-    Map<WebGLUniformLocation, any[]>
-  > = new WeakMap();
   //#endregion Cached WebGL State
 
   //#region Canvas
@@ -708,24 +704,6 @@ export class WebGlContextWrapper {
     this.curProgram = program;
   }
 
-  setUniform<T extends keyof UniformMethodMap>(
-    type: T,
-    location: WebGLUniformLocation,
-    ...args: UniformMethodMap[T]
-  ) {
-    const { gl, programUniforms } = this;
-    let uniforms = programUniforms.get(this.curProgram!);
-    if (!uniforms) {
-      uniforms = new Map();
-      programUniforms.set(this.curProgram!, uniforms);
-    }
-    const uniformArgs = uniforms.get(location);
-    if (!uniformArgs || !compareArrays(uniformArgs, args)) {
-      uniforms.set(location, args);
-      gl[type](location, ...(args as [never, never, never, never]));
-    }
-  }
-
   /**
    * Sets the value of a single float uniform variable.
    *
@@ -962,17 +940,43 @@ export class WebGlContextWrapper {
 
   /**
    * Sets the value of a mat2 uniform variable.
+   *
    * @param location - The location of the uniform variable.
    * @param transpose - Whether to transpose the matrix.
    * @param value - The array of mat2 values to set.
    */
-  uniformMatrix3fv(
+  uniformMatrix2fv(
     location: WebGLUniformLocation | null,
-    transpose: GLboolean,
     value: Float32Array | number[],
   ) {
     const { gl } = this;
-    gl.uniformMatrix3fv(location, transpose, value);
+    gl.uniformMatrix2fv(location, false, value);
+  }
+
+  /**
+   * Sets the value of a mat2 uniform variable.
+   * @param location - The location of the uniform variable.
+   * @param value - The array of mat2 values to set.
+   */
+  uniformMatrix3fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix3fv(location, false, value);
+  }
+
+  /**
+   * Sets the value of a mat4 uniform variable.
+   * @param location - The location of the uniform variable.
+   * @param value - The array of mat4 values to set.
+   */
+  uniformMatrix4fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix4fv(location, false, value);
   }
 
   /**
@@ -1280,12 +1284,21 @@ export function compareArrays<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) {
     return false;
   }
-  return a.every((v, i) => {
-    // Don't bother to compare nested arrays or Float32Arrays
-    if (Array.isArray(v) || v instanceof Float32Array) {
-      return false;
-    } else {
-      return v === b[i];
+
+  let result = false;
+  for (let i = 0; i < a.length; i++) {
+    if (Array.isArray(a[i]) || a[i] instanceof Float32Array) {
+      result = false;
+      break;
     }
-  });
+
+    if (a[i] !== b[i]) {
+      result = false;
+      break;
+    }
+
+    result = true;
+  }
+
+  return result;
 }

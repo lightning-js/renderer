@@ -162,7 +162,45 @@ export class DynamicShader extends WebGlCoreShader {
             ]?.uniforms[key];
           uniform?.updateProgramValue!(effect.props[key], props);
         }
-        this.setUniform(uniformInfo[key]!.name, effect.props[key].programValue);
+
+        const uniform = uniformInfo[key]!.uniform;
+        const value = effect.props[key].programValue;
+        const location = this.getUniformLocation(uniformInfo[key]!.name);
+
+        // check single argument uniforms first
+        if (
+          uniform === 'uniform1f' ||
+          uniform === 'uniform1fv' ||
+          uniform === 'uniform1i' ||
+          uniform === 'uniform1iv' ||
+          uniform === 'uniform2fv' ||
+          uniform === 'uniform2iv' ||
+          //uniform === 'uniform3fv	' || <--- check why this isnt recognized
+          uniform === 'uniform3iv' ||
+          uniform === 'uniform4fv' ||
+          uniform === 'uniform4iv' ||
+          uniform === 'uniformMatrix2fv' ||
+          uniform === 'uniformMatrix3fv' ||
+          uniform === 'uniformMatrix4fv'
+        ) {
+          this.glw[uniform](location, value);
+          continue;
+        }
+
+        if (uniform === 'uniform2f' || uniform === 'uniform2i') {
+          this.glw[uniform](location, value[0], value[1]);
+          continue;
+        }
+
+        if (uniform === 'uniform3f' || uniform === 'uniform3i') {
+          this.glw[uniform](location, value[0], value[1], value[2]);
+          continue;
+        }
+
+        if (uniform === 'uniform4f' || uniform === 'uniform4i') {
+          this.glw[uniform](location, value[0], value[1], value[2], value[3]);
+          continue;
+        }
       }
     }
   }

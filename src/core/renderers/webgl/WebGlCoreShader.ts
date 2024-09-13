@@ -321,15 +321,6 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
   }
 
-  // setUniform(name: string, ...value: any[]): void {
-  //   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-argument
-  //   this.glw.setUniform(
-  //     this.uniformTypes[name]!,
-  //     this.uniformLocations[name]!,
-  //     ...(value as any),
-  //   );
-  // }
-
   getUniformLocation(name: string): WebGLUniformLocation | null {
     return this.uniformLocations[name] || null;
   }
