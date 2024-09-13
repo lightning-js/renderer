@@ -732,7 +732,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param v0 - The value to set.
    */
-  setUniform1f(location: WebGLUniformLocation | null, v0: number) {
+  uniform1f(location: WebGLUniformLocation | null, v0: number) {
     const { gl } = this;
     gl.uniform1f(location, v0);
   }
@@ -743,7 +743,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  setUniform1fv(
+  uniform1fv(
     location: WebGLUniformLocation | null,
     value: Float32Array | number[],
   ) {
@@ -757,7 +757,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param v0 - The value to set.
    */
-  setUniform1i(location: WebGLUniformLocation | null, v0: number) {
+  uniform1i(location: WebGLUniformLocation | null, v0: number) {
     const { gl } = this;
     gl.uniform1i(location, v0);
   }
@@ -768,7 +768,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  setUniform1iv(
+  uniform1iv(
     location: WebGLUniformLocation | null,
     value: Int32Array | number[],
   ) {
@@ -783,7 +783,7 @@ export class WebGlContextWrapper {
    * @param v0 - The first component of the vector.
    * @param v1 - The second component of the vector.
    */
-  setUniform2f(location: WebGLUniformLocation | null, v0: number, v1: number) {
+  uniform2f(location: WebGLUniformLocation | null, v0: number, v1: number) {
     const { gl } = this;
     gl.uniform2f(location, v0, v1);
   }
@@ -794,7 +794,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec2 values to set.
    */
-  setUniform2fv(
+  uniform2fv(
     location: WebGLUniformLocation | null,
     value: Float32Array | number[],
   ) {
@@ -809,7 +809,7 @@ export class WebGlContextWrapper {
    * @param v0 - The first component of the vector.
    * @param v1 - The second component of the vector.
    */
-  setUniform2i(location: WebGLUniformLocation | null, v0: number, v1: number) {
+  uniform2i(location: WebGLUniformLocation | null, v0: number, v1: number) {
     const { gl } = this;
     gl.uniform2i(location, v0, v1);
   }
@@ -820,7 +820,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec2 values to set.
    */
-  setUniform2iv(
+  uniform2iv(
     location: WebGLUniformLocation | null,
     value: Int32Array | number[],
   ) {
@@ -836,7 +836,7 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    * @param v2 - The third component of the vector.
    */
-  setUniform3f(
+  uniform3f(
     location: WebGLUniformLocation | null,
     v0: number,
     v1: number,
@@ -852,7 +852,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec3 values to set.
    */
-  setUniform3fv(
+  uniform3fv(
     location: WebGLUniformLocation | null,
     value: Float32Array | number[],
   ) {
@@ -868,7 +868,7 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    * @param v2 - The third component of the vector.
    */
-  setUniform3i(
+  uniform3i(
     location: WebGLUniformLocation | null,
     v0: number,
     v1: number,
@@ -884,7 +884,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec3 values to set.
    */
-  setUniform3iv(
+  uniform3iv(
     location: WebGLUniformLocation | null,
     value: Int32Array | number[],
   ) {
@@ -901,7 +901,7 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    * @param v3 - The fourth component of the vector.
    */
-  setUniform4f(
+  uniform4f(
     location: WebGLUniformLocation | null,
     v0: number,
     v1: number,
@@ -918,7 +918,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec4 values to set.
    */
-  setUniform4fv(
+  uniform4fv(
     location: WebGLUniformLocation | null,
     value: Float32Array | number[],
   ) {
@@ -935,7 +935,7 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    * @param v3 - The fourth component of the vector.
    */
-  setUniform4i(
+  uniform4i(
     location: WebGLUniformLocation | null,
     v0: number,
     v1: number,
@@ -952,12 +952,27 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec4 values to set.
    */
-  setUniform4iv(
+  uniform4iv(
     location: WebGLUniformLocation | null,
     value: Int32Array | number[],
   ) {
     const { gl } = this;
     gl.uniform4iv(location, value);
+  }
+
+  /**
+   * Sets the value of a mat2 uniform variable.
+   * @param location - The location of the uniform variable.
+   * @param transpose - Whether to transpose the matrix.
+   * @param value - The array of mat2 values to set.
+   */
+  uniformMatrix3fv(
+    location: WebGLUniformLocation | null,
+    transpose: GLboolean,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix3fv(location, transpose, value);
   }
 
   /**

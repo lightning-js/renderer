@@ -57,7 +57,8 @@ export class DefaultShaderBatched extends WebGlCoreShader {
       glw.bindTexture(t.ctxTexture);
     });
     const samplers = Array.from(Array(texture.length).keys());
-    this.setUniform('u_textures[0]', samplers);
+    // this.setUniform('u_textures[0]', samplers);
+    this.glw.uniform1iv(this.getUniformLocation('u_textures[0]'), samplers);
   }
 
   static override shaderSources: ShaderProgramSources = {

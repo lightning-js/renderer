@@ -89,18 +89,40 @@ export class SdfShader extends WebGlCoreShader {
     const resolvedProps = SdfShader.resolveDefaults(props);
     for (const key in resolvedProps) {
       if (key === 'transform') {
-        this.setUniform('u_transform', false, resolvedProps[key]);
+        // this.setUniform('u_transform', false, resolvedProps[key]);
+        this.glw.uniformMatrix3fv(
+          this.getUniformLocation('u_transform'),
+          false,
+          resolvedProps[key],
+        );
       } else if (key === 'scrollY') {
-        this.setUniform('u_scrollY', resolvedProps[key]);
+        // this.setUniform('u_scrollY', resolvedProps[key]);
+        this.glw.uniform1f(
+          this.getUniformLocation('u_scrollY'),
+          resolvedProps[key],
+        );
       } else if (key === 'color') {
         const components = getNormalizedRgbaComponents(resolvedProps.color);
-        this.setUniform('u_color', components);
+        // this.setUniform('u_color', components);
+        this.glw.uniform4fv(this.getUniformLocation('u_color'), components);
       } else if (key === 'size') {
-        this.setUniform('u_size', resolvedProps[key]);
+        // this.setUniform('u_size', resolvedProps[key]);
+        this.glw.uniform1f(
+          this.getUniformLocation('u_size'),
+          resolvedProps[key],
+        );
       } else if (key === 'distanceRange') {
-        this.setUniform('u_distanceRange', resolvedProps[key]);
+        // this.setUniform('u_distanceRange', resolvedProps[key]);
+        this.glw.uniform1f(
+          this.getUniformLocation('u_distanceRange'),
+          resolvedProps[key],
+        );
       } else if (key === 'debug') {
-        this.setUniform('u_debug', resolvedProps[key] ? 1.0 : 0.0);
+        // this.setUniform('u_debug', resolvedProps[key] ? 1.0 : 0.0);
+        this.glw.uniform1i(
+          this.getUniformLocation('u_debug'),
+          resolvedProps[key] ? 1 : 0,
+        );
       }
     }
   }

@@ -274,20 +274,20 @@ export abstract class WebGlCoreShader extends CoreShader {
       const { width, height } = renderOp.framebufferDimensions || {};
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
-      glw.setUniform1f(this.getUniformLocation('u_pixelRatio'), 1.0);
+      glw.uniform1f(this.getUniformLocation('u_pixelRatio'), 1.0);
 
       // Set resolution to the framebuffer dimensions
-      glw.setUniform2f(
+      glw.uniform2f(
         this.getUniformLocation('u_resolution'),
         width ?? 0,
         height ?? 0,
       );
     } else {
-      glw.setUniform1f(
+      glw.uniform1f(
         this.getUniformLocation('u_pixelRatio'),
         renderOp.options.pixelRatio,
       );
-      glw.setUniform2f(
+      glw.uniform2f(
         this.getUniformLocation('u_resolution'),
         glw.canvas.width,
         glw.canvas.height,
@@ -302,7 +302,7 @@ export abstract class WebGlCoreShader extends CoreShader {
         if (!dimensions) {
           dimensions = renderOp.dimensions;
         }
-        glw.setUniform2f(
+        glw.uniform2f(
           this.getUniformLocation('u_dimensions'),
           dimensions.width,
           dimensions.height,
@@ -314,21 +314,21 @@ export abstract class WebGlCoreShader extends CoreShader {
         if (!alpha) {
           alpha = renderOp.alpha;
         }
-        glw.setUniform1f(this.getUniformLocation('u_alpha'), alpha);
+        glw.uniform1f(this.getUniformLocation('u_alpha'), alpha);
         // this.setUniform('u_alpha', alpha);
       }
       this.bindProps(props);
     }
   }
 
-  setUniform(name: string, ...value: any[]): void {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-argument
-    this.glw.setUniform(
-      this.uniformTypes[name]!,
-      this.uniformLocations[name]!,
-      ...(value as any),
-    );
-  }
+  // setUniform(name: string, ...value: any[]): void {
+  //   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-argument
+  //   this.glw.setUniform(
+  //     this.uniformTypes[name]!,
+  //     this.uniformLocations[name]!,
+  //     ...(value as any),
+  //   );
+  // }
 
   getUniformLocation(name: string): WebGLUniformLocation | null {
     return this.uniformLocations[name] || null;
