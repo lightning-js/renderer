@@ -184,7 +184,7 @@ export class Stage {
         return;
       }
 
-      if (fontEngineInstance instanceof TextRenderer) {
+      if (typeof fontEngineInstance.canRenderFont === 'function') {
         if (className === 'canvas') {
           this.textRenderers['canvas'] =
             fontEngineInstance as CanvasTextRenderer;
