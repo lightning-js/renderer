@@ -432,23 +432,22 @@ export abstract class TextRenderer<
     // For each prop setter add a wrapper method that checks if the prop is
     // different before calling the setter
     this.set = Object.freeze(
-      Object.fromEntries(
-        Object.entries(propSetters).map(([key, setter]) => {
-          return [
-            key as keyof TrProps,
-            (state: StateT, value: TrProps[keyof TrProps]) => {
-              if (state.props[key as keyof TrProps] !== value) {
-                setter(state, value as never);
-                // Assume any prop change will require a render
-                // This is required because otherwise a paused RAF will result
-                // in renders when text props are changed.
-                this.stage.requestRender();
-              }
-            },
-          ];
-        }),
-      ),
-    ) as typeof this.set;
+      Object.entries(propSetters).reduce((acc, [key, setter]) => {
+        acc[key as keyof TrProps] = (
+          state: StateT,
+          value: TrProps[keyof TrProps],
+        ) => {
+          if (state.props[key as keyof TrProps] !== value) {
+            setter(state, value as never);
+            // Assume any prop change will require a render
+            // This is required because otherwise a paused RAF will result
+            // in renders when text props are changed.
+            this.stage.requestRender();
+          }
+        };
+        return acc;
+      }, {} as TrPropSetters<StateT>),
+    );
   }
 
   setStatus(state: StateT, status: StateT['status'], error?: Error) {
