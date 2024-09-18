@@ -22,7 +22,7 @@ import {
   type DimensionsShaderProp,
   type AlphaShaderProp,
 } from '../WebGlCoreShader.js';
-import type { UniformInfo } from '../internal/ShaderUtils.js';
+import { type UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import {
   ShaderEffect,
@@ -33,6 +33,7 @@ import {
 } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 import { assertTruthy } from '../../../../utils.js';
+import type { UniformMethodMap } from '../../../lib/WebGlContextWrapper.js';
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,
@@ -74,6 +75,7 @@ const getResolvedEffect = (
       const result: ShaderEffectValueMap = {
         value: defaultPropValues[key] as ShaderEffectUniform['value'],
         programValue: undefined,
+        method: uniform.method,
         updateOnBind: uniform.updateOnBind || false,
         hasValidator: uniform.validator !== undefined,
         hasProgramValueUpdater: uniform.updateProgramValue !== undefined,
@@ -142,13 +144,99 @@ export class DynamicShader extends WebGlCoreShader {
     glw.bindTexture(textures[0]!.ctxTexture);
   }
 
+  bindUniformMethods(props: DynamicShaderProps): void {
+    const glw = this.glw;
+    const effects = props.effects;
+    const effectsL = effects!.length;
+    for (let i = 0; i < effectsL; i++) {
+      const uniformInfo = this.effects[i]!.uniformInfo;
+      const effect = effects![i]! as Record<string, any>;
+      const propKeys = Object.keys(effect.props);
+      const propsLength = propKeys.length;
+      for (let j = 0; j < propsLength; j++) {
+        const key = propKeys[j]!;
+        const method = effect.props[key].method;
+        const location = this.getUniformLocation(uniformInfo[key]!.name);
+
+        if (method.indexOf('1') > -1) {
+          effect.props[key].setUniformValue = function () {
+            glw[
+              method as keyof Omit<
+                UniformMethodMap,
+                | 'uniform2f'
+                | 'uniform2i'
+                | 'uniform3f'
+                | 'uniform3i'
+                | 'uniform4f'
+                | 'uniform4i'
+              >
+            ](location, this.programValue);
+          };
+          continue;
+        }
+
+        if (method.indexOf('v') > -1) {
+          effect.props[key].setUniformValue = function () {
+            glw[
+              method as keyof Omit<
+                UniformMethodMap,
+                | 'uniform2f'
+                | 'uniform2i'
+                | 'uniform3f'
+                | 'uniform3i'
+                | 'uniform4f'
+                | 'uniform4i'
+              >
+            ](location, this.programValue);
+          };
+          continue;
+        }
+
+        if (method.indexOf('2') > -1) {
+          effect.props[key].setUniformValue = function () {
+            glw[method as 'uniform2f' | 'uniform2i'](
+              location,
+              this.programValue[0]!,
+              this.programValue[1]!,
+            );
+          };
+          continue;
+        }
+
+        if (method.indexOf('3') > -1) {
+          effect.props[key].setUniformValue = function () {
+            glw[method as 'uniform3f' | 'uniform3i'](
+              location,
+              this.programValue[0]!,
+              this.programValue[1]!,
+              this.programValue[2]!,
+            );
+          };
+          continue;
+        }
+
+        if (method.indexOf('4') > -1) {
+          effect.props[key].setUniformValue = function () {
+            glw[method as 'uniform4f' | 'uniform4i'](
+              location,
+              this.programValue[0]!,
+              this.programValue[1]!,
+              this.programValue[2]!,
+              this.programValue[3]!,
+            );
+          };
+          continue;
+        }
+      }
+    }
+  }
+
   protected override bindProps(props: Required<DynamicShaderProps>): void {
     const effects = props.effects;
     const effectsL = effects.length;
     let i = 0;
     for (; i < effectsL; i++) {
       const effect = effects[i]! as Record<string, any>;
-      const uniformInfo = this.effects[i]!.uniformInfo;
       const propKeys = Object.keys(effect.props);
       const propsLength = propKeys.length;
       let j = 0;
@@ -163,44 +251,7 @@ export class DynamicShader extends WebGlCoreShader {
           uniform?.updateProgramValue!(effect.props[key], props);
         }
 
-        const uniform = uniformInfo[key]!.uniform;
-        const value = effect.props[key].programValue;
-        const location = this.getUniformLocation(uniformInfo[key]!.name);
-
-        // check single argument uniforms first
-        if (
-          uniform === 'uniform1f' ||
-          uniform === 'uniform1fv' ||
-          uniform === 'uniform1i' ||
-          uniform === 'uniform1iv' ||
-          uniform === 'uniform2fv' ||
-          uniform === 'uniform2iv' ||
-          //uniform === 'uniform3fv	' || <--- check why this isnt recognized
-          uniform === 'uniform3iv' ||
-          uniform === 'uniform4fv' ||
-          uniform === 'uniform4iv' ||
-          uniform === 'uniformMatrix2fv' ||
-          uniform === 'uniformMatrix3fv' ||
-          uniform === 'uniformMatrix4fv'
-        ) {
-          this.glw[uniform](location, value);
-          continue;
-        }
-
-        if (uniform === 'uniform2f' || uniform === 'uniform2i') {
-          this.glw[uniform](location, value[0], value[1]);
-          continue;
-        }
-
-        if (uniform === 'uniform3f' || uniform === 'uniform3i') {
-          this.glw[uniform](location, value[0], value[1], value[2]);
-          continue;
-        }
-
-        if (uniform === 'uniform4f' || uniform === 'uniform4i') {
-          this.glw[uniform](location, value[0], value[1], value[2], value[3]);
-          continue;
-        }
+        prop.setUniformValue();
       }
     }
   }
