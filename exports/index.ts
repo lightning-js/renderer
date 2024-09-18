@@ -76,6 +76,7 @@ export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/
 
 // Textures
 export * from '../src/core/textures/Texture.js';
+export { ImageTexture } from '../src/core/textures/ImageTexture.js';
 
 // Text Rendering & Fonts
 // export * from '../src/core/text-rendering/renderers/TextRenderer.js';
