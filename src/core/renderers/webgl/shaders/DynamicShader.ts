@@ -155,57 +155,40 @@ export class DynamicShader extends WebGlCoreShader {
       const propsLength = propKeys.length;
       for (let j = 0; j < propsLength; j++) {
         const key = propKeys[j]!;
-        const method = effect.props[key].method;
+        const method = effect.props[key].method as keyof UniformMethodMap;
         const location = this.getUniformLocation(uniformInfo[key]!.name);
 
-        if (method.indexOf('1') > -1) {
+        if (
+          method === 'uniform2fv' ||
+          method === 'uniform2iv' ||
+          //uniform === 'uniform3fv	' || <--- check why this isnt recognized
+          method === 'uniform3iv' ||
+          method === 'uniform4fv' ||
+          method === 'uniform4iv' ||
+          method === 'uniformMatrix2fv' ||
+          method === 'uniformMatrix3fv' ||
+          method === 'uniformMatrix4fv' ||
+          method === 'uniform1f' ||
+          method === 'uniform1fv' ||
+          method === 'uniform1i' ||
+          method === 'uniform1iv'
+        ) {
           effect.props[key].setUniformValue = function () {
-            glw[
-              method as keyof Omit<
-                UniformMethodMap,
-                | 'uniform2f'
-                | 'uniform2i'
-                | 'uniform3f'
-                | 'uniform3i'
-                | 'uniform4f'
-                | 'uniform4i'
-              >
-            ](location, this.programValue);
+            glw[method](location, this.programValue);
           };
           continue;
         }
 
-        if (method.indexOf('v') > -1) {
+        if (method === 'uniform2f' || method === 'uniform2i') {
           effect.props[key].setUniformValue = function () {
-            glw[
-              method as keyof Omit<
-                UniformMethodMap,
-                | 'uniform2f'
-                | 'uniform2i'
-                | 'uniform3f'
-                | 'uniform3i'
-                | 'uniform4f'
-                | 'uniform4i'
-              >
-            ](location, this.programValue);
+            glw[method](location, this.programValue[0]!, this.programValue[1]!);
           };
           continue;
         }
 
-        if (method.indexOf('2') > -1) {
+        if (method === 'uniform3f' || method === 'uniform3i') {
           effect.props[key].setUniformValue = function () {
-            glw[method as 'uniform2f' | 'uniform2i'](
-              location,
-              this.programValue[0]!,
-              this.programValue[1]!,
-            );
-          };
-          continue;
-        }
-
-        if (method.indexOf('3') > -1) {
-          effect.props[key].setUniformValue = function () {
-            glw[method as 'uniform3f' | 'uniform3i'](
+            glw[method](
               location,
               this.programValue[0]!,
               this.programValue[1]!,
@@ -215,9 +198,9 @@ export class DynamicShader extends WebGlCoreShader {
           continue;
         }
 
-        if (method.indexOf('4') > -1) {
+        if (method === 'uniform4f' || method === 'uniform4i') {
           effect.props[key].setUniformValue = function () {
-            glw[method as 'uniform4f' | 'uniform4i'](
+            glw[method](
               location,
               this.programValue[0]!,
               this.programValue[1]!,
