@@ -608,7 +608,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     const renderer = this.stage.renderer;
-    assertTruthy(renderer instanceof WebGlCoreRenderer);
+    assertTruthy(renderer.mode === 'webgl');
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
