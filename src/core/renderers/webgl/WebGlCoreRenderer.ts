@@ -619,12 +619,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
       console.log('renderOps', this.renderOps.length);
     }
 
-    this.renderOps.forEach((renderOp, i) => {
+    for (let i = 0, length = this.renderOps.length; i < length; i++) {
+      const renderOp = this.renderOps[i] as WebGlCoreRenderOp;
       if (doLog) {
         console.log('Quads per operation', renderOp.numQuads);
       }
       renderOp.draw();
-    });
+    }
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
   }
 

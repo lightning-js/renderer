@@ -976,9 +976,9 @@ export class CoreNode extends EventEmitter {
       this.updateType ^ UpdateType.All &&
       this.updateType & UpdateType.RenderTexture
     ) {
-      this.children.forEach((child) => {
-        child.setUpdateType(UpdateType.All);
-      });
+      for (let i = 0, length = this.children.length; i < length; i++) {
+        this.children[i]!.setUpdateType(UpdateType.All);
+      }
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -1105,11 +1105,8 @@ export class CoreNode extends EventEmitter {
       this.children.length > 0 &&
       this.rtt === false
     ) {
-      for (let i = 0; i < this.children.length; i++) {
-        const child = this.children[i];
-        if (child === undefined) {
-          continue;
-        }
+      for (let i = 0, length = this.children.length; i < length; i++) {
+        const child = this.children[i] as CoreNode;
 
         child.setUpdateType(this.childUpdateType);
 
@@ -1452,8 +1449,7 @@ export class CoreNode extends EventEmitter {
     this.props.shader = this.stage.defShaderCtr;
 
     const children = [...this.children];
-    for (let i = 0; i < children.length; i++) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    for (let i = 0, length = children.length; i < length; i++) {
       children[i]!.destroy();
     }
     // This very action will also remove the node from the parent's children array
@@ -1879,9 +1875,9 @@ export class CoreNode extends EventEmitter {
   set zIndexLocked(value: number) {
     this.props.zIndexLocked = value;
     this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    this.children.forEach((child) => {
-      child.setUpdateType(UpdateType.CalculatedZIndex);
-    });
+    for (let i = 0, length = this.children.length; i < length; i++) {
+      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
+    }
   }
 
   get zIndex(): number {
@@ -1891,9 +1887,9 @@ export class CoreNode extends EventEmitter {
   set zIndex(value: number) {
     this.props.zIndex = value;
     this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    this.children.forEach((child) => {
-      child.setUpdateType(UpdateType.CalculatedZIndex);
-    });
+    for (let i = 0, length = this.children.length; i < length; i++) {
+      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
+    }
   }
 
   get parent(): CoreNode | null {
@@ -1956,11 +1952,9 @@ export class CoreNode extends EventEmitter {
       if (value === false && this.texture !== null) {
         this.unloadTexture();
         this.setUpdateType(UpdateType.All);
-
-        this.children.forEach((child) => {
-          child.parentHasRenderTexture = false;
-        });
-
+        for (let i = 0, length = this.children.length; i < length; i++) {
+          this.children[i]!.parentHasRenderTexture = false;
+        }
         this.stage.renderer?.removeRTTNode(this);
         return;
       }
@@ -1982,9 +1976,9 @@ export class CoreNode extends EventEmitter {
     this.hasRTTupdates = true;
     this.setUpdateType(UpdateType.All);
 
-    this.children.forEach((child) => {
-      child.setUpdateType(UpdateType.All);
-    });
+    for (let i = 0, length = this.children.length; i < length; i++) {
+      this.children[i]!.setUpdateType(UpdateType.All);
+    }
 
     // Store RTT nodes in a separate list
     this.stage.renderer?.renderToTexture(this);
