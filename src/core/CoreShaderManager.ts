@@ -275,6 +275,7 @@ export class CoreShaderManager {
     shader: InstanceType<ShaderMap['DynamicShader']>,
     props: ExtractProps<ShaderMap['DynamicShader']>,
   ): DynamicShaderController<T> {
+    shader.bindUniformMethods(props);
     return new DynamicShaderController(shader, props, this);
   }
 

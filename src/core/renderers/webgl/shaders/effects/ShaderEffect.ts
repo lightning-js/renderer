@@ -1,5 +1,6 @@
 import type { EffectMap } from '../../../../CoreShaderManager.js';
 import type { ExtractProps } from '../../../../CoreTextureManager.js';
+import type { WebGlContextWrapper } from '../../../../lib/WebGlContextWrapper.js';
 import type {
   AlphaShaderProp,
   DimensionsShaderProp,
@@ -89,6 +90,8 @@ export interface ShaderEffectValueMap
     AlphaShaderProp {
   value: ShaderEffectUniform['value'];
   programValue: number | Float32Array | undefined;
+  method: keyof UniformMethodMap;
+  setUniformValue?: () => void | null;
   hasValidator: boolean;
   hasProgramValueUpdater: boolean;
   updateOnBind: boolean;
