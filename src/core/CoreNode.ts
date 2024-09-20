@@ -1027,6 +1027,20 @@ export class CoreNode extends EventEmitter {
       }
     }
 
+    if (this.updateType & UpdateType.WorldAlpha) {
+      if (parent) {
+        this.worldAlpha = parent.worldAlpha * this.props.alpha;
+      } else {
+        this.worldAlpha = this.props.alpha;
+      }
+      this.setUpdateType(
+        UpdateType.Children |
+          UpdateType.PremultipliedColors |
+          UpdateType.IsRenderable,
+      );
+      this.childUpdateType |= UpdateType.WorldAlpha;
+    }
+
     if (this.updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
     }
@@ -1041,20 +1055,6 @@ export class CoreNode extends EventEmitter {
 
       this.childUpdateType |= UpdateType.Clipping;
       this.childUpdateType |= UpdateType.RenderBounds;
-    }
-
-    if (this.updateType & UpdateType.WorldAlpha) {
-      if (parent) {
-        this.worldAlpha = parent.worldAlpha * this.props.alpha;
-      } else {
-        this.worldAlpha = this.props.alpha;
-      }
-      this.setUpdateType(
-        UpdateType.Children |
-          UpdateType.PremultipliedColors |
-          UpdateType.IsRenderable,
-      );
-      this.childUpdateType |= UpdateType.WorldAlpha;
     }
 
     if (this.updateType & UpdateType.PremultipliedColors) {
@@ -1739,9 +1739,10 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(
       UpdateType.PremultipliedColors |
         UpdateType.WorldAlpha |
-        UpdateType.Children,
+        UpdateType.Children |
+        UpdateType.IsRenderable,
     );
-    this.childUpdateType |= UpdateType.Global;
+    this.childUpdateType |= UpdateType.WorldAlpha;
   }
 
   get autosize(): boolean {
