@@ -45,10 +45,6 @@ export class WebGlContextWrapper {
   private boundArrayBuffer: WebGLBuffer | null;
   private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
-  private programUniforms: WeakMap<
-    WebGLProgram,
-    Map<WebGLUniformLocation, any[]>
-  > = new WeakMap();
   //#endregion Cached WebGL State
 
   //#region Canvas
@@ -708,22 +704,279 @@ export class WebGlContextWrapper {
     this.curProgram = program;
   }
 
-  setUniform<T extends keyof UniformMethodMap>(
-    type: T,
-    location: WebGLUniformLocation,
-    ...args: UniformMethodMap[T]
+  /**
+   * Sets the value of a single float uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The value to set.
+   */
+  uniform1f(location: WebGLUniformLocation | null, v0: number) {
+    const { gl } = this;
+    gl.uniform1f(location, v0);
+  }
+
+  /**
+   * Sets the value of a float array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of values to set.
+   */
+  uniform1fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
   ) {
-    const { gl, programUniforms } = this;
-    let uniforms = programUniforms.get(this.curProgram!);
-    if (!uniforms) {
-      uniforms = new Map();
-      programUniforms.set(this.curProgram!, uniforms);
-    }
-    const uniformArgs = uniforms.get(location);
-    if (!uniformArgs || !compareArrays(uniformArgs, args)) {
-      uniforms.set(location, args);
-      gl[type](location, ...(args as [never, never, never, never]));
-    }
+    const { gl } = this;
+    gl.uniform1fv(location, value);
+  }
+
+  /**
+   * Sets the value of a single integer uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The value to set.
+   */
+  uniform1i(location: WebGLUniformLocation | null, v0: number) {
+    const { gl } = this;
+    gl.uniform1i(location, v0);
+  }
+
+  /**
+   * Sets the value of an integer array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of values to set.
+   */
+  uniform1iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform1iv(location, value);
+  }
+
+  /**
+   * Sets the value of a vec2 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   */
+  uniform2f(location: WebGLUniformLocation | null, v0: number, v1: number) {
+    const { gl } = this;
+    gl.uniform2f(location, v0, v1);
+  }
+
+  /**
+   * Sets the value of a vec2 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec2 values to set.
+   */
+  uniform2fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform2fv(location, value);
+  }
+
+  /**
+   * Sets the value of a ivec2 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   */
+  uniform2i(location: WebGLUniformLocation | null, v0: number, v1: number) {
+    const { gl } = this;
+    gl.uniform2i(location, v0, v1);
+  }
+
+  /**
+   * Sets the value of an ivec2 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec2 values to set.
+   */
+  uniform2iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform2iv(location, value);
+  }
+
+  /**
+   * Sets the value of a vec3 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   * @param v2 - The third component of the vector.
+   */
+  uniform3f(
+    location: WebGLUniformLocation | null,
+    v0: number,
+    v1: number,
+    v2: number,
+  ) {
+    const { gl } = this;
+    gl.uniform3f(location, v0, v1, v2);
+  }
+
+  /**
+   * Sets the value of a vec3 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec3 values to set.
+   */
+  uniform3fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform3fv(location, value);
+  }
+
+  /**
+   * Sets the value of a ivec3 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   * @param v2 - The third component of the vector.
+   */
+  uniform3i(
+    location: WebGLUniformLocation | null,
+    v0: number,
+    v1: number,
+    v2: number,
+  ) {
+    const { gl } = this;
+    gl.uniform3i(location, v0, v1, v2);
+  }
+
+  /**
+   * Sets the value of an ivec3 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec3 values to set.
+   */
+  uniform3iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform3iv(location, value);
+  }
+
+  /**
+   * Sets the value of a vec4 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   * @param v2 - The third component of the vector.
+   * @param v3 - The fourth component of the vector.
+   */
+  uniform4f(
+    location: WebGLUniformLocation | null,
+    v0: number,
+    v1: number,
+    v2: number,
+    v3: number,
+  ) {
+    const { gl } = this;
+    gl.uniform4f(location, v0, v1, v2, v3);
+  }
+
+  /**
+   * Sets the value of a vec4 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec4 values to set.
+   */
+  uniform4fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform4fv(location, value);
+  }
+
+  /**
+   * Sets the value of a ivec4 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v0 - The first component of the vector.
+   * @param v1 - The second component of the vector.
+   * @param v2 - The third component of the vector.
+   * @param v3 - The fourth component of the vector.
+   */
+  uniform4i(
+    location: WebGLUniformLocation | null,
+    v0: number,
+    v1: number,
+    v2: number,
+    v3: number,
+  ) {
+    const { gl } = this;
+    gl.uniform4i(location, v0, v1, v2, v3);
+  }
+
+  /**
+   * Sets the value of an ivec4 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec4 values to set.
+   */
+  uniform4iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniform4iv(location, value);
+  }
+
+  /**
+   * Sets the value of a mat2 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param transpose - Whether to transpose the matrix.
+   * @param value - The array of mat2 values to set.
+   */
+  uniformMatrix2fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix2fv(location, false, value);
+  }
+
+  /**
+   * Sets the value of a mat2 uniform variable.
+   * @param location - The location of the uniform variable.
+   * @param value - The array of mat2 values to set.
+   */
+  uniformMatrix3fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix3fv(location, false, value);
+  }
+
+  /**
+   * Sets the value of a mat4 uniform variable.
+   * @param location - The location of the uniform variable.
+   * @param value - The array of mat4 values to set.
+   */
+  uniformMatrix4fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ) {
+    const { gl } = this;
+    gl.uniformMatrix4fv(location, false, value);
   }
 
   /**
@@ -1031,12 +1284,21 @@ export function compareArrays<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) {
     return false;
   }
-  return a.every((v, i) => {
-    // Don't bother to compare nested arrays or Float32Arrays
-    if (Array.isArray(v) || v instanceof Float32Array) {
-      return false;
-    } else {
-      return v === b[i];
+
+  let result = false;
+  for (let i = 0; i < a.length; i++) {
+    if (Array.isArray(a[i]) || a[i] instanceof Float32Array) {
+      result = false;
+      break;
     }
-  });
+
+    if (a[i] !== b[i]) {
+      result = false;
+      break;
+    }
+
+    result = true;
+  }
+
+  return result;
 }
