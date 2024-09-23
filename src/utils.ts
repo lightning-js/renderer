@@ -46,6 +46,11 @@ export function createWebGLContext(
   if (!gl) {
     throw new Error('Unable to create WebGL context');
   }
+  const error = gl.getError();
+  if (error !== gl.NO_ERROR) {
+    throw new Error(`WebGL context creation failed with error code: ${error}`);
+  }
+
   if (contextSpy) {
     // Proxy the GL context to log all GL calls
     return new Proxy(gl, {

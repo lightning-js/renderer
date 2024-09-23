@@ -996,6 +996,14 @@ export class WebGlContextWrapper {
     const { gl } = this;
     gl.deleteShader(shader);
   }
+
+  /**
+   * Restore the WebGL context if it was lost.
+   * @param gl
+   */
+  restoreGLContext(gl: WebGLRenderingContext | WebGL2RenderingContext) {
+    this.gl = gl;
+  }
 }
 
 // prettier-ignore

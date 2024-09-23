@@ -758,7 +758,7 @@ export class CoreNode extends EventEmitter {
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
-    queueMicrotask(() => {
+    const task = () => {
       texture.preventCleanup = this.props.preventCleanup;
       // Preload texture if required
       if (this.textureOptions.preload) {
@@ -776,7 +776,10 @@ export class CoreNode extends EventEmitter {
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
-    });
+    };
+    if (!this.stage.suspended) {
+      queueMicrotask(task);
+    }
   }
 
   unloadTexture(): void {

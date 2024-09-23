@@ -25,6 +25,10 @@ import type { Stage } from './Stage.js';
 export const startLoop = (stage: Stage) => {
   let isIdle = false;
   const runLoop = () => {
+    if (stage.suspended) {
+      return;
+    }
+
     stage.updateFrameTime();
     stage.updateAnimations();
 

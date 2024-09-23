@@ -107,6 +107,8 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  suspended = false;
+
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
@@ -322,6 +324,14 @@ export class Stage {
     if (renderRequested) {
       this.renderRequested = false;
     }
+  }
+
+  stop() {
+    this.suspended = true;
+  }
+
+  resume() {
+    this.suspended = false;
   }
 
   /**

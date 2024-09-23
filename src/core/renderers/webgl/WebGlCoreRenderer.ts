@@ -68,6 +68,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
   glw: WebGlContextWrapper;
   system: CoreWebGlSystem;
+  contextLost = false;
+  ext: null | WEBGL_lose_context = null;
 
   //// Persistent data
   quadBuffer: ArrayBuffer;
@@ -136,6 +138,30 @@ export class WebGlCoreRenderer extends CoreRenderer {
       parameters: getWebGlParameters(this.glw),
       extensions: getWebGlExtensions(this.glw),
     };
+
+    // set up context loss event listener
+    canvas.addEventListener(
+      'webglcontextlost',
+      this.handleContextLoss.bind(this),
+      false,
+    );
+
+    // set up visibility change event to simulate context loss
+    // and restore on tab visibility change
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.simulateContextLoss();
+        return;
+      }
+      if (this.contextLost) {
+        this.simulateContextRestore();
+        const gl = createWebGLContext(canvas, options.contextSpy);
+        this.glw = new WebGlContextWrapper(gl);
+        this.stage.resume();
+        this.stage.requestRender();
+      }
+    });
+
     this.shManager.renderer = this;
     this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
     this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
@@ -190,6 +216,29 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.renderOps.length = 0;
     glw.setScissorTest(false);
     glw.clear();
+  }
+
+  // Simulate gl context loss for testing purposes
+  simulateContextLoss() {
+    this.ext = this.glw.getExtension(
+      'WEBGL_lose_context',
+    ) as WEBGL_lose_context;
+    if (this.ext) {
+      this.ext.loseContext();
+    }
+  }
+
+  simulateContextRestore() {
+    if (this.ext) {
+      this.ext.restoreContext(); // Restore the context
+    }
+  }
+
+  handleContextLoss(event: Event) {
+    this.contextLost = true;
+    // Instruct the stage to suspend rendering
+    this.stage.stop();
+    event.preventDefault();
   }
 
   override getShaderManager(): CoreShaderManager {

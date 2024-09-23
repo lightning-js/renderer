@@ -75,6 +75,7 @@ export interface CoreWebGlExtensions {
   WEBKIT_WEBGL_compressed_texture_pvrtc: any | null;
   WEBGL_compressed_texture_s3tc_srgb: WEBGL_compressed_texture_s3tc_srgb | null;
   OES_vertex_array_object: OES_vertex_array_object | null;
+  WEBGL_lose_context: WEBGL_lose_context | null;
 }
 
 /**
@@ -94,6 +95,7 @@ export function getWebGlExtensions(
     WEBKIT_WEBGL_compressed_texture_pvrtc: null,
     WEBGL_compressed_texture_s3tc_srgb: null,
     OES_vertex_array_object: null,
+    WEBGL_lose_context: null,
   };
 
   // Map over all extensions and get them
