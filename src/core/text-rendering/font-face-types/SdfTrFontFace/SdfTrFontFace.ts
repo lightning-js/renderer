@@ -72,7 +72,7 @@ export class SdfTrFontFace<
     this.type = type;
     const renderer = stage.renderer;
     assertTruthy(
-      renderer instanceof WebGlCoreRenderer,
+      renderer.mode === 'webgl',
       'SDF Font Faces can only be used with the WebGL Renderer',
     );
 
