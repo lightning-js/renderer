@@ -1,7 +1,4 @@
-# Lightning 3 Renderer (Beta)
-
-**Warning: This is beta software and all of the exposed APIs are subject to
-breaking changes**
+# Lightning 3 Renderer
 
 A powerful 2D scene renderer designed for rendering highly performant user
 interfaces on web browsers running on embedded devices using WebGL.
