@@ -1,10 +1,35 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
-  const degToRad = (deg: number) => {
-    return (Math.PI / 180) * deg;
+export async function automation(settings: ExampleSettings) {
+  const TESTPAGES = 14;
+  const testPageArray: number[] = [];
+  for (let i = 1; i < TESTPAGES; i++) {
+    testPageArray.push(i);
+  }
+
+  const page = await test(settings);
+  // i = 0
+  await settings.snapshot();
+
+  let testIdx = 1;
+  const testPage = async () => {
+    console.log('Testing ', testIdx);
+    page(testIdx);
+    await settings.snapshot();
+
+    if (testIdx >= TESTPAGES) {
+      return true;
+    }
+
+    testIdx++;
+    await testPage();
   };
 
+  // test first page
+  await testPage();
+}
+
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const instructionText = renderer.createTextNode({
     text: 'Press space to start animation, arrow keys to move, enter to reset',
     fontSize: 30,
@@ -58,7 +83,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   const redRect = renderer.createNode({
     // skipRender: true,
-    x: 520,
+    x: 100,
     y: 305,
     alpha: 1,
     width: 200,
@@ -209,7 +234,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const blueRect = renderer.createNode({
-    x: 1920 / 2 - 200,
+    x: 340,
     y: 100,
     alpha: 1,
     width: 200,
@@ -294,7 +319,125 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     }
   };
 
+  const page = (i = 1) => {
+    console.log('Running test page', i);
+
+    switch (i) {
+      // reset
+      case 0:
+        blueRect.x = 340;
+        redRect.x = 100;
+        break;
+
+      // first yellow out of bounds
+      case 1:
+        redRect.x = -50;
+        blueRect.x = 190;
+        break;
+
+      // second yellow out of bounds
+      case 2:
+        redRect.x = -80;
+        blueRect.x = 160;
+        break;
+
+      // third yellow out of bounds
+      case 3:
+        redRect.x = -110;
+        blueRect.x = 130;
+        break;
+
+      // fourth yellow out of bounds
+      case 4:
+        redRect.x = -140;
+        blueRect.x = 100;
+        break;
+
+      // first yellow out of view
+      case 5:
+        redRect.x = -170;
+        blueRect.x = 70;
+        break;
+
+      // second yellow out of view
+      case 6:
+        redRect.x = -180;
+        blueRect.x = 60;
+        break;
+
+      // third yellow out of view
+      case 7:
+        redRect.x = -210;
+        blueRect.x = 30;
+        break;
+
+      // fourth yellow out of view
+      // red rect ouf ot bounds
+      case 8:
+        redRect.x = -240;
+        blueRect.x = 0;
+        break;
+
+      // red out of bounds
+      case 9:
+        redRect.x = -310;
+        blueRect.x = -70;
+        break;
+
+      // blue out of bounds
+      case 10:
+        redRect.x = -460;
+        blueRect.x = -220;
+        break;
+
+      // blue out of view
+      case 11:
+        redRect.x = -560;
+        blueRect.x = -320;
+        break;
+
+      // CLIPPING update tests
+      // clipping off - all back in view
+      case 12:
+        redRect.x = -240;
+        blueRect.x = 0;
+        setClipping(false);
+        break;
+
+      // turn clipping back on
+      case 13:
+        setClipping(true);
+        break;
+
+      // clipping toggle x3
+      // all blocks should be visible with clipping off
+      case 14:
+        redRect.x = -210;
+        blueRect.x = 30;
+        setClipping(false);
+        setClipping(true);
+        setClipping(false);
+        break;
+    }
+  };
+
+  const setClipping = (clipping: boolean) => {
+    boundaryRect.clipping = clipping;
+    clippingStatus.text = clipping ? 'Clipping: ON' : 'Clipping: OFF';
+    clippingStatus.color = clipping ? 0x00ff00ff : 0xff0000ff;
+  };
+
+  const toggleClipping = (force = false) => {
+    setClipping(!boundaryRect.clipping);
+  };
+
   const moveModifier = 10;
+  const numKeys: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    numKeys.push(i.toString());
+  }
+
+  let testPageIdx = 0;
   window.onkeydown = (e) => {
     if (e.key === ' ') {
       runAnimation = !runAnimation;
@@ -303,6 +446,10 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         animate();
       }
+    }
+
+    if (numKeys.indexOf(e.key) !== -1) {
+      page(parseInt(e.key));
     }
 
     if (e.key === 'ArrowRight') {
@@ -315,6 +462,16 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       blueRect.x -= moveModifier;
     }
 
+    if (e.key === 'ArrowDown') {
+      testPageIdx--;
+      page(testPageIdx);
+    }
+
+    if (e.key === 'ArrowUp') {
+      testPageIdx++;
+      page(testPageIdx);
+    }
+
     if (e.key === 'Enter') {
       runAnimation = false;
       redRect.x = 520;
@@ -322,12 +479,16 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     }
 
     if (e.key === 't') {
-      boundaryRect.clipping = !boundaryRect.clipping;
-
-      clippingStatus.text = boundaryRect.clipping
-        ? 'Clipping: ON'
-        : 'Clipping: OFF';
-      clippingStatus.color = boundaryRect.clipping ? 0x00ff00ff : 0xff0000ff;
+      toggleClipping();
     }
+
+    // wouter special
+    if (e.key === 'w') {
+      page(12);
+    }
+
+    console.log('positions redRect.x', redRect.x, ' bluerect.x', blueRect.x);
   };
+
+  return page;
 }

@@ -192,7 +192,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 8191,
+  All = 14335,
 }
 
 /**
@@ -1234,7 +1234,6 @@ export class CoreNode extends EventEmitter {
       strictBound.y1 - renderM[0],
       strictBound.x2 + renderM[1],
       strictBound.y2 + renderM[2],
-      this.preloadBound,
     );
   }
 
@@ -1264,16 +1263,19 @@ export class CoreNode extends EventEmitter {
 
     // no clipping, use parent's bounds
     if (this.clipping === false) {
-      if (this.parent !== null) {
-        this.strictBound =
-          this.parent.strictBound ??
-          createBound(0, 0, this.stage.root.width, this.stage.root.height);
+      if (this.parent !== null && this.parent.strictBound !== undefined) {
+        // we have a parent with a valid bound, copy it
+        this.strictBound = createBound(
+          this.parent.strictBound.x1,
+          this.parent.strictBound.y1,
+          this.parent.strictBound.x2,
+          this.parent.strictBound.y2,
+        );
 
-        this.preloadBound =
-          this.parent.preloadBound ??
-          this.createPreloadBounds(this.strictBound);
+        this.preloadBound = this.createPreloadBounds(this.strictBound);
         return;
       } else {
+        // no parent or parent does not have a bound, take the stage dimensions
         this.strictBound = createBound(
           0,
           0,
