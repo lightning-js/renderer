@@ -297,22 +297,21 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   }
 
   override isFontFaceSupported(fontFace: TrFontFace): boolean {
-    return fontFace instanceof SdfTrFontFace;
+    const sdfFont = fontFace as SdfTrFontFace;
+    return sdfFont.texture !== undefined && sdfFont.type !== undefined;
   }
 
   override addFontFace(fontFace: TrFontFace): void {
-    // Make sure the font face is an SDF font face (it should have already passed
-    // the `isFontFaceSupported` check)
-    assertTruthy(fontFace instanceof SdfTrFontFace);
-    const familyName = fontFace.fontFamily;
+    const sdfFont = fontFace as SdfTrFontFace;
+    const familyName = sdfFont.fontFamily;
     const fontFamiles =
-      fontFace.type === 'ssdf'
+      sdfFont.type === 'ssdf'
         ? this.ssdfFontFamilies
-        : fontFace.type === 'msdf'
+        : sdfFont.type === 'msdf'
         ? this.msdfFontFamilies
         : undefined;
     if (!fontFamiles) {
-      console.warn(`Invalid font face type: ${fontFace.type as string}`);
+      console.warn(`Invalid font face type: ${sdfFont.type as string}`);
       return;
     }
     let faceSet = fontFamiles[familyName];
@@ -607,7 +606,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       return;
     }
 
-    const renderer = this.stage.renderer;
+    const renderer = this.stage.renderer as WebGlCoreRenderer;
     assertTruthy(renderer.mode === 'webgl');
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
@@ -626,9 +625,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     } = state;
 
     let { webGlBuffers } = state;
+    const glw = renderer.glw;
 
     if (!webGlBuffers) {
-      const glw = renderer.glw;
       const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
       const webGlBuffer = glw.createBuffer();
       assertTruthy(webGlBuffer);
@@ -661,8 +660,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     if (!bufferUploaded) {
-      const glw = renderer.glw;
-
       const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
       glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
@@ -687,7 +684,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     const renderOp = new WebGlCoreRenderOp(
-      renderer.glw,
+      glw,
       renderer.options,
       webGlBuffers,
       this.sdfShader,

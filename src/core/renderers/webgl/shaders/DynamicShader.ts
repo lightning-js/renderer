@@ -258,17 +258,17 @@ export class DynamicShader extends WebGlCoreShader {
       }
 
       let onShaderMask =
-        fxClass.onShaderMask instanceof Function
+        typeof fxClass.onShaderMask === 'function'
           ? fxClass.onShaderMask(fxProps)
           : fxClass.onShaderMask;
 
       let onColorize =
-        fxClass.onColorize instanceof Function
+        typeof fxClass.onColorize === 'function'
           ? fxClass.onColorize(fxProps)
           : fxClass.onColorize;
 
       let onEffectMask =
-        fxClass.onEffectMask instanceof Function
+        typeof fxClass.onEffectMask === 'function'
           ? fxClass.onEffectMask(fxProps)
           : fxClass.onEffectMask;
 

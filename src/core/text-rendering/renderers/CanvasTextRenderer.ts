@@ -234,25 +234,23 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
   }
 
   override isFontFaceSupported(fontFace: TrFontFace): boolean {
-    return fontFace instanceof WebTrFontFace;
+    const webFont = fontFace as WebTrFontFace;
+    return webFont.fontFace !== undefined && webFont.fontUrl !== undefined;
   }
 
   override addFontFace(fontFace: TrFontFace): void {
-    // Make sure the font face is an Canvas font face (it should have already passed
-    // the `isFontFaceSupported` check)
-    assertTruthy(fontFace instanceof WebTrFontFace);
-
+    const webFont = fontFace as WebTrFontFace;
     // Add the font face to the document
     // Except for the 'sans-serif' font family, which the Renderer provides
     // as a special default fallback.
-    if (fontFace.fontFamily !== 'sans-serif') {
+    if (webFont.fontFamily !== 'sans-serif') {
       // @ts-expect-error `add()` method should be available from a FontFaceSet
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       globalFontSet.add(fontFace.fontFace);
     }
 
     const { fontFamilies } = this;
-    const familyName = fontFace.fontFace.family;
+    const familyName = webFont.fontFace.family;
 
     let faceSet = fontFamilies[familyName];
     if (!faceSet) {
@@ -260,7 +258,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       fontFamilies[familyName] = faceSet;
     }
 
-    faceSet.add(fontFace);
+    faceSet.add(webFont);
   }
 
   override createState(

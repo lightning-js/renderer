@@ -127,12 +127,12 @@ export abstract class WebGlCoreShader extends CoreShader {
       renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS;
 
     const vertexSource =
-      shaderSources.vertex instanceof Function
+      typeof shaderSources.vertex === 'function'
         ? shaderSources.vertex(textureUnits)
         : shaderSources.vertex;
 
     const fragmentSource =
-      shaderSources.fragment instanceof Function
+      typeof shaderSources.fragment === 'function'
         ? shaderSources.fragment(textureUnits)
         : shaderSources.fragment;
 
