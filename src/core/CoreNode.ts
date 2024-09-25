@@ -852,10 +852,15 @@ export class CoreNode extends EventEmitter {
     if (parent !== null && !(parent.updateType & UpdateType.Children)) {
       parent.setUpdateType(UpdateType.Children);
     }
+
     // If node is part of RTT texture
     // Flag that we need to update
     if (this.parentHasRenderTexture) {
       this.setRTTUpdates(type);
+
+      if (parent !== null) {
+        parent.setUpdateType(UpdateType.RenderTexture);
+      }
     }
   }
 
@@ -977,7 +982,7 @@ export class CoreNode extends EventEmitter {
       this.updateType & UpdateType.RenderTexture
     ) {
       for (let i = 0, length = this.children.length; i < length; i++) {
-        this.children[i]!.setUpdateType(UpdateType.All);
+        this.children[i]?.setUpdateType(UpdateType.All);
       }
     }
 
