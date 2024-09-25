@@ -329,6 +329,18 @@ async function initRenderer(
     },
   );
 
+  document.addEventListener('touchstart', (e) => {
+    const { targetTouches } = e;
+    if (targetTouches.length) {
+      const touch = targetTouches[0];
+      if (touch) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+        const nodes = renderer.stage.findNodesAt(touch.clientX, touch.clientY);
+        console.log(nodes);
+      }
+    }
+  });
+
   const appElement = document.querySelector('#app');
 
   assertTruthy(appElement instanceof HTMLDivElement);
