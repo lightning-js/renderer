@@ -940,6 +940,12 @@ export class CoreNode extends EventEmitter {
         .scale(resizeModeScaleX, resizeModeScaleY);
     }
 
+    // If we have local transformations
+    // we mark the node as dirty in the spatial grid
+    if (this.isRenderable) {
+      this.stage.renderMap.flagDirty(this);
+    }
+
     this.setUpdateType(UpdateType.Global);
   }
 
@@ -1334,6 +1340,13 @@ export class CoreNode extends EventEmitter {
 
   onChangeIsRenderable(isRenderable: boolean) {
     this.texture?.setRenderableOwner(this, isRenderable);
+
+    // Update Spatial grid
+    if (isRenderable) {
+      this.stage.renderMap.insert(this);
+    } else {
+      this.stage.renderMap.remove(this);
+    }
   }
 
   calculateRenderCoords() {

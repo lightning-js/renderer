@@ -48,6 +48,7 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { SpatialHash } from './lib/SpatialHash.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -92,6 +93,7 @@ export class Stage {
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
   public readonly defShaderCtr: BaseShaderController;
+  public readonly renderMap: SpatialHash;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -200,6 +202,9 @@ export class Stage {
 
     this.fontManager = new TrFontManager(this.textRenderers);
 
+    // Create a Spatial grid for renderables
+    this.renderMap = new SpatialHash(50);
+
     // create root node
     const rootNode = new CoreNode(this, {
       x: 0,
@@ -282,6 +287,16 @@ export class Stage {
    */
   hasSceneUpdates() {
     return !!this.root.updateType || this.renderRequested;
+  }
+
+  /**
+   * Find renderables at specific world position
+   * @param x
+   * @param y
+   * @returns
+   */
+  findNodesAt(x: number, y: number) {
+    return this.renderMap.query(x, y);
   }
 
   /**
