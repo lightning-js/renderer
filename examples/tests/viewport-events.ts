@@ -1,7 +1,7 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export async function automation(settings: ExampleSettings) {
-  const TESTPAGES = 14;
+  const TESTPAGES = 17;
   const testPageArray: number[] = [];
   for (let i = 1; i < TESTPAGES; i++) {
     testPageArray.push(i);
@@ -418,6 +418,30 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         setClipping(true);
         setClipping(false);
         break;
+
+      // turn clipping back on, put redRect out of bounds
+      case 15:
+        setClipping(true);
+        redRect.x = -310;
+        blueRect.x = -70;
+        break;
+
+      // resize redrect, should be inbounds again due to size change
+      case 16:
+        redRect.width = 400;
+        break;
+
+      // but parent redRect out of bounds, update yellow rect colors
+      // move in bounds and color change should be reflected
+      case 17:
+        redRect.width = 200;
+        yellow1Rect.color = 0x0000ffff;
+        yellow2Rect.color = 0x0000ffff;
+        yellow3Rect.color = 0x0000ffff;
+        yellow4Rect.color = 0x0000ffff;
+        blueRect.x = 340;
+        redRect.x = 100;
+        break;
     }
   };
 
@@ -478,13 +502,37 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       blueRect.x = 1920 / 2 - 200;
     }
 
+    if (e.key === 's') {
+      (redRect.width = Math.random() * 400),
+        (redRect.height = Math.random() * 400);
+    }
+
+    if (e.key === 'c') {
+      yellow1Rect.color =
+        yellow1Rect.color === 0x0000ffff
+          ? (yellow1Rect.color = 0xffff00ff)
+          : (yellow1Rect.color = 0x0000ffff);
+      yellow2Rect.color =
+        yellow2Rect.color === 0x0000ffff
+          ? (yellow2Rect.color = 0xffff00ff)
+          : (yellow2Rect.color = 0x0000ffff);
+      yellow3Rect.color =
+        yellow3Rect.color === 0x0000ffff
+          ? (yellow3Rect.color = 0xffff00ff)
+          : (yellow3Rect.color = 0x0000ffff);
+      yellow4Rect.color =
+        yellow4Rect.color === 0x0000ffff
+          ? (yellow4Rect.color = 0xffff00ff)
+          : (yellow4Rect.color = 0x0000ffff);
+    }
+
     if (e.key === 't') {
       toggleClipping();
     }
 
     // wouter special
     if (e.key === 'w') {
-      page(12);
+      page(15);
     }
 
     console.log('positions redRect.x', redRect.x, ' bluerect.x', blueRect.x);
