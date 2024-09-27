@@ -88,6 +88,8 @@ const defaultPhysicalPixelRatio = 1;
   const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
   const enableInspector = urlParams.get('inspector') === 'true';
+  const forceWebGL2 = urlParams.get('webgl2') === 'true';
+
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
   const logicalPixelRatio = resolution / appHeight;
@@ -110,6 +112,7 @@ const defaultPhysicalPixelRatio = 1;
       enableContextSpy,
       perfMultiplier,
       enableInspector,
+      forceWebGL2,
     );
     return;
   }
@@ -131,6 +134,7 @@ async function runTest(
   enableContextSpy: boolean,
   perfMultiplier: number,
   enableInspector: boolean,
+  forceWebGL2: boolean,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -152,6 +156,7 @@ async function runTest(
     logicalPixelRatio,
     physicalPixelRatio,
     enableInspector,
+    forceWebGL2,
     customSettings,
   );
 
@@ -222,6 +227,7 @@ async function initRenderer(
   logicalPixelRatio: number,
   physicalPixelRatio: number,
   enableInspector: boolean,
+  forceWebGL2?: boolean,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let inspector: typeof Inspector | undefined;
@@ -236,6 +242,7 @@ async function initRenderer(
       clearColor: 0x00000000,
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
+      forceWebGL2,
       inspector,
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
