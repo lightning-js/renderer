@@ -152,16 +152,6 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
     this.program = program;
 
-    if (webGl2) {
-      const vao = glw.createVertexArray();
-      if (!vao) {
-        throw new Error();
-      }
-      this.vao = vao;
-
-      glw.bindVertexArray(this.vao);
-    }
-
     this.attributeLocations = {} as Record<string, number>;
     this.attributeBuffers = {} as Record<string, number>;
     this.attributeNames = [];
