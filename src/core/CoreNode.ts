@@ -1006,12 +1006,12 @@ export class CoreNode extends EventEmitter {
       this.updateBoundingRect();
 
       this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
+      this.childUpdateType |= UpdateType.Global;
 
       if (this.clipping === true) {
-        this.setUpdateType(UpdateType.Clipping);
+        this.setUpdateType(UpdateType.Clipping | UpdateType.RenderBounds);
+        this.childUpdateType |= UpdateType.RenderBounds;
       }
-
-      this.childUpdateType |= UpdateType.Global;
     }
 
     if (this.updateType & UpdateType.RenderBounds) {
@@ -1048,10 +1048,6 @@ export class CoreNode extends EventEmitter {
 
     if (this.updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
-    }
-
-    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      return;
     }
 
     if (this.updateType & UpdateType.Clipping) {
@@ -1103,6 +1099,10 @@ export class CoreNode extends EventEmitter {
       this.calculateZIndex();
       // Tell parent to re-sort children
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
+    }
+
+    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
+      return;
     }
 
     if (
