@@ -351,7 +351,6 @@ export abstract class WebGlCoreShader extends CoreShader {
 
   override attach(): void {
     this.glw.useProgram(this.program);
-    this.glw.useProgram(this.program);
     if (this.glw.isWebGl2() && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
