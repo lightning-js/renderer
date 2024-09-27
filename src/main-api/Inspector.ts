@@ -246,6 +246,18 @@ export class Inspector {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (node as any).div = div;
 
+    node.on('inViewport', () => {
+      div.setAttribute('state', 'inViewport');
+    });
+
+    node.on('inBounds', () => {
+      div.setAttribute('state', 'inBounds');
+    });
+
+    node.on('outOfBounds', () => {
+      div.setAttribute('state', 'outOfBounds');
+    });
+
     return this.createProxy(node, div);
   }
 
