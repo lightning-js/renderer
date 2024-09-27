@@ -70,6 +70,7 @@ export interface CoreRendererOptions {
   clearColor: number;
   bufferMemory: number;
   contextSpy: ContextSpy | null;
+  forceWebGL2: boolean;
 }
 
 export interface BufferInfo {
