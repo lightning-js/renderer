@@ -18,7 +18,11 @@
  */
 import type { IEventEmitter } from './IEventEmitter.js';
 
-export type AnimationControllerState = 'running' | 'paused' | 'stopped';
+export type AnimationControllerState =
+  | 'scheduled'
+  | 'running'
+  | 'paused'
+  | 'stopped';
 
 /**
  * Animation Controller interface

@@ -53,10 +53,10 @@ export class CoreAnimationController
   }
 
   start(): IAnimationController {
-    if (this.state !== 'running') {
+    if (this.state !== 'running' && this.state !== 'scheduled') {
       this.makeStoppedPromise();
       this.registerAnimation();
-      this.state = 'running';
+      this.state = 'scheduled';
     }
     return this;
   }
@@ -139,6 +139,7 @@ export class CoreAnimationController
   }
 
   private onAnimating(this: CoreAnimationController): void {
+    this.state = 'running';
     this.emit('animating', this);
   }
 }
