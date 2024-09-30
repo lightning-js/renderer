@@ -60,6 +60,7 @@ export interface StageOptions {
   clearColor: number;
   fpsUpdateInterval: number;
   enableContextSpy: boolean;
+  forceWebGL2: boolean;
   numImageWorkers: number;
   renderEngine: typeof WebGlCoreRenderer | typeof CanvasCoreRenderer;
   eventBus: EventEmitter;
@@ -128,6 +129,7 @@ export class Stage {
       appHeight,
       boundsMargin,
       enableContextSpy,
+      forceWebGL2,
       numImageWorkers,
       textureMemory,
       renderEngine,
@@ -160,6 +162,7 @@ export class Stage {
       txMemManager: this.txMemManager,
       shManager: this.shManager,
       contextSpy: this.contextSpy,
+      forceWebGL2,
     };
 
     this.renderer = new renderEngine(rendererOptions);

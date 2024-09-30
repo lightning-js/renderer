@@ -121,7 +121,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.stage.requestRender();
     });
 
-    const gl = createWebGLContext(canvas, options.contextSpy);
+    const gl = createWebGLContext(
+      canvas,
+      options.forceWebGL2,
+      options.contextSpy,
+    );
     const glw = (this.glw = new WebGlContextWrapper(gl));
 
     const color = getNormalizedRgbaComponents(clearColor);

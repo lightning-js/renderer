@@ -21,6 +21,7 @@ import type { ContextSpy } from './core/lib/ContextSpy.js';
 
 export function createWebGLContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
+  forceWebGL2 = false,
   contextSpy: ContextSpy | null,
 ): WebGLRenderingContext {
   const config: WebGLContextAttributes = {
@@ -38,7 +39,7 @@ export function createWebGLContext(
   const gl =
     // TODO: Remove this assertion once this issue is fixed in TypeScript
     // https://github.com/microsoft/TypeScript/issues/53614
-    (canvas.getContext('webgl', config) ||
+    (canvas.getContext(forceWebGL2 ? 'webgl2' : 'webgl', config) ||
       canvas.getContext(
         'experimental-webgl' as 'webgl',
         config,

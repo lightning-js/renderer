@@ -245,6 +245,17 @@ export interface RendererMainSettings {
    *
    */
   fontEngines: (typeof SdfTextRenderer | typeof CanvasTextRenderer)[];
+
+  /**
+   * Force WebGL2
+   *
+   * @remarks
+   * Force the renderer to use WebGL2. This can be used to force the renderer to
+   * use WebGL2 even if the browser supports WebGL1.
+   *
+   * @defaultValue `false`
+   */
+  forceWebGL2?: boolean;
 }
 
 /**
@@ -330,6 +341,7 @@ export class RendererMain extends EventEmitter {
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
+      forceWebGL2: settings.forceWebGL2 ?? false,
       inspector: settings.inspector ?? false,
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
@@ -366,6 +378,7 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio: this.settings.deviceLogicalPixelRatio,
       devicePhysicalPixelRatio: this.settings.devicePhysicalPixelRatio,
       enableContextSpy: this.settings.enableContextSpy,
+      forceWebGL2: this.settings.forceWebGL2,
       fpsUpdateInterval: this.settings.fpsUpdateInterval,
       numImageWorkers: this.settings.numImageWorkers,
       renderEngine: this.settings.renderEngine,
