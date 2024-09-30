@@ -19,7 +19,11 @@
 import { startLoop, getTimeStamp } from './platform.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
-import { CoreNode, type CoreNodeProps } from './CoreNode.js';
+import {
+  CoreNode,
+  CoreNodeRenderState,
+  type CoreNodeProps,
+} from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
 import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
@@ -237,6 +241,7 @@ export class Stage {
       src: null,
       scale: 1,
       preventCleanup: false,
+      containBounds: true,
     });
 
     this.root = rootNode;
@@ -394,7 +399,11 @@ export class Stage {
         continue;
       }
 
-      if (child.worldAlpha === 0) {
+      if (
+        child.worldAlpha === 0 ||
+        (child.containBounds === true &&
+          child.renderState === CoreNodeRenderState.OutOfBounds)
+      ) {
         continue;
       }
 
@@ -614,6 +623,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
+      containBounds: props.containBounds ?? true,
     };
   }
 }
