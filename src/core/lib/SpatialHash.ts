@@ -27,40 +27,59 @@ export class SpatialHash {
     return `${gridXLocation},${gridYLocation}`;
   }
 
+  private getOverlappingCells(node: CoreNode): string[] | [] {
+    if (!node.renderBound) {
+      return [];
+    }
+
+    const { x1, x2, y1, y2 } = node.renderBound;
+    const minX = ~~(x1 / this.cellSize);
+    const maxX = ~~(x2 / this.cellSize);
+    const minY = ~~(y1 / this.cellSize);
+    const maxY = ~~(y2 / this.cellSize);
+
+    const cells: string[] = [];
+
+    for (let gridX = minX; gridX < maxX; gridX++) {
+      for (let gridY = minY; gridY < maxY; gridY++) {
+        cells.push(`${gridX},${gridY}`);
+      }
+    }
+    return cells;
+  }
+
   /**
    * Add Node to spatial Grid
    * @param node
    */
   public insert(node: CoreNode): void {
     const point = this.getCenter(node);
-    const hash = this.getHash(point.x, point.x);
-    console.log(point);
-    if (this.grid.has(hash) === false) {
-      this.grid.set(hash, []);
-    }
+    const cells = this.getOverlappingCells(node);
 
-    this.grid.get(hash)?.push(node);
-    this.locations.set(node, { x: point.x, y: point.y });
+    cells.forEach((hash) => {
+      if (this.grid.has(hash) === false) {
+        this.grid.set(hash, []);
+      }
+      this.grid.get(hash)?.push(node);
+      this.locations.set(node, { x: point.x, y: point.y });
+    });
   }
 
   /**
    * Remove node from gridcell
    * @param node
    */
-  public remove(
-    node: CoreNode,
-    x: number | undefined = undefined,
-    y: number | undefined = undefined,
-  ): void {
-    const hash = this.getHash(x || node.absX, y || node.absY);
-    const cell = this.grid.get(hash);
-
-    if (cell !== undefined) {
-      const index = cell.indexOf(node);
-      if (index > -1) {
-        cell.splice(index, 1);
+  public remove(node: CoreNode): void {
+    const cells = this.getOverlappingCells(node);
+    cells.forEach((hash) => {
+      const cell = this.grid.get(hash);
+      if (cell) {
+        const index = cell.indexOf(node);
+        if (index > -1) {
+          cell.splice(index, 1);
+        }
       }
-    }
+    });
   }
 
   /**
