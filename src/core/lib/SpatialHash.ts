@@ -107,7 +107,7 @@ export class SpatialHash {
 
   public update(node: CoreNode, oldX: number, oldY: number): void {
     // Remove node from old cell
-    this.remove(node, oldX, oldY);
+    this.remove(node);
     // insert intro new cell
     this.insert(node);
   }

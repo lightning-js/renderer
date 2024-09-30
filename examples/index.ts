@@ -42,6 +42,7 @@ import type {
 import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
+import type { CoreNode } from '../dist/src/core/CoreNode.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -328,18 +329,6 @@ async function initRenderer(
       fpsSampleIndex++;
     },
   );
-
-  document.addEventListener('touchstart', (e) => {
-    const { targetTouches } = e;
-    if (targetTouches.length) {
-      const touch = targetTouches[0];
-      if (touch) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-        const nodes = renderer.stage.findNodesAt(touch.clientX, touch.clientY);
-        console.log(nodes);
-      }
-    }
-  });
 
   const appElement = document.querySelector('#app');
 
