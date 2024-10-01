@@ -665,6 +665,21 @@ export interface CoreNodeProps {
    * are provided. Only works when createImageBitmap is supported on the browser.
    */
   srcY?: number;
+  /**
+   * By enabling Strict bounds the renderer will not process & render child nodes of a node that is out of the visible area
+   *
+   * @remarks
+   * When enabled out of bound nodes, i.e. nodes that are out of the visible area, will
+   * **NOT** have their children processed and renderer anymore. This means the children of a out of bound
+   * node will not receive update processing such as positioning updates and will not be drawn on screen.
+   * As such the rest of the branch of the update tree that sits below this node will not be processed anymore
+   *
+   * This is a big performance gain but may be disabled in cases where the width of the parent node is
+   * unknown and the render must process the child nodes regardless of the viewport status of the parent node
+   *
+   * @default false
+   */
+  strictBounds: boolean;
 }
 
 /**
@@ -1101,7 +1116,10 @@ export class CoreNode extends EventEmitter {
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
-    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
+    if (
+      this.props.strictBounds === true &&
+      this.renderState === CoreNodeRenderState.OutOfBounds
+    ) {
       return;
     }
 
@@ -2132,6 +2150,20 @@ export class CoreNode extends EventEmitter {
 
   get textureOptions(): TextureOptions {
     return this.props.textureOptions;
+  }
+
+  get strictBounds(): boolean {
+    return this.props.strictBounds;
+  }
+
+  set strictBounds(v) {
+    if (v === this.props.strictBounds) {
+      return;
+    }
+
+    this.props.strictBounds = v;
+    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
 
   setRTTUpdates(type: number) {
