@@ -83,7 +83,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         break;
 
       case 3:
-        containerNode.strictBounds = false;
+        containerNode.strictBounds = true;
         break;
     }
   };
