@@ -666,20 +666,20 @@ export interface CoreNodeProps {
    */
   srcY?: number;
   /**
-   * Contain bounds will not process/render child nodes of a node that is out of the visible area
+   * By enabling Strict bounds the renderer will not process & render child nodes of a node that is out of the visible area
    *
    * @remarks
    * When enabled out of bound nodes, i.e. nodes that are out of the visible area, will
-   * **NOT** have their children processed anymore. This means the children of a out of bound
-   * node will not receive update processing and will not be drawn on screen. As such the rest of the
-   * branch of the update tree that sits below this node will not be processed anymore
+   * **NOT** have their children processed and renderer anymore. This means the children of a out of bound
+   * node will not receive update processing such as positioning updates and will not be drawn on screen.
+   * As such the rest of the branch of the update tree that sits below this node will not be processed anymore
    *
-   * This saves a lot in performance but may be disabled in cases where the width of the node is
-   * unknown and the render must process the child nodes regardless of the status of the parent node
+   * This is a big performance gain but may be disabled in cases where the width of the parent node is
+   * unknown and the render must process the child nodes regardless of the viewport status of the parent node
    *
-   * @default true
+   * @default false
    */
-  containBounds: boolean;
+  strictBounds: boolean;
 }
 
 /**
@@ -1117,7 +1117,7 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.props.containBounds === true &&
+      this.props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
       return;
@@ -2152,16 +2152,16 @@ export class CoreNode extends EventEmitter {
     return this.props.textureOptions;
   }
 
-  get containBounds(): boolean {
-    return this.props.containBounds;
+  get strictBounds(): boolean {
+    return this.props.strictBounds;
   }
 
-  set containBounds(v) {
-    if (v === this.props.containBounds) {
+  set strictBounds(v) {
+    if (v === this.props.strictBounds) {
       return;
     }
 
-    this.props.containBounds = v;
+    this.props.strictBounds = v;
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
     this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }

@@ -1,7 +1,15 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export async function automation(settings: ExampleSettings) {
-  // Your automation logic here
+  const page = await test(settings);
+  page(1);
+  await settings.snapshot();
+
+  page(2);
+  await settings.snapshot();
+
+  page(3);
+  await settings.snapshot();
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
@@ -12,6 +20,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     width: 1000,
     height: 600,
     color: 0xff0000ff, // Red
+    parent: testRoot,
+  });
+
+  const status = renderer.createTextNode({
+    text: 'Strict Bound: ',
+    fontSize: 30,
+    x: 10,
+    y: 50,
     parent: testRoot,
   });
 
@@ -38,6 +54,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
+  renderer.on('idle', () => {
+    status.text = 'Strict Bound: ' + String(containerNode.strictBounds);
+  });
+
   window.onkeydown = (e) => {
     if (e.key === 'ArrowRight') {
       containerNode.x -= 100;
@@ -48,8 +68,25 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     if (e.key === ' ') {
-      containerNode.containBounds = !containerNode.containBounds;
-      console.log('Contain bounds is: ', containerNode.containBounds);
+      containerNode.strictBounds = !containerNode.strictBounds;
     }
   };
+
+  const page = (i = 0) => {
+    switch (i) {
+      case 1:
+        containerNode.x = -590;
+        break;
+
+      case 2:
+        containerNode.x = -1390;
+        break;
+
+      case 3:
+        containerNode.strictBounds = false;
+        break;
+    }
+  };
+
+  return page;
 }

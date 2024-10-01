@@ -241,7 +241,7 @@ export class Stage {
       src: null,
       scale: 1,
       preventCleanup: false,
-      containBounds: true,
+      strictBounds: false,
     });
 
     this.root = rootNode;
@@ -401,7 +401,7 @@ export class Stage {
 
       if (
         child.worldAlpha === 0 ||
-        (child.containBounds === true &&
+        (child.strictBounds === true &&
           child.renderState === CoreNodeRenderState.OutOfBounds)
       ) {
         continue;
@@ -623,7 +623,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
-      containBounds: props.containBounds ?? true,
+      strictBounds: props.strictBounds ?? false,
     };
   }
 }
