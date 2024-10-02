@@ -1,158 +1,70 @@
-import type { INode, Point } from '@lightningjs/renderer';
+import type { Point } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import type { CoreNode } from '../../dist/src/core/CoreNode.js';
+
+const getRandomValue = (min: number, max: number) => {
+  return Math.random() * (max - min) + min;
+};
+
+const getRandomColor = () => {
+  const randomInt = Math.floor(Math.random() * Math.pow(2, 24)); // Use 24 bits for RGB
+  const hexString = randomInt.toString(16).padStart(6, '0'); // RGB hex without alpha
+  return parseInt(hexString + 'FF', 16); // Append 'FF' for full alpha
+};
+
+const getRandomBezierCurve = () => {
+  // Generate random values for control points within specified ranges
+  const x1 = Math.random(); // 0 to 1
+  const y1 = Math.random() * 2; // Allow values above 1
+  const x2 = Math.random(); // 0 to 1
+  const y2 = Math.random() * 2 - 1; // Allow values between -1 and 1
+
+  // Return the Bezier curve in the required format
+  return `cubic-bezier(${x1.toFixed(2)}, ${y1.toFixed(2)}, ${x2.toFixed(
+    2,
+  )}, ${y2.toFixed(2)})`;
+};
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
-  function createTextNode(container: INode, label?: string | undefined) {
-    const textNode = renderer.createTextNode({
-      x: 10,
-      y: 10,
-      text: `${label ? label + '\n' : ''}X: ${container.x} => absX: ${
-        container.absX
-      }\nY: ${container.y} => absY: ${container.absY}\nMountX: ${
-        container.mountX
-      } | MountY: ${container.mountY}`,
-      parent: container,
-    });
-    return textNode;
-  }
+  const holder = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+    color: 0x000000ff,
+    parent: testRoot,
+  });
 
-  /* Create a grid to show the values */
-  for (let index = 1; index <= Math.ceil(testRoot.width / 100); index++) {
-    renderer.createNode({
-      x: index * 100,
-      y: 0,
-      width: 2,
-      height: testRoot.height,
-      color: index % 5 ? 0xffffff40 : 0xffffffa0,
-      parent: testRoot,
+  // Copy source texture from rootRenderToTextureNode
+  for (let i = 0; i < 50; i++) {
+    const dimension = getRandomValue(30, 150);
+    const node = renderer.createNode({
+      parent: holder,
+      x: getRandomValue(0, 1820),
+      y: getRandomValue(0, 980),
+      width: dimension,
+      height: dimension,
+      color: getRandomColor(),
       interactive: true,
+      zIndex: getRandomValue(0, 100),
     });
+
+    node
+      .animate(
+        {
+          x: getRandomValue(0, 1820),
+          y: getRandomValue(0, 980),
+        },
+        {
+          duration: getRandomValue(8000, 12000),
+          delay: getRandomValue(0, 5000),
+          stopMethod: 'reverse',
+          loop: true,
+          easing: getRandomBezierCurve(),
+        },
+      )
+      .start();
   }
-  for (let index = 1; index <= Math.ceil(testRoot.height / 100); index++) {
-    renderer.createNode({
-      x: 0,
-      y: index * 100,
-      width: testRoot.width,
-      height: 2,
-      color: index % 5 ? 0xffffff40 : 0xffffffa0,
-      parent: testRoot,
-      interactive: true,
-    });
-  }
-
-  const defaultRect = renderer.createNode({
-    x: 100,
-    y: 100,
-    width: 200,
-    height: 200,
-    mountX: 0,
-    color: 0x00ff00ff,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(defaultRect, 'Default');
-
-  const mount1Rect = renderer.createNode({
-    x: 600,
-    y: 200,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    mount: 1,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(mount1Rect, 'Mount 1');
-
-  const scaleRect = renderer.createNode({
-    x: 700,
-    y: 100,
-    width: 200,
-    height: 200,
-    scale: 1.2,
-    color: 0xff0000ff,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(scaleRect, 'Scale 1.2');
-
-  const rotationPivot0Rect = renderer.createNode({
-    x: 1100,
-    y: 100,
-    width: 200,
-    height: 200,
-    rotation: Math.PI / 6,
-    pivot: 0,
-    color: 0xff0000ff,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(rotationPivot0Rect, 'Rotation Pivot 0');
-
-  const rotationPivot1Rect = renderer.createNode({
-    x: 1300,
-    y: 100,
-    width: 200,
-    height: 200,
-    rotation: Math.PI / 6,
-    pivot: 1,
-    color: 0xff0000ff,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(rotationPivot1Rect, 'Rotation Pivot 1');
-
-  const mountX1Rect = renderer.createNode({
-    x: 300,
-    y: 500,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    mountX: 1,
-    mountY: 0,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(mountX1Rect, 'MountX 1');
-
-  const mountY1Rect = renderer.createNode({
-    x: 400,
-    y: 600,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    mountX: 0,
-    mountY: 1,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(mountY1Rect, 'MountY 1');
-
-  const mountThirdRect = renderer.createNode({
-    x: 700,
-    y: 600,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    mountX: 0.33,
-    mountY: 0.66,
-    parent: testRoot,
-    interactive: true,
-  });
-  createTextNode(mountThirdRect, 'MountX 0.33 MountY 0.66');
-
-  const mountScaleRect = renderer.createNode({
-    x: 1200,
-    y: 600,
-    width: 200,
-    height: 200,
-    color: 0x0000ffff,
-    mountX: 1,
-    mountY: 0.5,
-    scale: 1.5,
-    parent: testRoot,
-  });
-  createTextNode(mountScaleRect, 'Mount and Scale 1.5');
 
   document.addEventListener('touchstart', (e: TouchEvent) => {
     const { changedTouches } = e;
@@ -163,17 +75,38 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       const y = touch?.clientY ?? 0;
 
       const eventData: Point = {
-        x: x ? x / renderer.settings.deviceLogicalPixelRatio : 0,
-        y: y ? y / renderer.settings.deviceLogicalPixelRatio : 0,
+        x,
+        y,
       };
+      // const nodes: CoreNode[] = renderer.stage.findNodesAtPoint(eventData);
+      const topNode: CoreNode | null =
+        renderer.stage.getTopZindexNode(eventData);
 
-      const nodes: CoreNode[] = renderer.stage.findNodesAtPoint(eventData);
-      for (let i = 0; i < nodes.length; i++) {
-        nodes[i].scale = 1.1;
+      if (topNode) {
+        topNode.scale = 1.5;
         setTimeout(() => {
-          nodes[i].scale = 1;
+          topNode.scale = 1;
         }, 150);
       }
+    }
+  });
+
+  document.addEventListener('mousemove', (e: MouseEvent) => {
+    const x = e?.clientX ?? 0;
+    const y = e?.clientY ?? 0;
+
+    const eventData: Point = {
+      x,
+      y,
+    };
+    // const nodes: CoreNode[] = renderer.stage.findNodesAtPoint(eventData);
+    const topNode: CoreNode | null = renderer.stage.getTopZindexNode(eventData);
+
+    if (topNode) {
+      topNode.scale = 1.5;
+      setTimeout(() => {
+        topNode.scale = 1;
+      }, 150);
     }
   });
 }
