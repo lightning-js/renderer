@@ -48,6 +48,7 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { pointInBound } from './lib/utils.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -78,6 +79,11 @@ export type StageFrameTickHandler = (
   frameTickData: FrameTickPayload,
 ) => void;
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
 const bufferMemory = 2e6;
 const autoStart = true;
 
@@ -93,6 +99,7 @@ export class Stage {
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
   public readonly defShaderCtr: BaseShaderController;
+  public readonly interactiveNodes: Set<CoreNode> = new Set();
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -552,6 +559,23 @@ export class Stage {
   }
 
   /**
+   * Find all nodes at a given point
+   * @param data
+   */
+  findNodesAtPoint(data: Point): CoreNode[] {
+    const nodes = [];
+    for (const node of this.interactiveNodes) {
+      if (!node.renderBound) {
+        continue;
+      }
+      if (pointInBound(data.x, data.y, node.renderBound)) {
+        nodes.push(node);
+      }
+    }
+    return nodes;
+  }
+
+  /**
    * Resolves the default property values for a Node
    *
    * @remarks
@@ -617,6 +641,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
+      interactive: props.interactive ?? false,
     };
   }
 }
