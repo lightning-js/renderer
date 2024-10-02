@@ -253,6 +253,10 @@ export function boundLargeThanBound(bound1: Bound, bound2: Bound) {
   );
 }
 
+export function pointInBound(x: number, y: number, bound: Bound) {
+  return !(x < bound.x1 || x > bound.x2 || y < bound.y1 || y > bound.y2);
+}
+
 export function isBoundPositive(bound: Bound): boolean {
   return bound.x1 < bound.x2 && bound.y1 < bound.y2;
 }
