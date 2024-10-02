@@ -665,6 +665,13 @@ export interface CoreNodeProps {
    * are provided. Only works when createImageBitmap is supported on the browser.
    */
   srcY?: number;
+
+  /**
+   * Mark the node as interactive so we can perform hit tests on it
+   * when pointer events are registered.
+   * @default false
+   */
+  interactive?: boolean;
 }
 
 /**
@@ -743,6 +750,7 @@ export class CoreNode extends EventEmitter {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
+    this.interactive = props.interactive;
 
     this.updateScaleRotateTransform();
 
@@ -2132,6 +2140,18 @@ export class CoreNode extends EventEmitter {
 
   get textureOptions(): TextureOptions {
     return this.props.textureOptions;
+  }
+
+  set interactive(value: boolean | undefined) {
+    this.props.interactive = value;
+    // Update Stage's interactive Set
+    if (value) {
+      this.stage.interactiveNodes.add(this);
+    }
+  }
+
+  get interactive(): boolean | undefined {
+    return this.props.interactive;
   }
 
   setRTTUpdates(type: number) {
