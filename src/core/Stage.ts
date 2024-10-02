@@ -563,16 +563,43 @@ export class Stage {
    * @param data
    */
   findNodesAtPoint(data: Point): CoreNode[] {
+    // Convert the point to the logical pixel space
+    const point = {
+      x: data.x / this.options.deviceLogicalPixelRatio,
+      y: data.y / this.options.deviceLogicalPixelRatio,
+    };
     const nodes = [];
     for (const node of this.interactiveNodes) {
       if (!node.renderBound) {
         continue;
       }
-      if (pointInBound(data.x, data.y, node.renderBound)) {
+      if (pointInBound(point.x, point.y, node.renderBound)) {
         nodes.push(node);
       }
     }
     return nodes;
+  }
+
+  /**
+   * Find the top node at a given point
+   * @param data
+   * @returns
+   */
+  getTopZindexNode(data: Point): CoreNode | null {
+    const nodes: CoreNode[] = this.findNodesAtPoint(data);
+    if (nodes.length === 0) {
+      return null;
+    }
+    // Reverse the array so we have them in natural order
+    nodes.reverse();
+
+    let topNode: CoreNode | undefined = nodes[0];
+    for (let i = 0; i < nodes.length; i++) {
+      if ((nodes[i]?.zIndex ?? 0) > (topNode?.zIndex ?? 0)) {
+        topNode = nodes[i];
+      }
+    }
+    return topNode || null;
   }
 
   /**
