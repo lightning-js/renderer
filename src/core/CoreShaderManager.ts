@@ -22,6 +22,7 @@ import type { CoreShader } from './renderers/CoreShader.js';
 
 import { DefaultShader } from './renderers/webgl/shaders/DefaultShader.js';
 import { DefaultShaderBatched } from './renderers/webgl/shaders/DefaultShaderBatched.js';
+import { DistortShader } from './renderers/webgl/shaders/DistortShader.js';
 import {
   DynamicShader,
   type DynamicShaderProps,
@@ -83,6 +84,7 @@ export type { HolePunchEffectProps };
 export interface ShaderMap {
   DefaultShader: typeof DefaultShader;
   DefaultShaderBatched: typeof DefaultShaderBatched;
+  DistortShader: typeof DistortShader;
   RoundedRectangle: typeof RoundedRectangle;
   DynamicShader: typeof DynamicShader;
   SdfShader: typeof SdfShader;
@@ -125,6 +127,7 @@ export class CoreShaderManager {
   constructor() {
     this.registerShaderType('DefaultShader', DefaultShader);
     this.registerShaderType('DefaultShaderBatched', DefaultShaderBatched);
+    this.registerShaderType('DistortShader', DistortShader);
     this.registerShaderType('RoundedRectangle', RoundedRectangle);
     this.registerShaderType('DynamicShader', DynamicShader);
     this.registerShaderType('SdfShader', SdfShader);
