@@ -71,10 +71,12 @@ export class SdfTrFontFace<
     const { atlasUrl, atlasDataUrl, stage } = options;
     this.type = type;
     const renderer = stage.renderer;
-    assertTruthy(
-      renderer instanceof WebGlCoreRenderer,
-      'SDF Font Faces can only be used with the WebGL Renderer',
-    );
+    if (!(renderer instanceof WebGlCoreRenderer)) {
+      console.warn(
+        'SDF Font Faces can only be used with the WebGL Renderer. Skipping.',
+      );
+      return;
+    }
 
     // Load image
     this.texture = stage.txManager.loadTexture('ImageTexture', {
