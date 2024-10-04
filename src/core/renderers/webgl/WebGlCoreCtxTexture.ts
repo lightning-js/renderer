@@ -86,28 +86,34 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._state = 'loading';
     this.textureSource.setState('loading');
     this._nativeCtxTexture = this.createNativeCtxTexture();
-    this.onLoadRequest()
-      .then(({ width, height }) => {
-        // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
-          return;
-        }
-        this._state = 'loaded';
-        this._w = width;
-        this._h = height;
-        // Update the texture source's width and height so that it can be used
-        // for rendering.
-        this.textureSource.setState('loaded', { width, height });
-      })
-      .catch((err) => {
-        // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
-          return;
-        }
-        this._state = 'failed';
+    try {
+      this.onLoadRequest()
+        .then(({ width, height }) => {
+          // If the texture has been freed while loading, return early.
+          if (this._state === 'freed') {
+            return;
+          }
+          this._state = 'loaded';
+          this._w = width;
+          this._h = height;
+          // Update the texture source's width and height so that it can be used
+          // for rendering.
+          this.textureSource.setState('loaded', { width, height });
+        })
+        .catch((err) => {
+          // If the texture has been freed while loading, return early.
+          if (this._state === 'freed') {
+            return;
+          }
+          this._state = 'failed';
+          this.textureSource.setState('failed', err);
+          console.error(err);
+        });
+    } catch(err: any) {
+      this._state = 'failed';
         this.textureSource.setState('failed', err);
         console.error(err);
-      });
+    }
   }
 
   /**
