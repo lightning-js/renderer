@@ -66,6 +66,7 @@ export interface StageOptions {
   eventBus: EventEmitter;
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
+  inspector: boolean;
 }
 
 export type StageFpsUpdateHandler = (
@@ -571,7 +572,11 @@ export class Stage {
       props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
     const colorBr =
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
-    const data = santizeCustomDataMap(props.data ?? {});
+
+    let data = {};
+    if (this.options.inspector === true) {
+      data = santizeCustomDataMap(props.data ?? {});
+    }
 
     return {
       x: props.x ?? 0,

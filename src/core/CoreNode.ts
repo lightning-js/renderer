@@ -744,10 +744,11 @@ export class CoreNode extends EventEmitter {
     this.src = props.src;
     this.rtt = props.rtt;
 
-    this.updateScaleRotateTransform();
-
     this.setUpdateType(
-      UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
+      UpdateType.ScaleRotate |
+        UpdateType.Local |
+        UpdateType.RenderBounds |
+        UpdateType.RenderState,
     );
   }
 
@@ -782,7 +783,7 @@ export class CoreNode extends EventEmitter {
   }
 
   unloadTexture(): void {
-    if (this.texture) {
+    if (this.texture !== null) {
       this.texture.off('loaded', this.onTextureLoaded);
       this.texture.off('failed', this.onTextureFailed);
       this.texture.off('freed', this.onTextureFreed);
@@ -1441,24 +1442,26 @@ export class CoreNode extends EventEmitter {
     this.unloadTexture();
 
     this.clippingRect.valid = false;
-
     this.isRenderable = false;
 
-    delete this.renderCoords;
-    delete this.renderBound;
-    delete this.strictBound;
-    delete this.preloadBound;
-    delete this.globalTransform;
-    delete this.scaleRotateTransform;
-    delete this.localTransform;
+    this.renderCoords = undefined;
+    this.renderBound = undefined;
+    this.strictBound = undefined;
+    this.preloadBound = undefined;
+    this.globalTransform = undefined;
+    this.scaleRotateTransform = undefined;
+    this.localTransform = undefined;
 
     this.props.texture = null;
     this.props.shader = this.stage.defShaderCtr;
 
-    const children = [...this.children];
-    for (let i = 0, length = children.length; i < length; i++) {
-      children[i]!.destroy();
+    for (let i = 0, length = this.children.length; i < length; i++) {
+      const child = this.children[i];
+      if (child !== undefined) {
+        child.destroy();
+      }
     }
+
     // This very action will also remove the node from the parent's children array
     this.parent = null;
 
@@ -1470,8 +1473,6 @@ export class CoreNode extends EventEmitter {
   }
 
   renderQuads(renderer: CoreRenderer): void {
-    const { texture, width, height, textureOptions, rtt, shader } = this.props;
-
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
     if (this.parentHasRenderTexture) {
@@ -1484,47 +1485,32 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    const {
-      premultipliedColorTl,
-      premultipliedColorTr,
-      premultipliedColorBl,
-      premultipliedColorBr,
-    } = this;
-
-    const {
-      zIndex,
-      worldAlpha,
-      globalTransform: gt,
-      clippingRect,
-      renderCoords,
-    } = this;
-
-    assertTruthy(gt);
-    assertTruthy(renderCoords);
+    assertTruthy(this.globalTransform);
+    assertTruthy(this.renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
-      width,
-      height,
-      colorTl: premultipliedColorTl,
-      colorTr: premultipliedColorTr,
-      colorBl: premultipliedColorBl,
-      colorBr: premultipliedColorBr,
-      texture,
-      textureOptions,
-      zIndex,
-      shader: shader.shader,
-      shaderProps: shader.getResolvedProps(),
-      alpha: worldAlpha,
-      clippingRect,
-      tx: gt.tx,
-      ty: gt.ty,
-      ta: gt.ta,
-      tb: gt.tb,
-      tc: gt.tc,
-      td: gt.td,
-      renderCoords,
-      rtt,
+      width: this.props.width,
+      height: this.props.height,
+      colorTl: this.premultipliedColorTl,
+      colorTr: this.premultipliedColorTr,
+      colorBl: this.premultipliedColorBl,
+      colorBr: this.premultipliedColorBr,
+      texture: this.texture,
+      textureOptions: this.textureOptions,
+      zIndex: this.zIndex,
+      shader: this.shader.shader,
+      shaderProps: this.shader.getResolvedProps(),
+      alpha: this.worldAlpha,
+      clippingRect: this.clippingRect,
+      tx: this.globalTransform.tx,
+      ty: this.globalTransform.ty,
+      ta: this.globalTransform.ta,
+      tb: this.globalTransform.tb,
+      tc: this.globalTransform.tc,
+      td: this.globalTransform.td,
+      renderCoords: this.renderCoords,
+      rtt: this.rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
       framebufferDimensions: this.framebufferDimensions,
     });
