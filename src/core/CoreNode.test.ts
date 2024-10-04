@@ -61,6 +61,7 @@ describe('set color()', () => {
     zIndex: 0,
     zIndexLocked: 0,
     preventCleanup: false,
+    strictBounds: false,
   };
 
   it('should set all color subcomponents.', () => {
