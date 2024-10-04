@@ -102,6 +102,15 @@ export interface TextureData {
 
 export type TextureState = 'freed' | 'loading' | 'loaded' | 'failed';
 
+export enum TextureType {
+  'generic' = 0,
+  'color' = 1,
+  'image' = 2,
+  'noise' = 3,
+  'renderToTexture' = 4,
+  'subTexture' = 5,
+}
+
 export interface TextureStateEventMap {
   freed: TextureFreedEventHandler;
   loading: TextureLoadingEventHandler;
@@ -149,6 +158,8 @@ export abstract class Texture extends EventEmitter {
   readonly renderable: boolean = false;
 
   readonly lastRenderableChangeTime = 0;
+
+  public type: TextureType = TextureType.generic;
 
   public preventCleanup = false;
 

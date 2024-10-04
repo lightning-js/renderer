@@ -34,7 +34,7 @@ import {
   getWebGlExtensions,
 } from './internal/RendererUtils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import { Texture } from '../../textures/Texture.js';
+import { Texture, TextureType } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
@@ -249,15 +249,19 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
     }
 
-    assertTruthy(texture instanceof Texture, 'Invalid texture type');
+    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
     const targetDims = { width: -1, height: -1 };
     targetDims.width = params.width;
     targetDims.height = params.height;
 
-    const targetShader = params.shader || this.defaultShader;
-    assertTruthy(targetShader instanceof WebGlCoreShader);
+    const targetShader =
+      (params.shader as WebGlCoreShader) || this.defaultShader;
+    assertTruthy(
+      targetShader.getUniformLocation !== undefined,
+      'Invalid WebGL shader',
+    );
 
     if (this.reuseRenderOp(params) === false) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -281,19 +285,25 @@ export class WebGlCoreRenderer extends CoreRenderer {
     let texCoordX2 = 1;
     let texCoordY2 = 1;
 
-    if (texture instanceof SubTexture) {
-      const { x: tx, y: ty, width: tw, height: th } = texture.props;
-      const { width: parentW = 0, height: parentH = 0 } = texture.parentTexture
-        .dimensions || { width: 0, height: 0 };
+    if (texture.type === TextureType.subTexture) {
+      const {
+        x: tx,
+        y: ty,
+        width: tw,
+        height: th,
+      } = (texture as SubTexture).props;
+      const { width: parentW = 0, height: parentH = 0 } = (
+        texture as SubTexture
+      ).parentTexture.dimensions || { width: 0, height: 0 };
       texCoordX1 = tx / parentW;
       texCoordX2 = texCoordX1 + tw / parentW;
       texCoordY1 = ty / parentH;
       texCoordY2 = texCoordY1 + th / parentH;
-      texture = texture.parentTexture;
+      texture = (texture as SubTexture).parentTexture;
     }
 
     if (
-      texture instanceof ImageTexture &&
+      texture.type === TextureType.image &&
       params.textureOptions !== null &&
       params.textureOptions.resizeMode !== undefined &&
       texture.dimensions !== null
@@ -332,16 +342,15 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     // Eitherone should be true
-    if (flipY ^ +(texture instanceof RenderTexture)) {
+    if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const ctxTexture = texture.ctxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+    const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
+    assertTruthy(ctxTexture.ctxTexture !== undefined);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
-    curRenderOp = this.curRenderOp;
-    assertTruthy(curRenderOp);
+    assertTruthy(this.curRenderOp !== null);
     if (params.renderCoords) {
       // Upper-Left
       fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
@@ -447,8 +456,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = textureIdx;
     }
     // Update the length of the current render op
-    curRenderOp.length += WORDS_PER_QUAD;
-    curRenderOp.numQuads++;
+    this.curRenderOp.length += WORDS_PER_QUAD;
+    this.curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
   }
 
