@@ -109,10 +109,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           this.textureSource.setState('failed', err);
           console.error(err);
         });
-    } catch(err: any) {
+    } catch (err: any) {
       this._state = 'failed';
-        this.textureSource.setState('failed', err);
-        console.error(err);
+      this.textureSource.setState('failed', err);
+      console.error(err);
     }
   }
 
