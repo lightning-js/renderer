@@ -49,6 +49,7 @@ const devTarget = 'es2020';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default defineConfig(({ command, mode, isSsrBuild }) => {
   return {
+    base: './',
     worker: {
       format: 'es',
     },
