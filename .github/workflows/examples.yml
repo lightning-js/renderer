@@ -1,4 +1,4 @@
-name: Deploy Official Results
+name: Deploy Examples
 
 on:
   push:
