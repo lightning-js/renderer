@@ -791,7 +791,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   //#endregion Overrides
 
   public resolveFontFace(props: TrFontProps): SdfTrFontFace | undefined {
-    return TrFontManager.resolveFontFace(this.fontFamilyArray, props) as
+    return this.stage.fontManager.resolveFontFace(this.fontFamilyArray, props) as
       | SdfTrFontFace
       | undefined;
   }

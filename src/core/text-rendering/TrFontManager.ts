@@ -20,8 +20,6 @@
 import type { TrFontFace } from './font-face-types/TrFontFace.js';
 import type { TextRendererMap, TrFontProps } from './renderers/TextRenderer.js';
 
-const fontCache = new Map<string, TrFontFace>();
-
 const weightConversions: { [key: string]: number } = {
   normal: 400,
   bold: 700,
@@ -129,6 +127,8 @@ export interface FontFamilyMap {
 }
 
 export class TrFontManager {
+  private fontCache = new Map<string, TrFontFace>();
+
   constructor(private textRenderers: Partial<TextRendererMap>) {
     // Intentionally left blank
   }
@@ -154,15 +154,15 @@ export class TrFontManager {
    * @param props
    * @returns
    */
-  public static resolveFontFace(
+  public resolveFontFace(
     familyMapsByPriority: FontFamilyMap[],
     props: TrFontProps,
   ): TrFontFace | undefined {
     const { fontFamily, fontWeight, fontStyle, fontStretch } = props;
     const fontCacheString = `${fontFamily}${fontStyle}${fontWeight}${fontStretch}`;
 
-    if (fontCache.has(fontCacheString) === true) {
-      return fontCache.get(fontCacheString);
+    if (this.fontCache.has(fontCacheString) === true) {
+      return this.fontCache.get(fontCacheString);
     }
 
     const resolvedFont = resolveFontToUse(
@@ -173,7 +173,7 @@ export class TrFontManager {
       fontStretch,
     );
     if (resolvedFont !== undefined) {
-      fontCache.set(fontCacheString, resolvedFont);
+      this.fontCache.set(fontCacheString, resolvedFont);
     }
 
     return resolvedFont;
