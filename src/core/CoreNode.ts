@@ -1473,8 +1473,8 @@ export class CoreNode extends EventEmitter {
     this.props.texture = null;
     this.props.shader = this.stage.defShaderCtr;
 
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]?.destroy();
+    while (this.children.length > 0) {
+      this.children[0]?.destroy();
     }
 
     // This very action will also remove the node from the parent's children array
