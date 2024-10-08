@@ -285,3 +285,42 @@ export function convertUrlToAbsolute(url: string): string {
   const absoluteUrl = new URL(url, self.location.href);
   return absoluteUrl.href;
 }
+
+export function base64DataFromSrc(src: string): [string, string] {
+  const matches = src.match(/^data:(.*?);base64,(.*)$/);
+
+  let mimeType;
+  let base64Content;
+
+  if (matches) {
+    mimeType = matches[1];
+    base64Content = matches[2];
+  }
+
+  mimeType = mimeType ?? 'image/png';
+  base64Content = base64Content ?? src;
+  base64Content = base64Content.replace(/-/g, '+').replace(/_/g, '/');
+
+  return [base64Content, mimeType];
+}
+
+export function base64toBlob(base64Data: string, contentType: string) {
+  contentType = contentType || '';
+  const sliceSize = 1024;
+  const byteCharacters = atob(base64Data);
+  const bytesLength = byteCharacters.length;
+  const slicesCount = Math.ceil(bytesLength / sliceSize);
+  const byteArrays = new Array(slicesCount);
+
+  for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+    const begin = sliceIndex * sliceSize;
+    const end = Math.min(begin + sliceSize, bytesLength);
+
+    const bytes = new Array(end - begin);
+    for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+      bytes[i] = byteCharacters[offset]?.charCodeAt(0);
+    }
+    byteArrays[sliceIndex] = new Uint8Array(bytes);
+  }
+  return new Blob(byteArrays, { type: contentType });
+}

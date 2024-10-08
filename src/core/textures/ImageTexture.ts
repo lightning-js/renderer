@@ -23,7 +23,11 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute } from '../lib/utils.js';
+import {
+  base64DataFromSrc,
+  base64toBlob,
+  convertUrlToAbsolute,
+} from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 
 /**
@@ -131,7 +135,7 @@ export class ImageTexture extends Texture {
   }
 
   async loadImage(src: string) {
-    const { premultiplyAlpha, sx, sy, sw, sh, width, height } = this.props;
+    const { premultiplyAlpha, sx, sy, sw, sh } = this.props;
 
     if (this.txManager.imageWorkerManager !== null) {
       return await this.txManager.imageWorkerManager.getImage(
@@ -143,8 +147,15 @@ export class ImageTexture extends Texture {
         sh,
       );
     } else if (this.txManager.hasCreateImageBitmap === true) {
-      const response = await fetch(src);
-      const blob = await response.blob();
+      let blob;
+      try {
+        const response = await fetch(src);
+        blob = await response.blob();
+      } catch (error) {
+        const base64data = base64DataFromSrc(src);
+        blob = base64toBlob(base64data[0], base64data[1]);
+      }
+
       const hasAlphaChannel =
         premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
 
@@ -168,8 +179,8 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {
-      const img = new Image(width || undefined, height || undefined);
-      if (!(src.substr(0, 5) === 'data:')) {
+      const img = new Image();
+      if (!src.startsWith('data:')) {
         img.crossOrigin = 'Anonymous';
       }
       img.src = src;
