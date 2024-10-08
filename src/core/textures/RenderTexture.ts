@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link RenderTexture}
@@ -39,6 +39,8 @@ export interface RenderTextureProps {
 
 export class RenderTexture extends Texture {
   props: Required<RenderTextureProps>;
+
+  public override type: TextureType = TextureType.renderToTexture;
 
   constructor(txManager: CoreTextureManager, props?: RenderTextureProps) {
     super(txManager);

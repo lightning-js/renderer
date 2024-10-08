@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link ColorTexture}
@@ -45,6 +45,8 @@ export interface ColorTextureProps {
  * a Node are.
  */
 export class ColorTexture extends Texture {
+  public override type: TextureType = TextureType.color;
+
   props: Required<ColorTextureProps>;
 
   constructor(txManager: CoreTextureManager, props?: ColorTextureProps) {
