@@ -152,8 +152,12 @@ export class ImageTexture extends Texture {
         const response = await fetch(src);
         blob = await response.blob();
       } catch (error) {
-        const base64data = base64DataFromSrc(src);
-        blob = base64toBlob(base64data[0], base64data[1]);
+        if (src.startsWith('data:')) {
+          const base64data = base64DataFromSrc(src);
+          blob = base64toBlob(base64data[0], base64data[1]);
+        } else {
+          throw error;
+        }
       }
 
       const hasAlphaChannel =
