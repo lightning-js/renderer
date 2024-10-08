@@ -29,7 +29,7 @@ export function installFonts(stage: Stage) {
     new WebTrFontFace({
       fontFamily: 'NotoSans',
       descriptors: {},
-      fontUrl: '/fonts/NotoSans-Regular.ttf',
+      fontUrl: './fonts/NotoSans-Regular.ttf',
       metrics: {
         ascender: 1069,
         descender: -293,
@@ -43,7 +43,7 @@ export function installFonts(stage: Stage) {
     new WebTrFontFace({
       fontFamily: 'Ubuntu',
       descriptors: {},
-      fontUrl: '/fonts/Ubuntu-Regular.ttf',
+      fontUrl: './fonts/Ubuntu-Regular.ttf',
       metrics: {
         ascender: 776,
         descender: -185,
@@ -57,7 +57,7 @@ export function installFonts(stage: Stage) {
     new WebTrFontFace({
       fontFamily: 'Ubuntu-No-Metrics',
       descriptors: {},
-      fontUrl: '/fonts/Ubuntu-Regular.ttf',
+      fontUrl: './fonts/Ubuntu-Regular.ttf',
     }),
   );
 
@@ -72,7 +72,7 @@ export function installFonts(stage: Stage) {
     new WebTrFontFace({
       fontFamily: 'Ubuntu-Modified-Metrics',
       descriptors: {},
-      fontUrl: '/fonts/Ubuntu-Regular.ttf',
+      fontUrl: './fonts/Ubuntu-Regular.ttf',
       metrics: ubuntuModifiedMetrics,
     }),
   );
@@ -82,8 +82,8 @@ export function installFonts(stage: Stage) {
       new SdfTrFontFace('ssdf', {
         fontFamily: 'NotoSans',
         descriptors: {},
-        atlasUrl: '/fonts/NotoSans-Regular.ssdf.png',
-        atlasDataUrl: '/fonts/NotoSans-Regular.ssdf.json',
+        atlasUrl: './fonts/NotoSans-Regular.ssdf.png',
+        atlasDataUrl: './fonts/NotoSans-Regular.ssdf.json',
         stage,
         metrics: {
           ascender: 1000,
@@ -98,8 +98,8 @@ export function installFonts(stage: Stage) {
       new SdfTrFontFace('msdf', {
         fontFamily: 'Ubuntu',
         descriptors: {},
-        atlasUrl: '/fonts/Ubuntu-Regular.msdf.png',
-        atlasDataUrl: '/fonts/Ubuntu-Regular.msdf.json',
+        atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
+        atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
         stage,
         // Instead of suppling `metrics` this font will rely on the ones
         // encoded in the json file under `lightningMetrics`.
@@ -110,8 +110,8 @@ export function installFonts(stage: Stage) {
       new SdfTrFontFace('msdf', {
         fontFamily: 'Ubuntu-Modified-Metrics',
         descriptors: {},
-        atlasUrl: '/fonts/Ubuntu-Regular.msdf.png',
-        atlasDataUrl: '/fonts/Ubuntu-Regular.msdf.json',
+        atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
+        atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
         stage,
         metrics: ubuntuModifiedMetrics,
       }),
@@ -121,8 +121,8 @@ export function installFonts(stage: Stage) {
       new SdfTrFontFace('ssdf', {
         fontFamily: 'Ubuntu-ssdf',
         descriptors: {},
-        atlasUrl: '/fonts/Ubuntu-Regular.ssdf.png',
-        atlasDataUrl: '/fonts/Ubuntu-Regular.ssdf.json',
+        atlasUrl: './fonts/Ubuntu-Regular.ssdf.png',
+        atlasDataUrl: './fonts/Ubuntu-Regular.ssdf.json',
         stage,
         metrics: {
           ascender: 776,
