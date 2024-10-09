@@ -286,7 +286,7 @@ export function convertUrlToAbsolute(url: string): string {
   return absoluteUrl.href;
 }
 
-export function base64DataFromSrc(src: string): [string, string] {
+export function base64DataFromSrc(src: string): [string, string] | undefined {
   const matches = src.match(/^data:(.*?);base64,(.*)$/);
 
   let mimeType;
@@ -297,8 +297,10 @@ export function base64DataFromSrc(src: string): [string, string] {
     base64Content = matches[2];
   }
 
-  mimeType = mimeType ?? 'image/png';
-  base64Content = base64Content ?? src;
+  if (!mimeType || !base64Content) {
+    return undefined;
+  }
+
   base64Content = base64Content.replace(/-/g, '+').replace(/_/g, '/');
 
   return [base64Content, mimeType];

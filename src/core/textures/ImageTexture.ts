@@ -154,7 +154,11 @@ export class ImageTexture extends Texture {
       } catch (error) {
         if (src.startsWith('data:')) {
           const base64data = base64DataFromSrc(src);
-          blob = base64toBlob(base64data[0], base64data[1]);
+          if (base64data) {
+            blob = base64toBlob(base64data[0], base64data[1]);
+          } else {
+            throw error;
+          }
         } else {
           throw error;
         }
