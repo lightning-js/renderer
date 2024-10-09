@@ -85,12 +85,12 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     }
     this._state = 'loading';
     this.textureSource.setState('loading');
-    try {
-      this._nativeCtxTexture = this.createNativeCtxTexture();
-    } catch (err: any) {
+    this._nativeCtxTexture = this.createNativeCtxTexture();
+    if (this._nativeCtxTexture === null) {
       this._state = 'failed';
-      this.textureSource.setState('failed', err);
-      console.error(err);
+      this.textureSource.setState('failed', new Error('Could not create WebGL Texture'));
+      console.error('Could not create WebGL Texture');
+      return;
     }
     this.onLoadRequest()
       .then(({ width, height }) => {
@@ -251,7 +251,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     const { glw } = this;
     const nativeTexture = glw.createTexture();
     if (!nativeTexture) {
-      throw new Error('Could not create WebGL Texture');
+      return null;
     }
 
     // On initial load request, create a 1x1 transparent texture to use until
