@@ -168,8 +168,8 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {
-      const img = new Image(width || undefined, height || undefined);
-      if (!(src.substr(0, 5) === 'data:')) {
+      const img = new Image();
+      if (!src.startsWith('data:')) {
         img.crossOrigin = 'Anonymous';
       }
       img.src = src;
