@@ -20,6 +20,7 @@
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import {
   Texture,
+  TextureType,
   type TextureData,
   type TextureFailedEventHandler,
   type TextureLoadedEventHandler,
@@ -76,6 +77,8 @@ export interface SubTextureProps {
 export class SubTexture extends Texture {
   props: Required<SubTextureProps>;
   parentTexture: Texture;
+
+  public override type: TextureType = TextureType.subTexture;
 
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);

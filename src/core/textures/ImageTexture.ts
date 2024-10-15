@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 import {
   isCompressedTextureContainer,
   loadCompressedTexture,
@@ -120,6 +120,8 @@ export interface ImageTextureProps {
  */
 export class ImageTexture extends Texture {
   props: Required<ImageTextureProps>;
+
+  public override type: TextureType = TextureType.image;
 
   constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
     super(txManager);
