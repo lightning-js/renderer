@@ -61,16 +61,25 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   addTexture(texture: WebGlCoreCtxTexture): number {
     const { textures, maxTextures } = this;
-    const existingIdx = textures.findIndex((t) => t === texture);
+    let existingIdx = -1;
+    const texturesLength = textures.length;
+    for (let i = 0; i < texturesLength; i++) {
+      const t = textures[i];
+      if (t === texture) {
+        existingIdx = i;
+        break;
+      }
+    }
+
     if (existingIdx !== -1) {
       return existingIdx;
     }
-    const newIdx = textures.length;
-    if (newIdx >= maxTextures) {
+
+    if (texturesLength >= maxTextures) {
       return 0xffffffff;
     }
     this.textures.push(texture);
-    return newIdx;
+    return texturesLength;
   }
 
   draw() {

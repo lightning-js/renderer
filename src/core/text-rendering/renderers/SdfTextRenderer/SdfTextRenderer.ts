@@ -396,10 +396,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     // Resolve font face if we haven't yet
-    if (!trFontFace) {
+    if (trFontFace === undefined) {
       trFontFace = this.resolveFontFace(state.props);
       state.trFontFace = trFontFace;
-      if (!trFontFace) {
+      if (trFontFace === undefined) {
         const msg = `SdfTextRenderer: Could not resolve font face for family: '${state.props.fontFamily}'`;
         console.error(msg);
         this.setStatus(state, 'failed', new Error(msg));
@@ -410,7 +410,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     // If the font hasn't been loaded yet, stop here.
     // Listen for the 'loaded' event and forward fontLoaded event
-    if (!trFontFace.loaded) {
+    if (trFontFace.loaded === false) {
       trFontFace.once('loaded', () => {
         this.scheduleUpdateState(state);
       });
