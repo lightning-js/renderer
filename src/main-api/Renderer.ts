@@ -245,6 +245,17 @@ export interface RendererMainSettings {
    *
    */
   fontEngines: (typeof SdfTextRenderer | typeof CanvasTextRenderer)[];
+
+  /**
+   * Force Texture Canvas Source
+   *
+   * @remarks
+   * If set to true, the texture canvas source will be used for all textures.
+   * This is useful for debugging purposes.
+   *
+   * @defaultValue `false`
+   */
+  forceTxCanvasSource?: boolean;
 }
 
 /**
@@ -334,6 +345,7 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
+      forceTxCanvasSource: settings.forceTxCanvasSource || false,
     };
     this.settings = resolvedSettings;
 
@@ -373,6 +385,7 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
+      forceTxCanvasSource: this.settings.forceTxCanvasSource,
     });
 
     // Extract the root node

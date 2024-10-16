@@ -39,7 +39,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData | (() => ImageData | null);
+  src?: string | ImageData | (() => ImageBitmap | ImageData | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.

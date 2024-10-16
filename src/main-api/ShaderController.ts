@@ -54,6 +54,9 @@ export class ShaderController<S extends keyof ShaderMap>
     props: ExtractProps<ShaderMap[S]>,
     stage: Stage,
   ) {
+    // props is not filled in Cancas Renderer
+    if (!props) props = {} as ExtractProps<ShaderMap[S]>;
+
     this.resolvedProps = props;
 
     const keys = Object.keys(props);

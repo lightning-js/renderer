@@ -240,6 +240,7 @@ async function initRenderer(
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
+      forceTxCanvasSource: false,
       ...customSettings,
     },
     'app',

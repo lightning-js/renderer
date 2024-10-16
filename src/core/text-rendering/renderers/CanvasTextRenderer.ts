@@ -355,12 +355,30 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         if (this.canvas.width === 0 || this.canvas.height === 0) {
           return null;
         }
-        return this.context.getImageData(
-          0,
-          0,
-          this.canvas.width,
-          this.canvas.height,
-        );
+        if (this.stage.options.forceTxCanvasSource === true) {
+          if (typeof OffscreenCanvas !== 'undefined') {
+            const offscreen = new OffscreenCanvas(
+              this.canvas.width,
+              this.canvas.height,
+            );
+            const offscreenCtx = offscreen.getContext('2d');
+            if (offscreenCtx) {
+              offscreenCtx.drawImage(this.canvas, 0, 0);
+              return offscreen.transferToImageBitmap();
+            } else {
+              return null;
+            }
+          } else {
+            return null;
+          }
+        } else {
+          return this.context.getImageData(
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+          );
+        }
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
     if (state.textureNode) {

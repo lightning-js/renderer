@@ -65,6 +65,7 @@ export interface StageOptions {
   eventBus: EventEmitter;
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
+  forceTxCanvasSource: boolean;
 }
 
 export type StageFpsUpdateHandler = (
