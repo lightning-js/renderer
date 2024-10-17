@@ -267,7 +267,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.newRenderOp(
         targetShader,
-        params.shaderProps as Record<string, unknown>,
+        params.shaderProps as unknown as Record<string, unknown>,
         params.alpha,
         targetDims,
         params.clippingRect,
@@ -610,7 +610,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      const renderOp = this.renderOps[i] as WebGlCoreRenderOp;
+      const renderOp = this.renderOps[i]!;
       if (doLog) {
         console.log('Quads per operation', renderOp.numQuads);
       }
@@ -685,9 +685,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     // Bind the default framebuffer
     glw.bindFramebuffer(null);
-
     glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
     this.renderToTextureActive = false;
+  }
+
+  updateViewport(): void {
+    console.log('set viewport', this.glw.canvas.width, this.glw.canvas.height);
+    this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
 
   removeRTTNode(node: CoreNode) {

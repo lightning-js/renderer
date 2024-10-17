@@ -299,7 +299,6 @@ export class Stage {
   drawFrame() {
     const { renderer, renderRequested } = this;
     assertTruthy(renderer);
-
     // Update tree if needed
     if (this.root.updateType !== 0) {
       this.root.update(this.deltaTime, this.root.clippingRect);

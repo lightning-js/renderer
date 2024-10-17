@@ -108,6 +108,7 @@ export abstract class CoreRenderer {
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
+  abstract updateViewport(): void;
   abstract getBufferInfo(): BufferInfo | null;
   abstract getDefShaderCtr(): BaseShaderController;
 }

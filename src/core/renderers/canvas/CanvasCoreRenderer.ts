@@ -239,6 +239,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
   renderToTexture(node: CoreNode): void {
     // noop
   }
+
+  override updateViewport(): void {
+    // noop
+  }
   getBufferInfo(): null {
     return null;
   }

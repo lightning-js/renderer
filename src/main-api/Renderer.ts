@@ -78,6 +78,11 @@ type MapShaderRefs<ShType extends keyof ShaderMap> =
  */
 export type ShaderRef = MapShaderRefs<keyof ShaderMap>;
 
+export interface AppDimensions {
+  width?: number;
+  height?: number;
+}
+
 /**
  * Configuration settings for {@link RendererMain}
  */
@@ -309,7 +314,7 @@ export interface RendererMainSettings {
 export class RendererMain extends EventEmitter {
   readonly root: INode<ShaderController<'DefaultShader'>>;
   readonly canvas: HTMLCanvasElement;
-  readonly settings: Readonly<Required<RendererMainSettings>>;
+  protected settings: Required<RendererMainSettings>;
   readonly stage: Stage;
   private inspector: Inspector | null = null;
 
@@ -621,6 +626,38 @@ export class RendererMain extends EventEmitter {
     };
 
     return findNode(root);
+  }
+
+  /**
+   * Update app dimensions
+   *
+   * @param dimensions
+   */
+  updateAppDimensions(dimensions: AppDimensions) {
+    const {
+      appWidth,
+      appHeight,
+      deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio,
+    } = this.settings;
+    const { width = appWidth, height = appHeight } = dimensions;
+
+    const deviceLogicalWidth = width * deviceLogicalPixelRatio;
+    const deviceLogicalHeight = height * deviceLogicalPixelRatio;
+
+    this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
+
+    this.stage.renderer.updateViewport();
+
+    this.root.width = width;
+    this.root.height = height;
+
+    this.settings.appWidth = width;
+    this.settings.appHeight = height;
   }
 
   toggleFreeze() {
