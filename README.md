@@ -59,6 +59,13 @@ The Example Tests can be launched with:
 pnpm start
 ```
 
+Alternatively you can use the hosted version of the Example Tests, which can be found here:
+[https://lightning-js.github.io/renderer/](https://lightning-js.github.io/renderer/).
+
+If you want to use this on an older browser, you will have to use a version with polyfills and legacy JS targets.
+This can be found here:
+[https://lightning-js.github.io/renderer/es5/](https://lightning-js.github.io/renderer/es5/)
+
 See [examples/README.md](./examples/README.md) for more info.
 
 ## Visual Regression Tests

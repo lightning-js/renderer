@@ -10,6 +10,7 @@
     "start:prod": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\" \"sleep 5 && pnpm preview\"",
     "dev": "vite --open --host",
     "build": "vite build",
+    "build:es5": "vite build --config vite.es5.config.js",
     "watch": "vite build --watch",
     "watch-all": "concurrently -c \"auto\" \"pnpm:watch:renderer\" \"pnpm:watch\"",
     "preview": "vite preview --host --open",
@@ -24,7 +25,8 @@
     "@stdlib/random-base-mt19937": "^0.2.1"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "@vitejs/plugin-legacy": "^5.4.2",
+    "vite": "^5.4.8"
   },
   "engines": {
     "npm": "please-use-pnpm"
