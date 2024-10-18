@@ -690,7 +690,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   updateViewport(): void {
-    console.log('set viewport', this.glw.canvas.width, this.glw.canvas.height);
     this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
 
