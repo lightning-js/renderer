@@ -386,7 +386,7 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
-      inspector: this.inspector !== null,
+      inspector: this.settings.inspector !== null,
     });
 
     // Extract the root node
