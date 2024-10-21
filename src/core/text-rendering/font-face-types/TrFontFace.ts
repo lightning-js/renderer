@@ -154,7 +154,6 @@ export class TrFontFace extends EventEmitter {
         lineGap: metrics.lineGap / metrics.unitsPerEm,
       };
     }
-
     this.fontFamily = fontFamily;
     this.descriptors = {
       style: 'normal',

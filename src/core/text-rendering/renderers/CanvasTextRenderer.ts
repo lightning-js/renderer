@@ -252,7 +252,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     }
 
     const { fontFamilies } = this;
-    const familyName = fontFace.fontFace.family;
+
+    let familyName = fontFace.fontFace.family;
+    if (familyName === '') {
+      familyName = fontFace.fontFamily;
+    }
 
     let faceSet = fontFamilies[familyName];
     if (!faceSet) {
@@ -384,6 +388,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   loadFont = (state: CanvasTextRendererState): void => {
     const cssString = getFontCssString(state.props);
+
     const trFontFace = this.stage.fontManager.resolveFontFace(
       this.fontFamilyArray,
       state.props,
