@@ -24,7 +24,7 @@ import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { Rect, RectWithValid } from '../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 

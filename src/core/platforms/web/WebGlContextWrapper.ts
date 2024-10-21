@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
-import { assertTruthy } from '../../utils.js';
-import { isWebGl2 } from '../renderers/webgl/internal/WebGlUtils.js';
+import { assertTruthy } from '../../../utils.js';
+import { isWebGl2 } from '../../renderers/webgl/internal/WebGlUtils.js';
 
 /**
  * Optimized WebGL Context Wrapper

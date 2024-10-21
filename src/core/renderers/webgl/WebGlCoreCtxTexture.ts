@@ -20,7 +20,7 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';

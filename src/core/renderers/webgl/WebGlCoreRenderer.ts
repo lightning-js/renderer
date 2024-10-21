@@ -47,7 +47,7 @@ import {
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';

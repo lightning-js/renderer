@@ -19,7 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy, hasOwn } from '../../../utils.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import { CoreShader } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';

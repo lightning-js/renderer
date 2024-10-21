@@ -19,7 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 

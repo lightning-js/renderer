@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../../platforms/web/WebGlContextWrapper.js';
 
 export interface CoreWebGlParameters {
   MAX_RENDERBUFFER_SIZE: number;

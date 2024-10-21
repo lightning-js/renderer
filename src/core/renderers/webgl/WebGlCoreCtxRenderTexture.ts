@@ -20,7 +20,7 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
