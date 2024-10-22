@@ -22,6 +22,7 @@ import {
   type DefaultEffectProps,
   ShaderEffect,
   type ShaderEffectUniforms,
+  type ShaderEffectValueMap,
 } from './ShaderEffect.js';
 
 /**
@@ -54,6 +55,12 @@ export class LinearGradientEffect extends ShaderEffect {
   override readonly name = 'linearGradient';
 
   static override getEffectKey(props: LinearGradientEffectProps): string {
+    if ((props.colors as unknown as ShaderEffectValueMap).value as number[]) {
+      return `linearGradient${
+        ((props.colors as unknown as ShaderEffectValueMap).value as number[])
+          .length
+      }`;
+    }
     return `linearGradient${props.colors!.length}`;
   }
 

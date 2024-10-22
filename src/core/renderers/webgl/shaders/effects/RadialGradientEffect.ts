@@ -25,6 +25,7 @@ import {
   type DefaultEffectProps,
   ShaderEffect,
   type ShaderEffectUniforms,
+  type ShaderEffectValueMap,
 } from './ShaderEffect.js';
 
 /**
@@ -62,7 +63,13 @@ export class RadialGradientEffect extends ShaderEffect {
   override readonly name = 'radialGradient';
 
   static override getEffectKey(props: RadialGradientEffectProps): string {
-    return `radialGradient${props.colors!.length}`;
+    if ((props.colors as unknown as ShaderEffectValueMap).value as number[]) {
+      return `linearGradient${
+        ((props.colors as unknown as ShaderEffectValueMap).value as number[])
+          .length
+      }`;
+    }
+    return `linearGradient${props.colors!.length}`;
   }
 
   static override resolveDefaults(
