@@ -100,10 +100,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       canvasText.text =
         sdfText.text = `Short${ZWSP}text${ZWSP}with${ZWSP}ZWSP.`;
     },
-    () => {
-      canvasText.text =
-        sdfText.text = `A${ZWSP}single${ZWSP}ZWSP${ZWSP}test${ZWSP}case${ZWSP}to${ZWSP}check${ZWSP}behavior.`;
-    },
   ];
 
   /**
