@@ -22,7 +22,10 @@
 import { assertTruthy } from '../../../utils.js';
 import { getRgbaString, type RGBA } from '../../lib/utils.js';
 import { calcDefaultLineHeight } from '../TextRenderingUtils.js';
-import { getWebFontMetrics } from '../TextTextureRendererUtils.js';
+import {
+  getWebFontMetrics,
+  isZeroWidthSpace,
+} from '../TextTextureRendererUtils.js';
 import type { NormalizedFontMetrics } from '../font-face-types/TrFontFace.js';
 import type { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 
@@ -682,38 +685,43 @@ export class LightningTextTextureRenderer {
     letterSpacing: number,
     indent = 0,
   ) {
-    // Greedy wrapping algorithm that will wrap words as the line grows longer.
-    // than its horizontal bounds.
+    const spaceRegex = / |\u200B/g; // ZWSP and spaces
     const lines = text.split(/\r?\n/g);
     let allLines: string[] = [];
-    const realNewlines = [];
+    const realNewlines: number[] = [];
+
     for (let i = 0; i < lines.length; i++) {
-      const resultLines = [];
+      const resultLines: string[] = [];
       let result = '';
       let spaceLeft = wordWrapWidth - indent;
-      const words = lines[i]!.split(' ');
+
+      // Split the line into words, considering ZWSP
+      const words = lines[i]!.split(spaceRegex);
+      const spaces = lines[i]!.match(spaceRegex) || [];
+
       for (let j = 0; j < words.length; j++) {
-        const wordWidth = this.measureText(words[j]!, letterSpacing);
-        const wordWidthWithSpace =
-          wordWidth + this.measureText(' ', letterSpacing);
+        const space = spaces[j - 1] || '';
+        const word = words[j]!;
+        const wordWidth = this.measureText(word, letterSpacing);
+        const wordWidthWithSpace = isZeroWidthSpace(space)
+          ? wordWidth
+          : wordWidth + this.measureText(space, letterSpacing);
+
         if (j === 0 || wordWidthWithSpace > spaceLeft) {
-          // Skip printing the newline if it's the first word of the line that is.
-          // greater than the word wrap width.
           if (j > 0) {
             resultLines.push(result);
             result = '';
           }
-          result += words[j];
+          result += word;
           spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
         } else {
           spaceLeft -= wordWidthWithSpace;
-          result += ` ${words[j]!}`;
+          result += space + word;
         }
       }
 
       resultLines.push(result);
       result = '';
-
       allLines = allLines.concat(resultLines);
 
       if (i < lines.length - 1) {
@@ -728,7 +736,13 @@ export class LightningTextTextureRenderer {
     if (!space) {
       return this._context.measureText(word).width;
     }
+
+    // Split word into characters, but skip ZWSP in the width calculation
     return word.split('').reduce((acc, char) => {
+      // Check if the character is a zero-width space and skip it
+      if (isZeroWidthSpace(char)) {
+        return acc;
+      }
       return acc + this._context.measureText(char).width + space;
     }, 0);
   }

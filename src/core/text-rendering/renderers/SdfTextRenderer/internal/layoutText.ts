@@ -192,7 +192,11 @@ export function layoutText(
 
       // If we encounter a word boundary (white space or newline) we invalidate
       // the lastWord and set the xStartLastWordBoundary if we haven't already.
-      if (glyph.codepoint === 32 || glyph.codepoint === 10) {
+      if (
+        glyph.codepoint === 32 ||
+        glyph.codepoint === 10 ||
+        glyph.codepoint === 8203
+      ) {
         if (lastWord.codepointIndex !== -1) {
           lastWord.codepointIndex = -1;
           xStartLastWordBoundary = curX;
