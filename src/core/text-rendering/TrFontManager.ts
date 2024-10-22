@@ -157,9 +157,10 @@ export class TrFontManager {
   public resolveFontFace(
     familyMapsByPriority: FontFamilyMap[],
     props: TrFontProps,
+    rendererType: 'canvas' | 'sdf',
   ): TrFontFace | undefined {
     const { fontFamily, fontWeight, fontStyle, fontStretch } = props;
-    const fontCacheString = `${fontFamily}${fontStyle}${fontWeight}${fontStretch}`;
+    const fontCacheString = `${rendererType}_${fontFamily}_${fontStyle}_${fontWeight}_${fontStretch}`;
 
     if (this.fontCache.has(fontCacheString) === true) {
       return this.fontCache.get(fontCacheString);

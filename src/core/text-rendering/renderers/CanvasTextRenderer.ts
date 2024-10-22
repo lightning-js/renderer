@@ -387,6 +387,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const trFontFace = this.stage.fontManager.resolveFontFace(
       this.fontFamilyArray,
       state.props,
+      'canvas',
     ) as WebTrFontFace | undefined;
     assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
     state.fontInfo = {
