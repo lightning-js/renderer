@@ -46,6 +46,7 @@ function resolveFontToUse(
 
   for (const fontFamiles of familyMapsByPriority) {
     const fontFaces = fontFamiles[family];
+
     if (!fontFaces) {
       continue;
     }

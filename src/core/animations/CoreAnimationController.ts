@@ -26,6 +26,7 @@ import type { AnimationManager } from './AnimationManager.js';
 import type { CoreAnimation } from './CoreAnimation.js';
 import { assertTruthy } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+import type { AnimationTickPayload } from '../../common/CommonTypes.js';
 
 export class CoreAnimationController
   extends EventEmitter
@@ -50,6 +51,7 @@ export class CoreAnimationController
     // Bind event handlers
     this.onAnimating = this.onAnimating.bind(this);
     this.onFinished = this.onFinished.bind(this);
+    this.onTick = this.onTick.bind(this);
   }
 
   start(): IAnimationController {
@@ -93,6 +95,7 @@ export class CoreAnimationController
     // Hook up event listeners
     this.animation.once('finished', this.onFinished);
     this.animation.on('animating', this.onAnimating);
+    this.animation.on('tick', this.onTick);
     // Then register the animation
     this.manager.registerAnimation(this.animation);
   }
@@ -103,6 +106,7 @@ export class CoreAnimationController
     // Then unhook event listeners
     this.animation.off('finished', this.onFinished);
     this.animation.off('animating', this.onAnimating);
+    this.animation.off('tick', this.onTick);
   }
 
   private makeStoppedPromise(): void {
@@ -141,5 +145,13 @@ export class CoreAnimationController
   private onAnimating(this: CoreAnimationController): void {
     this.state = 'running';
     this.emit('animating', this);
+  }
+
+  private onTick(
+    this: CoreAnimationController,
+    _animation: CoreAnimation,
+    data: AnimationTickPayload,
+  ): void {
+    this.emit('tick', data);
   }
 }

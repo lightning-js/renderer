@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 import {
   isCompressedTextureContainer,
   loadCompressedTexture,
@@ -121,6 +121,8 @@ export interface ImageTextureProps {
 export class ImageTexture extends Texture {
   props: Required<ImageTextureProps>;
 
+  public override type: TextureType = TextureType.image;
+
   constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
     super(txManager);
     this.props = ImageTexture.resolveDefaults(props);
@@ -168,8 +170,8 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {
-      const img = new Image(width || undefined, height || undefined);
-      if (!(src.substr(0, 5) === 'data:')) {
+      const img = new Image();
+      if (!src.startsWith('data:')) {
         img.crossOrigin = 'Anonymous';
       }
       img.src = src;

@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link NoiseTexture}
@@ -55,6 +55,8 @@ export interface NoiseTextureProps {
  */
 export class NoiseTexture extends Texture {
   props: Required<NoiseTextureProps>;
+
+  public override type: TextureType = TextureType.noise;
 
   constructor(txManager: CoreTextureManager, props: NoiseTextureProps) {
     super(txManager);
