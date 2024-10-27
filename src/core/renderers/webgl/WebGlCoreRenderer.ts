@@ -47,12 +47,12 @@ import {
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
-import { ImageTexture } from '../../textures/ImageTexture.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,7 +66,7 @@ interface CoreWebGlSystem {
 
 export class WebGlCoreRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  glw: WebGlContextWrapper;
+  glw: WebGlContext;
   system: CoreWebGlSystem;
 
   //// Persistent data
@@ -106,7 +106,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     this.mode = 'webgl';
 
-    const { canvas, clearColor, bufferMemory } = options;
+    const { canvas, clearColor, bufferMemory, platform } = options;
 
     this.defaultTexture = new ColorTexture(this.txManager);
 
@@ -121,12 +121,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.stage.requestRender();
     });
 
-    const gl = createWebGLContext(
+    const glw = platform.createWebGLContext(
       canvas,
       options.forceWebGL2,
       options.contextSpy,
     );
-    const glw = (this.glw = new WebGlContextWrapper(gl));
+    this.glw = glw;
 
     const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);

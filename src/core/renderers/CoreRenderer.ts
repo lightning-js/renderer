@@ -30,6 +30,8 @@ import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
+import type { CorePlatform } from '../platforms/CorePlatform.js';
+import type { WebPlatform } from '../platforms/web/WebPlatform.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShader } from './CoreShader.js';
@@ -71,6 +73,7 @@ export interface CoreRendererOptions {
   bufferMemory: number;
   contextSpy: ContextSpy | null;
   forceWebGL2: boolean;
+  platform: WebPlatform;
 }
 
 export interface BufferInfo {

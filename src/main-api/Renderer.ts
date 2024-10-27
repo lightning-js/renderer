@@ -44,6 +44,8 @@ import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRe
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
+import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
+import { CorePlatform } from '../core/platforms/CorePlatform.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -256,6 +258,18 @@ export interface RendererMainSettings {
    * @defaultValue `false`
    */
   forceWebGL2?: boolean;
+
+  /**
+   * Provide an alternative platform abstraction layer
+   *
+   * @remarks
+   * By default the Lightning 3 renderer will load a webplatform, assuming it runs
+   * inside a web browsr. However for special cases there might be a need to provide
+   * an abstracted platform layer to run on non-web or non-standard JS engines
+   *
+   * @defaultValue `null`
+   */
+  platform?: typeof CorePlatform | null;
 }
 
 /**
@@ -346,6 +360,7 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
+      platform: settings.platform || null,
     };
     this.settings = resolvedSettings;
 
@@ -357,10 +372,20 @@ export class RendererMain extends EventEmitter {
       inspector,
     } = resolvedSettings;
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const platform = (new settings.platform() ||
+      new WebPlatform()) as CorePlatform;
+    assertTruthy(
+      platform instanceof CorePlatform,
+      'Platform is not a core platform immplementation',
+    );
+
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    const canvas = document.createElement('canvas');
+    const canvas = platform.createCanvas();
     this.canvas = canvas;
     canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
@@ -387,6 +412,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
       inspector: this.settings.inspector !== null,
+      platform: platform,
     });
 
     // Extract the root node
@@ -397,7 +423,7 @@ export class RendererMain extends EventEmitter {
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
     if (typeof target === 'string') {
-      targetEl = document.getElementById(target);
+      targetEl = platform.getElementById(target);
     } else {
       targetEl = target;
     }

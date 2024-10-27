@@ -1,22 +1,11 @@
 import { CorePlatform } from '../CorePlatform.js';
 import { WebGlContext } from './WebGlContext.js';
-import { Stage } from '../../Stage.js';
+import type { Stage } from '../../Stage.js';
+import { ContextSpy } from '../../lib/ContextSpy.js';
 
 export class WebPlatform extends CorePlatform {
-  private glContextWrapper!: WebGlContext;
-
   constructor() {
     super();
-    const canvas = this.createCanvas();
-    this.glContextWrapper = new WebGlContext(this.createWebGLContext(canvas));
-  }
-
-  ////////////////////////
-  // WebGL Wrapper
-  ////////////////////////
-
-  override get gl() {
-    return this.glContextWrapper;
   }
 
   ////////////////////////
@@ -28,37 +17,54 @@ export class WebPlatform extends CorePlatform {
     return canvas;
   }
 
+  override getElementById(id: string): HTMLElement | null {
+    return document.getElementById(id);
+  }
+
   override createWebGLContext(
-    canvas: HTMLCanvasElement,
-  ): WebGLRenderingContext | WebGL2RenderingContext {
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    canvas: HTMLCanvasElement | OffscreenCanvas,
+    forceWebGL2 = false,
+    contextSpy: ContextSpy | null,
+  ): WebGlContext {
+    const config: WebGLContextAttributes = {
+      alpha: true,
+      antialias: false,
+      depth: false,
+      stencil: true,
+      desynchronized: false,
+      // Disabled because it prevents Visual Regression Tests from working
+      // failIfMajorPerformanceCaveat: true,
+      powerPreference: 'high-performance',
+      premultipliedAlpha: true,
+      preserveDrawingBuffer: false,
+    };
+    const gl =
+      // TODO: Remove this assertion once this issue is fixed in TypeScript
+      // https://github.com/microsoft/TypeScript/issues/53614
+      (canvas.getContext(forceWebGL2 ? 'webgl2' : 'webgl', config) ||
+        canvas.getContext(
+          'experimental-webgl' as 'webgl',
+          config,
+        )) as unknown as WebGLRenderingContext | null;
     if (!gl) {
-      throw new Error('WebGL not supported');
+      throw new Error('Unable to create WebGL context');
     }
-    return gl;
-  }
-
-  override createCanvasRenderingContext2D(
-    canvas: HTMLCanvasElement,
-  ): CanvasRenderingContext2D {
-    const context = canvas.getContext('2d');
-    if (!context) {
-      throw new Error('2D rendering context not supported');
+    if (contextSpy) {
+      // Proxy the GL context to log all GL calls
+      return new Proxy(new WebGlContext(gl), {
+        get(target, prop) {
+          const value = target[prop as never] as unknown;
+          if (typeof value === 'function') {
+            contextSpy.increment(String(prop));
+            return value.bind(target);
+          }
+          return value;
+        },
+      });
     }
-    return context;
-  }
 
-  override setCanvasPixelRatio(pixelRatio: number): void {
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    document.body.style.zoom = (pixelRatio * devicePixelRatio).toString();
-  }
-
-  override setCanvasClearColor(
-    context: CanvasRenderingContext2D,
-    color: string,
-  ): void {
-    context.fillStyle = color;
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+    // return WebGL Context Wrapper
+    return new WebGlContext(gl);
   }
 
   ////////////////////////
@@ -95,29 +101,8 @@ export class WebPlatform extends CorePlatform {
     requestAnimationFrame(runLoop);
   }
 
-  /**
-   * Implementation that supports both overloaded signatures for creating an ImageBitmap.
-   */
-  createImageBitmap(
-    image: ImageBitmapSource,
-    sxOrOptions?: number | ImageBitmapOptions,
-    sy?: number,
-    sw?: number,
-    sh?: number,
-    options?: ImageBitmapOptions,
-  ): Promise<ImageBitmap> {
-    // Check if the second argument is a number, meaning it's using the cropping version
-    if (
-      typeof sxOrOptions === 'number' &&
-      sy !== undefined &&
-      sw !== undefined &&
-      sh !== undefined
-    ) {
-      return window.createImageBitmap(image, sxOrOptions, sy, sw, sh, options);
-    } else {
-      // Otherwise, assume it's using the non-cropping version
-      return window.createImageBitmap(image, sxOrOptions as ImageBitmapOptions);
-    }
+  get createImageBitmap() {
+    return self.createImageBitmap;
   }
 
   getTimeStamp(): number {

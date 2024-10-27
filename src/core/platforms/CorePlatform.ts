@@ -19,15 +19,9 @@
 
 import { CoreGlContext } from './CoreGlContext.js';
 import { Stage } from '../Stage.js';
+import type { ContextSpy } from '../lib/ContextSpy.js';
 
 export abstract class CorePlatform {
-  /**
-   * Gets the WebGL context wrapper that provides access to WebGL-specific functions
-   * such as creating textures, binding buffers, etc.
-   * @returns {WebGLFunctions} An instance of WebGLFunctions that wraps the WebGL context.
-   */
-  abstract get gl(): CoreGlContext;
-
   /**
    * Creates a new canvas element.
    * @returns The created HTMLCanvasElement.
@@ -35,38 +29,24 @@ export abstract class CorePlatform {
   abstract createCanvas(): HTMLCanvasElement;
 
   /**
-   * Creates a WebGL context (either WebGL1 or WebGL2) for a given canvas.
-   * @param canvas - The canvas element to create the context for.
-   * @returns The created WebGLRenderingContext or WebGL2RenderingContext.
+   * Get a DOM element by ID
+   * @returns The DOM element (or null)
+   */
+  abstract getElementById(id: string): HTMLElement | null;
+
+  /**
+   * Creates a WebGL context from a given canvas element.
+   *
+   * @param {HTMLCanvasElement} canvas - The canvas element to create the WebGL context from.
+   * @param {boolean} [forceWebGL2=false] - Whether to force the use of WebGL2 if available.
+   * @param {boolean} [contextSpy=false] - Whether to enable context spying for debugging purposes.
+   * @returns {WebGLRenderingContext | WebGL2RenderingContext} The created WebGL context.
    */
   abstract createWebGLContext(
-    canvas: HTMLCanvasElement,
-  ): WebGLRenderingContext | WebGL2RenderingContext;
-
-  /**
-   * Creates a 2D canvas rendering context.
-   * @param canvas - The canvas element.
-   * @returns The 2D rendering context.
-   */
-  abstract createCanvasRenderingContext2D(
-    canvas: HTMLCanvasElement,
-  ): CanvasRenderingContext2D;
-
-  /**
-   * Sets the pixel ratio for the canvas.
-   * @param pixelRatio - The pixel ratio to set.
-   */
-  abstract setCanvasPixelRatio(pixelRatio: number): void;
-
-  /**
-   * Sets the clear color for the canvas.
-   * @param context - The 2D rendering context.
-   * @param color - The color to set.
-   */
-  abstract setCanvasClearColor(
-    context: CanvasRenderingContext2D,
-    color: string,
-  ): void;
+    canvas: HTMLCanvasElement | OffscreenCanvas,
+    forceWebGL2: boolean,
+    contextSpy: ContextSpy | null,
+  ): CoreGlContext;
 
   /**
    * Starts the main rendering loop, calling the provided update function every frame.
@@ -75,34 +55,10 @@ export abstract class CorePlatform {
   abstract startLoop(stage: Stage): void;
 
   /**
-   * Creates an ImageBitmap from an image source with specified cropping coordinates.
-   * @param image - The source image or blob to create an image bitmap from.
-   * @param sx - The x-coordinate of the sub-rectangle of the image.
-   * @param sy - The y-coordinate of the sub-rectangle of the image.
-   * @param sw - The width of the sub-rectangle of the image.
-   * @param sh - The height of the sub-rectangle of the image.
-   * @param options - Image bitmap options like premultiplyAlpha, colorSpaceConversion, etc.
-   * @returns A promise that resolves to an ImageBitmap.
+   * Returns the platform createImageBitmap function
+   * @returns {createImageBitmap}
    */
-  abstract createImageBitmap(
-    image: ImageBitmapSource,
-    sx: number,
-    sy: number,
-    sw: number,
-    sh: number,
-    options?: ImageBitmapOptions,
-  ): Promise<ImageBitmap>;
-
-  /**
-   * Creates an ImageBitmap from an image source without cropping.
-   * @param image - The source image or blob to create an image bitmap from.
-   * @param options - Image bitmap options like premultiplyAlpha, colorSpaceConversion, etc.
-   * @returns A promise that resolves to an ImageBitmap.
-   */
-  abstract createImageBitmap(
-    image: ImageBitmapSource,
-    options?: ImageBitmapOptions,
-  ): Promise<ImageBitmap>;
+  abstract get createImageBitmap(): typeof createImageBitmap;
 
   /**
    * Retrieves the current timestamp.
