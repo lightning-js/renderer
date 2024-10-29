@@ -655,6 +655,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       glw.bindFramebuffer(ctxTexture.framebuffer);
 
       glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
+      // Set the clear color to transparent
+      glw.clearColor(0, 0, 0, 0);
       glw.clear();
 
       // Render all associated quads to the texture
@@ -682,6 +684,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.renderOps.length = 0;
       node.hasRTTupdates = false;
     }
+
+    const color = getNormalizedRgbaComponents(this.stage.options.clearColor);
+    // Restore the default clear color
+    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
 
     // Bind the default framebuffer
     glw.bindFramebuffer(null);
