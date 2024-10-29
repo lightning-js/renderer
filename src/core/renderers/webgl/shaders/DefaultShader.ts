@@ -35,12 +35,6 @@ export class DefaultShader extends WebGlCoreShader {
     });
   }
 
-  override bindTextures(textures: WebGlCoreCtxTexture[]) {
-    const { glw } = this;
-    glw.activeTexture(0);
-    glw.bindTexture(textures[0]!.ctxTexture);
-  }
-
   static override shaderSources: ShaderProgramSources = {
     vertex: `
       # ifdef GL_FRAGMENT_PRECISION_HIGH

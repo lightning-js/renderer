@@ -64,60 +64,18 @@ export class SdfShader extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_transform', uniform: 'uniformMatrix3fv' },
-        { name: 'u_scrollY', uniform: 'uniform1f' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_color', uniform: 'uniform4fv' },
-        { name: 'u_size', uniform: 'uniform1f' },
-        { name: 'u_distanceRange', uniform: 'uniform1f' },
-        { name: 'u_debug', uniform: 'uniform1i' },
-      ],
     });
   }
 
-  override bindTextures(textures: WebGlCoreCtxTexture[]) {
-    const { glw } = this;
-    glw.activeTexture(0);
-    glw.bindTexture(textures[0]!.ctxTexture);
-  }
-
-  protected override bindProps(props: SdfShaderProps): void {
-    const resolvedProps = SdfShader.resolveDefaults(props);
-    for (const key in resolvedProps) {
-      if (key === 'transform') {
-        this.glw.uniformMatrix3fv(
-          this.getUniformLocation('u_transform'),
-          resolvedProps[key],
-        );
-      } else if (key === 'scrollY') {
-        this.glw.uniform1f(
-          this.getUniformLocation('u_scrollY'),
-          resolvedProps[key],
-        );
-      } else if (key === 'color') {
-        const components = getNormalizedRgbaComponents(resolvedProps.color);
-        this.glw.uniform4fv(this.getUniformLocation('u_color'), components);
-      } else if (key === 'size') {
-        this.glw.uniform1f(
-          this.getUniformLocation('u_size'),
-          resolvedProps[key],
-        );
-      } else if (key === 'distanceRange') {
-        this.glw.uniform1f(
-          this.getUniformLocation('u_distanceRange'),
-          resolvedProps[key],
-        );
-      } else if (key === 'debug') {
-        this.glw.uniform1i(
-          this.getUniformLocation('u_debug'),
-          resolvedProps[key] ? 1 : 0,
-        );
-      }
-    }
+  override bindProps(props: Required<SdfShaderProps>): void {
+    props = SdfShader.resolveDefaults(props);
+    this.glw.uniformMatrix3fv('u_transform', props.transform);
+    this.glw.uniform1f('u_scrollY', props.scrollY);
+    const components = getNormalizedRgbaComponents(props.color);
+    this.glw.uniform4fv('u_color', components);
+    this.glw.uniform1f('u_size', props.size);
+    this.glw.uniform1f('u_distanceRange', props.size);
+    this.glw.uniform1i('u_debug', props.debug ? 1 : 0);
   }
 
   static override resolveDefaults(

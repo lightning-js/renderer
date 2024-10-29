@@ -35,7 +35,8 @@ export class UnsupportedShader extends CoreShader {
   bindRenderOp(): void {
     // noop
   }
-  protected bindProps(): void {
+
+  override bindProps(): void {
     // noop
   }
 

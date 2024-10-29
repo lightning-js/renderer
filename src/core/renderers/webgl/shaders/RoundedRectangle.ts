@@ -45,14 +45,6 @@ export class RoundedRectangle extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_dimensions', uniform: 'uniform2fv' },
-        { name: 'u_radius', uniform: 'uniform1f' },
-      ],
     });
   }
 
@@ -70,20 +62,11 @@ export class RoundedRectangle extends WebGlCoreShader {
     };
   }
 
-  override bindTextures(textures: WebGlCoreCtxTexture[]) {
-    const { glw } = this;
-    glw.activeTexture(0);
-    glw.bindTexture(textures[0]!.ctxTexture);
-  }
-
-  protected override bindProps(props: Required<RoundedRectangleProps>): void {
+  override bindProps(props: Required<RoundedRectangleProps>): void {
     const radiusFactor =
       Math.min(props.$dimensions.width, props.$dimensions.height) /
       (2.0 * props.radius);
-    this.glw.uniform1f(
-      this.getUniformLocation('u_radius'),
-      props.radius * Math.min(radiusFactor, 1),
-    );
+    this.glw.uniform1f('u_radius', props.radius * Math.min(radiusFactor, 1));
   }
 
   override canBatchShaderProps(

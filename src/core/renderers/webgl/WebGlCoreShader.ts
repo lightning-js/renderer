@@ -18,7 +18,7 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import { assertTruthy, hasOwn } from '../../../utils.js';
+import { hasOwn } from '../../../utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { CoreShader } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
@@ -30,8 +30,6 @@ import {
   createShader,
   type AttributeInfo,
   type ShaderOptions,
-  type UniformInfo,
-  type UniformMethodMap,
   type ShaderProgramSources,
 } from './internal/ShaderUtils.js';
 
@@ -77,18 +75,15 @@ export abstract class WebGlCoreShader extends CoreShader {
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
-  protected attributeBuffers: Record<string, WebGLBuffer>;
   protected attributeLocations: Record<string, number>;
-  protected attributeNames: string[];
-  protected uniformLocations: Record<string, WebGLUniformLocation>;
-  protected uniformTypes: Record<string, keyof UniformMethodMap>;
-  readonly supportsIndexedTextures: boolean;
+  readonly supportsIndexedTextures: boolean = false;
 
   constructor(options: ShaderOptions) {
     super();
     const renderer = (this.renderer = options.renderer);
-    const glw = (this.glw = this.renderer.glw);
-    this.supportsIndexedTextures = options.supportsIndexedTextures || false;
+    const glw = (this.glw = renderer.glw);
+    this.supportsIndexedTextures =
+      options.supportsIndexedTextures || this.supportsIndexedTextures;
 
     // Check that extensions are supported
     const webGl2 = glw.isWebGl2();
@@ -152,61 +147,7 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
     this.program = program;
 
-    this.attributeLocations = {} as Record<string, number>;
-    this.attributeBuffers = {} as Record<string, number>;
-    this.attributeNames = [];
-
-    [...options.attributes].forEach((attributeName) => {
-      const location = glw.getAttribLocation(this.program, attributeName);
-      if (location < 0) {
-        throw new Error(
-          `${this.constructor.name}: Vertex shader must have an attribute "${attributeName}"!`,
-        );
-      }
-      const buffer = glw.createBuffer();
-      if (!buffer) {
-        throw new Error(
-          `${this.constructor.name}: Could not create buffer for attribute "${attributeName}"`,
-        );
-      }
-
-      this.attributeLocations[attributeName] = location;
-      this.attributeBuffers[attributeName] = buffer;
-      this.attributeNames.push(attributeName);
-    });
-
-    this.uniformLocations = {} as Record<string, WebGLRenderingContext>;
-    this.uniformTypes = {} as Record<string, keyof UniformMethodMap>;
-    options.uniforms.forEach((uniform: UniformInfo) => {
-      const location = glw.getUniformLocation(this.program, uniform.name);
-      this.uniformTypes[uniform.name] = uniform.uniform;
-      if (!location) {
-        console.warn(
-          `Shader "${this.constructor.name}" could not get uniform location for "${uniform.name}"`,
-        );
-        return;
-      }
-      this.uniformLocations[uniform.name] = location;
-    });
-  }
-
-  private bindBufferAttribute(
-    location: number,
-    buffer: WebGLBuffer,
-    attribute: AttributeInfo,
-  ) {
-    const { glw } = this;
-    glw.enableVertexAttribArray(location);
-
-    glw.vertexAttribPointer(
-      buffer,
-      location,
-      attribute.size,
-      attribute.type,
-      attribute.normalized,
-      attribute.stride,
-      attribute.offset,
-    );
+    this.attributeLocations = glw.getAttributeLocations(program);
   }
 
   disableAttribute(location: number) {
@@ -214,10 +155,12 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   disableAttributes() {
-    for (const loc in this.attributeLocations) {
-      this.disableAttribute(this.attributeLocations[loc] as number);
+    const { glw } = this;
+    const attribs = Object.keys(this.attributeLocations);
+    const attribLen = attribs.length;
+    for (let i = 0; i < attribLen; i++) {
+      glw.disableVertexAttribArray(i);
     }
-    this.boundBufferCollection = null;
   }
 
   /**
@@ -264,24 +207,13 @@ export abstract class WebGlCoreShader extends CoreShader {
       const { width, height } = renderOp.framebufferDimensions || {};
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
-      glw.uniform1f(this.getUniformLocation('u_pixelRatio'), 1.0);
+      glw.uniform1f('u_pixelRatio', 1.0);
 
       // Set resolution to the framebuffer dimensions
-      glw.uniform2f(
-        this.getUniformLocation('u_resolution'),
-        width ?? 0,
-        height ?? 0,
-      );
+      glw.uniform2f('u_resolution', width ?? 0, height ?? 0);
     } else {
-      glw.uniform1f(
-        this.getUniformLocation('u_pixelRatio'),
-        renderOp.options.pixelRatio,
-      );
-      glw.uniform2f(
-        this.getUniformLocation('u_resolution'),
-        glw.canvas.width,
-        glw.canvas.height,
-      );
+      glw.uniform1f('u_pixelRatio', renderOp.options.pixelRatio);
+      glw.uniform2f('u_resolution', glw.canvas.width, glw.canvas.height);
     }
 
     if (props) {
@@ -292,51 +224,49 @@ export abstract class WebGlCoreShader extends CoreShader {
         if (!dimensions) {
           dimensions = renderOp.dimensions;
         }
-        glw.uniform2f(
-          this.getUniformLocation('u_dimensions'),
-          dimensions.width,
-          dimensions.height,
-        );
+        glw.uniform2f('u_dimensions', dimensions.width, dimensions.height);
       }
       if (hasOwn(props, '$alpha')) {
         let alpha = props.$alpha as number | null;
         if (!alpha) {
           alpha = renderOp.alpha;
         }
-        glw.uniform1f(this.getUniformLocation('u_alpha'), alpha);
+        glw.uniform1f('u_alpha', alpha);
       }
-      this.bindProps(props);
+      if (typeof this.bindProps === 'function') {
+        this.bindProps(props);
+      }
     }
-  }
-
-  getUniformLocation(name: string): WebGLUniformLocation | null {
-    return this.uniformLocations[name] || null;
   }
 
   bindBufferCollection(buffer: BufferCollection) {
-    if (this.boundBufferCollection === buffer) {
-      return;
-    }
-    for (const attributeName in this.attributeLocations) {
-      const resolvedBuffer = buffer.getBuffer(attributeName);
-      const resolvedInfo = buffer.getAttributeInfo(attributeName);
-      assertTruthy(resolvedBuffer, `Buffer for "${attributeName}" not found`);
-      assertTruthy(resolvedInfo);
-      this.bindBufferAttribute(
-        this.attributeLocations[attributeName]!,
+    const { glw } = this;
+    const attribs = Object.keys(this.attributeLocations);
+    const attribLen = attribs.length;
+
+    for (let i = 0; i < attribLen; i++) {
+      const name = attribs[i]!;
+      const resolvedBuffer = buffer.getBuffer(name);
+      const resolvedInfo = buffer.getAttributeInfo(name);
+      if (!resolvedBuffer || !resolvedInfo) {
+        continue;
+      }
+      glw.enableVertexAttribArray(i);
+      glw.vertexAttribPointer(
         resolvedBuffer,
-        resolvedInfo,
+        i,
+        resolvedInfo.size,
+        resolvedInfo.type,
+        resolvedInfo.normalized,
+        resolvedInfo.stride,
+        resolvedInfo.offset,
       );
     }
-    this.boundBufferCollection = buffer;
-  }
-
-  protected override bindProps(props: Record<string, unknown>) {
-    // Implement in child class
   }
 
   bindTextures(textures: WebGlCoreCtxTexture[]) {
-    // no defaults
+    this.glw.activeTexture(0);
+    this.glw.bindTexture(textures[0]!.ctxTexture);
   }
 
   override attach(): void {

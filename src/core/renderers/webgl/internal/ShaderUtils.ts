@@ -37,8 +37,8 @@ export interface UniformInfo {
 
 export interface ShaderOptions {
   renderer: WebGlCoreRenderer;
-  attributes: string[];
-  uniforms: UniformInfo[];
+  attributes?: string[];
+  uniforms?: UniformInfo[];
   shaderSources?: ShaderProgramSources;
   supportsIndexedTextures?: boolean;
   webgl1Extensions?: string[];

@@ -29,17 +29,6 @@ export class DefaultShaderBatched extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: [
-        'a_position',
-        'a_textureCoordinate',
-        'a_color',
-        'a_textureIndex',
-      ],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_textures[0]', uniform: 'uniform1iv' },
-      ],
     });
   }
 
@@ -57,7 +46,7 @@ export class DefaultShaderBatched extends WebGlCoreShader {
       glw.bindTexture(t.ctxTexture);
     });
     const samplers = Array.from(Array(texture.length).keys());
-    this.glw.uniform1iv(this.getUniformLocation('u_textures[0]'), samplers);
+    this.glw.uniform1iv('u_textures[0]', samplers);
   }
 
   static override shaderSources: ShaderProgramSources = {

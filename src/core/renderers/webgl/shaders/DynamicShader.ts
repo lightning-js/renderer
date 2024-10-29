@@ -118,15 +118,6 @@ export class DynamicShader extends WebGlCoreShader {
     const shader = DynamicShader.createShader(props, effectContructors);
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2fv' },
-        { name: 'u_dimensions', uniform: 'uniform2fv' },
-        { name: 'u_alpha', uniform: 'uniform1f' },
-        ...shader.uniforms,
-      ],
       shaderSources: {
         vertex: shader.vertex,
         fragment: shader.fragment,
@@ -156,7 +147,7 @@ export class DynamicShader extends WebGlCoreShader {
       for (let j = 0; j < propsLength; j++) {
         const key = propKeys[j]!;
         const method = effect.props[key].method as keyof UniformMethodMap;
-        const location = this.getUniformLocation(uniformInfo[key]!.name);
+        const location = uniformInfo[key]!.name;
 
         if (
           method === 'uniform2fv' ||
@@ -214,7 +205,7 @@ export class DynamicShader extends WebGlCoreShader {
     }
   }
 
-  protected override bindProps(props: Required<DynamicShaderProps>): void {
+  override bindProps(props: Required<DynamicShaderProps>): void {
     const effects = props.effects;
     const effectsL = effects.length;
     let i = 0;

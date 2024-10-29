@@ -258,10 +258,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     const targetShader =
       (params.shader as WebGlCoreShader) || this.defaultShader;
-    assertTruthy(
-      targetShader.getUniformLocation !== undefined,
-      'Invalid WebGL shader',
-    );
 
     if (this.reuseRenderOp(params) === false) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
