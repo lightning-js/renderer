@@ -122,7 +122,7 @@ export class Stage {
   private frameEventQueue: [name: string, payload: unknown][] = [];
   private fontResolveMap: Record<string, CanvasTextRenderer | SdfTextRenderer> =
     {};
-  private platform: CorePlatform;
+  private platform: CorePlatform | WebPlatform | null = null;
 
   /// Debug data
   contextSpy: ContextSpy | null = null;
@@ -152,7 +152,6 @@ export class Stage {
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
-    this.platform = platform;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -161,6 +160,11 @@ export class Stage {
         : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
     }
     this.boundsMargin = bm;
+
+    assertTruthy(
+      platform !== null,
+      'A CorePlatform is not provided in the options',
+    );
 
     const rendererOptions: CoreRendererOptions = {
       stage: this,
@@ -264,7 +268,7 @@ export class Stage {
   }
 
   updateFrameTime() {
-    const newFrameTime = this.platform.getTimeStamp();
+    const newFrameTime = this.platform?.getTimeStamp() || Date.now();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.deltaTime = !this.lastFrameTime

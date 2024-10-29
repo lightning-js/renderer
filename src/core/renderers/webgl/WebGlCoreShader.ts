@@ -19,7 +19,8 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy, hasOwn } from '../../../utils.js';
-import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 import { CoreShader } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
@@ -76,7 +77,7 @@ export abstract class WebGlCoreShader extends CoreShader {
    */
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlCoreRenderer;
-  protected glw: WebGlContextWrapper;
+  protected glw: CoreGlContext | WebGlContext;
   protected attributeBuffers: Record<string, WebGLBuffer>;
   protected attributeLocations: Record<string, number>;
   protected attributeNames: string[];

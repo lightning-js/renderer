@@ -18,14 +18,15 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
 export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
   constructor(
-    glw: WebGlContextWrapper,
+    glw: CoreGlContext | WebGlContext,
     memManager: TextureMemoryManager,
     textureSource: SubTexture,
   ) {

@@ -1,6 +1,6 @@
 import type { EffectMap } from '../../../../CoreShaderManager.js';
 import type { ExtractProps } from '../../../../CoreTextureManager.js';
-import type { WebGlContextWrapper } from '../../../../platforms/web/WebGlContextWrapper.js';
+
 import type {
   AlphaShaderProp,
   DimensionsShaderProp,

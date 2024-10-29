@@ -73,7 +73,7 @@ export interface CoreRendererOptions {
   bufferMemory: number;
   contextSpy: ContextSpy | null;
   forceWebGL2: boolean;
-  platform: WebPlatform;
+  platform: CorePlatform | WebPlatform;
 }
 
 export interface BufferInfo {

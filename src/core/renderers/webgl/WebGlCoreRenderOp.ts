@@ -23,8 +23,9 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { Rect, RectWithValid } from '../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
+import type { RectWithValid } from '../../lib/utils.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
@@ -39,7 +40,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   readonly maxTextures: number;
 
   constructor(
-    readonly glw: WebGlContextWrapper,
+    readonly glw: CoreGlContext | WebGlContext,
     readonly options: WebGlCoreRendererOptions,
     readonly buffers: BufferCollection,
     readonly shader: WebGlCoreShader,

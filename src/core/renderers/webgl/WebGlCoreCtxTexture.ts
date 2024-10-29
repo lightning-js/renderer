@@ -19,8 +19,9 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../platforms/web/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
 import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
@@ -46,7 +47,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   private _h = 0;
 
   constructor(
-    protected glw: WebGlContextWrapper,
+    protected glw: CoreGlContext | WebGlContext,
     memManager: TextureMemoryManager,
     textureSource: Texture,
   ) {
@@ -88,7 +89,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = this.createNativeCtxTexture();
     if (this._nativeCtxTexture === null) {
       this._state = 'failed';
-      this.textureSource.setState('failed', new Error('Could not create WebGL Texture'));
+      this.textureSource.setState(
+        'failed',
+        new Error('Could not create WebGL Texture'),
+      );
       console.error('Could not create WebGL Texture');
       return;
     }

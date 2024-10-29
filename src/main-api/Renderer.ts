@@ -372,11 +372,15 @@ export class RendererMain extends EventEmitter {
       inspector,
     } = resolvedSettings;
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const platform = (new settings.platform() ||
-      new WebPlatform()) as CorePlatform;
+    let platform;
+    if (settings.platform) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      platform = new settings.platform() as WebPlatform;
+    } else {
+      platform = new WebPlatform();
+    }
+
     assertTruthy(
       platform instanceof CorePlatform,
       'Platform is not a core platform immplementation',

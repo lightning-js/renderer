@@ -25,6 +25,8 @@ import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
+import type { CorePlatform } from './platforms/CorePlatform.js';
+import type { WebPlatform } from './platforms/web/WebPlatform.js';
 
 /**
  * Augmentable map of texture class types
@@ -139,6 +141,10 @@ export interface TextureOptions {
 }
 
 export class CoreTextureManager {
+  private platform: CorePlatform | WebPlatform;
+  public createImageBitmap: typeof createImageBitmap;
+  public hasCreateImageBitmap = false;
+
   /**
    * Map of textures by cache key
    */
@@ -155,8 +161,8 @@ export class CoreTextureManager {
   txConstructors: Partial<TextureMap> = {};
 
   imageWorkerManager: ImageWorkerManager | null = null;
-  hasCreateImageBitmap = !!self.createImageBitmap;
   hasWorker = !!self.Worker;
+
   /**
    * Renderer that this texture manager is associated with
    *
@@ -177,7 +183,12 @@ export class CoreTextureManager {
    */
   frameTime = 0;
 
-  constructor(numImageWorkers: number) {
+  constructor(numImageWorkers: number, platform: CorePlatform | WebPlatform) {
+    this.platform = platform;
+
+    this.createImageBitmap = platform.createImageBitmap;
+    this.hasCreateImageBitmap = !!this.createImageBitmap;
+
     // Register default known texture types
     if (this.hasCreateImageBitmap && this.hasWorker && numImageWorkers > 0) {
       this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);

@@ -18,6 +18,67 @@
  */
 
 export abstract class CoreGlContext {
+  //#region Cached WebGL State
+  protected abstract activeTextureUnit: number | undefined;
+  protected abstract texture2dUnits: Array<WebGLTexture | null>;
+  protected abstract texture2dParams: WeakMap<
+    WebGLTexture,
+    Record<number, number | undefined>
+  >;
+  protected abstract scissorEnabled: boolean;
+  protected abstract scissorX: number;
+  protected abstract scissorY: number;
+  protected abstract scissorWidth: number;
+  protected abstract scissorHeight: number;
+  protected abstract blendEnabled: boolean;
+  protected abstract blendSrcRgb: number;
+  protected abstract blendDstRgb: number;
+  protected abstract blendSrcAlpha: number;
+  protected abstract blendDstAlpha: number;
+  protected abstract boundArrayBuffer: WebGLBuffer | null;
+  protected abstract boundElementArrayBuffer: WebGLBuffer | null;
+  protected abstract curProgram: WebGLProgram | null;
+  //#endregion Cached WebGL State
+
+  //#region Canvas
+  public abstract readonly canvas: HTMLCanvasElement | OffscreenCanvas;
+  //#endregion Canvas
+
+  //#region WebGL Enums
+  public abstract readonly MAX_RENDERBUFFER_SIZE: GLenum;
+  public abstract readonly MAX_TEXTURE_SIZE: GLenum;
+  public abstract readonly MAX_VIEWPORT_DIMS: GLenum;
+  public abstract readonly MAX_VERTEX_TEXTURE_IMAGE_UNITS: GLenum;
+  public abstract readonly MAX_TEXTURE_IMAGE_UNITS: GLenum;
+  public abstract readonly MAX_COMBINED_TEXTURE_IMAGE_UNITS: GLenum;
+  public abstract readonly MAX_VERTEX_ATTRIBS: GLenum;
+  public abstract readonly MAX_VARYING_VECTORS: GLenum;
+  public abstract readonly MAX_VERTEX_UNIFORM_VECTORS: GLenum;
+  public abstract readonly MAX_FRAGMENT_UNIFORM_VECTORS: GLenum;
+  public abstract readonly TEXTURE_MAG_FILTER: GLenum;
+  public abstract readonly TEXTURE_MIN_FILTER: GLenum;
+  public abstract readonly TEXTURE_WRAP_S: GLenum;
+  public abstract readonly TEXTURE_WRAP_T: GLenum;
+  public abstract readonly LINEAR: GLenum;
+  public abstract readonly CLAMP_TO_EDGE: GLenum;
+  public abstract readonly RGBA: GLenum;
+  public abstract readonly UNSIGNED_BYTE: GLenum;
+  public abstract readonly UNPACK_PREMULTIPLY_ALPHA_WEBGL: GLenum;
+  public abstract readonly UNPACK_FLIP_Y_WEBGL: GLenum;
+  public abstract readonly FLOAT: GLenum;
+  public abstract readonly TRIANGLES: GLenum;
+  public abstract readonly UNSIGNED_SHORT: GLenum;
+  public abstract readonly ONE: GLenum;
+  public abstract readonly ONE_MINUS_SRC_ALPHA: GLenum;
+  public abstract readonly VERTEX_SHADER: GLenum;
+  public abstract readonly FRAGMENT_SHADER: GLenum;
+  public abstract readonly STATIC_DRAW: GLenum;
+  public abstract readonly COMPILE_STATUS: GLenum;
+  public abstract readonly LINK_STATUS: GLenum;
+  public abstract readonly DYNAMIC_DRAW: GLenum;
+  public abstract readonly COLOR_ATTACHMENT0: GLenum;
+  //#endregion WebGL Enums
+
   /**
    * Sets the active texture unit.
    * @param textureUnit - The index of the texture unit to activate.
@@ -311,6 +372,17 @@ export abstract class CoreGlContext {
   ): void;
 
   /**
+   * Sets the value of a vec3 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec3 values to set.
+   */
+  abstract uniform3fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ): void;
+
+  /**
    * Sets the value of a vec4 (4-component float vector) uniform variable.
    * @param location - The location of the uniform variable.
    * @param v0 - The first component of the vector.
@@ -357,7 +429,7 @@ export abstract class CoreGlContext {
   ): void;
 
   /**
-   * Sets the value of a 4x4 float matrix uniform variable.
+   * Sets the value of a 4x4 float matrix uniform variablisWebGl2e.
    * @param location - The location of the uniform variable.
    * @param value - The matrix to set (must be 4x4).
    */
@@ -386,6 +458,28 @@ export abstract class CoreGlContext {
   ): void;
 
   /**
+   * Sets the value of a vec2 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec2 values to set.
+   */
+  abstract uniform2fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
+  ): void;
+
+  /**
+   * Sets the value of an ivec2 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec2 values to set.
+   */
+  abstract uniform2iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ): void;
+
+  /**
    * Sets the value of a vec3 (3-component integer vector) uniform variable.
    * @param location - The location of the uniform variable.
    * @param v0 - The first component of the vector.
@@ -397,6 +491,17 @@ export abstract class CoreGlContext {
     v0: number,
     v1: number,
     v2: number,
+  ): void;
+
+  /**
+   * Sets the value of an ivec3 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec3 values to set.
+   */
+  abstract uniform3iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
   ): void;
 
   /**
@@ -423,6 +528,28 @@ export abstract class CoreGlContext {
   abstract uniform1iv(
     location: WebGLUniformLocation | null,
     value: Int32Array | number[],
+  ): void;
+
+  /**
+   * Sets the value of an ivec4 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of ivec4 values to set.
+   */
+  abstract uniform4iv(
+    location: WebGLUniformLocation | null,
+    value: Int32Array | number[],
+  ): void;
+
+  /**
+   * Sets the value of a vec4 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec4 values to set.
+   */
+  abstract uniform4fv(
+    location: WebGLUniformLocation | null,
+    value: Float32Array | number[],
   ): void;
 
   ////////////////////////
@@ -470,6 +597,10 @@ export abstract class CoreGlContext {
    */
   abstract blendFunc(src: GLenum, dst: GLenum): void;
 
+  ////////////////////////
+  // Main
+  ////////////////////////
+
   /**
    * Sets the color values used when clearing the color buffer.
    * @param red - The red component of the clear color.
@@ -488,7 +619,7 @@ export abstract class CoreGlContext {
    * Clears buffers to preset values.
    * @param mask - A bitmask indicating which buffer(s) to clear (e.g., `gl.COLOR_BUFFER_BIT`).
    */
-  abstract clear(mask: GLbitfield): void;
+  abstract clear(mask?: GLbitfield): void;
 
   /**
    * Renders primitives from array data.
@@ -505,6 +636,109 @@ export abstract class CoreGlContext {
   ): void;
 
   /**
+   * ```
+   * gl.getAttribLocation(program, name);
+   * ```
+   *
+   * @param program
+   * @param name
+   * @returns
+   */
+  abstract getAttribLocation(program: WebGLProgram, name: string): GLint;
+
+  /**
+   * ```
+   * gl.enableVertexAttribArray(index);
+   * ```
+   *
+   * @param index
+   */
+  abstract enableVertexAttribArray(index: number): void;
+
+  /**
+   * ```
+   * gl.disableVertexAttribArray(index);
+   * ```
+   *
+   * @param index
+   */
+  abstract disableVertexAttribArray(index: number): void;
+
+  /**
+   * ```
+   * gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+   * gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+   * ```
+   *
+   * @remarks
+   * **WebGL Combo**: `gl.bindBuffer` and `gl.bufferData` are combined into one function.
+   *
+   * @param buffer
+   * @param data
+   * @param usage
+   */
+  abstract arrayBufferData(
+    buffer: WebGLBuffer | null,
+    data: ArrayBufferView,
+    usage: GLenum,
+  ): void;
+
+  /**
+   * ```
+   * gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+   * gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, usage);
+   * ```
+   * @remarks
+   * **WebGL Combo**: `gl.bindBuffer` and `gl.bufferData` are combined into one function.
+   *
+   * @param buffer
+   * @param data
+   * @param usage
+   */
+  abstract elementArrayBufferData(
+    buffer: WebGLBuffer | null,
+    data: ArrayBufferView,
+    usage: GLenum,
+  ): void;
+
+  /**
+   * ```
+   * gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+   * gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+   * ```
+   *
+   * @remarks
+   * **WebGL Combo**: `gl.bindBuffer` and `gl.vertexAttribPointer` are combined into one function.
+   *
+   * @param buffer
+   * @param index
+   * @param size
+   * @param type
+   * @param normalized
+   * @param stride
+   * @param offset
+   */
+  abstract vertexAttribPointer(
+    buffer: WebGLBuffer,
+    index: GLuint,
+    size: GLint,
+    type: GLenum,
+    normalized: GLboolean,
+    stride: GLsizei,
+    offset: GLintptr,
+  ): void;
+
+  /**
+   * ```
+   * gl.pixelStorei(pname, param);
+   * ```
+   *
+   * @param pname
+   * @param param
+   */
+  abstract pixelStorei(pname: GLenum, param: GLint | GLboolean): void;
+
+  /**
    * Renders primitives from the currently bound array data.
    * @param mode - The kind of primitives to render (e.g., `gl.TRIANGLES`).
    * @param first - The starting index in the array.
@@ -512,6 +746,34 @@ export abstract class CoreGlContext {
    */
   // Currently not used in L3 renderer
   // abstract drawArrays(mode: GLenum, first: GLint, count: GLsizei): void;
+
+  ////////////////////////
+  // WebGL2
+  ////////////////////////
+
+  /**
+   * ```
+   * gl.createVertexArray();
+   * ```
+   *
+   * @remarks
+   * This is a WebGL2 only function
+   *
+   * @returns
+   */
+  abstract createVertexArray(): void;
+
+  /**
+   * ```
+   * gl.bindVertexArray(vertexArray);
+   * ```
+   *
+   * @remarks
+   * This is a WebGL2 only function
+   *
+   * @param vertexArray
+   */
+  abstract bindVertexArray(vertexArray: WebGLVertexArrayObject | null): void;
 
   ////////////////////////
   // Extension handling
@@ -522,7 +784,7 @@ export abstract class CoreGlContext {
    * @param name - The name of the extension to retrieve.
    * @returns The extension object, or null if the extension is not supported.
    */
-  abstract getExtension(name: string): any;
+  abstract getExtension(name: string): string | null;
 
   ////////////////////////
   // Query parameters and states
@@ -533,7 +795,7 @@ export abstract class CoreGlContext {
    * @param pname - The name of the parameter to query (e.g., `gl.MAX_TEXTURE_SIZE`).
    * @returns The value of the requested parameter.
    */
-  abstract getParameter(pname: GLenum): any;
+  abstract getParameter(pname: GLenum): GLenum;
 
   /**
    * Determines if the current WebGL context is WebGL2.
