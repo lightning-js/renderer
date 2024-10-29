@@ -33,7 +33,7 @@ import {
 } from './effects/ShaderEffect.js';
 import type { EffectMap } from '../../../CoreShaderManager.js';
 import { assertTruthy } from '../../../../utils.js';
-import type { UniformMethodMap } from '../../../lib/WebGlContextWrapper.js';
+import type { UniformMethodMap } from '../../../platforms/web/WebGlContext.js';
 
 export interface DynamicShaderProps
   extends DimensionsShaderProp,

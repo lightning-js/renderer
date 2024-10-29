@@ -17,7 +17,8 @@
  * limitations under the License.
  */
 
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+import type { CoreGlContext } from '../../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../../platforms/web/WebGlContext.js';
 
 export interface CoreWebGlParameters {
   MAX_RENDERBUFFER_SIZE: number;
@@ -37,7 +38,7 @@ export interface CoreWebGlParameters {
  * @param glw
  */
 export function getWebGlParameters(
-  glw: WebGlContextWrapper,
+  glw: CoreGlContext | WebGlContext,
 ): CoreWebGlParameters {
   const params: CoreWebGlParameters = {
     MAX_RENDERBUFFER_SIZE: 0,
@@ -82,7 +83,7 @@ export interface CoreWebGlExtensions {
  * @param glw
  */
 export function getWebGlExtensions(
-  glw: WebGlContextWrapper,
+  glw: CoreGlContext | WebGlContext,
 ): CoreWebGlExtensions {
   const extensions: CoreWebGlExtensions = {
     ANGLE_instanced_arrays: null,
@@ -113,7 +114,10 @@ export function getWebGlExtensions(
  * @param glw
  * @param size
  */
-export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
+export function createIndexBuffer(
+  glw: CoreGlContext | WebGlContext,
+  size: number,
+) {
   const maxQuads = ~~(size / 80);
   const indices = new Uint16Array(maxQuads * 6);
 

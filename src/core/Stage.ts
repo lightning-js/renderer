@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { startLoop, getTimeStamp } from './platform.js';
+
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import {
@@ -52,6 +52,8 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import type { CorePlatform } from './platforms/CorePlatform.js';
+import type { WebPlatform } from './platforms/web/WebPlatform.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -71,6 +73,7 @@ export interface StageOptions {
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
+  platform: CorePlatform | WebPlatform;
 }
 
 export type StageFpsUpdateHandler = (
@@ -119,6 +122,7 @@ export class Stage {
   private frameEventQueue: [name: string, payload: unknown][] = [];
   private fontResolveMap: Record<string, CanvasTextRenderer | SdfTextRenderer> =
     {};
+  private platform: CorePlatform | WebPlatform | null = null;
 
   /// Debug data
   contextSpy: ContextSpy | null = null;
@@ -139,10 +143,11 @@ export class Stage {
       textureMemory,
       renderEngine,
       fontEngines,
+      platform,
     } = options;
 
     this.eventBus = options.eventBus;
-    this.txManager = new CoreTextureManager(numImageWorkers);
+    this.txManager = new CoreTextureManager(numImageWorkers, platform);
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
@@ -156,8 +161,14 @@ export class Stage {
     }
     this.boundsMargin = bm;
 
+    assertTruthy(
+      platform !== null,
+      'A CorePlatform is not provided in the options',
+    );
+
     const rendererOptions: CoreRendererOptions = {
       stage: this,
+      platform,
       canvas,
       pixelRatio:
         options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio,
@@ -252,12 +263,12 @@ export class Stage {
 
     // execute platform start loop
     if (autoStart) {
-      startLoop(this);
+      platform.startLoop(this);
     }
   }
 
   updateFrameTime() {
-    const newFrameTime = getTimeStamp();
+    const newFrameTime = this.platform?.getTimeStamp() || Date.now();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.deltaTime = !this.lastFrameTime

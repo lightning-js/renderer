@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
+import { assertTruthy, hasOwn } from '../../../utils.js';
 import {
   CoreRenderer,
   type BufferInfo,
@@ -47,12 +47,12 @@ import {
 } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
-import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
-import { ImageTexture } from '../../textures/ImageTexture.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -66,7 +66,7 @@ interface CoreWebGlSystem {
 
 export class WebGlCoreRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  glw: WebGlContextWrapper;
+  glw: CoreGlContext | WebGlContext;
   system: CoreWebGlSystem;
 
   //// Persistent data
@@ -106,7 +106,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     this.mode = 'webgl';
 
-    const { canvas, clearColor, bufferMemory } = options;
+    const { canvas, clearColor, bufferMemory, platform } = options;
 
     this.defaultTexture = new ColorTexture(this.txManager);
 
@@ -121,20 +121,19 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.stage.requestRender();
     });
 
-    const gl = createWebGLContext(
+    this.glw = platform.createWebGLContext(
       canvas,
       options.forceWebGL2,
       options.contextSpy,
     );
-    const glw = (this.glw = new WebGlContextWrapper(gl));
 
     const color = getNormalizedRgbaComponents(clearColor);
-    glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
-    glw.setBlend(true);
-    glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
+    this.glw.viewport(0, 0, canvas.width, canvas.height);
+    this.glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    this.glw.setBlend(true);
+    this.glw.blendFunc(this.glw.ONE, this.glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(glw, bufferMemory);
+    createIndexBuffer(this.glw, bufferMemory);
 
     this.system = {
       parameters: getWebGlParameters(this.glw),
@@ -143,7 +142,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.shManager.renderer = this;
     this.defShaderCtrl = this.shManager.loadShader('DefaultShader');
     this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
-    const quadBuffer = glw.createBuffer();
+    const quadBuffer = this.glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
@@ -153,7 +152,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_position: {
             name: 'a_position',
             size: 2, // 2 components per iteration
-            type: glw.FLOAT, // the data is 32bit floats
+            type: this.glw.FLOAT, // the data is 32bit floats
             normalized: false, // don't normalize the data
             stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
             offset: 0, // start at the beginning of the buffer
@@ -161,7 +160,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureCoordinate: {
             name: 'a_textureCoordinate',
             size: 2,
-            type: glw.FLOAT,
+            type: this.glw.FLOAT,
             normalized: false,
             stride,
             offset: 2 * Float32Array.BYTES_PER_ELEMENT,
@@ -169,7 +168,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_color: {
             name: 'a_color',
             size: 4,
-            type: glw.UNSIGNED_BYTE,
+            type: this.glw.UNSIGNED_BYTE,
             normalized: true,
             stride,
             offset: 4 * Float32Array.BYTES_PER_ELEMENT,
@@ -177,7 +176,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
           a_textureIndex: {
             name: 'a_textureIndex',
             size: 1,
-            type: glw.FLOAT,
+            type: this.glw.FLOAT,
             normalized: false,
             stride,
             offset: 5 * Float32Array.BYTES_PER_ELEMENT,
@@ -188,12 +187,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   reset() {
-    const { glw } = this;
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
-    glw.setScissorTest(false);
-    glw.clear();
+    this.glw.setScissorTest(false);
+    this.glw.clear();
   }
 
   override getShaderManager(): CoreShaderManager {

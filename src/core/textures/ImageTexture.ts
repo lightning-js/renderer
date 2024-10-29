@@ -152,17 +152,24 @@ export class ImageTexture extends Texture {
 
       if (sw !== null && sh !== null) {
         return {
-          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
-            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          }),
+          data: await this.txManager.createImageBitmap(
+            blob,
+            sx ?? 0,
+            sy ?? 0,
+            sw,
+            sh,
+            {
+              premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+              colorSpaceConversion: 'none',
+              imageOrientation: 'none',
+            },
+          ),
           premultiplyAlpha: hasAlphaChannel,
         };
       }
 
       return {
-        data: await createImageBitmap(blob, {
+        data: await this.txManager.createImageBitmap(blob, {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',

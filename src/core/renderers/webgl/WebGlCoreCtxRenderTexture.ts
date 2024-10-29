@@ -19,8 +19,9 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import type { CoreGlContext } from '../../platforms/CoreGlContext.js';
+import type { WebGlContext } from '../../platforms/web/WebGlContext.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
@@ -30,7 +31,7 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
   readonly framebuffer: WebGLFramebuffer;
 
   constructor(
-    glw: WebGlContextWrapper,
+    glw: CoreGlContext | WebGlContext,
     memManager: TextureMemoryManager,
     textureSource: RenderTexture,
   ) {

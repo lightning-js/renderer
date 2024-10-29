@@ -285,3 +285,37 @@ export function convertUrlToAbsolute(url: string): string {
   const absoluteUrl = new URL(url, self.location.href);
   return absoluteUrl.href;
 }
+
+/**
+ * Compare two arrays for equality.
+ *
+ * @remarks
+ * This function will not try to compare nested arrays or Float32Arrays and
+ * instead will always return false when they are encountered.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
+export function compareArrays<T>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let result = false;
+  for (let i = 0; i < a.length; i++) {
+    if (Array.isArray(a[i]) || a[i] instanceof Float32Array) {
+      result = false;
+      break;
+    }
+
+    if (a[i] !== b[i]) {
+      result = false;
+      break;
+    }
+
+    result = true;
+  }
+
+  return result;
+}
