@@ -52,6 +52,7 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -98,6 +99,8 @@ export class Stage {
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
   public readonly defShaderCtr: BaseShaderController;
+  public readonly strictBound: Bound;
+  public readonly preloadBound: Bound;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -155,6 +158,10 @@ export class Stage {
         : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
     }
     this.boundsMargin = bm;
+
+    // precalculate our viewport bounds
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
     const rendererOptions: CoreRendererOptions = {
       stage: this,

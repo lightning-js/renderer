@@ -46,6 +46,7 @@ import {
   createBound,
   boundInsideBound,
   boundLargeThanBound,
+  createPreloadBounds,
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
@@ -1224,6 +1225,11 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.strictBound);
     assertTruthy(this.preloadBound);
 
+    // if we're out of the stage bounds, we're definitely out of bounds
+    if (boundInsideBound(this.renderBound, this.stage.preloadBound) === false) {
+      return CoreNodeRenderState.OutOfBounds;
+    }
+
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
@@ -1246,16 +1252,6 @@ export class CoreNode extends EventEmitter {
     }
 
     return CoreNodeRenderState.OutOfBounds;
-  }
-
-  createPreloadBounds(strictBound: Bound): Bound {
-    const renderM = this.stage.boundsMargin;
-    return createBound(
-      strictBound.x1 - renderM[3],
-      strictBound.y1 - renderM[0],
-      strictBound.x2 + renderM[1],
-      strictBound.y2 + renderM[2],
-    );
   }
 
   updateBoundingRect() {
@@ -1293,18 +1289,15 @@ export class CoreNode extends EventEmitter {
           this.parent.strictBound.y2,
         );
 
-        this.preloadBound = this.createPreloadBounds(this.strictBound);
+        this.preloadBound = createPreloadBounds(
+          this.strictBound,
+          this.stage.boundsMargin,
+        );
         return;
       } else {
-        // no parent or parent does not have a bound, take the stage dimensions
-        this.strictBound = createBound(
-          0,
-          0,
-          this.stage.root.width,
-          this.stage.root.height,
-        );
-
-        this.preloadBound = this.createPreloadBounds(this.strictBound);
+        // no parent or parent does not have a bound, take the stage boundaries
+        this.strictBound = this.stage.strictBound;
+        this.preloadBound = this.stage.preloadBound;
         return;
       }
     }
@@ -1322,7 +1315,10 @@ export class CoreNode extends EventEmitter {
       this.strictBound,
     );
 
-    this.preloadBound = this.createPreloadBounds(this.strictBound);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.stage.boundsMargin,
+    );
   }
 
   updateRenderState(renderState: CoreNodeRenderState) {
