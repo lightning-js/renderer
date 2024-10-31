@@ -48,6 +48,20 @@ export function parseColor(abgr: number): IParsedColor {
 }
 
 /**
+ * Extract color components
+ */
+export function parseBorderColor(rgba: number): IParsedColor {
+  if (rgba === 0xffffffff) {
+    return WHITE;
+  }
+  const r = (rgba >>> 24) & 0xff;
+  const g = (rgba >>> 16) & 0xff & 0xff;
+  const b = (rgba >>> 8) & 0xff & 0xff;
+  const a = (rgba & 0xff & 0xff) / 255;
+  return { isWhite: false, r, g, b, a };
+}
+
+/**
  * Format a parsed color into a rgba CSS color
  */
 export function formatRgba({ a, r, g, b }: IParsedColor): string {

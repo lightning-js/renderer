@@ -30,9 +30,10 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
-import { getRadius } from './internal/C2DShaderUtils.js';
+import { getBorder, getRadius, strokeLine } from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
+  parseBorderColor,
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
@@ -134,8 +135,22 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
     const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
     const radius = quad.shader ? getRadius(quad) : 0;
+    const border = quad.shader ? getBorder(quad) : undefined;
+    const borderTop = quad.shader ? getBorder(quad, 'Top') : undefined;
+    const borderRight = quad.shader ? getBorder(quad, 'Right') : undefined;
+    const borderBottom = quad.shader ? getBorder(quad, 'Bottom') : undefined;
+    const borderLeft = quad.shader ? getBorder(quad, 'Left') : undefined;
 
-    if (hasTransform || hasClipping || radius) {
+    if (
+      hasTransform ||
+      hasClipping ||
+      radius ||
+      border ||
+      borderTop ||
+      borderRight ||
+      borderBottom ||
+      borderLeft
+    ) {
       ctx.save();
     }
 
@@ -165,6 +180,76 @@ export class CanvasCoreRenderer extends CoreRenderer {
       const path = new Path2D();
       path.roundRect(tx, ty, width, height, radius);
       ctx.clip(path);
+    }
+
+    if (border && border.width) {
+      const pixelRatio = this.pixelRatio;
+      const borderWidth = border.width * pixelRatio;
+      const borderColor = formatRgba(parseBorderColor(border.color ?? 0));
+
+      ctx.beginPath();
+      ctx.lineWidth = borderWidth;
+      ctx.strokeStyle = borderColor;
+      ctx.globalAlpha = alpha;
+      if (radius) {
+        ctx.roundRect(tx, ty, width, height, radius);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(tx, ty, width, height);
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      if (borderTop) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderTop.width,
+          borderTop.color,
+          'Top',
+        );
+      }
+
+      if (borderRight) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderRight.width,
+          borderRight.color,
+          'Right',
+        );
+      }
+
+      if (borderBottom) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderBottom.width,
+          borderBottom.color,
+          'Bottom',
+        );
+      }
+
+      if (borderLeft) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderLeft.width,
+          borderLeft.color,
+          'Left',
+        );
+      }
     }
 
     if (ctxTexture) {
@@ -211,7 +296,16 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.fillRect(tx, ty, width, height);
     }
 
-    if (hasTransform || hasClipping || radius) {
+    if (
+      hasTransform ||
+      hasClipping ||
+      radius ||
+      border ||
+      borderTop ||
+      borderRight ||
+      borderBottom ||
+      borderLeft
+    ) {
       ctx.restore();
     }
   }
