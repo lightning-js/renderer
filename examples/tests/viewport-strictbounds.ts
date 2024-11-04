@@ -21,6 +21,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: 600,
     color: 0xff0000ff, // Red
     parent: testRoot,
+    strictBounds: false,
   });
 
   const status = renderer.createTextNode({
