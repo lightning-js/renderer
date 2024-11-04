@@ -180,6 +180,56 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.translate(-tx, -ty);
     }
 
+    if (radius) {
+      const path = new Path2D();
+      path.roundRect(tx, ty, width, height, radius);
+      ctx.clip(path);
+    }
+
+    if (ctxTexture) {
+      const image = ctxTexture.getImage(color);
+      ctx.globalAlpha = alpha;
+      if (frame) {
+        ctx.drawImage(
+          image,
+          frame.x,
+          frame.y,
+          frame.width,
+          frame.height,
+          tx,
+          ty,
+          width,
+          height,
+        );
+      } else {
+        ctx.drawImage(image, tx, ty, width, height);
+      }
+      ctx.globalAlpha = 1;
+    } else if (hasGradient) {
+      let endX: number = tx;
+      let endY: number = ty;
+      let endColor: IParsedColor;
+      if (colorTl === colorTr) {
+        // vertical
+        endX = tx;
+        endY = ty + height;
+        endColor = parseColor(colorBr);
+      } else {
+        // horizontal
+        endX = tx + width;
+        endY = ty;
+        endColor = parseColor(colorTr);
+      }
+      const gradient = ctx.createLinearGradient(tx, ty, endX, endY);
+      gradient.addColorStop(0, formatRgba(color));
+      gradient.addColorStop(1, formatRgba(endColor));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(tx, ty, width, height);
+    } else {
+      ctx.fillStyle = formatRgba(color);
+      ctx.fillRect(tx, ty, width, height);
+    }
+
     if (border && border.width) {
       const borderWidth = border.width;
       const borderInnerWidth = border.width / 2;
@@ -259,56 +309,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
           'Left',
         );
       }
-    }
-
-    if (radius) {
-      const path = new Path2D();
-      path.roundRect(tx, ty, width, height, radius);
-      ctx.clip(path);
-    }
-
-    if (ctxTexture) {
-      const image = ctxTexture.getImage(color);
-      ctx.globalAlpha = alpha;
-      if (frame) {
-        ctx.drawImage(
-          image,
-          frame.x,
-          frame.y,
-          frame.width,
-          frame.height,
-          tx,
-          ty,
-          width,
-          height,
-        );
-      } else {
-        ctx.drawImage(image, tx, ty, width, height);
-      }
-      ctx.globalAlpha = 1;
-    } else if (hasGradient) {
-      let endX: number = tx;
-      let endY: number = ty;
-      let endColor: IParsedColor;
-      if (colorTl === colorTr) {
-        // vertical
-        endX = tx;
-        endY = ty + height;
-        endColor = parseColor(colorBr);
-      } else {
-        // horizontal
-        endX = tx + width;
-        endY = ty;
-        endColor = parseColor(colorTr);
-      }
-      const gradient = ctx.createLinearGradient(tx, ty, endX, endY);
-      gradient.addColorStop(0, formatRgba(color));
-      gradient.addColorStop(1, formatRgba(endColor));
-      ctx.fillStyle = gradient;
-      ctx.fillRect(tx, ty, width, height);
-    } else {
-      ctx.fillStyle = formatRgba(color);
-      ctx.fillRect(tx, ty, width, height);
     }
 
     if (
