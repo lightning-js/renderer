@@ -72,6 +72,7 @@ export interface StageOptions {
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
+  strictBounds: boolean;
 }
 
 export type StageFpsUpdateHandler = (
@@ -101,6 +102,7 @@ export class Stage {
   public readonly defShaderCtr: BaseShaderController;
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
+  public readonly strictBounds: boolean;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -150,6 +152,7 @@ export class Stage {
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+    this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -252,7 +255,7 @@ export class Stage {
       src: null,
       scale: 1,
       preventCleanup: false,
-      strictBounds: false,
+      strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
@@ -638,7 +641,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
-      strictBounds: props.strictBounds ?? false,
+      strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
 }
