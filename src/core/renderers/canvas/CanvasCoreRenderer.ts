@@ -136,10 +136,14 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
     const radius = quad.shader ? getRadius(quad) : 0;
     const border = quad.shader ? getBorder(quad) : undefined;
-    const borderTop = quad.shader ? getBorder(quad, 'Top') : undefined;
-    const borderRight = quad.shader ? getBorder(quad, 'Right') : undefined;
-    const borderBottom = quad.shader ? getBorder(quad, 'Bottom') : undefined;
-    const borderLeft = quad.shader ? getBorder(quad, 'Left') : undefined;
+    const borderTop =
+      !border && quad.shader ? getBorder(quad, 'Top') : undefined;
+    const borderRight =
+      !border && quad.shader ? getBorder(quad, 'Right') : undefined;
+    const borderBottom =
+      !border && quad.shader ? getBorder(quad, 'Bottom') : undefined;
+    const borderLeft =
+      !border && quad.shader ? getBorder(quad, 'Left') : undefined;
 
     if (
       hasTransform ||
@@ -176,15 +180,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.translate(-tx, -ty);
     }
 
-    if (radius) {
-      const path = new Path2D();
-      path.roundRect(tx, ty, width, height, radius);
-      ctx.clip(path);
-    }
-
     if (border && border.width) {
-      const pixelRatio = this.pixelRatio;
-      const borderWidth = border.width * pixelRatio;
+      const borderWidth = border.width;
+      const borderInnerWidth = border.width / 2;
       const borderColor = formatRgba(parseColorRgba(border.color ?? 0));
 
       ctx.beginPath();
@@ -192,10 +190,21 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.strokeStyle = borderColor;
       ctx.globalAlpha = alpha;
       if (radius) {
-        ctx.roundRect(tx, ty, width, height, radius);
+        ctx.roundRect(
+          tx + borderInnerWidth,
+          ty + borderInnerWidth,
+          width - borderWidth,
+          height - borderWidth,
+          radius,
+        );
         ctx.stroke();
       } else {
-        ctx.strokeRect(tx, ty, width, height);
+        ctx.strokeRect(
+          tx + borderInnerWidth,
+          ty + borderInnerWidth,
+          width - borderWidth,
+          height - borderWidth,
+        );
       }
       ctx.globalAlpha = 1;
     } else {
@@ -250,6 +259,12 @@ export class CanvasCoreRenderer extends CoreRenderer {
           'Left',
         );
       }
+    }
+
+    if (radius) {
+      const path = new Path2D();
+      path.roundRect(tx, ty, width, height, radius);
+      ctx.clip(path);
     }
 
     if (ctxTexture) {
