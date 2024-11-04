@@ -142,6 +142,14 @@ const gradientColorPropertyMap = [
   'colorBr',
 ];
 
+const knownProperties = new Set<string>([
+  ...Object.keys(stylePropertyMap),
+  ...Object.keys(domPropertyMap),
+  // ...gradientColorPropertyMap,
+  'src',
+  'parent',
+]);
+
 export class Inspector {
   private root: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
@@ -239,35 +247,22 @@ export class Inspector {
 
   createNode(node: CoreNode): CoreNode {
     const div = this.createDiv(node.id, node.props);
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (node as any).div = div;
 
-    node.on('inViewport', () => {
-      div.setAttribute('state', 'inViewport');
-    });
+    node.on('inViewport', () => div.setAttribute('state', 'inViewport'));
+    node.on('inBounds', () => div.setAttribute('state', 'inBounds'));
+    node.on('outOfBounds', () => div.setAttribute('state', 'outOfBounds'));
 
-    node.on('inBounds', () => {
-      div.setAttribute('state', 'inBounds');
-    });
-
-    node.on('outOfBounds', () => {
-      div.setAttribute('state', 'outOfBounds');
-    });
-
+    // Monitor only relevant properties by trapping with selective assignment
     return this.createProxy(node, div);
   }
 
   createTextNode(node: CoreNode): CoreTextNode {
     const div = this.createDiv(node.id, node.props);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (div as any).node = node;
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (node as any).div = div;
+
     return this.createProxy(node, div) as CoreTextNode;
   }
 
@@ -275,36 +270,64 @@ export class Inspector {
     node: CoreNode | CoreTextNode,
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
-    return new Proxy(node, {
-      set: (target, property: keyof CoreNodeProps, value) => {
-        this.updateNodeProperty(div, property, value);
-        return Reflect.set(target, property, value);
-      },
-      get: (target, property: keyof CoreNode, receiver: any): any => {
-        if (property === 'destroy') {
-          this.destroyNode(target.id);
-        }
+    const updateNodePropertyWrapper = (
+      property: keyof CoreNodeProps,
+      value: any,
+    ) => {
+      queueMicrotask(() => this.updateNodeProperty(div, property, value));
+    };
 
-        if (property === 'animate') {
-          return (props: CoreNodeAnimateProps, settings: AnimationSettings) => {
-            const anim = target.animate(props, settings);
+    // Define traps for each property in knownProperties
+    knownProperties.forEach((property) => {
+      const originalProp = Object.getOwnPropertyDescriptor(node, property);
+      if (!originalProp) {
+        return;
+      }
 
-            // Trap the animate start function so we can update the inspector accordingly
-            return new Proxy(anim, {
-              get: (target, property: keyof IAnimationController, receiver) => {
-                if (property === 'start') {
-                  this.animateNode(div, props, settings);
-                }
+      Object.defineProperties(node, {
+        [property]: {
+          get() {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+            return originalProp.get?.call(node);
+          },
+          set(value) {
+            originalProp.set?.call(node, value);
+            updateNodePropertyWrapper(property as keyof CoreNodeProps, value);
+          },
+          configurable: true,
+          enumerable: true,
+        },
+      });
+    });
 
-                return Reflect.get(target, property, receiver);
-              },
-            });
-          };
-        }
-
-        return Reflect.get(target, property, receiver);
+    const originalDestroy = node.destroy;
+    Object.defineProperty(node, 'destroy', {
+      value: () => {
+        this.destroyNode(node.id);
+        originalDestroy.call(node);
       },
     });
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const originalAnimate = node.animate;
+    Object.defineProperty(node, 'animate', {
+      value: (
+        props: CoreNodeAnimateProps,
+        settings: AnimationSettings,
+      ): IAnimationController => {
+        const animationController = originalAnimate.call(node, props, settings);
+
+        return {
+          ...animationController,
+          start: () => {
+            this.animateNode(div, props, settings);
+            return animationController.start();
+          },
+        };
+      },
+    });
+
+    return node;
   }
 
   destroyNode(id: number) {
