@@ -137,13 +137,13 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const radius = quad.shader ? getRadius(quad) : 0;
     const border = quad.shader ? getBorder(quad) : undefined;
     const borderTop =
-      !border && quad.shader ? getBorder(quad, 'Top') : undefined;
+      !border?.width && quad.shader ? getBorder(quad, 'Top') : undefined;
     const borderRight =
-      !border && quad.shader ? getBorder(quad, 'Right') : undefined;
+      !border?.width && quad.shader ? getBorder(quad, 'Right') : undefined;
     const borderBottom =
-      !border && quad.shader ? getBorder(quad, 'Bottom') : undefined;
+      !border?.width && quad.shader ? getBorder(quad, 'Bottom') : undefined;
     const borderLeft =
-      !border && quad.shader ? getBorder(quad, 'Left') : undefined;
+      !border?.width && quad.shader ? getBorder(quad, 'Left') : undefined;
 
     if (
       hasTransform ||
