@@ -50,7 +50,7 @@ export function parseColor(abgr: number): IParsedColor {
 /**
  * Extract color components
  */
-export function parseBorderColor(rgba: number): IParsedColor {
+export function parseColorRgba(rgba: number): IParsedColor {
   if (rgba === 0xffffffff) {
     return WHITE;
   }

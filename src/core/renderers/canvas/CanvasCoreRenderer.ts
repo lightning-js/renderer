@@ -33,7 +33,7 @@ import { CanvasCoreTexture } from './CanvasCoreTexture.js';
 import { getBorder, getRadius, strokeLine } from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
-  parseBorderColor,
+  parseColorRgba,
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
@@ -185,7 +185,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
     if (border && border.width) {
       const pixelRatio = this.pixelRatio;
       const borderWidth = border.width * pixelRatio;
-      const borderColor = formatRgba(parseBorderColor(border.color ?? 0));
+      const borderColor = formatRgba(parseColorRgba(border.color ?? 0));
 
       ctx.beginPath();
       ctx.lineWidth = borderWidth;

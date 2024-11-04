@@ -25,7 +25,7 @@ import {
   ROUNDED_RECTANGLE_SHADER_TYPE,
   UnsupportedShader,
 } from '../shaders/UnsupportedShader.js';
-import { formatRgba, parseBorderColor } from './ColorUtils.js';
+import { formatRgba, parseColorRgba } from './ColorUtils.js';
 
 /**
  * Extract `RoundedRectangle` shader radius to apply as a clipping
@@ -128,7 +128,7 @@ export function strokeLine(
   }
   ctx.beginPath();
   ctx.lineWidth = lineWidth;
-  ctx.strokeStyle = formatRgba(parseBorderColor(color ?? 0));
+  ctx.strokeStyle = formatRgba(parseColorRgba(color ?? 0));
   ctx.moveTo(sx, sy);
   ctx.lineTo(ex, ey);
   ctx.stroke();
