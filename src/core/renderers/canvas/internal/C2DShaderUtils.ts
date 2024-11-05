@@ -27,6 +27,8 @@ import {
 } from '../shaders/UnsupportedShader.js';
 import { formatRgba, parseColorRgba } from './ColorUtils.js';
 
+type Direction = 'Top' | 'Right' | 'Bottom' | 'Left';
+
 /**
  * Extract `RoundedRectangle` shader radius to apply as a clipping
  */
@@ -56,7 +58,7 @@ export function getRadius(quad: QuadOptions): RadiusEffectProps['radius'] {
  * Extract `RoundedRectangle` shader radius to apply as a clipping */
 export function getBorder(
   quad: QuadOptions,
-  direction: '' | 'Top' | 'Right' | 'Bottom' | 'Left' = '',
+  direction: '' | Direction = '',
 ): BorderEffectProps | undefined {
   if (quad.shader instanceof UnsupportedShader) {
     const shType = quad.shader.shType;
@@ -65,15 +67,12 @@ export function getBorder(
         | EffectDescUnion[]
         | undefined;
 
-      if (effects) {
+      if (effects && effects.length) {
         const effect = effects.find((effect: EffectDescUnion) => {
-          return effect.type === `border${direction}` && effect?.props;
+          return effect.type === `border${direction}` && effect.props;
         });
 
-        return (
-          (effect && effect.type === `border${direction}` && effect.props) ||
-          undefined
-        );
+        return effect && effect.props;
       }
     }
   }
@@ -89,7 +88,7 @@ export function strokeLine(
   height: number,
   lineWidth = 0,
   color: number | undefined,
-  direction: 'Top' | 'Right' | 'Bottom' | 'Left',
+  direction: Direction,
 ) {
   if (!lineWidth) {
     return;

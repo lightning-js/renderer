@@ -88,7 +88,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = this.createNativeCtxTexture();
     if (this._nativeCtxTexture === null) {
       this._state = 'failed';
-      this.textureSource.setState('failed', new Error('Could not create WebGL Texture'));
+      this.textureSource.setState(
+        'failed',
+        new Error('Could not create WebGL Texture'),
+      );
       console.error('Could not create WebGL Texture');
       return;
     }
