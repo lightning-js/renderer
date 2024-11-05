@@ -134,27 +134,11 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
     const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
-    const radius = quad.shader ? getRadius(quad) : 0;
-    const border = quad.shader ? getBorder(quad) : undefined;
-    const borderTop =
-      !border?.width && quad.shader ? getBorder(quad, 'Top') : undefined;
-    const borderRight =
-      !border?.width && quad.shader ? getBorder(quad, 'Right') : undefined;
-    const borderBottom =
-      !border?.width && quad.shader ? getBorder(quad, 'Bottom') : undefined;
-    const borderLeft =
-      !border?.width && quad.shader ? getBorder(quad, 'Left') : undefined;
+    const hasQuadShader = Boolean(quad.shader);
+    const radius = hasQuadShader ? getRadius(quad) : 0;
+    const border = hasQuadShader ? getBorder(quad) : undefined;
 
-    if (
-      hasTransform ||
-      hasClipping ||
-      radius ||
-      border ||
-      borderTop ||
-      borderRight ||
-      borderBottom ||
-      borderLeft
-    ) {
+    if (hasTransform || hasClipping || radius) {
       ctx.save();
     }
 
@@ -258,6 +242,13 @@ export class CanvasCoreRenderer extends CoreRenderer {
       }
       ctx.globalAlpha = 1;
     } else {
+      const borderTop = hasQuadShader ? getBorder(quad, 'Top') : undefined;
+      const borderRight = hasQuadShader ? getBorder(quad, 'Right') : undefined;
+      const borderBottom = hasQuadShader
+        ? getBorder(quad, 'Bottom')
+        : undefined;
+      const borderLeft = hasQuadShader ? getBorder(quad, 'Left') : undefined;
+
       if (borderTop) {
         strokeLine(
           ctx,
@@ -311,16 +302,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
       }
     }
 
-    if (
-      hasTransform ||
-      hasClipping ||
-      radius ||
-      border ||
-      borderTop ||
-      borderRight ||
-      borderBottom ||
-      borderLeft
-    ) {
+    if (hasTransform || hasClipping || radius) {
       ctx.restore();
     }
   }
