@@ -270,13 +270,6 @@ export class Inspector {
     node: CoreNode | CoreTextNode,
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
-    const updateNodePropertyWrapper = (
-      property: keyof CoreNodeProps,
-      value: any,
-    ) => {
-      queueMicrotask(() => this.updateNodeProperty(div, property, value));
-    };
-
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
       const originalProp = Object.getOwnPropertyDescriptor(node, property);
@@ -292,7 +285,8 @@ export class Inspector {
           },
           set(value) {
             originalProp.set?.call(node, value);
-            updateNodePropertyWrapper(property as keyof CoreNodeProps, value);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            this.updateNodeProperty(div, property, value);
           },
           configurable: true,
           enumerable: true,
