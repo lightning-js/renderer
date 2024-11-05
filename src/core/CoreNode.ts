@@ -46,6 +46,7 @@ import {
   createBound,
   boundInsideBound,
   boundLargeThanBound,
+  createPreloadBounds,
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
@@ -1159,6 +1160,7 @@ export class CoreNode extends EventEmitter {
     // being marked as out of bounds
     if (renderState === CoreNodeRenderState.OutOfBounds) {
       this.updateRenderState(renderState);
+      this.updateIsRenderable();
     }
 
     // reset update type
@@ -1167,7 +1169,7 @@ export class CoreNode extends EventEmitter {
   }
 
   //check if CoreNode is renderable based on props
-  checkRenderProps(): boolean {
+  hasRenderableProperties(): boolean {
     if (this.props.texture) {
       return true;
     }
@@ -1253,16 +1255,6 @@ export class CoreNode extends EventEmitter {
     return CoreNodeRenderState.OutOfBounds;
   }
 
-  createPreloadBounds(strictBound: Bound): Bound {
-    const renderM = this.stage.boundsMargin;
-    return createBound(
-      strictBound.x1 - renderM[3],
-      strictBound.y1 - renderM[0],
-      strictBound.x2 + renderM[1],
-      strictBound.y2 + renderM[2],
-    );
-  }
-
   updateBoundingRect() {
     const { renderCoords, globalTransform: transform } = this;
     assertTruthy(transform);
@@ -1287,34 +1279,43 @@ export class CoreNode extends EventEmitter {
   createRenderBounds(): void {
     assertTruthy(this.stage);
 
-    // no clipping, use parent's bounds
-    if (this.clipping === false) {
-      if (this.parent !== null && this.parent.strictBound !== undefined) {
-        // we have a parent with a valid bound, copy it
-        this.strictBound = createBound(
-          this.parent.strictBound.x1,
-          this.parent.strictBound.y1,
-          this.parent.strictBound.x2,
-          this.parent.strictBound.y2,
-        );
+    if (this.parent !== null && this.parent.strictBound !== undefined) {
+      // we have a parent with a valid bound, copy it
+      const parentBound = this.parent.strictBound;
+      this.strictBound = createBound(
+        parentBound.x1,
+        parentBound.y1,
+        parentBound.x2,
+        parentBound.y2,
+      );
 
-        this.preloadBound = this.createPreloadBounds(this.strictBound);
-        return;
-      } else {
-        // no parent or parent does not have a bound, take the stage dimensions
-        this.strictBound = createBound(
-          0,
-          0,
-          this.stage.root.width,
-          this.stage.root.height,
-        );
-
-        this.preloadBound = this.createPreloadBounds(this.strictBound);
-        return;
-      }
+      this.preloadBound = createPreloadBounds(
+        this.strictBound,
+        this.stage.boundsMargin,
+      );
+    } else {
+      // no parent or parent does not have a bound, take the stage boundaries
+      this.strictBound = this.stage.strictBound;
+      this.preloadBound = this.stage.preloadBound;
     }
 
-    // clipping is enabled create our own bounds
+    // if clipping is disabled, we're done
+    if (this.props.clipping === false) {
+      return;
+    }
+
+    // only create local clipping bounds if node itself is in bounds
+    // this can only be done if we have a render bound already
+    if (this.renderBound === undefined) {
+      return;
+    }
+
+    // if we're out of bounds, we're done
+    if (boundInsideBound(this.renderBound, this.strictBound) === false) {
+      return;
+    }
+
+    // clipping is enabled and we are in bounds create our own bounds
     const { x, y, width, height } = this.props;
     const { tx, ty } = this.globalTransform || {};
     const _x = tx ?? x;
@@ -1327,7 +1328,10 @@ export class CoreNode extends EventEmitter {
       this.strictBound,
     );
 
-    this.preloadBound = this.createPreloadBounds(this.strictBound);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.stage.boundsMargin,
+    );
   }
 
   updateRenderState(renderState: CoreNodeRenderState) {
@@ -1352,7 +1356,7 @@ export class CoreNode extends EventEmitter {
    */
   updateIsRenderable() {
     let newIsRenderable;
-    if (this.worldAlpha === 0 || !this.checkRenderProps()) {
+    if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;

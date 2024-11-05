@@ -368,11 +368,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override checkRenderProps(): boolean {
+  override hasRenderableProperties(): boolean {
     if (this.trState && this.trState.props.text !== '') {
       return true;
     }
-    return super.checkRenderProps();
+    return super.hasRenderableProperties();
   }
 
   override onChangeIsRenderable(isRenderable: boolean) {
