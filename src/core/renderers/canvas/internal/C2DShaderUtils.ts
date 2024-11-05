@@ -69,7 +69,11 @@ export function getBorder(
 
       if (effects && effects.length) {
         const effect = effects.find((effect: EffectDescUnion) => {
-          return effect.type === `border${direction}` && effect.props;
+          return (
+            effect.type === `border${direction}` &&
+            effect.props &&
+            effect.props.width
+          );
         });
 
         return effect && effect.props;
