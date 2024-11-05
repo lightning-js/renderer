@@ -55,7 +55,7 @@ jobs:
         run: pnpm build
 
       - name: Build examples
-        run: cd examples && pnpm build
+        run: cd examples && pnpm build && pnpm build:es5
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

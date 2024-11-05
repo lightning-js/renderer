@@ -22,18 +22,9 @@ import * as path from 'path';
 import legacy from '@vitejs/plugin-legacy';
 
 /**
- * Targeting ES2019 gets us at least to WPE 2.28
- *
- * Despite setting the target in different places in the Vite config below
- * this does not seem to have an effect on the output when running Vite in
- * development mode (`pnpm start`). In order to properly test on embedded devices
- * that require the es2019 target, you must run `pnpm run build` and then serve the
- * production build via `pnpm run preview`.
- *
- * See the following for any updates on this:
- * https://github.com/vitejs/vite/issues/13756#issuecomment-1751085158
+ * Targeting Chrome 38 for a legacy build.
  */
-const prodTarget = 'Chrome>=49';
+const prodTarget = 'Chrome>=38';
 
 /**
  * Vite Config
@@ -43,7 +34,7 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
   return {
     plugins: [
       legacy({
-        targets: ['chrome>=38'],
+        targets: [prodTarget],
         modernPolyfills: true,
       }),
     ],
