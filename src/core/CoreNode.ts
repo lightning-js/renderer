@@ -862,21 +862,26 @@ export class CoreNode extends EventEmitter {
   setUpdateType(type: UpdateType): void {
     this.updateType |= type;
 
-    // If we're updating this node at all, we need to inform the parent
-    // (and all ancestors) that their children need updating as well
     const parent = this.props.parent;
-    if (parent !== null && !(parent.updateType & UpdateType.Children)) {
+    if (!parent) return;
+
+    // Inform the parent if it doesn’t already have a child update
+    if ((parent.updateType & UpdateType.Children) === 0) {
       parent.setUpdateType(UpdateType.Children);
     }
 
-    // If node is part of RTT texture
-    // Flag that we need to update
-    if (this.parentHasRenderTexture) {
-      this.setRTTUpdates(type);
+    if (this.parentHasRenderTexture === false) return;
 
-      if (parent !== null) {
+    if (this.rtt === false) {
+      if ((parent.updateType & UpdateType.RenderTexture) === 0) {
+        this.setRTTUpdates(type);
         parent.setUpdateType(UpdateType.RenderTexture);
       }
+    }
+
+    // If this node has outstanding RTT updates, propagate them
+    if (this.hasRTTupdates) {
+      this.setRTTUpdates(type);
     }
   }
 
@@ -2150,6 +2155,10 @@ export class CoreNode extends EventEmitter {
   }
 
   setRTTUpdates(type: number) {
+    if (this.hasRTTupdates === true) {
+      return;
+    }
+
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
