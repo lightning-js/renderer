@@ -17,10 +17,12 @@
  * limitations under the License.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { WebGlCoreShader } from '../../exports/index.js';
 import type { ShaderMap } from '../core/CoreShaderManager.js';
 import type { ExtractProps } from '../core/CoreTextureManager.js';
 import type { Stage } from '../core/Stage.js';
 import type { CoreShader } from '../core/renderers/CoreShader.js';
+import type { UnsupportedShader } from '../core/renderers/canvas/shaders/UnsupportedShader.js';
 
 /**
  * Shader Controller Base Interface
@@ -33,9 +35,15 @@ export interface BaseShaderController {
   type: keyof ShaderMap;
   shader: CoreShader;
   props: Record<string, any>;
-  getResolvedProps: () => Record<string, any>;
+  getResolvedProps: () => Record<string, any> | null;
 }
 
+export type ShaderControllerConfig<S> = {
+  type: S;
+  shader: WebGlCoreShader | UnsupportedShader;
+  props?: Record<string, unknown>;
+  stage: Stage;
+};
 /**
  * Shader Controller Class
  *
@@ -46,33 +54,34 @@ export interface BaseShaderController {
 export class ShaderController<S extends keyof ShaderMap>
   implements BaseShaderController
 {
-  private resolvedProps: ExtractProps<ShaderMap[S]>;
-  props: ExtractProps<ShaderMap[S]>;
-  constructor(
-    readonly type: S,
-    readonly shader: InstanceType<ShaderMap[S]>,
-    props: ExtractProps<ShaderMap[S]>,
-    stage: Stage,
-  ) {
-    this.resolvedProps = props;
+  private resolvedProps: Record<string, unknown> | null = null;
+  readonly type: S;
+  readonly shader: WebGlCoreShader | UnsupportedShader;
 
-    const keys = Object.keys(props);
-    const l = keys.length;
+  props: Record<string, unknown> = {};
+  constructor(config: ShaderControllerConfig<S>) {
+    (this.type = config.type),
+      (this.shader = config.shader),
+      (this.resolvedProps = config.props || {});
 
     const definedProps = {};
-    for (let i = 0; i < l; i++) {
-      const name = keys[i]!;
-      Object.defineProperty(definedProps, name, {
-        get: () => {
-          return this.resolvedProps[name as keyof ExtractProps<ShaderMap[S]>];
-        },
-        set: (value) => {
-          this.resolvedProps[name as keyof ExtractProps<ShaderMap[S]>] = value;
-          stage.requestRender();
-        },
-      });
+    if (this.resolvedProps !== undefined) {
+      const keys = Object.keys(this.resolvedProps);
+      const l = keys.length;
+      for (let i = 0; i < l; i++) {
+        const name = keys[i]!;
+        Object.defineProperty(definedProps, name, {
+          get: () => {
+            return this.resolvedProps![name];
+          },
+          set: (value) => {
+            this.resolvedProps![name] = value;
+            config.stage.requestRender();
+          },
+        });
+      }
     }
-    this.props = definedProps as ExtractProps<ShaderMap[S]>;
+    this.props = definedProps;
   }
 
   getResolvedProps() {

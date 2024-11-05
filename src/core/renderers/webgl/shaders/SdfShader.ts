@@ -16,11 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
 import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import { WebGlCoreShader } from '../WebGlCoreShader.js';
-import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
+import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
+import { type WebGlShaderConfig } from '../WebGlCoreShader.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
@@ -60,101 +59,89 @@ export interface SdfShaderProps {
  * ends up being a performance bottleneck we can always look at ways to
  * remove it.
  */
-export class SdfShader extends WebGlCoreShader {
-  constructor(renderer: WebGlCoreRenderer) {
-    super({
-      renderer,
-    });
-  }
-
-  override bindProps(props: Required<SdfShaderProps>): void {
-    props = SdfShader.resolveDefaults(props);
-    this.glw.uniformMatrix3fv('u_transform', props.transform);
-    this.glw.uniform1f('u_scrollY', props.scrollY);
-    const components = getNormalizedRgbaComponents(props.color);
-    this.glw.uniform4fv('u_color', components);
-    this.glw.uniform1f('u_size', props.size);
-    this.glw.uniform1f('u_distanceRange', props.size);
-    this.glw.uniform1i('u_debug', props.debug ? 1 : 0);
-  }
-
-  static override resolveDefaults(
-    props: SdfShaderProps = {},
-  ): Required<SdfShaderProps> {
-    return {
-      transform: props.transform ?? IDENTITY_MATRIX_3x3,
-      scrollY: props.scrollY ?? 0,
-      color: props.color ?? 0xffffffff,
-      size: props.size ?? 16,
-      distanceRange: props.distanceRange ?? 1.0,
-      debug: props.debug ?? false,
-    };
-  }
-
-  static override shaderSources: ShaderProgramSources = {
-    vertex: `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
-      // an attribute is an input (in) to a vertex shader.
-      // It will receive data from a buffer
-      attribute vec2 a_position;
-      attribute vec2 a_textureCoordinate;
-
-      uniform vec2 u_resolution;
-      uniform mat3 u_transform;
-      uniform float u_scrollY;
-      uniform float u_pixelRatio;
-      uniform float u_size;
-
-      varying vec2 v_texcoord;
-
-      void main() {
-        vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
-        vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
-
-        // Calculate screen space with pixel ratio
-        vec2 screenSpace = (transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1);
-
-        gl_Position = vec4(screenSpace, 0.0, 1.0);
-        v_texcoord = a_textureCoordinate;
-
-      }
-    `,
-    fragment: `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
-      uniform vec4 u_color;
-      uniform sampler2D u_texture;
-      uniform float u_distanceRange;
-      uniform float u_pixelRatio;
-      uniform int u_debug;
-
-      varying vec2 v_texcoord;
-
-      float median(float r, float g, float b) {
-          return max(min(r, g), min(max(r, g), b));
-      }
-
-      void main() {
-          vec3 sample = texture2D(u_texture, v_texcoord).rgb;
-          if (u_debug == 1) {
-            gl_FragColor = vec4(sample.r, sample.g, sample.b, 1.0);
-            return;
-          }
-          float scaledDistRange = u_distanceRange * u_pixelRatio;
-          float sigDist = scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
-          float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
-
-          // Build the final color.
-          // IMPORTANT: We must premultiply the color by the alpha value before returning it.
-          gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
-      }
-    `,
+export class SdfShader implements WebGlShaderConfig<SdfShaderProps> {
+  props = {
+    transform: IDENTITY_MATRIX_3x3,
+    scrollY: 0,
+    color: 0xffffffff,
+    size: 16,
+    distanceRange: 1.0,
+    debug: false,
   };
+
+  update(glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) {
+    const props = renderOp.shaderProps as Required<SdfShaderProps>;
+    glw.uniformMatrix3fv('u_transform', props.transform);
+    glw.uniform1f('u_scrollY', props.scrollY);
+    glw.uniform4fv('u_color', getNormalizedRgbaComponents(props.color));
+    glw.uniform1f('u_size', props.size);
+    glw.uniform1f('u_distanceRange', props.distanceRange);
+    glw.uniform1i('u_debug', props.debug ? 1 : 0);
+  }
+
+  vertex = `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+    // an attribute is an input (in) to a vertex shader.
+    // It will receive data from a buffer
+    attribute vec2 a_position;
+    attribute vec2 a_textureCoordinate;
+
+    uniform vec2 u_resolution;
+    uniform mat3 u_transform;
+    uniform float u_scrollY;
+    uniform float u_pixelRatio;
+    uniform float u_size;
+
+    varying vec2 v_texcoord;
+
+    void main() {
+      vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
+      vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
+
+      // Calculate screen space with pixel ratio
+      vec2 screenSpace = (transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1);
+
+      gl_Position = vec4(screenSpace, 0.0, 1.0);
+      v_texcoord = a_textureCoordinate;
+
+    }
+  `;
+
+  fragment = `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+    uniform vec4 u_color;
+    uniform sampler2D u_texture;
+    uniform float u_distanceRange;
+    uniform float u_pixelRatio;
+    uniform int u_debug;
+
+    varying vec2 v_texcoord;
+
+    float median(float r, float g, float b) {
+        return max(min(r, g), min(max(r, g), b));
+    }
+
+    void main() {
+        vec3 sample = texture2D(u_texture, v_texcoord).rgb;
+        if (u_debug == 1) {
+          gl_FragColor = vec4(sample.r, sample.g, sample.b, 1.0);
+          return;
+        }
+        float scaledDistRange = u_distanceRange * u_pixelRatio;
+        float sigDist = scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
+        float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
+
+        // Build the final color.
+        // IMPORTANT: We must premultiply the color by the alpha value before returning it.
+        gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
+    }
+  `;
 }

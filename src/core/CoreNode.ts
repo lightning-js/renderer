@@ -435,7 +435,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: BaseShaderController;
+  shader: BaseShaderController | null;
   /**
    * Image URL
    *
@@ -1171,7 +1171,7 @@ export class CoreNode extends EventEmitter {
       return false;
     }
 
-    if (this.props.shader !== this.stage.defShaderCtr) {
+    if (this.props.shader !== null) {
       return true;
     }
 
@@ -1471,7 +1471,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = this.stage.defShaderCtr;
+    this.props.shader = null;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
@@ -1514,8 +1514,7 @@ export class CoreNode extends EventEmitter {
       texture: this.texture,
       textureOptions: this.textureOptions,
       zIndex: this.zIndex,
-      shader: this.shader.shader,
-      shaderProps: this.shader.getResolvedProps(),
+      shader: this.shader,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
       tx: this.globalTransform.tx,
@@ -1993,7 +1992,7 @@ export class CoreNode extends EventEmitter {
     this.stage.renderer?.renderToTexture(this);
   }
 
-  get shader(): BaseShaderController {
+  get shader(): BaseShaderController | null {
     return this.props.shader;
   }
 

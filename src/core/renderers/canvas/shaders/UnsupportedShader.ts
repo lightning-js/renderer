@@ -36,10 +36,6 @@ export class UnsupportedShader extends CoreShader {
     // noop
   }
 
-  override bindProps(): void {
-    // noop
-  }
-
   attach(): void {
     // noop
   }

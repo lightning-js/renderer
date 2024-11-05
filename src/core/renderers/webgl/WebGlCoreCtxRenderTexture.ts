@@ -26,7 +26,6 @@ import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 
 export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
   declare textureSource: RenderTexture;
-
   readonly framebuffer: WebGLFramebuffer;
 
   constructor(

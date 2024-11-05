@@ -18,7 +18,6 @@
  */
 
 import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 
 //#region Types
 export interface AttributeInfo {
@@ -36,9 +35,6 @@ export interface UniformInfo {
 }
 
 export interface ShaderOptions {
-  renderer: WebGlCoreRenderer;
-  attributes?: string[];
-  uniforms?: UniformInfo[];
   shaderSources?: ShaderProgramSources;
   supportsIndexedTextures?: boolean;
   webgl1Extensions?: string[];
@@ -80,7 +76,7 @@ export type UniformTupleToMap<Uniforms extends [...UniformInfo[]]> = {
   : never;
 };
 
-type ShaderSource = string | ((textureUnits: number) => string);
+export type ShaderSource = string | ((textureUnits: number) => string);
 
 export interface ShaderProgramSources {
   vertex: ShaderSource;
@@ -134,3 +130,33 @@ export function createProgram(
   glw.deleteProgram(program);
   return undefined;
 }
+
+export const DefaultVertexSource = `
+  # ifdef GL_FRAGMENT_PRECISION_HIGH
+  precision highp float;
+  # else
+  precision mediump float;
+  # endif
+
+  attribute vec2 a_position;
+  attribute vec2 a_textureCoordinate;
+  attribute vec4 a_color;
+
+  uniform vec2 u_resolution;
+  uniform float u_pixelRatio;
+
+
+  varying vec4 v_color;
+  varying vec2 v_textureCoordinate;
+
+  void main() {
+    vec2 normalized = a_position * u_pixelRatio;
+    vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
+
+    v_color = a_color;
+    v_textureCoordinate = a_textureCoordinate;
+
+    gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
+    gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
+  }
+`;

@@ -109,7 +109,7 @@ export const updateWebSafeRadius = (
   }
   const programValue = values.programValue as Float32Array;
   const validatedValue = (values.validatedValue || values.value) as number[];
-  if (shaderProps === undefined && values.$dimensions === undefined) {
+  if (shaderProps === undefined && values === undefined) {
     programValue[0] = validatedValue[0]!;
     programValue[1] = validatedValue[1]!;
     programValue[2] = validatedValue[2]!;
@@ -117,26 +117,29 @@ export const updateWebSafeRadius = (
     return;
   }
 
-  let storedDimensions = values.$dimensions;
-  if (shaderProps !== undefined) {
-    const { $dimensions } = shaderProps;
-    if (
-      storedDimensions !== undefined &&
-      (storedDimensions.width === $dimensions!.width ||
-        storedDimensions.height === $dimensions!.height)
-    ) {
-      return;
-    }
-    if (storedDimensions === undefined) {
-      storedDimensions = {
-        width: $dimensions?.width as number,
-        height: $dimensions?.height as number,
-      };
-      values.$dimensions = storedDimensions;
-    }
-  }
+  const storedDimensions = {
+    width: 20,
+    height: 20,
+  };
+  // if (shaderProps !== undefined) {
+  //   const { $dimensions } = shaderProps;
+  //   if (
+  //     storedDimensions !== undefined &&
+  //     (storedDimensions.width === $dimensions!.width ||
+  //       storedDimensions.height === $dimensions!.height)
+  //   ) {
+  //     return;
+  //   }
+  //   if (storedDimensions === undefined) {
+  //     storedDimensions = {
+  //       width: $dimensions?.width as number,
+  //       height: $dimensions?.height as number,
+  //     };
+  //     values.$dimensions = storedDimensions;
+  //   }
+  // }
 
-  const { width, height } = storedDimensions!;
+  const { width, height } = storedDimensions;
   const [r0, r1, r2, r3] = validatedValue;
   const factor = Math.min(
     Math.min(

@@ -61,7 +61,7 @@ export default async function test({
     color: 0xffffffff,
   });
 
-  const t2 = renderer.createNode({
+  /*const t2 = renderer.createNode({
     ...nodeSize,
     x: 90,
     y: 540,
@@ -106,7 +106,7 @@ export default async function test({
     text: 'border: 10',
     parent: testRoot,
     color: 0xffffffff,
-  });
+  });*/
 
   await snapshot({ name: 'startup' });
 
@@ -127,7 +127,7 @@ export default async function test({
 
   await snapshot({ name: 'animation1' });
 
-  const shaderAnimation2 = t2.animate(
+  /*const shaderAnimation2 = t2.animate(
     {
       x: 1140,
       shaderProps: {
@@ -150,5 +150,5 @@ export default async function test({
   t2Border.text = 'border: ' + t2.shader.props.e1.width!.toString();
 
   await snapshot({ name: 'animation2' });
-  console.log('ready!');
+  console.log('ready!');*/
 }

@@ -16,76 +16,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import { WebGlCoreShader } from '../WebGlCoreShader.js';
+import { type WebGlShaderConfig } from '../WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
-import type { ShaderProgramSources } from '../internal/ShaderUtils.js';
-// import type { Texture } from '../textures/Texture';
 
-export class DefaultShaderBatched extends WebGlCoreShader {
-  override supportsIndexedTextures = true;
+export class DefaultShaderBatched implements WebGlShaderConfig {
+  supportsIndexedTextures = true;
 
-  constructor(renderer: WebGlCoreRenderer) {
-    super({
-      renderer,
-    });
-  }
+  // override bindTextures(texture: WebGlCoreCtxTexture[]) {
+  //   const { renderer, glw } = this;
+  //   if (
+  //     texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
+  //   ) {
+  //     throw new Error(
+  //       `DefaultShaderBatched: Cannot bind more than ${renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS} textures`,
+  //     );
+  //   }
+  //   texture.forEach((t, i) => {
+  //     glw.activeTexture(i);
+  //     glw.bindTexture(t.ctxTexture);
+  //   });
+  //   const samplers = Array.from(Array(texture.length).keys());
+  //   this.glw.uniform1iv('u_textures[0]', samplers);
+  // }
 
-  override bindTextures(texture: WebGlCoreCtxTexture[]) {
-    const { renderer, glw } = this;
-    if (
-      texture.length > renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS
-    ) {
-      throw new Error(
-        `DefaultShaderBatched: Cannot bind more than ${renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS} textures`,
-      );
+  vertex = `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+
+    attribute vec2 a_textureCoordinate;
+    attribute vec2 a_position;
+    attribute vec4 a_color;
+    attribute float a_textureIndex;
+    attribute float a_depth;
+
+    uniform vec2 u_resolution;
+    uniform float u_pixelRatio;
+
+    varying vec4 v_color;
+    varying vec2 v_textureCoordinate;
+    varying float v_textureIndex;
+
+    void main(){
+      vec2 normalized = a_position * u_pixelRatio / u_resolution;
+      vec2 zero_two = normalized * 2.0;
+      vec2 clip_space = zero_two - 1.0;
+
+      // pass to fragment
+      v_color = a_color;
+      v_textureCoordinate = a_textureCoordinate;
+      v_textureIndex = a_textureIndex;
+
+      // flip y
+      gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
     }
-    texture.forEach((t, i) => {
-      glw.activeTexture(i);
-      glw.bindTexture(t.ctxTexture);
-    });
-    const samplers = Array.from(Array(texture.length).keys());
-    this.glw.uniform1iv('u_textures[0]', samplers);
-  }
+  `;
 
-  static override shaderSources: ShaderProgramSources = {
-    vertex: `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
-
-      attribute vec2 a_textureCoordinate;
-      attribute vec2 a_position;
-      attribute vec4 a_color;
-      attribute float a_textureIndex;
-      attribute float a_depth;
-
-      uniform vec2 u_resolution;
-      uniform float u_pixelRatio;
-
-      varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
-      varying float v_textureIndex;
-
-      void main(){
-        vec2 normalized = a_position * u_pixelRatio / u_resolution;
-        vec2 zero_two = normalized * 2.0;
-        vec2 clip_space = zero_two - 1.0;
-
-        // pass to fragment
-        v_color = a_color;
-        v_textureCoordinate = a_textureCoordinate;
-        v_textureIndex = a_textureIndex;
-
-        // flip y
-        gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
-      }
-    `,
-    fragment: (textureUnits) => `
-      #define txUnits ${textureUnits}
+  fragment(textureUnits: number) {
+    return `
+    #define txUnits ${textureUnits}
       # ifdef GL_FRAGMENT_PRECISION_HIGH
       precision highp float;
       # else
@@ -116,6 +107,6 @@ export class DefaultShaderBatched extends WebGlCoreShader {
       void main(){
         gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoordinate);
       }
-    `,
-  };
+    `;
+  }
 }

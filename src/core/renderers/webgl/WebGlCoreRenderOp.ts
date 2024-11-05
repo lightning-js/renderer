@@ -20,13 +20,29 @@
 import { CoreRenderOp } from '../CoreRenderOp.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
+import type {
+  WebGlCoreRenderer,
+  WebGlCoreRendererOptions,
+} from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { Rect, RectWithValid } from '../../lib/utils.js';
+import type { RectWithValid } from '../../lib/utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
+
+export type WebGlRenderOpProps = {
+  buffers: BufferCollection;
+  shader: WebGlCoreShader;
+  shaderProps: Record<string, unknown> | null;
+  alpha: number;
+  clippingRect: RectWithValid;
+  dimensions: Dimensions;
+  bufferIdx: number;
+  rtt: boolean;
+  parentHasRenderTexture: boolean;
+  framebufferDimensions: Dimensions;
+};
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -37,25 +53,34 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   numQuads = 0;
   textures: WebGlCoreCtxTexture[] = [];
   readonly maxTextures: number;
+  readonly buffers: BufferCollection;
+  readonly shader: WebGlCoreShader;
+  readonly shaderProps: Record<string, unknown> | null;
+  readonly alpha: number;
+  readonly clippingRect: RectWithValid;
+  readonly dimensions: Dimensions;
+  readonly bufferIdx: number;
+  readonly rtt: boolean;
+  readonly parentHasRenderTexture: boolean;
+  readonly framebufferDimensions: Dimensions;
 
-  constructor(
-    readonly glw: WebGlContextWrapper,
-    readonly options: WebGlCoreRendererOptions,
-    readonly buffers: BufferCollection,
-    readonly shader: WebGlCoreShader,
-    readonly shaderProps: Record<string, unknown>,
-    readonly alpha: number,
-    readonly clippingRect: RectWithValid,
-    readonly dimensions: Dimensions,
-    readonly bufferIdx: number,
-    readonly zIndex: number,
-    readonly renderToTexture: boolean | undefined,
-    readonly parentHasRenderTexture: boolean | undefined,
-    readonly framebufferDimensions: Dimensions | undefined,
-  ) {
+  constructor(readonly renderer: WebGlCoreRenderer, props: WebGlRenderOpProps) {
     super();
-    this.maxTextures = shader.supportsIndexedTextures
-      ? (glw.getParameter(glw.MAX_VERTEX_TEXTURE_IMAGE_UNITS) as number)
+    this.buffers = props.buffers;
+    this.shader = props.shader;
+    this.shaderProps = props.shaderProps;
+    this.alpha = props.alpha;
+    this.clippingRect = props.clippingRect;
+    this.dimensions = props.dimensions;
+    this.bufferIdx = props.bufferIdx;
+    this.rtt = props.rtt;
+    this.parentHasRenderTexture = props.parentHasRenderTexture;
+    this.framebufferDimensions = props.framebufferDimensions;
+
+    this.maxTextures = props.shader.supportsIndexedTextures
+      ? (renderer.glw.getParameter(
+          renderer.glw.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+        ) as number)
       : 1;
   }
 
@@ -83,11 +108,10 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   }
 
   draw() {
-    const { glw, shader, shaderProps, options } = this;
-    const { shManager } = options;
+    const { glw, options, shManager } = this.renderer;
 
-    shManager.useShader(shader);
-    shader.bindRenderOp(this, shaderProps);
+    shManager.useShader(this.shader);
+    this.shader.bindRenderOp(this);
 
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;

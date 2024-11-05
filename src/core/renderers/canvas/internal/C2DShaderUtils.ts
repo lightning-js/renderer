@@ -30,7 +30,7 @@ export function getRadius(quad: QuadOptions): number {
   if (quad.shader instanceof UnsupportedShader) {
     const shType = quad.shader.shType;
     if (shType === ROUNDED_RECTANGLE_SHADER_TYPE) {
-      return (quad.shaderProps?.radius as number) ?? 0;
+      return (quad.shader.getResolvedProps()?.radius as number) ?? 0;
     }
   }
   return 0;

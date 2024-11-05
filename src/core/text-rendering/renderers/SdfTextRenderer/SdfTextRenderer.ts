@@ -59,6 +59,7 @@ import type { Matrix3d } from '../../../lib/Matrix3d.js';
 import type { Dimensions } from '../../../../common/CommonTypes.js';
 import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
 import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
+import type { WebGlCoreShader } from '../../../renderers/webgl/WebGlCoreShader.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -139,14 +140,14 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.ssdfFontFamilies,
     this.msdfFontFamilies,
   ];
-  private sdfShader: SdfShader;
+  private sdfShader: WebGlCoreShader;
   private rendererBounds: Bound;
 
   public type: 'canvas' | 'sdf' = 'sdf';
 
   constructor(stage: Stage) {
     super(stage);
-    this.sdfShader = this.stage.shManager.loadShader('SdfShader').shader;
+    this.sdfShader = this.stage.shManager.loadShader('SdfShader')!.shader;
     this.rendererBounds = {
       x1: 0,
       y1: 0,
@@ -686,12 +687,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       }
     }
 
-    const renderOp = new WebGlCoreRenderOp(
-      renderer.glw,
-      renderer.options,
-      webGlBuffers,
-      this.sdfShader,
-      {
+    const renderOp = new WebGlCoreRenderOp(renderer, {
+      buffers: webGlBuffers,
+      shader: this.sdfShader,
+      shaderProps: {
         transform: transform.getFloatArr(),
         // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
         // for the best blending results. Which is why we use `mergeColorAlpha`
@@ -701,16 +700,15 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         scrollY,
         distanceRange,
         debug: debug.sdfShaderDebug,
-      } satisfies SdfShaderProps,
+      },
       alpha,
       clippingRect,
-      { height: textH, width: textW },
-      0,
-      zIndex,
-      false,
+      dimensions: { height: textH, width: textW },
+      bufferIdx: 0,
+      rtt: false,
       parentHasRenderTexture,
       framebufferDimensions,
-    );
+    });
 
     const texture = state.trFontFace?.texture;
     assertTruthy(texture);

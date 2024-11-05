@@ -224,10 +224,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
     return this.shManager;
   }
 
-  override getDefShaderCtr(): BaseShaderController {
-    return this.defShaderCtr;
-  }
-
   renderRTTNodes(): void {
     // noop
   }

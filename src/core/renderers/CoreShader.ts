@@ -19,23 +19,20 @@
 
 import type { CoreRenderOp } from './CoreRenderOp.js';
 
+export interface ShaderConfig<T = Record<string, any>> {
+  props?: T;
+  /**
+   * used for making a cache key to check for reusability
+   */
+  generateKey?: (props: T) => string;
+}
+
 export abstract class CoreShader {
-  // abstract draw(): void;
-  static makeCacheKey(props: Record<string, unknown>): string | false {
-    return false;
-  }
-
-  static resolveDefaults(
-    props: Record<string, unknown>,
-  ): Record<string, unknown> {
-    return {};
-  }
-
   abstract bindRenderOp(
     renderOp: CoreRenderOp,
     props: Record<string, unknown> | null,
   ): void;
-  bindProps?(props: Record<string, unknown>): void;
+
   abstract attach(): void;
   abstract detach(): void;
 }

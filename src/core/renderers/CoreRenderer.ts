@@ -44,8 +44,7 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
+  shader: BaseShaderController | null;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
@@ -55,9 +54,9 @@ export interface QuadOptions {
   tc: number;
   td: number;
   renderCoords?: RenderCoords;
-  rtt?: boolean;
-  parentHasRenderTexture?: boolean;
-  framebufferDimensions?: Dimensions;
+  rtt: boolean;
+  parentHasRenderTexture: boolean;
+  framebufferDimensions: Dimensions;
 }
 
 export interface CoreRendererOptions {
@@ -102,12 +101,10 @@ export abstract class CoreRenderer {
   abstract render(surface?: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
-  abstract getShaderManager(): CoreShaderManager;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
   abstract getBufferInfo(): BufferInfo | null;
-  abstract getDefShaderCtr(): BaseShaderController;
 }

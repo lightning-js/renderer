@@ -18,53 +18,67 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import { hasOwn } from '../../../utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-import { CoreShader } from '../CoreShader.js';
+import { CoreShader, type ShaderConfig } from '../CoreShader.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
+import type {
+  WebGlCoreRenderOp,
+  WebGlRenderOpProps,
+} from './WebGlCoreRenderOp.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
   createShader,
-  type AttributeInfo,
-  type ShaderOptions,
-  type ShaderProgramSources,
+  type ShaderSource,
+  DefaultVertexSource,
 } from './internal/ShaderUtils.js';
 
-/**
- * Automatic shader prop for the dimensions of the Node being rendered
- *
- * @remarks
- * Shader's who's rendering depends on the dimensions of the Node being rendered
- * should extend this interface from their Prop interface type.
- */
-export interface DimensionsShaderProp {
+export type WebGlShaderLifecycle = {
   /**
-   * Dimensions of the Node being rendered (Auto-set by the renderer)
-   *
-   * @remarks
-   * DO NOT SET THIS. It is set automatically by the renderer.
-   * Any values set here will be ignored.
+   * This function is called before drawing the node, here you can update the uniforms you use in the fragment / vertex shader.
+   * @param glw WebGlContextWrapper with utilities to update uniforms, and other actions.
+   * @param renderOp containing all information of the render operation that uses this shader
+   * @returns
    */
-  $dimensions?: Dimensions;
+  update?: (glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) => void;
+  /**
+   * This function is used to check if the shader can bereused based on quad info
+   * @param props
+   * @returns
+   */
+  canBatch?: (
+    renderOpA: WebGlRenderOpProps,
+    renderOpB: WebGlRenderOpProps,
+  ) => boolean;
+};
+
+export type WebGlShaderConfig<T = Record<string, any>> = ShaderConfig<T> &
+  WebGlShaderLifecycle & {
+    /**
+     * fragment shader source for WebGl or WebGl2
+     */
+    fragment: ShaderSource;
+    /**
+     * vertex shader source for WebGl or WebGl2
+     */
+    vertex?: ShaderSource;
+    /**
+     * extensions required for specific shader?
+     */
+    webgl1Extensions?: string[];
+    webgl2Extensions?: string[];
+    supportsIndexedTextures?: boolean;
+  };
+
+export interface WebGlShaderBatchMap {
+  dimensions: Dimensions;
+  alpha: number;
+  props: Record<string, unknown>;
 }
 
-export interface AlphaShaderProp {
-  /**
-   * Alpha of the Node being rendered (Auto-set by the renderer)
-   *
-   * @remarks
-   * DO NOT SET THIS. It is set automatically by the renderer.
-   * Any values set here will be ignored.
-   */
-  $alpha?: number;
-}
-
-export abstract class WebGlCoreShader extends CoreShader {
+export class WebGlCoreShader extends CoreShader {
   protected boundBufferCollection: BufferCollection | null = null;
-  protected buffersBound = false;
   protected program: WebGLProgram;
   /**
    * Vertex Array Object
@@ -76,21 +90,27 @@ export abstract class WebGlCoreShader extends CoreShader {
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
-  readonly supportsIndexedTextures: boolean = false;
+  protected lifecycle: WebGlShaderLifecycle;
+  protected useSystemAlpha = false;
+  protected useSystemDimensions = false;
+  supportsIndexedTextures = false;
 
-  constructor(options: ShaderOptions) {
+  constructor(renderer: WebGlCoreRenderer, config: WebGlShaderConfig) {
     super();
-    const renderer = (this.renderer = options.renderer);
+    this.renderer = renderer;
     const glw = (this.glw = renderer.glw);
-    this.supportsIndexedTextures =
-      options.supportsIndexedTextures || this.supportsIndexedTextures;
 
     // Check that extensions are supported
     const webGl2 = glw.isWebGl2();
-    const requiredExtensions =
-      (webGl2 && options.webgl2Extensions) ||
-      (!webGl2 && options.webgl1Extensions) ||
+    let requiredExtensions: string[] = [];
+
+    this.supportsIndexedTextures =
+      config.supportsIndexedTextures || this.supportsIndexedTextures;
+    requiredExtensions =
+      (webGl2 && config.webgl2Extensions) ||
+      (!webGl2 && config.webgl1Extensions) ||
       [];
+
     const glVersion = webGl2 ? '2.0' : '1.0';
     requiredExtensions.forEach((extensionName) => {
       if (!glw.getExtension(extensionName)) {
@@ -100,36 +120,22 @@ export abstract class WebGlCoreShader extends CoreShader {
       }
     });
 
-    // Gather shader sources
-    // - If WebGL 2 and special WebGL 2 sources are provided, we copy those sources and delete
-    // the extra copy of them to save memory.
-    // TODO: This could be further made optimal by just caching the compiled shaders and completely deleting
-    // the source code
-    const shaderSources =
-      options.shaderSources ||
-      (this.constructor as typeof WebGlCoreShader).shaderSources;
-    if (!shaderSources) {
-      throw new Error(
-        `Shader "${this.constructor.name}" is missing shaderSources.`,
-      );
-    } else if (webGl2 && shaderSources?.webGl2) {
-      shaderSources.fragment = shaderSources.webGl2.fragment;
-      shaderSources.vertex = shaderSources.webGl2.vertex;
-      delete shaderSources.webGl2;
-    }
-
     const textureUnits =
       renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS;
 
-    const vertexSource =
-      shaderSources.vertex instanceof Function
-        ? shaderSources.vertex(textureUnits)
-        : shaderSources.vertex;
+    let vertexSource =
+      config.vertex instanceof Function
+        ? config.vertex(textureUnits)
+        : config.vertex;
+
+    if (vertexSource === undefined) {
+      vertexSource = DefaultVertexSource;
+    }
 
     const fragmentSource =
-      shaderSources.fragment instanceof Function
-        ? shaderSources.fragment(textureUnits)
-        : shaderSources.fragment;
+      config.fragment instanceof Function
+        ? config.fragment(textureUnits)
+        : config.fragment;
 
     const vertexShader = createShader(glw, glw.VERTEX_SHADER, vertexSource);
     const fragmentShader = createShader(
@@ -145,9 +151,19 @@ export abstract class WebGlCoreShader extends CoreShader {
     if (!program) {
       throw new Error();
     }
-    this.program = program;
 
+    this.program = program;
     this.attributeLocations = glw.getAttributeLocations(program);
+
+    this.useSystemAlpha =
+      this.glw.getUniformLocation(program, 'u_alpha') !== null;
+    this.useSystemDimensions =
+      this.glw.getUniformLocation(program, 'u_dimensions') !== null;
+
+    this.lifecycle = {
+      update: config.update,
+      canBatch: config.canBatch,
+    };
   }
 
   disableAttribute(location: number) {
@@ -163,79 +179,90 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
   }
 
-  /**
-   * Given two sets of Shader props destined for this Shader, determine if they can be batched together
-   * to reduce the number of draw calls.
-   *
-   * @remarks
-   * This is used by the {@link WebGlCoreRenderer} to determine if it can batch multiple consecutive draw
-   * calls into a single draw call.
-   *
-   * By default, this returns false (meaning no batching is allowed), but can be
-   * overridden by child classes to provide more efficient batching.
-   *
-   * @param propsA
-   * @param propsB
-   * @returns
-   */
-  canBatchShaderProps(
-    propsA: Record<string, unknown>,
-    propsB: Record<string, unknown>,
+  reuseRenderOp(
+    renderOpA: WebGlRenderOpProps,
+    renderOpB: WebGlRenderOpProps,
   ): boolean {
-    return false;
-  }
-
-  bindRenderOp(
-    renderOp: WebGlCoreRenderOp,
-    props: Record<string, unknown> | null,
-  ) {
-    this.bindBufferCollection(renderOp.buffers);
-    if (renderOp.textures.length > 0) {
-      this.bindTextures(renderOp.textures);
+    const lifecycleCheck = this.lifecycle.canBatch
+      ? this.lifecycle.canBatch(renderOpA, renderOpB)
+      : true;
+    if (!lifecycleCheck) {
+      return false;
     }
 
-    const { glw, parentHasRenderTexture, renderToTexture } = renderOp;
+    if (this.useSystemAlpha) {
+      if (renderOpA.alpha !== renderOpB.alpha) {
+        return false;
+      }
+    }
+
+    if (this.useSystemDimensions) {
+      if (
+        renderOpA.dimensions.width !== renderOpB.dimensions.width ||
+        renderOpA.dimensions.height !== renderOpB.dimensions.height
+      ) {
+        return false;
+      }
+    }
+
+    if (renderOpA.shaderProps !== null && renderOpB.shaderProps !== null) {
+      for (const key in renderOpA) {
+        if (
+          renderOpA[key as keyof WebGlRenderOpProps] !==
+          renderOpB[key as keyof WebGlRenderOpProps]
+        ) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bindRenderOp(renderOp: WebGlCoreRenderOp) {
+    this.bindBufferCollection(renderOp.buffers);
+    this.bindTextures(renderOp.textures);
+
+    const { parentHasRenderTexture, rtt } = renderOp;
 
     // Skip if the parent and current operation both have render textures
-    if (renderToTexture && parentHasRenderTexture) {
+    if (rtt && parentHasRenderTexture) {
       return;
     }
 
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
     if (parentHasRenderTexture) {
-      const { width, height } = renderOp.framebufferDimensions || {};
+      const { width, height } = renderOp.framebufferDimensions;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
-      glw.uniform1f('u_pixelRatio', 1.0);
+      this.glw.uniform1f('u_pixelRatio', 1.0);
 
       // Set resolution to the framebuffer dimensions
-      glw.uniform2f('u_resolution', width ?? 0, height ?? 0);
+      this.glw.uniform2f('u_resolution', width ?? 0, height ?? 0);
     } else {
-      glw.uniform1f('u_pixelRatio', renderOp.options.pixelRatio);
-      glw.uniform2f('u_resolution', glw.canvas.width, glw.canvas.height);
+      this.glw.uniform1f('u_pixelRatio', renderOp.renderer.options.pixelRatio);
+      this.glw.uniform2f(
+        'u_resolution',
+        this.glw.canvas.width,
+        this.glw.canvas.height,
+      );
     }
 
-    if (props) {
-      // Bind optional automatic uniforms
-      // These are only bound if their keys are present in the props.
-      if (hasOwn(props, '$dimensions')) {
-        let dimensions = props.$dimensions as Dimensions | null;
-        if (!dimensions) {
-          dimensions = renderOp.dimensions;
-        }
-        glw.uniform2f('u_dimensions', dimensions.width, dimensions.height);
-      }
-      if (hasOwn(props, '$alpha')) {
-        let alpha = props.$alpha as number | null;
-        if (!alpha) {
-          alpha = renderOp.alpha;
-        }
-        glw.uniform1f('u_alpha', alpha);
-      }
-      if (typeof this.bindProps === 'function') {
-        this.bindProps(props);
-      }
+    if (this.useSystemAlpha) {
+      this.glw.uniform1f('u_alpha', renderOp.alpha);
+    }
+
+    if (this.useSystemDimensions) {
+      this.glw.uniform2f(
+        'u_dimensions',
+        renderOp.dimensions.width,
+        renderOp.dimensions.height,
+      );
+    }
+
+    if (renderOp.shaderProps !== null && this.lifecycle.update !== undefined) {
+      this.lifecycle.update(this.glw, renderOp);
     }
   }
 
@@ -279,6 +306,4 @@ export abstract class WebGlCoreShader extends CoreShader {
   override detach(): void {
     this.disableAttributes();
   }
-
-  protected static shaderSources?: ShaderProgramSources;
 }

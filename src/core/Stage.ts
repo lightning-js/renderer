@@ -97,7 +97,6 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
-  public readonly defShaderCtr: BaseShaderController;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -173,7 +172,6 @@ export class Stage {
     this.renderer = new renderEngine(rendererOptions);
     const renderMode = this.renderer.mode || 'webgl';
 
-    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -240,7 +238,7 @@ export class Stage {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: this.defShaderCtr,
+      shader: null,
       rtt: false,
       src: null,
       scale: 1,
@@ -502,20 +500,6 @@ export class Stage {
     return resolvedTextRenderer as unknown as TextRenderer;
   }
 
-  /**
-   * Create a shader controller instance
-   *
-   * @param type
-   * @param props
-   * @returns
-   */
-  createShaderCtr(
-    type: keyof ShaderMap,
-    props: Record<string, unknown>,
-  ): BaseShaderController {
-    return this.shManager.loadShader(type, props);
-  }
-
   createNode(props: Partial<CoreNodeProps>) {
     const resolvedProps = this.resolveNodeDefaults(props);
     return new CoreNode(this, resolvedProps);
@@ -609,7 +593,7 @@ export class Stage {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? this.defShaderCtr,
+      shader: props.shader ?? null,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,

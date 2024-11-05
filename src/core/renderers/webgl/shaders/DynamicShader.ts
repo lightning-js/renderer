@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import {
-  WebGlCoreShader,
-  type DimensionsShaderProp,
-  type AlphaShaderProp,
-} from '../WebGlCoreShader.js';
+import { WebGlCoreShader } from '../WebGlCoreShader.js';
 import { type UniformInfo } from '../internal/ShaderUtils.js';
 import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
 import {
@@ -35,9 +31,7 @@ import type { EffectMap } from '../../../CoreShaderManager.js';
 import { assertTruthy } from '../../../../utils.js';
 import type { UniformMethodMap } from '../../../lib/WebGlContextWrapper.js';
 
-export interface DynamicShaderProps
-  extends DimensionsShaderProp,
-    AlphaShaderProp {
+export interface DynamicShaderProps {
   effects?: EffectDescUnion[];
 }
 
@@ -116,12 +110,9 @@ export class DynamicShader extends WebGlCoreShader {
     effectContructors: Partial<EffectMap>,
   ) {
     const shader = DynamicShader.createShader(props, effectContructors);
-    super({
-      renderer,
-      shaderSources: {
-        vertex: shader.vertex,
-        fragment: shader.fragment,
-      },
+    super(renderer, {
+      vertex: shader.vertex,
+      fragment: shader.fragment,
     });
 
     this.effects = shader.effects as Array<
@@ -205,7 +196,7 @@ export class DynamicShader extends WebGlCoreShader {
     }
   }
 
-  override bindProps(props: Required<DynamicShaderProps>): void {
+  bindProps(props: Required<DynamicShaderProps>): void {
     const effects = props.effects;
     const effectsL = effects.length;
     let i = 0;
@@ -230,7 +221,7 @@ export class DynamicShader extends WebGlCoreShader {
     }
   }
 
-  override canBatchShaderProps(
+  /*override canBatchShaderProps(
     propsA: Required<DynamicShaderProps>,
     propsB: Required<DynamicShaderProps>,
   ): boolean {
@@ -261,7 +252,7 @@ export class DynamicShader extends WebGlCoreShader {
       }
     }
     return true;
-  }
+  }*/
 
   static createShader(
     props: DynamicShaderProps,
@@ -454,7 +445,7 @@ export class DynamicShader extends WebGlCoreShader {
     return m;
   }
 
-  static override resolveDefaults(
+  /*static override resolveDefaults(
     props: DynamicShaderProps,
     effectContructors?: Partial<EffectMap>,
   ): Required<DynamicShaderProps> {
@@ -463,12 +454,7 @@ export class DynamicShader extends WebGlCoreShader {
       effects: getResolvedEffect(
         props.effects ?? [],
         effectContructors,
-      ) as EffectDescUnion[],
-      $dimensions: {
-        width: 0,
-        height: 0,
-      },
-      $alpha: 0,
+      ) as EffectDescUnion[]
     };
   }
 
@@ -483,7 +469,7 @@ export class DynamicShader extends WebGlCoreShader {
       fx += `,${key}`;
     });
     return `DynamicShader${fx}`;
-  }
+  }*/
 
   static z$__type__Props: DynamicShaderProps;
 

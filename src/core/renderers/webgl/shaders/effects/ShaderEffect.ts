@@ -1,10 +1,7 @@
 import type { EffectMap } from '../../../../CoreShaderManager.js';
 import type { ExtractProps } from '../../../../CoreTextureManager.js';
 import type { WebGlContextWrapper } from '../../../../lib/WebGlContextWrapper.js';
-import type {
-  AlphaShaderProp,
-  DimensionsShaderProp,
-} from '../../WebGlCoreShader.js';
+import type {} from '../../WebGlCoreShader.js';
 import type {
   UniformInfo,
   UniformMethodMap,
@@ -85,9 +82,7 @@ export interface ShaderEffectUniform {
   ) => number | number[] | number[][];
 }
 
-export interface ShaderEffectValueMap
-  extends DimensionsShaderProp,
-    AlphaShaderProp {
+export interface ShaderEffectValueMap {
   value: ShaderEffectUniform['value'];
   programValue: number | Float32Array | undefined;
   method: keyof UniformMethodMap;

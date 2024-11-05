@@ -25,15 +25,11 @@ import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
-import type {
-  BaseShaderController,
+import {
   ShaderController,
+  type BaseShaderController,
 } from './ShaderController.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
-import type {
-  DynamicEffects,
-  DynamicShaderController,
-} from './DynamicShaderController.js';
 import type {
   EffectDesc,
   EffectDescUnion,
@@ -44,6 +40,7 @@ import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRe
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
+import { UnsupportedShader } from '../core/renderers/canvas/shaders/UnsupportedShader.js';
 
 /**
  * An immutable reference to a specific Shader type
@@ -463,7 +460,7 @@ export class RendererMain extends EventEmitter {
     const textNode = this.stage.createTextNode(props as CoreTextNodeProps);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode);
+      return this.inspector.createTextNode(textNode) as unknown as ITextNode;
     }
 
     return textNode as unknown as ITextNode;
@@ -525,72 +522,25 @@ export class RendererMain extends EventEmitter {
    */
   createShader<ShType extends keyof ShaderMap>(
     shaderType: ShType,
-    props?: ExtractProps<ShaderMap[ShType]>,
-  ): ShaderController<ShType> {
-    return this.stage.shManager.loadShader(shaderType, props);
-  }
+    props?: Record<string, unknown>,
+  ) {
+    //Don't call to shaderManager if renderer is canvas renderer
+    if (this.stage.renderer.mode === 'canvas') {
+      return new ShaderController<ShType>({
+        type: shaderType,
+        shader: new UnsupportedShader(shaderType as string),
+        props: props,
+        stage: this.stage,
+      });
+    }
 
-  /**
-   * Create a new Dynamic Shader controller
-   *
-   * @remarks
-   * A Dynamic Shader is a shader that can be composed of an array of mulitple
-   * effects. Each effect can be animated or changed after creation (provided
-   * the effect is given a name).
-   *
-   * Example:
-   * ```ts
-   * renderer.createNode({
-   *   shader: renderer.createDynamicShader([
-   *     renderer.createEffect('radius', {
-   *       radius: 0
-   *     }, 'effect1'),
-   *     renderer.createEffect('border', {
-   *       color: 0xff00ffff,
-   *       width: 10,
-   *     }, 'effect2'),
-   *   ]),
-   * });
-   * ```
-   *
-   * @param effects
-   * @returns
-   */
-  createDynamicShader<
-    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
-  >(effects: [...T]): DynamicShaderController<T> {
-    return this.stage.shManager.loadDynamicShader({
-      effects: effects as EffectDescUnion[],
+    const resolvedShader = this.stage.shManager.loadShader(shaderType, props);
+    return new ShaderController<ShType>({
+      type: shaderType,
+      shader: resolvedShader.shader,
+      props: resolvedShader.props,
+      stage: this.stage,
     });
-  }
-
-  /**
-   * Create an effect to be used in a Dynamic Shader
-   *
-   * @remark
-   * The {name} parameter is optional but required if you want to animate the effect
-   * or change the effect's properties after creation.
-   *
-   * See {@link createDynamicShader} for an example.
-   *
-   * @param type
-   * @param props
-   * @param name
-   * @returns
-   */
-  createEffect<
-    Type extends keyof EffectMap,
-    Name extends string | undefined = undefined,
-  >(
-    type: Type,
-    props: EffectDesc<{ name: Name; type: Type }>['props'],
-    name?: Name,
-  ): EffectDesc<{ name: Name; type: Type }> {
-    return {
-      name,
-      type,
-      props,
-    };
   }
 
   /**
