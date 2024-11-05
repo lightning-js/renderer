@@ -261,6 +261,25 @@ export function isRectPositive(rect: Rect): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
+/**
+ * Create a preload bounds from a strict bound
+ *
+ * @param strictBound The strict boundary of the node
+ * @param boundsMargin Boundary margin to apply to the strictBound
+ * @returns
+ */
+export function createPreloadBounds(
+  strictBound: Bound,
+  boundsMargin: [number, number, number, number],
+): Bound {
+  return createBound(
+    strictBound.x1 - boundsMargin[3],
+    strictBound.y1 - boundsMargin[0],
+    strictBound.x2 + boundsMargin[1],
+    strictBound.y2 + boundsMargin[2],
+  );
+}
+
 export function convertUrlToAbsolute(url: string): string {
   // handle local file imports if the url isn't remote resource or data blob
   if (self.location.protocol === 'file:' && !PROTOCOL_REGEX.test(url)) {

@@ -256,6 +256,17 @@ export interface RendererMainSettings {
    * @defaultValue `false`
    */
   forceWebGL2?: boolean;
+
+  /**
+   * Enable strictBounds
+   *
+   * @remarks
+   * Enable strict bounds for the renderer. This will ensure that the renderer
+   * will not render outside the bounds of the canvas.
+   *
+   * @defaultValue `true`
+   */
+  strictBounds?: boolean;
 }
 
 /**
@@ -346,6 +357,7 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
+      strictBounds: settings.strictBounds ?? true,
     };
     this.settings = resolvedSettings;
 
@@ -386,7 +398,8 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
-      inspector: this.inspector !== null,
+      inspector: this.settings.inspector !== null,
+      strictBounds: this.settings.strictBounds,
     });
 
     // Extract the root node
@@ -432,8 +445,6 @@ export class RendererMain extends EventEmitter {
   createNode<
     ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
   >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
-    assertTruthy(this.stage, 'Stage is not initialized');
-
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {

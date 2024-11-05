@@ -42,6 +42,7 @@ export class CoreAnimation extends EventEmitter {
   public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
+  private delay = 0;
   private timingFunction: (t: number) => number | undefined;
 
   propValuesMap: PropValuesMap = {};
@@ -109,6 +110,7 @@ export class CoreAnimation extends EventEmitter {
     };
     this.timingFunction = getTimingFunction(easing);
     this.delayFor = delay;
+    this.delay = delay;
   }
 
   reset() {
@@ -287,6 +289,7 @@ export class CoreAnimation extends EventEmitter {
 
     if (this.progress > 1) {
       this.progress = loop ? 0 : 1;
+      this.delayFor = this.delay;
       if (stopMethod) {
         // If there's a stop method emit finished so the stop method can be applied.
         // TODO: We should probably reevaluate how stopMethod is implemented as currently
@@ -324,6 +327,10 @@ export class CoreAnimation extends EventEmitter {
           );
         }
       }
+    }
+
+    if (this.progress < 1) {
+      this.emit('tick', { progress: this.progress });
     }
 
     if (this.progress === 1) {

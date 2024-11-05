@@ -1,4 +1,6 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import type { CoreTextNode } from '../../dist/src/core/CoreTextNode.js';
+import type { INode } from '../../dist/exports/index.js';
 
 export async function automation(settings: ExampleSettings) {
   const page = await test(settings);
@@ -15,20 +17,20 @@ export async function automation(settings: ExampleSettings) {
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   // Create a container node
   const containerNode = renderer.createNode({
-    x: 10,
-    y: 100,
-    width: 1000,
-    height: 600,
+    x: -100,
+    y: -100,
+    width: 2040,
+    height: 1280,
     color: 0xff0000ff, // Red
     parent: testRoot,
-    strictBounds: false,
+    clipping: true,
   });
 
-  const status = renderer.createTextNode({
-    text: 'Strict Bound: ',
+  const nodeStatus = renderer.createTextNode({
+    text: '',
     fontSize: 30,
     x: 10,
-    y: 50,
+    y: 580,
     parent: testRoot,
   });
 
@@ -39,7 +41,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   for (let i = 0; i < amountOfNodes; i++) {
     const childNode = renderer.createNode({
       x: i * childNodeWidth + i * 100,
-      y: 100,
+      y: 300,
       width: childNodeWidth,
       height: 300,
       color: 0x00ff00ff, // Green
@@ -55,10 +57,26 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
+  function processAllNodes(containerNode: INode) {
+    let status =
+      'Container bound: ' + JSON.stringify(containerNode.renderState) + '\n';
+
+    for (const node of containerNode.children) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      status += `${
+        (node.children[0] as CoreTextNode)?.text
+      } bound: ${JSON.stringify(node.renderState)} \n`;
+    }
+
+    nodeStatus.text = status;
+    console.log(status);
+  }
+
   renderer.on('idle', () => {
-    status.text = 'Strict Bound: ' + String(containerNode.strictBounds);
+    processAllNodes(containerNode);
   });
 
+  let curPage = 1;
   window.onkeydown = (e) => {
     if (e.key === 'ArrowRight') {
       containerNode.x -= 100;
@@ -71,12 +89,24 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     if (e.key === ' ') {
       containerNode.strictBounds = !containerNode.strictBounds;
     }
+
+    if (e.key === 'ArrowUp') {
+      curPage = Math.min(3, curPage + 1);
+      page(curPage);
+    }
+
+    if (e.key === 'ArrowDown') {
+      curPage = Math.max(1, curPage - 1);
+      page(curPage);
+    }
+
+    processAllNodes(containerNode);
   };
 
-  const page = (i = 0) => {
+  const page = (i = 1) => {
     switch (i) {
       case 1:
-        containerNode.x = -590;
+        containerNode.x = -100;
         break;
 
       case 2:
@@ -84,9 +114,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         break;
 
       case 3:
-        containerNode.strictBounds = true;
+        containerNode.x = -4000;
         break;
     }
+
+    processAllNodes(containerNode);
   };
 
   return page;

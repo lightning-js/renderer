@@ -242,24 +242,22 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     // the `isFontFaceSupported` check)
     assertTruthy(fontFace instanceof WebTrFontFace);
 
+    const fontFamily = fontFace.fontFamily;
+
     // Add the font face to the document
     // Except for the 'sans-serif' font family, which the Renderer provides
     // as a special default fallback.
-    if (fontFace.fontFamily !== 'sans-serif') {
+    if (fontFamily !== 'sans-serif') {
       // @ts-expect-error `add()` method should be available from a FontFaceSet
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       globalFontSet.add(fontFace.fontFace);
     }
 
-    const { fontFamilies } = this;
-    const familyName = fontFace.fontFace.family;
-
-    let faceSet = fontFamilies[familyName];
+    let faceSet = this.fontFamilies[fontFamily];
     if (!faceSet) {
       faceSet = new Set();
-      fontFamilies[familyName] = faceSet;
+      this.fontFamilies[fontFamily] = faceSet;
     }
-
     faceSet.add(fontFace);
   }
 
@@ -384,9 +382,11 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
 
   loadFont = (state: CanvasTextRendererState): void => {
     const cssString = getFontCssString(state.props);
-    const trFontFace = TrFontManager.resolveFontFace(
+
+    const trFontFace = this.stage.fontManager.resolveFontFace(
       this.fontFamilyArray,
       state.props,
+      'canvas',
     ) as WebTrFontFace | undefined;
     assertTruthy(trFontFace, `Could not resolve font face for ${cssString}`);
     state.fontInfo = {
