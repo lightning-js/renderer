@@ -364,6 +364,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     if (state.textureNode) {
       // Use the existing texture node
       state.textureNode.texture = texture;
+      // Update the alpha
+      state.textureNode.alpha = getNormalizedAlphaComponent(state.props.color);
     } else {
       // Create a new texture node
       const textureNode = this.stage.createNode({

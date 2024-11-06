@@ -169,7 +169,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
     if (ctxTexture) {
       const image = ctxTexture.getImage(color);
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = color.a ?? alpha;
       if (frame) {
         ctx.drawImage(
           image,
