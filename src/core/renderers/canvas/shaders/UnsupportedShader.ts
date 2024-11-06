@@ -27,9 +27,9 @@ export class UnsupportedShader extends CoreShader {
   constructor(shType: string) {
     super();
     this.shType = shType;
-    if (shType !== ROUNDED_RECTANGLE_SHADER_TYPE) {
-      console.warn('Unsupported shader:', shType);
-    }
+    // if (shType !== ROUNDED_RECTANGLE_SHADER_TYPE) {
+    //   console.warn('Unsupported shader:', shType);
+    // }
   }
 
   bindRenderOp(): void {
