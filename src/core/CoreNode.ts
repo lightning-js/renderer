@@ -2159,10 +2159,6 @@ export class CoreNode extends EventEmitter {
   }
 
   setRTTUpdates(type: number) {
-    if (this.hasRTTupdates === true) {
-      return;
-    }
-
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
   }
