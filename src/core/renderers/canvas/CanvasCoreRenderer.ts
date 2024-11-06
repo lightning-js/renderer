@@ -241,13 +241,11 @@ export class CanvasCoreRenderer extends CoreRenderer {
         );
       }
       ctx.globalAlpha = 1;
-    } else {
-      const borderTop = hasQuadShader ? getBorder(quad, 'Top') : undefined;
-      const borderRight = hasQuadShader ? getBorder(quad, 'Right') : undefined;
-      const borderBottom = hasQuadShader
-        ? getBorder(quad, 'Bottom')
-        : undefined;
-      const borderLeft = hasQuadShader ? getBorder(quad, 'Left') : undefined;
+    } else if (hasQuadShader) {
+      const borderTop = getBorder(quad, 'Top');
+      const borderRight = getBorder(quad, 'Right');
+      const borderBottom = getBorder(quad, 'Bottom');
+      const borderLeft = getBorder(quad, 'Left');
 
       if (borderTop) {
         strokeLine(
