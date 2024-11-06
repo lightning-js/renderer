@@ -311,13 +311,15 @@ export class Inspector {
       ): IAnimationController => {
         const animationController = originalAnimate.call(node, props, settings);
 
-        return {
-          ...animationController,
-          start: () => {
-            this.animateNode(div, props, settings);
-            return animationController.start();
-          },
+        const originalStart =
+          animationController.start.bind(animationController);
+        animationController.start = () => {
+          this.animateNode(div, props, settings);
+
+          return originalStart();
         };
+
+        return animationController;
       },
     });
 
