@@ -272,25 +272,33 @@ export class Inspector {
   ): CoreNode | CoreTextNode {
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
-      const originalProp = Object.getOwnPropertyDescriptor(node, property);
-      if (!originalProp) {
+      let originalProp = Object.getOwnPropertyDescriptor(node, property);
+
+      if (originalProp === undefined) {
+        // Search the prototype chain for the property descriptor
+        const proto = Object.getPrototypeOf(node) as CoreNode | CoreTextNode;
+        originalProp = Object.getOwnPropertyDescriptor(proto, property);
+      }
+
+      if (originalProp === undefined) {
         return;
       }
 
-      Object.defineProperties(node, {
-        [property]: {
-          get() {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-            return originalProp.get?.call(node);
-          },
-          set(value) {
-            originalProp.set?.call(node, value);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-            this.updateNodeProperty(div, property, value);
-          },
-          configurable: true,
-          enumerable: true,
+      Object.defineProperty(node, property, {
+        get() {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return originalProp?.get?.call(node);
         },
+        set: (value) => {
+          originalProp?.set?.call(node, value);
+          this.updateNodeProperty(
+            div,
+            property as keyof CoreNodeProps | keyof CoreTextNodeProps,
+            value,
+          );
+        },
+        configurable: true,
+        enumerable: true,
       });
     });
 
