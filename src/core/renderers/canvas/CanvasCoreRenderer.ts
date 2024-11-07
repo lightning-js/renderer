@@ -30,9 +30,10 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
-import { getRadius } from './internal/C2DShaderUtils.js';
+import { getBorder, getRadius, strokeLine } from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
+  parseColorRgba,
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
@@ -133,7 +134,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
     const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
-    const radius = quad.shader ? getRadius(quad) : 0;
+    const hasQuadShader = Boolean(quad.shader);
+    const radius = hasQuadShader ? getRadius(quad) : 0;
+    const border = hasQuadShader ? getBorder(quad) : undefined;
 
     if (hasTransform || hasClipping || radius) {
       ctx.save();
@@ -209,6 +212,92 @@ export class CanvasCoreRenderer extends CoreRenderer {
     } else {
       ctx.fillStyle = formatRgba(color);
       ctx.fillRect(tx, ty, width, height);
+    }
+
+    if (border && border.width) {
+      const borderWidth = border.width;
+      const borderInnerWidth = border.width / 2;
+      const borderColor = formatRgba(parseColorRgba(border.color ?? 0));
+
+      ctx.beginPath();
+      ctx.lineWidth = borderWidth;
+      ctx.strokeStyle = borderColor;
+      ctx.globalAlpha = alpha;
+      if (radius) {
+        ctx.roundRect(
+          tx + borderInnerWidth,
+          ty + borderInnerWidth,
+          width - borderWidth,
+          height - borderWidth,
+          radius,
+        );
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(
+          tx + borderInnerWidth,
+          ty + borderInnerWidth,
+          width - borderWidth,
+          height - borderWidth,
+        );
+      }
+      ctx.globalAlpha = 1;
+    } else if (hasQuadShader) {
+      const borderTop = getBorder(quad, 'Top');
+      const borderRight = getBorder(quad, 'Right');
+      const borderBottom = getBorder(quad, 'Bottom');
+      const borderLeft = getBorder(quad, 'Left');
+
+      if (borderTop) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderTop.width,
+          borderTop.color,
+          'Top',
+        );
+      }
+
+      if (borderRight) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderRight.width,
+          borderRight.color,
+          'Right',
+        );
+      }
+
+      if (borderBottom) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderBottom.width,
+          borderBottom.color,
+          'Bottom',
+        );
+      }
+
+      if (borderLeft) {
+        strokeLine(
+          ctx,
+          tx,
+          ty,
+          width,
+          height,
+          borderLeft.width,
+          borderLeft.color,
+          'Left',
+        );
+      }
     }
 
     if (hasTransform || hasClipping || radius) {
