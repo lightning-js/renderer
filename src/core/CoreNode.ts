@@ -1119,8 +1119,6 @@ export class CoreNode extends EventEmitter {
 
     if (
       this.props.strictBounds === true &&
-      this.rtt === false &&
-      this.parentHasRenderTexture === false &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
       return;
@@ -2016,10 +2014,6 @@ export class CoreNode extends EventEmitter {
   }
 
   private cleanupRenderTexture() {
-    if (this.texture === null) {
-      return;
-    }
-
     this.unloadTexture();
     this.clearRTTInheritance();
 
@@ -2105,8 +2099,6 @@ export class CoreNode extends EventEmitter {
       sw: this.props.srcWidth,
       sh: this.props.srcHeight,
     });
-
-    this.onChangeIsRenderable(true);
   }
 
   set imageType(type: 'regular' | 'compressed' | 'svg' | null) {
@@ -2222,11 +2214,6 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
     this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
-
-  // setRTTUpdates(type: number) {
-  //   this.hasRTTupdates = true;
-  //   this.parent?.setRTTUpdates(type);
-  // }
 
   animate(
     props: Partial<CoreNodeAnimateProps>,
