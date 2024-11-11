@@ -626,13 +626,88 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
     }
 
-    // @todo: Better bottom up rendering order
-    this.rttNodes.unshift(node);
+    this.insertRTTNodeInOrder(node);
+  }
+
+  /**
+   * Inserts an RTT node into `this.rttNodes` while maintaining the correct rendering order based on hierarchy.
+   *
+   * Rendering order for RTT nodes is critical when nested RTT nodes exist in a parent-child relationship.
+   * Specifically:
+   *  - Child RTT nodes must be rendered before their RTT-enabled parents to ensure proper texture composition.
+   *  - If an RTT node is added and it has existing RTT children, it should be rendered after those children.
+   *
+   * This function addresses both cases by:
+   * 1. **Checking Upwards**: It traverses the node's hierarchy upwards to identify any RTT parent
+   *    already in `rttNodes`. If an RTT parent is found, the new node is placed before this parent.
+   * 2. **Checking Downwards**: It traverses the node’s children recursively to find any RTT-enabled
+   *    children that are already in `rttNodes`. If such children are found, the new node is inserted
+   *    after the last (highest index) RTT child node.
+   *
+   * The final calculated insertion index ensures the new node is positioned in `rttNodes` to respect
+   * both parent-before-child and child-before-parent rendering rules, preserving the correct order
+   * for the WebGL renderer.
+   *
+   * @param node - The RTT-enabled CoreNode to be added to `rttNodes` in the appropriate hierarchical position.
+   */
+  private insertRTTNodeInOrder(node: CoreNode) {
+    let insertIndex = this.rttNodes.length; // Default to the end of the array
+
+    // 1. Traverse upwards to ensure the node is placed before its RTT parent (if any).
+    let currentNode: CoreNode = node;
+    while (currentNode) {
+      if (!currentNode.parent) {
+        break;
+      }
+
+      const parentIndex = this.rttNodes.indexOf(currentNode.parent);
+      if (parentIndex !== -1) {
+        // Found an RTT parent in the list; set insertIndex to place node before the parent
+        insertIndex = parentIndex;
+        break;
+      }
+
+      currentNode = currentNode.parent;
+    }
+
+    // 2. Traverse downwards to ensure the node is placed after any RTT children.
+    // Look through each child recursively to see if any are already in rttNodes.
+    const maxChildIndex = this.findMaxChildRTTIndex(node);
+    if (maxChildIndex !== -1) {
+      // Adjust insertIndex to be after the last child RTT node
+      insertIndex = Math.max(insertIndex, maxChildIndex + 1);
+    }
+
+    // 3. Insert the node at the calculated position
+    this.rttNodes.splice(insertIndex, 0, node);
+  }
+
+  // Helper function to find the highest index of any RTT children of a node within rttNodes
+  private findMaxChildRTTIndex(node: CoreNode): number {
+    let maxIndex = -1;
+
+    const traverseChildren = (currentNode: CoreNode) => {
+      const currentIndex = this.rttNodes.indexOf(currentNode);
+      if (currentIndex !== -1) {
+        maxIndex = Math.max(maxIndex, currentIndex);
+      }
+
+      // Recursively check all children of the current node
+      for (const child of currentNode.children) {
+        traverseChildren(child);
+      }
+    };
+
+    // Start traversal directly with the provided node
+    traverseChildren(node);
+
+    return maxIndex;
   }
 
   renderRTTNodes() {
     const { glw } = this;
     const { txManager } = this.stage;
+
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
       const node = this.rttNodes[i];
@@ -662,16 +737,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // Render all associated quads to the texture
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
         if (!child) {
           continue;
         }
-        child.update(this.stage.deltaTime, {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0,
-          valid: false,
-        });
 
         this.stage.addQuads(child);
         child.hasRTTupdates = false;

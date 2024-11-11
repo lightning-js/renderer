@@ -783,6 +783,21 @@ export class CoreNode extends EventEmitter {
       if (this.textureOptions.preload) {
         texture.ctxTexture.load();
       }
+
+      texture.on('loaded', this.onTextureLoaded);
+      texture.on('failed', this.onTextureFailed);
+      texture.on('freed', this.onTextureFreed);
+
+      // If the parent is a render texture, the initial texture status
+      // will be set to freed until the texture is processed by the
+      // Render RTT nodes. So we only need to listen fo changes and
+      // no need to check the texture.state until we restructure how
+      // textures are being processed.
+      if (this.parentHasRenderTexture) {
+        this.notifyParentRTTOfUpdate();
+        return;
+      }
+
       if (texture.state === 'loaded') {
         assertTruthy(texture.dimensions);
         this.onTextureLoaded(texture, texture.dimensions);
@@ -792,9 +807,6 @@ export class CoreNode extends EventEmitter {
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
       }
-      texture.on('loaded', this.onTextureLoaded);
-      texture.on('failed', this.onTextureFailed);
-      texture.on('freed', this.onTextureFreed);
     });
   }
 
@@ -822,9 +834,8 @@ export class CoreNode extends EventEmitter {
     this.stage.requestRender();
 
     // If parent has a render texture, flag that we need to update
-    // @todo: Reserve type for RTT updates
     if (this.parentHasRenderTexture) {
-      this.setRTTUpdates(1);
+      this.notifyParentRTTOfUpdate();
     }
 
     this.emit('loaded', {
@@ -839,6 +850,11 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    // If parent has a render texture, flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+    }
+
     this.emit('failed', {
       type: 'texture',
       error,
@@ -846,6 +862,11 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    // If parent has a render texture, flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+    }
+
     this.emit('freed', {
       type: 'texture',
     } satisfies NodeTextureFreedPayload);
@@ -866,23 +887,9 @@ export class CoreNode extends EventEmitter {
     const parent = this.props.parent;
     if (!parent) return;
 
-    // Inform the parent if it doesn’t already have a child update
     if ((parent.updateType & UpdateType.Children) === 0) {
+      // Inform the parent if it doesn’t already have a child update
       parent.setUpdateType(UpdateType.Children);
-    }
-
-    if (this.parentHasRenderTexture === false) return;
-
-    if (this.rtt === false) {
-      if ((parent.updateType & UpdateType.RenderTexture) === 0) {
-        this.setRTTUpdates(type);
-        parent.setUpdateType(UpdateType.RenderTexture);
-      }
-    }
-
-    // If this node has outstanding RTT updates, propagate them
-    if (this.hasRTTupdates) {
-      this.setRTTUpdates(type);
     }
   }
 
@@ -988,24 +995,11 @@ export class CoreNode extends EventEmitter {
     const parent = this.props.parent;
     let renderState = null;
 
-    if (this.updateType & UpdateType.ParentRenderTexture) {
-      let p = this.parent;
-      while (p) {
-        if (p.rtt) {
-          this.parentHasRenderTexture = true;
-        }
-        p = p.parent;
-      }
-    }
-
-    // If we have render texture updates and not already running a full update
-    if (
-      this.updateType ^ UpdateType.All &&
-      this.updateType & UpdateType.RenderTexture
-    ) {
-      for (let i = 0, length = this.children.length; i < length; i++) {
-        this.children[i]?.setUpdateType(UpdateType.All);
-      }
+    // Handle specific RTT updates at this node level
+    if (this.updateType & UpdateType.RenderTexture && this.rtt) {
+      // Only the RTT node itself triggers `renderToTexture`
+      this.hasRTTupdates = true;
+      this.stage.renderer?.renderToTexture(this);
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -1125,16 +1119,14 @@ export class CoreNode extends EventEmitter {
 
     if (
       this.props.strictBounds === true &&
+      this.rtt === false &&
+      this.parentHasRenderTexture === false &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
       return;
     }
 
-    if (
-      this.updateType & UpdateType.Children &&
-      this.children.length > 0 &&
-      this.rtt === false
-    ) {
+    if (this.updateType & UpdateType.Children && this.children.length > 0) {
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
@@ -1146,6 +1138,13 @@ export class CoreNode extends EventEmitter {
 
         child.update(delta, this.clippingRect);
       }
+    }
+
+    // If the node has an RTT parent and requires a texture re-render, inform the RTT parent
+    // if (this.parentHasRenderTexture && this.updateType & UpdateType.RenderTexture) {
+    // @TODO have a more scoped down updateType for RTT updates
+    if (this.parentHasRenderTexture && this.updateType > 0) {
+      this.notifyParentRTTOfUpdate();
     }
 
     // Sorting children MUST happen after children have been updated so
@@ -1166,6 +1165,31 @@ export class CoreNode extends EventEmitter {
     // reset update type
     this.updateType = 0;
     this.childUpdateType = 0;
+  }
+
+  private notifyParentRTTOfUpdate() {
+    if (this.parent === null) {
+      return;
+    }
+
+    let rttNode: CoreNode | null = this.parent;
+    // Traverse up to find the RTT root node
+    while (rttNode && !rttNode.rtt) {
+      rttNode = rttNode.parent;
+    }
+
+    if (!rttNode) {
+      return;
+    }
+
+    // If an RTT node is found, mark it for re-rendering
+    rttNode.hasRTTupdates = true;
+    rttNode.setUpdateType(UpdateType.RenderTexture);
+
+    // if rttNode is nested, also make it update its RTT parent
+    if (rttNode.parentHasRenderTexture === true) {
+      rttNode.notifyParentRTTOfUpdate();
+    }
   }
 
   //check if CoreNode is renderable based on props
@@ -1940,8 +1964,9 @@ export class CoreNode extends EventEmitter {
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
 
+      // If the new parent has an RTT enabled, apply RTT inheritance
       if (newParent.rtt || newParent.parentHasRenderTexture) {
-        this.setRTTUpdates(UpdateType.All);
+        this.applyRTTInheritance(newParent);
       }
     }
     this.updateScaleRotateTransform();
@@ -1963,43 +1988,81 @@ export class CoreNode extends EventEmitter {
   }
 
   set rtt(value: boolean) {
-    if (this.props.rtt === true) {
-      this.props.rtt = value;
-
-      // unload texture if we used to have a render texture
-      if (value === false && this.texture !== null) {
-        this.unloadTexture();
-        this.setUpdateType(UpdateType.All);
-        for (let i = 0, length = this.children.length; i < length; i++) {
-          this.children[i]!.parentHasRenderTexture = false;
-        }
-        this.stage.renderer?.removeRTTNode(this);
-        return;
-      }
-    }
-
-    // if the new value is false and we didnt have rtt previously, we don't need to do anything
-    if (value === false) {
+    if (this.props.rtt === value) {
       return;
     }
+    this.props.rtt = value;
 
-    // load texture
+    if (value) {
+      this.initRenderTexture();
+      this.markChildrenWithRTT();
+    } else {
+      this.cleanupRenderTexture();
+    }
+
+    this.setUpdateType(UpdateType.RenderTexture);
+
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+    }
+  }
+  private initRenderTexture() {
     this.texture = this.stage.txManager.loadTexture('RenderTexture', {
       width: this.width,
       height: this.height,
     });
     this.textureOptions.preload = true;
+    this.stage.renderer?.renderToTexture(this); // Only this RTT node
+  }
 
-    this.props.rtt = true;
-    this.hasRTTupdates = true;
-    this.setUpdateType(UpdateType.All);
-
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]!.setUpdateType(UpdateType.All);
+  private cleanupRenderTexture() {
+    if (this.texture === null) {
+      return;
     }
 
-    // Store RTT nodes in a separate list
-    this.stage.renderer?.renderToTexture(this);
+    this.unloadTexture();
+    this.clearRTTInheritance();
+
+    this.stage.renderer?.removeRTTNode(this);
+    this.hasRTTupdates = false;
+    this.texture = null;
+  }
+
+  private markChildrenWithRTT(node: CoreNode | null = null) {
+    const parent = node || this;
+
+    for (const child of parent.children) {
+      child.setUpdateType(UpdateType.All);
+      child.parentHasRenderTexture = true;
+      child.markChildrenWithRTT();
+    }
+  }
+
+  // Apply RTT inheritance when a node has an RTT-enabled parent
+  private applyRTTInheritance(parent: CoreNode) {
+    if (parent.rtt) {
+      // Only the RTT node should be added to `renderToTexture`
+      parent.setUpdateType(UpdateType.RenderTexture);
+    }
+
+    // Propagate `parentHasRenderTexture` downwards
+    this.markChildrenWithRTT(parent);
+  }
+
+  // Clear RTT inheritance when detaching from an RTT chain
+  private clearRTTInheritance() {
+    // if this node is RTT itself stop the propagation important for nested RTT nodes
+    // for the initial RTT node this is already handled in `set rtt`
+    if (this.rtt) {
+      return;
+    }
+
+    for (const child of this.children) {
+      // force child to update everything as the RTT inheritance has changed
+      child.parentHasRenderTexture = false;
+      child.setUpdateType(UpdateType.All);
+      child.clearRTTInheritance();
+    }
   }
 
   get shader(): BaseShaderController {
@@ -2042,6 +2105,8 @@ export class CoreNode extends EventEmitter {
       sw: this.props.srcWidth,
       sh: this.props.srcHeight,
     });
+
+    this.onChangeIsRenderable(true);
   }
 
   set imageType(type: 'regular' | 'compressed' | 'svg' | null) {
@@ -2158,10 +2223,10 @@ export class CoreNode extends EventEmitter {
     this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
 
-  setRTTUpdates(type: number) {
-    this.hasRTTupdates = true;
-    this.parent?.setRTTUpdates(type);
-  }
+  // setRTTUpdates(type: number) {
+  //   this.hasRTTupdates = true;
+  //   this.parent?.setRTTUpdates(type);
+  // }
 
   animate(
     props: Partial<CoreNodeAnimateProps>,

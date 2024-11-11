@@ -382,7 +382,9 @@ async function runAutomation(
       // Override Math.random() as stable random number generator
       // - Each test gets the same sequence of random numbers
       // - This only is in effect when tests are run in automation mode
-      const rand = mt19937.factory({ seed: 1234 });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const factory = mt19937.factory || mt19937.default.factory;
+      const rand = factory({ seed: 1234 });
       Math.random = function () {
         return rand() / rand.MAX;
       };
