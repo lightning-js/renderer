@@ -63,10 +63,27 @@ export class ColorTexture extends Texture {
   }
 
   override async getTextureData(): Promise<TextureData> {
-    const pixelData32 = new Uint32Array([this.color]);
-    const pixelData8 = new Uint8ClampedArray(pixelData32.buffer);
+    let pixelData: Uint8Array;
+
+    if (this.color === 0xffffffff) {
+      pixelData = new Uint8Array([255, 255, 255, 255]);
+    } else {
+      const alpha = (this.color >>> 24) & 0xff;
+      const red = (this.color >>> 16) & 0xff;
+      const green = (this.color >>> 8) & 0xff;
+      const blue = this.color & 0xff;
+
+      pixelData = new Uint8Array([red, green, blue, alpha]);
+    }
+
+    // workaround to avoid creating a UInt8ClampedArray
+    // because new Uint8ClampedArray(iterable) support is missing in Chrome v38
+    // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray
+    const imageData = new ImageData(1, 1);
+    imageData.data.set(pixelData);
+
     return {
-      data: new ImageData(pixelData8, 1, 1),
+      data: imageData,
       premultiplyAlpha: true,
     };
   }
