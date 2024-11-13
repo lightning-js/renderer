@@ -491,7 +491,7 @@ export class Inspector {
     function animate() {
       setTimeout(() => {
         div.style.top = `${y - height * (mountY || mount)}px`;
-        div.style.left = `${x + (width - (mountX || mount))}px`;
+        div.style.left = `${x - width * (mountX || mount)}px`;
         div.style.width = `${width}px`;
         div.style.height = `${height}px`;
         div.style.opacity = `${alpha}`;
