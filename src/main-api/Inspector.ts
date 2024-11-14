@@ -248,8 +248,8 @@ export class Inspector {
 
   createNode(node: CoreNode): CoreNode {
     const div = this.createDiv(node.id, node.props);
-    (div as any).node = node;
-    (node as any).div = div;
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
     node.on('inViewport', () => div.setAttribute('state', 'inViewport'));
     node.on('inBounds', () => div.setAttribute('state', 'inBounds'));
@@ -261,8 +261,8 @@ export class Inspector {
 
   createTextNode(node: CoreNode): CoreTextNode {
     const div = this.createDiv(node.id, node.props);
-    (div as any).node = node;
-    (node as any).div = div;
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
     return this.createProxy(node, div) as CoreTextNode;
   }
@@ -412,14 +412,14 @@ export class Inspector {
       if (typeof mappedStyleResponse === 'object') {
         let value = mappedStyleResponse.value;
         if (property === 'x') {
-          const mount = props.mountX || props.mount;
+          const mount = props.mountX;
           const width = props.width;
 
           if (mount) {
             value = `${parseInt(value) - width * mount}px`;
           }
         } else if (property === 'y') {
-          const mount = props.mountY || props.mount;
+          const mount = props.mountY;
           const height = props.height;
 
           if (mount) {
@@ -482,7 +482,6 @@ export class Inspector {
       rotation = 0,
       scale = 1,
       color,
-      mount,
       mountX,
       mountY,
     } = props;
@@ -490,8 +489,8 @@ export class Inspector {
     // ignoring loops and repeats for now, as that might be a bit too much for the inspector
     function animate() {
       setTimeout(() => {
-        div.style.top = `${y - height * (mountY || mount)}px`;
-        div.style.left = `${x - width * (mountX || mount)}px`;
+        div.style.top = `${y - height * mountY}px`;
+        div.style.left = `${x - width * mountX}px`;
         div.style.width = `${width}px`;
         div.style.height = `${height}px`;
         div.style.opacity = `${alpha}`;
