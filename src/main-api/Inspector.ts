@@ -62,7 +62,7 @@ const stylePropertyMap: {
 
     return { prop: 'height', value: `${h}px` };
   },
-  zIndex: () => 'zIndex',
+  zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
   fontSize: () => 'font-size',
   fontStyle: () => 'font-style',
