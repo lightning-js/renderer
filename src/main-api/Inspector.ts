@@ -62,7 +62,7 @@ const stylePropertyMap: {
 
     return { prop: 'height', value: `${h}px` };
   },
-  zIndex: () => 'zIndex',
+  zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
   fontSize: () => 'font-size',
   fontStyle: () => 'font-style',
@@ -239,6 +239,7 @@ export class Inspector {
         // really typescript? really?
         key as keyof CoreNodeProps,
         properties[key as keyof CoreNodeProps],
+        properties,
       );
     }
 
@@ -247,8 +248,8 @@ export class Inspector {
 
   createNode(node: CoreNode): CoreNode {
     const div = this.createDiv(node.id, node.props);
-    (div as any).node = node;
-    (node as any).div = div;
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
     node.on('inViewport', () => div.setAttribute('state', 'inViewport'));
     node.on('inBounds', () => div.setAttribute('state', 'inBounds'));
@@ -260,8 +261,8 @@ export class Inspector {
 
   createTextNode(node: CoreNode): CoreTextNode {
     const div = this.createDiv(node.id, node.props);
-    (div as any).node = node;
-    (node as any).div = div;
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
     return this.createProxy(node, div) as CoreTextNode;
   }
@@ -295,6 +296,7 @@ export class Inspector {
             div,
             property as keyof CoreNodeProps | keyof CoreTextNodeProps,
             value,
+            node.props,
           );
         },
         configurable: true,
@@ -344,6 +346,7 @@ export class Inspector {
     property: keyof CoreNodeProps | keyof CoreTextNodeProps,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
+    props: CoreNodeProps | CoreTextNodeProps,
   ) {
     if (this.root === null || value === undefined || value === null) {
       return;
@@ -407,10 +410,23 @@ export class Inspector {
       }
 
       if (typeof mappedStyleResponse === 'object') {
-        div.style.setProperty(
-          mappedStyleResponse.prop,
-          mappedStyleResponse.value,
-        );
+        let value = mappedStyleResponse.value;
+        if (property === 'x') {
+          const mount = props.mountX;
+          const width = props.width;
+
+          if (mount) {
+            value = `${parseInt(value) - width * mount}px`;
+          }
+        } else if (property === 'y') {
+          const mount = props.mountY;
+          const height = props.height;
+
+          if (mount) {
+            value = `${parseInt(value) - height * mount}px`;
+          }
+        }
+        div.style.setProperty(mappedStyleResponse.prop, value);
       }
 
       return;
@@ -466,13 +482,15 @@ export class Inspector {
       rotation = 0,
       scale = 1,
       color,
+      mountX,
+      mountY,
     } = props;
 
     // ignoring loops and repeats for now, as that might be a bit too much for the inspector
     function animate() {
       setTimeout(() => {
-        div.style.top = `${y}px`;
-        div.style.left = `${x}px`;
+        div.style.top = `${y - height * mountY}px`;
+        div.style.left = `${x - width * mountX}px`;
         div.style.width = `${width}px`;
         div.style.height = `${height}px`;
         div.style.opacity = `${alpha}`;
