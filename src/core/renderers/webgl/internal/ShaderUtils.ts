@@ -100,11 +100,11 @@ export function createShader(
 ) {
   const shader = glw.createShader(type);
   if (!shader) {
-    throw new Error();
+    throw new Error(`Unable to create shader type: ${type}. Source: ${source}`);
   }
   glw.shaderSource(shader, source);
   glw.compileShader(shader);
-  const success = glw.getShaderParameter(shader, glw.COMPILE_STATUS);
+  const success = !!glw.getShaderParameter(shader, glw.COMPILE_STATUS);
   if (success) {
     return shader;
   }
@@ -120,12 +120,13 @@ export function createProgram(
 ) {
   const program = glw.createProgram();
   if (!program) {
-    throw new Error();
+    throw new Error('Unable to create program');
   }
+
   glw.attachShader(program, vertexShader);
   glw.attachShader(program, fragmentShader);
   glw.linkProgram(program);
-  const success = glw.getProgramParameter(program, glw.LINK_STATUS);
+  const success = !!glw.getProgramParameter(program, glw.LINK_STATUS);
   if (success) {
     return program;
   }

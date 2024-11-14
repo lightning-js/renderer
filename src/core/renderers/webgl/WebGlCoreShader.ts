@@ -143,12 +143,14 @@ export abstract class WebGlCoreShader extends CoreShader {
       fragmentSource,
     );
     if (!vertexShader || !fragmentShader) {
-      throw new Error();
+      throw new Error(
+        `Unable to create shader type: ${glw.FRAGMENT_SHADER}. Source: ${fragmentSource}`,
+      );
     }
 
     const program = createProgram(glw, vertexShader, fragmentShader);
     if (!program) {
-      throw new Error();
+      throw new Error('Unable to create program');
     }
     this.program = program;
 
