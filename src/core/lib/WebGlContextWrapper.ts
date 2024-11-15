@@ -299,7 +299,7 @@ export class WebGlContextWrapper {
     internalformat: GLint,
     format: GLenum,
     type: GLenum,
-    source: TexImageSource,
+    source: TexImageSource | Uint8Array,
   ): void;
   texImage2D(
     level: any,

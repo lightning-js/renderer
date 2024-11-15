@@ -63,10 +63,22 @@ export class ColorTexture extends Texture {
   }
 
   override async getTextureData(): Promise<TextureData> {
-    const pixelData32 = new Uint32Array([this.color]);
-    const pixelData8 = new Uint8ClampedArray(pixelData32.buffer);
+    const pixelData = new Uint8Array(4);
+
+    if (this.color === 0xffffffff) {
+      pixelData[0] = 255;
+      pixelData[1] = 255;
+      pixelData[2] = 255;
+      pixelData[3] = 255;
+    } else {
+      pixelData[0] = (this.color >> 16) & 0xff; // Red
+      pixelData[1] = (this.color >> 8) & 0xff; // Green
+      pixelData[2] = this.color & 0xff; // Blue
+      pixelData[3] = (this.color >>> 24) & 0xff; // Alpha
+    }
+
     return {
-      data: new ImageData(pixelData8, 1, 1),
+      data: pixelData,
       premultiplyAlpha: true,
     };
   }
