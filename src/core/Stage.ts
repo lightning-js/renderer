@@ -266,6 +266,11 @@ export class Stage {
     }
   }
 
+  setClearColor(color: number) {
+    this.renderer.updateClearColor(color);
+    this.renderRequested = true;
+  }
+
   updateFrameTime() {
     const newFrameTime = getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;

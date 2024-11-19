@@ -784,4 +784,21 @@ export class WebGlCoreRenderer extends CoreRenderer {
   override getDefShaderCtr(): BaseShaderController {
     return this.defShaderCtrl;
   }
+
+  /**
+   * Updates the WebGL context's clear color and clears the color buffer.
+   *
+   * @param color - The color to set as the clear color, represented as a 32-bit integer.
+   */
+  updateClearColor(color: number) {
+    const glw = this.glw;
+    const normalizedColor = getNormalizedRgbaComponents(color);
+    glw.clearColor(
+      normalizedColor[0],
+      normalizedColor[1],
+      normalizedColor[2],
+      normalizedColor[3],
+    );
+    glw.clear();
+  }
 }
