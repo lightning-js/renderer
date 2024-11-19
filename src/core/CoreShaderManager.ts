@@ -198,7 +198,7 @@ export class CoreShaderManager {
 
     if (shType === 'DynamicShader') {
       return this.loadDynamicShader(
-        props!,
+        props as DynamicShaderProps,
       ) as unknown as ShaderController<Type>;
     }
 

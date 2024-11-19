@@ -55,7 +55,6 @@ export class ShaderController<S extends keyof ShaderMap>
     stage: Stage,
   ) {
     this.resolvedProps = props;
-
     const keys = Object.keys(props);
     const l = keys.length;
 

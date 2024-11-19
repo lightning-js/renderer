@@ -79,6 +79,8 @@ export class SdfShader extends WebGlCoreShader {
     });
   }
 
+  static z$__type__Props: SdfShaderProps;
+
   override bindTextures(textures: WebGlCoreCtxTexture[]) {
     const { glw } = this;
     glw.activeTexture(0);
