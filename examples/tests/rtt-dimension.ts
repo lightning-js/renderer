@@ -29,6 +29,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: 300,
     parent: node,
     rtt: true,
+    clipping: true,
     zIndex: 5,
     colorTop: 0xfff00fff,
     colorBottom: 0x00ffffff,
