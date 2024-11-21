@@ -32,6 +32,7 @@ import {
   type CoreWebGlExtensions,
   getWebGlParameters,
   getWebGlExtensions,
+  type WebGlColor,
 } from './internal/RendererUtils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { Texture, TextureType } from '../../textures/Texture.js';
@@ -86,6 +87,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
+  clearColor: WebGlColor = {
+    raw: 0x00000000,
+    normalized: [0, 0, 0, 0],
+  };
+
   /**
    * White pixel texture used by default when no texture is specified.
    */
@@ -127,10 +133,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       options.contextSpy,
     );
     const glw = (this.glw = new WebGlContextWrapper(gl));
-
-    const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+
+    this.updateClearColor(clearColor);
+
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
@@ -754,9 +760,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       node.hasRTTupdates = false;
     }
 
-    const color = getNormalizedRgbaComponents(this.stage.options.clearColor);
+    const clearColor = this.clearColor.normalized;
     // Restore the default clear color
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
 
     // Bind the default framebuffer
     glw.bindFramebuffer(null);
@@ -791,6 +797,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param color - The color to set as the clear color, represented as a 32-bit integer.
    */
   updateClearColor(color: number) {
+    if (this.clearColor.raw === color) {
+      return;
+    }
     const glw = this.glw;
     const normalizedColor = getNormalizedRgbaComponents(color);
     glw.clearColor(
@@ -799,6 +808,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       normalizedColor[2],
       normalizedColor[3],
     );
+    this.clearColor = {
+      raw: color,
+      normalized: normalizedColor,
+    };
     glw.clear();
   }
 }

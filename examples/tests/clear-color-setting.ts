@@ -36,6 +36,7 @@ export default async function test(settings: ExampleSettings) {
 
   pageContainer.pushPage(createTestCase(renderer, 'red', 0xff0000ff));
   pageContainer.pushPage(createTestCase(renderer, 'green', 0x00ff00ff));
+  pageContainer.pushPage(createTestCase(renderer, 'transparent', 0x00000000));
 
   await delay(200);
   pageContainer.finalizePages();
@@ -44,7 +45,7 @@ export default async function test(settings: ExampleSettings) {
 
 function createTestCase(
   renderer: RendererMain,
-  colorName: 'red' | 'green',
+  colorName: 'red' | 'green' | 'transparent',
   color: number,
 ) {
   return async function (page: INode) {
