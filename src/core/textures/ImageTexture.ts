@@ -166,7 +166,7 @@ export class ImageTexture extends Texture {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
-        }),
+        }).catch(() => createImageBitmap(blob)),
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {
