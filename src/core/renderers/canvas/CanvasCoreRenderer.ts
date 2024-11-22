@@ -331,4 +331,13 @@ export class CanvasCoreRenderer extends CoreRenderer {
   getBufferInfo(): null {
     return null;
   }
+
+  /**
+   * Updates the clear color of the canvas renderer.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  updateClearColor(color: number) {
+    this.clearColor = color ? getRgbaComponents(color) : undefined;
+  }
 }

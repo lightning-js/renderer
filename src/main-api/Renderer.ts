@@ -658,4 +658,13 @@ export class RendererMain extends EventEmitter {
   rerender() {
     throw new Error('Not implemented');
   }
+
+  /**
+   * Sets the clear color for the stage.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  setClearColor(color: number) {
+    this.stage.setClearColor(color);
+  }
 }

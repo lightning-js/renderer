@@ -110,4 +110,5 @@ export abstract class CoreRenderer {
   abstract renderToTexture(node: CoreNode): void;
   abstract getBufferInfo(): BufferInfo | null;
   abstract getDefShaderCtr(): BaseShaderController;
+  abstract updateClearColor(color: number): void;
 }
