@@ -84,6 +84,8 @@ export class WebGlContextWrapper {
   public readonly LINK_STATUS;
   public readonly DYNAMIC_DRAW;
   public readonly COLOR_ATTACHMENT0;
+  public readonly INVALID_ENUM: number;
+  public readonly INVALID_OPERATION: number;
   //#endregion WebGL Enums
 
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
@@ -175,6 +177,8 @@ export class WebGlContextWrapper {
     this.LINK_STATUS = gl.LINK_STATUS;
     this.DYNAMIC_DRAW = gl.DYNAMIC_DRAW;
     this.COLOR_ATTACHMENT0 = gl.COLOR_ATTACHMENT0;
+    this.INVALID_ENUM = gl.INVALID_ENUM;
+    this.INVALID_OPERATION = gl.INVALID_OPERATION;
   }
   /**
    * Returns true if the WebGL context is WebGL2
@@ -1018,6 +1022,18 @@ export class WebGlContextWrapper {
   getExtension(name: string) {
     const { gl } = this;
     return gl.getExtension(name);
+  }
+
+  /**
+   * ```
+   * gl.getError(type);
+   * ```
+   *
+   * @returns
+   */
+  getError() {
+    const { gl } = this;
+    return gl.getError();
   }
 
   /**
