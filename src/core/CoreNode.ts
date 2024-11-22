@@ -742,6 +742,7 @@ export class CoreNode extends EventEmitter {
   public calcZIndex = 0;
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
+  public rttParent: CoreNode | null = null;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
@@ -1134,7 +1135,18 @@ export class CoreNode extends EventEmitter {
           continue;
         }
 
-        child.update(delta, this.clippingRect);
+        let childClippingRect = this.clippingRect;
+        if (this.rtt === true) {
+          childClippingRect = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            valid: false,
+          };
+        }
+
+        child.update(delta, childClippingRect);
       }
     }
 
@@ -1165,17 +1177,20 @@ export class CoreNode extends EventEmitter {
     this.childUpdateType = 0;
   }
 
+  private findParentRTTNode(): CoreNode | null {
+    let rttNode: CoreNode | null = this.parent;
+    while (rttNode && !rttNode.rtt) {
+      rttNode = rttNode.parent;
+    }
+    return rttNode;
+  }
+
   private notifyParentRTTOfUpdate() {
     if (this.parent === null) {
       return;
     }
 
-    let rttNode: CoreNode | null = this.parent;
-    // Traverse up to find the RTT root node
-    while (rttNode && !rttNode.rtt) {
-      rttNode = rttNode.parent;
-    }
-
+    const rttNode = this.rttParent || this.findParentRTTNode();
     if (!rttNode) {
       return;
     }
@@ -1264,6 +1279,11 @@ export class CoreNode extends EventEmitter {
     // check if we're larger then our parent, we're definitely in the viewport
     if (boundLargeThanBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
+    }
+
+    // if we are part of a parent render texture, we're always in bounds
+    if (this.parentHasRenderTexture === true) {
+      return CoreNodeRenderState.InBounds;
     }
 
     // check if we dont have dimensions, take our parent's render state
@@ -1991,7 +2011,7 @@ export class CoreNode extends EventEmitter {
     }
     this.props.rtt = value;
 
-    if (value) {
+    if (value === true) {
       this.initRenderTexture();
       this.markChildrenWithRTT();
     } else {
@@ -2000,7 +2020,7 @@ export class CoreNode extends EventEmitter {
 
     this.setUpdateType(UpdateType.RenderTexture);
 
-    if (this.parentHasRenderTexture) {
+    if (this.parentHasRenderTexture === true) {
       this.notifyParentRTTOfUpdate();
     }
   }
@@ -2054,6 +2074,7 @@ export class CoreNode extends EventEmitter {
     for (const child of this.children) {
       // force child to update everything as the RTT inheritance has changed
       child.parentHasRenderTexture = false;
+      child.rttParent = null;
       child.setUpdateType(UpdateType.All);
       child.clearRTTInheritance();
     }
