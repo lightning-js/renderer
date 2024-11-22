@@ -183,17 +183,36 @@ export class CoreTextureManager {
       this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
     }
 
-    if (!this.hasCreateImageBitmap) {
-      console.warn(
-        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-      );
-    }
+    this.validateCreateImageBitmap()
+      .then((result) => {
+        this.hasCreateImageBitmap = result;
+
+        if (!this.hasCreateImageBitmap) {
+          console.warn(
+            '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+          );
+        }
+
+        if (this.hasWorker && numImageWorkers > 0) {
+          this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
+        }
+      })
+      .catch((e) => {
+        console.warn(
+          '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+        );
+      });
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
     this.registerTextureType('SubTexture', SubTexture);
     this.registerTextureType('RenderTexture', RenderTexture);
+  }
+
+  private async validateCreateImageBitmap(): Promise<boolean> {
+    const testBlob = new Blob([''], { type: 'image/png' });
+    return (await createImageBitmap(testBlob)) !== null;
   }
 
   registerTextureType<Type extends keyof TextureMap>(
