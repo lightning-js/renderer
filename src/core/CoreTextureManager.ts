@@ -259,7 +259,7 @@ export class CoreTextureManager {
       self.createImageBitmap(new Blob(), {}).catch((e: unknown) => {
         if (
           e instanceof Error &&
-          e?.message ===
+          e.message ===
             "Failed to execute 'createImageBitmap' on 'Window': No function was found that matched the signature provided."
         ) {
           console.warn(
