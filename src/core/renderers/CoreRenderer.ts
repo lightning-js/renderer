@@ -30,9 +30,12 @@ import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
+import type {
+  CoreShaderConfig,
+  CoreShaderProgram,
+} from './CoreShaderProgram.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
-import type { CoreShader } from './CoreShader.js';
 
 export interface QuadOptions {
   width: number;
@@ -84,23 +87,22 @@ export abstract class CoreRenderer {
   readonly stage: Stage;
 
   //// Core Managers
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
   rttNodes: CoreNode[] = [];
 
   constructor(options: CoreRendererOptions) {
     this.options = options;
     this.stage = options.stage;
-    this.txManager = options.txManager;
-    this.txMemManager = options.txMemManager;
-    this.shManager = options.shManager;
   }
 
+  abstract load(): void;
   abstract reset(): void;
   abstract render(surface?: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
+  abstract createShaderProgram(
+    shaderConfig: CoreShaderConfig,
+    props?: Record<string, any>,
+  ): CoreShaderProgram;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;

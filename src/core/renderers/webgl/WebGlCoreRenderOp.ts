@@ -18,23 +18,19 @@
  */
 
 import { CoreRenderOp } from '../CoreRenderOp.js';
-import { WebGlCoreShader } from './WebGlCoreShader.js';
+import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type {
-  WebGlCoreRenderer,
-  WebGlCoreRendererOptions,
-} from './WebGlCoreRenderer.js';
+import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { RectWithValid } from '../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 
 const MAX_TEXTURES = 8; // TODO: get from gl
 
 export type WebGlRenderOpProps = {
   buffers: BufferCollection;
-  shader: WebGlCoreShader;
-  shaderProps: Record<string, unknown> | null;
+  shader: WebGlShaderProgram;
+  shaderProps: Record<string, any> | null;
   alpha: number;
   clippingRect: RectWithValid;
   dimensions: Dimensions;
@@ -54,8 +50,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   textures: WebGlCoreCtxTexture[] = [];
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
-  readonly shader: WebGlCoreShader;
-  readonly shaderProps: Record<string, unknown> | null;
+  readonly shader: WebGlShaderProgram;
+  readonly shaderProps: Record<string, any> | null;
   readonly alpha: number;
   readonly clippingRect: RectWithValid;
   readonly dimensions: Dimensions;
@@ -108,9 +104,9 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   }
 
   draw() {
-    const { glw, options, shManager } = this.renderer;
+    const { glw, options, stage } = this.renderer;
 
-    shManager.useShader(this.shader);
+    stage.shManager.useShader(this.shader);
     this.shader.bindRenderOp(this);
 
     // TODO: Reduce calculations required

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { assertTruthy, createWebGLContext, hasOwn } from '../../../utils.js';
+import { assertTruthy, createWebGLContext } from '../../../utils.js';
 import {
   CoreRenderer,
   type BufferInfo,
@@ -41,21 +41,16 @@ import { Texture, TextureType } from '../../textures/Texture.js';
 import { ColorTexture } from '../../textures/ColorTexture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
-import { CoreShaderManager } from '../../CoreShaderManager.js';
 import { BufferCollection } from './internal/BufferCollection.js';
-import {
-  compareRect,
-  getNormalizedRgbaComponents,
-  type RectWithValid,
-} from '../../lib/utils.js';
-import type { Dimensions } from '../../../common/CommonTypes.js';
-import { WebGlCoreShader } from './WebGlCoreShader.js';
+import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
+import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
-import type { BaseShaderController } from '../../../main-api/ShaderController.js';
-import { ImageTexture } from '../../textures/ImageTexture.js';
+import type { CoreShaderConfig } from '../CoreShaderProgram.js';
+import { Default } from './shaders/Default.js';
+import type { WebGlShaderConfig } from './WebGlShaderProgram.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -85,13 +80,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
-  defaultShader: WebGlCoreShader;
+  defaultShader: WebGlShaderProgram | null = null;
   quadBufferCollection: BufferCollection;
 
   /**
    * White pixel texture used by default when no texture is specified.
    */
-  defaultTexture: Texture;
+  defaultTexture: Texture | null = null;
 
   quadBufferUsage = 0;
   /**
@@ -109,19 +104,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.mode = 'webgl';
 
     const { canvas, clearColor, bufferMemory } = options;
-
-    this.defaultTexture = new ColorTexture(this.txManager);
-
-    // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being cleaned up.
-    // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
-
-    // When the default texture is loaded, request a render in case the
-    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
-    this.defaultTexture.once('loaded', () => {
-      this.stage.requestRender();
-    });
 
     const gl = createWebGLContext(
       canvas,
@@ -142,8 +124,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       parameters: getWebGlParameters(this.glw),
       extensions: getWebGlExtensions(this.glw),
     };
-    this.shManager.renderer = this;
-    this.defaultShader = this.shManager.loadShader('DefaultShader').shader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
     const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
@@ -188,6 +168,24 @@ export class WebGlCoreRenderer extends CoreRenderer {
     ]);
   }
 
+  load() {
+    this.defaultTexture = new ColorTexture(this.stage.txManager);
+
+    // Mark the default texture as ALWAYS renderable
+    // This prevents it from ever being cleaned up.
+    // Fixes https://github.com/lightning-js/renderer/issues/262
+    this.defaultTexture.setRenderableOwner(this, true);
+
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
+      this.stage.requestRender();
+    });
+
+    this.defaultShader = this.stage.shManager.loadShader(Default)
+      .shader as WebGlShaderProgram;
+  }
+
   reset() {
     const { glw } = this;
     this.curBufferIdx = 0;
@@ -197,21 +195,36 @@ export class WebGlCoreRenderer extends CoreRenderer {
     glw.clear();
   }
 
-  override createCtxTexture(textureSource: Texture): CoreContextTexture {
+  createShaderProgram(
+    shaderConfig: CoreShaderConfig,
+    props: Record<string, any>,
+  ): WebGlShaderProgram {
+    return new WebGlShaderProgram(
+      this,
+      shaderConfig as WebGlShaderConfig,
+      props,
+    );
+  }
+
+  createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
       return new WebGlCoreCtxSubTexture(
         this.glw,
-        this.txMemManager,
+        this.stage.txMemManager,
         textureSource,
       );
     } else if (textureSource instanceof RenderTexture) {
       return new WebGlCoreCtxRenderTexture(
         this.glw,
-        this.txMemManager,
+        this.stage.txMemManager,
         textureSource,
       );
     }
-    return new WebGlCoreCtxTexture(this.glw, this.txMemManager, textureSource);
+    return new WebGlCoreCtxTexture(
+      this.glw,
+      this.stage.txMemManager,
+      textureSource,
+    );
   }
 
   /**
@@ -230,7 +243,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { fQuadBuffer, uiQuadBuffer } = this;
     const shaderProps =
       (params.shader && params.shader.getResolvedProps()) || null;
-    let texture = params.texture || this.defaultTexture;
+    let texture = params.texture || this.defaultTexture!;
 
     assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
 
@@ -240,8 +253,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     targetDims.height = params.height;
 
     const targetShader =
-      (params.shader && (params.shader.shader as WebGlCoreShader)) ||
-      this.defaultShader;
+      (params.shader && (params.shader.shader as WebGlShaderProgram)) ||
+      this.defaultShader!;
 
     const renderOpProps: WebGlRenderOpProps = {
       buffers: this.quadBufferCollection,
@@ -591,7 +604,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   renderRTTNodes() {
     const { glw } = this;
-    const { txManager } = this.stage;
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
       const node = this.rttNodes[i];
@@ -605,7 +617,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
 
-      assertTruthy(node.texture, 'RTT node missing texture');
+      assertTruthy(node.texture !== null, 'RTT node missing texture');
       const ctxTexture = node.texture.ctxTexture;
       assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
       this.renderToTextureActive = true;

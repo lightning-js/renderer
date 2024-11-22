@@ -16,11 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { type WebGlShaderConfig } from '../WebGlCoreShader.js';
-import type { WebGlCoreCtxTexture } from '../WebGlCoreCtxTexture.js';
+import { type WebGlShaderConfig } from '../WebGlShaderProgram.js';
 
-export class DefaultShaderBatched implements WebGlShaderConfig {
-  supportsIndexedTextures = true;
+export const DefaultBatched: WebGlShaderConfig = {
+  name: 'DefaultBatched',
+  supportsIndexedTextures: true,
 
   // override bindTextures(texture: WebGlCoreCtxTexture[]) {
   //   const { renderer, glw } = this;
@@ -39,7 +39,7 @@ export class DefaultShaderBatched implements WebGlShaderConfig {
   //   this.glw.uniform1iv('u_textures[0]', samplers);
   // }
 
-  vertex = `
+  vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -72,9 +72,10 @@ export class DefaultShaderBatched implements WebGlShaderConfig {
       // flip y
       gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
     }
-  `;
-
-  fragment(textureUnits: number) {
+  `,
+  fragment(renderer) {
+    const textureUnits =
+      renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS;
     return `
     #define txUnits ${textureUnits}
       # ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -108,5 +109,5 @@ export class DefaultShaderBatched implements WebGlShaderConfig {
         gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoordinate);
       }
     `;
-  }
-}
+  },
+};

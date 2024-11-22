@@ -16,11 +16,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 import type { CoreNode } from '../../CoreNode.js';
-import type { CoreShaderManager } from '../../CoreShaderManager.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
+import type { CoreShaderConfig } from '../CoreShaderProgram.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import type { Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
@@ -30,13 +28,16 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
+import {
+  CanvasShaderProgram,
+  type CanvasShaderConfig,
+} from './CanvasShaderProgram.js';
 import { getRadius } from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
-import { UnsupportedShader } from './shaders/UnsupportedShader.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -45,30 +46,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
   private clearColor: RGBA | undefined;
   public renderToTextureActive = false;
   activeRttNode: CoreNode | null = null;
-  private defShaderCtr: BaseShaderController;
 
   constructor(options: CoreRendererOptions) {
     super(options);
 
     this.mode = 'canvas';
-    this.shManager.renderer = this;
 
     const { canvas, pixelRatio, clearColor } = options;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = pixelRatio;
     this.clearColor = clearColor ? getRgbaComponents(clearColor) : undefined;
-
-    // Stub for default shader controller since the canvas renderer does not
-    // (really) support the concept of a shader (yet)
-    this.defShaderCtr = {
-      type: 'DefaultShader',
-      props: {},
-      shader: new UnsupportedShader('DefaultShader'),
-      getResolvedProps: () => () => {
-        return {};
-      },
-    };
   }
 
   reset(): void {
@@ -84,6 +72,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
     }
 
     ctx.scale(this.pixelRatio, this.pixelRatio);
+  }
+
+  load(): void {
+    //noop
   }
 
   render(): void {
@@ -216,12 +208,12 @@ export class CanvasCoreRenderer extends CoreRenderer {
     }
   }
 
-  createCtxTexture(textureSource: Texture): CoreContextTexture {
-    return new CanvasCoreTexture(this.txMemManager, textureSource);
+  createShaderProgram(shaderConfig: CoreShaderConfig): CanvasShaderProgram {
+    return new CanvasShaderProgram(this, shaderConfig as CanvasShaderConfig);
   }
 
-  getShaderManager(): CoreShaderManager {
-    return this.shManager;
+  createCtxTexture(textureSource: Texture): CoreContextTexture {
+    return new CanvasCoreTexture(this.stage.txMemManager, textureSource);
   }
 
   renderRTTNodes(): void {

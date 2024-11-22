@@ -18,6 +18,7 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { RoundedRectangle } from '@lightningjs/renderer/webgl/shaders';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
@@ -44,7 +45,7 @@ export default async function test({
     x: 90,
     y: 90,
     color: 0xff0000ff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader(RoundedRectangle, {
       radius: 100,
     }),
     parent: testRoot,
@@ -123,7 +124,7 @@ export default async function test({
   );
   shaderAnimation.start();
   await shaderAnimation.waitUntilStopped();
-  t1Radius.text = 'radius: ' + t1.shader.props.radius!.toString();
+  t1Radius.text = 'radius: ' + t1.shader.props.radius.toString();
 
   await snapshot({ name: 'animation1' });
 

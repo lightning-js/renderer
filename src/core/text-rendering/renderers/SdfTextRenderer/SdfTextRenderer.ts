@@ -44,22 +44,19 @@ import {
   type SdfRenderWindow,
 } from './internal/setRenderWindow.js';
 import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
-import { TrFontManager, type FontFamilyMap } from '../../TrFontManager.js';
+import { type FontFamilyMap } from '../../TrFontManager.js';
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
 import { WebGlCoreRenderOp } from '../../../renderers/webgl/WebGlCoreRenderOp.js';
 import { BufferCollection } from '../../../renderers/webgl/internal/BufferCollection.js';
-import type {
-  SdfShader,
-  SdfShaderProps,
-} from '../../../renderers/webgl/shaders/SdfShader.js';
+import { Sdf } from '../../../renderers/webgl/shaders/SdfShader.js';
 import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
 import type { Dimensions } from '../../../../common/CommonTypes.js';
 import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
 import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
-import type { WebGlCoreShader } from '../../../renderers/webgl/WebGlCoreShader.js';
+import type { WebGlShaderProgram } from '../../../renderers/webgl/WebGlShaderProgram.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -140,14 +137,15 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.ssdfFontFamilies,
     this.msdfFontFamilies,
   ];
-  private sdfShader: WebGlCoreShader;
+  private sdfShader: WebGlShaderProgram;
   private rendererBounds: Bound;
 
   public type: 'canvas' | 'sdf' = 'sdf';
 
   constructor(stage: Stage) {
     super(stage);
-    this.sdfShader = this.stage.shManager.loadShader('SdfShader')!.shader;
+    this.sdfShader = this.stage.shManager.loadShader(Sdf)
+      .shader as WebGlShaderProgram;
     this.rendererBounds = {
       x1: 0,
       y1: 0,

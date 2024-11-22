@@ -17,22 +17,20 @@
  * limitations under the License.
  */
 
-import type { CoreRenderOp } from './CoreRenderOp.js';
-
-export interface ShaderConfig<T = Record<string, any>> {
+export interface CoreShaderConfig<T = Record<string, any>> {
+  name: string;
   props?: T;
+  /**
+   * validate props before creating shader program
+   */
+  validateProps?: (props: T) => T;
   /**
    * used for making a cache key to check for reusability
    */
-  generateKey?: (props: T) => string;
+  getCacheMarkers?: (props: T) => string;
 }
 
-export abstract class CoreShader {
-  abstract bindRenderOp(
-    renderOp: CoreRenderOp,
-    props: Record<string, unknown> | null,
-  ): void;
-
-  abstract attach(): void;
-  abstract detach(): void;
+export interface CoreShaderProgram {
+  attach?: () => void;
+  detach?: () => void;
 }

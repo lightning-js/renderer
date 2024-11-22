@@ -285,3 +285,45 @@ export function convertUrlToAbsolute(url: string): string {
   const absoluteUrl = new URL(url, self.location.href);
   return absoluteUrl.href;
 }
+
+export function calcFactoredRadius(
+  radius: number,
+  width: number,
+  height: number,
+): number {
+  return radius * Math.min(Math.min(width, height) / (2.0 * radius), 1);
+}
+
+export function calcFactoredRadiusArray(
+  radius: number[],
+  width: number,
+  height: number,
+): [number, number, number, number] {
+  const result: [number, number, number, number] = [0, 0, 0, 0];
+  result[0] = radius[0] || 0;
+  result[1] = radius[1] || result[0];
+  result[2] = radius[2] || result[0];
+  result[3] = radius[3] || result[0];
+  if (radius.length === 2) {
+    result[2] = result[0];
+    result[3] = result[1];
+  }
+  const factor = Math.min(
+    Math.min(
+      Math.min(
+        width / Math.max(width, result[0] + result[1]),
+        width / Math.max(width, result[2] + result[3]),
+      ),
+      Math.min(
+        height / Math.max(height, result[0] + result[3]),
+        height / Math.max(height, result[1] + result[2]),
+      ),
+    ),
+    1,
+  );
+  result[0] *= factor;
+  result[1] *= factor;
+  result[2] *= factor;
+  result[3] *= factor;
+  return result;
+}

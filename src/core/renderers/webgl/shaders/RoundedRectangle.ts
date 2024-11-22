@@ -18,8 +18,13 @@
  */
 
 import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
 import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
-import type { WebGlShaderConfig } from '../WebGlCoreShader.js';
+import {
+  calcFactoredRadius,
+  calcFactoredRadiusArray,
+} from '../../../lib/utils.js';
+import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 
 /**
  * Properties of the {@link RoundedRectangle} shader
@@ -30,92 +35,88 @@ export interface RoundedRectangleProps {
    *
    * @defaultValue 10
    */
-  radius?: number;
+  radius: number | number[];
 }
 
 /**
  * Similar to the {@link DefaultShader} but cuts out 4 rounded rectangle corners
  * as defined by the specified corner {@link RoundedRectangleProps.radius}
  */
-export class RoundedRectangle
-  implements WebGlShaderConfig<RoundedRectangleProps>
-{
-  props = {
+export const RoundedRectangle: WebGlShaderConfig<RoundedRectangleProps> = {
+  name: 'RoundedRectangle',
+
+  props: {
     radius: 10,
-  };
-
+  },
   update(glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) {
-    const radius = (renderOp.shaderProps as RoundedRectangleProps).radius!;
-    const radiusFactor =
-      Math.min(renderOp.dimensions.width, renderOp.dimensions.height) /
-      (2.0 * radius);
-    glw.uniform1f('u_radius', radius * Math.min(radiusFactor, 1));
-  }
-
-  vertex = `
-    # ifdef GL_FRAGMENT_PRECISION_HIGH
-    precision highp float;
-    # else
-    precision mediump float;
-    # endif
-
-    attribute vec2 a_position;
-    attribute vec2 a_textureCoordinate;
-    attribute vec4 a_color;
-    attribute float a_textureIndex;
-    attribute float a_depth;
-
-    uniform vec2 u_resolution;
-    uniform float u_pixelRatio;
-
-    varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
-
-    void main() {
-      vec2 normalized = a_position * u_pixelRatio / u_resolution;
-      vec2 zero_two = normalized * 2.0;
-      vec2 clip_space = zero_two - 1.0;
-
-      // pass to fragment
-      v_color = a_color;
-      v_textureCoordinate = a_textureCoordinate;
-
-      // flip y
-      gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
+    const radius = (renderOp.shaderProps as RoundedRectangleProps).radius;
+    if (!Array.isArray(radius)) {
+      glw.uniform1f(
+        'u_radius',
+        calcFactoredRadius(
+          radius,
+          renderOp.dimensions.width,
+          renderOp.dimensions.height,
+        ),
+      );
+    } else {
+      const fRadius = calcFactoredRadiusArray(
+        radius,
+        renderOp.dimensions.width,
+        renderOp.dimensions.height,
+      );
+      glw.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
     }
-  `;
+  },
+  getCacheMarkers(props: RoundedRectangleProps) {
+    return `radiusArray:${Array.isArray(props.radius)}`;
+  },
+  fragment(renderer: WebGlCoreRenderer, props: RoundedRectangleProps) {
+    return `
+      # ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+      # else
+      precision mediump float;
+      # endif
 
-  fragment = `
-    # ifdef GL_FRAGMENT_PRECISION_HIGH
-    precision highp float;
-    # else
-    precision mediump float;
-    # endif
+      uniform vec2 u_resolution;
+      uniform vec2 u_dimensions;
+      uniform ${Array.isArray(props.radius) ? 'vec4' : 'float'} u_radius;
+      uniform sampler2D u_texture;
 
-    uniform vec2 u_resolution;
-    uniform vec2 u_dimensions;
-    uniform float u_radius;
-    uniform sampler2D u_texture;
+      varying vec4 v_color;
+      varying vec2 v_textureCoordinate;
+      varying vec2 v_position;
 
-    varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+      float boxDist(vec2 p, vec2 size, float radius){
+        size -= vec2(radius);
+        vec2 d = abs(p) - size;
+        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
+      }
 
-    float boxDist(vec2 p, vec2 size, float radius){
-      size -= vec2(radius);
-      vec2 d = abs(p) - size;
-      return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
-    }
+      float fillMask(float dist) {
+        return clamp(-dist, 0.0, 1.0);
+      }
 
-    float fillMask(float dist) {
-      return clamp(-dist, 0.0, 1.0);
-    }
+      void main() {
+        vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+        vec2 halfDimensions = u_dimensions * 0.5;
+        ${
+          Array.isArray(props.radius)
+            ? `
+            float radius = u_radius[0] * step(v_textureCoordinate.x, 0.5) * step(v_textureCoordinate.y, 0.5);
+            radius = radius + u_radius[1] * step(0.5, v_textureCoordinate.x) * step(v_textureCoordinate.y, 0.5);
+            radius = radius + u_radius[2] * step(0.5, v_textureCoordinate.x) * step(0.5, v_textureCoordinate.y);
+            radius = radius + u_radius[3] * step(v_textureCoordinate.x, 0.5) * step(0.5, v_textureCoordinate.y);
+          `
+            : `
+            float radius = u_radius;
+          `
+        }
 
-    void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 halfDimensions = u_dimensions * 0.5;
-
-      float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, u_radius);
-      gl_FragColor = mix(vec4(0.0), color, fillMask(d));
-    }
-  `;
-}
+        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, radius);
+        gl_FragColor = mix(vec4(0.0), color, fillMask(d));
+      }
+    `;
+  },
+};

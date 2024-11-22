@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { DynamicShaderProps } from '../DynamicShader.js';
 import { updateWebSafeRadius, validateArrayLength4 } from './EffectUtils.js';
 import {
   ShaderEffect,

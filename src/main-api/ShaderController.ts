@@ -17,12 +17,11 @@
  * limitations under the License.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { WebGlCoreShader } from '../../exports/index.js';
-import type { ShaderMap } from '../core/CoreShaderManager.js';
-import type { ExtractProps } from '../core/CoreTextureManager.js';
 import type { Stage } from '../core/Stage.js';
-import type { CoreShader } from '../core/renderers/CoreShader.js';
-import type { UnsupportedShader } from '../core/renderers/canvas/shaders/UnsupportedShader.js';
+import type {
+  CoreShaderConfig,
+  CoreShaderProgram,
+} from '../core/renderers/CoreShaderProgram.js';
 
 /**
  * Shader Controller Base Interface
@@ -32,16 +31,16 @@ import type { UnsupportedShader } from '../core/renderers/canvas/shaders/Unsuppo
  * But it is also used as a base for more specific Shader Controller interfaces.
  */
 export interface BaseShaderController {
-  type: keyof ShaderMap;
-  shader: CoreShader;
+  type: CoreShaderConfig;
+  shader: CoreShaderProgram;
   props: Record<string, any>;
   getResolvedProps: () => Record<string, any> | null;
 }
 
-export type ShaderControllerConfig<S> = {
+export type ShaderControllerConfig<S extends CoreShaderConfig> = {
   type: S;
-  shader: WebGlCoreShader | UnsupportedShader;
-  props?: Record<string, unknown>;
+  shader: CoreShaderProgram;
+  props?: S['props'];
   stage: Stage;
 };
 /**
@@ -51,14 +50,12 @@ export type ShaderControllerConfig<S> = {
  * This class is used to control shader props.
  */
 
-export class ShaderController<S extends keyof ShaderMap>
-  implements BaseShaderController
-{
-  private resolvedProps: Record<string, unknown> | null = null;
+export class ShaderController<S extends CoreShaderConfig> {
+  private resolvedProps: Record<string, any> | null = null;
   readonly type: S;
-  readonly shader: WebGlCoreShader | UnsupportedShader;
+  readonly shader: CoreShaderProgram;
 
-  props: Record<string, unknown> = {};
+  props: S['props'] = {};
   constructor(config: ShaderControllerConfig<S>) {
     (this.type = config.type),
       (this.shader = config.shader),

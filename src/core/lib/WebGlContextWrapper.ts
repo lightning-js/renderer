@@ -1037,7 +1037,10 @@ export class WebGlContextWrapper {
    */
   createVertexArray() {
     assertTruthy(this.gl instanceof WebGL2RenderingContext);
-    return this.gl.createVertexArray();
+    if (this.gl instanceof WebGL2RenderingContext) {
+      return this.gl.createVertexArray();
+    }
+    return undefined;
   }
 
   /**
@@ -1049,7 +1052,9 @@ export class WebGlContextWrapper {
    */
   bindVertexArray(vertexArray: WebGLVertexArrayObject | null) {
     assertTruthy(this.gl instanceof WebGL2RenderingContext);
-    this.gl.bindVertexArray(vertexArray);
+    if (this.gl instanceof WebGL2RenderingContext) {
+      this.gl.bindVertexArray(vertexArray);
+    }
   }
 
   /**

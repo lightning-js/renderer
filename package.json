@@ -9,6 +9,7 @@
     "./utils": "./dist/exports/utils.js",
     "./canvas": "./dist/exports/canvas.js",
     "./webgl": "./dist/exports/webgl.js",
+    "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {

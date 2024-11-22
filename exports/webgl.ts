@@ -16,6 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * SDF Font renderer
  *
@@ -36,3 +37,5 @@
 
 export { SdfTextRenderer } from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 export { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
+
+export * as shaders from './webgl-shaders.js';

@@ -311,7 +311,7 @@ export abstract class Texture extends EventEmitter {
   static resolveDefaults(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     props: unknown,
-  ): Record<string, unknown> {
+  ): Record<string, any> {
     return {};
   }
 }

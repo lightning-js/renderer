@@ -1,4 +1,3 @@
-import type { DynamicShaderProps } from '../DynamicShader.js';
 import type { ShaderEffectValueMap } from './ShaderEffect.js';
 
 /*
@@ -102,7 +101,7 @@ export const validateArrayLength4 = (value: number | number[]): number[] => {
 
 export const updateWebSafeRadius = (
   values: ShaderEffectValueMap,
-  shaderProps?: DynamicShaderProps,
+  shaderProps?: Record<string, any>,
 ) => {
   if (values.programValue === undefined) {
     values.programValue = new Float32Array(4);

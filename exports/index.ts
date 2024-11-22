@@ -51,26 +51,26 @@ export {
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
-export type {
-  EffectProps,
-  FadeOutEffectProps,
-  LinearGradientEffectProps,
-  RadialGradientEffectProps,
-  GrayscaleEffectProps,
-  GlitchEffectProps,
-  RadialProgressEffectProps,
-  HolePunchEffectProps,
-} from '../src/core/CoreShaderManager.js';
+
 export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 
+export * from '../src/core/shaders/BorderBottomTemplate.js';
+export * from '../src/core/shaders/BorderTopTemplate.js';
+export * from '../src/core/shaders/BorderLeftTemplate.js';
+export * from '../src/core/shaders/BorderRightTemplate.js';
+export * from '../src/core/shaders/BorderTemplate.js';
+export * from '../src/core/shaders/HolePunchTemplate.js';
+export * from '../src/core/shaders/RoundedRectangleTemplate.js';
+export * from '../src/core/shaders/LinearGradientTemplate.js';
+export * from '../src/core/shaders/RadialGradientTemplate.js';
+
 // Shaders
-export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
+export * from '../src/core/renderers/webgl/WebGlShaderProgram.js';
 export * from '../src/core/renderers/webgl/shaders/effects/ShaderEffect.js';
 export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/ShaderUtils.js';
 

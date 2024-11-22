@@ -1,29 +1,8 @@
-import type { EffectMap } from '../../../../CoreShaderManager.js';
-import type { ExtractProps } from '../../../../CoreTextureManager.js';
-import type { WebGlContextWrapper } from '../../../../lib/WebGlContextWrapper.js';
-import type {} from '../../WebGlCoreShader.js';
+import type {} from '../../WebGlShaderProgram.js';
 import type {
   UniformInfo,
   UniformMethodMap,
 } from '../../internal/ShaderUtils.js';
-
-export interface BaseEffectDesc {
-  name?: string;
-  type: keyof EffectMap;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  props: Record<string, any>;
-}
-
-export interface EffectDesc<
-  T extends { name?: string; type: keyof EffectMap } = {
-    name?: string;
-    type: keyof EffectMap;
-  },
-> extends BaseEffectDesc {
-  name?: T['name'];
-  type: T['type'];
-  props: ExtractProps<EffectMap[T['type']]>;
-}
 
 /**
  * Allows the `keyof EffectMap` to be mapped over and form an discriminated
@@ -59,11 +38,6 @@ export interface EffectDesc<
  * and will know exactly what the `props` field should be based on the `type`
  * field.
  */
-type MapEffectDescs<T extends keyof EffectMap> = T extends keyof EffectMap
-  ? EffectDesc<{ type: T; name: string }>
-  : never;
-
-export type EffectDescUnion = MapEffectDescs<keyof EffectMap>;
 
 export interface ShaderEffectUniform {
   value: number | number[] | boolean | string;

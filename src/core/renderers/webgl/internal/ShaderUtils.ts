@@ -148,6 +148,7 @@ export const DefaultVertexSource = `
 
   varying vec4 v_color;
   varying vec2 v_textureCoordinate;
+  varying vec2 v_position;
 
   void main() {
     vec2 normalized = a_position * u_pixelRatio;
@@ -155,8 +156,30 @@ export const DefaultVertexSource = `
 
     v_color = a_color;
     v_textureCoordinate = a_textureCoordinate;
+    v_position = vec2(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0);
+    v_position.y = -sign(screenSpace.y) * v_position.y;
 
     gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
     gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
   }
 `;
+
+/**
+ * generate fragment source for
+ * @param stops
+ * @returns
+ */
+export function genGradientColors(stops: number): string {
+  let result = `
+    float stopCalc = (dist - u_stops[0]) / (u_stops[1] - u_stops[0]);
+    vec4 colorOut = mix(u_colors[0], u_colors[1], stopCalc);
+  `;
+  if (stops > 2) {
+    for (let i = 2; i < stops; i++) {
+      result += `colorOut = mix(colorOut, u_colors[${i}], clamp((dist - u_stops[${
+        i - 1
+      }]) / (u_stops[${i}] - u_stops[${i - 1}]), 0.0, 1.0));`;
+    }
+  }
+  return result;
+}

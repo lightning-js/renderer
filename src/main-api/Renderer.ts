@@ -18,7 +18,6 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
@@ -30,50 +29,13 @@ import {
   type BaseShaderController,
 } from './ShaderController.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
-import type {
-  EffectDesc,
-  EffectDescUnion,
-} from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
-import { UnsupportedShader } from '../core/renderers/canvas/shaders/UnsupportedShader.js';
-
-/**
- * An immutable reference to a specific Shader type
- *
- * @remarks
- * See {@link ShaderRef} for more details.
- */
-export interface SpecificShaderRef<ShType extends keyof ShaderMap> {
-  readonly descType: 'shader';
-  readonly shType: ShType;
-  readonly props: ExtractProps<ShaderMap[ShType]>;
-}
-
-type MapShaderRefs<ShType extends keyof ShaderMap> =
-  ShType extends keyof ShaderMap ? SpecificShaderRef<ShType> : never;
-
-/**
- * An immutable reference to a Shader
- *
- * @remarks
- * This structure should only be created by the RendererMain's `createShader`
- * method. The structure is immutable and should not be modified once created.
- *
- * A `ShaderRef` exists in the Main API Space and is used to point to an actual
- * `Shader` instance in the Core API Space. The `ShaderRef` is used to
- * communicate with the Core API Space to create, load, and destroy the
- * `Shader` instance.
- *
- * This type is technically a discriminated union of all possible shader types.
- * If you'd like to represent a specific shader type, you can use the
- * `SpecificShaderRef` generic type.
- */
-export type ShaderRef = MapShaderRefs<keyof ShaderMap>;
+import type { CoreShaderConfig } from '../core/renderers/CoreShaderProgram.js';
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -304,7 +266,7 @@ export interface RendererMainSettings {
  *     - `criticalThreshold` - The critical threshold (in bytes)
  */
 export class RendererMain extends EventEmitter {
-  readonly root: INode<ShaderController<'DefaultShader'>>;
+  readonly root: INode;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
@@ -387,9 +349,7 @@ export class RendererMain extends EventEmitter {
     });
 
     // Extract the root node
-    this.root = this.stage.root as unknown as INode<
-      ShaderController<'DefaultShader'>
-    >;
+    this.root = this.stage.root as unknown as INode;
 
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
@@ -426,9 +386,9 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode<
-    ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
-  >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
+  createNode<ShCtr extends ShaderController<any>>(
+    props: Partial<INodeProps<ShCtr>>,
+  ): INode<ShCtr> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
@@ -520,23 +480,13 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createShader<ShType extends keyof ShaderMap>(
-    shaderType: ShType,
-    props?: Record<string, unknown>,
+  createShader<ShConfig extends CoreShaderConfig<any>>(
+    shaderConfig: ShConfig,
+    props?: Partial<ShConfig['props']>,
   ) {
-    //Don't call to shaderManager if renderer is canvas renderer
-    if (this.stage.renderer.mode === 'canvas') {
-      return new ShaderController<ShType>({
-        type: shaderType,
-        shader: new UnsupportedShader(shaderType as string),
-        props: props,
-        stage: this.stage,
-      });
-    }
-
-    const resolvedShader = this.stage.shManager.loadShader(shaderType, props);
-    return new ShaderController<ShType>({
-      type: shaderType,
+    const resolvedShader = this.stage.shManager.loadShader(shaderConfig, props);
+    return new ShaderController<ShConfig>({
+      type: shaderConfig,
       shader: resolvedShader.shader,
       props: resolvedShader.props,
       stage: this.stage,

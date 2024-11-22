@@ -19,15 +19,9 @@
 import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
 import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
 import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
-import { type WebGlShaderConfig } from '../WebGlCoreShader.js';
+import { type WebGlShaderConfig } from '../WebGlShaderProgram.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-
-declare module '../../../CoreShaderManager.js' {
-  interface ShaderMap {
-    SdfShader: typeof SdfShader;
-  }
-}
 
 /**
  * Properties of the {@link SdfShader}
@@ -59,16 +53,16 @@ export interface SdfShaderProps {
  * ends up being a performance bottleneck we can always look at ways to
  * remove it.
  */
-export class SdfShader implements WebGlShaderConfig<SdfShaderProps> {
-  props = {
+export const Sdf: WebGlShaderConfig<SdfShaderProps> = {
+  name: 'Sdf',
+  props: {
     transform: IDENTITY_MATRIX_3x3,
     scrollY: 0,
     color: 0xffffffff,
     size: 16,
     distanceRange: 1.0,
     debug: false,
-  };
-
+  },
   update(glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) {
     const props = renderOp.shaderProps as Required<SdfShaderProps>;
     glw.uniformMatrix3fv('u_transform', props.transform);
@@ -77,9 +71,8 @@ export class SdfShader implements WebGlShaderConfig<SdfShaderProps> {
     glw.uniform1f('u_size', props.size);
     glw.uniform1f('u_distanceRange', props.distanceRange);
     glw.uniform1i('u_debug', props.debug ? 1 : 0);
-  }
-
-  vertex = `
+  },
+  vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -109,9 +102,8 @@ export class SdfShader implements WebGlShaderConfig<SdfShaderProps> {
       v_texcoord = a_textureCoordinate;
 
     }
-  `;
-
-  fragment = `
+  `,
+  fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -143,5 +135,5 @@ export class SdfShader implements WebGlShaderConfig<SdfShaderProps> {
         // IMPORTANT: We must premultiply the color by the alpha value before returning it.
         gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
     }
-  `;
-}
+  `,
+};

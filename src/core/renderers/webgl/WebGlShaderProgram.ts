@@ -17,9 +17,11 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-import { CoreShader, type ShaderConfig } from '../CoreShader.js';
+import type {
+  CoreShaderConfig,
+  CoreShaderProgram,
+} from '../CoreShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type {
   WebGlCoreRenderOp,
@@ -30,39 +32,39 @@ import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
   createShader,
-  type ShaderSource,
   DefaultVertexSource,
 } from './internal/ShaderUtils.js';
 
-export type WebGlShaderLifecycle = {
-  /**
-   * This function is called before drawing the node, here you can update the uniforms you use in the fragment / vertex shader.
-   * @param glw WebGlContextWrapper with utilities to update uniforms, and other actions.
-   * @param renderOp containing all information of the render operation that uses this shader
-   * @returns
-   */
-  update?: (glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) => void;
-  /**
-   * This function is used to check if the shader can bereused based on quad info
-   * @param props
-   * @returns
-   */
-  canBatch?: (
-    renderOpA: WebGlRenderOpProps,
-    renderOpB: WebGlRenderOpProps,
-  ) => boolean;
-};
+type ShaderSource<T> =
+  | string
+  | ((renderer: WebGlCoreRenderer, props: T) => string);
 
-export type WebGlShaderConfig<T = Record<string, any>> = ShaderConfig<T> &
-  WebGlShaderLifecycle & {
+export type WebGlShaderConfig<T = Record<string, unknown>> =
+  CoreShaderConfig<T> & {
     /**
      * fragment shader source for WebGl or WebGl2
      */
-    fragment: ShaderSource;
+    fragment: ShaderSource<T>;
     /**
      * vertex shader source for WebGl or WebGl2
      */
-    vertex?: ShaderSource;
+    vertex?: ShaderSource<T>;
+    /**
+     * This function is called before drawing the node, here you can update the uniforms you use in the fragment / vertex shader.
+     * @param glw WebGlContextWrapper with utilities to update uniforms, and other actions.
+     * @param renderOp containing all information of the render operation that uses this shader
+     * @returns
+     */
+    update?: (glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) => void;
+    /**
+     * This function is used to check if the shader can bereused based on quad info
+     * @param props
+     * @returns
+     */
+    canBatch?: (
+      renderOpA: WebGlRenderOpProps,
+      renderOpB: WebGlRenderOpProps,
+    ) => boolean;
     /**
      * extensions required for specific shader?
      */
@@ -71,13 +73,7 @@ export type WebGlShaderConfig<T = Record<string, any>> = ShaderConfig<T> &
     supportsIndexedTextures?: boolean;
   };
 
-export interface WebGlShaderBatchMap {
-  dimensions: Dimensions;
-  alpha: number;
-  props: Record<string, unknown>;
-}
-
-export class WebGlCoreShader extends CoreShader {
+export class WebGlShaderProgram implements CoreShaderProgram {
   protected boundBufferCollection: BufferCollection | null = null;
   protected program: WebGLProgram;
   /**
@@ -90,13 +86,16 @@ export class WebGlCoreShader extends CoreShader {
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
-  protected lifecycle: WebGlShaderLifecycle;
+  protected lifecycle: Pick<WebGlShaderConfig, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
   supportsIndexedTextures = false;
 
-  constructor(renderer: WebGlCoreRenderer, config: WebGlShaderConfig) {
-    super();
+  constructor(
+    renderer: WebGlCoreRenderer,
+    config: WebGlShaderConfig,
+    resolvedProps: Record<string, any>,
+  ) {
     this.renderer = renderer;
     const glw = (this.glw = renderer.glw);
 
@@ -120,12 +119,9 @@ export class WebGlCoreShader extends CoreShader {
       }
     });
 
-    const textureUnits =
-      renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS;
-
     let vertexSource =
       config.vertex instanceof Function
-        ? config.vertex(textureUnits)
+        ? config.vertex(renderer, resolvedProps)
         : config.vertex;
 
     if (vertexSource === undefined) {
@@ -134,7 +130,7 @@ export class WebGlCoreShader extends CoreShader {
 
     const fragmentSource =
       config.fragment instanceof Function
-        ? config.fragment(textureUnits)
+        ? config.fragment(renderer, resolvedProps)
         : config.fragment;
 
     const vertexShader = createShader(glw, glw.VERTEX_SHADER, vertexSource);
@@ -143,6 +139,7 @@ export class WebGlCoreShader extends CoreShader {
       glw.FRAGMENT_SHADER,
       fragmentSource,
     );
+
     if (!vertexShader || !fragmentShader) {
       throw new Error();
     }
@@ -296,14 +293,14 @@ export class WebGlCoreShader extends CoreShader {
     this.glw.bindTexture(textures[0]!.ctxTexture);
   }
 
-  override attach(): void {
+  attach(): void {
     this.glw.useProgram(this.program);
     if (this.glw.isWebGl2() && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
   }
 
-  override detach(): void {
+  detach(): void {
     this.disableAttributes();
   }
 }

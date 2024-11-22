@@ -26,7 +26,7 @@ import {
 } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
+import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   TextRenderer,
   type TextRendererMap,
@@ -47,7 +47,6 @@ import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
-import type { BaseShaderController } from '../main-api/ShaderController.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
@@ -143,7 +142,7 @@ export class Stage {
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(numImageWorkers);
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
-    this.shManager = new CoreShaderManager();
+    this.shManager = new CoreShaderManager(this);
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
@@ -170,6 +169,7 @@ export class Stage {
     };
 
     this.renderer = new renderEngine(rendererOptions);
+    this.renderer.load();
     const renderMode = this.renderer.mode || 'webgl';
 
     setPremultiplyMode(renderMode);
