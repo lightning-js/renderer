@@ -150,23 +150,28 @@ export class ImageTexture extends Texture {
       const hasAlphaChannel =
         premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
 
-      if (sw !== null && sh !== null) {
-        return {
-          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
-            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          }),
-          premultiplyAlpha: hasAlphaChannel,
-        };
-      }
+      let data;
 
-      return {
-        data: await createImageBitmap(blob, {
+      if (sw !== null && sh !== null) {
+        data = await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
-        }).catch(() => createImageBitmap(blob)),
+        });
+      }
+
+      if (this.txManager.createImageBitmapNotSupportsOptions) {
+        data = await createImageBitmap(blob);
+      } else {
+        data = await createImageBitmap(blob, {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        }).catch(() => createImageBitmap(blob));
+      }
+
+      return {
+        data: data,
         premultiplyAlpha: hasAlphaChannel,
       };
     } else {

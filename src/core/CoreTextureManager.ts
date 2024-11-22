@@ -156,6 +156,7 @@ export class CoreTextureManager {
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
+  createImageBitmapNotSupportsOptions = false;
   hasWorker = !!self.Worker;
   /**
    * Renderer that this texture manager is associated with
@@ -183,11 +184,7 @@ export class CoreTextureManager {
       this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
     }
 
-    if (!this.hasCreateImageBitmap) {
-      console.warn(
-        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-      );
-    }
+    this.checkCompatibilities();
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
@@ -249,6 +246,28 @@ export class CoreTextureManager {
     const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
       keyCache.delete(cacheKey);
+    }
+  }
+
+  checkCompatibilities() {
+    // check compatibility with createImageBitmap
+    if (!this.hasCreateImageBitmap) {
+      console.warn(
+        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+      );
+    } else {
+      self.createImageBitmap(new Blob(), {}).catch((e: unknown) => {
+        if (
+          e instanceof Error &&
+          e?.message ===
+            "Failed to execute 'createImageBitmap' on 'Window': No function was found that matched the signature provided."
+        ) {
+          console.warn(
+            '[Lightning] createImageBitmap not supports (image, options) signature on this browser.',
+          );
+          this.createImageBitmapNotSupportsOptions = true;
+        }
+      });
     }
   }
 }
