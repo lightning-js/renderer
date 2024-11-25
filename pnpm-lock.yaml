@@ -29,6 +29,9 @@ importers:
       eslint-config-prettier:
         specifier: ^8.7.0
         version: 8.10.0(eslint@9.15.0)
+      eslint-define-config:
+        specifier: ^2.1.0
+        version: 2.1.0
       husky:
         specifier: ^8.0.3
         version: 8.0.3
@@ -2032,6 +2035,10 @@ packages:
     hasBin: true
     peerDependencies:
       eslint: '>=7.0.0'
+
+  eslint-define-config@2.1.0:
+    resolution: {integrity: sha512-QUp6pM9pjKEVannNAbSJNeRuYwW3LshejfyBBpjeMGaJjaDUpVps4C6KVR8R7dWZnD3i0synmrE36znjTkJvdQ==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0', pnpm: '>=8.6.0'}
 
   eslint-scope@8.2.0:
     resolution: {integrity: sha512-PHlWUfG6lvPc3yvP5A4PNyBL1W8fkDUccmI21JUu/+GKZBoH/W5u6usENXUrWFRsyoW5ACUjFGgAFQp5gUlb/A==}
@@ -5126,6 +5133,8 @@ snapshots:
   eslint-config-prettier@8.10.0(eslint@9.15.0):
     dependencies:
       eslint: 9.15.0
+
+  eslint-define-config@2.1.0: {}
 
   eslint-scope@8.2.0:
     dependencies:
