@@ -134,7 +134,6 @@ export class ImageTexture extends Texture {
 
   async loadImageFallback(src: string, hasAlpha: boolean) {
     const img = new Image();
-    img.src = src;
 
     return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
       (resolve) => {
@@ -146,6 +145,8 @@ export class ImageTexture extends Texture {
           console.warn('Image loading failed, returning fallback object.');
           resolve({ data: img, premultiplyAlpha: hasAlpha });
         };
+
+        img.src = src;
       },
     );
   }
@@ -162,8 +163,15 @@ export class ImageTexture extends Texture {
     premultiplyAlpha: boolean;
   }> {
     const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
+    const imageBitmapSupported = this.txManager.imageBitmapSupported;
 
-    if (sx !== null && sy !== null && sw !== null && sh !== null) {
+    if (
+      imageBitmapSupported.full === true &&
+      sx !== null &&
+      sy !== null &&
+      sw !== null &&
+      sh !== null
+    ) {
       // createImageBitmap with crop
       const bitmap = await createImageBitmap(blob, sx, sy, sw, sh, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
@@ -171,14 +179,21 @@ export class ImageTexture extends Texture {
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else {
-      // createImageBitmap without crop
+    } else if (imageBitmapSupported.options === true) {
+      // createImageBitmap without crop but with options
       const bitmap = await createImageBitmap(blob, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else {
+      // basic createImageBitmap without options or crop
+      // this is supported for Chrome v50 to v52/54 that doesn't support options
+      return {
+        data: await createImageBitmap(blob),
+        premultiplyAlpha: hasAlphaChannel,
+      };
     }
   }
 
