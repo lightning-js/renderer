@@ -34,7 +34,7 @@ import {
 
 import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
-import * as mt19937 from '@stdlib/random-base-mt19937';
+
 import type {
   ExampleSettings,
   SnapshotOptions,
@@ -42,7 +42,21 @@ import type {
 import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
+import { isProductionEnvironment } from '../dist/src/utils.js';
 
+// This is a hack to ensure that the mt19937 module is not included
+// in the production build. This is because the module is only used
+// for testing automation purposes and has issues on legacy browsers.
+let mt19937: any | undefined;
+if (isProductionEnvironment() === false) {
+  import('@stdlib/random-base-mt19937')
+    .then((module) => {
+      mt19937 = module;
+    })
+    .catch((err) => {
+      console.error('Failed to load mt19937 module:', err);
+    });
+}
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
   customSettings?: (
@@ -383,11 +397,15 @@ async function runAutomation(
       // - Each test gets the same sequence of random numbers
       // - This only is in effect when tests are run in automation mode
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      const factory = mt19937.factory || mt19937.default.factory;
-      const rand = factory({ seed: 1234 });
-      Math.random = function () {
-        return rand() / rand.MAX;
-      };
+      if (isProductionEnvironment() === false) {
+        // The mt19937 module is only used for testing automation purposes
+        // and has issues on legacy browsers (i.e. chrome v38).
+        const factory = mt19937.factory || mt19937.default.factory;
+        const rand = factory({ seed: 1234 });
+        Math.random = function () {
+          return rand() / rand.MAX;
+        };
+      }
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {
