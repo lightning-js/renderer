@@ -133,7 +133,7 @@ export class ImageTexture extends Texture {
   }
 
   async loadImage(src: string) {
-    const { premultiplyAlpha, sx, sy, sw, sh, width, height } = this.props;
+    const { premultiplyAlpha, sx, sy, sw, sh } = this.props;
 
     if (this.txManager.imageWorkerManager !== null) {
       return await this.txManager.imageWorkerManager.getImage(
