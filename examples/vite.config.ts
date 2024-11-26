@@ -49,8 +49,6 @@ const devTarget = 'es2020';
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default defineConfig(({ command, mode, isSsrBuild }) => {
-  const isProduction = mode === 'production';
-
   return {
     base: './',
     plugins: [
@@ -76,11 +74,6 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
       minify: false,
       sourcemap: true,
       outDir: path.resolve(__dirname, 'dist'),
-      rollupOptions: {
-        // Exclude @stdlib/random-base-mt19937 from the production build. This is because the
-        // legacy build does not support the `crypto` module and breaks the es5 Chrome v38 build.
-        external: isProduction ? ['@stdlib/random-base-mt19937'] : [],
-      },
     },
     server: {
       headers: {

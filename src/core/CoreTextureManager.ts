@@ -200,6 +200,8 @@ export class CoreTextureManager {
           console.warn(
             '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
           );
+
+          return;
         }
 
         if (this.hasWorker && numImageWorkers > 0) {
@@ -224,6 +226,7 @@ export class CoreTextureManager {
 
   private async validateCreateImageBitmap(): Promise<CreateImageBitmapSupport> {
     // Test if createImageBitmap is supported using a simple 1x1 PNG image
+    // prettier-ignore (this is a binary PNG image)
     const pngBinaryData = new Uint8Array([
       0x89,
       0x50,
