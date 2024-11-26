@@ -93,7 +93,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // Clipping
     if (this.clippingRect.valid) {
       const { x, y, width, height } = this.clippingRect;
-      const pixelRatio = options.pixelRatio;
+      const pixelRatio = this.parentHasRenderTexture ? 1 : options.pixelRatio;
       const canvasHeight = options.canvas.height;
 
       const clipX = Math.round(x * pixelRatio);
@@ -109,8 +109,8 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
           : 0;
       }
 
-      glw.viewport(clipX, clipY, clipWidth, clipHeight);
       glw.setScissorTest(true);
+      glw.scissor(clipX, clipY, clipWidth, clipHeight);
     } else {
       glw.setScissorTest(false);
     }
