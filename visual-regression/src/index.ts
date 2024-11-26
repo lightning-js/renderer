@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -32,28 +31,19 @@
 import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
-import upng from 'upng-js';
 import chalk from 'chalk';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { execa, $ } from 'execa';
 import { fileURLToPath } from 'url';
+import {
+  compareSnapshot,
+  saveSnapshot,
+  type SnapshotOptions,
+} from './snapshot.js';
 
-/**
- * Keep in sync with `examples/common/ExampleSettings.ts`
- */
-export interface SnapshotOptions {
-  name?: string;
-  clip?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
-
-const certifiedSnapshotDir = 'certified-snapshots';
-const failedResultsDir = 'failed-results';
+export const certifiedSnapshotDir = 'certified-snapshots';
+export const failedResultsDir = 'failed-results';
 
 const browsers = { chromium };
 let snapshotsTested = 0;
@@ -159,7 +149,7 @@ async function dockerCiMode(): Promise<number> {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const rootDir = path.resolve(__dirname, '..', '..', '..');
 
-  const childProc = $({ stdio: 'inherit' })`docker run --network host \
+  const childProc = $({ stdio: 'inherit' })`podman run --network host \
     -v ${rootDir}:/work/ \
     -v /work/node_modules \
     -v /work/.pnpm-store \
@@ -170,12 +160,6 @@ async function dockerCiMode(): Promise<number> {
   `;
   await childProc;
   return childProc.exitCode ?? 1;
-}
-
-interface CompareResult {
-  doesMatch: boolean;
-  diffImageBuffer?: Buffer;
-  reason?: string;
 }
 
 /**
@@ -302,111 +286,56 @@ async function runTest(browserType: 'chromium') {
     'snapshot',
     async (test: string, options: SnapshotOptions) => {
       snapshotsTested++;
+
+      // Ensure clip dimensions are integers
       if (options.clip) {
-        options.clip = {
-          x: Math.round(options.clip.x),
-          y: Math.round(options.clip.y),
-          width: Math.round(options.clip.width),
-          height: Math.round(options.clip.height),
-        };
+        for (const key of ['x', 'y', 'width', 'height']) {
+          options.clip[key as keyof typeof options.clip] = Math.round(
+            options.clip[key as keyof typeof options.clip],
+          );
+        }
       }
+
       const subtestName = options.name ? `${test}_${options.name}` : test;
       const snapshotIndex = (testCounters[subtestName] =
         (testCounters[subtestName] || 0) + 1);
       const makeFilename = (postfix?: string) =>
         `${subtestName}-${snapshotIndex}${postfix ? `-${postfix}` : ''}.png`;
       const snapshotPath = path.join(snapshotSubDir, makeFilename());
+
       if (argv.capture) {
-        process.stdout.write(
-          chalk.gray(
-            `Saving snapshot for ${chalk.white(
-              `${subtestName}-${snapshotIndex}`,
-            )}... `,
-          ),
+        // Handle snapshot capturing
+        const captureResponse = await saveSnapshot(
+          page,
+          snapshotPath,
+          options,
+          subtestName,
+          snapshotIndex,
+          argv.overwrite,
         );
-        // If file exists and overwrite is false, skip
-        if (fs.existsSync(snapshotPath) && !argv.overwrite) {
-          process.stdout.write(
-            chalk.yellow.bold('SKIPPED! (already exists)\n'),
-          );
+        if (captureResponse === false) {
           snapshotsSkipped++;
           return;
-        } else {
-          await page.screenshot({ path: snapshotPath, clip: options?.clip });
-          process.stdout.write(chalk.green.bold('DONE!\n'));
+        }
+
+        if (argv.overwrite) {
           snapshotsPassed++;
           return;
         }
+      }
+
+      // Handle snapshot comparison
+      const resp = await compareSnapshot(
+        page,
+        snapshotPath,
+        options,
+        subtestName,
+        snapshotIndex,
+      );
+      if (resp) {
+        snapshotsPassed++;
       } else {
-        process.stdout.write(
-          chalk.gray(
-            `Running ${chalk.white(`${subtestName}-${snapshotIndex}`)}... `,
-          ),
-        );
-        const actualPng = await page.screenshot({ clip: options?.clip });
-        const actualImage = upng.decode(actualPng);
-        let expectedPng: Buffer | null = null;
-        let expectedImage: upng.Image | null = null;
-        let result: CompareResult = {
-          doesMatch: false,
-        };
-
-        if (fs.existsSync(snapshotPath)) {
-          expectedPng = await fs.readFile(snapshotPath, null);
-          expectedImage = upng.decode(expectedPng);
-          result = compareBuffers(actualImage, expectedImage);
-        } else {
-          result = {
-            doesMatch: false,
-            reason: 'snapshot does not exist!',
-          };
-        }
-
-        if (result.doesMatch) {
-          snapshotsPassed++;
-          console.log(chalk.green.bold('PASS!'));
-        } else {
-          snapshotsFailed++;
-          console.log(
-            chalk.red.bold(
-              `FAILED!${result.reason ? ` (${result.reason})` : ''}`,
-            ),
-          );
-          try {
-            // Ensure the failedResult directory exists
-            await Promise.all([
-              result.diffImageBuffer &&
-                fs.writeFile(
-                  path.join(
-                    './',
-                    failedResultsDir,
-                    `${snapshotSubDirName}-${makeFilename('diff')}`,
-                  ),
-                  result.diffImageBuffer,
-                ),
-              fs.writeFile(
-                path.join(
-                  './',
-                  failedResultsDir,
-                  `${snapshotSubDirName}-${makeFilename('actual')}`,
-                ),
-                actualPng,
-              ),
-              expectedPng &&
-                fs.writeFile(
-                  path.join(
-                    './',
-                    failedResultsDir,
-                    `${snapshotSubDirName}-${makeFilename('expected')}`,
-                  ),
-                  expectedPng,
-                ),
-            ]);
-          } catch (e: unknown) {
-            process.stderr.write(chalk.red.bold('Failed to write result:\n'));
-            console.error(e);
-          }
-        }
+        snapshotsFailed++;
       }
     },
   );
@@ -505,65 +434,4 @@ async function runTest(browserType: 'chromium') {
   );
 
   return donePromise;
-}
-
-/**
- * Compare two image buffers and return if they match and a diff image buffer
- *
- * @param actualImage
- * @param expectedImage
- * @returns
- */
-function compareBuffers(
-  actualImage: upng.Image,
-  expectedImage: upng.Image,
-): CompareResult {
-  const actualData = new Uint8ClampedArray(actualImage.data);
-  const expectedData = new Uint8ClampedArray(expectedImage.data);
-
-  if (
-    actualImage.width !== expectedImage.width ||
-    actualImage.height !== expectedImage.height
-  ) {
-    return {
-      doesMatch: false,
-      reason: 'snapshot dimensions do not match!',
-    };
-  }
-
-  // Round diffData array up to 4 byte alignment otherwise upng will throw an error
-  const diffData = new Uint8ClampedArray(
-    Math.ceil(expectedData.byteLength / 4) * 4,
-  );
-
-  // Get the N-dimensional euclidean distance between the two images regardless of channel not using colorDistance
-  const maxDistance = Math.sqrt(actualData.length * 255 * 255);
-
-  const distance = Math.sqrt(
-    actualData.reduce((acc, cur, i) => {
-      if (i % 4 === 3) {
-        diffData[i] = 255;
-      } else {
-        diffData[i] = Math.abs(cur - expectedData[i]!);
-      }
-      if (diffData[i]! >= 5) {
-        diffData[i] = 255;
-      }
-      return acc + Math.pow(cur - expectedData[i]!, 2);
-    }, 0),
-  );
-
-  const normalizedDistance = distance / maxDistance;
-
-  const diffImage = upng.encode(
-    [diffData.buffer],
-    expectedImage.width,
-    expectedImage.height,
-    0,
-  );
-
-  return {
-    doesMatch: normalizedDistance < 0.0005,
-    diffImageBuffer: Buffer.from(diffImage),
-  };
 }
