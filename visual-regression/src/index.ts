@@ -149,7 +149,7 @@ async function dockerCiMode(): Promise<number> {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const rootDir = path.resolve(__dirname, '..', '..', '..');
 
-  const childProc = $({ stdio: 'inherit' })`podman run --network host \
+  const childProc = $({ stdio: 'inherit' })`docker run --network host \
     -v ${rootDir}:/work/ \
     -v /work/node_modules \
     -v /work/.pnpm-store \
