@@ -23,10 +23,8 @@ import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRendererOptions } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { Rect, RectWithValid } from '../../lib/utils.js';
+import type { RectWithValid } from '../../lib/utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-
-const MAX_TEXTURES = 8; // TODO: get from gl
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -95,15 +93,24 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // Clipping
     if (this.clippingRect.valid) {
       const { x, y, width, height } = this.clippingRect;
-      const pixelRatio = options.pixelRatio;
+      const pixelRatio = this.parentHasRenderTexture ? 1 : options.pixelRatio;
       const canvasHeight = options.canvas.height;
 
       const clipX = Math.round(x * pixelRatio);
       const clipWidth = Math.round(width * pixelRatio);
       const clipHeight = Math.round(height * pixelRatio);
-      const clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+      let clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+
+      // if parent has render texture, we need to adjust the scissor rect
+      // to be relative to the parent's framebuffer
+      if (this.parentHasRenderTexture) {
+        clipY = this.framebufferDimensions
+          ? this.framebufferDimensions.height - this.dimensions.height
+          : 0;
+      }
+
+      glw.viewport(clipX, clipY, clipWidth, clipHeight);
       glw.setScissorTest(true);
-      glw.scissor(clipX, clipY, clipWidth, clipHeight);
     } else {
       glw.setScissorTest(false);
     }
