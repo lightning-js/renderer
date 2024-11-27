@@ -25,6 +25,7 @@ import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
+import { EventEmitter } from '../common/EventEmitter.js';
 
 /**
  * Augmentable map of texture class types
@@ -144,7 +145,7 @@ export interface TextureOptions {
   resizeMode?: ResizeModeOptions;
 }
 
-export class CoreTextureManager {
+export class CoreTextureManager extends EventEmitter {
   /**
    * Map of textures by cache key
    */
@@ -190,6 +191,7 @@ export class CoreTextureManager {
   frameTime = 0;
 
   constructor(numImageWorkers: number) {
+    super();
     this.validateCreateImageBitmap()
       .then((result) => {
         this.hasCreateImageBitmap =
@@ -200,21 +202,37 @@ export class CoreTextureManager {
           console.warn(
             '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
           );
-
-          return;
         }
 
-        if (this.hasWorker && numImageWorkers > 0) {
-          this.imageWorkerManager = new ImageWorkerManager(
-            numImageWorkers,
-            this.imageBitmapSupported,
+        if (
+          this.hasCreateImageBitmap &&
+          this.hasWorker &&
+          numImageWorkers > 0
+        ) {
+          const imageWorkers = new ImageWorkerManager(numImageWorkers, result);
+
+          // wait for the image worker manager to be initialized
+          imageWorkers.once('initialized', () => {
+            // enable image worker manager
+            this.imageWorkerManager = imageWorkers;
+          });
+        } else {
+          console.warn(
+            '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
           );
         }
+
+        // Do an early init event, we don't need to wait for the image worker manager to be initialized.
+        // Loading textures will be done on the main thread from this point on until the image worker manager is ready.
+        this.emit('initialized');
       })
       .catch((e) => {
         console.warn(
           '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
         );
+
+        // initialized without image worker manager and createImageBitmap
+        this.emit('initialized');
       });
 
     this.registerTextureType('ImageTexture', ImageTexture);

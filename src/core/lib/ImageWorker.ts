@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CreateImageBitmapSupport } from '../CoreTextureManager.js';
 import { type TextureData } from '../textures/Texture.js';
 
@@ -141,6 +142,7 @@ function createImageWorker() {
       // Store support level sent from the main thread
       supportsOptionsCreateImageBitmap = event.data.support.config;
       supportsFullCreateImageBitmap = event.data.support.full;
+      self.postMessage({ initialized: true });
       return;
     }
 
@@ -163,7 +165,7 @@ function createImageWorker() {
 }
 /* eslint-enable */
 
-export class ImageWorkerManager {
+export class ImageWorkerManager extends EventEmitter {
   imageWorkersEnabled = true;
   messageManager: Record<number, MessageCallback> = {};
   workers: Worker[] = [];
@@ -174,6 +176,7 @@ export class ImageWorkerManager {
     numImageWorkers: number,
     createImageBitmapSupport: CreateImageBitmapSupport,
   ) {
+    super();
     this.workers = this.createWorkers(
       numImageWorkers,
       createImageBitmapSupport,
@@ -184,6 +187,12 @@ export class ImageWorkerManager {
   }
 
   private handleMessage(event: MessageEvent) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (event.data?.initialized) {
+      this.emit('initialized');
+      return;
+    }
+
     const { id, data, error } = event.data as ImageWorkerMessage;
     const msg = this.messageManager[id];
     if (msg) {
