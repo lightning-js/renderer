@@ -44,15 +44,15 @@ To run LightningJS in older browsers, you can use **Vite's legacy plugin** and s
 
 Install the required dependencies:
 
-\`\`\`bash
+```bash
 pnpm i -D @vitejs/plugin-legacy whatwg-fetch
-\`\`\`
+```
 
 ### Configuration
 
 Add the following to your \`vite.config.js\`:
 
-\`\`\`javascript
+```javascript
 import legacy from '@vitejs/plugin-legacy';
 
 export default {
@@ -64,27 +64,27 @@ additionalLegacyPolyfills: ['whatwg-fetch'],
 }),
 ],
 };
-\`\`\`
+```
 
 ### Adjusting Targets
 
 Modify the \`chrome>=38\` target to match the browser version you need to support. If the target version is **Chrome v71** or higher, or **WPEWebKit 2.22** or newer, the legacy plugin is not required. You can adjust the target in your build configuration:
 
-\`\`\`javascript
+```javascript
 build: {
 target: prodTarget,
 },
 esbuild: {
 target: devTarget,
 },
-\`\`\`
+```
 
 Define the respective targets as follows:
 
-\`\`\`javascript
+```javascript
 const devTarget = 'es2020';
 const prodTarget = 'es2019';
-\`\`\`
+```
 
 For newer browsers, you can specify a higher target to reduce the use of polyfills and leverage native browser APIs for better performance.
 
