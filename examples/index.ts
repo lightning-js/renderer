@@ -242,6 +242,7 @@ async function initRenderer(
       fpsUpdateInterval: logFps ? 1000 : 0,
       enableContextSpy,
       forceWebGL2,
+      // numImageWorkers: 0,
       inspector,
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
