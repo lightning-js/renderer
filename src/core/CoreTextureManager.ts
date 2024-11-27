@@ -209,21 +209,16 @@ export class CoreTextureManager extends EventEmitter {
           this.hasWorker &&
           numImageWorkers > 0
         ) {
-          const imageWorkers = new ImageWorkerManager(numImageWorkers, result);
-
-          // wait for the image worker manager to be initialized
-          imageWorkers.once('initialized', () => {
-            // enable image worker manager
-            this.imageWorkerManager = imageWorkers;
-          });
+          this.imageWorkerManager = new ImageWorkerManager(
+            numImageWorkers,
+            result,
+          );
         } else {
           console.warn(
             '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
           );
         }
 
-        // Do an early init event, we don't need to wait for the image worker manager to be initialized.
-        // Loading textures will be done on the main thread from this point on until the image worker manager is ready.
         this.emit('initialized');
       })
       .catch((e) => {
