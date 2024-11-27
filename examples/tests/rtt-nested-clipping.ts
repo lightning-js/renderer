@@ -1,16 +1,6 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import rocko from '../assets/rocko.png';
 
-export async function automation(settings: ExampleSettings) {
-  const page = await test(settings);
-
-  const maxPages = 6;
-  for (let i = 0; i < maxPages; i++) {
-    page(i);
-    await settings.snapshot();
-  }
-}
-
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
