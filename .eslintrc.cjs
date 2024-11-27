@@ -37,6 +37,7 @@ const config = {
     // Temporary relaxed rules while we tighten up our TypeScript code
     // TODO: Remove these rules once we eliminate all of the unnecessary `any` types in the code
     '@typescript-eslint/no-unsafe-argument': 'warn',
+    '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unsafe-assignment': 'warn',
     '@typescript-eslint/no-unsafe-return': 'warn',
     '@typescript-eslint/no-unsafe-call': 'warn',

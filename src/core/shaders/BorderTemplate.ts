@@ -16,6 +16,12 @@ export interface BorderProps {
    * @default 0xffffffff
    */
   color: number;
+  /**
+   * Corner radius, in pixels, to cut out of the corners
+   *
+   * @defaultValue 0
+   */
+  radius: number | number[];
 }
 
 export const BorderTemplate: CoreShaderConfig<BorderProps> = {
@@ -23,5 +29,6 @@ export const BorderTemplate: CoreShaderConfig<BorderProps> = {
   props: {
     width: 10,
     color: 0xffffffff,
+    radius: 0,
   },
 };

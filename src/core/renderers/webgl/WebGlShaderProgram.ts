@@ -134,14 +134,19 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         : config.fragment;
 
     const vertexShader = createShader(glw, glw.VERTEX_SHADER, vertexSource);
+    if (!vertexShader) {
+      throw new Error('Vertex shader creation failed');
+    }
+
     const fragmentShader = createShader(
       glw,
       glw.FRAGMENT_SHADER,
       fragmentSource,
     );
 
-    if (!vertexShader || !fragmentShader) {
-      throw new Error();
+    if (!fragmentShader) {
+      console.log('test', fragmentSource);
+      throw new Error('fragment shader creation failed');
     }
 
     const program = createProgram(glw, vertexShader, fragmentShader);

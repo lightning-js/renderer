@@ -9,7 +9,7 @@ export interface RoundedRectangleProps {
    *
    * @defaultValue 10
    */
-  radius: number;
+  radius: number | number[];
 }
 
 export const RoundedRectangleTemplate: CoreShaderConfig<RoundedRectangleProps> =

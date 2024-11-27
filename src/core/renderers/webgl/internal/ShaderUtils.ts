@@ -96,7 +96,12 @@ export function createShader(
 ) {
   const shader = glw.createShader(type);
   if (!shader) {
-    throw new Error();
+    const glError = glw.getError();
+    throw new Error(
+      `Unable to create the shader: ${
+        type === glw.VERTEX_SHADER ? 'VERTEX_SHADER' : 'FRAGMENT_SHADER'
+      }.${glError ? ` WebGlContext Error: ${glError}` : ''}`,
+    );
   }
   glw.shaderSource(shader, source);
   glw.compileShader(shader);
@@ -105,7 +110,7 @@ export function createShader(
     return shader;
   }
 
-  console.log(glw.getShaderInfoLog(shader));
+  console.error(glw.getShaderInfoLog(shader));
   glw.deleteShader(shader);
 }
 

@@ -1,5 +1,5 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { Border } from '@lightningjs/renderer/webgl/shaders';
+import { BorderBottom } from '@lightningjs/renderer/webgl/shaders';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
@@ -18,7 +18,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(Border),
+    shader: renderer.createShader(BorderBottom),
     parent: testRoot,
   });
 
@@ -28,7 +28,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(Border, { radius: 10 }),
+    shader: renderer.createShader(BorderBottom, { width: 30 }),
     parent: testRoot,
   });
 
@@ -38,8 +38,8 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0x00ff00ff,
-    shader: renderer.createShader(Border, {
-      radius: [50, 20],
+    shader: renderer.createShader(BorderBottom, {
+      width: 40,
     }),
     parent: testRoot,
   });
@@ -49,9 +49,9 @@ export default async function ({
     y: 520,
     width: 600,
     height: 400,
-    color: 0x00ff00ff,
-    shader: renderer.createShader(Border, {
-      radius: [50, 20, 30],
+    color: 0x00000000,
+    shader: renderer.createShader(BorderBottom, {
+      width: 20,
     }),
     parent: testRoot,
   });

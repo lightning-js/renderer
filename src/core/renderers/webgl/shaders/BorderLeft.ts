@@ -37,12 +37,11 @@ export const BorderLeft: WebGlShaderConfig<BorderLeftProps> = Object.assign(
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
 
       vec2 pos = vec2(u_width * 0.5, 0.0);
-      vec2 p = v_textureCoordinate.xy * u_dimensions - pos;
-      vec2 size = vec2(u_width * 0.5, u_dimensions.y);
-      float dist = abs(p) - size;
-      dist = min(max(dist.x, dist.y), 0.0) + length(max(d, 0.0));
-
-      gl_FragColor = mix(color, u_color, clamp(-dist, 0.0, 1.0)) * u_alpha;
+      vec2 p = v_textureCoordinate.xy * u_dimensions - pos + 1.0;
+      vec2 size = vec2(u_width * 0.5, u_dimensions.y) + 1.5;
+      vec2 dist = abs(p) - size;
+      float shape = min(max(dist.x, dist.y), 0.0) + length(max(dist, 0.0));
+      gl_FragColor = mix(color, u_color, clamp(-shape, 0.0, 1.0)) * u_alpha;
     }
   `,
   },

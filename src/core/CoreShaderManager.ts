@@ -59,14 +59,13 @@ export class CoreShaderManager {
       props = {};
     }
     const cachedShader = this.shCache.get(cacheKey);
+
     if (cachedShader) {
       return {
         shader: cachedShader,
         props,
       };
     }
-
-    console.log('create shader program: ', cacheKey);
 
     const shader = this.stage.renderer.createShaderProgram(shConfig, props);
 

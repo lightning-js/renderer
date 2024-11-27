@@ -1030,6 +1030,17 @@ export class WebGlContextWrapper {
 
   /**
    * ```
+   * gl.getError(type);
+   * ```
+   *
+   * @returns
+   */
+  getError() {
+    return this.gl.getError();
+  }
+
+  /**
+   * ```
    * gl.createVertexArray();
    * ```
    *
