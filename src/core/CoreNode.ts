@@ -267,6 +267,7 @@ export interface CoreNodeProps {
    * @default `false`
    */
   autosize: boolean;
+  boundsMargin: [number, number, number, number] | null;
   /**
    * Clipping Mode
    *
@@ -759,6 +760,21 @@ export class CoreNode extends EventEmitter {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
+
+    let bm = this.stage.boundsMargin;
+    if (props.boundsMargin) {
+      bm = Array.isArray(props.boundsMargin)
+        ? props.boundsMargin
+        : [
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+          ];
+    } else if (this.parent !== null && this.parent.boundsMargin !== undefined) {
+      bm = this.parent.boundsMargin;
+    }
+    this.boundsMargin = bm;
 
     this.setUpdateType(
       UpdateType.ScaleRotate |
@@ -1313,7 +1329,7 @@ export class CoreNode extends EventEmitter {
 
       this.preloadBound = createPreloadBounds(
         this.strictBound,
-        this.stage.boundsMargin,
+        this.boundsMargin,
       );
     } else {
       // no parent or parent does not have a bound, take the stage boundaries
@@ -1790,6 +1806,28 @@ export class CoreNode extends EventEmitter {
 
   set autosize(value: boolean) {
     this.props.autosize = value;
+  }
+
+  get boundsMargin(): [number, number, number, number] {
+    return (
+      this.props.boundsMargin ??
+      this.parent?.boundsMargin ??
+      this.stage.boundsMargin ??
+      null
+    );
+  }
+
+  set boundsMargin(value: number | [number, number, number, number]) {
+    if (value === this.props.boundsMargin) {
+      return;
+    }
+
+    const bm: [number, number, number, number] = Array.isArray(value)
+      ? value
+      : [value, value, value, value];
+
+    this.props.boundsMargin = bm;
+    this.setUpdateType(UpdateType.RenderBounds);
   }
 
   get clipping(): boolean {
