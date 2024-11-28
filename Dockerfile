@@ -1,5 +1,5 @@
 # Use Playwright's base image
-FROM mcr.microsoft.com/playwright:v1.39.0-jammy
+FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 
 # Set the working directory
 WORKDIR /work

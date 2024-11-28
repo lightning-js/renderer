@@ -132,66 +132,94 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
+  async loadImageFallback(src: string, hasAlpha: boolean) {
+    const img = new Image();
+
+    return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
+      (resolve) => {
+        img.onload = () => {
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
+        };
+
+        img.onerror = () => {
+          console.warn('Image loading failed, returning fallback object.');
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
+        };
+
+        img.src = src;
+      },
+    );
+  }
+
+  async createImageBitmap(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
+  ): Promise<{
+    data: ImageBitmap | HTMLImageElement;
+    premultiplyAlpha: boolean;
+  }> {
+    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
+    const imageBitmapSupported = this.txManager.imageBitmapSupported;
+
+    if (
+      imageBitmapSupported.full === true &&
+      sx !== null &&
+      sy !== null &&
+      sw !== null &&
+      sh !== null
+    ) {
+      // createImageBitmap with crop
+      const bitmap = await createImageBitmap(blob, sx, sy, sw, sh, {
+        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      });
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else if (imageBitmapSupported.options === true) {
+      // createImageBitmap without crop but with options
+      const bitmap = await createImageBitmap(blob, {
+        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      });
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else {
+      // basic createImageBitmap without options or crop
+      // this is supported for Chrome v50 to v52/54 that doesn't support options
+      return {
+        data: await createImageBitmap(blob),
+        premultiplyAlpha: hasAlphaChannel,
+      };
+    }
+  }
+
   async loadImage(src: string) {
     const { premultiplyAlpha, sx, sy, sw, sh } = this.props;
 
-    if (this.txManager.imageWorkerManager !== null) {
-      return await this.txManager.imageWorkerManager.getImage(
-        src,
-        premultiplyAlpha,
-        sx,
-        sy,
-        sw,
-        sh,
-      );
-    } else if (this.txManager.hasCreateImageBitmap === true) {
-      const response = await fetch(src);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
-
-      let data;
-
-      if (sw !== null && sh !== null) {
-        data = await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        });
+    if (this.txManager.hasCreateImageBitmap === true) {
+      if (
+        this.txManager.hasWorker === true &&
+        this.txManager.imageWorkerManager !== null
+      ) {
+        return this.txManager.imageWorkerManager.getImage(
+          src,
+          premultiplyAlpha,
+          sx,
+          sy,
+          sw,
+          sh,
+        );
       }
 
-      if (this.txManager.createImageBitmapNotSupportsOptions) {
-        data = await createImageBitmap(blob);
-      } else {
-        data = await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }).catch(() => createImageBitmap(blob));
-      }
-
-      return {
-        data: data,
-        premultiplyAlpha: hasAlphaChannel,
-      };
-    } else {
-      const img = new Image();
-      if (!src.startsWith('data:')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.src = src;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
-      });
-
-      return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
-      };
+      const blob = await fetch(src).then((response) => response.blob());
+      return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
+
+    return this.loadImageFallback(src, premultiplyAlpha ?? true);
   }
 
   override async getTextureData(): Promise<TextureData> {

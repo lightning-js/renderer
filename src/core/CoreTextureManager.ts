@@ -25,6 +25,7 @@ import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
+import { EventEmitter } from '../common/EventEmitter.js';
 
 /**
  * Augmentable map of texture class types
@@ -40,6 +41,12 @@ export interface TextureMap {
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
   RenderTexture: typeof RenderTexture;
+}
+
+export interface CreateImageBitmapSupport {
+  basic: boolean; // Supports createImageBitmap(image)
+  options: boolean; // Supports createImageBitmap(image, options)
+  full: boolean; // Supports createImageBitmap(image, sx, sy, sw, sh, options)
 }
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
@@ -138,7 +145,7 @@ export interface TextureOptions {
   resizeMode?: ResizeModeOptions;
 }
 
-export class CoreTextureManager {
+export class CoreTextureManager extends EventEmitter {
   /**
    * Map of textures by cache key
    */
@@ -156,7 +163,12 @@ export class CoreTextureManager {
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
-  createImageBitmapNotSupportsOptions = false;
+  imageBitmapSupported = {
+    basic: false,
+    options: false,
+    full: false,
+  };
+
   hasWorker = !!self.Worker;
   /**
    * Renderer that this texture manager is associated with
@@ -179,18 +191,192 @@ export class CoreTextureManager {
   frameTime = 0;
 
   constructor(numImageWorkers: number) {
-    // Register default known texture types
-    if (this.hasCreateImageBitmap && this.hasWorker && numImageWorkers > 0) {
-      this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
-    }
+    super();
+    this.validateCreateImageBitmap()
+      .then((result) => {
+        this.hasCreateImageBitmap =
+          result.basic || result.options || result.full;
+        this.imageBitmapSupported = result;
 
-    this.checkCompatibilities();
+        if (!this.hasCreateImageBitmap) {
+          console.warn(
+            '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+          );
+        }
+
+        if (
+          this.hasCreateImageBitmap &&
+          this.hasWorker &&
+          numImageWorkers > 0
+        ) {
+          const imageWorkers = new ImageWorkerManager(numImageWorkers, result);
+
+          // wait for the image worker manager to be initialized
+          imageWorkers.once('initialized', () => {
+            // enable image worker manager
+            this.imageWorkerManager = imageWorkers;
+          });
+        } else {
+          console.warn(
+            '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
+          );
+        }
+
+        // Do an early init event, we don't need to wait for the image worker manager to be initialized.
+        // Loading textures will be done on the main thread from this point on until the image worker manager is ready.
+        this.emit('initialized');
+      })
+      .catch((e) => {
+        console.warn(
+          '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+        );
+
+        // initialized without image worker manager and createImageBitmap
+        this.emit('initialized');
+      });
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
     this.registerTextureType('SubTexture', SubTexture);
     this.registerTextureType('RenderTexture', RenderTexture);
+  }
+
+  private async validateCreateImageBitmap(): Promise<CreateImageBitmapSupport> {
+    // Test if createImageBitmap is supported using a simple 1x1 PNG image
+    // prettier-ignore (this is a binary PNG image)
+    const pngBinaryData = new Uint8Array([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a, // PNG signature
+      0x00,
+      0x00,
+      0x00,
+      0x0d, // IHDR chunk length
+      0x49,
+      0x48,
+      0x44,
+      0x52, // "IHDR" chunk type
+      0x00,
+      0x00,
+      0x00,
+      0x01, // Width: 1
+      0x00,
+      0x00,
+      0x00,
+      0x01, // Height: 1
+      0x01, // Bit depth: 1
+      0x03, // Color type: Indexed
+      0x00, // Compression method: Deflate
+      0x00, // Filter method: None
+      0x00, // Interlace method: None
+      0x25,
+      0xdb,
+      0x56,
+      0xca, // CRC for IHDR
+      0x00,
+      0x00,
+      0x00,
+      0x03, // PLTE chunk length
+      0x50,
+      0x4c,
+      0x54,
+      0x45, // "PLTE" chunk type
+      0x00,
+      0x00,
+      0x00, // Palette entry: Black
+      0xa7,
+      0x7a,
+      0x3d,
+      0xda, // CRC for PLTE
+      0x00,
+      0x00,
+      0x00,
+      0x01, // tRNS chunk length
+      0x74,
+      0x52,
+      0x4e,
+      0x53, // "tRNS" chunk type
+      0x00, // Transparency for black: Fully transparent
+      0x40,
+      0xe6,
+      0xd8,
+      0x66, // CRC for tRNS
+      0x00,
+      0x00,
+      0x00,
+      0x0a, // IDAT chunk length
+      0x49,
+      0x44,
+      0x41,
+      0x54, // "IDAT" chunk type
+      0x08,
+      0xd7, // Deflate header
+      0x63,
+      0x60,
+      0x00,
+      0x00,
+      0x00,
+      0x02,
+      0x00,
+      0x01, // Zlib-compressed data
+      0xe2,
+      0x21,
+      0xbc,
+      0x33, // CRC for IDAT
+      0x00,
+      0x00,
+      0x00,
+      0x00, // IEND chunk length
+      0x49,
+      0x45,
+      0x4e,
+      0x44, // "IEND" chunk type
+      0xae,
+      0x42,
+      0x60,
+      0x82, // CRC for IEND
+    ]);
+
+    const support: CreateImageBitmapSupport = {
+      basic: false,
+      options: false,
+      full: false,
+    };
+
+    // Test basic createImageBitmap support
+    const blob = new Blob([pngBinaryData], { type: 'image/png' });
+    const bitmap = await createImageBitmap(blob);
+    bitmap.close?.();
+    support.basic = true;
+
+    // Test createImageBitmap with options support
+    try {
+      const options = { premultiplyAlpha: 'none' as const };
+      const bitmapWithOptions = await createImageBitmap(blob, options);
+      bitmapWithOptions.close?.();
+      support.options = true;
+    } catch (e) {
+      /* ignore */
+    }
+
+    // Test createImageBitmap with full options support
+    try {
+      const bitmapWithFullOptions = await createImageBitmap(blob, 0, 0, 1, 1, {
+        premultiplyAlpha: 'none',
+      });
+      bitmapWithFullOptions.close?.();
+      support.full = true;
+    } catch (e) {
+      /* ignore */
+    }
+
+    return support;
   }
 
   registerTextureType<Type extends keyof TextureMap>(
@@ -246,28 +432,6 @@ export class CoreTextureManager {
     const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
       keyCache.delete(cacheKey);
-    }
-  }
-
-  checkCompatibilities() {
-    // check compatibility with createImageBitmap
-    if (!this.hasCreateImageBitmap) {
-      console.warn(
-        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-      );
-    } else {
-      self.createImageBitmap(new Blob(), {}).catch((e: unknown) => {
-        if (
-          e instanceof Error &&
-          e.message ===
-            "Failed to execute 'createImageBitmap' on 'Window': No function was found that matched the signature provided."
-        ) {
-          console.warn(
-            '[Lightning] createImageBitmap not supports (image, options) signature on this browser.',
-          );
-          this.createImageBitmapNotSupportsOptions = true;
-        }
-      });
     }
   }
 }

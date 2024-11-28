@@ -93,7 +93,9 @@ export class SdfTrFontFace<
     });
 
     // Pre-load it
-    this.texture.ctxTexture.load();
+    stage.txManager.once('initialized', () => {
+      this.texture.ctxTexture.load();
+    });
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)
@@ -102,7 +104,7 @@ export class SdfTrFontFace<
         (this.data as SdfFontData) = await response.json();
         assertTruthy(this.data);
         // Add all the glyphs to the glyph map
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
         let maxCharHeight = 0;
         this.data.chars.forEach((glyph) => {
           this.glyphMap.set(glyph.id, glyph);
@@ -111,10 +113,10 @@ export class SdfTrFontFace<
             maxCharHeight = charHeight;
           }
         });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
         (this.maxCharHeight as number) = maxCharHeight;
         // We know `data` is defined here, because we just set it
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
         (this.shaper as FontShaper) = new SdfFontShaper(
           this.data,
           this.glyphMap,
