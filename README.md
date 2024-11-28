@@ -3,9 +3,7 @@
 A powerful 2D scene renderer designed for rendering highly performant user
 interfaces on web browsers running on embedded devices using WebGL.
 
-The Renderer is not designed for direct application development but instead
-to provide a lightweight API for front-end application frameworks like Bolt and
-Solid.
+The Renderer is part of the [LightningJS](https://lightningjs.io) project. While it is possible to use the renderer directly, it is not recommended. Instead, Lightning 3 works best when combined with [Blits](https://lightningjs.io/v3-docs/blits/getting_started/intro.html).
 
 ## Setup & Commands
 
@@ -45,7 +43,7 @@ The Lightning 3 Renderer's goal is to work with the following browser versions a
 
 Any JavaScript language features or browser APIs that cannot be automatically transpiled or polyfilled by industry standard transpilers (such as Babel) to target these versions must be carefully considered before use.
 
-For a more detailed and comprehensive list of browsers and their features please see [browsers](./BROWSERS.md)
+For a more detailed and comprehensive list of browsers and their features please see [browsers](./BROWSERS.md).
 
 ## Example Tests
 
@@ -61,8 +59,7 @@ The Example Tests can be launched with:
 pnpm start
 ```
 
-A hosted version can be found at:
-(https://https://lightning-js.github.io/renderer/)[https://lightning-js.github.io/renderer/]
+A hosted version can be found [here](https://lightning-js.github.io/renderer/).
 
 This supports modern browsers as well as Chrome 38 and above through a legacy build.
 
@@ -148,4 +145,3 @@ Canvas renderer only supports Web Fonts:
 | ------------------ | -------- | -------- |
 | WebGL              | Y        | Y        |
 | Canvas             | N        | Y        |
-|                    |          |          |
