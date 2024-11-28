@@ -56,13 +56,13 @@ Add the following to your \`vite.config.js\`:
 import legacy from '@vitejs/plugin-legacy';
 
 export default {
-plugins: [
-legacy({
-targets: ['chrome>=38'],
-modernPolyfills: true,
-additionalLegacyPolyfills: ['whatwg-fetch'],
-}),
-],
+  plugins: [
+    legacy({
+      targets: ['chrome>=38'],
+      modernPolyfills: true,
+      additionalLegacyPolyfills: ['whatwg-fetch'],
+    }),
+  ],
 };
 ```
 
