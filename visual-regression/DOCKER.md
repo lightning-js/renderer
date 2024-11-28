@@ -1,75 +1,149 @@
 # Visual Regression Test Docker Instructions
 
-The Visual Regression Tests utilize headless browsers provided by the
-[Playwright](https://playwright.dev/) project. Browsers tend to be very platform
-specific in terms of exactly how pixels end up being rendered out. The
-differences should be small, but they tend to be big enough such that a simple
-image comparison algorithm cannot reliably tell what is a real regression and
-what is just a platform difference.
+The Visual Regression Tests utilize headless browsers provided by the [Playwright](https://playwright.dev/) project. Browsers are highly platform-specific, and even small pixel differences can cause significant issues for image comparison algorithms. These differences can prevent reliable detection of regressions.
 
-In order to prevent this issue, the Visual Regression Tests are built to run
-inside a Docker container which guarantees a consistent platform environment
-for the given headless browser to run in.
+To avoid these issues, Visual Regression Tests run inside a containerized environment. This guarantees a consistent platform for headless browsers, ensuring reproducible results.
 
-Whenever new commits to a PR are pushed, a GitHub Action runs the Visual
-Regression Tests in a Linux-based Docker container to determine if the PR should
-be allowed to merge or not.
+For PRs, a GitHub Action runs these tests in a Linux-based container. Locally, you must use `--ci` mode, which launches tests in a container to produce snapshots identical to the GitHub Action environment.
 
-When you need to capture new snapshots or update existing ones, you must run the
-Visual Regression Test Runner locally in `--ci` mode. This launches the tests in
-a Docker container giving you exactly the same snapshot results as the tests
-that run in the cloud on GitHub Actions.
+This guide covers installing the required tools (`docker`, `colima`, or `podman`) and building the Visual Regression Test image.
 
-Below are the instructions for both installing Docker and building the Visual
-Regression Test Image that is used when you run the tests in `--ci`.
+---
 
-## Installing Docker
+## Installing a Container Runtime
 
 ### Mac
 
-If you have a license for [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-you can install that and all should be well. However, if you don't follow the
-alternative steps below:
+You can use Docker Desktop if you have a license. If you don’t, use Colima or Podman as alternatives.
 
-1. Using [Homebrew](https://brew.sh/) install the Docker Client:
+#### Option 1: Docker Desktop (Requires License)
 
-```
-brew install docker
-```
+1. Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop).
+2. After installation, test Docker:
+   ```bash
+   docker ps
+   ```
 
-2. Install [Colima](https://github.com/abiosoft/colima)
+#### Option 2: Colima (Open Source Docker Alternative)
 
-```
-brew install colima
-```
+1. Install the Docker CLI using [Homebrew](https://brew.sh/):
+   ```bash
+   brew install docker
+   ```
+2. Install [Colima](https://colima.dev/):
+   ```bash
+   brew install colima
+   ```
+3. Start Colima:
+   ```bash
+   colima start
+   ```
+4. Test Docker with Colima:
+   ```bash
+   docker ps
+   ```
+   It should run without errors.
 
-3. Start Colima
+#### Option 3: Podman (Docker Alternative)
 
-```
-colima start
-```
+1. Install [Podman](https://podman.io/):
+   ```bash
+   brew install podman
+   ```
+2. Start Podman:
+   ```bash
+   podman machine init
+   podman machine start
+   ```
+3. Test Podman:
+   ```bash
+   podman ps
+   ```
 
-4. Test Docker
+### Linux
 
-```
-docker ps
-```
+Docker is natively supported on Linux, but you can also use Podman for a rootless container environment.
 
-It should run without errors.
+#### Option 1: Docker
+
+1. Follow the instructions for your Linux distribution to install Docker:
+   - [Ubuntu/Debian](https://docs.docker.com/engine/install/debian/)
+   - [Fedora/CentOS](https://docs.docker.com/engine/install/centos/)
+2. After installation, test Docker:
+   ```bash
+   docker ps
+   ```
+
+#### Option 2: Podman
+
+1. Install [Podman](https://podman.io/) for your Linux distribution:
+   - [Podman Installation Guide](https://podman.io/getting-started/installation)
+2. Test Podman:
+   ```bash
+   podman ps
+   ```
+
+### Windows
+
+Windows users can use Docker Desktop if they have a license or install Podman as an alternative.
+
+#### Option 1: Docker Desktop (Requires License)
+
+1. Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop).
+2. After installation, test Docker:
+   ```powershell
+   docker ps
+   ```
+
+#### Option 2: Podman (Open Source Alternative)
+
+1. Install [Podman](https://podman.io/) via the Windows installer:
+   - [Podman for Windows](https://podman.io/getting-started/installation)
+2. Start the Podman machine:
+   ```powershell
+   podman machine init
+   podman machine start
+   ```
+3. Test Podman:
+   ```powershell
+   podman ps
+   ```
+
+---
 
 ## Building the Test Image
 
-After installing Docker, you must build the Visual Regression Test Image before
-running the test runner in `--ci` mode.
+After installing a container runtime, you must build the Visual Regression Test image.
 
-```
-pnpm build:docker
-```
+1. Run the build script:
 
-If all goes well it should create an image called **visual-regression** locally.
+   ```bash
+   pnpm build:docker
+   ```
 
-```
-❯ docker images
-REPOSITORY                     TAG             IMAGE ID       CREATED         SIZE
-visual-regression              latest          40476ed4acae   3 minutes ago   2.09GB
-```
+2. The script automatically detects your runtime (`docker` or `podman`) and builds the image. After a successful build, you should see the image:
+
+   ```bash
+   docker images
+   ```
+
+   Or, if using Podman:
+
+   ```bash
+   podman images
+   ```
+
+   Example output:
+
+   ```
+   REPOSITORY                     TAG             IMAGE ID       CREATED         SIZE
+   visual-regression              latest          40476ed4acae   3 minutes ago   2.09GB
+   ```
+
+---
+
+## References
+
+- **Docker Desktop**: [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
+- **Colima**: [colima.dev](https://colima.dev/)
+- **Podman**: [podman.io](https://podman.io/)

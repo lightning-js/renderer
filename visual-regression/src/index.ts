@@ -45,6 +45,8 @@ import {
 export const certifiedSnapshotDir = 'certified-snapshots';
 export const failedResultsDir = 'failed-results';
 
+import { detectContainerRuntime } from './detectDockerRuntime.js';
+
 const browsers = { chromium };
 let snapshotsTested = 0;
 let snapshotsPassed = 0;
@@ -135,6 +137,9 @@ const argv = yargs(hideBin(process.argv))
  * @returns Exit code
  */
 async function dockerCiMode(): Promise<number> {
+  // Detect container runtime
+  const runtime = await detectContainerRuntime();
+
   // Relay the command line arguments to the docker container
   const commandLineStr = [
     argv.capture ? '--capture' : '',
@@ -149,7 +154,7 @@ async function dockerCiMode(): Promise<number> {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const rootDir = path.resolve(__dirname, '..', '..', '..');
 
-  const childProc = $({ stdio: 'inherit' })`docker run --network host \
+  const childProc = $({ stdio: 'inherit' })`${runtime} run --network host \
     -v ${rootDir}:/work/ \
     -v /work/node_modules \
     -v /work/.pnpm-store \
