@@ -24,17 +24,18 @@ Below is a detailed breakdown of confirmed browsers that work with LightningJS, 
 |               | v54         | Enables resizing in `createImageBitmap`.                                                                                                        |
 |               | v63         | Adds support for dynamic imports.                                                                                                               |
 |               | v71         | Introduces `globalThis`.                                                                                                                        |
+| **QtWebKit**  | 5.2         | Support for WebGL1, with known issues                                                                                                           |
 | **WPEWebKit** | 2017        | Adds support for Image Worker and `createImageBitmap`.                                                                                          |
 |               | 2.22        | Full support, including Lightning Native mode (disables DOM/CSS compositing except for `<canvas>`, `<video>`, `<audio>` tags).                  |
 |               | 2.28        | Full support.                                                                                                                                   |
 |               | 2.36        | Adds offscreen canvas and shared array buffers with await support for multithreading.                                                           |
 |               | 2.46        | (Upcoming) Adds FTL support for 32-bit devices and offscreen rendering support for Lightning Native.                                            |
 
-For createImageBitmap the Lightning 3 renderer will use a 1x1 PNG Pixel to validate whether the createImageBitmap API is available and which version can be used.
+For createImageBitmap the Lightning 3 renderer will use a `1x1` PNG Pixel to validate whether the createImageBitmap API is available and which version can be used.
 If the createImageBitmap API is not available it will gracefully fallback to `new Image()` with a performance decrease.
 
 Lightning 3 prefers to run on **WPEWebKit** with `Lightning Native` (also known as nonCompositedWebGL) enabled for maximum performance!
-For more information please see (https://wpewebkit.org/)[https://wpewebkit.org/]
+For more information please see [https://wpewebkit.org/](https://wpewebkit.org/)
 
 ## Running Lightning in older Browsers
 
@@ -50,32 +51,32 @@ pnpm i -D @vitejs/plugin-legacy whatwg-fetch
 
 ### Configuration
 
-Add the following to your \`vite.config.js\`:
+Add the following to your `vite.config.js`:
 
 ```javascript
 import legacy from '@vitejs/plugin-legacy';
 
 export default {
-plugins: [
-legacy({
-targets: ['chrome>=38'],
-modernPolyfills: true,
-additionalLegacyPolyfills: ['whatwg-fetch'],
-}),
-],
+  plugins: [
+    legacy({
+      targets: ['chrome>=38'],
+      modernPolyfills: true,
+      additionalLegacyPolyfills: ['whatwg-fetch'],
+    }),
+  ],
 };
 ```
 
 ### Adjusting Targets
 
-Modify the \`chrome>=38\` target to match the browser version you need to support. If the target version is **Chrome v71** or higher, or **WPEWebKit 2.22** or newer, the legacy plugin is not required. You can adjust the target in your build configuration:
+Modify the `chrome>=38` target to match the browser version you need to support. If the target version is **Chrome v71** or higher, or **WPEWebKit 2.22** or newer, the legacy plugin is not required. You can adjust the target in your build configuration:
 
 ```javascript
 build: {
-target: prodTarget,
+  target: prodTarget,
 },
 esbuild: {
-target: devTarget,
+  target: devTarget,
 },
 ```
 
