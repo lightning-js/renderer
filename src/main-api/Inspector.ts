@@ -148,6 +148,7 @@ const knownProperties = new Set<string>([
   // ...gradientColorPropertyMap,
   'src',
   'parent',
+  'data',
 ]);
 
 export class Inspector {
@@ -312,7 +313,6 @@ export class Inspector {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalAnimate = node.animate;
     Object.defineProperty(node, 'animate', {
       value: (
