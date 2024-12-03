@@ -147,8 +147,8 @@ const knownProperties = new Set<string>([
   ...Object.keys(domPropertyMap),
   // ...gradientColorPropertyMap,
   'src',
-  'data',
   'parent',
+  'data',
 ]);
 
 export class Inspector {
