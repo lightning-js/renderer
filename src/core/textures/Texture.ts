@@ -164,6 +164,10 @@ export abstract class Texture extends EventEmitter {
 
   public preventCleanup = false;
 
+  public ctxTexture: CoreContextTexture | undefined;
+
+  public textureData: TextureData | null = null;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }
@@ -188,7 +192,6 @@ export abstract class Texture extends EventEmitter {
       this.renderableOwners.add(owner);
       const newSize = this.renderableOwners.size;
       if (newSize > oldSize && newSize === 1) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         (this.renderable as boolean) = true;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(true);
@@ -197,7 +200,6 @@ export abstract class Texture extends EventEmitter {
       this.renderableOwners.delete(owner);
       const newSize = this.renderableOwners.size;
       if (newSize < oldSize && newSize === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         (this.renderable as boolean) = false;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(false);
@@ -217,22 +219,33 @@ export abstract class Texture extends EventEmitter {
   onChangeIsRenderable?(isRenderable: boolean): void;
 
   /**
-   * Get the CoreContextTexture for this Texture
+   * Load the core context texture for this Texture.
+   * The ctxTexture is created by the renderer and lives on the GPU.
+   *
+   * @returns
+   */
+  loadCtxTexture(): void {
+    if (this.ctxTexture !== undefined) {
+      return;
+    }
+
+    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
+    ctxTexture.load();
+
+    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
+  }
+
+  /**
+   * Free the core context texture for this Texture.
    *
    * @remarks
-   * Each Texture has a corresponding CoreContextTexture that is used to
-   * manage the texture's native data depending on the renderer's mode
-   * (WebGL, Canvas, etc).
-   *
-   * The Texture and CoreContextTexture are always linked together in a 1:1
-   * relationship.
+   * The ctxTexture is created by the renderer and lives on the GPU.
    */
-  get ctxTexture() {
-    // The first time this is called, create the ctxTexture
-    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
-    // And replace this getter with the value for future calls
-    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
-    return ctxTexture;
+  free(): void {
+    this.ctxTexture?.free();
+    if (this.textureData !== null) {
+      this.textureData = null;
+    }
   }
 
   /**
@@ -250,7 +263,6 @@ export abstract class Texture extends EventEmitter {
     ...args: ParametersSkipTarget<TextureStateEventMap[State]>
   ): void {
     if (this.state !== state) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       (this.state as TextureState) = state;
       if (state === 'loaded') {
         const loadedArgs = args as ParametersSkipTarget<
@@ -277,7 +289,22 @@ export abstract class Texture extends EventEmitter {
    * @returns
    * The texture data for this texture.
    */
-  abstract getTextureData(): Promise<TextureData>;
+  async getTextureData(): Promise<TextureData> {
+    if (this.textureData === null) {
+      this.textureData = await this.getTextureSource();
+    }
+
+    return this.textureData;
+  }
+
+  /**
+   * Get the texture source for this texture.
+   *
+   * @remarks
+   * This method is called by the CoreContextTexture when the texture is loaded.
+   * The texture source is then used to populate the CoreContextTexture.
+   */
+  abstract getTextureSource(): Promise<TextureData>;
 
   /**
    * Make a cache key for this texture.

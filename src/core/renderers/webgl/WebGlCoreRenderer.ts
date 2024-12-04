@@ -255,7 +255,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
     }
 
-    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
+    // assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
+    if (!texture.ctxTexture) {
+      console.warn('Invalid texture type', texture);
+      return;
+    }
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
     const targetDims = { width: -1, height: -1 };
@@ -270,7 +274,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     );
 
     if (this.reuseRenderOp(params) === false) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.newRenderOp(
         targetShader,
         params.shaderProps as Record<string, unknown>,
@@ -353,7 +356,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture.ctxTexture !== undefined);
+    if (!ctxTexture) {
+      console.warn('Invalid texture type', texture);
+      return;
+    }
+
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
@@ -720,6 +727,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Skip nodes that don't have RTT updates
       if (!node || !node.hasRTTupdates) {
+        continue;
+      }
+
+      if (!node.texture || !node.texture.ctxTexture) {
+        console.warn('Texture not loaded for RTT node', node);
         continue;
       }
 

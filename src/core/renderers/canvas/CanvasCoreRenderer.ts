@@ -73,7 +73,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   reset(): void {
-    // eslint-disable-next-line no-self-assign
     this.canvas.width = this.canvas.width; // quick reset canvas
 
     const ctx = this.context;
@@ -122,7 +121,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
       ctxTexture = texture.ctxTexture as CanvasCoreTexture;
       if (texture.state === 'freed') {
-        ctxTexture.load();
+        // we're going to batch the texture loading so we don't have to wait for
+        // ctxTexture.load();
         return;
       }
       if (texture.state !== 'loaded' || !ctxTexture.hasImage()) {

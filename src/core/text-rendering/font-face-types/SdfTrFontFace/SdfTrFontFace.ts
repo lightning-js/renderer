@@ -92,10 +92,11 @@ export class SdfTrFontFace<
       stage.requestRender();
     });
 
-    // Pre-load it
-    stage.txManager.once('initialized', () => {
-      this.texture.ctxTexture.load();
-    });
+    // // Pre-load it
+    // this should be done automatically with throttling
+    // stage.txManager.once('initialized', () => {
+    //   this.texture.ctxTexture.load();
+    // });
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)

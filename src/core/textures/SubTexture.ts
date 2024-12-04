@@ -104,6 +104,10 @@ export class SubTexture extends Texture {
   private onParentTxLoaded: TextureLoadedEventHandler = () => {
     // We ignore the parent's passed dimensions, and simply use the SubTexture's
     // configured dimensions (because that's all that matters here)
+
+    // Load the core texture for this sub-texture
+    this.loadCtxTexture();
+
     this.setState('loaded', {
       width: this.props.width,
       height: this.props.height,
@@ -119,7 +123,7 @@ export class SubTexture extends Texture {
     this.parentTexture.setRenderableOwner(this, isRenderable);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
     return {
       data: this.props,
     };

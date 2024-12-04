@@ -159,6 +159,7 @@ function createImageWorker() {
         self.postMessage({ id: id, src: src, data: data });
       })
       .catch(function (error) {
+        console.error('Error loading image:', error);
         self.postMessage({ id: id, src: src, error: error.message });
       });
   };

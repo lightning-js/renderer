@@ -25,11 +25,12 @@ import {
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
-import type {
-  Texture,
-  TextureFailedEventHandler,
-  TextureFreedEventHandler,
-  TextureLoadedEventHandler,
+import {
+  TextureType,
+  type Texture,
+  type TextureFailedEventHandler,
+  type TextureFreedEventHandler,
+  type TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
   Dimensions,
@@ -767,6 +768,13 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderBounds |
         UpdateType.RenderState,
     );
+
+    // load default texture if no texture is set
+    if (!this.props.src && !this.props.texture && !this.props.rtt) {
+      this.texture = this.stage.txManager.loadTexture('ColorTexture', {
+        color: 0xffffffff,
+      });
+    }
   }
 
   //#region Textures
@@ -780,11 +788,6 @@ export class CoreNode extends EventEmitter {
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
       texture.preventCleanup = this.props.preventCleanup;
-      // Preload texture if required
-      if (this.textureOptions.preload) {
-        texture.ctxTexture.load();
-      }
-
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
@@ -1554,6 +1557,13 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
 
+    if (
+      this.texture?.ctxTexture === undefined ||
+      this.texture.state !== 'loaded'
+    ) {
+      return;
+    }
+
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
       width: this.props.width,
@@ -2241,12 +2251,12 @@ export class CoreNode extends EventEmitter {
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this, props, settings);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+
     const controller = new CoreAnimationController(
       this.stage.animationManager,
       animation,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return controller;
   }
 

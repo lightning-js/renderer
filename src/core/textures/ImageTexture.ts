@@ -222,7 +222,39 @@ export class ImageTexture extends Texture {
     return this.loadImageFallback(src, premultiplyAlpha ?? true);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
+    const resp = await this.determineImageType();
+
+    if (resp.data === null) {
+      this.setState('failed', Error('ImageTexture: No image data'));
+      return {
+        data: null,
+      };
+    }
+
+    let width, height;
+    // check if resp.data is typeof Uint8ClampedArray else
+    // use resp.data.width and resp.data.height
+    if (resp.data instanceof Uint8Array) {
+      width = this.props.width ?? 0;
+      height = this.props.height ?? 0;
+    } else {
+      width = resp.data?.width ?? (this.props.width || 0);
+      height = resp.data?.height ?? (this.props.height || 0);
+    }
+
+    // we're loaded!
+    this.setState('loaded', {
+      width,
+      height,
+    });
+
+    return {
+      data: resp.data,
+    };
+  }
+
+  determineImageType() {
     const { src, premultiplyAlpha, type } = this.props;
     if (src === null) {
       return {

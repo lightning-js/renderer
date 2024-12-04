@@ -149,17 +149,23 @@ export class CoreTextureManager extends EventEmitter {
   /**
    * Map of textures by cache key
    */
-  keyCache: Map<string, Texture> = new Map();
+  // keyCache: Map<string, Texture> = new Map();
 
   /**
    * Map of cache keys by texture
    */
-  inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
+  // inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
 
   /**
    * Map of texture constructors by their type name
    */
   txConstructors: Partial<TextureMap> = {};
+
+  private downloadTextureSourceQueue: Array<ImageTexture> = [];
+  private uploadTextureQueue: Array<Texture> = [];
+
+  private maxItemsPerFrame = 25; // Configurable limit for items to process per frame
+  private initialized = false;
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
@@ -209,21 +215,17 @@ export class CoreTextureManager extends EventEmitter {
           this.hasWorker &&
           numImageWorkers > 0
         ) {
-          const imageWorkers = new ImageWorkerManager(numImageWorkers, result);
-
-          // wait for the image worker manager to be initialized
-          imageWorkers.once('initialized', () => {
-            // enable image worker manager
-            this.imageWorkerManager = imageWorkers;
-          });
+          this.imageWorkerManager = new ImageWorkerManager(
+            numImageWorkers,
+            result,
+          );
         } else {
           console.warn(
             '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
           );
         }
 
-        // Do an early init event, we don't need to wait for the image worker manager to be initialized.
-        // Loading textures will be done on the main thread from this point on until the image worker manager is ready.
+        this.initialized = true;
         this.emit('initialized');
       })
       .catch((e) => {
@@ -232,6 +234,7 @@ export class CoreTextureManager extends EventEmitter {
         );
 
         // initialized without image worker manager and createImageBitmap
+        this.initialized = true;
         this.emit('initialized');
       });
 
@@ -244,103 +247,37 @@ export class CoreTextureManager extends EventEmitter {
 
   private async validateCreateImageBitmap(): Promise<CreateImageBitmapSupport> {
     // Test if createImageBitmap is supported using a simple 1x1 PNG image
-    // prettier-ignore (this is a binary PNG image)
+    // prettier-ignore
     const pngBinaryData = new Uint8Array([
-      0x89,
-      0x50,
-      0x4e,
-      0x47,
-      0x0d,
-      0x0a,
-      0x1a,
-      0x0a, // PNG signature
-      0x00,
-      0x00,
-      0x00,
-      0x0d, // IHDR chunk length
-      0x49,
-      0x48,
-      0x44,
-      0x52, // "IHDR" chunk type
-      0x00,
-      0x00,
-      0x00,
-      0x01, // Width: 1
-      0x00,
-      0x00,
-      0x00,
-      0x01, // Height: 1
-      0x01, // Bit depth: 1
-      0x03, // Color type: Indexed
-      0x00, // Compression method: Deflate
-      0x00, // Filter method: None
-      0x00, // Interlace method: None
-      0x25,
-      0xdb,
-      0x56,
-      0xca, // CRC for IHDR
-      0x00,
-      0x00,
-      0x00,
-      0x03, // PLTE chunk length
-      0x50,
-      0x4c,
-      0x54,
-      0x45, // "PLTE" chunk type
-      0x00,
-      0x00,
-      0x00, // Palette entry: Black
-      0xa7,
-      0x7a,
-      0x3d,
-      0xda, // CRC for PLTE
-      0x00,
-      0x00,
-      0x00,
-      0x01, // tRNS chunk length
-      0x74,
-      0x52,
-      0x4e,
-      0x53, // "tRNS" chunk type
-      0x00, // Transparency for black: Fully transparent
-      0x40,
-      0xe6,
-      0xd8,
-      0x66, // CRC for tRNS
-      0x00,
-      0x00,
-      0x00,
-      0x0a, // IDAT chunk length
-      0x49,
-      0x44,
-      0x41,
-      0x54, // "IDAT" chunk type
-      0x08,
-      0xd7, // Deflate header
-      0x63,
-      0x60,
-      0x00,
-      0x00,
-      0x00,
-      0x02,
-      0x00,
-      0x01, // Zlib-compressed data
-      0xe2,
-      0x21,
-      0xbc,
-      0x33, // CRC for IDAT
-      0x00,
-      0x00,
-      0x00,
-      0x00, // IEND chunk length
-      0x49,
-      0x45,
-      0x4e,
-      0x44, // "IEND" chunk type
-      0xae,
-      0x42,
-      0x60,
-      0x82, // CRC for IEND
+      0x89, 0x50, 0x4e, 0x47,
+      0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
+      0x00, 0x00, 0x00, 0x0d, // IHDR chunk length
+      0x49, 0x48, 0x44, 0x52, // "IHDR" chunk type
+      0x00, 0x00, 0x00, 0x01, // Width: 1
+      0x00, 0x00, 0x00, 0x01, // Height: 1
+      0x01,                   // Bit depth: 1
+      0x03,                   // Color type: Indexed
+      0x00,                   // Compression method: Deflate
+      0x00,                   // Filter method: None
+      0x00,                   // Interlace method: None
+      0x25, 0xdb, 0x56, 0xca, // CRC for IHDR
+      0x00, 0x00, 0x00, 0x03, // PLTE chunk length
+      0x50, 0x4c, 0x54, 0x45, // "PLTE" chunk type
+      0x00, 0x00, 0x00,       // Palette entry: Black
+      0xa7, 0x7a, 0x3d, 0xda, // CRC for PLTE
+      0x00, 0x00, 0x00, 0x01, // tRNS chunk length
+      0x74, 0x52, 0x4e, 0x53, // "tRNS" chunk type
+      0x00,                   // Transparency for black: Fully transparent
+      0x40, 0xe6, 0xd8, 0x66, // CRC for tRNS
+      0x00, 0x00, 0x00, 0x0a, // IDAT chunk length
+      0x49, 0x44, 0x41, 0x54, // "IDAT" chunk type
+      0x08, 0xd7,             // Deflate header
+      0x63, 0x60, 0x00, 0x00,
+      0x00, 0x02, 0x00, 0x01, // Zlib-compressed data
+      0xe2, 0x21, 0xbc, 0x33, // CRC for IDAT
+      0x00, 0x00, 0x00, 0x00, // IEND chunk length
+      0x49, 0x45, 0x4e, 0x44, // "IEND" chunk type
+      0xae, 0x42, 0x60, 0x82, // CRC for IEND
     ]);
 
     const support: CreateImageBitmapSupport = {
@@ -386,6 +323,7 @@ export class CoreTextureManager extends EventEmitter {
     this.txConstructors[textureType] = textureClass;
   }
 
+  /*
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
@@ -412,26 +350,115 @@ export class CoreTextureManager extends EventEmitter {
     }
     return texture as InstanceType<TextureMap[Type]>;
   }
+  */
 
-  private initTextureToCache(texture: Texture, cacheKey: string) {
-    const { keyCache, inverseKeyCache } = this;
-    keyCache.set(cacheKey, texture);
-    inverseKeyCache.set(texture, cacheKey);
+  /**
+   * Enqueue a texture for downloading its source image.
+   */
+  enqueueDownloadTextureSource(texture: ImageTexture): void {
+    if (!this.downloadTextureSourceQueue.includes(texture)) {
+      this.downloadTextureSourceQueue.push(texture);
+    }
   }
 
   /**
-   * Remove a texture from the cache
-   *
-   * @remarks
-   * Called by Texture Cleanup when a texture is freed.
-   *
-   * @param texture
+   * Enqueue a texture for uploading to the GPU.
    */
-  removeTextureFromCache(texture: Texture) {
-    const { inverseKeyCache, keyCache } = this;
-    const cacheKey = inverseKeyCache.get(texture);
-    if (cacheKey) {
-      keyCache.delete(cacheKey);
+  enqueueUploadTexture(texture: Texture): void {
+    if (!this.uploadTextureQueue.includes(texture)) {
+      this.uploadTextureQueue.push(texture);
     }
   }
+
+  /**
+   * Override loadTexture to use the batched approach.
+   */
+  loadTexture<Type extends keyof TextureMap>(
+    textureType: Type,
+    props: ExtractProps<TextureMap[Type]>,
+  ): InstanceType<TextureMap[Type]> {
+    const TextureClass = this.txConstructors[textureType];
+    if (!TextureClass) {
+      throw new Error(`Texture type "${textureType}" is not registered`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    const texture = new TextureClass(this, props as any);
+
+    // only ImageTexture needs to be loaded in batch
+    if (texture instanceof ImageTexture) {
+      this.enqueueDownloadTextureSource(texture);
+    } else {
+      this.enqueueUploadTexture(texture);
+    }
+
+    return texture as InstanceType<TextureMap[Type]>;
+  }
+
+  /**
+   * Process a limited number of downloads and uploads.
+   */
+  processSome(maxItems = this.maxItemsPerFrame): void {
+    if (this.initialized === false) {
+      return;
+    }
+
+    let itemsProcessed = 0;
+
+    // Process uploads
+    while (this.uploadTextureQueue.length > 0 && itemsProcessed < maxItems) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.uploadTextureQueue.shift()!;
+      queueMicrotask(() => {
+        texture.loadCtxTexture();
+      });
+      itemsProcessed++;
+    }
+
+    // Process downloads
+    while (
+      this.downloadTextureSourceQueue.length > 0 &&
+      itemsProcessed < maxItems
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.downloadTextureSourceQueue.shift()!;
+
+      queueMicrotask(() => {
+        texture.setState('loading');
+        texture
+          .getTextureData()
+          .then(() => {
+            this.enqueueUploadTexture(texture);
+          })
+          .catch((err) => {
+            texture.setState('failed', err);
+            console.error(`Failed to download texture: ${texture.type}`, err);
+          });
+      });
+
+      itemsProcessed++;
+    }
+  }
+
+  // private initTextureToCache(texture: Texture, cacheKey: string) {
+  //   const { keyCache, inverseKeyCache } = this;
+  //   keyCache.set(cacheKey, texture);
+  //   inverseKeyCache.set(texture, cacheKey);
+  // }
+
+  // /**
+  //  * Remove a texture from the cache
+  //  *
+  //  * @remarks
+  //  * Called by Texture Cleanup when a texture is freed.
+  //  *
+  //  * @param texture
+  //  */
+  // removeTextureFromCache(texture: Texture) {
+  //   const { inverseKeyCache, keyCache } = this;
+  //   const cacheKey = inverseKeyCache.get(texture);
+  //   if (cacheKey) {
+  //     keyCache.delete(cacheKey);
+  //   }
+  // }
 }

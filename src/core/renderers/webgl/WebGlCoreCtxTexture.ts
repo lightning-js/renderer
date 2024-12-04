@@ -53,9 +53,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     super(memManager, textureSource);
   }
 
-  get ctxTexture(): WebGLTexture {
+  get ctxTexture(): WebGLTexture | null {
     if (this._state === 'freed') {
-      this.load();
+      // this.load();
+      return null;
     }
     assertTruthy(this._nativeCtxTexture);
     return this._nativeCtxTexture;

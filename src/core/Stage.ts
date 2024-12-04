@@ -148,6 +148,13 @@ export class Stage {
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(numImageWorkers);
+
+    // Wait for the Texture Manager to initialize
+    // once it does, request a render
+    this.txManager.on('initialized', () => {
+      this.requestRender();
+    });
+
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
@@ -319,6 +326,10 @@ export class Stage {
     if (this.root.updateType !== 0) {
       this.root.update(this.deltaTime, this.root.clippingRect);
     }
+
+    // Process some textures
+    // TODO this should have a configurable amount
+    this.txManager.processSome();
 
     // Reset render operations and clear the canvas
     renderer.reset();
