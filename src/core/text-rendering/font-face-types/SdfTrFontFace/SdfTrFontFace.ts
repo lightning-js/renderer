@@ -77,26 +77,24 @@ export class SdfTrFontFace<
     );
 
     // Load image
-    this.texture = stage.txManager.loadTexture('ImageTexture', {
-      src: atlasUrl,
-      // IMPORTANT: The SDF shader requires the alpha channel to NOT be
-      // premultiplied on the atlas texture. If it is premultiplied, the
-      // rendering of SDF glyphs (especially single-channel SDF fonts) will
-      // be very jagged.
-      premultiplyAlpha: false,
-    });
+    this.texture = stage.txManager.loadTexture(
+      'ImageTexture',
+      {
+        src: atlasUrl,
+        // IMPORTANT: The SDF shader requires the alpha channel to NOT be
+        // premultiplied on the atlas texture. If it is premultiplied, the
+        // rendering of SDF glyphs (especially single-channel SDF fonts) will
+        // be very jagged.
+        premultiplyAlpha: false,
+      },
+      true,
+    );
 
     this.texture.on('loaded', () => {
       this.checkLoaded();
       // Make sure we mark the stage for a re-render (in case the font's texture was freed and reloaded)
       stage.requestRender();
     });
-
-    // // Pre-load it
-    // this should be done automatically with throttling
-    // stage.txManager.once('initialized', () => {
-    //   this.texture.ctxTexture.load();
-    // });
 
     // Set this.data to the fetched data from dataUrl
     fetch(atlasDataUrl)

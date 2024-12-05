@@ -771,9 +771,7 @@ export class CoreNode extends EventEmitter {
 
     // load default texture if no texture is set
     if (!this.props.src && !this.props.texture && !this.props.rtt) {
-      this.texture = this.stage.txManager.loadTexture('ColorTexture', {
-        color: 0xffffffff,
-      });
+      this.texture = this.stage.defaultTexture;
     }
   }
 

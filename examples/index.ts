@@ -425,7 +425,7 @@ async function runAutomation(
 
             // Allow some time for all images to load and the RaF to unpause
             // and render if needed.
-            await delay(200);
+            await waitForRendererIdle(renderer);
             if (snapshot) {
               console.log(`Calling snapshot(${testName})`);
               await snapshot(testName, adjustedOptions);
@@ -454,6 +454,20 @@ async function runAutomation(
   }
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function waitForRendererIdle(renderer: RendererMain) {
+  return new Promise<void>((resolve) => {
+    let timeout: NodeJS.Timeout | undefined;
+    const startTimeout = () => {
+      timeout = setTimeout(() => {
+        resolve();
+      }, 200);
+    };
+
+    renderer.once('idle', () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      startTimeout();
+    });
+  });
 }

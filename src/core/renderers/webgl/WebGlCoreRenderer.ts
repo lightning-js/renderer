@@ -95,7 +95,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   /**
    * White pixel texture used by default when no texture is specified.
    */
-  defaultTexture: Texture;
 
   quadBufferUsage = 0;
   /**
@@ -113,19 +112,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.mode = 'webgl';
 
     const { canvas, clearColor, bufferMemory } = options;
-
-    this.defaultTexture = new ColorTexture(this.txManager);
-
-    // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being cleaned up.
-    // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
-
-    // When the default texture is loaded, request a render in case the
-    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
-    this.defaultTexture.once('loaded', () => {
-      this.stage.requestRender();
-    });
 
     const gl = createWebGLContext(
       canvas,
@@ -237,7 +223,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    let texture = params.texture || this.defaultTexture;
+    let texture = params.texture;
+
+    assertTruthy(texture !== null, 'Texture is required');
+    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
 
     /**
      * If the shader props contain any automatic properties, update it with the
@@ -253,12 +242,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (hasOwn(params.shaderProps, '$alpha') === true) {
         params.shaderProps.$alpha = params.alpha;
       }
-    }
-
-    // assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
-    if (!texture.ctxTexture) {
-      console.warn('Invalid texture type', texture);
-      return;
     }
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
@@ -356,11 +339,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    if (!ctxTexture) {
-      console.warn('Invalid texture type', texture);
-      return;
-    }
-
+    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);

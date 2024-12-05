@@ -163,6 +163,7 @@ export class CoreTextureManager extends EventEmitter {
 
   private downloadTextureSourceQueue: Array<ImageTexture> = [];
   private uploadTextureQueue: Array<Texture> = [];
+  private uploadPriorityQueue: Array<Texture> = [];
 
   private maxItemsPerFrame = 25; // Configurable limit for items to process per frame
   private initialized = false;
@@ -363,10 +364,24 @@ export class CoreTextureManager extends EventEmitter {
 
   /**
    * Enqueue a texture for uploading to the GPU.
+   *
+   * @param texture - The texture to upload
+   * @param priority - Whether to prioritize this texture for upload
    */
-  enqueueUploadTexture(texture: Texture): void {
-    if (!this.uploadTextureQueue.includes(texture)) {
+  enqueueUploadTexture(texture: Texture, priority: boolean): void {
+    if (
+      priority === false &&
+      this.uploadTextureQueue.includes(texture) === false
+    ) {
       this.uploadTextureQueue.push(texture);
+      return;
+    }
+
+    if (
+      priority === true &&
+      this.uploadPriorityQueue.includes(texture) === false
+    ) {
+      this.uploadPriorityQueue.push(texture);
     }
   }
 
@@ -376,6 +391,7 @@ export class CoreTextureManager extends EventEmitter {
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
+    priority?: boolean,
   ): InstanceType<TextureMap[Type]> {
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
@@ -389,7 +405,7 @@ export class CoreTextureManager extends EventEmitter {
     if (texture instanceof ImageTexture) {
       this.enqueueDownloadTextureSource(texture);
     } else {
-      this.enqueueUploadTexture(texture);
+      this.enqueueUploadTexture(texture, priority || false);
     }
 
     return texture as InstanceType<TextureMap[Type]>;
@@ -404,6 +420,16 @@ export class CoreTextureManager extends EventEmitter {
     }
 
     let itemsProcessed = 0;
+
+    // Process priority uploads
+    while (this.uploadPriorityQueue.length > 0 && itemsProcessed < maxItems) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.uploadPriorityQueue.shift()!;
+      queueMicrotask(() => {
+        texture.loadCtxTexture();
+      });
+      itemsProcessed++;
+    }
 
     // Process uploads
     while (this.uploadTextureQueue.length > 0 && itemsProcessed < maxItems) {
@@ -428,11 +454,10 @@ export class CoreTextureManager extends EventEmitter {
         texture
           .getTextureData()
           .then(() => {
-            this.enqueueUploadTexture(texture);
+            this.enqueueUploadTexture(texture, false);
           })
           .catch((err) => {
             texture.setState('failed', err);
-            console.error(`Failed to download texture: ${texture.type}`, err);
           });
       });
 

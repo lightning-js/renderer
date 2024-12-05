@@ -53,6 +53,8 @@ import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
+import type { Texture } from './textures/Texture.js';
+import { ColorTexture } from './textures/ColorTexture.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -103,6 +105,7 @@ export class Stage {
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
+  public readonly defaultTexture: Texture;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -152,6 +155,26 @@ export class Stage {
     // Wait for the Texture Manager to initialize
     // once it does, request a render
     this.txManager.on('initialized', () => {
+      this.requestRender();
+    });
+
+    this.defaultTexture = this.txManager.loadTexture(
+      'ColorTexture',
+      {
+        color: 0xffffffff,
+      },
+      true,
+    );
+    assertTruthy(this.defaultTexture instanceof ColorTexture);
+
+    // Mark the default texture as ALWAYS renderable
+    // This prevents it from ever being cleaned up.
+    // Fixes https://github.com/lightning-js/renderer/issues/262
+    this.defaultTexture.setRenderableOwner(this, true);
+
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
       this.requestRender();
     });
 
