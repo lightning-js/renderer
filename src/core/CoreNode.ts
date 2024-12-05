@@ -1556,7 +1556,8 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.renderCoords);
 
     if (
-      this.texture?.ctxTexture === undefined ||
+      this.texture === null ||
+      this.texture === undefined ||
       this.texture.state !== 'loaded'
     ) {
       return;

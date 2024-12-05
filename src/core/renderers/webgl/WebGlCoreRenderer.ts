@@ -226,7 +226,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     let texture = params.texture;
 
     assertTruthy(texture !== null, 'Texture is required');
-    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
 
     /**
      * If the shader props contain any automatic properties, update it with the
@@ -338,8 +337,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
+    if (texture.ctxTexture === null || texture.ctxTexture === undefined) {
+      return;
+    }
+
     const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+    // assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);

@@ -425,9 +425,7 @@ export class CoreTextureManager extends EventEmitter {
     while (this.uploadPriorityQueue.length > 0 && itemsProcessed < maxItems) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.uploadPriorityQueue.shift()!;
-      queueMicrotask(() => {
-        texture.loadCtxTexture();
-      });
+      texture.loadCtxTexture();
       itemsProcessed++;
     }
 
@@ -435,9 +433,7 @@ export class CoreTextureManager extends EventEmitter {
     while (this.uploadTextureQueue.length > 0 && itemsProcessed < maxItems) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.uploadTextureQueue.shift()!;
-      queueMicrotask(() => {
-        texture.loadCtxTexture();
-      });
+      texture.loadCtxTexture();
       itemsProcessed++;
     }
 
