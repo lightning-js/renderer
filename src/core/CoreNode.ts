@@ -2018,10 +2018,14 @@ export class CoreNode extends EventEmitter {
     }
   }
   private initRenderTexture() {
-    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
-      width: this.width,
-      height: this.height,
-    });
+    this.texture = this.stage.txManager.loadTexture(
+      'RenderTexture',
+      {
+        width: this.width,
+        height: this.height,
+      },
+      true,
+    );
 
     this.stage.renderer?.renderToTexture(this); // Only this RTT node
   }
