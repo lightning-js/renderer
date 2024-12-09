@@ -335,7 +335,11 @@ export class Stage {
    * Check if the scene has updates
    */
   hasSceneUpdates() {
-    return !!this.root.updateType || this.renderRequested;
+    return (
+      !!this.root.updateType ||
+      this.renderRequested ||
+      this.txManager.hasUpdates()
+    );
   }
 
   /**

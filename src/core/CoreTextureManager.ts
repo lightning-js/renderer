@@ -108,20 +108,6 @@ export type ResizeModeOptions =
  */
 export interface TextureOptions {
   /**
-   * Preload the texture immediately even if it's not being rendered to the
-   * screen.
-   *
-   * @remarks
-   * This allows the texture to be used immediately without any delay when it
-   * is first needed for rendering. Otherwise the loading process will start
-   * when the texture is first rendered, which may cause a delay in that texture
-   * being shown properly.
-   *
-   * @defaultValue `false`
-   */
-  preload?: boolean;
-
-  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
@@ -161,9 +147,8 @@ export class CoreTextureManager extends EventEmitter {
    */
   txConstructors: Partial<TextureMap> = {};
 
-  private downloadTextureSourceQueue: Array<ImageTexture> = [];
+  private downloadTextureSourceQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
-  private uploadPriorityQueue: Array<Texture> = [];
 
   private maxItemsPerFrame = 25; // Configurable limit for items to process per frame
   private initialized = false;
@@ -356,7 +341,7 @@ export class CoreTextureManager extends EventEmitter {
   /**
    * Enqueue a texture for downloading its source image.
    */
-  enqueueDownloadTextureSource(texture: ImageTexture): void {
+  enqueueDownloadTextureSource(texture: Texture): void {
     if (!this.downloadTextureSourceQueue.includes(texture)) {
       this.downloadTextureSourceQueue.push(texture);
     }
@@ -366,27 +351,19 @@ export class CoreTextureManager extends EventEmitter {
    * Enqueue a texture for uploading to the GPU.
    *
    * @param texture - The texture to upload
-   * @param priority - Whether to prioritize this texture for upload
    */
-  enqueueUploadTexture(texture: Texture, priority: boolean): void {
-    if (
-      priority === false &&
-      this.uploadTextureQueue.includes(texture) === false
-    ) {
+  enqueueUploadTexture(texture: Texture): void {
+    if (this.uploadTextureQueue.includes(texture) === false) {
       this.uploadTextureQueue.push(texture);
-      return;
-    }
-
-    if (
-      priority === true &&
-      this.uploadPriorityQueue.includes(texture) === false
-    ) {
-      this.uploadPriorityQueue.push(texture);
     }
   }
 
   /**
    * Override loadTexture to use the batched approach.
+   *
+   * @param textureType - The type of texture to load
+   * @param props - The properties to use for the texture
+   * @param immediate - Whether to prioritize the texture for immediate loading
    */
   loadTexture<Type extends keyof TextureMap>(
     textureType: Type,
@@ -401,12 +378,23 @@ export class CoreTextureManager extends EventEmitter {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     const texture = new TextureClass(this, props as any);
 
-    // only ImageTexture needs to be loaded in batch
-    if (texture instanceof ImageTexture) {
-      this.enqueueDownloadTextureSource(texture);
-    } else {
-      this.enqueueUploadTexture(texture, priority || false);
+    // prioritize the texture for immediate loading
+    if (priority === true) {
+      texture
+        .getTextureData()
+        .then(() => {
+          const coreContext = texture.loadCtxTexture();
+          coreContext.load();
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+
+      return texture as InstanceType<TextureMap[Type]>;
     }
+
+    // enqueue the texture for download and upload
+    this.enqueueDownloadTextureSource(texture);
 
     return texture as InstanceType<TextureMap[Type]>;
   }
@@ -421,19 +409,12 @@ export class CoreTextureManager extends EventEmitter {
 
     let itemsProcessed = 0;
 
-    // Process priority uploads
-    while (this.uploadPriorityQueue.length > 0 && itemsProcessed < maxItems) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.uploadPriorityQueue.shift()!;
-      texture.loadCtxTexture();
-      itemsProcessed++;
-    }
-
     // Process uploads
     while (this.uploadTextureQueue.length > 0 && itemsProcessed < maxItems) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.uploadTextureQueue.shift()!;
-      texture.loadCtxTexture();
+      const coreContext = texture.loadCtxTexture();
+      coreContext.load();
       itemsProcessed++;
     }
 
@@ -444,21 +425,26 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
-
       queueMicrotask(() => {
-        texture.setState('loading');
         texture
           .getTextureData()
           .then(() => {
-            this.enqueueUploadTexture(texture, false);
+            this.enqueueUploadTexture(texture);
           })
           .catch((err) => {
-            texture.setState('failed', err);
+            console.error(err);
           });
       });
 
       itemsProcessed++;
     }
+  }
+
+  public hasUpdates(): boolean {
+    return (
+      this.downloadTextureSourceQueue.length > 0 ||
+      this.uploadTextureQueue.length > 0
+    );
   }
 
   // private initTextureToCache(texture: Texture, cacheKey: string) {

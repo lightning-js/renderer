@@ -104,18 +104,14 @@ export class SubTexture extends Texture {
   private onParentTxLoaded: TextureLoadedEventHandler = () => {
     // We ignore the parent's passed dimensions, and simply use the SubTexture's
     // configured dimensions (because that's all that matters here)
-
-    // Load the core texture for this sub-texture
-    this.loadCtxTexture();
-
-    this.setState('loaded', {
+    this.setSourceState('loaded', {
       width: this.props.width,
       height: this.props.height,
     });
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
-    this.setState('failed', error);
+    this.setSourceState('failed', error);
   };
 
   override onChangeIsRenderable(isRenderable: boolean): void {

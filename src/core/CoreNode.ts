@@ -830,6 +830,7 @@ export class CoreNode extends EventEmitter {
 
   private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
+    this.setUpdateType(UpdateType.IsRenderable);
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -852,6 +853,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -864,6 +867,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -1208,8 +1213,12 @@ export class CoreNode extends EventEmitter {
 
   //check if CoreNode is renderable based on props
   hasRenderableProperties(): boolean {
-    if (this.props.texture) {
-      return true;
+    if (this.texture !== null) {
+      if (this.texture.state === 'loaded') {
+        return true;
+      }
+
+      return false;
     }
 
     if (!this.props.width || !this.props.height) {
@@ -1220,7 +1229,7 @@ export class CoreNode extends EventEmitter {
       return true;
     }
 
-    if (this.props.clipping) {
+    if (this.props.clipping === true) {
       return true;
     }
 
@@ -1230,37 +1239,19 @@ export class CoreNode extends EventEmitter {
 
     // Consider removing these checks and just using the color property check above.
     // Maybe add a forceRender prop for nodes that should always render.
-    if (this.props.colorTop !== 0) {
+    if (
+      this.props.colorTop !== 0 ||
+      this.props.colorBottom !== 0 ||
+      this.props.colorLeft !== 0 ||
+      this.props.colorRight !== 0 ||
+      this.props.colorTl !== 0 ||
+      this.props.colorTr !== 0 ||
+      this.props.colorBl !== 0 ||
+      this.props.colorBr !== 0
+    ) {
       return true;
     }
 
-    if (this.props.colorBottom !== 0) {
-      return true;
-    }
-
-    if (this.props.colorLeft !== 0) {
-      return true;
-    }
-
-    if (this.props.colorRight !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTr !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBr !== 0) {
-      return true;
-    }
     return false;
   }
 
@@ -1554,14 +1545,7 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-
-    if (
-      this.texture === null ||
-      this.texture === undefined ||
-      this.texture.state !== 'loaded'
-    ) {
-      return;
-    }
+    assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1656,7 +1640,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1676,7 +1660,7 @@ export class CoreNode extends EventEmitter {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -2038,7 +2022,7 @@ export class CoreNode extends EventEmitter {
       width: this.width,
       height: this.height,
     });
-    this.textureOptions.preload = true;
+
     this.stage.renderer?.renderToTexture(this); // Only this RTT node
   }
 

@@ -226,7 +226,7 @@ export class ImageTexture extends Texture {
     const resp = await this.determineImageType();
 
     if (resp.data === null) {
-      this.setState('failed', Error('ImageTexture: No image data'));
+      this.setSourceState('failed', Error('ImageTexture: No image data'));
       return {
         data: null,
       };
@@ -244,7 +244,7 @@ export class ImageTexture extends Texture {
     }
 
     // we're loaded!
-    this.setState('loaded', {
+    this.setSourceState('loaded', {
       width,
       height,
     });

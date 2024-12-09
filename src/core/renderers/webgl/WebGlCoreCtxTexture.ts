@@ -41,7 +41,6 @@ const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
  */
 export class WebGlCoreCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
-  private _state: 'freed' | 'loading' | 'loaded' | 'failed' = 'freed';
   private _w = 0;
   private _h = 0;
 
@@ -54,8 +53,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   }
 
   get ctxTexture(): WebGLTexture | null {
-    if (this._state === 'freed') {
-      // this.load();
+    if (this.state === 'freed') {
+      this.load();
       return null;
     }
     assertTruthy(this._nativeCtxTexture);
@@ -81,41 +80,45 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    */
   load() {
     // If the texture is already loading or loaded, don't load it again.
-    if (this._state === 'loading' || this._state === 'loaded') {
+    if (this.state === 'loading' || this.state === 'loaded') {
       return;
     }
-    this._state = 'loading';
-    this.textureSource.setState('loading');
+
+    this.state = 'loading';
+    this.textureSource.setCoreCtxState('loading');
     this._nativeCtxTexture = this.createNativeCtxTexture();
+
     if (this._nativeCtxTexture === null) {
-      this._state = 'failed';
-      this.textureSource.setState(
+      this.state = 'failed';
+      this.textureSource.setCoreCtxState(
         'failed',
         new Error('Could not create WebGL Texture'),
       );
       console.error('Could not create WebGL Texture');
       return;
     }
+
     this.onLoadRequest()
       .then(({ width, height }) => {
         // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
+        if (this.state === 'freed') {
           return;
         }
-        this._state = 'loaded';
+
+        this.state = 'loaded';
         this._w = width;
         this._h = height;
         // Update the texture source's width and height so that it can be used
         // for rendering.
-        this.textureSource.setState('loaded', { width, height });
+        this.textureSource.setCoreCtxState('loaded', { width, height });
       })
       .catch((err) => {
         // If the texture has been freed while loading, return early.
-        if (this._state === 'freed') {
+        if (this.state === 'freed') {
           return;
         }
-        this._state = 'failed';
-        this.textureSource.setState('failed', err);
+        this.state = 'failed';
+        this.textureSource.setCoreCtxState('failed', err);
         console.error(err);
       });
   }
@@ -125,21 +128,21 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    */
   async onLoadRequest(): Promise<Dimensions> {
     const { glw } = this;
+    const textureData = this.textureSource.textureData;
+    assertTruthy(textureData, 'Texture data is null');
 
     // Set to a 1x1 transparent texture
     glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
     this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
-    const textureData = await this.textureSource?.getTextureData();
     // If the texture has been freed while loading, return early.
     if (!this._nativeCtxTexture) {
-      assertTruthy(this._state === 'freed');
+      assertTruthy(this.state === 'freed');
       return { width: 0, height: 0 };
     }
     let width = 0;
     let height = 0;
 
-    assertTruthy(this._nativeCtxTexture);
     glw.activeTexture(0);
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
@@ -247,11 +250,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
    * @returns
    */
   free() {
-    if (this._state === 'freed') {
+    if (this.state === 'freed') {
       return;
     }
-    this._state = 'freed';
-    this.textureSource.setState('freed');
+    this.state = 'freed';
+    this.textureSource.setCoreCtxState('freed');
     this._w = 0;
     this._h = 0;
     if (!this._nativeCtxTexture) {
