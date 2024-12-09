@@ -656,7 +656,7 @@ export class RendererMain extends EventEmitter {
    * May not do anything if the render loop is running on a separate worker.
    */
   rerender() {
-    throw new Error('Not implemented');
+    this.stage.requestRender();
   }
 
   /**
