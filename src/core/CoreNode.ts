@@ -267,7 +267,12 @@ export interface CoreNodeProps {
    * @default `false`
    */
   autosize: boolean;
-  boundsMargin: [number, number, number, number] | null;
+  /**
+   * Margin around the Node's bounds for preloading
+   *
+   * @default `null`
+   */
+  boundsMargin: number | [number, number, number, number] | null;
   /**
    * Clipping Mode
    *
@@ -761,21 +766,6 @@ export class CoreNode extends EventEmitter {
     this.src = props.src;
     this.rtt = props.rtt;
 
-    let bm = this.stage.boundsMargin;
-    if (props.boundsMargin) {
-      bm = Array.isArray(props.boundsMargin)
-        ? props.boundsMargin
-        : [
-            props.boundsMargin,
-            props.boundsMargin,
-            props.boundsMargin,
-            props.boundsMargin,
-          ];
-    } else if (this.parent !== null && this.parent.boundsMargin !== undefined) {
-      bm = this.parent.boundsMargin;
-    }
-    this.boundsMargin = bm;
-
     this.setUpdateType(
       UpdateType.ScaleRotate |
         UpdateType.Local |
@@ -1137,6 +1127,7 @@ export class CoreNode extends EventEmitter {
       this.props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
+      this.updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
@@ -1329,7 +1320,7 @@ export class CoreNode extends EventEmitter {
 
       this.preloadBound = createPreloadBounds(
         this.strictBound,
-        this.boundsMargin,
+        this.boundsMargin as [number, number, number, number],
       );
     } else {
       // no parent or parent does not have a bound, take the stage boundaries
@@ -1808,13 +1799,11 @@ export class CoreNode extends EventEmitter {
     this.props.autosize = value;
   }
 
-  get boundsMargin(): [number, number, number, number] {
-    return (
-      this.props.boundsMargin ??
-      this.parent?.boundsMargin ??
-      this.stage.boundsMargin ??
-      null
-    );
+  get boundsMargin(): number | [number, number, number, number] {
+    const value = this.props.boundsMargin;
+    return Array.isArray(value)
+      ? value
+      : this.parent?.boundsMargin ?? this.stage.boundsMargin;
   }
 
   set boundsMargin(value: number | [number, number, number, number]) {
@@ -1827,7 +1816,8 @@ export class CoreNode extends EventEmitter {
       : [value, value, value, value];
 
     this.props.boundsMargin = bm;
-    this.setUpdateType(UpdateType.RenderBounds);
+    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
 
   get clipping(): boolean {
