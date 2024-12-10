@@ -135,12 +135,12 @@ export class CoreTextureManager extends EventEmitter {
   /**
    * Map of textures by cache key
    */
-  // keyCache: Map<string, Texture> = new Map();
+  keyCache: Map<string, Texture> = new Map();
 
   /**
    * Map of cache keys by texture
    */
-  // inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
+  inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
 
   /**
    * Map of texture constructors by their type name
@@ -359,25 +359,41 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
-   * Override loadTexture to use the batched approach.
+   * Create a texture
    *
-   * @param textureType - The type of texture to load
+   * @param textureType - The type of texture to create
    * @param props - The properties to use for the texture
-   * @param immediate - Whether to prioritize the texture for immediate loading
    */
-  loadTexture<Type extends keyof TextureMap>(
+  createTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
-    priority?: boolean,
   ): InstanceType<TextureMap[Type]> {
+    let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    const texture = new TextureClass(this, props as any);
+    const cacheKey = TextureClass.makeCacheKey(props as any);
+    if (cacheKey && this.keyCache.has(cacheKey)) {
+      console.log('Getting texture by cache key', cacheKey);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      texture = this.keyCache.get(cacheKey)!;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      texture = new TextureClass(this, props as any);
+    }
 
+    return texture as InstanceType<TextureMap[Type]>;
+  }
+
+  /**
+   * Override loadTexture to use the batched approach.
+   *
+   * @param texture - The texture to load
+   * @param immediate - Whether to prioritize the texture for immediate loading
+   */
+  loadTexture(texture: Texture, priority?: boolean): void {
     // prioritize the texture for immediate loading
     if (priority === true) {
       texture
@@ -389,14 +405,10 @@ export class CoreTextureManager extends EventEmitter {
         .catch((err) => {
           console.error(err);
         });
-
-      return texture as InstanceType<TextureMap[Type]>;
     }
 
     // enqueue the texture for download and upload
     this.enqueueDownloadTextureSource(texture);
-
-    return texture as InstanceType<TextureMap[Type]>;
   }
 
   /**
@@ -447,25 +459,25 @@ export class CoreTextureManager extends EventEmitter {
     );
   }
 
-  // private initTextureToCache(texture: Texture, cacheKey: string) {
-  //   const { keyCache, inverseKeyCache } = this;
-  //   keyCache.set(cacheKey, texture);
-  //   inverseKeyCache.set(texture, cacheKey);
-  // }
+  private initTextureToCache(texture: Texture, cacheKey: string) {
+    const { keyCache, inverseKeyCache } = this;
+    keyCache.set(cacheKey, texture);
+    inverseKeyCache.set(texture, cacheKey);
+  }
 
-  // /**
-  //  * Remove a texture from the cache
-  //  *
-  //  * @remarks
-  //  * Called by Texture Cleanup when a texture is freed.
-  //  *
-  //  * @param texture
-  //  */
-  // removeTextureFromCache(texture: Texture) {
-  //   const { inverseKeyCache, keyCache } = this;
-  //   const cacheKey = inverseKeyCache.get(texture);
-  //   if (cacheKey) {
-  //     keyCache.delete(cacheKey);
-  //   }
-  // }
+  /**
+   * Remove a texture from the cache
+   *
+   * @remarks
+   * Called by Texture Cleanup when a texture is freed.
+   *
+   * @param texture
+   */
+  removeTextureFromCache(texture: Texture) {
+    const { inverseKeyCache, keyCache } = this;
+    const cacheKey = inverseKeyCache.get(texture);
+    if (cacheKey) {
+      keyCache.delete(cacheKey);
+    }
+  }
 }

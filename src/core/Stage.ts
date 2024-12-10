@@ -158,13 +158,12 @@ export class Stage {
       this.requestRender();
     });
 
-    this.defaultTexture = this.txManager.loadTexture(
-      'ColorTexture',
-      {
-        color: 0xffffffff,
-      },
-      true,
-    );
+    this.defaultTexture = this.txManager.createTexture('ColorTexture', {
+      color: 0xffffffff,
+    });
+
+    this.txManager.loadTexture(this.defaultTexture, true);
+
     assertTruthy(this.defaultTexture instanceof ColorTexture);
 
     // Mark the default texture as ALWAYS renderable

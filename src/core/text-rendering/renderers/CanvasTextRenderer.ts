@@ -99,7 +99,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
     let context = this.canvas.getContext('2d', {
       willReadFrequently: true,
     }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
@@ -338,7 +338,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     assertTruthy(state.renderInfo);
     const node = state.node;
 
-    const texture = this.stage.txManager.loadTexture('ImageTexture', {
+    const texture = this.stage.txManager.createTexture('ImageTexture', {
       src: function (
         this: CanvasTextRenderer,
         lightning2TextRenderer: LightningTextTextureRenderer,
@@ -361,6 +361,9 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         );
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
+
+    this.stage.txManager.loadTexture(texture);
+
     if (state.textureNode) {
       // Use the existing texture node
       state.textureNode.texture = texture;

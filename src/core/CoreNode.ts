@@ -26,7 +26,6 @@ import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
-  TextureType,
   type Texture,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
@@ -1389,12 +1388,24 @@ export class CoreNode extends EventEmitter {
    * @returns
    */
   updateIsRenderable() {
-    let newIsRenderable;
+    let newIsRenderable: boolean;
     if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
     }
+
+    // If the texture is not loaded and the node is renderable, load the texture
+    // this only needs to happen once or until the texture is no longer loaded
+    if (
+      this.texture !== null &&
+      this.texture.state !== 'loaded' &&
+      this.renderState > CoreNodeRenderState.OutOfBounds
+    ) {
+      console.log('Loading texture');
+      this.stage.txManager.loadTexture(this.texture);
+    }
+
     if (this.isRenderable !== newIsRenderable) {
       this.isRenderable = newIsRenderable;
       this.onChangeIsRenderable(newIsRenderable);
@@ -1636,7 +1647,7 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
@@ -1656,7 +1667,7 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
@@ -2018,14 +2029,14 @@ export class CoreNode extends EventEmitter {
     }
   }
   private initRenderTexture() {
-    this.texture = this.stage.txManager.loadTexture(
-      'RenderTexture',
-      {
-        width: this.width,
-        height: this.height,
-      },
-      true,
-    );
+    this.texture = this.stage.txManager.createTexture('RenderTexture', {
+      width: this.width,
+      height: this.height,
+    });
+
+    // call load immediately to ensure the texture is created
+    // WvB do we really need this?
+    this.stage.txManager.loadTexture(this.texture, true);
 
     this.stage.renderer?.renderToTexture(this); // Only this RTT node
   }
@@ -2107,7 +2118,7 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
+    this.texture = this.stage.txManager.createTexture('ImageTexture', {
       src: imageUrl,
       width: this.props.width,
       height: this.props.height,

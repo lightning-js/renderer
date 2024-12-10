@@ -516,7 +516,7 @@ export class RendererMain extends EventEmitter {
     textureType: TxType,
     props: ExtractProps<TextureMap[TxType]>,
   ): InstanceType<TextureMap[TxType]> {
-    return this.stage.txManager.loadTexture(textureType, props);
+    return this.stage.txManager.createTexture(textureType, props);
   }
 
   /**
