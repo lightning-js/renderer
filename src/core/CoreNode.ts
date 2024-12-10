@@ -268,6 +268,12 @@ export interface CoreNodeProps {
    */
   autosize: boolean;
   /**
+   * Margin around the Node's bounds for preloading
+   *
+   * @default `null`
+   */
+  boundsMargin: number | [number, number, number, number] | null;
+  /**
    * Clipping Mode
    *
    * @remarks
@@ -1122,6 +1128,7 @@ export class CoreNode extends EventEmitter {
       this.props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
+      this.updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
@@ -1333,7 +1340,7 @@ export class CoreNode extends EventEmitter {
 
       this.preloadBound = createPreloadBounds(
         this.strictBound,
-        this.stage.boundsMargin,
+        this.boundsMargin as [number, number, number, number],
       );
     } else {
       // no parent or parent does not have a bound, take the stage boundaries
@@ -1810,6 +1817,27 @@ export class CoreNode extends EventEmitter {
 
   set autosize(value: boolean) {
     this.props.autosize = value;
+  }
+
+  get boundsMargin(): number | [number, number, number, number] {
+    const value = this.props.boundsMargin;
+    return Array.isArray(value)
+      ? value
+      : this.parent?.boundsMargin ?? this.stage.boundsMargin;
+  }
+
+  set boundsMargin(value: number | [number, number, number, number]) {
+    if (value === this.props.boundsMargin) {
+      return;
+    }
+
+    const bm: [number, number, number, number] = Array.isArray(value)
+      ? value
+      : [value, value, value, value];
+
+    this.props.boundsMargin = bm;
+    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
 
   get clipping(): boolean {
