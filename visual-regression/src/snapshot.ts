@@ -149,7 +149,7 @@ export async function saveFailedSnapshot(
     writeTasks.push(
       fs.promises.writeFile(
         path.join(failedResultsDir, `${subtestName}-${snapshotIndex}-diff.png`),
-         
+
         PNG.sync.write(diffPng),
       ),
     );
@@ -171,7 +171,6 @@ export function compareBuffers(
   width: number,
   height: number,
 ): CompareResult {
-   
   const diff = new PNG({ width: width as number, height: height as number });
   const actualImage = PNG.sync.read(actualImageBuffer);
   const expectedImage = PNG.sync.read(expectedImageBuffer);
@@ -187,11 +186,10 @@ export function compareBuffers(
     };
   }
 
-   
   const count = pixelmatch(
     actualImage.data,
     expectedImage.data,
-     
+
     diff.data,
     width,
     height,
@@ -202,7 +200,7 @@ export function compareBuffers(
 
   return {
     doesMatch,
-     
+
     diffImageBuffer: doesMatch ? undefined : diff,
     reason: doesMatch ? undefined : `${count} pixels differ`,
   };

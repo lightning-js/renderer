@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CreateImageBitmapSupport } from '../CoreTextureManager.js';
 import { type TextureData } from '../textures/Texture.js';
 
@@ -138,14 +137,6 @@ function createImageWorker() {
   }
 
   self.onmessage = (event) => {
-    if (event.data.type === 'init') {
-      // Store support level sent from the main thread
-      supportsOptionsCreateImageBitmap = event.data.support.config;
-      supportsFullCreateImageBitmap = event.data.support.full;
-      self.postMessage({ initialized: true });
-      return;
-    }
-
     var src = event.data.src;
     var id = event.data.id;
     var premultiplyAlpha = event.data.premultiplyAlpha;
@@ -166,7 +157,7 @@ function createImageWorker() {
 }
 /* eslint-enable */
 
-export class ImageWorkerManager extends EventEmitter {
+export class ImageWorkerManager {
   imageWorkersEnabled = true;
   messageManager: Record<number, MessageCallback> = {};
   workers: Worker[] = [];
@@ -177,7 +168,6 @@ export class ImageWorkerManager extends EventEmitter {
     numImageWorkers: number,
     createImageBitmapSupport: CreateImageBitmapSupport,
   ) {
-    super();
     this.workers = this.createWorkers(
       numImageWorkers,
       createImageBitmapSupport,
@@ -188,12 +178,6 @@ export class ImageWorkerManager extends EventEmitter {
   }
 
   private handleMessage(event: MessageEvent) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    if (event.data?.initialized) {
-      this.emit('initialized');
-      return;
-    }
-
     const { id, data, error } = event.data as ImageWorkerMessage;
     const msg = this.messageManager[id];
     if (msg) {
@@ -211,7 +195,19 @@ export class ImageWorkerManager extends EventEmitter {
     numWorkers = 1,
     createImageBitmapSupport: CreateImageBitmapSupport,
   ): Worker[] {
-    const workerCode = `(${createImageWorker.toString()})()`;
+    let workerCode = `(${createImageWorker.toString()})()`;
+
+    // Replace placeholders with actual initialization values
+    const supportsOptions = createImageBitmapSupport.options ? 'true' : 'false';
+    const supportsFull = createImageBitmapSupport.full ? 'true' : 'false';
+    workerCode = workerCode.replace(
+      'var supportsOptionsCreateImageBitmap = false;',
+      `var supportsOptionsCreateImageBitmap = ${supportsOptions};`,
+    );
+    workerCode = workerCode.replace(
+      'var supportsFullCreateImageBitmap = false;',
+      `var supportsFullCreateImageBitmap = ${supportsFull};`,
+    );
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',

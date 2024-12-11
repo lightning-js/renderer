@@ -30,7 +30,12 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
-import { getBorder, getRadius, strokeLine } from './internal/C2DShaderUtils.js';
+import {
+  getBorder,
+  getRadius,
+  roundRect,
+  strokeLine,
+} from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
   parseColorRgba,
@@ -166,7 +171,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
     if (radius) {
       const path = new Path2D();
-      path.roundRect(tx, ty, width, height, radius);
+      roundRect.call(path, tx, ty, width, height, radius);
       ctx.clip(path);
     }
 
@@ -224,7 +229,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.strokeStyle = borderColor;
       ctx.globalAlpha = alpha;
       if (radius) {
-        ctx.roundRect(
+        roundRect.call(
+          ctx,
           tx + borderInnerWidth,
           ty + borderInnerWidth,
           width - borderWidth,
