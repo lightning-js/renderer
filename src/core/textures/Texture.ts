@@ -255,38 +255,6 @@ export abstract class Texture extends EventEmitter {
     }
   }
 
-  /**
-   * Set the state of the texture
-   *
-   * @remark
-   * Intended for internal-use only but declared public so that it can be set
-   * by it's associated {@link CoreContextTexture}
-   *
-   * @param state
-   * @param args
-   */
-  // setState<State extends TextureState>(
-  //   state: State,
-  //   ...args: ParametersSkipTarget<TextureStateEventMap[State]>
-  // ): void {
-  //   if (this.state === state) {
-  //     return;
-  //   }
-
-  //   // (this.state as TextureState) = state;
-  //   if (state === 'loaded') {
-  //     const loadedArgs = args as ParametersSkipTarget<
-  //       TextureStateEventMap['loaded']
-  //     >;
-  //     (this.dimensions as Dimensions) = loadedArgs[0];
-  //   } else if (state === 'failed') {
-  //     const failedArgs = args as ParametersSkipTarget<
-  //       TextureStateEventMap['failed']
-  //     >;
-  //     (this.error as Error) = failedArgs[0];
-  //   }
-  // }
-
   private setState(
     state: TextureState,
     type: UpdateType,

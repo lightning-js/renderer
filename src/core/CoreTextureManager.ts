@@ -345,12 +345,15 @@ export class CoreTextureManager extends EventEmitter {
 
     const cacheKey = TextureClass.makeCacheKey(props as any);
     if (cacheKey && this.keyCache.has(cacheKey)) {
-      console.log('Getting texture by cache key', cacheKey);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       texture = this.keyCache.get(cacheKey)!;
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
       texture = new TextureClass(this, props as any);
+
+      if (cacheKey) {
+        this.initTextureToCache(texture, cacheKey);
+      }
     }
 
     return texture as InstanceType<TextureMap[Type]>;

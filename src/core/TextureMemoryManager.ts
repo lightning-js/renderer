@@ -227,9 +227,8 @@ export class TextureMemoryManager {
         break;
       }
       if (texture.preventCleanup === false) {
-        // texture.ctxTexture.free();
         texture.free();
-        // txManager.removeTextureFromCache(texture);
+        txManager.removeTextureFromCache(texture);
       }
       if (this.memUsed <= memTarget) {
         // Stop once we've freed enough textures to reach under the target threshold
