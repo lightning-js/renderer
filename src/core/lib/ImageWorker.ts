@@ -215,15 +215,7 @@ export class ImageWorkerManager {
     const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
-      const worker = new Worker(blobURL);
-
-      // Pass `createImageBitmap` support level during worker initialization
-      worker.postMessage({
-        type: 'init',
-        support: createImageBitmapSupport,
-      });
-
-      workers.push(worker);
+      workers.push(new Worker(blobURL));
     }
     return workers;
   }
