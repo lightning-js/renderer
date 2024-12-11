@@ -149,8 +149,6 @@ export class CoreTextureManager extends EventEmitter {
 
   private downloadTextureSourceQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
-
-  private maxItemsPerFrame = 25; // Configurable limit for items to process per frame
   private initialized = false;
 
   imageWorkerManager: ImageWorkerManager | null = null;
@@ -309,35 +307,6 @@ export class CoreTextureManager extends EventEmitter {
     this.txConstructors[textureType] = textureClass;
   }
 
-  /*
-  loadTexture<Type extends keyof TextureMap>(
-    textureType: Type,
-    props: ExtractProps<TextureMap[Type]>,
-  ): InstanceType<TextureMap[Type]> {
-    let texture: Texture | undefined;
-    const TextureClass = this.txConstructors[textureType];
-    if (!TextureClass) {
-      throw new Error(`Texture type "${textureType}" is not registered`);
-    }
-
-    if (!texture) {
-      const cacheKey = TextureClass.makeCacheKey(props as any);
-      if (cacheKey && this.keyCache.has(cacheKey)) {
-        // console.log('Getting texture by cache key', cacheKey);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        texture = this.keyCache.get(cacheKey)!;
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        texture = new TextureClass(this, props as any);
-        if (cacheKey) {
-          this.initTextureToCache(texture, cacheKey);
-        }
-      }
-    }
-    return texture as InstanceType<TextureMap[Type]>;
-  }
-  */
-
   /**
    * Enqueue a texture for downloading its source image.
    */
@@ -413,8 +382,10 @@ export class CoreTextureManager extends EventEmitter {
 
   /**
    * Process a limited number of downloads and uploads.
+   *
+   * @param maxItems - The maximum number of items to process
    */
-  processSome(maxItems = this.maxItemsPerFrame): void {
+  processSome(maxItems = 0): void {
     if (this.initialized === false) {
       return;
     }
@@ -422,7 +393,10 @@ export class CoreTextureManager extends EventEmitter {
     let itemsProcessed = 0;
 
     // Process uploads
-    while (this.uploadTextureQueue.length > 0 && itemsProcessed < maxItems) {
+    while (
+      this.uploadTextureQueue.length > 0 &&
+      (maxItems === 0 || itemsProcessed < maxItems)
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.uploadTextureQueue.shift()!;
       const coreContext = texture.loadCtxTexture();
@@ -433,7 +407,7 @@ export class CoreTextureManager extends EventEmitter {
     // Process downloads
     while (
       this.downloadTextureSourceQueue.length > 0 &&
-      itemsProcessed < maxItems
+      (maxItems === 0 || itemsProcessed < maxItems)
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;

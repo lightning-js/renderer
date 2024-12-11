@@ -75,6 +75,7 @@ export interface StageOptions {
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
   strictBounds: boolean;
+  textureProcessingLimit: number;
 }
 
 export type StageFpsUpdateHandler = (
@@ -367,7 +368,7 @@ export class Stage {
 
     // Process some textures
     // TODO this should have a configurable amount
-    this.txManager.processSome();
+    this.txManager.processSome(this.options.textureProcessingLimit);
 
     // Reset render operations and clear the canvas
     renderer.reset();

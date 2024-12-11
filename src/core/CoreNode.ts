@@ -1407,7 +1407,6 @@ export class CoreNode extends EventEmitter {
       this.texture.state !== 'loaded' &&
       this.renderState > CoreNodeRenderState.OutOfBounds
     ) {
-      console.log('Loading texture');
       this.stage.txManager.loadTexture(this.texture);
     }
 
