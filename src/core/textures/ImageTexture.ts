@@ -134,7 +134,9 @@ export class ImageTexture extends Texture {
 
   async loadImageFallback(src: string, hasAlpha: boolean) {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+        if (!(src.startsWith('data:'))) {
+      img.crossOrigin = 'Anonymous';
+    }
 
     return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
       (resolve) => {
