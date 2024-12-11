@@ -105,7 +105,7 @@ export class Stage {
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
-  public readonly defaultTexture: Texture;
+  public readonly defaultTexture: Texture | null = null;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -158,25 +158,6 @@ export class Stage {
       this.requestRender();
     });
 
-    this.defaultTexture = this.txManager.createTexture('ColorTexture', {
-      color: 0xffffffff,
-    });
-
-    this.txManager.loadTexture(this.defaultTexture, true);
-
-    assertTruthy(this.defaultTexture instanceof ColorTexture);
-
-    // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being cleaned up.
-    // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
-
-    // When the default texture is loaded, request a render in case the
-    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
-    this.defaultTexture.once('loaded', () => {
-      this.requestRender();
-    });
-
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
@@ -211,6 +192,10 @@ export class Stage {
 
     this.renderer = new renderEngine(rendererOptions);
     const renderMode = this.renderer.mode || 'webgl';
+
+    if (renderMode === 'webgl') {
+      this.createDefaultTexture();
+    }
 
     this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
@@ -315,6 +300,33 @@ export class Stage {
     this.eventBus.emit('frameTick', {
       time: this.currentFrameTime,
       delta: this.deltaTime,
+    });
+  }
+
+  /**
+   * Create default PixelTexture
+   */
+  createDefaultTexture() {
+    (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
+      'ColorTexture',
+      {
+        color: 0xffffffff,
+      },
+    );
+
+    assertTruthy(this.defaultTexture instanceof ColorTexture);
+
+    this.txManager.loadTexture(this.defaultTexture, true);
+
+    // Mark the default texture as ALWAYS renderable
+    // This prevents it from ever being cleaned up.
+    // Fixes https://github.com/lightning-js/renderer/issues/262
+    this.defaultTexture.setRenderableOwner(this, true);
+
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
+      this.requestRender();
     });
   }
 

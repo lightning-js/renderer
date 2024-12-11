@@ -769,7 +769,12 @@ export class CoreNode extends EventEmitter {
     );
 
     // load default texture if no texture is set
-    if (!this.props.src && !this.props.texture && !this.props.rtt) {
+    if (
+      this.stage.defaultTexture !== null &&
+      !this.props.src &&
+      !this.props.texture &&
+      !this.props.rtt
+    ) {
       this.texture = this.stage.defaultTexture;
     }
   }
@@ -1556,7 +1561,7 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-    assertTruthy(this.texture);
+    // assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({

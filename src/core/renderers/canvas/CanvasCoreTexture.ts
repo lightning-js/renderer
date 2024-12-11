@@ -40,6 +40,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
       return;
     }
     this.textureSource.setCoreCtxState('loading');
+
     this.onLoadRequest()
       .then((size) => {
         this.textureSource.setCoreCtxState('loaded', size);
@@ -126,8 +127,8 @@ export class CanvasCoreTexture extends CoreContextTexture {
   }
 
   private async onLoadRequest(): Promise<Dimensions> {
-    const data = this.textureSource.textureData;
-    assertTruthy(data, 'Texture data is null');
+    assertTruthy(this.textureSource?.textureData?.data, 'Texture data is null');
+    const { data } = this.textureSource.textureData;
 
     // TODO: canvas from text renderer should be able to provide the canvas directly
     // instead of having to re-draw it into a new canvas...
@@ -146,6 +147,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
       this.image = data;
       return { width: data.width, height: data.height };
     }
+
     return { width: 0, height: 0 };
   }
 }
