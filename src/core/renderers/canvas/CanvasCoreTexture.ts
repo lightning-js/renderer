@@ -23,7 +23,11 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
 import { formatRgba, type IParsedColor } from './internal/ColorUtils.js';
 
 export class CanvasCoreTexture extends CoreContextTexture {
-  protected image: ImageBitmap | HTMLCanvasElement | undefined;
+  protected image:
+    | ImageBitmap
+    | HTMLCanvasElement
+    | HTMLImageElement
+    | undefined;
   protected tintCache:
     | {
         key: string;
@@ -68,7 +72,9 @@ export class CanvasCoreTexture extends CoreContextTexture {
     return this.image !== undefined;
   }
 
-  getImage(color: IParsedColor): ImageBitmap | HTMLCanvasElement {
+  getImage(
+    color: IParsedColor,
+  ): ImageBitmap | HTMLCanvasElement | HTMLImageElement {
     const image = this.image;
     assertTruthy(image, 'Attempt to get unloaded image texture');
 
@@ -94,7 +100,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
   }
 
   protected tintTexture(
-    source: ImageBitmap | HTMLCanvasElement,
+    source: ImageBitmap | HTMLCanvasElement | HTMLImageElement,
     color: string,
   ) {
     const { width, height } = source;
@@ -134,8 +140,8 @@ export class CanvasCoreTexture extends CoreContextTexture {
       this.image = canvas;
       return { width: data.width, height: data.height };
     } else if (
-      typeof ImageBitmap !== 'undefined' &&
-      data instanceof ImageBitmap
+      (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+      data instanceof HTMLImageElement
     ) {
       this.image = data;
       return { width: data.width, height: data.height };
