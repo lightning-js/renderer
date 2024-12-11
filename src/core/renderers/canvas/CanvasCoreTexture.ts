@@ -138,13 +138,9 @@ export class CanvasCoreTexture extends CoreContextTexture {
       this.image = canvas;
       return { width: data.width, height: data.height };
     } else if (
-      typeof ImageBitmap !== 'undefined' &&
-      data instanceof ImageBitmap
+      (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+      data instanceof HTMLImageElement
     ) {
-      this.image = data;
-      return { width: data.width, height: data.height };
-    }
-    if (data instanceof HTMLImageElement) {
       this.image = data;
       return { width: data.width, height: data.height };
     }
