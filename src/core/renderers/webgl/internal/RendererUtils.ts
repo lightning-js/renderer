@@ -144,7 +144,8 @@ export function isHTMLImageElement(obj: unknown): obj is HTMLImageElement {
     ((typeof obj === 'object' &&
       obj.constructor &&
       obj.constructor.name === 'HTMLImageElement') ||
-      obj instanceof HTMLImageElement)
+      (typeof HTMLImageElement !== 'undefined' &&
+        obj instanceof HTMLImageElement))
   );
 }
 
