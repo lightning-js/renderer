@@ -765,6 +765,7 @@ export class CoreNode extends EventEmitter {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
+    this.boundsMargin = props.boundsMargin as [number, number, number, number];
 
     this.setUpdateType(
       UpdateType.ScaleRotate |
@@ -1800,10 +1801,11 @@ export class CoreNode extends EventEmitter {
   }
 
   get boundsMargin(): number | [number, number, number, number] {
-    const value = this.props.boundsMargin;
-    return Array.isArray(value)
-      ? value
-      : this.parent?.boundsMargin ?? this.stage.boundsMargin;
+    return (
+      this.props.boundsMargin ??
+      this.parent?.boundsMargin ??
+      this.stage.boundsMargin
+    );
   }
 
   set boundsMargin(value: number | [number, number, number, number]) {
