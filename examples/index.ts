@@ -170,9 +170,13 @@ async function runTest(
       parent: renderer.root,
       fontSize: 50,
     });
-    overlayText.once(
+    overlayText.on(
       'loaded',
-      (target: any, { dimensions }: NodeLoadedPayload) => {
+      (target: any, { type, dimensions }: NodeLoadedPayload) => {
+        if (type !== 'text') {
+          return;
+        }
+
         overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
         overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
       },
