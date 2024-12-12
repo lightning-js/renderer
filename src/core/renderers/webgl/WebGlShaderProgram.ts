@@ -17,22 +17,24 @@
  * limitations under the License.
  */
 
+import type { CoreNode } from '../../CoreNode.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
-import type {
-  CoreShaderConfig,
-  CoreShaderProgram,
-} from '../CoreShaderProgram.js';
+import type { QuadOptions } from '../CoreRenderer.js';
+import type { CoreShaderConfig } from '../CoreShaderNode.js';
+import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type {
-  WebGlCoreRenderOp,
-  WebGlRenderOpProps,
-} from './WebGlCoreRenderOp.js';
+import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
+import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
   createShader,
   DefaultVertexSource,
+  type UniformSet1Param,
+  type UniformSet2Params,
+  type UniformSet3Params,
+  type UniformSet4Params,
 } from './internal/ShaderUtils.js';
 
 type ShaderSource<T> =
@@ -50,21 +52,17 @@ export type WebGlShaderConfig<T = Record<string, unknown>> =
      */
     vertex?: ShaderSource<T>;
     /**
-     * This function is called before drawing the node, here you can update the uniforms you use in the fragment / vertex shader.
-     * @param glw WebGlContextWrapper with utilities to update uniforms, and other actions.
-     * @param renderOp containing all information of the render operation that uses this shader
+     * This function is called when one of the props is changed, here you can update the uniforms you use in the fragment / vertex shader.
+     * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
      * @returns
      */
-    update?: (glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) => void;
+    update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
     /**
      * This function is used to check if the shader can bereused based on quad info
      * @param props
      * @returns
      */
-    canBatch?: (
-      renderOpA: WebGlRenderOpProps,
-      renderOpB: WebGlRenderOpProps,
-    ) => boolean;
+    canBatch?: (renderOpA: QuadOptions, renderOpB: QuadOptions) => boolean;
     /**
      * extensions required for specific shader?
      */
@@ -86,14 +84,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
-  protected lifecycle: Pick<WebGlShaderConfig, 'update' | 'canBatch'>;
+  protected lifecycle: Pick<WebGlShaderConfig<any>, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
   supportsIndexedTextures = false;
 
   constructor(
     renderer: WebGlCoreRenderer,
-    config: WebGlShaderConfig,
+    config: WebGlShaderConfig<any>,
     resolvedProps: Record<string, any>,
   ) {
     this.renderer = renderer;
@@ -145,7 +143,6 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     );
 
     if (!fragmentShader) {
-      console.log('test', fragmentSource);
       throw new Error('fragment shader creation failed');
     }
 
@@ -181,10 +178,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(
-    renderOpA: WebGlRenderOpProps,
-    renderOpB: WebGlRenderOpProps,
-  ): boolean {
+  reuseRenderOp(renderOpA: QuadOptions, renderOpB: QuadOptions): boolean {
     const lifecycleCheck = this.lifecycle.canBatch
       ? this.lifecycle.canBatch(renderOpA, renderOpB)
       : true;
@@ -200,19 +194,18 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     if (this.useSystemDimensions) {
       if (
-        renderOpA.dimensions.width !== renderOpB.dimensions.width ||
-        renderOpA.dimensions.height !== renderOpB.dimensions.height
+        renderOpA.width !== renderOpB.width ||
+        renderOpA.height !== renderOpB.height
       ) {
         return false;
       }
     }
 
-    if (renderOpA.shaderProps !== null && renderOpB.shaderProps !== null) {
-      for (const key in renderOpA) {
-        if (
-          renderOpA[key as keyof WebGlRenderOpProps] !==
-          renderOpB[key as keyof WebGlRenderOpProps]
-        ) {
+    const shaderPropsA = renderOpA.shader.getResolvedProps();
+    const shaderPropsB = renderOpB.shader.getResolvedProps();
+    if (shaderPropsA !== undefined && shaderPropsB !== undefined) {
+      for (const key in shaderPropsA) {
+        if (shaderPropsA[key] !== shaderPropsB[key]) {
           return false;
         }
       }
@@ -225,23 +218,23 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.bindBufferCollection(renderOp.buffers);
     this.bindTextures(renderOp.textures);
 
-    const { parentHasRenderTexture, rtt } = renderOp;
+    const { parentHasRenderTexture } = renderOp.quad;
 
     // Skip if the parent and current operation both have render textures
-    if (rtt && parentHasRenderTexture) {
+    if (renderOp.quad.rtt && parentHasRenderTexture) {
       return;
     }
 
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
     if (parentHasRenderTexture) {
-      const { width, height } = renderOp.framebufferDimensions;
+      const { width, height } = renderOp.quad.framebufferDimensions;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);
 
       // Set resolution to the framebuffer dimensions
-      this.glw.uniform2f('u_resolution', width ?? 0, height ?? 0);
+      this.glw.uniform2f('u_resolution', width, height);
     } else {
       this.glw.uniform1f('u_pixelRatio', renderOp.renderer.options.pixelRatio);
       this.glw.uniform2f(
@@ -252,19 +245,46 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     if (this.useSystemAlpha) {
-      this.glw.uniform1f('u_alpha', renderOp.alpha);
+      this.glw.uniform1f('u_alpha', renderOp.quad.alpha);
     }
 
     if (this.useSystemDimensions) {
       this.glw.uniform2f(
         'u_dimensions',
-        renderOp.dimensions.width,
-        renderOp.dimensions.height,
+        renderOp.quad.width,
+        renderOp.quad.height,
       );
     }
 
-    if (renderOp.shaderProps !== null && this.lifecycle.update !== undefined) {
-      this.lifecycle.update(this.glw, renderOp);
+    for (const key in renderOp.shader.uniforms.single) {
+      const { method, value } = renderOp.shader.uniforms.single[key]!;
+      this.glw[method as keyof UniformSet1Param](key, value as never);
+    }
+
+    for (const key in renderOp.shader.uniforms.vec2) {
+      const { method, value } = renderOp.shader.uniforms.vec2[key]!;
+      this.glw[method as keyof UniformSet2Params](key, value[0], value[1]);
+    }
+
+    for (const key in renderOp.shader.uniforms.vec3) {
+      const { method, value } = renderOp.shader.uniforms.vec3[key]!;
+      this.glw[method as keyof UniformSet3Params](
+        key,
+        value[0],
+        value[1],
+        value[2],
+      );
+    }
+
+    for (const key in renderOp.shader.uniforms.vec4) {
+      const { method, value } = renderOp.shader.uniforms.vec4[key]!;
+      this.glw[method as keyof UniformSet4Params](
+        key,
+        value[0],
+        value[1],
+        value[2],
+        value[3],
+      );
     }
   }
 

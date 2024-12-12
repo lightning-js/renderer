@@ -1,7 +1,5 @@
-import type {
-  CoreShaderConfig,
-  CoreShaderProgram,
-} from '../CoreShaderProgram.js';
+import type { CoreShaderConfig } from '../CoreShaderNode.js';
+import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { CanvasCoreRenderer } from './CanvasCoreRenderer.js';
 
 export type CanvasShaderConfig<T = Record<string, unknown>> =

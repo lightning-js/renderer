@@ -16,14 +16,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type {
-  CoreShaderConfig,
-  CoreShaderProgram,
-} from './renderers/CoreShaderProgram.js';
+import {
+  resolveShaderProps,
+  type CoreShaderConfig,
+} from './renderers/CoreShaderNode.js';
+import type { CoreShaderProgram } from './renderers/CoreShaderProgram.js';
 import type { Stage } from './Stage.js';
 
 export class CoreShaderManager {
   protected shCache: Map<string, CoreShaderProgram> = new Map();
+  protected valuesCache: Map<string, Record<string, any>> = new Map();
   protected attachedShader: CoreShaderProgram | null = null;
 
   constructor(readonly stage: Stage) {}
@@ -35,46 +37,51 @@ export class CoreShaderManager {
    * @param props
    * @returns
    */
-  loadShader(shConfig: CoreShaderConfig<any>, props?: Record<string, unknown>) {
+  createShader(
+    shConfig: Readonly<CoreShaderConfig>,
+    props?: Record<string, unknown>,
+  ) {
     if (!this.stage.renderer) {
       throw new Error(`Renderer is not been defined`);
     }
 
     let cacheKey = shConfig.name;
     if (shConfig.props !== undefined) {
+      /**
+       * if props is undefined create empty obj to fill
+       */
       props = props || {};
-
-      if (shConfig.validateProps !== undefined) {
-        props = shConfig.validateProps(props);
-      } else {
-        for (const key in shConfig.props) {
-          props[key] = props[key] || shConfig.props[key];
-        }
-      }
-
+      /**
+       * resolve shader values
+       */
+      resolveShaderProps(props, shConfig.props);
       if (shConfig.getCacheMarkers !== undefined) {
         cacheKey += `-${shConfig.getCacheMarkers(props)}`;
       }
-    } else {
-      props = {};
-    }
-    const cachedShader = this.shCache.get(cacheKey);
-
-    if (cachedShader) {
-      return {
-        shader: cachedShader,
-        props,
-      };
     }
 
-    const shader = this.stage.renderer.createShaderProgram(shConfig, props);
+    /**
+     * get shaderProgram by cacheKey
+     */
+    let shProgram = this.shCache.get(cacheKey);
 
-    this.shCache.set(cacheKey, shader);
+    /**
+     * if shaderProgram was not found create a new one
+     */
+    if (shProgram === undefined) {
+      shProgram = this.stage.renderer.createShaderProgram(shConfig, props);
+      this.shCache.set(cacheKey, shProgram);
+    }
 
-    return {
-      shader,
-      props,
-    };
+    return this.stage.renderer.createShaderNode(shConfig, shProgram, props);
+  }
+
+  getShaderValues(key: string) {
+    return this.valuesCache.get(key);
+  }
+
+  setShaderValues(key: string, values: Record<string, any>) {
+    this.valuesCache.set(key, values);
   }
 
   useShader(shader: CoreShaderProgram): void {

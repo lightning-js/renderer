@@ -51,6 +51,7 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -96,6 +97,7 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
+  public readonly defShaderNode: CoreShaderNode;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -170,6 +172,7 @@ export class Stage {
 
     this.renderer = new renderEngine(rendererOptions);
     this.renderer.load();
+    this.defShaderNode = this.renderer.getDefaultShaderNode();
     const renderMode = this.renderer.mode || 'webgl';
 
     setPremultiplyMode(renderMode);
@@ -238,7 +241,7 @@ export class Stage {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: null,
+      shader: this.defShaderNode,
       rtt: false,
       src: null,
       scale: 1,
@@ -593,7 +596,7 @@ export class Stage {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? null,
+      shader: props.shader ?? this.defShaderNode,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,

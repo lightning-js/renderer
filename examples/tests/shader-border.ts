@@ -28,7 +28,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(Border, { radius: 10 }),
+    shader: renderer.createShader(Border, { width: 30, radius: 10 }),
     parent: testRoot,
   });
 
@@ -39,6 +39,7 @@ export default async function ({
     height: 400,
     color: 0x00ff00ff,
     shader: renderer.createShader(Border, {
+      width: 60,
       radius: [50, 20],
     }),
     parent: testRoot,

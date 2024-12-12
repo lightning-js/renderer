@@ -736,7 +736,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  uniform1fv(location: string, value: Float32Array | number[]) {
+  uniform1fv(location: string, value: Float32Array) {
     this.gl.uniform1fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -762,7 +762,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  uniform1iv(location: string, value: Int32Array | number[]) {
+  uniform1iv(location: string, value: Int32Array) {
     this.gl.uniform1iv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -790,7 +790,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec2 values to set.
    */
-  uniform2fv(location: string, value: Float32Array | number[]) {
+  uniform2fv(location: string, value: Float32Array) {
     this.gl.uniform2fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -818,7 +818,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec2 values to set.
    */
-  uniform2iv(location: string, value: Int32Array | number[]) {
+  uniform2iv(location: string, value: Int32Array) {
     this.gl.uniform2iv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -848,7 +848,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec3 values to set.
    */
-  uniform3fv(location: string, value: Float32Array | number[]) {
+  uniform3fv(location: string, value: Float32Array) {
     this.gl.uniform3fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -878,7 +878,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec3 values to set.
    */
-  uniform3iv(location: string, value: Int32Array | number[]) {
+  uniform3iv(location: string, value: Int32Array) {
     this.gl.uniform3iv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -910,7 +910,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec4 values to set.
    */
-  uniform4fv(location: string, value: Float32Array | number[]) {
+  uniform4fv(location: string, value: Float32Array) {
     this.gl.uniform4fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -942,7 +942,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec4 values to set.
    */
-  uniform4iv(location: string, value: Int32Array | number[]) {
+  uniform4iv(location: string, value: Int32Array) {
     this.gl.uniform4iv(
       this.gl.getUniformLocation(this.curProgram!, location),
       value,
@@ -956,7 +956,7 @@ export class WebGlContextWrapper {
    * @param transpose - Whether to transpose the matrix.
    * @param value - The array of mat2 values to set.
    */
-  uniformMatrix2fv(location: string, value: Float32Array | number[]) {
+  uniformMatrix2fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix2fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       false,
@@ -969,7 +969,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of mat2 values to set.
    */
-  uniformMatrix3fv(location: string, value: Float32Array | number[]) {
+  uniformMatrix3fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix3fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       false,
@@ -982,7 +982,7 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of mat4 values to set.
    */
-  uniformMatrix4fv(location: string, value: Float32Array | number[]) {
+  uniformMatrix4fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix4fv(
       this.gl.getUniformLocation(this.curProgram!, location),
       false,

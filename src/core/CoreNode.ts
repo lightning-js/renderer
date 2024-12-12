@@ -53,7 +53,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type { BaseShaderController } from '../main-api/ShaderController.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -193,6 +193,11 @@ export enum UpdateType {
    * All
    */
   All = 14335,
+
+  /**
+   * RecalcUniforms
+   */
+  RecalcUniforms = 16384,
 }
 
 /**
@@ -435,7 +440,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: BaseShaderController | null;
+  shader: CoreShaderNode;
   /**
    * Image URL
    *
@@ -1125,6 +1130,14 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
+      this.shader?.update !== undefined &&
+      this.updateType & UpdateType.Local &&
+      this.updateType & UpdateType.RecalcUniforms
+    ) {
+      this.shader.update();
+    }
+
+    if (
       this.updateType & UpdateType.Children &&
       this.children.length > 0 &&
       this.rtt === false
@@ -1471,7 +1484,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = null;
+    this.props.shader = this.stage.defShaderNode;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
@@ -1514,7 +1527,7 @@ export class CoreNode extends EventEmitter {
       texture: this.texture,
       textureOptions: this.textureOptions,
       zIndex: this.zIndex,
-      shader: this.shader,
+      shader: this.props.shader,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
       tx: this.globalTransform.tx,
@@ -1992,17 +2005,22 @@ export class CoreNode extends EventEmitter {
     this.stage.renderer?.renderToTexture(this);
   }
 
-  get shader(): BaseShaderController | null {
+  get shader(): CoreShaderNode | null {
     return this.props.shader;
   }
 
-  set shader(value: BaseShaderController) {
-    if (this.props.shader === value) {
+  set shader(shader: CoreShaderNode | null) {
+    if (this.props.shader === shader) {
+      return;
+    }
+    if (shader === null) {
+      this.props.shader = this.stage.defShaderNode;
+      this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
 
-    this.props.shader = value;
-
+    shader.attachNode(this);
+    this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable);
   }
 

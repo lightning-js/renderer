@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderProgram.js';
+import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link RoundedRectangle} shader

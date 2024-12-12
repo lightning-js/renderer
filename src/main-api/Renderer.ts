@@ -24,10 +24,6 @@ import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
-import {
-  ShaderController,
-  type BaseShaderController,
-} from './ShaderController.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
@@ -35,7 +31,12 @@ import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRe
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
-import type { CoreShaderConfig } from '../core/renderers/CoreShaderProgram.js';
+import type {
+  CoreShaderConfig,
+  CoreShaderNode,
+  PartialShaderProps,
+  ExtractShaderProps,
+} from '../core/renderers/CoreShaderNode.js';
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -386,20 +387,20 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode<ShCtr extends ShaderController<any>>(
-    props: Partial<INodeProps<ShCtr>>,
-  ): INode<ShCtr> {
+  createNode<ShNode extends CoreShaderNode>(
+    props: Partial<INodeProps<ShNode>>,
+  ): INode<ShNode> {
     assertTruthy(this.stage, 'Stage is not initialized');
 
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
-      return this.inspector.createNode(node) as unknown as INode<ShCtr>;
+      return this.inspector.createNode(node) as unknown as INode<ShNode>;
     }
 
     // FIXME onDestroy event? node.once('beforeDestroy'
     // FIXME onCreate event?
-    return node as unknown as INode<ShCtr>;
+    return node as unknown as INode<ShNode>;
   }
 
   /**
@@ -480,17 +481,14 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createShader<ShConfig extends CoreShaderConfig<any>>(
+  createShader<ShConfig extends CoreShaderConfig>(
     shaderConfig: ShConfig,
-    props?: Partial<ShConfig['props']>,
+    props?: PartialShaderProps<ShConfig['props']>,
   ) {
-    const resolvedShader = this.stage.shManager.loadShader(shaderConfig, props);
-    return new ShaderController<ShConfig>({
-      type: shaderConfig,
-      shader: resolvedShader.shader,
-      props: resolvedShader.props,
-      stage: this.stage,
-    });
+    return this.stage.shManager.createShader(
+      shaderConfig,
+      props,
+    ) as CoreShaderNode<ExtractShaderProps<ShConfig['props']>>;
   }
 
   /**

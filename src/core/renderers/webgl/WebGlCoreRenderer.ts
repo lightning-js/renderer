@@ -24,10 +24,7 @@ import {
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
-import {
-  WebGlCoreRenderOp,
-  type WebGlRenderOpProps,
-} from './WebGlCoreRenderOp.js';
+import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -48,9 +45,10 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
-import type { CoreShaderConfig } from '../CoreShaderProgram.js';
 import { Default } from './shaders/Default.js';
 import type { WebGlShaderConfig } from './WebGlShaderProgram.js';
+import { WebGlShaderNode } from './WebGlShaderNode.js';
+import type { CoreShaderNode } from '../CoreShaderNode.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -80,7 +78,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   activeRttNode: CoreNode | null = null;
 
   //// Default Shader
-  defaultShader: WebGlShaderProgram | null = null;
+  defaultShaderNode: WebGlShaderNode | null = null;
   quadBufferCollection: BufferCollection;
 
   /**
@@ -182,8 +180,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.stage.requestRender();
     });
 
-    this.defaultShader = this.stage.shManager.loadShader(Default)
-      .shader as WebGlShaderProgram;
+    this.defaultShaderNode = this.stage.shManager.createShader(
+      Default,
+    ) as WebGlShaderNode;
   }
 
   reset() {
@@ -196,14 +195,18 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   createShaderProgram(
-    shaderConfig: CoreShaderConfig,
+    shaderConfig: WebGlShaderConfig<any>,
     props: Record<string, any>,
   ): WebGlShaderProgram {
-    return new WebGlShaderProgram(
-      this,
-      shaderConfig as WebGlShaderConfig,
-      props,
-    );
+    return new WebGlShaderProgram(this, shaderConfig, props);
+  }
+
+  createShaderNode(
+    shaderConfig: WebGlShaderConfig<any>,
+    program: WebGlShaderProgram,
+    props?: Record<string, any>,
+  ) {
+    return new WebGlShaderNode(shaderConfig, program, this.stage, props);
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {
@@ -241,8 +244,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    const shaderProps =
-      (params.shader && params.shader.getResolvedProps()) || null;
+    const shaderProps = params.shader.getResolvedProps() || null;
     let texture = params.texture || this.defaultTexture!;
 
     assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
@@ -252,25 +254,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     targetDims.width = params.width;
     targetDims.height = params.height;
 
-    const targetShader =
-      (params.shader && (params.shader.shader as WebGlShaderProgram)) ||
-      this.defaultShader!;
-
-    const renderOpProps: WebGlRenderOpProps = {
-      buffers: this.quadBufferCollection,
-      shader: targetShader,
-      shaderProps,
-      alpha: params.alpha,
-      clippingRect: params.clippingRect,
-      dimensions: targetDims,
-      bufferIdx,
-      rtt: params.rtt,
-      parentHasRenderTexture: params.parentHasRenderTexture,
-      framebufferDimensions: params.framebufferDimensions,
-    };
-
-    if (this.reuseRenderOp(renderOpProps) === false) {
-      this.newRenderOp(renderOpProps);
+    if (this.reuseRenderOp(params) === false) {
+      this.newRenderOp(params, bufferIdx);
       curRenderOp = this.curRenderOp;
       assertTruthy(curRenderOp);
     }
@@ -463,8 +448,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(props: WebGlRenderOpProps) {
-    const curRenderOp = new WebGlCoreRenderOp(this, props);
+  private newRenderOp(quad: QuadOptions, bufferIdx: number) {
+    const curRenderOp = new WebGlCoreRenderOp(this, quad, bufferIdx);
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
   }
@@ -486,27 +471,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
     bufferIdx: number,
     recursive?: boolean,
   ): number {
-    const { curRenderOp } = this;
-    assertTruthy(curRenderOp);
-    const textureIdx = curRenderOp.addTexture(texture);
+    assertTruthy(this.curRenderOp);
+    const textureIdx = this.curRenderOp.addTexture(texture);
     // TODO: Refactor to be more DRY
     if (textureIdx === 0xffffffff) {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-
-      this.newRenderOp({
-        buffers: curRenderOp.buffers,
-        shader: curRenderOp.shader,
-        shaderProps: curRenderOp.shaderProps,
-        alpha: curRenderOp.alpha,
-        clippingRect: curRenderOp.clippingRect,
-        dimensions: curRenderOp.dimensions,
-        bufferIdx,
-        rtt: curRenderOp.rtt,
-        parentHasRenderTexture: curRenderOp.parentHasRenderTexture,
-        framebufferDimensions: curRenderOp.framebufferDimensions,
-      });
+      this.newRenderOp(this.curRenderOp.quad, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
@@ -517,19 +489,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param params
    * @returns
    */
-  reuseRenderOp(params: WebGlRenderOpProps): boolean {
-    const { shader, shaderProps, parentHasRenderTexture, rtt, clippingRect } =
-      params;
-
-    const targetShader = shader || this.defaultShader;
+  reuseRenderOp(params: QuadOptions): boolean {
+    const { shader, parentHasRenderTexture, rtt, clippingRect } = params;
 
     // Switching shader program will require a new render operation
-    if (this.curRenderOp?.shader !== targetShader) {
+    if (this.curRenderOp?.shader !== this.defaultShaderNode) {
       return false;
     }
 
     // Switching clipping rect will require a new render operation
-    if (!compareRect(this.curRenderOp.clippingRect, clippingRect)) {
+    if (!compareRect(this.curRenderOp.quad.clippingRect, clippingRect)) {
       return false;
     }
 
@@ -542,9 +511,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     // Check if the shader can batch the shader properties
     if (
-      this.curRenderOp.shader !== this.defaultShader &&
-      (!shaderProps ||
-        !this.curRenderOp.shader.reuseRenderOp(params, this.curRenderOp))
+      !this.curRenderOp.shader.program.reuseRenderOp(
+        params,
+        this.curRenderOp.quad,
+      )
     ) {
       return false;
     }
@@ -675,5 +645,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       totalUsed: this.quadBufferUsage,
     };
     return bufferInfo;
+  }
+
+  getDefaultShaderNode(): CoreShaderNode {
+    return this.defaultShaderNode as CoreShaderNode;
   }
 }

@@ -17,19 +17,6 @@
  * limitations under the License.
  */
 
-export interface CoreShaderConfig<T = Record<string, any>> {
-  name: string;
-  props?: T;
-  /**
-   * validate props before creating shader program
-   */
-  validateProps?: (props: T) => T;
-  /**
-   * used for making a cache key to check for reusability
-   */
-  getCacheMarkers?: (props: T) => string;
-}
-
 export interface CoreShaderProgram {
   attach?: () => void;
   detach?: () => void;

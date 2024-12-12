@@ -7,16 +7,18 @@ import {
 } from '../../../shaders/BorderBottomTemplate.js';
 import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
 
-export const BorderBottom: WebGlShaderConfig<BorderBottomProps> = Object.assign(
-  {},
-  BorderBottomTemplate,
-  {
-    update(glw: WebGlContextWrapper, renderOp: WebGlRenderOpProps) {
-      const props = renderOp.shaderProps as Required<BorderBottomProps>;
-      glw.uniform1f('u_width', props.width);
-      glw.uniform4fv('u_color', getNormalizedRgbaComponents(props.color));
-    },
-    fragment: `
+export const BorderBottom: WebGlShaderConfig<BorderBottomProps> = {
+  name: BorderBottomTemplate.name,
+  props: BorderBottomTemplate.props,
+  update() {
+    const props = this.props!;
+    this.uniform1f('u_width', props.width);
+    this.uniform4fv(
+      'u_color',
+      new Float32Array(getNormalizedRgbaComponents(props.color)),
+    );
+  },
+  fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -44,5 +46,4 @@ export const BorderBottom: WebGlShaderConfig<BorderBottomProps> = Object.assign(
       gl_FragColor = mix(color, u_color, clamp(-shape, 0.0, 1.0)) * u_alpha;
     }
   `,
-  },
-);
+};

@@ -34,6 +34,72 @@ export interface UniformInfo {
   uniform: keyof UniformMethodMap;
 }
 
+export type SingleValue = number | Float32Array | Int32Array;
+export type Vec2 = [number, number];
+export type Vec3 = [number, number, number];
+export type Vec4 = [number, number, number, number];
+
+export type UniformValue = SingleValue | Vec2 | Vec3 | Vec4;
+
+export interface UniformCollection {
+  single: Record<string, Uniform<SingleValue>>;
+  vec2: Record<string, Uniform<Vec2>>;
+  vec3: Record<string, Uniform<Vec3>>;
+  vec4: Record<string, Uniform<Vec4>>;
+}
+
+export interface Uniform<T = UniformValue> {
+  method: string;
+  value: T;
+}
+
+export interface SupportedSetUniforms {
+  uniform2fv: Float32Array;
+  uniform2iv: Int32Array;
+  uniform3fv:
+    | 'uniform2iv'
+    | 'uniform3fv'
+    | 'uniform3iv'
+    | 'uniform4fv'
+    | 'uniform4iv'
+    | 'uniformMatrix2fv'
+    | 'uniformMatrix3fv'
+    | 'uniformMatrix4fv'
+    | 'uniform1f'
+    | 'uniform1fv'
+    | 'uniform1i'
+    | 'uniform1iv'
+    | 'uniform3fv'
+    | 'uniform2f'
+    | 'uniform2i'
+    | 'uniform3f'
+    | 'uniform3i'
+    | 'uniform4f'
+    | 'uniform4i';
+}
+
+type SupportSetUniforms =
+  | 'uniform2fv'
+  | 'uniform2iv'
+  | 'uniform3fv'
+  | 'uniform3iv'
+  | 'uniform4fv'
+  | 'uniform4iv'
+  | 'uniformMatrix2fv'
+  | 'uniformMatrix3fv'
+  | 'uniformMatrix4fv'
+  | 'uniform1f'
+  | 'uniform1fv'
+  | 'uniform1i'
+  | 'uniform1iv'
+  | 'uniform3fv'
+  | 'uniform2f'
+  | 'uniform2i'
+  | 'uniform3f'
+  | 'uniform3i'
+  | 'uniform4f'
+  | 'uniform4i';
+
 export interface ShaderOptions {
   shaderSources?: ShaderProgramSources;
   supportsIndexedTextures?: boolean;
@@ -58,6 +124,28 @@ export type UniformMethodMap = {
   ? T
   : never;
 };
+
+export type UniformSet1Param = Omit<
+  UniformMethodMap,
+  | 'uniform2f'
+  | 'uniform2i'
+  | 'uniform3f'
+  | 'uniform3i'
+  | 'uniform4f'
+  | 'uniform4i'
+>;
+export type UniformSet2Params = Pick<
+  UniformMethodMap,
+  'uniform2f' | 'uniform2i'
+>;
+export type UniformSet3Params = Pick<
+  UniformMethodMap,
+  'uniform3f' | 'uniform3i'
+>;
+export type UniformSet4Params = Pick<
+  UniformMethodMap,
+  'uniform4f' | 'uniform4i'
+>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TupleToObject<T extends any[]> = Omit<T, keyof any[]>;

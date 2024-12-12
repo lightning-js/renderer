@@ -1,22 +1,22 @@
 import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import type { WebGlRenderOpProps } from '../WebGlCoreRenderOp.js';
 import {
   BorderTopTemplate,
   type BorderTopProps,
 } from '../../../shaders/BorderTopTemplate.js';
 import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import type { CoreNode } from '../../../CoreNode.js';
 
-export const BorderTop: WebGlShaderConfig<BorderTopProps> = Object.assign(
-  {},
-  BorderTopTemplate,
-  {
-    update(glw: WebGlContextWrapper, renderOp: WebGlRenderOpProps) {
-      const props = renderOp.shaderProps as Required<BorderTopProps>;
-      glw.uniform1f('u_width', props.width);
-      glw.uniform4fv('u_color', getNormalizedRgbaComponents(props.color));
-    },
-    fragment: `
+export const BorderTop: WebGlShaderConfig<BorderTopProps> = {
+  name: BorderTopTemplate.name,
+  props: BorderTopTemplate.props,
+  update(node: CoreNode) {
+    this.uniform1f('u_width', this.props!.width);
+    this.uniform4fv(
+      'u_color',
+      new Float32Array(getNormalizedRgbaComponents(this.props!.color)),
+    );
+  },
+  fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -44,5 +44,4 @@ export const BorderTop: WebGlShaderConfig<BorderTopProps> = Object.assign(
       gl_FragColor = mix(color, u_color, clamp(-shape, 0.0, 1.0)) * u_alpha;
     }
   `,
-  },
-);
+};

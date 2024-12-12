@@ -18,27 +18,11 @@
  */
 
 import { CoreRenderOp } from '../CoreRenderOp.js';
-import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
-import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { RectWithValid } from '../../lib/utils.js';
-
-const MAX_TEXTURES = 8; // TODO: get from gl
-
-export type WebGlRenderOpProps = {
-  buffers: BufferCollection;
-  shader: WebGlShaderProgram;
-  shaderProps: Record<string, any> | null;
-  alpha: number;
-  clippingRect: RectWithValid;
-  dimensions: Dimensions;
-  bufferIdx: number;
-  rtt: boolean;
-  parentHasRenderTexture: boolean;
-  framebufferDimensions: Dimensions;
-};
+import type { WebGlShaderNode } from './WebGlShaderNode.js';
+import type { QuadOptions } from '../CoreRenderer.js';
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -50,30 +34,18 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   textures: WebGlCoreCtxTexture[] = [];
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
-  readonly shader: WebGlShaderProgram;
-  readonly shaderProps: Record<string, any> | null;
-  readonly alpha: number;
-  readonly clippingRect: RectWithValid;
-  readonly dimensions: Dimensions;
-  readonly bufferIdx: number;
-  readonly rtt: boolean;
-  readonly parentHasRenderTexture: boolean;
-  readonly framebufferDimensions: Dimensions;
+  readonly shader: WebGlShaderNode;
 
-  constructor(readonly renderer: WebGlCoreRenderer, props: WebGlRenderOpProps) {
+  constructor(
+    readonly renderer: WebGlCoreRenderer,
+    readonly quad: QuadOptions,
+    readonly bufferIdx: number,
+  ) {
     super();
-    this.buffers = props.buffers;
-    this.shader = props.shader;
-    this.shaderProps = props.shaderProps;
-    this.alpha = props.alpha;
-    this.clippingRect = props.clippingRect;
-    this.dimensions = props.dimensions;
-    this.bufferIdx = props.bufferIdx;
-    this.rtt = props.rtt;
-    this.parentHasRenderTexture = props.parentHasRenderTexture;
-    this.framebufferDimensions = props.framebufferDimensions;
+    this.buffers = renderer.quadBufferCollection;
+    this.shader = quad.shader as WebGlShaderNode;
 
-    this.maxTextures = props.shader.supportsIndexedTextures
+    this.maxTextures = this.shader.program.supportsIndexedTextures
       ? (renderer.glw.getParameter(
           renderer.glw.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
         ) as number)
@@ -106,15 +78,15 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
   draw() {
     const { glw, options, stage } = this.renderer;
 
-    stage.shManager.useShader(this.shader);
-    this.shader.bindRenderOp(this);
+    stage.shManager.useShader(this.shader.program);
+    this.shader.program.bindRenderOp(this);
 
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;
 
     // Clipping
-    if (this.clippingRect.valid) {
-      const { x, y, width, height } = this.clippingRect;
+    if (this.quad.clippingRect.valid) {
+      const { x, y, width, height } = this.quad.clippingRect;
       const pixelRatio = options.pixelRatio;
       const canvasHeight = options.canvas.height;
 

@@ -18,7 +18,6 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
-import type { BaseShaderController } from '../../main-api/ShaderController.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { CoreShaderManager } from '../CoreShaderManager.js';
 import type {
@@ -30,12 +29,10 @@ import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
-import type {
-  CoreShaderConfig,
-  CoreShaderProgram,
-} from './CoreShaderProgram.js';
+import type { CoreShaderProgram } from './CoreShaderProgram.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
+import type { CoreShaderConfig, CoreShaderNode } from './CoreShaderNode.js';
 
 export interface QuadOptions {
   width: number;
@@ -47,7 +44,7 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: BaseShaderController | null;
+  shader: CoreShaderNode;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
@@ -100,9 +97,15 @@ export abstract class CoreRenderer {
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract createShaderProgram(
-    shaderConfig: CoreShaderConfig,
+    shaderConfig: Readonly<CoreShaderConfig>,
     props?: Record<string, any>,
   ): CoreShaderProgram;
+  abstract createShaderNode(
+    shaderConfig: Readonly<CoreShaderConfig>,
+    program: CoreShaderProgram,
+    props?: Record<string, any>,
+  ): CoreShaderNode;
+  abstract getDefaultShaderNode(): CoreShaderNode;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;
