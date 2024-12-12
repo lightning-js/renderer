@@ -140,10 +140,11 @@ export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
  */
 export function isHTMLImageElement(obj: unknown): obj is HTMLImageElement {
   return (
-    obj !== null &&
-    typeof obj === 'object' &&
-    obj.constructor &&
-    obj.constructor.name === 'HTMLImageElement'
+    (obj !== null &&
+      typeof obj === 'object' &&
+      obj.constructor &&
+      obj.constructor.name === 'HTMLImageElement') ||
+    obj instanceof HTMLImageElement
   );
 }
 
