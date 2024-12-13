@@ -120,6 +120,11 @@ export class SubTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
+    // Check if parent texture is loaded
+    if (this.parentTexture.state !== 'loaded') {
+      await this.txManager.loadTexture(this.parentTexture);
+    }
+
     return {
       data: this.props,
     };
