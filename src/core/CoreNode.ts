@@ -812,9 +812,10 @@ export class CoreNode extends EventEmitter {
     // load default texture if no texture is set
     if (
       this.stage.defaultTexture !== null &&
-      !this.props.src &&
-      !this.props.texture &&
-      !this.props.rtt
+      this.props.src === null &&
+      this.props.texture === null &&
+      this.props.rtt === false &&
+      this.hasRenderableProperties() === true
     ) {
       this.texture = this.stage.defaultTexture;
     }
@@ -849,10 +850,13 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('loaded', {
-      type: 'texture',
-      dimensions,
-    } satisfies NodeTextureLoadedPayload);
+    // ignore 1x1 pixel textures
+    if (dimensions.width > 1 && dimensions.height > 1) {
+      this.emit('loaded', {
+        type: 'texture',
+        dimensions,
+      } satisfies NodeTextureLoadedPayload);
+    }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
     if (this.props.textureOptions?.resizeMode?.type === 'contain') {
@@ -1564,7 +1568,7 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-    // assertTruthy(this.texture);
+    assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({

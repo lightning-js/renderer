@@ -429,7 +429,7 @@ async function runAutomation(
 
             // Allow some time for all images to load and the RaF to unpause
             // and render if needed.
-            await waitForRendererIdle(renderer);
+            await new Promise((resolve) => setTimeout(resolve, 200));
             if (snapshot) {
               console.log(`Calling snapshot(${testName})`);
               await snapshot(testName, adjustedOptions);
