@@ -768,15 +768,7 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderState,
     );
 
-    // load default texture if no texture is set
-    if (
-      this.stage.defaultTexture !== null &&
-      !this.props.src &&
-      !this.props.texture &&
-      !this.props.rtt
-    ) {
-      this.texture = this.stage.defaultTexture;
-    }
+    this.createDefaultTexture();
   }
 
   //#region Textures
@@ -814,6 +806,18 @@ export class CoreNode extends EventEmitter {
         this.onTextureFreed(texture);
       }
     });
+  }
+
+  createDefaultTexture(): void {
+    // load default texture if no texture is set
+    if (
+      this.stage.defaultTexture !== null &&
+      !this.props.src &&
+      !this.props.texture &&
+      !this.props.rtt
+    ) {
+      this.texture = this.stage.defaultTexture;
+    }
   }
 
   unloadTexture(): void {
@@ -2213,16 +2217,22 @@ export class CoreNode extends EventEmitter {
     if (this.props.texture === value) {
       return;
     }
+
     const oldTexture = this.props.texture;
     if (oldTexture) {
       oldTexture.setRenderableOwner(this, false);
       this.unloadTexture();
     }
+
     this.props.texture = value;
-    if (value) {
+    if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);
       this.loadTexture();
+    } else {
+      // If the texture is null, create a default texture
+      this.createDefaultTexture();
     }
+
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
