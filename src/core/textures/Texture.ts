@@ -316,18 +316,21 @@ export abstract class Texture extends EventEmitter {
 
     let newState: TextureState = 'freed';
     let payload: Error | Dimensions | null = null;
+
     if (sourceState === 'failed' || ctxState === 'failed') {
       newState = 'failed';
-
-      // If the texture failed to load, the error is set by the source
-      payload = this.error;
+      payload = this.error; // Error set by the source
     } else if (sourceState === 'loading' || ctxState === 'loading') {
       newState = 'loading';
-    } else if (this.sourceState === 'loaded' && ctxState === 'loaded') {
+    } else if (sourceState === 'loaded' && ctxState === 'loaded') {
       newState = 'loaded';
-
-      // If the texture is loaded, the dimensions are set by the source
-      payload = this.dimensions;
+      payload = this.dimensions; // Dimensions set by the source
+    } else if (
+      (sourceState === 'loaded' && ctxState === 'freed') ||
+      (ctxState === 'loaded' && sourceState === 'freed')
+    ) {
+      // If one is loaded and the other is freed, then we are in a loading state
+      newState = 'loading';
     } else {
       newState = 'freed';
     }

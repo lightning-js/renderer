@@ -366,6 +366,13 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   loadTexture(texture: Texture, priority?: boolean): void {
+    if (texture.state === 'loaded' || texture.state === 'loading') {
+      return;
+    }
+
+    texture.setSourceState('loading');
+    texture.setCoreCtxState('loading');
+
     // prioritize the texture for immediate loading
     if (priority === true) {
       texture
@@ -415,14 +422,9 @@ export class CoreTextureManager extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
       queueMicrotask(() => {
-        texture
-          .getTextureData()
-          .then(() => {
-            this.enqueueUploadTexture(texture);
-          })
-          .catch((err) => {
-            console.error(err);
-          });
+        texture.getTextureData().then(() => {
+          this.enqueueUploadTexture(texture);
+        });
       });
 
       itemsProcessed++;
@@ -436,10 +438,25 @@ export class CoreTextureManager extends EventEmitter {
     );
   }
 
-  private initTextureToCache(texture: Texture, cacheKey: string) {
+  /**
+   * Initialize a texture to the cache
+   *
+   * @param texture Texture to cache
+   * @param cacheKey Cache key for the texture
+   */
+  initTextureToCache(texture: Texture, cacheKey: string) {
     const { keyCache, inverseKeyCache } = this;
     keyCache.set(cacheKey, texture);
     inverseKeyCache.set(texture, cacheKey);
+  }
+
+  /**
+   * Get a texture from the cache
+   *
+   * @param cacheKey
+   */
+  getTextureFromCache(cacheKey: string): Texture | undefined {
+    return this.keyCache.get(cacheKey);
   }
 
   /**
@@ -456,5 +473,23 @@ export class CoreTextureManager extends EventEmitter {
     if (cacheKey) {
       keyCache.delete(cacheKey);
     }
+  }
+
+  /**
+   * Resolve a parent texture from the cache or fallback to the provided texture.
+   *
+   * @param texture - The provided texture to resolve.
+   * @returns The cached or provided texture.
+   */
+  resolveParentTexture(texture: ImageTexture): Texture {
+    if (!texture?.props) {
+      return texture;
+    }
+
+    const cacheKey = ImageTexture.makeCacheKey(texture.props);
+    const cachedTexture = cacheKey
+      ? this.getTextureFromCache(cacheKey)
+      : undefined;
+    return cachedTexture ?? texture;
   }
 }

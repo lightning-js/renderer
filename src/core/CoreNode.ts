@@ -1412,7 +1412,7 @@ export class CoreNode extends EventEmitter {
     // this only needs to happen once or until the texture is no longer loaded
     if (
       this.texture !== null &&
-      this.texture.state !== 'loaded' &&
+      this.texture.state === 'freed' &&
       this.renderState > CoreNodeRenderState.OutOfBounds
     ) {
       this.stage.txManager.loadTexture(this.texture);

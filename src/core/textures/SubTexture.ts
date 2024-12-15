@@ -17,7 +17,9 @@
  * limitations under the License.
  */
 
+import { assertTruthy } from '../../utils.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
+import { ImageTexture } from './ImageTexture.js';
 import {
   Texture,
   TextureType,
@@ -83,7 +85,21 @@ export class SubTexture extends Texture {
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
     this.props = SubTexture.resolveDefaults(props || {});
-    this.parentTexture = this.props.texture;
+
+    assertTruthy(this.props.texture, 'SubTexture requires a parent texture');
+    assertTruthy(
+      this.props.texture instanceof ImageTexture,
+      'SubTexture requires an ImageTexture parent',
+    );
+
+    // Resolve parent texture from cache or fallback to provided texture
+    this.parentTexture = txManager.resolveParentTexture(this.props.texture);
+
+    if (this.parentTexture.state === 'freed') {
+      this.txManager.loadTexture(this.parentTexture);
+    }
+
+    this.parentTexture.setRenderableOwner(this, true);
 
     // If parent texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -121,10 +137,6 @@ export class SubTexture extends Texture {
 
   override async getTextureSource(): Promise<TextureData> {
     // Check if parent texture is loaded
-    if (this.parentTexture.state !== 'loaded') {
-      await this.txManager.loadTexture(this.parentTexture);
-    }
-
     return {
       data: this.props,
     };
