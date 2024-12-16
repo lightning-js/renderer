@@ -232,14 +232,11 @@ export abstract class Texture extends EventEmitter {
    * @returns
    */
   loadCtxTexture(): CoreContextTexture {
-    if (this.ctxTexture !== undefined) {
-      return this.ctxTexture;
+    if (this.ctxTexture === undefined) {
+      this.ctxTexture = this.txManager.renderer.createCtxTexture(this);
     }
 
-    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
-    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
-
-    return ctxTexture;
+    return this.ctxTexture;
   }
 
   /**
