@@ -124,6 +124,14 @@ export class SubTexture extends Texture {
       width: this.props.width,
       height: this.props.height,
     });
+
+    // If the parent already has a ctxTexture, we can set the core ctx state
+    if (this.parentTexture.ctxTexture !== undefined) {
+      this.setCoreCtxState('loaded', {
+        width: this.props.width,
+        height: this.props.height,
+      });
+    }
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
