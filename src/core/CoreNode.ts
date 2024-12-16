@@ -814,8 +814,7 @@ export class CoreNode extends EventEmitter {
       this.stage.defaultTexture !== null &&
       this.props.src === null &&
       this.props.texture === null &&
-      this.props.rtt === false &&
-      this.hasRenderableProperties() === true
+      this.props.rtt === false
     ) {
       this.texture = this.stage.defaultTexture;
     }
