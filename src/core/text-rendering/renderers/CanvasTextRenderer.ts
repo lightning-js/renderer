@@ -26,8 +26,7 @@ import {
   getNormalizedRgbaComponents,
   getNormalizedAlphaComponent,
 } from '../../lib/utils.js';
-import type { ImageTexture } from '../../textures/ImageTexture.js';
-import { TrFontManager, type FontFamilyMap } from '../TrFontManager.js';
+import { type FontFamilyMap } from '../TrFontManager.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 import { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 import {
@@ -47,7 +46,7 @@ const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
 /**
  * Global font set regardless of if run in the main thread or a web worker
  */
-const globalFontSet = ((resolvedGlobal.document as any)?.fonts ||
+const globalFontSet: FontFaceSet = (resolvedGlobal.document?.fonts ||
   (resolvedGlobal as any).fonts) as FontFaceSet;
 
 declare module './TextRenderer.js' {
@@ -99,7 +98,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
     let context = this.canvas.getContext('2d', {
       willReadFrequently: true,
     }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
