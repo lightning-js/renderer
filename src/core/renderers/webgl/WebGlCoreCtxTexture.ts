@@ -54,7 +54,6 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
   get ctxTexture(): WebGLTexture | null {
     if (this.state === 'freed') {
-      this.load();
       return null;
     }
     assertTruthy(this._nativeCtxTexture);
@@ -83,6 +82,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     if (this.state === 'loading' || this.state === 'loaded') {
       return;
     }
+
+    console.log('WebGlCoreCtxTexture.load');
 
     this.state = 'loading';
     this.textureSource.setCoreCtxState('loading');
