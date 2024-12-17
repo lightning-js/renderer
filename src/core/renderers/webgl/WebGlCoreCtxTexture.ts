@@ -158,10 +158,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       width = data.width;
       height = data.height;
       glw.bindTexture(this._nativeCtxTexture);
-      glw.pixelStorei(
-        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-        !!textureData.premultiplyAlpha,
-      );
+
+      if (textureData.premultiplyAlpha === true) {
+        glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      }
 
       glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
       this.setTextureMemUse(width * height * 4);
@@ -215,10 +215,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height = 1;
 
       glw.bindTexture(this._nativeCtxTexture);
-      glw.pixelStorei(
-        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-        !!textureData.premultiplyAlpha,
-      );
+      if (textureData.premultiplyAlpha === true) {
+        glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      }
 
       glw.texImage2D(
         0,

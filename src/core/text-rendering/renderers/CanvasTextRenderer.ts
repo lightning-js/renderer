@@ -338,6 +338,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     const node = state.node;
 
     const texture = this.stage.txManager.createTexture('ImageTexture', {
+      premultiplyAlpha: false,
       src: function (
         this: CanvasTextRenderer,
         lightning2TextRenderer: LightningTextTextureRenderer,

@@ -266,6 +266,7 @@ export class ImageTexture extends Texture {
 
     return {
       data: resp.data,
+      premultiplyAlpha: this.props.premultiplyAlpha ?? true,
     };
   }
 
