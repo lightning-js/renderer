@@ -368,6 +368,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
+  override hasRenderableProperties(): boolean {
+    if (this.trState && this.trState.props.text !== '') {
+      return true;
+    }
+    return super.hasRenderableProperties();
+  }
+
   override onChangeIsRenderable(isRenderable: boolean) {
     super.onChangeIsRenderable(isRenderable);
     this.textRenderer.setIsRenderable(this.trState, isRenderable);
@@ -378,7 +385,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // If the text renderer does not support rendering quads, fallback to the
     // default renderQuads method
-    if (this.textRenderer.type === 'canvas') {
+    if (!this.textRenderer.renderQuads) {
       super.renderQuads(renderer);
       return;
     }
@@ -405,7 +412,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     assertTruthy(this.globalTransform);
-    assertTruthy(this.textRenderer.renderQuads);
 
     this.textRenderer.renderQuads(
       this.trState,

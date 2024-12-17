@@ -26,6 +26,7 @@ import {
   getNormalizedRgbaComponents,
   getNormalizedAlphaComponent,
 } from '../../lib/utils.js';
+import type { ImageTexture } from '../../textures/ImageTexture.js';
 import { TrFontManager, type FontFamilyMap } from '../TrFontManager.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 import { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
@@ -362,15 +363,27 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
 
-    // Create a new texture node
-    node.autosize = true;
-    node.texture = texture;
-    node.alpha = getNormalizedAlphaComponent(state.props.color);
+    this.stage.txManager.loadTexture(texture);
 
-    // once the texture is loaded, set the status to loaded
-    texture.once('loaded', () => {
-      this.setStatus(state, 'loaded');
-    });
+    if (state.textureNode) {
+      // Use the existing texture node
+      state.textureNode.texture = texture;
+      // Update the alpha
+      state.textureNode.alpha = getNormalizedAlphaComponent(state.props.color);
+    } else {
+      // Create a new texture node
+      const textureNode = this.stage.createNode({
+        parent: node,
+        texture,
+        autosize: true,
+        // The alpha channel of the color is ignored when rasterizing the text
+        // texture so we need to pass it directly to the texture node.
+        alpha: getNormalizedAlphaComponent(state.props.color),
+      });
+      state.textureNode = textureNode;
+    }
+
+    this.setStatus(state, 'loaded');
   }
 
   loadFont = (state: CanvasTextRendererState): void => {
