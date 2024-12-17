@@ -148,6 +148,7 @@ export class CoreTextureManager extends EventEmitter {
   txConstructors: Partial<TextureMap> = {};
 
   private downloadTextureSourceQueue: Array<Texture> = [];
+  private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
 
@@ -373,13 +374,18 @@ export class CoreTextureManager extends EventEmitter {
     texture.setSourceState('loading');
     texture.setCoreCtxState('loading');
 
+    // if we're not initialized, just queue the texture into the priority queue
+    if (this.initialized === false) {
+      this.priorityQueue.push(texture);
+      return;
+    }
+
     // prioritize the texture for immediate loading
     if (priority === true) {
       texture
         .getTextureData()
         .then(() => {
-          const coreContext = texture.loadCtxTexture();
-          coreContext.load();
+          this.uploadTexture(texture);
         })
         .catch((err) => {
           console.error(err);
@@ -388,6 +394,16 @@ export class CoreTextureManager extends EventEmitter {
 
     // enqueue the texture for download and upload
     this.enqueueDownloadTextureSource(texture);
+  }
+
+  /**
+   * Upload a texture to the GPU
+   *
+   * @param texture Texture to upload
+   */
+  uploadTexture(texture: Texture): void {
+    const coreContext = texture.loadCtxTexture();
+    coreContext.load();
   }
 
   /**
@@ -402,15 +418,26 @@ export class CoreTextureManager extends EventEmitter {
 
     let itemsProcessed = 0;
 
+    // Process priority queue
+    while (
+      this.priorityQueue.length > 0 &&
+      (maxItems === 0 || itemsProcessed < maxItems)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.priorityQueue.shift()!;
+      texture.getTextureData().then(() => {
+        this.uploadTexture(texture);
+      });
+      itemsProcessed++;
+    }
+
     // Process uploads
     while (
       this.uploadTextureQueue.length > 0 &&
       (maxItems === 0 || itemsProcessed < maxItems)
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.uploadTextureQueue.shift()!;
-      const coreContext = texture.loadCtxTexture();
-      coreContext.load();
+      this.uploadTexture(this.uploadTextureQueue.shift()!);
       itemsProcessed++;
     }
 
