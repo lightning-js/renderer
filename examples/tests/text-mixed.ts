@@ -52,7 +52,7 @@ export default async function test(settings: ExampleSettings) {
       color: 0xff0000ff,
       y: 100,
       text: `Canvas`,
-      parent: renderer.root,
+      parent: testRoot,
       fontSize: 50,
     });
 
