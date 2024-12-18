@@ -194,10 +194,7 @@ export class Stage {
     this.renderer = new renderEngine(rendererOptions);
     const renderMode = this.renderer.mode || 'webgl';
 
-    if (renderMode === 'webgl') {
-      this.createDefaultTexture();
-    }
-
+    this.createDefaultTexture();
     this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 

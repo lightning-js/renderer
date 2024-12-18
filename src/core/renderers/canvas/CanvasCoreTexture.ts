@@ -36,9 +36,6 @@ export class CanvasCoreTexture extends CoreContextTexture {
     | undefined;
 
   load(): void {
-    if (this.textureSource.state !== 'freed') {
-      return;
-    }
     this.textureSource.setCoreCtxState('loading');
 
     this.onLoadRequest()
