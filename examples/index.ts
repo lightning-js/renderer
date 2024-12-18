@@ -34,7 +34,7 @@ import {
 
 import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
-import * as mt19937 from '@stdlib/random-base-mt19937';
+
 import type {
   ExampleSettings,
   SnapshotOptions,
@@ -42,6 +42,7 @@ import type {
 import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
+import { setupMathRandom } from './common/setupMathRandom.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -141,9 +142,8 @@ async function runTest(
     throw new Error(`Test "${test}" not found`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const module = await testModule();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
   const customSettings: Partial<RendererMainSettings> =
     typeof module.customSettings === 'function'
       ? module.customSettings(urlParams)
@@ -216,7 +216,6 @@ async function runTest(
     memMonitor,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   await module.default(exampleSettings);
 }
 
@@ -374,18 +373,15 @@ async function runAutomation(
       continue;
     }
     assertTruthy(testModule);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
+    // Setup Math.random to use a seeded random number generator for consistent
+    // results in automation mode.
+    await setupMathRandom();
+
     const { automation, customSettings } = await testModule();
     console.log(`Attempting to run automation for ${testName}...`);
     if (automation) {
       console.log(`Running automation for ${testName}...`);
-      // Override Math.random() as stable random number generator
-      // - Each test gets the same sequence of random numbers
-      // - This only is in effect when tests are run in automation mode
-      const rand = mt19937.factory({ seed: 1234 });
-      Math.random = function () {
-        return rand() / rand.MAX;
-      };
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {

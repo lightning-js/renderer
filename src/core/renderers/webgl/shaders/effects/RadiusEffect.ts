@@ -21,7 +21,6 @@ import {
   ShaderEffect,
   type DefaultEffectProps,
   type ShaderEffectUniforms,
-  type ShaderEffectValueMap,
 } from './ShaderEffect.js';
 
 /**

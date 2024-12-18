@@ -91,6 +91,7 @@ export interface TextureData {
     | SubTextureProps
     | CompressedData
     | HTMLImageElement
+    | Uint8Array
     | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
@@ -187,7 +188,7 @@ export abstract class Texture extends EventEmitter {
       this.renderableOwners.add(owner);
       const newSize = this.renderableOwners.size;
       if (newSize > oldSize && newSize === 1) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+         
         (this.renderable as boolean) = true;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(true);
@@ -196,7 +197,7 @@ export abstract class Texture extends EventEmitter {
       this.renderableOwners.delete(owner);
       const newSize = this.renderableOwners.size;
       if (newSize < oldSize && newSize === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+         
         (this.renderable as boolean) = false;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(false);
@@ -249,7 +250,7 @@ export abstract class Texture extends EventEmitter {
     ...args: ParametersSkipTarget<TextureStateEventMap[State]>
   ): void {
     if (this.state !== state) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+       
       (this.state as TextureState) = state;
       if (state === 'loaded') {
         const loadedArgs = args as ParametersSkipTarget<

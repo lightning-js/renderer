@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
@@ -36,6 +36,7 @@ import type {
   CoreShaderNode,
   PartialShaderProps,
   ExtractShaderProps,
+  BaseShaderNode,
 } from '../core/renderers/CoreShaderNode.js';
 
 /**
@@ -216,6 +217,17 @@ export interface RendererMainSettings {
    * @defaultValue `false`
    */
   forceWebGL2?: boolean;
+
+  /**
+   * Enable strictBounds
+   *
+   * @remarks
+   * Enable strict bounds for the renderer. This will ensure that the renderer
+   * will not render outside the bounds of the canvas.
+   *
+   * @defaultValue `true`
+   */
+  strictBounds?: boolean;
 }
 
 /**
@@ -306,6 +318,7 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
+      strictBounds: settings.strictBounds ?? true,
     };
     this.settings = resolvedSettings;
 
@@ -347,6 +360,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
       inspector: this.settings.inspector !== null,
+      strictBounds: this.settings.strictBounds,
     });
 
     // Extract the root node
@@ -387,7 +401,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode<ShNode extends CoreShaderNode>(
+  createNode<ShNode extends BaseShaderNode = CoreShaderNode<any>>(
     props: Partial<INodeProps<ShNode>>,
   ): INode<ShNode> {
     assertTruthy(this.stage, 'Stage is not initialized');
@@ -544,5 +558,14 @@ export class RendererMain extends EventEmitter {
    */
   rerender() {
     throw new Error('Not implemented');
+  }
+
+  /**
+   * Sets the clear color for the stage.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  setClearColor(color: number) {
+    this.stage.setClearColor(color);
   }
 }

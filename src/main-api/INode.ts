@@ -24,7 +24,7 @@ import {
 } from '../core/CoreNode.js';
 import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
-import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
+import type { BaseShaderNode } from '../core/renderers/CoreShaderNode.js';
 
 /**
  * A visual Node in the Renderer scene graph.
@@ -44,7 +44,7 @@ import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
  * Users of the Renderer API, should generally interact with INode objects
  * instead of CoreNode objects.
  */
-export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
+export interface INode<ShaderNode extends BaseShaderNode = BaseShaderNode>
   extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
   shader: ShaderNode;
   animate(
@@ -57,7 +57,7 @@ export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
 /**
  * Properties used to animate() a Node
  */
-export interface INodeAnimateProps<ShNode extends CoreShaderNode>
+export interface INodeAnimateProps<ShNode extends BaseShaderNode>
   extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
   shaderProps: Partial<ShNode['props']>;
 }
@@ -65,7 +65,7 @@ export interface INodeAnimateProps<ShNode extends CoreShaderNode>
 /**
  * Properties used to create a new Node
  */
-export interface INodeProps<ShNode extends CoreShaderNode>
+export interface INodeProps<ShNode extends BaseShaderNode>
   extends Omit<CoreNodeProps, 'shader' | 'parent'> {
   shader: ShNode;
   parent: INode | null;
@@ -85,7 +85,7 @@ export interface INodeProps<ShNode extends CoreShaderNode>
  */
 export interface ITextNode extends Omit<CoreTextNode, 'animate' | 'parent'> {
   animate(
-    props: Partial<INodeAnimateProps<CoreShaderNode>>,
+    props: Partial<INodeAnimateProps<BaseShaderNode>>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
   parent: INode | null;

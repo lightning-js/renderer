@@ -44,7 +44,7 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: CoreShaderNode;
+  shader: CoreShaderNode<any> | null;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
@@ -104,12 +104,13 @@ export abstract class CoreRenderer {
     shaderConfig: Readonly<CoreShaderConfig>,
     program: CoreShaderProgram,
     props?: Record<string, any>,
-  ): CoreShaderNode;
-  abstract getDefaultShaderNode(): CoreShaderNode;
+  ): CoreShaderNode<any>;
+  abstract getDefaultShaderNode(): CoreShaderNode<any> | null;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
   abstract getBufferInfo(): BufferInfo | null;
+  abstract updateClearColor(color: number): void;
 }

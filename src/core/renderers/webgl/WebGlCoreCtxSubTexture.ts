@@ -34,6 +34,12 @@ export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
 
   override async onLoadRequest(): Promise<Dimensions> {
     const props = await (this.textureSource as SubTexture).getTextureData();
+
+    if (props.data instanceof Uint8Array) {
+      // its a 1x1 Color Texture
+      return { width: 1, height: 1 };
+    }
+
     return {
       width: props.data?.width || 0,
       height: props.data?.height || 0,

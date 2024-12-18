@@ -32,6 +32,7 @@ import {
   type CoreWebGlExtensions,
   getWebGlParameters,
   getWebGlExtensions,
+  type WebGlColor,
 } from './internal/RendererUtils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { Texture, TextureType } from '../../textures/Texture.js';
@@ -48,7 +49,7 @@ import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import { Default } from './shaders/Default.js';
 import type { WebGlShaderConfig } from './WebGlShaderProgram.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
-import type { CoreShaderNode } from '../CoreShaderNode.js';
+import type { BaseShaderNode, CoreShaderNode } from '../CoreShaderNode.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -81,6 +82,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultShaderNode: WebGlShaderNode | null = null;
   quadBufferCollection: BufferCollection;
 
+  clearColor: WebGlColor = {
+    raw: 0x00000000,
+    normalized: [0, 0, 0, 0],
+  };
+
   /**
    * White pixel texture used by default when no texture is specified.
    */
@@ -109,10 +115,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       options.contextSpy,
     );
     const glw = (this.glw = new WebGlContextWrapper(gl));
-
-    const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+
+    this.updateClearColor(clearColor);
+
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
@@ -244,15 +250,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    const shaderProps = params.shader.getResolvedProps() || null;
     let texture = params.texture || this.defaultTexture!;
 
     assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
-    const targetDims = { width: -1, height: -1 };
-    targetDims.width = params.width;
-    targetDims.height = params.height;
 
     if (this.reuseRenderOp(params) === false) {
       this.newRenderOp(params, bufferIdx);
@@ -478,7 +480,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(this.curRenderOp.quad, bufferIdx);
+      this.newRenderOp(this.curRenderOp.quad as QuadOptions, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
@@ -513,7 +515,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     if (
       !this.curRenderOp.shader.program.reuseRenderOp(
         params,
-        this.curRenderOp.quad,
+        this.curRenderOp.quad as QuadOptions,
       )
     ) {
       return false;
@@ -568,8 +570,82 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
     }
 
-    // @todo: Better bottom up rendering order
-    this.rttNodes.unshift(node);
+    this.insertRTTNodeInOrder(node);
+  }
+
+  /**
+   * Inserts an RTT node into `this.rttNodes` while maintaining the correct rendering order based on hierarchy.
+   *
+   * Rendering order for RTT nodes is critical when nested RTT nodes exist in a parent-child relationship.
+   * Specifically:
+   *  - Child RTT nodes must be rendered before their RTT-enabled parents to ensure proper texture composition.
+   *  - If an RTT node is added and it has existing RTT children, it should be rendered after those children.
+   *
+   * This function addresses both cases by:
+   * 1. **Checking Upwards**: It traverses the node's hierarchy upwards to identify any RTT parent
+   *    already in `rttNodes`. If an RTT parent is found, the new node is placed before this parent.
+   * 2. **Checking Downwards**: It traverses the node’s children recursively to find any RTT-enabled
+   *    children that are already in `rttNodes`. If such children are found, the new node is inserted
+   *    after the last (highest index) RTT child node.
+   *
+   * The final calculated insertion index ensures the new node is positioned in `rttNodes` to respect
+   * both parent-before-child and child-before-parent rendering rules, preserving the correct order
+   * for the WebGL renderer.
+   *
+   * @param node - The RTT-enabled CoreNode to be added to `rttNodes` in the appropriate hierarchical position.
+   */
+  private insertRTTNodeInOrder(node: CoreNode) {
+    let insertIndex = this.rttNodes.length; // Default to the end of the array
+
+    // 1. Traverse upwards to ensure the node is placed before its RTT parent (if any).
+    let currentNode: CoreNode = node;
+    while (currentNode) {
+      if (!currentNode.parent) {
+        break;
+      }
+
+      const parentIndex = this.rttNodes.indexOf(currentNode.parent);
+      if (parentIndex !== -1) {
+        // Found an RTT parent in the list; set insertIndex to place node before the parent
+        insertIndex = parentIndex;
+        break;
+      }
+
+      currentNode = currentNode.parent;
+    }
+
+    // 2. Traverse downwards to ensure the node is placed after any RTT children.
+    // Look through each child recursively to see if any are already in rttNodes.
+    const maxChildIndex = this.findMaxChildRTTIndex(node);
+    if (maxChildIndex !== -1) {
+      // Adjust insertIndex to be after the last child RTT node
+      insertIndex = Math.max(insertIndex, maxChildIndex + 1);
+    }
+
+    // 3. Insert the node at the calculated position
+    this.rttNodes.splice(insertIndex, 0, node);
+  }
+
+  // Helper function to find the highest index of any RTT children of a node within rttNodes
+  private findMaxChildRTTIndex(node: CoreNode): number {
+    let maxIndex = -1;
+
+    const traverseChildren = (currentNode: CoreNode) => {
+      const currentIndex = this.rttNodes.indexOf(currentNode);
+      if (currentIndex !== -1) {
+        maxIndex = Math.max(maxIndex, currentIndex);
+      }
+
+      // Recursively check all children of the current node
+      for (const child of currentNode.children) {
+        traverseChildren(child);
+      }
+    };
+
+    // Start traversal directly with the provided node
+    traverseChildren(node);
+
+    return maxIndex;
   }
 
   renderRTTNodes() {
@@ -596,21 +672,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
       glw.bindFramebuffer(ctxTexture.framebuffer);
 
       glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
+      // Set the clear color to transparent
+      glw.clearColor(0, 0, 0, 0);
       glw.clear();
 
       // Render all associated quads to the texture
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
         if (!child) {
           continue;
         }
-        child.update(this.stage.deltaTime, {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0,
-          valid: false,
-        });
 
         this.stage.addQuads(child);
         child.hasRTTupdates = false;
@@ -623,6 +695,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       this.renderOps.length = 0;
       node.hasRTTupdates = false;
     }
+
+    const clearColor = this.clearColor.normalized;
+    // Restore the default clear color
+    glw.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
 
     // Bind the default framebuffer
     glw.bindFramebuffer(null);
@@ -647,7 +723,31 @@ export class WebGlCoreRenderer extends CoreRenderer {
     return bufferInfo;
   }
 
-  getDefaultShaderNode(): CoreShaderNode {
-    return this.defaultShaderNode as CoreShaderNode;
+  getDefaultShaderNode(): WebGlShaderNode {
+    return this.defaultShaderNode as WebGlShaderNode;
+  }
+
+  /**
+   * Updates the WebGL context's clear color and clears the color buffer.
+   *
+   * @param color - The color to set as the clear color, represented as a 32-bit integer.
+   */
+  updateClearColor(color: number) {
+    if (this.clearColor.raw === color) {
+      return;
+    }
+    const glw = this.glw;
+    const normalizedColor = getNormalizedRgbaComponents(color);
+    glw.clearColor(
+      normalizedColor[0],
+      normalizedColor[1],
+      normalizedColor[2],
+      normalizedColor[3],
+    );
+    this.clearColor = {
+      raw: color,
+      normalized: normalizedColor,
+    };
+    glw.clear();
   }
 }

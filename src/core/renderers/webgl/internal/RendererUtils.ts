@@ -146,3 +146,8 @@ export function isHTMLImageElement(obj: unknown): obj is HTMLImageElement {
     obj.constructor.name === 'HTMLImageElement'
   );
 }
+
+export interface WebGlColor {
+  raw: number;
+  normalized: [number, number, number, number];
+}

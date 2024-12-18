@@ -51,7 +51,11 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
-import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import type {
+  BaseShaderNode,
+  CoreShaderNode,
+} from './renderers/CoreShaderNode.js';
+import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -71,6 +75,7 @@ export interface StageOptions {
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
+  strictBounds: boolean;
 }
 
 export type StageFpsUpdateHandler = (
@@ -97,7 +102,10 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
-  public readonly defShaderNode: CoreShaderNode;
+  public readonly defShaderNode: BaseShaderNode | null = null;
+  public readonly strictBound: Bound;
+  public readonly preloadBound: Bound;
+  public readonly strictBounds: boolean;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -147,6 +155,7 @@ export class Stage {
     this.shManager = new CoreShaderManager(this);
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+    this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -155,6 +164,10 @@ export class Stage {
         : [boundsMargin, boundsMargin, boundsMargin, boundsMargin];
     }
     this.boundsMargin = bm;
+
+    // precalculate our viewport bounds
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
     const rendererOptions: CoreRendererOptions = {
       stage: this,
@@ -246,7 +259,7 @@ export class Stage {
       src: null,
       scale: 1,
       preventCleanup: false,
-      strictBounds: false,
+      strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
@@ -255,6 +268,11 @@ export class Stage {
     if (autoStart) {
       startLoop(this);
     }
+  }
+
+  setClearColor(color: number) {
+    this.renderer.updateClearColor(color);
+    this.renderRequested = true;
   }
 
   updateFrameTime() {
@@ -618,7 +636,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
-      strictBounds: props.strictBounds ?? false,
+      strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
 }

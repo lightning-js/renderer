@@ -88,7 +88,10 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = this.createNativeCtxTexture();
     if (this._nativeCtxTexture === null) {
       this._state = 'failed';
-      this.textureSource.setState('failed', new Error('Could not create WebGL Texture'));
+      this.textureSource.setState(
+        'failed',
+        new Error('Could not create WebGL Texture'),
+      );
       console.error('Could not create WebGL Texture');
       return;
     }
@@ -201,6 +204,29 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
 
       this.setTextureMemUse(view.byteLength);
+    } else if (textureData.data && textureData.data instanceof Uint8Array) {
+      // Color Texture
+      width = 1;
+      height = 1;
+
+      glw.bindTexture(this._nativeCtxTexture);
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyAlpha,
+      );
+
+      glw.texImage2D(
+        0,
+        glw.RGBA,
+        width,
+        height,
+        0,
+        glw.RGBA,
+        glw.UNSIGNED_BYTE,
+        textureData.data,
+      );
+
+      this.setTextureMemUse(width * height * 4);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,

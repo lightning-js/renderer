@@ -2,8 +2,13 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 import rocko from '../assets/rocko.png';
 
 export async function automation(settings: ExampleSettings) {
-  await test(settings);
-  await settings.snapshot();
+  const page = await test(settings);
+
+  const maxPages = 6;
+  for (let i = 0; i < maxPages; i++) {
+    page(i);
+    await settings.snapshot();
+  }
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
@@ -24,6 +29,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: 300,
     parent: node,
     rtt: true,
+    clipping: true,
     zIndex: 5,
     colorTop: 0xfff00fff,
     colorBottom: 0x00ffffff,
@@ -251,4 +257,46 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       rttNode.height = rttNode.height === 200 ? 300 : 200;
     }
   });
+
+  // Define the page function to configure different test scenarios
+  const page = (i = 0) => {
+    switch (i) {
+      case 1:
+        rttNode.rtt = false;
+        rttNode.clipping = false;
+        rttNode2.rtt = false;
+        rttNode3.rtt = false;
+        break;
+
+      case 2:
+        rttNode.rtt = true;
+        rttNode2.rtt = true;
+        rttNode3.rtt = true;
+        break;
+
+      case 4:
+        // Modify child texture properties in nested RTT node
+        rocko4.x = 0;
+        break;
+
+      case 5:
+        nestedRTTNode1.rtt = false;
+        break;
+
+      case 6:
+        nestedRTTNode1.rtt = true;
+        break;
+
+      default:
+        // Reset to initial state
+        rttNode.rtt = true;
+        rttNode.clipping = true;
+        rttNode2.rtt = true;
+        rttNode3.rtt = true;
+        nestedRTTNode1.rtt = true;
+        break;
+    }
+  };
+
+  return page;
 }

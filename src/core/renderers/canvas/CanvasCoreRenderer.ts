@@ -18,7 +18,6 @@
  */
 import type { CoreNode } from '../../CoreNode.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
-import type { CoreShaderConfig } from '../CoreShaderProgram.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import type { Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
@@ -32,12 +31,12 @@ import {
   CanvasShaderProgram,
   type CanvasShaderConfig,
 } from './CanvasShaderProgram.js';
-import { getRadius } from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
   parseColor,
   type IParsedColor,
 } from './internal/ColorUtils.js';
+import { CoreShaderNode } from '../CoreShaderNode.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -60,7 +59,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   reset(): void {
-    // eslint-disable-next-line no-self-assign
+     
     this.canvas.width = this.canvas.width; // quick reset canvas
 
     const ctx = this.context;
@@ -101,13 +100,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
     } = quad;
     let texture = quad.texture;
     let ctxTexture: CanvasCoreTexture | undefined = undefined;
-    let frame:
-      | { x: number; y: number; width: number; height: number }
-      | undefined;
 
     if (texture) {
       if (texture instanceof SubTexture) {
-        frame = texture.props;
         texture = texture.parentTexture;
       }
 
@@ -121,13 +116,20 @@ export class CanvasCoreRenderer extends CoreRenderer {
       }
     }
 
-    const color = parseColor(colorTl);
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
-    const hasGradient = colorTl !== colorTr || colorTl !== colorBr;
-    const radius = quad.shader ? getRadius(quad) : 0;
 
-    if (hasTransform || hasClipping || radius) {
+    const hasShader = Boolean(quad.shader);
+
+    let saveAndRestore = hasTransform || hasClipping;
+
+    if (hasShader) {
+      saveAndRestore =
+        saveAndRestore ||
+        (quad.shader?.program as CanvasShaderProgram).saveAndRestore!;
+    }
+
+    if (saveAndRestore) {
       ctx.save();
     }
 
@@ -153,63 +155,103 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.translate(-tx, -ty);
     }
 
-    if (radius) {
-      const path = new Path2D();
-      path.roundRect(tx, ty, width, height, radius);
-      ctx.clip(path);
-    }
-
-    if (ctxTexture) {
-      const image = ctxTexture.getImage(color);
-      ctx.globalAlpha = alpha;
-      if (frame) {
-        ctx.drawImage(
-          image,
-          frame.x,
-          frame.y,
-          frame.width,
-          frame.height,
-          tx,
-          ty,
-          width,
-          height,
-        );
-      } else {
-        ctx.drawImage(image, tx, ty, width, height);
+    if (hasShader) {
+      let contextRendered = false;
+      let renderContext: (() => void) | null = () => {
+        this.renderContext(quad);
+        contextRendered = true;
+      };
+      (quad.shader?.program as CanvasShaderProgram).render(
+        this.context,
+        quad,
+        quad.shader?.getResolvedProps(),
+        renderContext,
+      );
+      if (contextRendered === false) {
+        renderContext();
       }
-      ctx.globalAlpha = 1;
-    } else if (hasGradient) {
-      let endX: number = tx;
-      let endY: number = ty;
-      let endColor: IParsedColor;
-      if (colorTl === colorTr) {
-        // vertical
-        endX = tx;
-        endY = ty + height;
-        endColor = parseColor(colorBr);
-      } else {
-        // horizontal
-        endX = tx + width;
-        endY = ty;
-        endColor = parseColor(colorTr);
-      }
-      const gradient = ctx.createLinearGradient(tx, ty, endX, endY);
-      gradient.addColorStop(0, formatRgba(color));
-      gradient.addColorStop(1, formatRgba(endColor));
-      ctx.fillStyle = gradient;
-      ctx.fillRect(tx, ty, width, height);
+      renderContext = null;
     } else {
-      ctx.fillStyle = formatRgba(color);
-      ctx.fillRect(tx, ty, width, height);
+      this.renderContext(quad);
     }
 
-    if (hasTransform || hasClipping || radius) {
+    if (saveAndRestore) {
       ctx.restore();
     }
   }
 
-  createShaderProgram(shaderConfig: CoreShaderConfig): CanvasShaderProgram {
-    return new CanvasShaderProgram(this, shaderConfig as CanvasShaderConfig);
+  renderContext(quad: QuadOptions) {
+    const color = parseColor(quad.colorTl);
+    const hasGradient =
+      quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
+    if (quad.texture) {
+      const image = (quad.texture.ctxTexture as CanvasCoreTexture).getImage(
+        color,
+      );
+      this.context.globalAlpha = color.a ?? quad.alpha;
+      if (quad.texture instanceof SubTexture) {
+        this.context.drawImage(
+          image,
+          quad.texture.props.x,
+          quad.texture.props.y,
+          quad.texture.props.width,
+          quad.texture.props.height,
+          quad.tx,
+          quad.ty,
+          quad.width,
+          quad.height,
+        );
+      } else {
+        this.context.drawImage(
+          image,
+          quad.tx,
+          quad.ty,
+          quad.width,
+          quad.height,
+        );
+      }
+      this.context.globalAlpha = 1;
+    } else if (hasGradient) {
+      let endX: number = quad.tx;
+      let endY: number = quad.ty;
+      let endColor: IParsedColor;
+      if (quad.colorTl === quad.colorTr) {
+        // vertical
+        endX = quad.tx;
+        endY = quad.ty + quad.height;
+        endColor = parseColor(quad.colorBr);
+      } else {
+        // horizontal
+        endX = quad.tx + quad.width;
+        endY = quad.ty;
+        endColor = parseColor(quad.colorTr);
+      }
+      const gradient = this.context.createLinearGradient(
+        quad.tx,
+        quad.ty,
+        endX,
+        endY,
+      );
+      gradient.addColorStop(0, formatRgba(color));
+      gradient.addColorStop(1, formatRgba(endColor));
+      this.context.fillStyle = gradient;
+      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+    } else {
+      this.context.fillStyle = formatRgba(color);
+      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+    }
+  }
+
+  createShaderNode(
+    shaderConfig: Readonly<CanvasShaderConfig>,
+    program: CanvasShaderProgram,
+    props?: Record<string, any>,
+  ): CoreShaderNode<any> {
+    return new CoreShaderNode(shaderConfig, program, this.stage, props);
+  }
+
+  createShaderProgram(shaderConfig: CanvasShaderConfig): CanvasShaderProgram {
+    return new CanvasShaderProgram(this, shaderConfig);
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {
@@ -228,6 +270,19 @@ export class CanvasCoreRenderer extends CoreRenderer {
     // noop
   }
   getBufferInfo(): null {
+    return null;
+  }
+
+  /**
+   * Updates the clear color of the canvas renderer.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  updateClearColor(color: number) {
+    this.clearColor = color ? getRgbaComponents(color) : undefined;
+  }
+
+  override getDefaultShaderNode() {
     return null;
   }
 }

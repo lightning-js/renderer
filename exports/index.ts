@@ -58,6 +58,7 @@ export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js'
 export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
+export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
 export * from '../src/core/shaders/BorderBottomTemplate.js';
 export * from '../src/core/shaders/BorderTopTemplate.js';

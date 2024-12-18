@@ -8,7 +8,7 @@ import type {
 } from './WebGlShaderProgram.js';
 
 export class WebGlShaderNode<
-  Props = Record<string, unknown>,
+  Props extends Record<string, unknown> = Record<string, unknown>,
 > extends CoreShaderNode<Props> {
   declare readonly program: WebGlShaderProgram;
   private updater: ((node: CoreNode) => void) | undefined = undefined;

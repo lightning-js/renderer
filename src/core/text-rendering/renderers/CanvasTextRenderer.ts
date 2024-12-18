@@ -99,7 +99,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     } else {
       this.canvas = document.createElement('canvas');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+     
     let context = this.canvas.getContext('2d', {
       willReadFrequently: true,
     }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
@@ -364,6 +364,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     if (state.textureNode) {
       // Use the existing texture node
       state.textureNode.texture = texture;
+      // Update the alpha
+      state.textureNode.alpha = getNormalizedAlphaComponent(state.props.color);
     } else {
       // Create a new texture node
       const textureNode = this.stage.createNode({

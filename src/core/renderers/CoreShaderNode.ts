@@ -61,7 +61,17 @@ export interface CoreShaderConfig<Props = Record<string, unknown>> {
   getCacheMarkers?: (props: Props) => string;
 }
 
-export class CoreShaderNode<Props = Record<string, unknown>> {
+export interface BaseShaderNode {
+  program: CoreShaderProgram;
+  getResolvedProps: () => Record<string, unknown> | undefined;
+  attachNode: (node: CoreNode) => void;
+  update?: () => void;
+  props?: Record<string, unknown>;
+}
+
+export class CoreShaderNode<Props extends Record<string, unknown>>
+  implements BaseShaderNode
+{
   readonly stage: Stage;
   readonly program: CoreShaderProgram;
   private propsConfig: ShaderProps<Props> | undefined;

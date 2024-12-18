@@ -62,7 +62,7 @@ const stylePropertyMap: {
 
     return { prop: 'height', value: `${h}px` };
   },
-  zIndex: () => 'zIndex',
+  zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
   fontSize: () => 'font-size',
   fontStyle: () => 'font-style',
@@ -141,6 +141,15 @@ const gradientColorPropertyMap = [
   'colorBl',
   'colorBr',
 ];
+
+const knownProperties = new Set<string>([
+  ...Object.keys(stylePropertyMap),
+  ...Object.keys(domPropertyMap),
+  // ...gradientColorPropertyMap,
+  'src',
+  'parent',
+  'data',
+]);
 
 export class Inspector {
   private root: HTMLElement | null = null;
@@ -231,6 +240,7 @@ export class Inspector {
         // really typescript? really?
         key as keyof CoreNodeProps,
         properties[key as keyof CoreNodeProps],
+        properties,
       );
     }
 
@@ -239,35 +249,22 @@ export class Inspector {
 
   createNode(node: CoreNode): CoreNode {
     const div = this.createDiv(node.id, node.props);
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (div as any).node = node;
+    node.on('inViewport', () => div.setAttribute('state', 'inViewport'));
+    node.on('inBounds', () => div.setAttribute('state', 'inBounds'));
+    node.on('outOfBounds', () => div.setAttribute('state', 'outOfBounds'));
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (node as any).div = div;
-
-    node.on('inViewport', () => {
-      div.setAttribute('state', 'inViewport');
-    });
-
-    node.on('inBounds', () => {
-      div.setAttribute('state', 'inBounds');
-    });
-
-    node.on('outOfBounds', () => {
-      div.setAttribute('state', 'outOfBounds');
-    });
-
+    // Monitor only relevant properties by trapping with selective assignment
     return this.createProxy(node, div);
   }
 
   createTextNode(node: CoreNode): CoreTextNode {
     const div = this.createDiv(node.id, node.props);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (div as any).node = node;
+    (div as HTMLElement & { node: CoreNode }).node = node;
+    (node as CoreNode & { div: HTMLElement }).div = div;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (node as any).div = div;
     return this.createProxy(node, div) as CoreTextNode;
   }
 
@@ -275,36 +272,68 @@ export class Inspector {
     node: CoreNode | CoreTextNode,
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
-    return new Proxy(node, {
-      set: (target, property: keyof CoreNodeProps, value) => {
-        this.updateNodeProperty(div, property, value);
-        return Reflect.set(target, property, value);
-      },
-      get: (target, property: keyof CoreNode, receiver: any): any => {
-        if (property === 'destroy') {
-          this.destroyNode(target.id);
-        }
+    // Define traps for each property in knownProperties
+    knownProperties.forEach((property) => {
+      let originalProp = Object.getOwnPropertyDescriptor(node, property);
 
-        if (property === 'animate') {
-          return (props: CoreNodeAnimateProps, settings: AnimationSettings) => {
-            const anim = target.animate(props, settings);
+      if (originalProp === undefined) {
+        // Search the prototype chain for the property descriptor
+        const proto = Object.getPrototypeOf(node) as CoreNode | CoreTextNode;
+        originalProp = Object.getOwnPropertyDescriptor(proto, property);
+      }
 
-            // Trap the animate start function so we can update the inspector accordingly
-            return new Proxy(anim, {
-              get: (target, property: keyof IAnimationController, receiver) => {
-                if (property === 'start') {
-                  this.animateNode(div, props, settings);
-                }
+      if (originalProp === undefined) {
+        return;
+      }
 
-                return Reflect.get(target, property, receiver);
-              },
-            });
-          };
-        }
+      Object.defineProperty(node, property, {
+        get() {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return originalProp?.get?.call(node);
+        },
+        set: (value) => {
+          originalProp?.set?.call(node, value);
+          this.updateNodeProperty(
+            div,
+            property as keyof CoreNodeProps | keyof CoreTextNodeProps,
+            value,
+            node.props,
+          );
+        },
+        configurable: true,
+        enumerable: true,
+      });
+    });
 
-        return Reflect.get(target, property, receiver);
+    const originalDestroy = node.destroy;
+    Object.defineProperty(node, 'destroy', {
+      value: () => {
+        this.destroyNode(node.id);
+        originalDestroy.call(node);
       },
     });
+
+    const originalAnimate = node.animate;
+    Object.defineProperty(node, 'animate', {
+      value: (
+        props: CoreNodeAnimateProps,
+        settings: AnimationSettings,
+      ): IAnimationController => {
+        const animationController = originalAnimate.call(node, props, settings);
+
+        const originalStart =
+          animationController.start.bind(animationController);
+        animationController.start = () => {
+          this.animateNode(div, props, settings);
+
+          return originalStart();
+        };
+
+        return animationController;
+      },
+    });
+
+    return node;
   }
 
   destroyNode(id: number) {
@@ -317,6 +346,7 @@ export class Inspector {
     property: keyof CoreNodeProps | keyof CoreTextNodeProps,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any,
+    props: CoreNodeProps | CoreTextNodeProps,
   ) {
     if (this.root === null || value === undefined || value === null) {
       return;
@@ -380,10 +410,23 @@ export class Inspector {
       }
 
       if (typeof mappedStyleResponse === 'object') {
-        div.style.setProperty(
-          mappedStyleResponse.prop,
-          mappedStyleResponse.value,
-        );
+        let value = mappedStyleResponse.value;
+        if (property === 'x') {
+          const mount = props.mountX;
+          const width = props.width;
+
+          if (mount) {
+            value = `${parseInt(value) - width * mount}px`;
+          }
+        } else if (property === 'y') {
+          const mount = props.mountY;
+          const height = props.height;
+
+          if (mount) {
+            value = `${parseInt(value) - height * mount}px`;
+          }
+        }
+        div.style.setProperty(mappedStyleResponse.prop, value);
       }
 
       return;
@@ -439,13 +482,15 @@ export class Inspector {
       rotation = 0,
       scale = 1,
       color,
+      mountX,
+      mountY,
     } = props;
 
     // ignoring loops and repeats for now, as that might be a bit too much for the inspector
     function animate() {
       setTimeout(() => {
-        div.style.top = `${y}px`;
-        div.style.left = `${x}px`;
+        div.style.top = `${y - height * mountY}px`;
+        div.style.left = `${x - width * mountX}px`;
         div.style.width = `${width}px`;
         div.style.height = `${height}px`;
         div.style.opacity = `${alpha}`;

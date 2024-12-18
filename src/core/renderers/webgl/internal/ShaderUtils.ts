@@ -191,9 +191,10 @@ export function createShader(
       }.${glError ? ` WebGlContext Error: ${glError}` : ''}`,
     );
   }
+
   glw.shaderSource(shader, source);
   glw.compileShader(shader);
-  const success = glw.getShaderParameter(shader, glw.COMPILE_STATUS);
+  const success = !!glw.getShaderParameter(shader, glw.COMPILE_STATUS);
   if (success) {
     return shader;
   }
@@ -209,17 +210,18 @@ export function createProgram(
 ) {
   const program = glw.createProgram();
   if (!program) {
-    throw new Error();
+    throw new Error('Unable to create program');
   }
+
   glw.attachShader(program, vertexShader);
   glw.attachShader(program, fragmentShader);
   glw.linkProgram(program);
-  const success = glw.getProgramParameter(program, glw.LINK_STATUS);
+  const success = !!glw.getProgramParameter(program, glw.LINK_STATUS);
   if (success) {
     return program;
   }
 
-  console.log(glw.getProgramInfoLog(program));
+  console.warn(glw.getProgramInfoLog(program));
   glw.deleteProgram(program);
   return undefined;
 }

@@ -24,6 +24,17 @@ import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 
+type ReqQuad =
+  | 'alpha'
+  | 'shader'
+  | 'parentHasRenderTexture'
+  | 'rtt'
+  | 'clippingRect'
+  | 'height'
+  | 'width';
+type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
+  Partial<Omit<QuadOptions, ReqQuad>>;
+
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
  *
@@ -38,7 +49,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
 
   constructor(
     readonly renderer: WebGlCoreRenderer,
-    readonly quad: QuadOptions,
+    readonly quad: RenderOpQuadOptions,
     readonly bufferIdx: number,
   ) {
     super();
@@ -87,13 +98,24 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
     // Clipping
     if (this.quad.clippingRect.valid) {
       const { x, y, width, height } = this.quad.clippingRect;
-      const pixelRatio = options.pixelRatio;
+      const pixelRatio = this.quad.parentHasRenderTexture
+        ? 1
+        : options.pixelRatio;
       const canvasHeight = options.canvas.height;
 
       const clipX = Math.round(x * pixelRatio);
       const clipWidth = Math.round(width * pixelRatio);
       const clipHeight = Math.round(height * pixelRatio);
-      const clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+      let clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+
+      // if parent has render texture, we need to adjust the scissor rect
+      // to be relative to the parent's framebuffer
+      if (this.quad.parentHasRenderTexture) {
+        clipY = this.quad.framebufferDimensions
+          ? this.quad.framebufferDimensions.height - this.quad.height
+          : 0;
+      }
+
       glw.setScissorTest(true);
       glw.scissor(clipX, clipY, clipWidth, clipHeight);
     } else {

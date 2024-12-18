@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { CreateImageBitmapSupport } from '../CoreTextureManager.js';
 import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
@@ -47,6 +48,9 @@ interface ImageWorkerMessage {
 
 /* eslint-disable */
 function createImageWorker() {
+  var supportsOptionsCreateImageBitmap = false;
+  var supportsFullCreateImageBitmap = false;
+
   function hasAlphaChannel(mimeType: string) {
     return mimeType.indexOf('image/png') !== -1;
   }
@@ -75,7 +79,12 @@ function createImageWorker() {
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
 
-        if (width !== null && height !== null) {
+        // createImageBitmap with crop and options
+        if (
+          supportsFullCreateImageBitmap === true &&
+          width !== null &&
+          height !== null
+        ) {
           createImageBitmap(blob, x || 0, y || 0, width, height, {
             premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
             colorSpaceConversion: 'none',
@@ -90,11 +99,25 @@ function createImageWorker() {
           return;
         }
 
-        createImageBitmap(blob, {
-          premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        })
+        // createImageBitmap without crop but with options
+        if (supportsOptionsCreateImageBitmap === true) {
+          createImageBitmap(blob, {
+            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          })
+            .then(function (data) {
+              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+            })
+            .catch(function (error) {
+              reject(error);
+            });
+          return;
+        }
+
+        // Fallback for browsers that do not support createImageBitmap with options
+        // this is supported for Chrome v50 to v52/54 that doesn't support options
+        createImageBitmap(blob)
           .then(function (data) {
             resolve({ data, premultiplyAlpha: premultiplyAlpha });
           })
@@ -140,8 +163,14 @@ export class ImageWorkerManager {
   workerIndex = 0;
   nextId = 0;
 
-  constructor(numImageWorkers: number) {
-    this.workers = this.createWorkers(numImageWorkers);
+  constructor(
+    numImageWorkers: number,
+    createImageBitmapSupport: CreateImageBitmapSupport,
+  ) {
+    this.workers = this.createWorkers(
+      numImageWorkers,
+      createImageBitmapSupport,
+    );
     this.workers.forEach((worker) => {
       worker.onmessage = this.handleMessage.bind(this);
     });
@@ -161,8 +190,23 @@ export class ImageWorkerManager {
     }
   }
 
-  private createWorkers(numWorkers = 1): Worker[] {
-    const workerCode = `(${createImageWorker.toString()})()`;
+  private createWorkers(
+    numWorkers = 1,
+    createImageBitmapSupport: CreateImageBitmapSupport,
+  ): Worker[] {
+    let workerCode = `(${createImageWorker.toString()})()`;
+
+    // Replace placeholders with actual initialization values
+    const supportsOptions = createImageBitmapSupport.options ? 'true' : 'false';
+    const supportsFull = createImageBitmapSupport.full ? 'true' : 'false';
+    workerCode = workerCode.replace(
+      'var supportsOptionsCreateImageBitmap = false;',
+      `var supportsOptionsCreateImageBitmap = ${supportsOptions};`,
+    );
+    workerCode = workerCode.replace(
+      'var supportsFullCreateImageBitmap = false;',
+      `var supportsFullCreateImageBitmap = ${supportsFull};`,
+    );
 
     const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
       type: 'application/javascript',
@@ -170,7 +214,15 @@ export class ImageWorkerManager {
     const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
-      workers.push(new Worker(blobURL));
+      const worker = new Worker(blobURL);
+
+      // Pass `createImageBitmap` support level during worker initialization
+      worker.postMessage({
+        type: 'init',
+        support: createImageBitmapSupport,
+      });
+
+      workers.push(worker);
     }
     return workers;
   }

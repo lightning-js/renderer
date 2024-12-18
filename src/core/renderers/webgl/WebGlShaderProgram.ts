@@ -41,7 +41,7 @@ type ShaderSource<T> =
   | string
   | ((renderer: WebGlCoreRenderer, props: T) => string);
 
-export type WebGlShaderConfig<T = Record<string, unknown>> =
+export type WebGlShaderConfig<T extends Record<string, unknown>> =
   CoreShaderConfig<T> & {
     /**
      * fragment shader source for WebGl or WebGl2
@@ -201,8 +201,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       }
     }
 
-    const shaderPropsA = renderOpA.shader.getResolvedProps();
-    const shaderPropsB = renderOpB.shader.getResolvedProps();
+    const shaderPropsA = renderOpA.shader?.getResolvedProps();
+    const shaderPropsB = renderOpB.shader?.getResolvedProps();
     if (shaderPropsA !== undefined && shaderPropsB !== undefined) {
       for (const key in shaderPropsA) {
         if (shaderPropsA[key] !== shaderPropsB[key]) {
@@ -228,7 +228,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
     if (parentHasRenderTexture) {
-      const { width, height } = renderOp.quad.framebufferDimensions;
+      const { width, height } = renderOp.quad.framebufferDimensions!;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);

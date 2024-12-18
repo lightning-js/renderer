@@ -24,9 +24,9 @@ export class UnsupportedShader {
 
   constructor(shType: string) {
     this.shType = shType;
-    if (shType !== ROUNDED_RECTANGLE_SHADER_TYPE) {
-      console.warn('Unsupported shader:', shType);
-    }
+    // if (shType !== ROUNDED_RECTANGLE_SHADER_TYPE) {
+    //   console.warn('Unsupported shader:', shType);
+    // }
   }
 
   bindRenderOp(): void {
