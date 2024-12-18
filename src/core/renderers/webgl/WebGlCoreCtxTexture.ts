@@ -144,7 +144,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     let height = 0;
 
     glw.activeTexture(0);
+
     const tdata = textureData.data;
+    const format = textureData.premultiplyAlpha ? glw.RGBA : glw.RGB;
+    const formatBytes = format === glw.RGBA ? 4 : 3;
+
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
@@ -156,13 +160,13 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       width = tdata.width;
       height = tdata.height;
       glw.bindTexture(this._nativeCtxTexture);
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyAlpha,
+      );
 
-      if (textureData.premultiplyAlpha === true) {
-        glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      }
-
-      glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, tdata);
-      this.setTextureMemUse(width * height * 4);
+      glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
+      this.setTextureMemUse(width * height * formatBytes);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
       if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
@@ -176,11 +180,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       glw.texImage2D(
         0,
-        glw.RGBA,
+        format,
         1,
         1,
         0,
-        glw.RGBA,
+        format,
         glw.UNSIGNED_BYTE,
         TRANSPARENT_TEXTURE_DATA,
       );
@@ -207,22 +211,23 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       height = 1;
 
       glw.bindTexture(this._nativeCtxTexture);
-      if (textureData.premultiplyAlpha === true) {
-        glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      }
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyAlpha,
+      );
 
       glw.texImage2D(
         0,
-        glw.RGBA,
+        format,
         width,
         height,
         0,
-        glw.RGBA,
+        format,
         glw.UNSIGNED_BYTE,
         tdata,
       );
 
-      this.setTextureMemUse(width * height * 4);
+      this.setTextureMemUse(width * height * formatBytes);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
