@@ -2046,7 +2046,6 @@ export class CoreNode extends EventEmitter {
     });
 
     // call load immediately to ensure the texture is created
-    // WvB do we really need this?
     this.stage.txManager.loadTexture(this.texture, true);
 
     this.stage.renderer?.renderToTexture(this); // Only this RTT node
