@@ -26,8 +26,7 @@ import {
   getNormalizedRgbaComponents,
   getNormalizedAlphaComponent,
 } from '../../lib/utils.js';
-import type { ImageTexture } from '../../textures/ImageTexture.js';
-import { TrFontManager, type FontFamilyMap } from '../TrFontManager.js';
+import { type FontFamilyMap } from '../TrFontManager.js';
 import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 import { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 import {
@@ -47,7 +46,7 @@ const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
 /**
  * Global font set regardless of if run in the main thread or a web worker
  */
-const globalFontSet = ((resolvedGlobal.document as any)?.fonts ||
+const globalFontSet: FontFaceSet = (resolvedGlobal.document?.fonts ||
   (resolvedGlobal as any).fonts) as FontFaceSet;
 
 declare module './TextRenderer.js' {

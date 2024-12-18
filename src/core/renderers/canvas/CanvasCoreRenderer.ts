@@ -191,7 +191,12 @@ export class CanvasCoreRenderer extends CoreRenderer {
           height,
         );
       } else {
-        ctx.drawImage(image, tx, ty, width, height);
+        try {
+          ctx.drawImage(image, tx, ty, width, height);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          // noop
+        }
       }
       ctx.globalAlpha = 1;
     } else if (hasGradient) {

@@ -144,32 +144,31 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     let height = 0;
 
     glw.activeTexture(0);
+    const tdata = textureData.data;
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
-      (typeof ImageBitmap !== 'undefined' &&
-        textureData.data instanceof ImageBitmap) ||
-      textureData.data instanceof ImageData ||
+      (typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap) ||
+      tdata instanceof ImageData ||
       // not using typeof HTMLImageElement due to web worker
-      isHTMLImageElement(textureData.data)
+      isHTMLImageElement(tdata)
     ) {
-      const data = textureData.data;
-      width = data.width;
-      height = data.height;
+      width = tdata.width;
+      height = tdata.height;
       glw.bindTexture(this._nativeCtxTexture);
 
       if (textureData.premultiplyAlpha === true) {
         glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       }
 
-      glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, data);
+      glw.texImage2D(0, glw.RGBA, glw.RGBA, glw.UNSIGNED_BYTE, tdata);
       this.setTextureMemUse(width * height * 4);
 
       // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
       if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
         glw.generateMipmap();
       }
-    } else if (textureData.data === null) {
+    } else if (tdata === null) {
       width = 0;
       height = 0;
       // Reset to a 1x1 transparent texture
@@ -186,14 +185,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         TRANSPARENT_TEXTURE_DATA,
       );
       this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
-    } else if ('mipmaps' in textureData.data && textureData.data.mipmaps) {
-      const {
-        mipmaps,
-        width = 0,
-        height = 0,
-        type,
-        glInternalFormat,
-      } = textureData.data;
+    } else if ('mipmaps' in tdata && tdata.mipmaps) {
+      const { mipmaps, width = 0, height = 0, type, glInternalFormat } = tdata;
       const view =
         type === 'ktx'
           ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
@@ -208,7 +201,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
 
       this.setTextureMemUse(view.byteLength);
-    } else if (textureData.data && textureData.data instanceof Uint8Array) {
+    } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
       width = 1;
       height = 1;
@@ -226,7 +219,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         0,
         glw.RGBA,
         glw.UNSIGNED_BYTE,
-        textureData.data,
+        tdata,
       );
 
       this.setTextureMemUse(width * height * 4);

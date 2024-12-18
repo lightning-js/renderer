@@ -278,6 +278,15 @@ export interface RendererMainSettings {
    * @defaultValue `0`
    */
   textureProcessingLimit?: number;
+
+  /**
+   * Canvas object to use for rendering
+   *
+   * @remarks
+   * This is used to render the scene graph. If not provided, a new canvas
+   * element will be created and appended to the target element.
+   */
+  canvas?: HTMLCanvasElement;
 }
 
 /**
@@ -370,6 +379,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: settings.fontEngines,
       strictBounds: settings.strictBounds ?? true,
       textureProcessingLimit: settings.textureProcessingLimit || 0,
+      canvas: settings.canvas || document.createElement('canvas'),
     };
     this.settings = resolvedSettings;
 
@@ -379,12 +389,12 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
       inspector,
+      canvas,
     } = resolvedSettings;
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    const canvas = document.createElement('canvas');
     this.canvas = canvas;
     canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
