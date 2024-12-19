@@ -269,6 +269,17 @@ export interface RendererMainSettings {
   strictBounds?: boolean;
 
   /**
+   * Texture Processing Limit
+   *
+   * @remarks
+   * The maximum number of textures to process in a single frame. This is used to
+   * prevent the renderer from processing too many textures in a single frame.
+   *
+   * @defaultValue `0`
+   */
+  textureProcessingLimit?: number;
+
+  /**
    * Canvas object to use for rendering
    *
    * @remarks
@@ -367,6 +378,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
       strictBounds: settings.strictBounds ?? true,
+      textureProcessingLimit: settings.textureProcessingLimit || 0,
       canvas: settings.canvas || document.createElement('canvas'),
     };
     this.settings = resolvedSettings;
@@ -410,6 +422,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: this.settings.fontEngines,
       inspector: this.settings.inspector !== null,
       strictBounds: this.settings.strictBounds,
+      textureProcessingLimit: this.settings.textureProcessingLimit,
     });
 
     // Extract the root node
@@ -526,7 +539,7 @@ export class RendererMain extends EventEmitter {
     textureType: TxType,
     props: ExtractProps<TextureMap[TxType]>,
   ): InstanceType<TextureMap[TxType]> {
-    return this.stage.txManager.loadTexture(textureType, props);
+    return this.stage.txManager.createTexture(textureType, props);
   }
 
   /**
@@ -666,7 +679,7 @@ export class RendererMain extends EventEmitter {
    * May not do anything if the render loop is running on a separate worker.
    */
   rerender() {
-    throw new Error('Not implemented');
+    this.stage.requestRender();
   }
 
   /**

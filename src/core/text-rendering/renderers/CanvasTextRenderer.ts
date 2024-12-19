@@ -337,7 +337,8 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
     assertTruthy(state.renderInfo);
     const node = state.node;
 
-    const texture = this.stage.txManager.loadTexture('ImageTexture', {
+    const texture = this.stage.txManager.createTexture('ImageTexture', {
+      premultiplyAlpha: true,
       src: function (
         this: CanvasTextRenderer,
         lightning2TextRenderer: LightningTextTextureRenderer,
@@ -360,6 +361,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         );
       }.bind(this, state.lightning2TextRenderer, state.renderInfo),
     });
+
     if (state.textureNode) {
       // Use the existing texture node
       state.textureNode.texture = texture;

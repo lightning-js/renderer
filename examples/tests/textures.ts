@@ -78,7 +78,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   await execLoadingTest(elevator, 200, 268);
 
-  // Test: Check that we capture a texture load failure
+  // // Test: Check that we capture a texture load failure
   const failure = renderer.createNode({
     x: curX,
     y: curY,
@@ -88,7 +88,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   await execFailureTest(failure);
 
-  // Test: Check that we capture a texture load failure
+  // // Test: Check that we capture a texture load failure
   const failure2 = renderer.createNode({
     x: curX,
     y: curY,
@@ -98,7 +98,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   await execFailureTest(failure2);
 
-  // Test: NoiseTexture
+  // // Test: NoiseTexture
 
   curX = renderer.settings.appWidth / 2;
   curY = BEGIN_Y;

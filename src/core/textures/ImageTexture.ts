@@ -119,7 +119,7 @@ export interface ImageTextureProps {
  * {@link ImageTextureProps.premultiplyAlpha} prop to `false`.
  */
 export class ImageTexture extends Texture {
-  props: Required<ImageTextureProps>;
+  public props: Required<ImageTextureProps>;
 
   public override type: TextureType = TextureType.image;
 
@@ -226,7 +226,48 @@ export class ImageTexture extends Texture {
     return this.loadImageFallback(src, premultiplyAlpha ?? true);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
+    let resp;
+    try {
+      resp = await this.determineImageTypeAndLoadImage();
+    } catch (e) {
+      this.setSourceState('failed', e as Error);
+      return {
+        data: null,
+      };
+    }
+
+    if (resp.data === null) {
+      this.setSourceState('failed', Error('ImageTexture: No image data'));
+      return {
+        data: null,
+      };
+    }
+
+    let width, height;
+    // check if resp.data is typeof Uint8ClampedArray else
+    // use resp.data.width and resp.data.height
+    if (resp.data instanceof Uint8Array) {
+      width = this.props.width ?? 0;
+      height = this.props.height ?? 0;
+    } else {
+      width = resp.data?.width ?? (this.props.width || 0);
+      height = resp.data?.height ?? (this.props.height || 0);
+    }
+
+    // we're loaded!
+    this.setSourceState('loaded', {
+      width,
+      height,
+    });
+
+    return {
+      data: resp.data,
+      premultiplyAlpha: this.props.premultiplyAlpha ?? true,
+    };
+  }
+
+  determineImageTypeAndLoadImage() {
     const { src, premultiplyAlpha, type } = this.props;
     if (src === null) {
       return {

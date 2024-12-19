@@ -17,7 +17,9 @@
  * limitations under the License.
  */
 
+import { assertTruthy } from '../../utils.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
+import { ImageTexture } from './ImageTexture.js';
 import {
   Texture,
   TextureType,
@@ -83,7 +85,21 @@ export class SubTexture extends Texture {
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
     this.props = SubTexture.resolveDefaults(props || {});
-    this.parentTexture = this.props.texture;
+
+    assertTruthy(this.props.texture, 'SubTexture requires a parent texture');
+    assertTruthy(
+      this.props.texture instanceof ImageTexture,
+      'SubTexture requires an ImageTexture parent',
+    );
+
+    // Resolve parent texture from cache or fallback to provided texture
+    this.parentTexture = txManager.resolveParentTexture(this.props.texture);
+
+    if (this.parentTexture.state === 'freed') {
+      this.txManager.loadTexture(this.parentTexture);
+    }
+
+    this.parentTexture.setRenderableOwner(this, true);
 
     // If parent texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -104,14 +120,22 @@ export class SubTexture extends Texture {
   private onParentTxLoaded: TextureLoadedEventHandler = () => {
     // We ignore the parent's passed dimensions, and simply use the SubTexture's
     // configured dimensions (because that's all that matters here)
-    this.setState('loaded', {
+    this.setSourceState('loaded', {
       width: this.props.width,
       height: this.props.height,
     });
+
+    // If the parent already has a ctxTexture, we can set the core ctx state
+    if (this.parentTexture.ctxTexture !== undefined) {
+      this.setCoreCtxState('loaded', {
+        width: this.props.width,
+        height: this.props.height,
+      });
+    }
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
-    this.setState('failed', error);
+    this.setSourceState('failed', error);
   };
 
   override onChangeIsRenderable(isRenderable: boolean): void {
@@ -119,7 +143,8 @@ export class SubTexture extends Texture {
     this.parentTexture.setRenderableOwner(this, isRenderable);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
+    // Check if parent texture is loaded
     return {
       data: this.props,
     };

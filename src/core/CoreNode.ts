@@ -25,11 +25,11 @@ import {
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
-import type {
-  Texture,
-  TextureFailedEventHandler,
-  TextureFreedEventHandler,
-  TextureLoadedEventHandler,
+import {
+  type Texture,
+  type TextureFailedEventHandler,
+  type TextureFreedEventHandler,
+  type TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
   Dimensions,
@@ -767,6 +767,8 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderBounds |
         UpdateType.RenderState,
     );
+
+    this.createDefaultTexture();
   }
 
   //#region Textures
@@ -780,11 +782,6 @@ export class CoreNode extends EventEmitter {
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
       texture.preventCleanup = this.props.preventCleanup;
-      // Preload texture if required
-      if (this.textureOptions.preload) {
-        texture.ctxTexture.load();
-      }
-
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
@@ -811,6 +808,18 @@ export class CoreNode extends EventEmitter {
     });
   }
 
+  createDefaultTexture(): void {
+    // load default texture if no texture is set
+    if (
+      this.stage.defaultTexture !== null &&
+      this.props.src === null &&
+      this.props.texture === null &&
+      this.props.rtt === false
+    ) {
+      this.texture = this.stage.defaultTexture;
+    }
+  }
+
   unloadTexture(): void {
     if (this.texture !== null) {
       this.texture.off('loaded', this.onTextureLoaded);
@@ -829,6 +838,7 @@ export class CoreNode extends EventEmitter {
 
   private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
+    this.setUpdateType(UpdateType.IsRenderable);
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -839,10 +849,13 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('loaded', {
-      type: 'texture',
-      dimensions,
-    } satisfies NodeTextureLoadedPayload);
+    // ignore 1x1 pixel textures
+    if (dimensions.width > 1 && dimensions.height > 1) {
+      this.emit('loaded', {
+        type: 'texture',
+        dimensions,
+      } satisfies NodeTextureLoadedPayload);
+    }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
     if (this.props.textureOptions?.resizeMode?.type === 'contain') {
@@ -851,6 +864,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -863,6 +878,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -1207,8 +1224,12 @@ export class CoreNode extends EventEmitter {
 
   //check if CoreNode is renderable based on props
   hasRenderableProperties(): boolean {
-    if (this.props.texture) {
-      return true;
+    if (this.texture !== null) {
+      if (this.texture.state === 'loaded') {
+        return true;
+      }
+
+      return false;
     }
 
     if (!this.props.width || !this.props.height) {
@@ -1219,7 +1240,7 @@ export class CoreNode extends EventEmitter {
       return true;
     }
 
-    if (this.props.clipping) {
+    if (this.props.clipping === true) {
       return true;
     }
 
@@ -1229,37 +1250,19 @@ export class CoreNode extends EventEmitter {
 
     // Consider removing these checks and just using the color property check above.
     // Maybe add a forceRender prop for nodes that should always render.
-    if (this.props.colorTop !== 0) {
+    if (
+      this.props.colorTop !== 0 ||
+      this.props.colorBottom !== 0 ||
+      this.props.colorLeft !== 0 ||
+      this.props.colorRight !== 0 ||
+      this.props.colorTl !== 0 ||
+      this.props.colorTr !== 0 ||
+      this.props.colorBl !== 0 ||
+      this.props.colorBr !== 0
+    ) {
       return true;
     }
 
-    if (this.props.colorBottom !== 0) {
-      return true;
-    }
-
-    if (this.props.colorLeft !== 0) {
-      return true;
-    }
-
-    if (this.props.colorRight !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTr !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBr !== 0) {
-      return true;
-    }
     return false;
   }
 
@@ -1397,12 +1400,23 @@ export class CoreNode extends EventEmitter {
    * @returns
    */
   updateIsRenderable() {
-    let newIsRenderable;
+    let newIsRenderable: boolean;
     if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
     }
+
+    // If the texture is not loaded and the node is renderable, load the texture
+    // this only needs to happen once or until the texture is no longer loaded
+    if (
+      this.texture !== null &&
+      this.texture.state === 'freed' &&
+      this.renderState > CoreNodeRenderState.OutOfBounds
+    ) {
+      this.stage.txManager.loadTexture(this.texture);
+    }
+
     if (this.isRenderable !== newIsRenderable) {
       this.isRenderable = newIsRenderable;
       this.onChangeIsRenderable(newIsRenderable);
@@ -1553,6 +1567,7 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
+    assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1643,11 +1658,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1663,11 +1678,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -2025,11 +2040,14 @@ export class CoreNode extends EventEmitter {
     }
   }
   private initRenderTexture() {
-    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+    this.texture = this.stage.txManager.createTexture('RenderTexture', {
       width: this.width,
       height: this.height,
     });
-    this.textureOptions.preload = true;
+
+    // call load immediately to ensure the texture is created
+    this.stage.txManager.loadTexture(this.texture, true);
+
     this.stage.renderer?.renderToTexture(this); // Only this RTT node
   }
 
@@ -2110,7 +2128,7 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
+    this.texture = this.stage.txManager.createTexture('ImageTexture', {
       src: imageUrl,
       width: this.props.width,
       height: this.props.height,
@@ -2201,16 +2219,22 @@ export class CoreNode extends EventEmitter {
     if (this.props.texture === value) {
       return;
     }
+
     const oldTexture = this.props.texture;
     if (oldTexture) {
       oldTexture.setRenderableOwner(this, false);
       this.unloadTexture();
     }
+
     this.props.texture = value;
-    if (value) {
+    if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);
       this.loadTexture();
+    } else {
+      // If the texture is null, create a default texture
+      this.createDefaultTexture();
     }
+
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
@@ -2241,12 +2265,12 @@ export class CoreNode extends EventEmitter {
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this, props, settings);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+
     const controller = new CoreAnimationController(
       this.stage.animationManager,
       animation,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return controller;
   }
 

@@ -36,24 +36,22 @@ export class CanvasCoreTexture extends CoreContextTexture {
     | undefined;
 
   load(): void {
-    if (this.textureSource.state !== 'freed') {
-      return;
-    }
-    this.textureSource.setState('loading');
+    this.textureSource.setCoreCtxState('loading');
+
     this.onLoadRequest()
       .then((size) => {
-        this.textureSource.setState('loaded', size);
+        this.textureSource.setCoreCtxState('loaded', size);
         this.updateMemSize();
       })
       .catch((err) => {
-        this.textureSource.setState('failed', err as Error);
+        this.textureSource.setCoreCtxState('failed', err as Error);
       });
   }
 
   free(): void {
     this.image = undefined;
     this.tintCache = undefined;
-    this.textureSource.setState('freed');
+    this.textureSource.setCoreCtxState('freed');
     this.setTextureMemUse(0);
   }
 
@@ -126,7 +124,9 @@ export class CanvasCoreTexture extends CoreContextTexture {
   }
 
   private async onLoadRequest(): Promise<Dimensions> {
-    const { data } = await this.textureSource.getTextureData();
+    assertTruthy(this.textureSource?.textureData?.data, 'Texture data is null');
+    const { data } = this.textureSource.textureData;
+
     // TODO: canvas from text renderer should be able to provide the canvas directly
     // instead of having to re-draw it into a new canvas...
     if (data instanceof ImageData) {
@@ -144,6 +144,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
       this.image = data;
       return { width: data.width, height: data.height };
     }
+
     return { width: 0, height: 0 };
   }
 }
