@@ -32,7 +32,7 @@ import type { RectWithValid } from '../lib/utils.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
-import type { CoreShaderConfig, CoreShaderNode } from './CoreShaderNode.js';
+import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
 
 export interface QuadOptions {
   width: number;
@@ -44,7 +44,7 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: CoreShaderNode<any> | null;
+  shader: CoreShaderNode | null;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
@@ -97,15 +97,15 @@ export abstract class CoreRenderer {
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
   abstract createShaderProgram(
-    shaderConfig: Readonly<CoreShaderConfig>,
-    props?: Record<string, any>,
+    shaderConfig: Readonly<CoreShaderType>,
+    props?: Record<string, unknown>,
   ): CoreShaderProgram;
   abstract createShaderNode(
-    shaderConfig: Readonly<CoreShaderConfig>,
+    shaderConfig: Readonly<CoreShaderType>,
     program: CoreShaderProgram,
-    props?: Record<string, any>,
-  ): CoreShaderNode<any>;
-  abstract getDefaultShaderNode(): CoreShaderNode<any> | null;
+    props?: Record<string, unknown>,
+  ): CoreShaderNode;
+  abstract getDefaultShaderNode(): CoreShaderNode | null;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;

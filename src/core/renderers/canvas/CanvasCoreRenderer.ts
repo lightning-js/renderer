@@ -29,7 +29,7 @@ import {
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
 import {
   CanvasShaderProgram,
-  type CanvasShaderConfig,
+  type CanvasShaderType,
 } from './CanvasShaderProgram.js';
 import {
   formatRgba,
@@ -59,7 +59,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   reset(): void {
-     
     this.canvas.width = this.canvas.width; // quick reset canvas
 
     const ctx = this.context;
@@ -243,14 +242,14 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   createShaderNode(
-    shaderConfig: Readonly<CanvasShaderConfig>,
+    shaderConfig: Readonly<CanvasShaderType>,
     program: CanvasShaderProgram,
     props?: Record<string, any>,
   ): CoreShaderNode<any> {
     return new CoreShaderNode(shaderConfig, program, this.stage, props);
   }
 
-  createShaderProgram(shaderConfig: CanvasShaderConfig): CanvasShaderProgram {
+  createShaderProgram(shaderConfig: CanvasShaderType): CanvasShaderProgram {
     return new CanvasShaderProgram(this, shaderConfig);
   }
 

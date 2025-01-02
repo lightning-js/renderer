@@ -1,22 +1,17 @@
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import type { WebGlRenderOpProps } from '../WebGlCoreRenderOp.js';
+import { assertTruthy } from '../../../../utils.js';
 import {
   BorderBottomTemplate,
   type BorderBottomProps,
 } from '../../../shaders/BorderBottomTemplate.js';
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
 
-export const BorderBottom: WebGlShaderConfig<BorderBottomProps> = {
+export const BorderBottom: WebGlShaderType<BorderBottomProps> = {
   name: BorderBottomTemplate.name,
   props: BorderBottomTemplate.props,
   update() {
-    const props = this.props!;
-    this.uniform1f('u_width', props.width);
-    this.uniform4fv(
-      'u_color',
-      new Float32Array(getNormalizedRgbaComponents(props.color)),
-    );
+    assertTruthy(this.props);
+    this.uniform1f('u_width', this.props.width);
+    this.uniformRGBA('u_color', this.props.color);
   },
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH

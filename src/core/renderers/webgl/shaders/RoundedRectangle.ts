@@ -16,56 +16,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
 import {
   calcFactoredRadius,
   calcFactoredRadiusArray,
 } from '../../../lib/utils.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-
-/**
- * Properties of the {@link RoundedRectangle} shader
- */
-export interface RoundedRectangleProps {
-  /**
-   * Corner radius, in pixels, to cut out of the corners
-   *
-   * @defaultValue 10
-   */
-  radius: number | number[];
-}
+import {
+  RoundedRectangleTemplate,
+  type RoundedRectangleProps,
+} from '../../../shaders/RoundedRectangleTemplate.js';
+import { assertTruthy } from '../../../../utils.js';
+import type { CoreNode } from '../../../CoreNode.js';
 
 /**
  * Similar to the {@link DefaultShader} but cuts out 4 rounded rectangle corners
  * as defined by the specified corner {@link RoundedRectangleProps.radius}
  */
-export const RoundedRectangle: WebGlShaderConfig<RoundedRectangleProps> = {
-  name: 'RoundedRectangle',
-
-  props: {
-    radius: 10,
-  },
-  update(glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) {
-    const radius = (renderOp.shaderProps as RoundedRectangleProps).radius;
-    if (!Array.isArray(radius)) {
-      glw.uniform1f(
+export const RoundedRectangle: WebGlShaderType<RoundedRectangleProps> = {
+  name: RoundedRectangleTemplate.name,
+  props: RoundedRectangleTemplate.props,
+  update(node: CoreNode) {
+    assertTruthy(this.props);
+    if (!Array.isArray(this.props.radius)) {
+      this.uniform1f(
         'u_radius',
-        calcFactoredRadius(
-          radius,
-          renderOp.dimensions.width,
-          renderOp.dimensions.height,
-        ),
+        calcFactoredRadius(this.props.radius, node.width, node.height),
       );
     } else {
       const fRadius = calcFactoredRadiusArray(
-        radius,
-        renderOp.dimensions.width,
-        renderOp.dimensions.height,
+        this.props.radius,
+        node.width,
+        node.height,
       );
-      glw.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
+      this.uniform4f(
+        'u_radius',
+        fRadius[0],
+        fRadius[1],
+        fRadius[2],
+        fRadius[3],
+      );
     }
   },
   getCacheMarkers(props: RoundedRectangleProps) {

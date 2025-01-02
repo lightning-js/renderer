@@ -1,34 +1,31 @@
+import { assertTruthy } from '../../../../utils.js';
 import type { CoreNode } from '../../../CoreNode.js';
 import {
   calcFactoredRadius,
   calcFactoredRadiusArray,
-  getNormalizedRgbaComponents,
 } from '../../../lib/utils.js';
 import {
   BorderTemplate,
   type BorderProps,
 } from '../../../shaders/BorderTemplate.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
 
-export const Border: WebGlShaderConfig<BorderProps> = {
+export const Border: WebGlShaderType<BorderProps> = {
   name: BorderTemplate.name,
   props: BorderTemplate.props,
   update(node: CoreNode) {
-    const props = this.props!;
-    this.uniform1f('u_width', props.width);
-    this.uniform4fv(
-      'u_color',
-      new Float32Array(getNormalizedRgbaComponents(props.color)),
-    );
-    if (!Array.isArray(props.radius)) {
+    assertTruthy(this.props);
+    this.uniform1f('u_width', this.props.width);
+    this.uniformRGBA('u_color', this.props.color);
+    if (!Array.isArray(this.props.radius)) {
       this.uniform1f(
         'u_radius',
-        calcFactoredRadius(props.radius, node.width, node.height),
+        calcFactoredRadius(this.props.radius, node.width, node.height),
       );
     } else {
       const fRadius = calcFactoredRadiusArray(
-        props.radius,
+        this.props.radius,
         node.width,
         node.height,
       );

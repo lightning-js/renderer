@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link RadialGradient} shader
@@ -27,10 +27,10 @@ export interface RadialGradientProps {
   /**
    * center point of where the RadialGradientEffect is drawn
    */
-  pivot: number[];
+  pivot: [number, number];
 }
 
-export const RadialGradientTemplate: CoreShaderConfig<RadialGradientProps> = {
+export const RadialGradientTemplate: CoreShaderType<RadialGradientProps> = {
   name: 'RadialGradient',
   props: {
     colors: {

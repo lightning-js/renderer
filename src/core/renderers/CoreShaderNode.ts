@@ -52,7 +52,9 @@ export function resolveShaderProps(
   }
 }
 
-export interface CoreShaderConfig<Props = Record<string, unknown>> {
+export interface CoreShaderType<
+  Props extends object = Record<string, unknown>,
+> {
   name: string;
   props?: ShaderProps<Props>;
   /**
@@ -61,16 +63,18 @@ export interface CoreShaderConfig<Props = Record<string, unknown>> {
   getCacheMarkers?: (props: Props) => string;
 }
 
-export interface BaseShaderNode {
+export interface BaseShaderNode<
+  Props extends object = Record<string, unknown>,
+> {
   program: CoreShaderProgram;
-  getResolvedProps: () => Record<string, unknown> | undefined;
+  getResolvedProps: () => Props | undefined;
   attachNode: (node: CoreNode) => void;
   update?: () => void;
-  props?: Record<string, unknown>;
+  props?: Props;
 }
 
-export class CoreShaderNode<Props extends Record<string, unknown>>
-  implements BaseShaderNode
+export class CoreShaderNode<Props extends object = Record<string, unknown>>
+  implements BaseShaderNode<Props>
 {
   readonly stage: Stage;
   readonly program: CoreShaderProgram;
@@ -81,7 +85,7 @@ export class CoreShaderNode<Props extends Record<string, unknown>>
   update: (() => void) | undefined = undefined;
 
   constructor(
-    config: CoreShaderConfig<any>,
+    config: CoreShaderType<Props>,
     program: CoreShaderProgram,
     stage: Stage,
     props?: Props,
@@ -136,7 +140,7 @@ export class CoreShaderNode<Props extends Record<string, unknown>>
       this.resolvedProps = undefined;
       this.definedProps = undefined;
     }
-    resolveShaderProps(props!, this.propsConfig!);
+    resolveShaderProps(props as Record<string, unknown>, this.propsConfig!);
     this.resolvedProps = props;
     this.defineProps(props!);
   }

@@ -47,9 +47,8 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import { Default } from './shaders/Default.js';
-import type { WebGlShaderConfig } from './WebGlShaderProgram.js';
+import type { WebGlShaderType } from './WebGlShaderProgram.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
-import type { BaseShaderNode, CoreShaderNode } from '../CoreShaderNode.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -201,16 +200,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   createShaderProgram(
-    shaderConfig: WebGlShaderConfig<any>,
-    props: Record<string, any>,
+    shaderConfig: WebGlShaderType,
+    props: Record<string, unknown>,
   ): WebGlShaderProgram {
     return new WebGlShaderProgram(this, shaderConfig, props);
   }
 
   createShaderNode(
-    shaderConfig: WebGlShaderConfig<any>,
+    shaderConfig: WebGlShaderType,
     program: WebGlShaderProgram,
-    props?: Record<string, any>,
+    props?: Record<string, unknown>,
   ) {
     return new WebGlShaderNode(shaderConfig, program, this.stage, props);
   }

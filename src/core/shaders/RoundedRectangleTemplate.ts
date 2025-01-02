@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link RoundedRectangle} shader
@@ -12,10 +12,9 @@ export interface RoundedRectangleProps {
   radius: number | number[];
 }
 
-export const RoundedRectangleTemplate: CoreShaderConfig<RoundedRectangleProps> =
-  {
-    name: 'RoundedRectangle',
-    props: {
-      radius: 10,
-    },
-  };
+export const RoundedRectangleTemplate: CoreShaderType<RoundedRectangleProps> = {
+  name: 'RoundedRectangle',
+  props: {
+    radius: 10,
+  },
+};

@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
- 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { assertTruthy, isProductionEnvironment } from '../utils.js';
@@ -32,7 +31,7 @@ import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRendere
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
 import type {
-  CoreShaderConfig,
+  CoreShaderType,
   CoreShaderNode,
   PartialShaderProps,
   ExtractShaderProps,
@@ -495,7 +494,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createShader<ShConfig extends CoreShaderConfig>(
+  createShader<ShConfig extends CoreShaderType>(
     shaderConfig: ShConfig,
     props?: PartialShaderProps<ShConfig['props']>,
   ) {

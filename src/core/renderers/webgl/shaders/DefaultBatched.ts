@@ -16,9 +16,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { type WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import { type WebGlShaderType } from '../WebGlShaderProgram.js';
 
-export const DefaultBatched: WebGlShaderConfig = {
+export const DefaultBatched: WebGlShaderType = {
   name: 'DefaultBatched',
   supportsIndexedTextures: true,
 

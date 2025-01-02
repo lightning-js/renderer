@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link BorderTop} shader
@@ -18,7 +18,7 @@ export interface BorderTopProps {
   color: number;
 }
 
-export const BorderTopTemplate: CoreShaderConfig<BorderTopProps> = {
+export const BorderTopTemplate: CoreShaderType<BorderTopProps> = {
   name: 'BorderTop',
   props: {
     width: 10,

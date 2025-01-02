@@ -1,20 +1,17 @@
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
 import {
   BorderTopTemplate,
   type BorderTopProps,
 } from '../../../shaders/BorderTopTemplate.js';
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
-import type { CoreNode } from '../../../CoreNode.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import { assertTruthy } from '../../../../utils.js';
 
-export const BorderTop: WebGlShaderConfig<BorderTopProps> = {
+export const BorderTop: WebGlShaderType<BorderTopProps> = {
   name: BorderTopTemplate.name,
   props: BorderTopTemplate.props,
-  update(node: CoreNode) {
-    this.uniform1f('u_width', this.props!.width);
-    this.uniform4fv(
-      'u_color',
-      new Float32Array(getNormalizedRgbaComponents(this.props!.color)),
-    );
+  update() {
+    assertTruthy(this.props);
+    this.uniform1f('u_width', this.props.width);
+    this.uniformRGBA('u_color', this.props.color);
   },
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH

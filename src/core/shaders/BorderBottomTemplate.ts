@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link BorderBottom} shader
@@ -18,7 +18,7 @@ export interface BorderBottomProps {
   color: number;
 }
 
-export const BorderBottomTemplate: CoreShaderConfig<BorderBottomProps> = {
+export const BorderBottomTemplate: CoreShaderType<BorderBottomProps> = {
   name: 'BorderBottom',
   props: {
     width: 10,

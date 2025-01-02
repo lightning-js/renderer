@@ -1,14 +1,15 @@
 import type { CoreNode } from '../../CoreNode.js';
+import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { Stage } from '../../Stage.js';
 import { CoreShaderNode } from '../CoreShaderNode.js';
 import type { Uniform, UniformCollection } from './internal/ShaderUtils.js';
 import type {
-  WebGlShaderConfig,
+  WebGlShaderType,
   WebGlShaderProgram,
 } from './WebGlShaderProgram.js';
 
 export class WebGlShaderNode<
-  Props extends Record<string, unknown> = Record<string, unknown>,
+  Props extends object = Record<string, unknown>,
 > extends CoreShaderNode<Props> {
   declare readonly program: WebGlShaderProgram;
   private updater: ((node: CoreNode) => void) | undefined = undefined;
@@ -21,7 +22,7 @@ export class WebGlShaderNode<
   };
 
   constructor(
-    config: WebGlShaderConfig<Props>,
+    config: WebGlShaderType<Props>,
     program: WebGlShaderProgram,
     stage: Stage,
     props?: Props,
@@ -39,15 +40,32 @@ export class WebGlShaderNode<
         for (const key in this.props) {
           this.valueKey += `${key}:${this.props[key]!};`;
         }
-        const values = this.stage.shManager.getShaderValues(this.valueKey);
+        const values = this.stage.shManager.getShaderValues(
+          this.valueKey,
+        ) as unknown as UniformCollection;
         if (values !== undefined) {
-          this.uniforms = values as UniformCollection;
+          this.uniforms = values;
           return;
         }
         this.updater!(this.node as CoreNode);
-        this.stage.shManager.setShaderValues(this.valueKey, this.uniforms);
+        this.stage.shManager.setShaderValues(
+          this.valueKey,
+          this.uniforms as unknown as Record<string, unknown>,
+        );
       };
     }
+  }
+
+  /**
+   * Sets the value of a RGBA variable
+   * @param location
+   * @param value
+   */
+  uniformRGBA(location: string, value: number) {
+    this.uniform4fv(
+      location,
+      new Float32Array(getNormalizedRgbaComponents(value)),
+    );
   }
 
   /**

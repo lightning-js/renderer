@@ -20,7 +20,7 @@
 import type { CoreNode } from '../../CoreNode.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { QuadOptions } from '../CoreRenderer.js';
-import type { CoreShaderConfig } from '../CoreShaderNode.js';
+import type { CoreShaderType } from '../CoreShaderNode.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
@@ -41,8 +41,8 @@ type ShaderSource<T> =
   | string
   | ((renderer: WebGlCoreRenderer, props: T) => string);
 
-export type WebGlShaderConfig<T extends Record<string, unknown>> =
-  CoreShaderConfig<T> & {
+export type WebGlShaderType<T extends object = Record<string, unknown>> =
+  CoreShaderType<T> & {
     /**
      * fragment shader source for WebGl or WebGl2
      */
@@ -84,14 +84,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
-  protected lifecycle: Pick<WebGlShaderConfig<any>, 'update' | 'canBatch'>;
+  protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
   supportsIndexedTextures = false;
 
   constructor(
     renderer: WebGlCoreRenderer,
-    config: WebGlShaderConfig<any>,
+    config: WebGlShaderType,
     resolvedProps: Record<string, any>,
   ) {
     this.renderer = renderer;

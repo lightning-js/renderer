@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link HolePunch} shader
@@ -45,7 +45,7 @@ export interface HolePunchProps {
   radius: number | number[];
 }
 
-export const HolePunchTemplate: CoreShaderConfig<HolePunchProps> = {
+export const HolePunchTemplate: CoreShaderType<HolePunchProps> = {
   name: 'HolePunch',
   props: {
     x: 0,

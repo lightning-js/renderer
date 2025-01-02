@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link Border} shader
@@ -24,7 +24,7 @@ export interface BorderProps {
   radius: number | number[];
 }
 
-export const BorderTemplate: CoreShaderConfig<BorderProps> = {
+export const BorderTemplate: CoreShaderType<BorderProps> = {
   name: 'Border',
   props: {
     width: 10,

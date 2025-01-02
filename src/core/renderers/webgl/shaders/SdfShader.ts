@@ -16,10 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlCoreRenderOp } from '../WebGlCoreRenderOp.js';
-import { type WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import { assertTruthy } from '../../../../utils.js';
+import { type WebGlShaderType } from '../WebGlShaderProgram.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
@@ -27,18 +25,18 @@ const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
  * Properties of the {@link SdfShader}
  */
 export interface SdfShaderProps {
-  transform?: Float32Array;
-  scrollY?: number;
+  transform: Float32Array;
+  scrollY: number;
   /**
    * Color in RGBA format
    *
    * @remarks
    * Color channels must NOT be premultiplied by alpha for best blending results.
    */
-  color?: number;
-  size?: number;
-  distanceRange?: number;
-  debug?: boolean;
+  color: number;
+  size: number;
+  distanceRange: number;
+  debug: boolean;
 }
 /**
  * SdfShader supports multi-channel and single-channel signed distance field textures.
@@ -53,7 +51,7 @@ export interface SdfShaderProps {
  * ends up being a performance bottleneck we can always look at ways to
  * remove it.
  */
-export const Sdf: WebGlShaderConfig<SdfShaderProps> = {
+export const Sdf: WebGlShaderType<SdfShaderProps> = {
   name: 'Sdf',
   props: {
     transform: IDENTITY_MATRIX_3x3,
@@ -63,14 +61,14 @@ export const Sdf: WebGlShaderConfig<SdfShaderProps> = {
     distanceRange: 1.0,
     debug: false,
   },
-  update(glw: WebGlContextWrapper, renderOp: WebGlCoreRenderOp) {
-    const props = renderOp.shaderProps as Required<SdfShaderProps>;
-    glw.uniformMatrix3fv('u_transform', props.transform);
-    glw.uniform1f('u_scrollY', props.scrollY);
-    glw.uniform4fv('u_color', getNormalizedRgbaComponents(props.color));
-    glw.uniform1f('u_size', props.size);
-    glw.uniform1f('u_distanceRange', props.distanceRange);
-    glw.uniform1i('u_debug', props.debug ? 1 : 0);
+  update() {
+    assertTruthy(this.props);
+    this.uniformMatrix3fv('u_transform', this.props.transform);
+    this.uniform1f('u_scrollY', this.props.scrollY);
+    this.uniformRGBA('u_color', this.props.color);
+    this.uniform1f('u_size', this.props.size);
+    this.uniform1f('u_distanceRange', this.props.distanceRange);
+    this.uniform1i('u_debug', this.props.debug ? 1 : 0);
   },
   vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH

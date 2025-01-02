@@ -18,14 +18,14 @@
  */
 import {
   resolveShaderProps,
-  type CoreShaderConfig,
+  type CoreShaderType,
 } from './renderers/CoreShaderNode.js';
 import type { CoreShaderProgram } from './renderers/CoreShaderProgram.js';
 import type { Stage } from './Stage.js';
 
 export class CoreShaderManager {
   protected shCache: Map<string, CoreShaderProgram> = new Map();
-  protected valuesCache: Map<string, Record<string, any>> = new Map();
+  protected valuesCache: Map<string, Record<string, unknown>> = new Map();
   protected attachedShader: CoreShaderProgram | null = null;
 
   constructor(readonly stage: Stage) {}
@@ -38,7 +38,7 @@ export class CoreShaderManager {
    * @returns
    */
   createShader(
-    shConfig: Readonly<CoreShaderConfig>,
+    shConfig: Readonly<CoreShaderType>,
     props?: Record<string, unknown>,
   ) {
     if (!this.stage.renderer) {
@@ -80,7 +80,7 @@ export class CoreShaderManager {
     return this.valuesCache.get(key);
   }
 
-  setShaderValues(key: string, values: Record<string, any>) {
+  setShaderValues(key: string, values: Record<string, unknown>) {
     this.valuesCache.set(key, values);
   }
 

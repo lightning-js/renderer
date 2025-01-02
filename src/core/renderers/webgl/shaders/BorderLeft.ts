@@ -1,22 +1,19 @@
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
-import type { WebGlRenderOpProps } from '../WebGlCoreRenderOp.js';
+import { assertTruthy } from '../../../../utils.js';
 import {
   BorderLeftTemplate,
   type BorderLeftProps,
 } from '../../../shaders/BorderLeftTemplate.js';
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
 
-export const BorderLeft: WebGlShaderConfig<BorderLeftProps> = Object.assign(
-  {},
-  BorderLeftTemplate,
-  {
-    update(glw: WebGlContextWrapper, renderOp: WebGlRenderOpProps) {
-      const props = renderOp.shaderProps as Required<BorderLeftProps>;
-      glw.uniform1f('u_width', props.width);
-      glw.uniform4fv('u_color', getNormalizedRgbaComponents(props.color));
-    },
-    fragment: `
+export const BorderLeft: WebGlShaderType<BorderLeftProps> = {
+  name: BorderLeftTemplate.name,
+  props: BorderLeftTemplate.props,
+  update() {
+    assertTruthy(this.props);
+    this.uniform1f('u_width', this.props.width);
+    this.uniformRGBA('u_color', this.props.color);
+  },
+  fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -44,5 +41,4 @@ export const BorderLeft: WebGlShaderConfig<BorderLeftProps> = Object.assign(
       gl_FragColor = mix(color, u_color, clamp(-shape, 0.0, 1.0)) * u_alpha;
     }
   `,
-  },
-);
+};

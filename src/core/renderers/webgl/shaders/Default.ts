@@ -1,4 +1,4 @@
-import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderProgram.js';
 
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
@@ -18,7 +18,7 @@ import type { WebGlShaderConfig } from '../WebGlShaderProgram.js';
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export const Default: WebGlShaderConfig = {
+export const Default: WebGlShaderType = {
   name: 'Default',
   vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH

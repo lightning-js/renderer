@@ -1,4 +1,4 @@
-import type { CoreShaderConfig } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link LinearGradient} shader
@@ -22,7 +22,7 @@ export interface LinearGradientProps {
   stops: number[];
 }
 
-export const LinearGradientTemplate: CoreShaderConfig<LinearGradientProps> = {
+export const LinearGradientTemplate: CoreShaderType<LinearGradientProps> = {
   name: 'LinearGradient',
   props: {
     colors: {
