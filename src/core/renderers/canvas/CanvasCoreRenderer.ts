@@ -19,7 +19,7 @@
 import type { CoreNode } from '../../CoreNode.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
 import { SubTexture } from '../../textures/SubTexture.js';
-import type { Texture } from '../../textures/Texture.js';
+import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   CoreRenderer,
@@ -37,6 +37,7 @@ import {
   type IParsedColor,
 } from './internal/ColorUtils.js';
 import { CoreShaderNode } from '../CoreShaderNode.js';
+import { assertTruthy } from '../../../utils.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -82,35 +83,28 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
   addQuad(quad: QuadOptions): void {
     const ctx = this.context;
-    const {
-      tx,
-      ty,
-      width,
-      height,
-      alpha,
-      colorTl,
-      colorTr,
-      colorBr,
-      ta,
-      tb,
-      tc,
-      td,
-      clippingRect,
-    } = quad;
+    const { tx, ty, ta, tb, tc, td, clippingRect } = quad;
     let texture = quad.texture;
-    let ctxTexture: CanvasCoreTexture | undefined = undefined;
+    const textureType = texture?.type;
+    assertTruthy(textureType, 'Texture type is not defined');
+
+    // The Canvas2D renderer only supports image and color textures
+    if (
+      textureType !== TextureType.image &&
+      textureType !== TextureType.color
+    ) {
+      return;
+    }
 
     if (texture) {
       if (texture instanceof SubTexture) {
         texture = texture.parentTexture;
       }
 
-      ctxTexture = texture.ctxTexture as CanvasCoreTexture;
       if (texture.state === 'freed') {
-        ctxTexture.load();
         return;
       }
-      if (texture.state !== 'loaded' || !ctxTexture.hasImage()) {
+      if (texture.state !== 'loaded') {
         return;
       }
     }
@@ -125,7 +119,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
     if (hasShader) {
       saveAndRestore =
         saveAndRestore ||
-        (quad.shader?.program as CanvasShaderProgram).saveAndRestore!;
+        (quad.shader?.program as CanvasShaderProgram).saveAndRestore;
     }
 
     if (saveAndRestore) {
@@ -181,9 +175,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
   renderContext(quad: QuadOptions) {
     const color = parseColor(quad.colorTl);
+    const textureType = quad.texture?.type;
     const hasGradient =
       quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
-    if (quad.texture) {
+    if (textureType === TextureType.image && quad.texture?.ctxTexture) {
       const image = (quad.texture.ctxTexture as CanvasCoreTexture).getImage(
         color,
       );
@@ -201,16 +196,21 @@ export class CanvasCoreRenderer extends CoreRenderer {
           quad.height,
         );
       } else {
-        this.context.drawImage(
-          image,
-          quad.tx,
-          quad.ty,
-          quad.width,
-          quad.height,
-        );
+        try {
+          this.context.drawImage(
+            image,
+            quad.tx,
+            quad.ty,
+            quad.width,
+            quad.height,
+          );
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          // noop
+        }
       }
       this.context.globalAlpha = 1;
-    } else if (hasGradient) {
+    } else if (textureType === TextureType.color && hasGradient) {
       let endX: number = quad.tx;
       let endY: number = quad.ty;
       let endColor: IParsedColor;
@@ -235,7 +235,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
       gradient.addColorStop(1, formatRgba(endColor));
       this.context.fillStyle = gradient;
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
-    } else {
+    } else if (textureType === TextureType.color) {
       this.context.fillStyle = formatRgba(color);
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
     }

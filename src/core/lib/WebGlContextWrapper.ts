@@ -68,6 +68,7 @@ export class WebGlContextWrapper {
   public readonly TEXTURE_WRAP_T;
   public readonly LINEAR;
   public readonly CLAMP_TO_EDGE;
+  public readonly RGB;
   public readonly RGBA;
   public readonly UNSIGNED_BYTE;
   public readonly UNPACK_PREMULTIPLY_ALPHA_WEBGL;
@@ -158,6 +159,7 @@ export class WebGlContextWrapper {
     this.TEXTURE_WRAP_T = gl.TEXTURE_WRAP_T;
     this.LINEAR = gl.LINEAR;
     this.CLAMP_TO_EDGE = gl.CLAMP_TO_EDGE;
+    this.RGB = gl.RGB;
     this.RGBA = gl.RGBA;
     this.UNSIGNED_BYTE = gl.UNSIGNED_BYTE;
     this.UNPACK_PREMULTIPLY_ALPHA_WEBGL = gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL;
@@ -1045,18 +1047,6 @@ export class WebGlContextWrapper {
 
   /**
    * ```
-   * gl.getError(type);
-   * ```
-   *
-   * @returns
-   */
-  getError() {
-    const { gl } = this;
-    return gl.getError();
-  }
-
-  /**
-   * ```
    * gl.createVertexArray();
    * ```
    *
@@ -1275,7 +1265,7 @@ export class WebGlContextWrapper {
 
 // prettier-ignore
 type IsUniformMethod<MethodName, MethodType> = MethodName extends `uniform${string}`
-  ?  
+  ?
   MethodType extends (location: WebGLUniformLocation | null, ...args: any[]) => void
   ? true
   : false

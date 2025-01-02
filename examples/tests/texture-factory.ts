@@ -100,7 +100,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
 
     return new Promise((resolve, reject) => {
-      setTimeout(() => {
+      renderer.once('idle', () => {
         let result = '';
         if ((setKey && factoryRuns === 1) || (!setKey && factoryRuns === 2)) {
           textNode.color = 0x00ff00ff;
@@ -112,7 +112,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         textNode.text += `: ${result}`;
         if (result === 'Pass') resolve(true);
         else reject({ setKey, factoryRuns });
-      }, 50);
+      });
     });
   }
 

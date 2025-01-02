@@ -36,7 +36,6 @@ import {
 } from './internal/RendererUtils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { Texture, TextureType } from '../../textures/Texture.js';
-import { ColorTexture } from '../../textures/ColorTexture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
 import { BufferCollection } from './internal/BufferCollection.js';
@@ -89,7 +88,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   /**
    * White pixel texture used by default when no texture is specified.
    */
-  defaultTexture: Texture | null = null;
 
   quadBufferUsage = 0;
   /**
@@ -172,19 +170,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   load() {
-    this.defaultTexture = new ColorTexture(this.stage.txManager);
-
-    // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being cleaned up.
-    // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
-
-    // When the default texture is loaded, request a render in case the
-    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
-    this.defaultTexture.once('loaded', () => {
-      this.stage.requestRender();
-    });
-
     this.defaultShaderNode = this.stage.shManager.createShader(
       Default,
     ) as WebGlShaderNode;
@@ -249,9 +234,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    let texture = params.texture || this.defaultTexture!;
+    let texture = params.texture;
 
-    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
+    assertTruthy(texture !== null, 'Texture is required');
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
 
@@ -328,7 +313,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture.ctxTexture !== undefined);
+    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
@@ -655,6 +640,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Skip nodes that don't have RTT updates
       if (!node || !node.hasRTTupdates) {
+        continue;
+      }
+
+      if (!node.texture || !node.texture.ctxTexture) {
+        console.warn('Texture not loaded for RTT node', node);
         continue;
       }
 

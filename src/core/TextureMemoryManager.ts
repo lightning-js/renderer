@@ -143,7 +143,6 @@ export class TextureMemoryManager {
     // If the threshold is 0, we disable the memory manager by replacing the
     // setTextureMemUse method with a no-op function.
     if (criticalThreshold === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       this.setTextureMemUse = () => {};
     }
   }
@@ -228,7 +227,7 @@ export class TextureMemoryManager {
         break;
       }
       if (texture.preventCleanup === false) {
-        texture.ctxTexture.free();
+        texture.free();
         txManager.removeTextureFromCache(texture);
       }
       if (this.memUsed <= memTarget) {
@@ -258,7 +257,6 @@ export class TextureMemoryManager {
   getMemoryInfo(): MemoryInfo {
     let renderableTexturesLoaded = 0;
     const renderableMemUsed = [...this.loadedTextures.keys()].reduce(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       (acc, texture) => {
         renderableTexturesLoaded += texture.renderable ? 1 : 0;
         return (
