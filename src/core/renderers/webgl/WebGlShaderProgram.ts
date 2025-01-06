@@ -236,7 +236,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       // Set resolution to the framebuffer dimensions
       this.glw.uniform2f('u_resolution', width, height);
     } else {
-      this.glw.uniform1f('u_pixelRatio', renderOp.renderer.options.pixelRatio);
+      this.glw.uniform1f('u_pixelRatio', renderOp.renderer.stage.pixelRatio);
       this.glw.uniform2f(
         'u_resolution',
         this.glw.canvas.width,

@@ -2,7 +2,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { Stage } from '../../Stage.js';
 import { CoreShaderNode } from '../CoreShaderNode.js';
-import type { Uniform, UniformCollection } from './internal/ShaderUtils.js';
+import type { UniformCollection } from './internal/ShaderUtils.js';
 import type {
   WebGlShaderType,
   WebGlShaderProgram,
@@ -44,7 +44,12 @@ export class WebGlShaderNode<
           this.valueKey,
         ) as unknown as UniformCollection;
         if (values !== undefined) {
-          this.uniforms = values;
+          for (const coll in values) {
+            for (const key in values[coll as keyof UniformCollection]) {
+              this.uniforms[coll as keyof UniformCollection][key]! =
+                values[coll as keyof UniformCollection][key]!;
+            }
+          }
           return;
         }
         this.updater!(this.node as CoreNode);

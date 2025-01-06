@@ -1,14 +1,25 @@
+import { assertTruthy } from '../../utils.js';
 import { UpdateType, type CoreNode } from '../CoreNode.js';
 import type { Stage } from '../Stage.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
 
 export interface AdvShaderProp<T = any, Props = Record<string, unknown>> {
+  /**
+   * default value
+   */
   default: T;
   resolve?: (this: AdvShaderProp<T, Props>, value: T, props: Props) => T;
   transform?: (start: T, end: T, progress: number) => T;
 }
 
-export type ShaderProp<T, Props> = T | AdvShaderProp<T, Props>;
+export type AdvancedShaderProp<T = any, Props = Record<string, unknown>> =
+  | (AdvShaderProp<T, Props> & {
+      set: (value: T, props: Props) => void;
+      get: (props: Props) => T;
+    })
+  | (AdvShaderProp<T, Props> & { set?: never; get?: never });
+
+export type ShaderProp<T, Props> = T | AdvancedShaderProp<T, Props>;
 
 export type ShaderProps<Props> = {
   [K in keyof Props]: ShaderProp<Props[K], Props>;
@@ -19,7 +30,7 @@ export type ExtractShaderProps<Props> = {
 };
 export type PartialShaderProps<Props> = Partial<ExtractShaderProps<Props>>;
 
-export function isAdvancedShaderProp(obj: any): obj is AdvShaderProp {
+export function isAdvancedShaderProp(obj: any): obj is AdvancedShaderProp {
   return (
     obj !== null &&
     typeof obj === 'object' &&
@@ -36,19 +47,20 @@ export function resolveShaderProps(
       props[key] = propsConfig[key];
       continue;
     }
-    if (
-      props[key] !== undefined &&
-      (propsConfig[key] as AdvShaderProp).resolve !== undefined
-    ) {
-      props[key] = (propsConfig[key] as AdvShaderProp).resolve!(
-        props[key],
-        props,
-      );
+    const pConfig = propsConfig[key]! as AdvancedShaderProp;
+    if (props[key] !== undefined && pConfig.resolve !== undefined) {
+      props[key] = pConfig.resolve!(props[key], props);
       continue;
     }
-    if (props[key] === undefined) {
-      props[key] = (propsConfig[key] as AdvShaderProp).default;
+    if (props[key] !== undefined && pConfig.set !== undefined) {
+      pConfig.set(props[key], props);
+      continue;
     }
+    if (props[key] === undefined && pConfig.get === undefined) {
+      props[key] = pConfig.default;
+      continue;
+    }
+    props[key] = pConfig.get!(props);
   }
 }
 
@@ -112,6 +124,15 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>>
         },
         set: (value) => {
           this.resolvedProps![key as keyof Props] = value;
+          if (
+            isAdvancedShaderProp(this.propsConfig![key]) &&
+            this.propsConfig![key].set !== undefined
+          ) {
+            this.propsConfig![key].set(
+              value,
+              this.resolvedProps as Record<string, unknown>,
+            );
+          }
           if (this.update !== undefined) {
             this.node?.setUpdateType(UpdateType.RecalcUniforms);
           } else {
@@ -139,9 +160,12 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>>
     if (props === undefined) {
       this.resolvedProps = undefined;
       this.definedProps = undefined;
+      return;
     }
+    assertTruthy(props);
     resolveShaderProps(props as Record<string, unknown>, this.propsConfig!);
-    this.resolvedProps = props;
-    this.defineProps(props!);
+    for (const key in props) {
+      this.props![key] = props[key];
+    }
   }
 }

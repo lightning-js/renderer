@@ -91,7 +91,6 @@ export type StageFrameTickHandler = (
   frameTickData: FrameTickPayload,
 ) => void;
 
-const bufferMemory = 2e6;
 const autoStart = true;
 
 export class Stage {
@@ -110,7 +109,8 @@ export class Stage {
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-
+  public readonly pixelRatio: number;
+  public readonly bufferMemory: number = 2e6;
   /**
    * Renderer Event Bus for the Stage to emit events onto
    *
@@ -125,6 +125,7 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  private cColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
@@ -163,7 +164,7 @@ export class Stage {
     });
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
-    this.shManager = new CoreShaderManager(this);
+
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
     this.strictBounds = options.strictBounds;
@@ -180,23 +181,22 @@ export class Stage {
     this.strictBound = createBound(0, 0, appWidth, appHeight);
     this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
-    const rendererOptions: CoreRendererOptions = {
+    this.clearColor = clearColor;
+
+    this.pixelRatio =
+      options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
+
+    this.renderer = new renderEngine({
       stage: this,
       canvas,
-      pixelRatio:
-        options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio,
-      clearColor: clearColor ?? 0xff000000,
-      bufferMemory,
-      txManager: this.txManager,
-      txMemManager: this.txMemManager,
-      shManager: this.shManager,
       contextSpy: this.contextSpy,
       forceWebGL2,
-    };
+    });
 
-    this.renderer = new renderEngine(rendererOptions);
-    this.renderer.load();
+    this.shManager = new CoreShaderManager(this);
+
     this.defShaderNode = this.renderer.getDefaultShaderNode();
+
     const renderMode = this.renderer.mode || 'webgl';
 
     this.createDefaultTexture();
@@ -283,6 +283,7 @@ export class Stage {
   }
 
   setClearColor(color: number) {
+    this.clearColor = color;
     this.renderer.updateClearColor(color);
     this.renderRequested = true;
   }
@@ -685,5 +686,15 @@ export class Stage {
       imageType: props.imageType,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
+  }
+
+  set clearColor(value: number) {
+    this.renderer.updateClearColor(value);
+    this.renderRequested = true;
+    this.cColor = value;
+  }
+
+  get clearColor() {
+    return this.cColor;
   }
 }

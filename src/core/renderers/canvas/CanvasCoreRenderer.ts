@@ -52,11 +52,13 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
     this.mode = 'canvas';
 
-    const { canvas, pixelRatio, clearColor } = options;
+    const { canvas } = options;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
-    this.pixelRatio = pixelRatio;
-    this.clearColor = clearColor ? getRgbaComponents(clearColor) : undefined;
+    this.pixelRatio = this.stage.pixelRatio;
+    this.clearColor = this.clearColor
+      ? getRgbaComponents(this.stage.clearColor)
+      : undefined;
   }
 
   reset(): void {
@@ -71,10 +73,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
     }
 
     ctx.scale(this.pixelRatio, this.pixelRatio);
-  }
-
-  load(): void {
-    //noop
   }
 
   render(): void {

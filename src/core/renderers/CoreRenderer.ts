@@ -19,13 +19,8 @@
 
 import type { Dimensions } from '../../common/CommonTypes.js';
 import type { CoreNode } from '../CoreNode.js';
-import type { CoreShaderManager } from '../CoreShaderManager.js';
-import type {
-  CoreTextureManager,
-  TextureOptions,
-} from '../CoreTextureManager.js';
+import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
-import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
@@ -62,12 +57,6 @@ export interface QuadOptions {
 export interface CoreRendererOptions {
   stage: Stage;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  pixelRatio: number;
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
-  clearColor: number;
-  bufferMemory: number;
   contextSpy: ContextSpy | null;
   forceWebGL2: boolean;
 }
@@ -91,7 +80,6 @@ export abstract class CoreRenderer {
     this.stage = options.stage;
   }
 
-  abstract load(): void;
   abstract reset(): void;
   abstract render(surface?: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;

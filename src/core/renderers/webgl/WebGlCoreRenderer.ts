@@ -104,22 +104,20 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     this.mode = 'webgl';
 
-    const { canvas, clearColor, bufferMemory } = options;
-
     const gl = createWebGLContext(
-      canvas,
+      options.canvas,
       options.forceWebGL2,
       options.contextSpy,
     );
     const glw = (this.glw = new WebGlContextWrapper(gl));
-    glw.viewport(0, 0, canvas.width, canvas.height);
+    glw.viewport(0, 0, options.canvas.width, options.canvas.height);
 
-    this.updateClearColor(clearColor);
+    this.updateClearColor(this.stage.clearColor);
 
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(glw, bufferMemory);
+    createIndexBuffer(glw, this.stage.bufferMemory);
 
     this.system = {
       parameters: getWebGlParameters(this.glw),
@@ -167,12 +165,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
         },
       },
     ]);
-  }
-
-  load() {
-    this.defaultShaderNode = this.stage.shManager.createShader(
-      Default,
-    ) as WebGlShaderNode;
   }
 
   reset() {
@@ -713,7 +705,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   getDefaultShaderNode(): WebGlShaderNode {
-    return this.defaultShaderNode as WebGlShaderNode;
+    if (this.defaultShaderNode !== null) {
+      return this.defaultShaderNode as WebGlShaderNode;
+    }
+    this.defaultShaderNode = this.stage.shManager.createShader(
+      Default,
+    ) as WebGlShaderNode;
+    return this.defaultShaderNode;
   }
 
   /**
