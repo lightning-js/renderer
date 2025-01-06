@@ -184,6 +184,10 @@ export enum UpdateType {
    * Render Bounds update
    */
   RenderBounds = 8192,
+  /**
+   * Bounds Margin update
+   */
+  BoundsMargin = 16384,
 
   /**
    * None
@@ -193,7 +197,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 14335,
+  All = 32767,
 }
 
 /**
@@ -765,7 +769,17 @@ export class CoreNode extends EventEmitter {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
-    this.boundsMargin = props.boundsMargin as [number, number, number, number];
+
+    if (props.boundsMargin) {
+      this.boundsMargin = Array.isArray(props.boundsMargin)
+        ? props.boundsMargin
+        : [
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+          ];
+    }
 
     this.setUpdateType(
       UpdateType.ScaleRotate |
@@ -1035,6 +1049,13 @@ export class CoreNode extends EventEmitter {
         this.setUpdateType(UpdateType.Clipping | UpdateType.RenderBounds);
         this.childUpdateType |= UpdateType.RenderBounds;
       }
+    }
+
+    if (this.updateType & UpdateType.BoundsMargin) {
+      this.setUpdateType(UpdateType.RenderBounds);
+      this.setUpdateType(UpdateType.Children);
+
+      this.childUpdateType |= UpdateType.BoundsMargin;
     }
 
     if (this.updateType & UpdateType.RenderBounds) {
@@ -1360,7 +1381,7 @@ export class CoreNode extends EventEmitter {
 
     this.preloadBound = createPreloadBounds(
       this.strictBound,
-      this.stage.boundsMargin,
+      this.boundsMargin as [number, number, number, number],
     );
   }
 
@@ -1800,7 +1821,7 @@ export class CoreNode extends EventEmitter {
     this.props.autosize = value;
   }
 
-  get boundsMargin(): number | [number, number, number, number] {
+  get boundsMargin(): number | [number, number, number, number] | null {
     return (
       this.props.boundsMargin ??
       this.parent?.boundsMargin ??
@@ -1808,18 +1829,21 @@ export class CoreNode extends EventEmitter {
     );
   }
 
-  set boundsMargin(value: number | [number, number, number, number]) {
+  set boundsMargin(value: number | [number, number, number, number] | null) {
     if (value === this.props.boundsMargin) {
       return;
     }
 
-    const bm: [number, number, number, number] = Array.isArray(value)
-      ? value
-      : [value, value, value, value];
+    if (value === null) {
+      this.props.boundsMargin = value;
+    } else {
+      const bm: [number, number, number, number] = Array.isArray(value)
+        ? value
+        : [value, value, value, value];
 
-    this.props.boundsMargin = bm;
-    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
-    this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
+      this.props.boundsMargin = bm;
+    }
+    this.setUpdateType(UpdateType.BoundsMargin);
   }
 
   get clipping(): boolean {
