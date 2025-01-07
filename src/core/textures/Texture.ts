@@ -260,6 +260,7 @@ export abstract class Texture extends EventEmitter {
     this.ctxTexture?.free();
     if (this.textureData !== null) {
       this.textureData = null;
+      this.setSourceState('freed');
     }
   }
 
