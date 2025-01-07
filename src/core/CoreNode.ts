@@ -1225,11 +1225,7 @@ export class CoreNode extends EventEmitter {
   //check if CoreNode is renderable based on props
   hasRenderableProperties(): boolean {
     if (this.texture !== null) {
-      if (this.texture.state === 'loaded') {
-        return true;
-      }
-
-      return false;
+      return true;
     }
 
     if (!this.props.width || !this.props.height) {
@@ -1401,20 +1397,10 @@ export class CoreNode extends EventEmitter {
    */
   updateIsRenderable() {
     let newIsRenderable: boolean;
-    if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
+    if (this.worldAlpha === 0 || this.hasRenderableProperties() === false) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
-    }
-
-    // If the texture is not loaded and the node is renderable, load the texture
-    // this only needs to happen once or until the texture is no longer loaded
-    if (
-      this.texture !== null &&
-      this.texture.state === 'freed' &&
-      this.renderState > CoreNodeRenderState.OutOfBounds
-    ) {
-      this.stage.txManager.loadTexture(this.texture);
     }
 
     if (this.isRenderable !== newIsRenderable) {

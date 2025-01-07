@@ -454,7 +454,12 @@ export class Stage {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer);
 
-    if (node.isRenderable === true) {
+    // If the node is renderable and has a loaded texture, render it
+    if (
+      node.isRenderable === true &&
+      node.texture !== null &&
+      node.texture.state === 'loaded'
+    ) {
       node.renderQuads(this.renderer);
     }
 
