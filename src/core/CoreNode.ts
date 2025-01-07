@@ -773,6 +773,13 @@ export class CoreNode extends EventEmitter {
 
   //#region Textures
   loadTexture(): void {
+    console.log(
+      'CoreNode.loadTexture id:',
+      this._id,
+      ' texture state: ',
+      this.texture?.state,
+    );
+
     const { texture } = this.props;
     assertTruthy(texture);
 
@@ -837,6 +844,13 @@ export class CoreNode extends EventEmitter {
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
+    console.log(
+      'CoreNode.onTextureLoaded id:',
+      this._id,
+      ' dimensions: ',
+      dimensions,
+    );
+
     this.autosizeNode(dimensions);
     this.setUpdateType(UpdateType.IsRenderable);
 
@@ -864,6 +878,7 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    console.log('CoreNode.onTextureFailed id:', this._id, ' error: ', error);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -878,6 +893,7 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    console.log('CoreNode.onTextureFreed id:', this._id);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update

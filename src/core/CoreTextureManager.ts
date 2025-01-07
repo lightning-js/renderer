@@ -418,6 +418,15 @@ export class CoreTextureManager extends EventEmitter {
 
     let itemsProcessed = 0;
 
+    console.log(
+      'TextureManager.processSome p:',
+      this.priorityQueue.length,
+      'd:',
+      this.downloadTextureSourceQueue.length,
+      'u:',
+      this.uploadTextureQueue.length,
+    );
+
     // Process priority queue
     while (
       this.priorityQueue.length > 0 &&
