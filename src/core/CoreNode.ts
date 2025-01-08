@@ -1017,7 +1017,7 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.RenderTexture && this.rtt) {
       // Only the RTT node itself triggers `renderToTexture`
       this.hasRTTupdates = true;
-      this.stage.renderer?.renderToTexture(this);
+      this.loadRenderTexture();
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -1225,11 +1225,7 @@ export class CoreNode extends EventEmitter {
   //check if CoreNode is renderable based on props
   hasRenderableProperties(): boolean {
     if (this.texture !== null) {
-      if (this.texture.state === 'loaded') {
-        return true;
-      }
-
-      return false;
+      return true;
     }
 
     if (!this.props.width || !this.props.height) {
@@ -1401,20 +1397,10 @@ export class CoreNode extends EventEmitter {
    */
   updateIsRenderable() {
     let newIsRenderable: boolean;
-    if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
+    if (this.worldAlpha === 0 || this.hasRenderableProperties() === false) {
       newIsRenderable = false;
     } else {
       newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
-    }
-
-    // If the texture is not loaded and the node is renderable, load the texture
-    // this only needs to happen once or until the texture is no longer loaded
-    if (
-      this.texture !== null &&
-      this.texture.state === 'freed' &&
-      this.renderState > CoreNodeRenderState.OutOfBounds
-    ) {
-      this.stage.txManager.loadTexture(this.texture);
     }
 
     if (this.isRenderable !== newIsRenderable) {
@@ -2045,10 +2031,25 @@ export class CoreNode extends EventEmitter {
       height: this.height,
     });
 
+    this.loadRenderTexture();
+  }
+
+  private loadRenderTexture() {
+    if (this.texture === null) {
+      return;
+    }
+
+    // If the texture is already loaded, render to it immediately
+    if (this.texture.state === 'loaded') {
+      this.stage.renderer?.renderToTexture(this);
+      return;
+    }
+
     // call load immediately to ensure the texture is created
     this.stage.txManager.loadTexture(this.texture, true);
-
-    this.stage.renderer?.renderToTexture(this); // Only this RTT node
+    this.texture.once('loaded', () => {
+      this.stage.renderer?.renderToTexture(this); // Only this RTT node
+    });
   }
 
   private cleanupRenderTexture() {
