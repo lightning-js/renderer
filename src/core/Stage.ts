@@ -20,6 +20,7 @@ import { startLoop, getTimeStamp } from './platform.js';
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import {
+  UpdateType,
   CoreNode,
   CoreNodeRenderState,
   type CoreNodeProps,
@@ -101,7 +102,7 @@ export class Stage {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
-  public readonly boundsMargin: [number, number, number, number];
+  public boundsMargin: [number, number, number, number];
   public readonly defShaderCtr: BaseShaderController;
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
@@ -132,6 +133,9 @@ export class Stage {
   /// Debug data
   contextSpy: ContextSpy | null = null;
 
+  get preloudBound() {
+    return createPreloadBounds(this.strictBound, this.boundsMargin);
+  }
   /**
    * Stage constructor
    */
@@ -238,6 +242,7 @@ export class Stage {
       height: appHeight,
       alpha: 1,
       autosize: false,
+      boundsMargin: null,
       clipping: false,
       color: 0x00000000,
       colorTop: 0x00000000,
@@ -628,6 +633,14 @@ export class Stage {
     return new CoreTextNode(this, resolvedProps, resolvedTextRenderer);
   }
 
+  setBoundsMargin(value: number | [number, number, number, number]) {
+    this.boundsMargin = Array.isArray(value)
+      ? value
+      : [value, value, value, value];
+
+    this.root.setUpdateType(UpdateType.RenderBounds);
+  }
+
   /**
    * Resolves the default property values for a Node
    *
@@ -661,6 +674,7 @@ export class Stage {
       height: props.height ?? 0,
       alpha: props.alpha ?? 1,
       autosize: props.autosize ?? false,
+      boundsMargin: props.boundsMargin ?? null,
       clipping: props.clipping ?? false,
       color,
       colorTop: props.colorTop ?? color,

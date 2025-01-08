@@ -193,7 +193,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 14335,
+  All = 16383,
 }
 
 /**
@@ -267,6 +267,12 @@ export interface CoreNodeProps {
    * @default `false`
    */
   autosize: boolean;
+  /**
+   * Margin around the Node's bounds for preloading
+   *
+   * @default `null`
+   */
+  boundsMargin: number | [number, number, number, number] | null;
   /**
    * Clipping Mode
    *
@@ -761,6 +767,17 @@ export class CoreNode extends EventEmitter {
     this.src = props.src;
     this.rtt = props.rtt;
 
+    if (props.boundsMargin) {
+      this.boundsMargin = Array.isArray(props.boundsMargin)
+        ? props.boundsMargin
+        : [
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+          ];
+    }
+
     this.setUpdateType(
       UpdateType.ScaleRotate |
         UpdateType.Local |
@@ -1052,6 +1069,8 @@ export class CoreNode extends EventEmitter {
       this.createRenderBounds();
       this.setUpdateType(UpdateType.RenderState);
       this.setUpdateType(UpdateType.Children);
+
+      this.childUpdateType |= UpdateType.RenderBounds;
     }
 
     if (this.updateType & UpdateType.RenderState) {
@@ -1139,6 +1158,7 @@ export class CoreNode extends EventEmitter {
       this.props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
+      this.updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
@@ -1332,7 +1352,7 @@ export class CoreNode extends EventEmitter {
 
       this.preloadBound = createPreloadBounds(
         this.strictBound,
-        this.stage.boundsMargin,
+        this.boundsMargin as [number, number, number, number],
       );
     } else {
       // no parent or parent does not have a bound, take the stage boundaries
@@ -1371,7 +1391,7 @@ export class CoreNode extends EventEmitter {
 
     this.preloadBound = createPreloadBounds(
       this.strictBound,
-      this.stage.boundsMargin,
+      this.boundsMargin as [number, number, number, number],
     );
   }
 
@@ -1811,6 +1831,31 @@ export class CoreNode extends EventEmitter {
 
   set autosize(value: boolean) {
     this.props.autosize = value;
+  }
+
+  get boundsMargin(): number | [number, number, number, number] | null {
+    return (
+      this.props.boundsMargin ??
+      this.parent?.boundsMargin ??
+      this.stage.boundsMargin
+    );
+  }
+
+  set boundsMargin(value: number | [number, number, number, number] | null) {
+    if (value === this.props.boundsMargin) {
+      return;
+    }
+
+    if (value === null) {
+      this.props.boundsMargin = value;
+    } else {
+      const bm: [number, number, number, number] = Array.isArray(value)
+        ? value
+        : [value, value, value, value];
+
+      this.props.boundsMargin = bm;
+    }
+    this.setUpdateType(UpdateType.RenderBounds);
   }
 
   get clipping(): boolean {

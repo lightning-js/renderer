@@ -28,6 +28,7 @@ describe('set color()', () => {
   const defaultProps: CoreNodeProps = {
     alpha: 0,
     autosize: false,
+    boundsMargin: null,
     clipping: false,
     color: 0,
     colorBl: 0,
