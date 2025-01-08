@@ -581,7 +581,7 @@ export class Stage {
       ? value
       : [value, value, value, value];
 
-    this.root.setUpdateType(UpdateType.BoundsMargin);
+    this.root.setUpdateType(UpdateType.RenderBounds);
   }
 
   /**

@@ -184,10 +184,6 @@ export enum UpdateType {
    * Render Bounds update
    */
   RenderBounds = 8192,
-  /**
-   * Bounds Margin update
-   */
-  BoundsMargin = 16384,
 
   /**
    * None
@@ -197,7 +193,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 32767,
+  All = 16383,
 }
 
 /**
@@ -1051,17 +1047,12 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    if (this.updateType & UpdateType.BoundsMargin) {
-      this.setUpdateType(UpdateType.RenderBounds);
-      this.setUpdateType(UpdateType.Children);
-
-      this.childUpdateType |= UpdateType.BoundsMargin;
-    }
-
     if (this.updateType & UpdateType.RenderBounds) {
       this.createRenderBounds();
       this.setUpdateType(UpdateType.RenderState);
       this.setUpdateType(UpdateType.Children);
+
+      this.childUpdateType |= UpdateType.RenderBounds;
     }
 
     if (this.updateType & UpdateType.RenderState) {
@@ -1843,7 +1834,7 @@ export class CoreNode extends EventEmitter {
 
       this.props.boundsMargin = bm;
     }
-    this.setUpdateType(UpdateType.BoundsMargin);
+    this.setUpdateType(UpdateType.RenderBounds);
   }
 
   get clipping(): boolean {
