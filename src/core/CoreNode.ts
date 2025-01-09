@@ -768,7 +768,16 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderState,
     );
 
-    this.createDefaultTexture();
+    // if the default texture isn't loaded yet, wait for it to load
+    // this only happens when the node is created before the stage is ready
+    if (
+      this.stage.defaultTexture &&
+      this.stage.defaultTexture.state !== 'loaded'
+    ) {
+      this.stage.defaultTexture.once('loaded', () => {
+        this.setUpdateType(UpdateType.IsRenderable);
+      });
+    }
   }
 
   //#region Textures
@@ -806,18 +815,6 @@ export class CoreNode extends EventEmitter {
         this.onTextureFreed(texture);
       }
     });
-  }
-
-  createDefaultTexture(): void {
-    // load default texture if no texture is set
-    if (
-      this.stage.defaultTexture !== null &&
-      this.props.src === null &&
-      this.props.texture === null &&
-      this.props.rtt === false
-    ) {
-      this.texture = this.stage.defaultTexture;
-    }
   }
 
   unloadTexture(): void {
@@ -1222,46 +1219,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  //check if CoreNode is renderable based on props
-  hasRenderableProperties(): boolean {
-    if (this.texture !== null) {
-      return true;
-    }
-
-    if (!this.props.width || !this.props.height) {
-      return false;
-    }
-
-    if (this.props.shader !== this.stage.defShaderCtr) {
-      return true;
-    }
-
-    if (this.props.clipping === true) {
-      return true;
-    }
-
-    if (this.props.color !== 0) {
-      return true;
-    }
-
-    // Consider removing these checks and just using the color property check above.
-    // Maybe add a forceRender prop for nodes that should always render.
-    if (
-      this.props.colorTop !== 0 ||
-      this.props.colorBottom !== 0 ||
-      this.props.colorLeft !== 0 ||
-      this.props.colorRight !== 0 ||
-      this.props.colorTl !== 0 ||
-      this.props.colorTr !== 0 ||
-      this.props.colorBl !== 0 ||
-      this.props.colorBr !== 0
-    ) {
-      return true;
-    }
-
-    return false;
-  }
-
   checkRenderBounds(): CoreNodeRenderState {
     assertTruthy(this.renderBound);
     assertTruthy(this.strictBound);
@@ -1391,26 +1348,98 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
-   * This function updates the `isRenderable` property based on certain conditions.
-   *
-   * @returns
+   * Updates the `isRenderable` property based on various conditions.
    */
   updateIsRenderable() {
-    let newIsRenderable: boolean;
-    if (this.worldAlpha === 0 || this.hasRenderableProperties() === false) {
-      newIsRenderable = false;
-    } else {
-      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
+    let newIsRenderable = false;
+    let needsTextureOwnership = false;
+
+    // If the node is out of bounds, has no dimensions or has an alpha of 0, it is not renderable
+    if (this.checkBasicRenderability() === false) {
+      this.updateTextureOwnership(false);
+      this.setRenderable(false);
+      return;
     }
 
-    if (this.isRenderable !== newIsRenderable) {
-      this.isRenderable = newIsRenderable;
-      this.onChangeIsRenderable(newIsRenderable);
+    if (this.texture !== null) {
+      needsTextureOwnership = true;
+
+      // we're only renderable if the texture state is loaded
+      newIsRenderable = this.texture.state === 'loaded';
+    } else if (
+      this.hasColorProperties() === true &&
+      this.hasDimensions() === true
+    ) {
+      // This mean we have dimensions and a color set, so we can render a ColorTexture
+      if (
+        this.stage.defaultTexture &&
+        this.stage.defaultTexture.state === 'loaded'
+      ) {
+        newIsRenderable = true;
+      }
+    }
+
+    this.updateTextureOwnership(needsTextureOwnership);
+    this.setRenderable(newIsRenderable);
+  }
+
+  /**
+   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   */
+  checkBasicRenderability(): boolean {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    } else {
+      return true;
     }
   }
 
-  onChangeIsRenderable(isRenderable: boolean) {
+  /**
+   * Sets the renderable state and triggers changes if necessary.
+   * @param isRenderable - The new renderable state
+   */
+  setRenderable(isRenderable: boolean) {
+    if (this.isRenderable !== isRenderable) {
+      this.isRenderable = isRenderable;
+    }
+  }
+
+  /**
+   * Changes the renderable state of the node.
+   */
+  updateTextureOwnership(isRenderable: boolean) {
     this.texture?.setRenderableOwner(this, isRenderable);
+  }
+
+  /**
+   * Checks if the node is out of the viewport bounds.
+   */
+  isOutOfBounds(): boolean {
+    return this.renderState <= CoreNodeRenderState.OutOfBounds;
+  }
+
+  /**
+   * Checks if the node has dimensions (width/height)
+   */
+  hasDimensions(): boolean {
+    return this.props.width !== 0 && this.props.height !== 0;
+  }
+
+  /**
+   * Checks if the node has any color properties set.
+   */
+  hasColorProperties(): boolean {
+    return (
+      this.props.color !== 0 ||
+      this.props.colorTop !== 0 ||
+      this.props.colorBottom !== 0 ||
+      this.props.colorLeft !== 0 ||
+      this.props.colorRight !== 0 ||
+      this.props.colorTl !== 0 ||
+      this.props.colorTr !== 0 ||
+      this.props.colorBl !== 0 ||
+      this.props.colorBr !== 0
+    );
   }
 
   calculateRenderCoords() {
@@ -1553,7 +1582,6 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-    assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1563,7 +1591,9 @@ export class CoreNode extends EventEmitter {
       colorTr: this.premultipliedColorTr,
       colorBl: this.premultipliedColorBl,
       colorBr: this.premultipliedColorBr,
-      texture: this.texture,
+      // if we do not have a texture, use the default texture
+      // this assumes any renderable node is either a distinct texture or a ColorTexture
+      texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
       zIndex: this.zIndex,
       shader: this.shader.shader,
@@ -2049,6 +2079,7 @@ export class CoreNode extends EventEmitter {
     this.stage.txManager.loadTexture(this.texture, true);
     this.texture.once('loaded', () => {
       this.stage.renderer?.renderToTexture(this); // Only this RTT node
+      this.setUpdateType(UpdateType.IsRenderable);
     });
   }
 
@@ -2229,11 +2260,8 @@ export class CoreNode extends EventEmitter {
 
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable);
+      value.setRenderableOwner(this, this.isRenderable); // WVB TODO: check if this is correct
       this.loadTexture();
-    } else {
-      // If the texture is null, create a default texture
-      this.createDefaultTexture();
     }
 
     this.setUpdateType(UpdateType.IsRenderable);

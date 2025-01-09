@@ -200,10 +200,14 @@ export abstract class Texture extends EventEmitter {
    */
   setRenderableOwner(owner: unknown, renderable: boolean): void {
     const oldSize = this.renderableOwners.size;
-    if (renderable === true) {
-      this.renderableOwners.add(owner);
-      const newSize = this.renderableOwners.size;
 
+    if (renderable === true) {
+      if (this.renderableOwners.has(owner) === false) {
+        // Add the owner to the set
+        this.renderableOwners.add(owner);
+      }
+
+      const newSize = this.renderableOwners.size;
       if (newSize > oldSize && newSize === 1) {
         (this.renderable as boolean) = true;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
