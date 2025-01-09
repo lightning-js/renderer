@@ -1354,7 +1354,7 @@ export class CoreNode extends EventEmitter {
     let newIsRenderable = false;
     let needsTextureOwnership = false;
 
-    // If the node is out of bounds, has no dimensions or has an alpha of 0, it is not renderable
+    // If the node is out of bounds or has an alpha of 0, it is not renderable
     if (this.checkBasicRenderability() === false) {
       this.updateTextureOwnership(false);
       this.setRenderable(false);
