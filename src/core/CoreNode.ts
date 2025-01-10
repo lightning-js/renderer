@@ -1367,7 +1367,7 @@ export class CoreNode extends EventEmitter {
       // we're only renderable if the texture state is loaded
       newIsRenderable = this.texture.state === 'loaded';
     } else if (
-      this.hasColorProperties() === true &&
+      (this.hasShader() || this.hasColorProperties() === true) &&
       this.hasDimensions() === true
     ) {
       // This mean we have dimensions and a color set, so we can render a ColorTexture
@@ -1438,6 +1438,10 @@ export class CoreNode extends EventEmitter {
       this.props.colorBl !== 0 ||
       this.props.colorBr !== 0
     );
+  }
+
+  hasShader(): boolean {
+    return this.props.shader !== null;
   }
 
   calculateRenderCoords() {
