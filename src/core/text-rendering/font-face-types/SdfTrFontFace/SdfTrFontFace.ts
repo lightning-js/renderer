@@ -89,7 +89,7 @@ export class SdfTrFontFace<
     // Load the texture
     stage.txManager.loadTexture(this.texture, true);
 
-    this.texture.on('loaded', () => {
+    this.texture.once('loaded', () => {
       this.checkLoaded();
       // Make sure we mark the stage for a re-render (in case the font's texture was freed and reloaded)
       stage.requestRender();
