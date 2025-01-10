@@ -16,7 +16,7 @@ export const Border: WebGlShaderType<BorderProps> = {
     this.uniform4fv('u_width', new Float32Array(this.props.width as Vec4));
     this.uniformRGBA('u_color', this.props.color);
 
-    // this.uniform4fv('u_shadow', new Float32Array([0, 10, 30, 10]))
+    this.uniform4fv('u_shadow', new Float32Array([0, 10, 30, 10]));
 
     const fRadius = calcFactoredRadiusArray(
       this.props.radius as Vec4,
@@ -50,7 +50,7 @@ export const Border: WebGlShaderType<BorderProps> = {
       vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
 
       vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
-      vec2 shadowEdge = outerEdge;
+      vec2 shadowEdge = outerEdge + u_shadow.xy + u_shadow.w + u_shadow.z;
       vec2 vertexPos = normalized + outerEdge + shadowEdge;
       v_color = a_color;
       v_textureCoordinate = a_textureCoordinate;
@@ -101,11 +101,11 @@ export const Border: WebGlShaderType<BorderProps> = {
       // borderWidth.x = (outerBoxUv.x > 0.0) > borderWidth.x ? borderWidth.y;
 
       float borderAlpha = 1.0 - smoothstep(borderWidth.x - u_pixelRatio, borderWidth.x, abs(outerBoxDist));
-      // float shadowDist = roundedBox(outerBoxUv + u_shadow.xy, halfDimensions, u_radius);
-      // float shadowAlpha = 1.0 - smoothstep(-u_shadow.z, u_shadow.z, shadowDist);
+      float shadowDist = roundedBox(outerBoxUv + u_shadow.xy, halfDimensions, u_radius);
+      float shadowAlpha = 1.0 - smoothstep(-u_shadow.z, u_shadow.z, shadowDist);
 
       vec4 resColor = vec4(0.0);
-      //resColor = mix(resColor, vec4(vec3(0.4), shadowAlpha), shadowAlpha);
+      resColor = mix(resColor, vec4(vec3(0.4), shadowAlpha), shadowAlpha);
       resColor = mix(resColor, color, min(color.a, roundedAlpha));
       resColor = mix(resColor, u_color , min(u_color.a, min(borderAlpha, roundedAlpha)));
 
