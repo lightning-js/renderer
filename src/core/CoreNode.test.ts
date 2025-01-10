@@ -22,7 +22,6 @@ import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { type TextureOptions } from './CoreTextureManager.js';
-import { type BaseShaderController } from '../main-api/ShaderController';
 
 describe('set color()', () => {
   const defaultProps: CoreNodeProps = {
@@ -51,7 +50,7 @@ describe('set color()', () => {
     scale: 0,
     scaleX: 0,
     scaleY: 0,
-    shader: mock<BaseShaderController>(),
+    shader: null,
     src: '',
     texture: null,
     textureOptions: {} as TextureOptions,

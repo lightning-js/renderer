@@ -1,5 +1,6 @@
 import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
 import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+import { validateArrayLength4 } from './shaderUtils.js';
 
 /**
  * Properties of the {@link Border} shader
@@ -8,7 +9,7 @@ export interface BorderProps {
   /**
    * Width of the border in pixels
    *
-   * @default 10
+   * @default 0
    */
   width: number | [number, number, number, number];
   /**
@@ -22,7 +23,7 @@ export interface BorderProps {
    *
    * @defaultValue 0
    */
-  radius: number | number[];
+  radius: number | [number, number, number, number];
   /**
    * Top width
    */
@@ -46,15 +47,13 @@ export const BorderTemplate: CoreShaderType<BorderProps> = {
   props: {
     width: {
       default: [0, 0, 0, 0],
-      resolve(value: number | Vec4) {
-        if (!isNaN(value as number)) {
-          return [value, value, value, value] as Vec4;
-        }
-        return value as Vec4;
-      },
+      resolve: validateArrayLength4,
     },
     color: 0xffffffff,
-    radius: 0,
+    radius: {
+      default: [0, 0, 0, 0],
+      resolve: validateArrayLength4,
+    },
     top: {
       default: 0,
       set(value, props) {

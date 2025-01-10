@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 import {
   calcFactoredRadius,
   calcFactoredRadiusArray,
@@ -28,6 +28,7 @@ import {
 } from '../../../shaders/RoundedRectangleTemplate.js';
 import { assertTruthy } from '../../../../utils.js';
 import type { CoreNode } from '../../../CoreNode.js';
+import type { Vec4 } from '../internal/ShaderUtils.js';
 
 /**
  * Similar to the {@link DefaultShader} but cuts out 4 rounded rectangle corners
@@ -45,7 +46,7 @@ export const RoundedRectangle: WebGlShaderType<RoundedRectangleProps> = {
       );
     } else {
       const fRadius = calcFactoredRadiusArray(
-        this.props.radius,
+        this.props.radius as Vec4,
         node.width,
         node.height,
       );

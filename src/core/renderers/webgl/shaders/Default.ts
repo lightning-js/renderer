@@ -1,4 +1,4 @@
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 /*
  * If not stated otherwise in this file or this component's LICENSE file the

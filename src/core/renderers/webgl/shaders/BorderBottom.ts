@@ -3,7 +3,7 @@ import {
   BorderBottomTemplate,
   type BorderBottomProps,
 } from '../../../shaders/BorderBottomTemplate.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const BorderBottom: WebGlShaderType<BorderBottomProps> = {
   name: BorderBottomTemplate.name,

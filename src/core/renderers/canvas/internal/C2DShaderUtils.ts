@@ -18,8 +18,7 @@
  */
 
 import type { QuadOptions } from '../../CoreRenderer.js';
-import type { BorderEffectProps } from '../../webgl/shaders/effects/BorderEffect.js';
-import type { RadiusEffectProps } from '../../webgl/shaders/effects/RadiusEffect.js';
+
 import {
   ROUNDED_RECTANGLE_SHADER_TYPE,
   UnsupportedShader,

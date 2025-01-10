@@ -148,7 +148,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
   constructor(stage: Stage) {
     super(stage);
-    this.sdfShader = this.stage.shManager.createShader(Sdf) as WebGlShaderNode;
+    this.stage.shManager.registerShaderType('Sdf', Sdf);
+    this.sdfShader = this.stage.shManager.createShader(
+      'Sdf',
+    ) as WebGlShaderNode;
     this.rendererBounds = {
       x1: 0,
       y1: 0,

@@ -7,8 +7,9 @@ import {
   HolePunchTemplate,
   type HolePunchProps,
 } from '../../../shaders/HolePunchTemplate.js';
+import type { Vec4 } from '../internal/ShaderUtils.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const HolePunch: WebGlShaderType<HolePunchProps> = {
   name: HolePunchTemplate.name,
@@ -31,7 +32,7 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
       );
     } else {
       const fRadius = calcFactoredRadiusArray(
-        this.props.radius,
+        this.props.radius as Vec4,
         this.props.width,
         this.props.height,
       );

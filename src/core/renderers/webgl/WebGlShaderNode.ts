@@ -1,12 +1,45 @@
 import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { Stage } from '../../Stage.js';
-import { CoreShaderNode } from '../CoreShaderNode.js';
+import type { QuadOptions } from '../CoreRenderer.js';
+import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type { UniformCollection } from './internal/ShaderUtils.js';
-import type {
-  WebGlShaderType,
-  WebGlShaderProgram,
-} from './WebGlShaderProgram.js';
+import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
+import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
+
+type ShaderSource<T> =
+  | string
+  | ((renderer: WebGlCoreRenderer, props: T) => string);
+
+export type WebGlShaderType<T extends object = Record<string, unknown>> =
+  CoreShaderType<T> & {
+    /**
+     * fragment shader source for WebGl or WebGl2
+     */
+    fragment: ShaderSource<T>;
+    /**
+     * vertex shader source for WebGl or WebGl2
+     */
+    vertex?: ShaderSource<T>;
+    /**
+     * This function is called when one of the props is changed, here you can update the uniforms you use in the fragment / vertex shader.
+     * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
+     * @returns
+     */
+    update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
+    /**
+     * This function is used to check if the shader can bereused based on quad info
+     * @param props
+     * @returns
+     */
+    canBatch?: (renderOpA: QuadOptions, renderOpB: QuadOptions) => boolean;
+    /**
+     * extensions required for specific shader?
+     */
+    webgl1Extensions?: string[];
+    webgl2Extensions?: string[];
+    supportsIndexedTextures?: boolean;
+  };
 
 export class WebGlShaderNode<
   Props extends object = Record<string, unknown>,
@@ -22,12 +55,13 @@ export class WebGlShaderNode<
   };
 
   constructor(
+    shaderKey: string,
     config: WebGlShaderType<Props>,
     program: WebGlShaderProgram,
     stage: Stage,
     props?: Props,
   ) {
-    super(config, program, stage, props);
+    super(shaderKey, config, program, stage, props);
     if (config.update !== undefined) {
       this.updater = config.update;
 
@@ -36,20 +70,16 @@ export class WebGlShaderNode<
           this.updater!(this.node as CoreNode);
           return;
         }
+
         this.valueKey = '';
-        for (const key in this.props) {
-          this.valueKey += `${key}:${this.props[key]!};`;
+        for (const key in this.resolvedProps) {
+          this.valueKey += `${key}:${this.resolvedProps[key]!};`;
         }
         const values = this.stage.shManager.getShaderValues(
           this.valueKey,
         ) as unknown as UniformCollection;
         if (values !== undefined) {
-          for (const coll in values) {
-            for (const key in values[coll as keyof UniformCollection]) {
-              this.uniforms[coll as keyof UniformCollection][key]! =
-                values[coll as keyof UniformCollection][key]!;
-            }
-          }
+          this.uniforms = values;
           return;
         }
         this.updater!(this.node as CoreNode);
@@ -81,7 +111,7 @@ export class WebGlShaderNode<
    */
   uniform1f(location: string, value: number) {
     this.uniforms.single[location] = {
-      method: 'uniform1',
+      method: 'uniform1f',
       value,
     };
   }

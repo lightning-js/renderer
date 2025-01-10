@@ -16,6 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { deepClone } from '../utils.js';
 import {
   resolveShaderProps,
   type CoreShaderType,
@@ -23,12 +24,42 @@ import {
 import type { CoreShaderProgram } from './renderers/CoreShaderProgram.js';
 import type { Stage } from './Stage.js';
 
+export interface ShaderMap {
+  [key: string]: CoreShaderType<any>;
+}
+
+export type ExtractProps<Props> = {
+  [K in keyof Props]: Props[K] extends { default: infer D } ? D : Props[K];
+};
+
+export type PartialShaderProps<Props> = Partial<ExtractProps<Props>>;
+export type ExtractShaderProps<T extends keyof ShaderMap> = ExtractProps<
+  ShaderMap[T]['props']
+>;
+export type OptionalShaderProps<T extends keyof ShaderMap> = PartialShaderProps<
+  ShaderMap[T]['props']
+>;
+
 export class CoreShaderManager {
+  protected shTypes: Record<string, CoreShaderType> = {};
   protected shCache: Map<string, CoreShaderProgram> = new Map();
   protected valuesCache: Map<string, Record<string, unknown>> = new Map();
   protected attachedShader: CoreShaderProgram | null = null;
 
   constructor(readonly stage: Stage) {}
+
+  registerShaderType<Name extends keyof ShaderMap>(
+    name: Name,
+    shType: ShaderMap[Name],
+  ): void {
+    if (this.shTypes[name as string] !== undefined) {
+      console.warn(
+        `ShaderType already exists with the name: ${name}. Breaking of registration.`,
+      );
+      return;
+    }
+    this.shTypes[name as string] = deepClone(shType);
+  }
 
   /**
    * Loads a shader (if not already loaded) and returns a controller for it.
@@ -37,16 +68,18 @@ export class CoreShaderManager {
    * @param props
    * @returns
    */
-  createShader(
-    shConfig: Readonly<CoreShaderType>,
+  createShader<Name extends keyof ShaderMap>(
+    name: Name,
     props?: Record<string, unknown>,
   ) {
     if (!this.stage.renderer) {
       throw new Error(`Renderer is not been defined`);
     }
 
-    let cacheKey = shConfig.name;
-    if (shConfig.props !== undefined) {
+    const shType = this.shTypes[name as string] as ShaderMap[Name];
+
+    let shaderKey = name as string;
+    if (shType.props !== undefined) {
       /**
        * if props is undefined create empty obj to fill
        */
@@ -54,26 +87,33 @@ export class CoreShaderManager {
       /**
        * resolve shader values
        */
-      resolveShaderProps(props, shConfig.props);
-      if (shConfig.getCacheMarkers !== undefined) {
-        cacheKey += `-${shConfig.getCacheMarkers(props)}`;
+      resolveShaderProps(props, shType.props);
+      if (shType.getCacheMarkers !== undefined) {
+        shaderKey += `-${shType.getCacheMarkers(props)}`;
       }
     }
+
+    console.log('shaderKey:', shaderKey);
 
     /**
      * get shaderProgram by cacheKey
      */
-    let shProgram = this.shCache.get(cacheKey);
+    let shProgram = this.shCache.get(shaderKey);
 
     /**
      * if shaderProgram was not found create a new one
      */
     if (shProgram === undefined) {
-      shProgram = this.stage.renderer.createShaderProgram(shConfig, props);
-      this.shCache.set(cacheKey, shProgram);
+      shProgram = this.stage.renderer.createShaderProgram(shType, props);
+      this.shCache.set(shaderKey, shProgram);
     }
 
-    return this.stage.renderer.createShaderNode(shConfig, shProgram, props);
+    return this.stage.renderer.createShaderNode(
+      shaderKey,
+      shType,
+      shProgram,
+      props,
+    );
   }
 
   getShaderValues(key: string) {

@@ -3,7 +3,7 @@ import {
   BorderLeftTemplate,
   type BorderLeftProps,
 } from '../../../shaders/BorderLeftTemplate.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const BorderLeft: WebGlShaderType<BorderLeftProps> = {
   name: BorderLeftTemplate.name,

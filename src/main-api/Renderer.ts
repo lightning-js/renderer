@@ -30,13 +30,12 @@ import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRe
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
 import type { Inspector } from './Inspector.js';
+import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 import type {
-  CoreShaderType,
-  CoreShaderNode,
-  PartialShaderProps,
   ExtractShaderProps,
-  BaseShaderNode,
-} from '../core/renderers/CoreShaderNode.js';
+  OptionalShaderProps,
+  ShaderMap,
+} from '../core/CoreShaderManager.js';
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -423,7 +422,7 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode<ShNode extends BaseShaderNode = CoreShaderNode<any>>(
+  createNode<ShNode extends CoreShaderNode<any>>(
     props: Partial<INodeProps<ShNode>>,
   ): INode<ShNode> {
     assertTruthy(this.stage, 'Stage is not initialized');
@@ -517,14 +516,13 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createShader<ShConfig extends CoreShaderType>(
-    shaderConfig: ShConfig,
-    props?: PartialShaderProps<ShConfig['props']>,
+  createShader<ShType extends keyof ShaderMap>(
+    shType: ShType,
+    props?: OptionalShaderProps<ShType>,
   ) {
-    return this.stage.shManager.createShader(
-      shaderConfig,
-      props,
-    ) as CoreShaderNode<ExtractShaderProps<ShConfig['props']>>;
+    return this.stage.shManager.createShader(shType, props) as CoreShaderNode<
+      ExtractShaderProps<ShType>
+    >;
   }
 
   /**

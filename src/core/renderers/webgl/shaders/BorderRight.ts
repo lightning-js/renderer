@@ -2,7 +2,7 @@ import {
   BorderRightTemplate,
   type BorderRightProps,
 } from '../../../shaders/BorderRightTemplate.js';
-import type { WebGlShaderType } from '..//WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 import { assertTruthy } from '../../../../utils.js';
 
 export const BorderRight: WebGlShaderType<BorderRightProps> = {

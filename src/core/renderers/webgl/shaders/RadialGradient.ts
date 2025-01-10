@@ -7,7 +7,7 @@ import {
 } from '../../../shaders/RadialGradientTemplate.js';
 import { genGradientColors } from '../internal/ShaderUtils.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
   name: RadialGradientTemplate.name,

@@ -46,7 +46,7 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import { Default } from './shaders/Default.js';
-import type { WebGlShaderType } from './WebGlShaderProgram.js';
+import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 
 const WORDS_PER_QUAD = 24;
@@ -177,18 +177,25 @@ export class WebGlCoreRenderer extends CoreRenderer {
   }
 
   createShaderProgram(
-    shaderConfig: WebGlShaderType,
+    shaderType: WebGlShaderType,
     props: Record<string, unknown>,
   ): WebGlShaderProgram {
-    return new WebGlShaderProgram(this, shaderConfig, props);
+    return new WebGlShaderProgram(this, shaderType, props);
   }
 
   createShaderNode(
-    shaderConfig: WebGlShaderType,
+    shaderKey: string,
+    shaderType: WebGlShaderType,
     program: WebGlShaderProgram,
     props?: Record<string, unknown>,
   ) {
-    return new WebGlShaderNode(shaderConfig, program, this.stage, props);
+    return new WebGlShaderNode(
+      shaderKey,
+      shaderType,
+      program,
+      this.stage,
+      props,
+    );
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {
@@ -471,7 +478,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { shader, parentHasRenderTexture, rtt, clippingRect } = params;
 
     // Switching shader program will require a new render operation
-    if (this.curRenderOp?.shader !== this.defaultShaderNode) {
+    if (
+      this.curRenderOp?.shader.shaderKey !==
+      (shader as WebGlShaderNode).shaderKey
+    ) {
       return false;
     }
 
@@ -708,8 +718,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
     if (this.defaultShaderNode !== null) {
       return this.defaultShaderNode as WebGlShaderNode;
     }
+    this.stage.shManager.registerShaderType('Default', Default);
     this.defaultShaderNode = this.stage.shManager.createShader(
-      Default,
+      'Default',
     ) as WebGlShaderNode;
     return this.defaultShaderNode;
   }

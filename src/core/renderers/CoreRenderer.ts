@@ -89,7 +89,8 @@ export abstract class CoreRenderer {
     props?: Record<string, unknown>,
   ): CoreShaderProgram;
   abstract createShaderNode(
-    shaderConfig: Readonly<CoreShaderType>,
+    shaderKey: string,
+    shaderType: Readonly<CoreShaderType>,
     program: CoreShaderProgram,
     props?: Record<string, unknown>,
   ): CoreShaderNode;

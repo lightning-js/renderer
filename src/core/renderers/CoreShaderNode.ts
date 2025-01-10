@@ -1,4 +1,4 @@
-import { assertTruthy } from '../../utils.js';
+import { assertTruthy, deepClone } from '../../utils.js';
 import { UpdateType, type CoreNode } from '../CoreNode.js';
 import type { Stage } from '../Stage.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
@@ -25,17 +25,8 @@ export type ShaderProps<Props> = {
   [K in keyof Props]: ShaderProp<Props[K], Props>;
 };
 
-export type ExtractShaderProps<Props> = {
-  [K in keyof Props]: Props[K] extends { default: infer D } ? D : Props[K];
-};
-export type PartialShaderProps<Props> = Partial<ExtractShaderProps<Props>>;
-
 export function isAdvancedShaderProp(obj: any): obj is AdvancedShaderProp {
-  return (
-    obj !== null &&
-    typeof obj === 'object' &&
-    typeof obj.default === 'undefined'
-  );
+  return obj !== null && typeof obj === 'object' && obj.default !== undefined;
 }
 
 export function resolveShaderProps(
@@ -47,17 +38,24 @@ export function resolveShaderProps(
       props[key] = propsConfig[key];
       continue;
     }
+
     const pConfig = propsConfig[key]! as AdvancedShaderProp;
-    if (props[key] !== undefined && pConfig.resolve !== undefined) {
+    const hasValue = props[key] !== undefined;
+
+    if (hasValue && pConfig.resolve !== undefined) {
       props[key] = pConfig.resolve!(props[key], props);
       continue;
     }
-    if (props[key] !== undefined && pConfig.set !== undefined) {
+    if (hasValue && pConfig.set !== undefined) {
       pConfig.set(props[key], props);
       continue;
     }
+    if (hasValue) {
+      continue;
+    }
+
     if (props[key] === undefined && pConfig.get === undefined) {
-      props[key] = pConfig.default;
+      props[key] = deepClone(pConfig.default);
       continue;
     }
     props[key] = pConfig.get!(props);
@@ -75,28 +73,17 @@ export interface CoreShaderType<
   getCacheMarkers?: (props: Props) => string;
 }
 
-export interface BaseShaderNode<
-  Props extends object = Record<string, unknown>,
-> {
-  program: CoreShaderProgram;
-  getResolvedProps: () => Props | undefined;
-  attachNode: (node: CoreNode) => void;
-  update?: () => void;
-  props?: Props;
-}
-
-export class CoreShaderNode<Props extends object = Record<string, unknown>>
-  implements BaseShaderNode<Props>
-{
+export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
   readonly program: CoreShaderProgram;
-  private propsConfig: ShaderProps<Props> | undefined;
-  private resolvedProps: Props | undefined = undefined;
-  private definedProps: Props | undefined = undefined;
+  protected propsConfig: ShaderProps<Props> | undefined;
+  protected resolvedProps: Props | undefined = undefined;
+  protected definedProps: Props | undefined = undefined;
   protected node: CoreNode | null = null;
   update: (() => void) | undefined = undefined;
 
   constructor(
+    readonly shaderKey: string,
     config: CoreShaderType<Props>,
     program: CoreShaderProgram,
     stage: Stage,

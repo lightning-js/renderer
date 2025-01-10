@@ -16,16 +16,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import type { CoreNode } from '../../CoreNode.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { QuadOptions } from '../CoreRenderer.js';
-import type { CoreShaderType } from '../CoreShaderNode.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
 import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
-import type { WebGlShaderNode } from './WebGlShaderNode.js';
+import type { WebGlShaderType } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -36,40 +33,6 @@ import {
   type UniformSet3Params,
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
-
-type ShaderSource<T> =
-  | string
-  | ((renderer: WebGlCoreRenderer, props: T) => string);
-
-export type WebGlShaderType<T extends object = Record<string, unknown>> =
-  CoreShaderType<T> & {
-    /**
-     * fragment shader source for WebGl or WebGl2
-     */
-    fragment: ShaderSource<T>;
-    /**
-     * vertex shader source for WebGl or WebGl2
-     */
-    vertex?: ShaderSource<T>;
-    /**
-     * This function is called when one of the props is changed, here you can update the uniforms you use in the fragment / vertex shader.
-     * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
-     * @returns
-     */
-    update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
-    /**
-     * This function is used to check if the shader can bereused based on quad info
-     * @param props
-     * @returns
-     */
-    canBatch?: (renderOpA: QuadOptions, renderOpB: QuadOptions) => boolean;
-    /**
-     * extensions required for specific shader?
-     */
-    webgl1Extensions?: string[];
-    webgl2Extensions?: string[];
-    supportsIndexedTextures?: boolean;
-  };
 
 export class WebGlShaderProgram implements CoreShaderProgram {
   protected boundBufferCollection: BufferCollection | null = null;
@@ -256,35 +219,37 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       );
     }
 
-    for (const key in renderOp.shader.uniforms.single) {
-      const { method, value } = renderOp.shader.uniforms.single[key]!;
-      this.glw[method as keyof UniformSet1Param](key, value as never);
-    }
+    if (renderOp.shader.props) {
+      for (const key in renderOp.shader.uniforms.single) {
+        const { method, value } = renderOp.shader.uniforms.single[key]!;
+        this.glw[method as keyof UniformSet1Param](key, value as never);
+      }
 
-    for (const key in renderOp.shader.uniforms.vec2) {
-      const { method, value } = renderOp.shader.uniforms.vec2[key]!;
-      this.glw[method as keyof UniformSet2Params](key, value[0], value[1]);
-    }
+      for (const key in renderOp.shader.uniforms.vec2) {
+        const { method, value } = renderOp.shader.uniforms.vec2[key]!;
+        this.glw[method as keyof UniformSet2Params](key, value[0], value[1]);
+      }
 
-    for (const key in renderOp.shader.uniforms.vec3) {
-      const { method, value } = renderOp.shader.uniforms.vec3[key]!;
-      this.glw[method as keyof UniformSet3Params](
-        key,
-        value[0],
-        value[1],
-        value[2],
-      );
-    }
+      for (const key in renderOp.shader.uniforms.vec3) {
+        const { method, value } = renderOp.shader.uniforms.vec3[key]!;
+        this.glw[method as keyof UniformSet3Params](
+          key,
+          value[0],
+          value[1],
+          value[2],
+        );
+      }
 
-    for (const key in renderOp.shader.uniforms.vec4) {
-      const { method, value } = renderOp.shader.uniforms.vec4[key]!;
-      this.glw[method as keyof UniformSet4Params](
-        key,
-        value[0],
-        value[1],
-        value[2],
-        value[3],
-      );
+      for (const key in renderOp.shader.uniforms.vec4) {
+        const { method, value } = renderOp.shader.uniforms.vec4[key]!;
+        this.glw[method as keyof UniformSet4Params](
+          key,
+          value[0],
+          value[1],
+          value[2],
+          value[3],
+        );
+      }
     }
   }
 

@@ -2,7 +2,7 @@ import {
   BorderTopTemplate,
   type BorderTopProps,
 } from '../../../shaders/BorderTopTemplate.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 import { assertTruthy } from '../../../../utils.js';
 
 export const BorderTop: WebGlShaderType<BorderTopProps> = {

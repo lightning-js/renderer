@@ -54,10 +54,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type {
-  BaseShaderNode,
-  CoreShaderNode,
-} from './renderers/CoreShaderNode.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -444,7 +441,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: BaseShaderNode | null;
+  shader: CoreShaderNode<any> | null;
   /**
    * Image URL
    *
@@ -755,17 +752,18 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = {
-      ...props,
+    this.props = Object.assign({}, props, {
       parent: null,
       texture: null,
+      shader: null,
       src: null,
       rtt: false,
-    };
+    });
 
     // Assign props to instance
     this.parent = props.parent;
     this.texture = props.texture;
+    this.shader = props.shader;
     this.src = props.src;
     this.rtt = props.rtt;
 
@@ -1047,7 +1045,11 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
+      this.setUpdateType(
+        UpdateType.RenderState |
+          UpdateType.Children |
+          UpdateType.RecalcUniforms,
+      );
       this.childUpdateType |= UpdateType.Global;
 
       if (this.clipping === true) {
@@ -2113,11 +2115,11 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  get shader(): BaseShaderNode | null {
+  get shader(): CoreShaderNode<any> | null {
     return this.props.shader;
   }
 
-  set shader(shader: BaseShaderNode | null) {
+  set shader(shader: CoreShaderNode<any> | null) {
     if (this.props.shader === shader) {
       return;
     }
@@ -2126,7 +2128,6 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
-
     shader.attachNode(this);
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable);

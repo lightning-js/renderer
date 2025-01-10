@@ -51,10 +51,7 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
-import type {
-  BaseShaderNode,
-  CoreShaderNode,
-} from './renderers/CoreShaderNode.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
@@ -104,7 +101,7 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public readonly boundsMargin: [number, number, number, number];
-  public readonly defShaderNode: BaseShaderNode | null = null;
+  public readonly defShaderNode: CoreShaderNode | null = null;
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
@@ -125,7 +122,7 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
-  private cColor = 0x00000000;
+  private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private renderRequested = false;
@@ -181,7 +178,7 @@ export class Stage {
     this.strictBound = createBound(0, 0, appWidth, appHeight);
     this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
-    this.clearColor = clearColor;
+    this.clrColor = clearColor;
 
     this.pixelRatio =
       options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
@@ -691,10 +688,10 @@ export class Stage {
   set clearColor(value: number) {
     this.renderer.updateClearColor(value);
     this.renderRequested = true;
-    this.cColor = value;
+    this.clrColor = value;
   }
 
   get clearColor() {
-    return this.cColor;
+    return this.clrColor;
   }
 }

@@ -6,7 +6,7 @@ import {
 } from '../../../shaders/LinearGradientTemplate.js';
 import { genGradientColors } from '../internal/ShaderUtils.js';
 import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
   name: LinearGradientTemplate.name,

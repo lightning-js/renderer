@@ -252,14 +252,16 @@ export function getNewId(): number {
  * @param object
  * @returns
  */
-export function deepClone(obj: Record<string, unknown>) {
+export function deepClone<T>(obj: T): T {
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => deepClone(item)) as T;
+  }
   const copy = {} as Record<string, unknown>;
   for (const key in obj) {
-    if (typeof obj[key] !== 'object') {
-      copy[key] = obj[key];
-      continue;
-    }
-    copy[key] = deepClone(obj[key] as Record<string, unknown>);
+    copy[key] = deepClone(obj[key]);
   }
-  return copy;
+  return copy as T;
 }

@@ -71,7 +71,6 @@ export * from '../src/core/shaders/RadialGradientTemplate.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlShaderProgram.js';
-export * from '../src/core/renderers/webgl/shaders/effects/ShaderEffect.js';
 export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/ShaderUtils.js';
 
 // Textures

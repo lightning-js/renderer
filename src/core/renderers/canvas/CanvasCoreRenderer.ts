@@ -240,11 +240,18 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   createShaderNode(
-    shaderConfig: Readonly<CanvasShaderType>,
+    shaderKey: string,
+    shaderType: Readonly<CanvasShaderType>,
     program: CanvasShaderProgram,
     props?: Record<string, any>,
   ): CoreShaderNode<any> {
-    return new CoreShaderNode(shaderConfig, program, this.stage, props);
+    return new CoreShaderNode(
+      shaderKey,
+      shaderType,
+      program,
+      this.stage,
+      props,
+    );
   }
 
   createShaderProgram(shaderConfig: CanvasShaderType): CanvasShaderProgram {

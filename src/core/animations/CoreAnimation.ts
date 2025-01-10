@@ -46,7 +46,6 @@ export class CoreAnimation extends EventEmitter {
   private timingFunction: (t: number) => number | undefined;
 
   propValuesMap: PropValuesMap = {};
-  dynPropValuesMap: PropValuesMap | undefined = undefined;
 
   constructor(
     private node: CoreNode,
@@ -71,7 +70,7 @@ export class CoreAnimation extends EventEmitter {
         this.propValuesMap['shaderProps'] = {};
         for (const key in props.shaderProps) {
           this.propValuesMap['shaderProps'][key] = {
-            start: node.shader.props[key] as number,
+            start: node.shader.props![key] as number,
             target: props.shaderProps[key] as number,
           };
         }
@@ -127,20 +126,6 @@ export class CoreAnimation extends EventEmitter {
         this.propValuesMap['shaderProps'],
       );
     }
-
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.restoreValues(
-            this.node.shader!.props[key],
-            this.dynPropValuesMap[key]!,
-          );
-        }
-      }
-    }
   }
 
   private reverseValues(valueMap: Record<string, PropValues>) {
@@ -164,17 +149,6 @@ export class CoreAnimation extends EventEmitter {
     }
     if (this.propValuesMap['shaderProps'] !== undefined) {
       this.reverseValues(this.propValuesMap['shaderProps']);
-    }
-
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.reverseValues(this.dynPropValuesMap[key]!);
-        }
-      }
     }
 
     // restore stop method if we are not looping
@@ -293,21 +267,6 @@ export class CoreAnimation extends EventEmitter {
         this.propValuesMap['shaderProps'],
         easing,
       );
-    }
-
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.updateValues(
-            this.node.shader!.props[key],
-            this.dynPropValuesMap[key]!,
-            easing,
-          );
-        }
-      }
     }
 
     if (this.progress < 1) {

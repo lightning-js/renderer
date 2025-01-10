@@ -43,6 +43,7 @@ import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
 import { setupMathRandom } from './common/setupMathRandom.js';
+import { installShaders } from './common/installShaders.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -261,6 +262,7 @@ async function initRenderer(
     },
     'app',
   );
+  await installShaders(renderer.stage, renderMode);
   installFonts(renderer.stage);
 
   /**

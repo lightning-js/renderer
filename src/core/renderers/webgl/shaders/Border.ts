@@ -1,95 +1,82 @@
 import { assertTruthy } from '../../../../utils.js';
 import type { CoreNode } from '../../../CoreNode.js';
-import {
-  calcFactoredRadius,
-  calcFactoredRadiusArray,
-} from '../../../lib/utils.js';
+import { calcFactoredRadiusArray } from '../../../lib/utils.js';
 import {
   BorderTemplate,
   type BorderProps,
 } from '../../../shaders/BorderTemplate.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
-import type { WebGlShaderType } from '../WebGlShaderProgram.js';
+import type { Vec4 } from '../internal/ShaderUtils.js';
+import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const Border: WebGlShaderType<BorderProps> = {
   name: BorderTemplate.name,
   props: BorderTemplate.props,
   update(node: CoreNode) {
     assertTruthy(this.props);
-    this.uniform1f('u_width', this.props.width);
+    this.uniform4fv('u_width', new Float32Array(this.props.width as Vec4));
     this.uniformRGBA('u_color', this.props.color);
-    if (!Array.isArray(this.props.radius)) {
-      this.uniform1f(
-        'u_radius',
-        calcFactoredRadius(this.props.radius, node.width, node.height),
-      );
-    } else {
-      const fRadius = calcFactoredRadiusArray(
-        this.props.radius,
-        node.width,
-        node.height,
-      );
-      this.uniform4f(
-        'u_radius',
-        fRadius[0],
-        fRadius[1],
-        fRadius[2],
-        fRadius[3],
-      );
+
+    // this.uniform4fv('u_shadow', new Float32Array([0, 10, 30, 10]))
+
+    const fRadius = calcFactoredRadiusArray(
+      this.props.radius as Vec4,
+      node.width,
+      node.height,
+    );
+    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
+  },
+  fragment: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+
+    uniform vec2 u_resolution;
+    uniform float u_pixelRatio;
+    uniform float u_alpha;
+    uniform vec2 u_dimensions;
+    uniform sampler2D u_texture;
+
+    uniform vec4 u_width;
+    uniform vec4 u_color;
+    uniform vec4 u_radius;
+    uniform vec4 u_shadow;
+
+    varying vec4 v_color;
+    varying vec2 v_position;
+    varying vec2 v_textureCoordinate;
+
+    float roundedBox(vec2 p, vec2 s, vec4 r) {
+      r.xy = (p.x > 0.0) ? r.yz : r.xw;
+      r.x = (p.y > 0.0) ? r.y : r.x;
+      vec2 q = abs(p) - s + r.x;
+      return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
     }
-  },
-  getCacheMarkers(props: BorderProps) {
-    return `radiusArray:${Array.isArray(props.radius)}`;
-  },
-  fragment(renderer: WebGlCoreRenderer, props: BorderProps) {
-    return `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
 
-      uniform float u_alpha;
-      uniform vec2 u_dimensions;
-      uniform sampler2D u_texture;
+    void main() {
+      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec2 halfDimensions = (u_dimensions * 0.5);
 
-      uniform float u_width;
-      uniform vec4 u_color;
-      uniform ${Array.isArray(props.radius) ? 'vec4' : 'float'} u_radius;
+      vec2 outerBoxUv = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      float outerBoxDist = roundedBox(outerBoxUv, halfDimensions, u_radius);
 
-      varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
+      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, outerBoxDist);
 
-      void main() {
-        vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-        vec2 halfDimensions = u_dimensions * 0.5;
-        vec2 size = halfDimensions + 0.5;
+      vec4 borderWidth = u_width;
+      // borderWidth.xy = (outerBoxUv.x > 0.0) > borderWidth.xy ? borderWidth.xw;
+      // borderWidth.x = (outerBoxUv.x > 0.0) > borderWidth.x ? borderWidth.y;
 
-        vec2 pos = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      float borderAlpha = 1.0 - smoothstep(borderWidth.x - u_pixelRatio, borderWidth.x, abs(outerBoxDist));
+      // float shadowDist = roundedBox(outerBoxUv + u_shadow.xy, halfDimensions, u_radius);
+      // float shadowAlpha = 1.0 - smoothstep(-u_shadow.z, u_shadow.z, shadowDist);
 
-        ${
-          Array.isArray(props.radius)
-            ? `
-            float radius = u_radius[0] * step(v_textureCoordinate.x, 0.5) * step(v_textureCoordinate.y, 0.5);
-            radius = radius + u_radius[1] * step(0.5, v_textureCoordinate.x) * step(v_textureCoordinate.y, 0.5);
-            radius = radius + u_radius[2] * step(0.5, v_textureCoordinate.x) * step(0.5, v_textureCoordinate.y);
-            radius = radius + u_radius[3] * step(v_textureCoordinate.x, 0.5) * step(0.5, v_textureCoordinate.y);
-          `
-            : `
-            float radius = u_radius;
-          `
-        }
+      vec4 resColor = vec4(0.0);
+      //resColor = mix(resColor, vec4(vec3(0.4), shadowAlpha), shadowAlpha);
+      resColor = mix(resColor, color, min(color.a, roundedAlpha));
+      resColor = mix(resColor, u_color , min(u_color.a, min(borderAlpha, roundedAlpha)));
 
-        //calc shape of rectangle
-        size -= vec2(radius);
-        vec2 dist = abs(pos) - size;
-        float shape = (min(max(dist.x, dist.y), 0.0) + length(max(dist, 0.0)) - radius) + 1.0;
-        color = mix(vec4(0.0), color, clamp(-shape, 0.0, 1.0));
-
-        //calc signed distance for border
-        shape = clamp(shape + u_width, 0.0, 1.0) - clamp(shape, 0.0, 1.0);
-        gl_FragColor = mix(color, mix(color, u_color, u_color.a), shape) * u_alpha;
-      }
-    `;
-  },
+      gl_FragColor = resColor;
+    }
+  `,
 };

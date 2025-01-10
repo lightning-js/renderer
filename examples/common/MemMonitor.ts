@@ -96,18 +96,18 @@ export class MemMonitor extends Component {
       width: BAR_WIDTH,
       height: BAR_HEIGHT,
       rtt: true,
-      shader: renderer.createShader('DynamicShader', {
-        effects: [
-          {
-            name: 'e1',
-            type: 'border',
-            props: {
-              color: 0x000000cc,
-              width: 4,
-            },
-          },
-        ],
-      }),
+      // shader: renderer.createShader('DynamicShader', {
+      //   effects: [
+      //     {
+      //       name: 'e1',
+      //       type: 'border',
+      //       props: {
+      //         color: 0x000000cc,
+      //         width: 4,
+      //       },
+      //     },
+      //   ],
+      // }),
       parent: this.bar,
     });
 
