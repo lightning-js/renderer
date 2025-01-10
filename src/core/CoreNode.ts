@@ -1399,9 +1399,7 @@ export class CoreNode extends EventEmitter {
    * @param isRenderable - The new renderable state
    */
   setRenderable(isRenderable: boolean) {
-    if (this.isRenderable !== isRenderable) {
-      this.isRenderable = isRenderable;
-    }
+    this.isRenderable = isRenderable;
   }
 
   /**
