@@ -27,7 +27,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader('RoundedRectangle', { radius: 10 }),
+    shader: renderer.createShader('RoundedRectangle', { radius: 30 }),
     parent: testRoot,
   });
 

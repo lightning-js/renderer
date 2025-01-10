@@ -1,5 +1,4 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { LinearGradient } from '@lightningjs/renderer/webgl/shaders';
 import elevatorPng from '../assets/elevator.png';
 
 export async function automation(settings: ExampleSettings) {
@@ -22,7 +21,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(LinearGradient),
+    shader: renderer.createShader('LinearGradient'),
     parent: testRoot,
   });
 
@@ -32,7 +31,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(LinearGradient, {
+    shader: renderer.createShader('LinearGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff],
       angle: degToRad(45),
     }),
@@ -45,7 +44,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0x00ff00ff,
-    shader: renderer.createShader(LinearGradient, {
+    shader: renderer.createShader('LinearGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff, 0xff0000ff],
       angle: degToRad(70),
     }),
@@ -58,7 +57,7 @@ export default async function ({
     width: 600,
     height: 400,
     src: elevatorPng,
-    shader: renderer.createShader(LinearGradient, {
+    shader: renderer.createShader('LinearGradient', {
       colors: [0x000000ff, 0x00000000],
       stops: [0.5, 1.0],
       angle: degToRad(270),

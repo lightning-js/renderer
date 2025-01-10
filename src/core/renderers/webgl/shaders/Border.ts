@@ -1,6 +1,6 @@
 import { assertTruthy } from '../../../../utils.js';
 import type { CoreNode } from '../../../CoreNode.js';
-import { calcFactoredRadiusArray } from '../../../lib/utils.js';
+import { calcFactoredRadiusArray, valuesAreEqual } from '../../../lib/utils.js';
 import {
   BorderTemplate,
   type BorderProps,
@@ -14,10 +14,12 @@ export const Border: WebGlShaderType<BorderProps> = {
   update(node: CoreNode) {
     assertTruthy(this.props);
     this.uniform4fv('u_width', new Float32Array(this.props.width as Vec4));
+    this.uniform1i(
+      'u_asymWidth',
+      valuesAreEqual(this.props.width as number[]) ? 0 : 1,
+    );
+
     this.uniformRGBA('u_color', this.props.color);
-
-    this.uniform4fv('u_shadow', new Float32Array([0, 10, 30, 10]));
-
     const fRadius = calcFactoredRadiusArray(
       this.props.radius as Vec4,
       node.width,
@@ -50,7 +52,7 @@ export const Border: WebGlShaderType<BorderProps> = {
       vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
 
       vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
-      vec2 shadowEdge = outerEdge + u_shadow.xy + u_shadow.w + u_shadow.z;
+      vec2 shadowEdge = outerEdge;// + u_shadow.xy + u_shadow.w + u_shadow.z;
       vec2 vertexPos = normalized + outerEdge + shadowEdge;
       v_color = a_color;
       v_textureCoordinate = a_textureCoordinate;
@@ -76,6 +78,8 @@ export const Border: WebGlShaderType<BorderProps> = {
     uniform vec4 u_radius;
     uniform vec4 u_shadow;
 
+    uniform int u_asymWidth;
+
     varying vec4 v_color;
     varying vec2 v_position;
     varying vec2 v_textureCoordinate;
@@ -87,6 +91,18 @@ export const Border: WebGlShaderType<BorderProps> = {
       return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
     }
 
+    float asymBorderWidth(vec2 p, float d, vec4 r, vec4 w) {
+      r.x = r.x - (max(w.w, w.x) - min(w.w, w.x));
+      r.y = r.y - (max(w.y, w.x) - min(w.y, w.x));
+      r.z = r.x - (max(w.y, w.z) - min(w.y, w.z));
+      r.w = r.w - (max(w.w, w.z) - min(w.w, w.z));
+      p.x = p.x + w[1] * 0.5;
+      p.y = p.y + w[2] * 0.5;
+      vec2 size = vec2(u_dimensions.x - (w.w + w.y), u_dimensions.y - (w.x + w.z)) * 0.5 + u_pixelRatio;
+      float borderDist = roundedBox(p, size, r);
+      return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
+    }
+
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
@@ -95,21 +111,19 @@ export const Border: WebGlShaderType<BorderProps> = {
       float outerBoxDist = roundedBox(outerBoxUv, halfDimensions, u_radius);
 
       float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, outerBoxDist);
+      float borderAlpha = 0.0;
 
-      vec4 borderWidth = u_width;
-      // borderWidth.xy = (outerBoxUv.x > 0.0) > borderWidth.xy ? borderWidth.xw;
-      // borderWidth.x = (outerBoxUv.x > 0.0) > borderWidth.x ? borderWidth.y;
-
-      float borderAlpha = 1.0 - smoothstep(borderWidth.x - u_pixelRatio, borderWidth.x, abs(outerBoxDist));
-      float shadowDist = roundedBox(outerBoxUv + u_shadow.xy, halfDimensions, u_radius);
-      float shadowAlpha = 1.0 - smoothstep(-u_shadow.z, u_shadow.z, shadowDist);
+      if(u_asymWidth == 1) {
+        borderAlpha = asymBorderWidth(outerBoxUv, outerBoxDist, u_radius, u_width);
+      }
+      else {
+        borderAlpha = 1.0 - smoothstep(u_width[0] - u_pixelRatio, u_width[0], abs(outerBoxDist));
+      }
 
       vec4 resColor = vec4(0.0);
-      resColor = mix(resColor, vec4(vec3(0.4), shadowAlpha), shadowAlpha);
       resColor = mix(resColor, color, min(color.a, roundedAlpha));
       resColor = mix(resColor, u_color , min(u_color.a, min(borderAlpha, roundedAlpha)));
-
-      gl_FragColor = resColor;
+      gl_FragColor = resColor * u_alpha;
     }
   `,
 };

@@ -1,5 +1,4 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { RadialGradient } from '@lightningjs/renderer/webgl/shaders';
 import elevatorPng from '../assets/elevator.png';
 
 export async function automation(settings: ExampleSettings) {
@@ -19,7 +18,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(RadialGradient, {
+    shader: renderer.createShader('RadialGradient', {
       width: 400,
       height: 400,
     }),
@@ -32,7 +31,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(RadialGradient, {
+    shader: renderer.createShader('RadialGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff],
       width: 600,
       height: 400,
@@ -46,7 +45,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0x00ff00ff,
-    shader: renderer.createShader(RadialGradient, {
+    shader: renderer.createShader('RadialGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff, 0xff0000ff],
       width: 400,
       height: 600,
@@ -60,7 +59,7 @@ export default async function ({
     width: 600,
     height: 400,
     src: elevatorPng,
-    shader: renderer.createShader(RadialGradient, {
+    shader: renderer.createShader('RadialGradient', {
       colors: [0x00000000, 0x000000ff],
       stops: [0.3, 1.0],
       width: 600,
