@@ -6,7 +6,7 @@ import {
   type RadialGradientProps,
 } from '../../../shaders/RadialGradientTemplate.js';
 import { genGradientColors } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
+import type { WebGlRenderer } from '../WebGlRenderer.js';
 import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
@@ -32,7 +32,7 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
   getCacheMarkers(props: RadialGradientProps) {
     return `colors:${props.colors.length}`;
   },
-  fragment(renderer: WebGlCoreRenderer, props: RadialGradientProps) {
+  fragment(renderer: WebGlRenderer, props: RadialGradientProps) {
     return `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;

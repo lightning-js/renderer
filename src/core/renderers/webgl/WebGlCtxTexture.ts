@@ -39,7 +39,7 @@ const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
  * and trigger the loading/uploading of the texture's data if it hasn't been
  * loaded yet.
  */
-export class WebGlCoreCtxTexture extends CoreContextTexture {
+export class WebGlCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
   private _w = 0;
   private _h = 0;

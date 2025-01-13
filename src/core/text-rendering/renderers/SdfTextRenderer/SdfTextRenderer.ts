@@ -47,17 +47,17 @@ import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
 import { type FontFamilyMap } from '../../TrFontManager.js';
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
-import { WebGlCoreRenderOp } from '../../../renderers/webgl/WebGlCoreRenderOp.js';
+import { WebGlRenderOp } from '../../../renderers/webgl/WebGlRenderOp.js';
 import { BufferCollection } from '../../../renderers/webgl/internal/BufferCollection.js';
 import {
   Sdf,
   type SdfShaderProps,
 } from '../../../renderers/webgl/shaders/SdfShader.js';
-import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
+import type { WebGlCtxTexture } from '../../../renderers/webgl/WebGlCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
 import type { Dimensions } from '../../../../common/CommonTypes.js';
-import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
+import { WebGlRenderer } from '../../../renderers/webgl/WebGlRenderer.js';
 import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
 import type { WebGlShaderProgram } from '../../../renderers/webgl/WebGlShaderProgram.js';
 import type { WebGlShaderNode } from '../../../renderers/webgl/WebGlShaderNode.js';
@@ -613,7 +613,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     }
 
     const renderer = this.stage.renderer;
-    assertTruthy(renderer instanceof WebGlCoreRenderer);
+    assertTruthy(renderer instanceof WebGlRenderer);
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
@@ -691,7 +691,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       }
     }
 
-    const renderOp = new WebGlCoreRenderOp(
+    const renderOp = new WebGlRenderOp(
       renderer,
       {
         shader: this.sdfShader,
@@ -710,7 +710,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     assertTruthy(texture);
     const ctxTexture = texture.ctxTexture;
 
-    renderOp.addTexture(ctxTexture as WebGlCoreCtxTexture);
+    renderOp.addTexture(ctxTexture as WebGlCtxTexture);
     renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 

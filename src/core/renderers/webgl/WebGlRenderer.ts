@@ -24,7 +24,7 @@ import {
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
-import { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
+import { WebGlRenderOp } from './WebGlRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -34,17 +34,17 @@ import {
   getWebGlExtensions,
   type WebGlColor,
 } from './internal/RendererUtils.js';
-import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import { Texture, TextureType } from '../../textures/Texture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
-import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
+import { WebGlCtxSubTexture } from './WebGlCtxSubTexture.js';
 import { BufferCollection } from './internal/BufferCollection.js';
 import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
-import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
+import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from './shaders/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
@@ -52,14 +52,14 @@ import { WebGlShaderNode } from './WebGlShaderNode.js';
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
-export type WebGlCoreRendererOptions = CoreRendererOptions;
+export type WebGlRendererOptions = CoreRendererOptions;
 
 interface CoreWebGlSystem {
   parameters: CoreWebGlParameters;
   extensions: CoreWebGlExtensions;
 }
 
-export class WebGlCoreRenderer extends CoreRenderer {
+export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
   glw: WebGlContextWrapper;
   system: CoreWebGlSystem;
@@ -68,11 +68,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
   quadBuffer: ArrayBuffer;
   fQuadBuffer: Float32Array;
   uiQuadBuffer: Uint32Array;
-  renderOps: WebGlCoreRenderOp[] = [];
+  renderOps: WebGlRenderOp[] = [];
 
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
-  curRenderOp: WebGlCoreRenderOp | null = null;
+  curRenderOp: WebGlRenderOp | null = null;
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
 
@@ -95,7 +95,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   public renderToTextureActive = false;
 
-  constructor(options: WebGlCoreRendererOptions) {
+  constructor(options: WebGlRendererOptions) {
     super(options);
 
     this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
@@ -200,19 +200,19 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {
     if (textureSource instanceof SubTexture) {
-      return new WebGlCoreCtxSubTexture(
+      return new WebGlCtxSubTexture(
         this.glw,
         this.stage.txMemManager,
         textureSource,
       );
     } else if (textureSource instanceof RenderTexture) {
-      return new WebGlCoreCtxRenderTexture(
+      return new WebGlCtxRenderTexture(
         this.glw,
         this.stage.txMemManager,
         textureSource,
       );
     }
-    return new WebGlCoreCtxTexture(
+    return new WebGlCtxTexture(
       this.glw,
       this.stage.txMemManager,
       textureSource,
@@ -311,8 +311,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+    const ctxTexture = texture.ctxTexture as WebGlCtxTexture;
+    assertTruthy(ctxTexture instanceof WebGlCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
@@ -434,7 +434,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @param bufferIdx
    */
   private newRenderOp(quad: QuadOptions, bufferIdx: number) {
-    const curRenderOp = new WebGlCoreRenderOp(this, quad, bufferIdx);
+    const curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
   }
@@ -452,7 +452,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    * @returns Assigned Texture Index of the texture in the render op
    */
   private addTexture(
-    texture: WebGlCoreCtxTexture,
+    texture: WebGlCtxTexture,
     bufferIdx: number,
     recursive?: boolean,
   ): number {
@@ -514,7 +514,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
   /**
    * add RenderOp to the render pipeline
    */
-  addRenderOp(renderable: WebGlCoreRenderOp) {
+  addRenderOp(renderable: WebGlRenderOp) {
     this.renderOps.push(renderable);
     this.curRenderOp = null;
   }
@@ -540,7 +540,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      const renderOp = this.renderOps[i] as WebGlCoreRenderOp;
+      const renderOp = this.renderOps[i] as WebGlRenderOp;
       if (doLog) {
         console.log('Quads per operation', renderOp.numQuads);
       }
@@ -656,7 +656,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       assertTruthy(node.texture !== null, 'RTT node missing texture');
       const ctxTexture = node.texture.ctxTexture;
-      assertTruthy(ctxTexture instanceof WebGlCoreCtxRenderTexture);
+      assertTruthy(ctxTexture instanceof WebGlCtxRenderTexture);
       this.renderToTextureActive = true;
 
       // Bind the the texture's framebuffer

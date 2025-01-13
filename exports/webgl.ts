@@ -36,6 +36,13 @@
  */
 
 export { SdfTextRenderer } from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-export { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
+export { WebGlRenderer } from '../src/core/renderers/webgl/WebGlRenderer.js';
+export { WebGlCtxTexture } from '../src/core/renderers/webgl/WebGlCtxTexture.js';
+
+/**
+ * @deprecated Use WebGlRenderer.
+ */
+export { WebGlRenderer as WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlRenderer.js';
+export { WebGlRenderer as WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlRenderer.js';
 
 export * as shaders from './webgl-shaders.js';

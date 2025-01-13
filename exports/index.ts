@@ -53,9 +53,6 @@ export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
-
-export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
-export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
@@ -85,3 +82,12 @@ export * from '../src/core/text-rendering/font-face-types/SdfTrFontFace/SdfTrFon
 
 // Stage (type only for Core Extensions)
 export type * from '../src/core/Stage.js';
+
+/**
+ * @deprecated Use `import { WebGlRenderer } @lightningjs/renderer/webgl` instead
+ */
+export type { WebGlRenderer as WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlRenderer.js';
+/**
+ * @deprecated Use `import { WebGlCtxTexture } @lightningjs/renderer/webgl` instead
+ */
+export type { WebGlCtxTexture as WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCtxTexture.js';

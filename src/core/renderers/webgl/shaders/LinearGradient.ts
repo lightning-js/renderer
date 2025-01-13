@@ -5,7 +5,7 @@ import {
   type LinearGradientProps,
 } from '../../../shaders/LinearGradientTemplate.js';
 import { genGradientColors } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
+import type { WebGlRenderer } from '../WebGlRenderer.js';
 import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
@@ -25,7 +25,7 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
   getCacheMarkers(props: LinearGradientProps) {
     return `colors:${props.colors.length}`;
   },
-  fragment(renderer: WebGlCoreRenderer, props: LinearGradientProps) {
+  fragment(renderer: WebGlRenderer, props: LinearGradientProps) {
     return `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;

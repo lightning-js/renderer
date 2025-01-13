@@ -26,7 +26,7 @@ import {
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
-import { CanvasCoreTexture } from './CanvasCoreTexture.js';
+import { CanvasTexture } from './CanvasTexture.js';
 import {
   CanvasShaderProgram,
   type CanvasShaderType,
@@ -39,7 +39,7 @@ import {
 import { CoreShaderNode } from '../CoreShaderNode.js';
 import { assertTruthy } from '../../../utils.js';
 
-export class CanvasCoreRenderer extends CoreRenderer {
+export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private pixelRatio: number;
@@ -177,9 +177,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const hasGradient =
       quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
     if (textureType === TextureType.image && quad.texture?.ctxTexture) {
-      const image = (quad.texture.ctxTexture as CanvasCoreTexture).getImage(
-        color,
-      );
+      const image = (quad.texture.ctxTexture as CanvasTexture).getImage(color);
       this.context.globalAlpha = color.a ?? quad.alpha;
       if (quad.texture instanceof SubTexture) {
         this.context.drawImage(
@@ -259,7 +257,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {
-    return new CanvasCoreTexture(this.stage.txMemManager, textureSource);
+    return new CanvasTexture(this.stage.txMemManager, textureSource);
   }
 
   renderRTTNodes(): void {

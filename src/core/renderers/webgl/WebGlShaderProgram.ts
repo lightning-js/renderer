@@ -19,9 +19,9 @@
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
-import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { WebGlCoreRenderOp } from './WebGlCoreRenderOp.js';
-import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
+import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
+import type { WebGlRenderOp } from './WebGlRenderOp.js';
+import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
@@ -44,7 +44,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
    * Used by WebGL2 Only
    */
   protected vao: WebGLVertexArrayObject | undefined;
-  protected renderer: WebGlCoreRenderer;
+  protected renderer: WebGlRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
@@ -53,7 +53,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   supportsIndexedTextures = false;
 
   constructor(
-    renderer: WebGlCoreRenderer,
+    renderer: WebGlRenderer,
     config: WebGlShaderType,
     resolvedProps: Record<string, any>,
   ) {
@@ -177,7 +177,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     return true;
   }
 
-  bindRenderOp(renderOp: WebGlCoreRenderOp) {
+  bindRenderOp(renderOp: WebGlRenderOp) {
     this.bindBufferCollection(renderOp.buffers);
     this.bindTextures(renderOp.textures);
 
@@ -278,7 +278,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  bindTextures(textures: WebGlCoreCtxTexture[]) {
+  bindTextures(textures: WebGlCtxTexture[]) {
     this.glw.activeTexture(0);
     this.glw.bindTexture(textures[0]!.ctxTexture);
   }

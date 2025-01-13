@@ -22,9 +22,9 @@ import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
-import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 
-export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
+export class WebGlCtxRenderTexture extends WebGlCtxTexture {
   declare textureSource: RenderTexture;
   readonly framebuffer: WebGLFramebuffer;
 

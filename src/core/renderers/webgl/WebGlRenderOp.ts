@@ -18,8 +18,8 @@
  */
 
 import { CoreRenderOp } from '../CoreRenderOp.js';
-import type { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
-import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
+import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
+import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { QuadOptions } from '../CoreRenderer.js';
@@ -39,16 +39,16 @@ type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
  *
  */
-export class WebGlCoreRenderOp extends CoreRenderOp {
+export class WebGlRenderOp extends CoreRenderOp {
   length = 0;
   numQuads = 0;
-  textures: WebGlCoreCtxTexture[] = [];
+  textures: WebGlCtxTexture[] = [];
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
   readonly shader: WebGlShaderNode;
 
   constructor(
-    readonly renderer: WebGlCoreRenderer,
+    readonly renderer: WebGlRenderer,
     readonly quad: RenderOpQuadOptions,
     readonly bufferIdx: number,
   ) {
@@ -63,7 +63,7 @@ export class WebGlCoreRenderOp extends CoreRenderOp {
       : 1;
   }
 
-  addTexture(texture: WebGlCoreCtxTexture): number {
+  addTexture(texture: WebGlCtxTexture): number {
     const { textures, maxTextures } = this;
     let existingIdx = -1;
     const texturesLength = textures.length;

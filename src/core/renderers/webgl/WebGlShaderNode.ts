@@ -4,12 +4,10 @@ import type { Stage } from '../../Stage.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type { UniformCollection } from './internal/ShaderUtils.js';
-import type { WebGlCoreRenderer } from './WebGlCoreRenderer.js';
+import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
-type ShaderSource<T> =
-  | string
-  | ((renderer: WebGlCoreRenderer, props: T) => string);
+type ShaderSource<T> = string | ((renderer: WebGlRenderer, props: T) => string);
 
 export type WebGlShaderType<T extends object = Record<string, unknown>> =
   CoreShaderType<T> & {

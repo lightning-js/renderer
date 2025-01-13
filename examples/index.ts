@@ -23,12 +23,9 @@ import {
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
+import { WebGlRenderer, SdfTextRenderer } from '@lightningjs/renderer/webgl';
 import {
-  WebGlCoreRenderer,
-  SdfTextRenderer,
-} from '@lightningjs/renderer/webgl';
-import {
-  CanvasCoreRenderer,
+  CanvasRenderer,
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
@@ -254,8 +251,7 @@ async function initRenderer(
       enableContextSpy,
       forceWebGL2,
       inspector,
-      renderEngine:
-        renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
+      renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       textureProcessingLimit: textureProcessingLimit,
       ...customSettings,

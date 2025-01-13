@@ -22,9 +22,9 @@ import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
-import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
+import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 
-export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
+export class WebGlCtxSubTexture extends WebGlCtxTexture {
   constructor(
     glw: WebGlContextWrapper,
     memManager: TextureMemoryManager,

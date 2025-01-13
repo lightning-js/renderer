@@ -22,7 +22,7 @@ import { assertTruthy } from '../../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { formatRgba, type IParsedColor } from './internal/ColorUtils.js';
 
-export class CanvasCoreTexture extends CoreContextTexture {
+export class CanvasTexture extends CoreContextTexture {
   protected image:
     | ImageBitmap
     | HTMLCanvasElement

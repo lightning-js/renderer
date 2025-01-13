@@ -45,8 +45,8 @@ import {
 } from './TextureMemoryManager.js';
 import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
-import type { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
+import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
+import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
@@ -69,7 +69,7 @@ export interface StageOptions {
   enableContextSpy: boolean;
   forceWebGL2: boolean;
   numImageWorkers: number;
-  renderEngine: typeof WebGlCoreRenderer | typeof CanvasCoreRenderer;
+  renderEngine: typeof WebGlRenderer | typeof CanvasRenderer;
   eventBus: EventEmitter;
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];

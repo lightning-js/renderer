@@ -1,7 +1,7 @@
 import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreShaderType } from '../CoreShaderNode.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
-import type { CanvasCoreRenderer } from './CanvasCoreRenderer.js';
+import type { CanvasRenderer } from './CanvasRenderer.js';
 
 export type CanvasShaderType<T extends object = Record<string, unknown>> =
   CoreShaderType<T> & {
@@ -24,7 +24,7 @@ export class CanvasShaderProgram implements CoreShaderProgram {
   saveAndRestore: boolean;
   render: CanvasShaderType['render'];
 
-  constructor(readonly renderer: CanvasCoreRenderer, config: CanvasShaderType) {
+  constructor(readonly renderer: CanvasRenderer, config: CanvasShaderType) {
     this.saveAndRestore = config.saveAndRestore || false;
     this.render = config.render;
   }

@@ -27,8 +27,8 @@ import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
-import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
+import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
+import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { Inspector } from './Inspector.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 import type {
@@ -166,7 +166,7 @@ export interface RendererMainSettings {
    * both CanvasTextRenderer and SdfTextRenderer for Text Rendering.
    *
    */
-  renderEngine: typeof CanvasCoreRenderer | typeof WebGlCoreRenderer;
+  renderEngine: typeof CanvasRenderer | typeof WebGlRenderer;
 
   /**
    * Quad buffer size in bytes
