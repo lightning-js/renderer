@@ -193,7 +193,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 16383,
+  All = 14335,
 }
 
 /**
