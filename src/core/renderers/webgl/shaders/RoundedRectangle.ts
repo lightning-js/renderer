@@ -17,11 +17,7 @@
  * limitations under the License.
  */
 import type { WebGlShaderType } from '../WebGlShaderNode.js';
-import {
-  calcFactoredRadius,
-  calcFactoredRadiusArray,
-} from '../../../lib/utils.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
+import { calcFactoredRadiusArray } from '../../../lib/utils.js';
 import {
   RoundedRectangleTemplate,
   type RoundedRectangleProps,
@@ -39,75 +35,45 @@ export const RoundedRectangle: WebGlShaderType<RoundedRectangleProps> = {
   props: RoundedRectangleTemplate.props,
   update(node: CoreNode) {
     assertTruthy(this.props);
-    if (!Array.isArray(this.props.radius)) {
-      this.uniform1f(
-        'u_radius',
-        calcFactoredRadius(this.props.radius, node.width, node.height),
-      );
-    } else {
-      const fRadius = calcFactoredRadiusArray(
-        this.props.radius as Vec4,
-        node.width,
-        node.height,
-      );
-      this.uniform4f(
-        'u_radius',
-        fRadius[0],
-        fRadius[1],
-        fRadius[2],
-        fRadius[3],
-      );
-    }
+    const fRadius = calcFactoredRadiusArray(
+      this.props.radius as Vec4,
+      node.width,
+      node.height,
+    );
+    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
   },
   getCacheMarkers(props: RoundedRectangleProps) {
     return `radiusArray:${Array.isArray(props.radius)}`;
   },
-  fragment(renderer: WebGlCoreRenderer, props: RoundedRectangleProps) {
-    return `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
+  fragment: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
 
-      uniform vec2 u_resolution;
-      uniform vec2 u_dimensions;
-      uniform ${Array.isArray(props.radius) ? 'vec4' : 'float'} u_radius;
-      uniform sampler2D u_texture;
+    uniform vec2 u_resolution;
+    uniform vec2 u_dimensions;
+    uniform float u_pixelRatio;
+    uniform vec4 u_radius;
+    uniform sampler2D u_texture;
 
-      varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
-      varying vec2 v_position;
+    varying vec4 v_color;
+    varying vec2 v_textureCoordinate;
+    varying vec2 v_position;
 
-      float boxDist(vec2 p, vec2 size, float radius){
-        size -= vec2(radius);
-        vec2 d = abs(p) - size;
-        return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
-      }
+    void main() {
+      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec2 halfDimensions = u_dimensions * 0.5;
 
-      float fillMask(float dist) {
-        return clamp(-dist, 0.0, 1.0);
-      }
-
-      void main() {
-        vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-        vec2 halfDimensions = u_dimensions * 0.5;
-        ${
-          Array.isArray(props.radius)
-            ? `
-            float radius = u_radius[0] * step(v_textureCoordinate.x, 0.5) * step(v_textureCoordinate.y, 0.5);
-            radius = radius + u_radius[1] * step(0.5, v_textureCoordinate.x) * step(v_textureCoordinate.y, 0.5);
-            radius = radius + u_radius[2] * step(0.5, v_textureCoordinate.x) * step(0.5, v_textureCoordinate.y);
-            radius = radius + u_radius[3] * step(v_textureCoordinate.x, 0.5) * step(0.5, v_textureCoordinate.y);
-          `
-            : `
-            float radius = u_radius;
-          `
-        }
-
-        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, radius);
-        gl_FragColor = mix(vec4(0.0), color, fillMask(d));
-      }
-    `;
-  },
+      vec2 p = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec4 r = u_radius;
+      r.xy = (p.x > 0.0) ? r.yz : r.xw;
+      r.x = (p.y > 0.0) ? r.y : r.x;
+      p = abs(p) - halfDimensions + r.x;
+      float dist = min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x;
+      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, dist);
+      gl_FragColor = mix(vec4(0.0), color, min(color.a, roundedAlpha));
+    }
+  `,
 };

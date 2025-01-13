@@ -1,14 +1,10 @@
 import { assertTruthy } from '../../../../utils.js';
-import {
-  calcFactoredRadius,
-  calcFactoredRadiusArray,
-} from '../../../lib/utils.js';
+import { calcFactoredRadiusArray } from '../../../lib/utils.js';
 import {
   HolePunchTemplate,
   type HolePunchProps,
 } from '../../../shaders/HolePunchTemplate.js';
 import type { Vec4 } from '../internal/ShaderUtils.js';
-import type { WebGlCoreRenderer } from '../WebGlCoreRenderer.js';
 import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 export const HolePunch: WebGlShaderType<HolePunchProps> = {
@@ -21,35 +17,17 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
     //precalculate to halfSize once instead of for every pixel
     this.uniform2f('u_size', this.props.width * 0.5, this.props.height * 0.5);
 
-    if (!Array.isArray(this.props.radius)) {
-      this.uniform1f(
-        'u_radius',
-        calcFactoredRadius(
-          this.props.radius,
-          this.props.width,
-          this.props.height,
-        ),
-      );
-    } else {
-      const fRadius = calcFactoredRadiusArray(
-        this.props.radius as Vec4,
-        this.props.width,
-        this.props.height,
-      );
-      this.uniform4f(
-        'u_radius',
-        fRadius[0],
-        fRadius[1],
-        fRadius[2],
-        fRadius[3],
-      );
-    }
+    const fRadius = calcFactoredRadiusArray(
+      this.props.radius as Vec4,
+      this.props.width,
+      this.props.height,
+    );
+    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
   },
   getCacheMarkers(props: HolePunchProps) {
     return `radiusArray:${Array.isArray(props.radius)}`;
   },
-  fragment(renderer: WebGlCoreRenderer, props: HolePunchProps) {
-    return `
+  fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     # else
@@ -57,13 +35,14 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
     # endif
 
     uniform float u_alpha;
+    uniform float u_pixelRatio;
     uniform vec2 u_dimensions;
     uniform sampler2D u_texture;
 
     uniform vec2 u_size;
     uniform vec2 u_pos;
 
-    uniform ${Array.isArray(props.radius) ? 'vec4' : 'float'} u_radius;
+    uniform vec4 u_radius;
 
     uniform vec4 u_color;
     varying vec4 v_color;
@@ -71,26 +50,14 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 basePos = v_textureCoordinate.xy * u_dimensions.xy - u_pos;
-      vec2 pos = basePos - u_size;
-      ${
-        Array.isArray(props.radius)
-          ? `
-          float radius = u_radius[0] * step(pos.x, 0.5) * step(pos.y, 0.5);
-          radius = radius + u_radius[1] * step(0.5, pos.x) * step(pos.y, 0.5);
-          radius = radius + u_radius[2] * step(0.5, pos.x) * step(0.5, pos.y);
-          radius = radius + u_radius[3] * step(pos.x, 0.5) * step(0.5, pos.y);
-        `
-          : `
-          float radius = u_radius;
-        `
-      }
-
-      vec2 size = u_size - vec2(radius);
-      pos = abs(pos) - size;
-      float dist = min(max(pos.x, pos.y), 0.0) + length(max(pos, 0.0)) - radius;
-      gl_FragColor = mix(color, vec4(0.0), clamp(-dist, 0.0, 1.0));
+      vec2 p = (v_textureCoordinate.xy * u_dimensions.xy - u_pos) - u_size;
+      vec4 r = u_radius;
+      r.xy = (p.x > 0.0) ? r.yz : r.xw;
+      r.x = (p.y > 0.0) ? r.y : r.x;
+      p = abs(p) - u_size + r.x;
+      float dist = min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x;
+      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, dist);
+      gl_FragColor = mix(color, vec4(0.0), min(color.a, roundedAlpha));
     }
-  `;
-  },
+  `,
 };

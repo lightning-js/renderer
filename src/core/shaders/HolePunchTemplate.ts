@@ -1,4 +1,5 @@
 import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
+import { validateArrayLength4 } from './shaderUtils.js';
 
 /**
  * Properties of the {@link HolePunch} shader
@@ -52,6 +53,9 @@ export const HolePunchTemplate: CoreShaderType<HolePunchProps> = {
     y: 0,
     width: 50,
     height: 50,
-    radius: 0,
+    radius: {
+      default: [0, 0, 0, 0],
+      resolve: validateArrayLength4,
+    },
   },
 };

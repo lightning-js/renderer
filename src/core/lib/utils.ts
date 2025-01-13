@@ -315,6 +315,16 @@ export function calcFactoredRadius(
   return radius * Math.min(Math.min(width, height) / (2.0 * radius), 1);
 }
 
+export function valuesAreEqual(values: number[]) {
+  let prevValue = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (prevValue !== values[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function calcFactoredRadiusArray(
   radius: Vec4,
   width: number,

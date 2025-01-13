@@ -1,5 +1,4 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { HolePunch } from '@lightningjs/renderer/webgl/shaders';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
@@ -18,7 +17,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(HolePunch),
+    shader: renderer.createShader('HolePunch'),
     parent: testRoot,
   });
 
@@ -28,7 +27,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0xff0000ff,
-    shader: renderer.createShader(HolePunch, {
+    shader: renderer.createShader('HolePunch', {
       x: 100,
       y: 100,
       width: 100,
@@ -44,7 +43,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0x00ff00ff,
-    shader: renderer.createShader(HolePunch, {
+    shader: renderer.createShader('HolePunch', {
       x: 100,
       y: 100,
       width: 200,
@@ -60,7 +59,7 @@ export default async function ({
     width: 600,
     height: 400,
     color: 0x00ff00ff,
-    shader: renderer.createShader(HolePunch, {
+    shader: renderer.createShader('HolePunch', {
       x: 270,
       y: 200,
       width: 225,
