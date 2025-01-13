@@ -129,9 +129,6 @@ export class Stage {
   /// Debug data
   contextSpy: ContextSpy | null = null;
 
-  get preloudBound() {
-    return createPreloadBounds(this.strictBound, this.boundsMargin);
-  }
   /**
    * Stage constructor
    */
