@@ -53,6 +53,8 @@ import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
+import type { Texture } from './textures/Texture.js';
+import { ColorTexture } from './textures/ColorTexture.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -73,6 +75,7 @@ export interface StageOptions {
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
   strictBounds: boolean;
+  textureProcessingLimit: number;
 }
 
 export type StageFpsUpdateHandler = (
@@ -103,6 +106,7 @@ export class Stage {
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
+  public readonly defaultTexture: Texture | null = null;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -148,6 +152,13 @@ export class Stage {
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(numImageWorkers);
+
+    // Wait for the Texture Manager to initialize
+    // once it does, request a render
+    this.txManager.on('initialized', () => {
+      this.requestRender();
+    });
+
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
     this.shManager = new CoreShaderManager();
     this.animationManager = new AnimationManager();
@@ -183,6 +194,7 @@ export class Stage {
     this.renderer = new renderEngine(rendererOptions);
     const renderMode = this.renderer.mode || 'webgl';
 
+    this.createDefaultTexture();
     this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
@@ -290,6 +302,33 @@ export class Stage {
   }
 
   /**
+   * Create default PixelTexture
+   */
+  createDefaultTexture() {
+    (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
+      'ColorTexture',
+      {
+        color: 0xffffffff,
+      },
+    );
+
+    assertTruthy(this.defaultTexture instanceof ColorTexture);
+
+    this.txManager.loadTexture(this.defaultTexture, true);
+
+    // Mark the default texture as ALWAYS renderable
+    // This prevents it from ever being cleaned up.
+    // Fixes https://github.com/lightning-js/renderer/issues/262
+    this.defaultTexture.setRenderableOwner(this, true);
+
+    // When the default texture is loaded, request a render in case the
+    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
+    this.defaultTexture.once('loaded', () => {
+      this.requestRender();
+    });
+  }
+
+  /**
    * Update animations
    */
   updateAnimations() {
@@ -305,7 +344,11 @@ export class Stage {
    * Check if the scene has updates
    */
   hasSceneUpdates() {
-    return !!this.root.updateType || this.renderRequested;
+    return (
+      !!this.root.updateType ||
+      this.renderRequested ||
+      this.txManager.hasUpdates()
+    );
   }
 
   /**
@@ -319,6 +362,10 @@ export class Stage {
     if (this.root.updateType !== 0) {
       this.root.update(this.deltaTime, this.root.clippingRect);
     }
+
+    // Process some textures
+    // TODO this should have a configurable amount
+    this.txManager.processSome(this.options.textureProcessingLimit);
 
     // Reset render operations and clear the canvas
     renderer.reset();
@@ -407,6 +454,7 @@ export class Stage {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer);
 
+    // If the node is renderable and has a loaded texture, render it
     if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
     }

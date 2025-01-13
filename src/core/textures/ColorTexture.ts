@@ -62,7 +62,7 @@ export class ColorTexture extends Texture {
     this.props.color = color;
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
     const pixelData = new Uint8Array(4);
 
     if (this.color === 0xffffffff) {
@@ -76,6 +76,8 @@ export class ColorTexture extends Texture {
       pixelData[2] = this.color & 0xff; // Blue
       pixelData[3] = (this.color >>> 24) & 0xff; // Alpha
     }
+
+    this.setSourceState('loaded', { width: 1, height: 1 });
 
     return {
       data: pixelData,

@@ -18,6 +18,7 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
@@ -33,7 +34,8 @@ export class WebGlCoreCtxSubTexture extends WebGlCoreCtxTexture {
   }
 
   override async onLoadRequest(): Promise<Dimensions> {
-    const props = await (this.textureSource as SubTexture).getTextureData();
+    const props = (this.textureSource as SubTexture).textureData;
+    assertTruthy(props, 'SubTexture must have texture data');
 
     if (props.data instanceof Uint8Array) {
       // its a 1x1 Color Texture

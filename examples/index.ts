@@ -90,6 +90,8 @@ const defaultPhysicalPixelRatio = 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
   const enableInspector = urlParams.get('inspector') === 'true';
   const forceWebGL2 = urlParams.get('webgl2') === 'true';
+  const textureProcessingLimit =
+    Number(urlParams.get('textureProcessingLimit')) || 0;
 
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
@@ -114,6 +116,7 @@ const defaultPhysicalPixelRatio = 1;
       perfMultiplier,
       enableInspector,
       forceWebGL2,
+      textureProcessingLimit,
     );
     return;
   }
@@ -136,6 +139,7 @@ async function runTest(
   perfMultiplier: number,
   enableInspector: boolean,
   forceWebGL2: boolean,
+  textureProcessingLimit: number,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -157,6 +161,7 @@ async function runTest(
     physicalPixelRatio,
     enableInspector,
     forceWebGL2,
+    textureProcessingLimit,
     customSettings,
   );
 
@@ -170,9 +175,13 @@ async function runTest(
       parent: renderer.root,
       fontSize: 50,
     });
-    overlayText.once(
+    overlayText.on(
       'loaded',
-      (target: any, { dimensions }: NodeLoadedPayload) => {
+      (target: any, { type, dimensions }: NodeLoadedPayload) => {
+        if (type !== 'text') {
+          return;
+        }
+
         overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
         overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
       },
@@ -227,6 +236,7 @@ async function initRenderer(
   physicalPixelRatio: number,
   enableInspector: boolean,
   forceWebGL2?: boolean,
+  textureProcessingLimit?: number,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let inspector: typeof Inspector | undefined;
@@ -246,6 +256,7 @@ async function initRenderer(
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
+      textureProcessingLimit: textureProcessingLimit,
       ...customSettings,
     },
     'app',
@@ -425,7 +436,7 @@ async function runAutomation(
 
             // Allow some time for all images to load and the RaF to unpause
             // and render if needed.
-            await delay(200);
+            await new Promise((resolve) => setTimeout(resolve, 200));
             if (snapshot) {
               console.log(`Calling snapshot(${testName})`);
               await snapshot(testName, adjustedOptions);
@@ -454,6 +465,20 @@ async function runAutomation(
   }
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function waitForRendererIdle(renderer: RendererMain) {
+  return new Promise<void>((resolve) => {
+    let timeout: NodeJS.Timeout | undefined;
+    const startTimeout = () => {
+      timeout = setTimeout(() => {
+        resolve();
+      }, 200);
+    };
+
+    renderer.once('idle', () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      startTimeout();
+    });
+  });
 }
