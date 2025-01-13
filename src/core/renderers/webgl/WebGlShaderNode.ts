@@ -82,6 +82,13 @@ export class WebGlShaderNode<
           this.uniforms = values;
           return;
         }
+        //create empty uniform collection when calculating new values
+        this.uniforms = {
+          single: {},
+          vec2: {},
+          vec3: {},
+          vec4: {},
+        };
         this.updater!(this.node as CoreNode);
         this.stage.shManager.setShaderValues(
           this.valueKey,
