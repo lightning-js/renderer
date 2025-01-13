@@ -76,6 +76,7 @@ export interface CoreShaderType<
 export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
   readonly program: CoreShaderProgram;
+  readonly shaderType: CoreShaderType<Props>;
   protected propsConfig: ShaderProps<Props> | undefined;
   protected resolvedProps: Props | undefined = undefined;
   protected definedProps: Props | undefined = undefined;
@@ -84,14 +85,14 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
 
   constructor(
     readonly shaderKey: string,
-    config: CoreShaderType<Props>,
+    type: CoreShaderType<Props>,
     program: CoreShaderProgram,
     stage: Stage,
     props?: Props,
   ) {
     this.stage = stage;
     this.program = program;
-    this.propsConfig = config.props;
+    this.shaderType = type;
 
     if (props !== undefined) {
       /**
@@ -112,10 +113,10 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
         set: (value) => {
           this.resolvedProps![key as keyof Props] = value;
           if (
-            isAdvancedShaderProp(this.propsConfig![key]) &&
-            this.propsConfig![key].set !== undefined
+            isAdvancedShaderProp(this.shaderType.props![key]) &&
+            this.shaderType.props![key].set !== undefined
           ) {
-            this.propsConfig![key].set(
+            this.shaderType.props![key].set(
               value,
               this.resolvedProps as Record<string, unknown>,
             );
@@ -149,8 +150,6 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
       this.definedProps = undefined;
       return;
     }
-    assertTruthy(props);
-    resolveShaderProps(props as Record<string, unknown>, this.propsConfig!);
     for (const key in props) {
       this.props![key] = props[key];
     }

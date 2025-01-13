@@ -23,6 +23,7 @@ import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { QuadOptions } from '../CoreRenderer.js';
+import type { CoreTextNode } from '../../CoreTextNode.js';
 
 type ReqQuad =
   | 'alpha'
@@ -33,7 +34,10 @@ type ReqQuad =
   | 'height'
   | 'width';
 type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
-  Partial<Omit<QuadOptions, ReqQuad>>;
+  Partial<Omit<QuadOptions, ReqQuad>> & {
+    sdfShaderProps?: Record<string, unknown>;
+    sdfBuffers?: BufferCollection;
+  };
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -43,6 +47,12 @@ export class WebGlRenderOp extends CoreRenderOp {
   length = 0;
   numQuads = 0;
   textures: WebGlCtxTexture[] = [];
+
+  /**
+   * need to improve this when TextRenderers are refactored
+   */
+  readonly sdfShaderProps: Record<string, unknown> | undefined;
+  readonly sdfNode: CoreTextNode | undefined;
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
   readonly shader: WebGlShaderNode;
@@ -53,8 +63,13 @@ export class WebGlRenderOp extends CoreRenderOp {
     readonly bufferIdx: number,
   ) {
     super();
-    this.buffers = renderer.quadBufferCollection;
+    this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
     this.shader = quad.shader as WebGlShaderNode;
+
+    /**
+     * related to line 51
+     */
+    this.sdfShaderProps = quad.sdfShaderProps;
 
     this.maxTextures = this.shader.program.supportsIndexedTextures
       ? (renderer.glw.getParameter(

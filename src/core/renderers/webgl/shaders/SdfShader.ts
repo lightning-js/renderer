@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { assertTruthy } from '../../../../utils.js';
+import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
 import type { WebGlShaderType } from '../WebGlShaderNode.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -66,14 +66,16 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     distanceRange: 1.0,
     debug: false,
   },
-  update() {
-    assertTruthy(this.props);
-    this.uniformMatrix3fv('u_transform', this.props.transform);
-    this.uniform1f('u_scrollY', this.props.scrollY);
-    this.uniformRGBA('u_color', this.props.color);
-    this.uniform1f('u_size', this.props.size);
-    this.uniform1f('u_distanceRange', this.props.distanceRange);
-    this.uniform1i('u_debug', this.props.debug ? 1 : 0);
+  onSdfBind(props) {
+    this.uniformMatrix3fv('u_transform', props.transform);
+    this.uniform1f('u_scrollY', props.scrollY);
+    this.uniform4fv(
+      'u_color',
+      new Float32Array(getNormalizedRgbaComponents(props.color)),
+    );
+    this.uniform1f('u_size', props.size);
+    this.uniform1f('u_distanceRange', props.distanceRange);
+    this.uniform1i('u_debug', props.debug ? 1 : 0);
   },
   vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH

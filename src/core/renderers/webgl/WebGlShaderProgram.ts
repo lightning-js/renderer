@@ -22,7 +22,7 @@ import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderOp } from './WebGlRenderOp.js';
 import type { WebGlRenderer } from './WebGlRenderer.js';
-import type { WebGlShaderType } from './WebGlShaderNode.js';
+import type { WebGlShaderNode, WebGlShaderType } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -216,6 +216,13 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         'u_dimensions',
         renderOp.quad.width,
         renderOp.quad.height,
+      );
+    }
+
+    if (renderOp.sdfShaderProps !== undefined) {
+      (renderOp.shader.shaderType as WebGlShaderType).onSdfBind?.call(
+        this.glw,
+        renderOp.sdfShaderProps,
       );
     }
 

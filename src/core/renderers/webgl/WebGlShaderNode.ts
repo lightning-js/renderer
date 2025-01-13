@@ -1,5 +1,6 @@
 import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
+import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Stage } from '../../Stage.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
@@ -22,9 +23,14 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
     /**
      * This function is called when one of the props is changed, here you can update the uniforms you use in the fragment / vertex shader.
      * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
+     */
+    update?: (this: WebGlShaderNode<T>, node: CoreNode, props?: T) => void;
+
+    /**
+     * only used for SDF shader, will be removed in the future.
      * @returns
      */
-    update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
+    onSdfBind?: (this: WebGlContextWrapper, props: T) => void;
     /**
      * This function is used to check if the shader can bereused based on quad info
      * @param props
@@ -43,7 +49,8 @@ export class WebGlShaderNode<
   Props extends object = Record<string, unknown>,
 > extends CoreShaderNode<Props> {
   declare readonly program: WebGlShaderProgram;
-  private updater: ((node: CoreNode) => void) | undefined = undefined;
+  private updater: ((node: CoreNode, props?: Props) => void) | undefined =
+    undefined;
   private valueKey: string | undefined = '';
   uniforms: UniformCollection = {
     single: {},
@@ -65,7 +72,7 @@ export class WebGlShaderNode<
 
       this.update = () => {
         if (this.props === undefined) {
-          this.updater!(this.node as CoreNode);
+          this.updater!(this.node as CoreNode, this.props);
           return;
         }
 

@@ -413,14 +413,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     assertTruthy(this.globalTransform);
 
-    this.textRenderer.renderQuads(
-      this.trState,
-      this.globalTransform,
-      this.clippingRect,
-      this.worldAlpha,
-      this.parentHasRenderTexture,
-      this.framebufferDimensions,
-    );
+    this.textRenderer.renderQuads(this);
   }
 
   /**

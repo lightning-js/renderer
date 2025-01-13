@@ -61,6 +61,7 @@ import { WebGlRenderer } from '../../../renderers/webgl/WebGlRenderer.js';
 import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
 import type { WebGlShaderProgram } from '../../../renderers/webgl/WebGlShaderProgram.js';
 import type { WebGlShaderNode } from '../../../renderers/webgl/WebGlShaderNode.js';
+import type { CoreTextNode } from '../../../CoreTextNode.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -599,14 +600,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  override renderQuads(
-    state: SdfTextRendererState,
-    transform: Matrix3d,
-    clippingRect: Readonly<RectWithValid>,
-    alpha: number,
-    parentHasRenderTexture: boolean,
-    framebufferDimensions: Dimensions,
-  ): void {
+  override renderQuads(node: CoreTextNode): void {
+    const state = node.trState as SdfTextRendererState;
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
@@ -678,30 +673,39 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       assertTruthy(elementBounds.valid);
       const elementRect = convertBoundToRect(elementBounds, tmpRect);
 
-      if (clippingRect.valid) {
+      if (node.clippingRect.valid) {
         state.clippingRect.valid = true;
-        clippingRect = intersectRect(
-          clippingRect,
+        node.clippingRect = intersectRect(
+          node.clippingRect,
           elementRect,
           state.clippingRect,
         );
       } else {
         state.clippingRect.valid = true;
-        clippingRect = copyRect(elementRect, state.clippingRect);
+        node.clippingRect = copyRect(elementRect, state.clippingRect);
       }
     }
 
     const renderOp = new WebGlRenderOp(
       renderer,
       {
+        sdfShaderProps: {
+          transform: node.globalTransform!.getFloatArr(),
+          color: mergeColorAlpha(color, node.alpha),
+          size: fontSize / (trFontFace.data?.info.size || 0),
+          scrollY,
+          distanceRange,
+          debug: debug.sdfShaderDebug,
+        },
+        sdfBuffers: state.webGlBuffers as BufferCollection,
         shader: this.sdfShader,
-        alpha,
-        clippingRect,
+        alpha: node.alpha,
+        clippingRect: node.clippingRect,
         height: textH,
         width: textW,
         rtt: false,
-        parentHasRenderTexture,
-        framebufferDimensions,
+        parentHasRenderTexture: node.parentHasRenderTexture,
+        framebufferDimensions: node.framebufferDimensions,
       },
       0,
     );
