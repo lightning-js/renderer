@@ -56,15 +56,15 @@ export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js'
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
-export * from '../src/core/shaders/BorderBottomTemplate.js';
-export * from '../src/core/shaders/BorderTopTemplate.js';
-export * from '../src/core/shaders/BorderLeftTemplate.js';
-export * from '../src/core/shaders/BorderRightTemplate.js';
-export * from '../src/core/shaders/BorderTemplate.js';
-export * from '../src/core/shaders/HolePunchTemplate.js';
-export * from '../src/core/shaders/RoundedRectangleTemplate.js';
-export * from '../src/core/shaders/LinearGradientTemplate.js';
-export * from '../src/core/shaders/RadialGradientTemplate.js';
+export * from '../src/core/shaders/templates/BorderBottomTemplate.js';
+export * from '../src/core/shaders/templates/BorderTopTemplate.js';
+export * from '../src/core/shaders/templates/BorderLeftTemplate.js';
+export * from '../src/core/shaders/templates/BorderRightTemplate.js';
+export * from '../src/core/shaders/templates/BorderTemplate.js';
+export * from '../src/core/shaders/templates/HolePunchTemplate.js';
+export * from '../src/core/shaders/templates/RoundedRectangleTemplate.js';
+export * from '../src/core/shaders/templates/LinearGradientTemplate.js';
+export * from '../src/core/shaders/templates/RadialGradientTemplate.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlShaderProgram.js';

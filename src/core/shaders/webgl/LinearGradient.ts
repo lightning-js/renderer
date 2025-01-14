@@ -1,26 +1,19 @@
-import { assertTruthy } from '../../../../utils.js';
-import type { CoreNode } from '../../../CoreNode.js';
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
+import { assertTruthy } from '../../../utils.js';
+import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import {
-  RadialGradientTemplate,
-  type RadialGradientProps,
-} from '../../../shaders/RadialGradientTemplate.js';
-import { genGradientColors } from '../internal/ShaderUtils.js';
-import type { WebGlRenderer } from '../WebGlRenderer.js';
-import type { WebGlShaderType } from '../WebGlShaderNode.js';
+  LinearGradientTemplate,
+  type LinearGradientProps,
+} from '../templates/LinearGradientTemplate.js';
+import { genGradientColors } from '../../renderers/webgl/internal/ShaderUtils.js';
+import type { WebGlRenderer } from '../../renderers/webgl/WebGlRenderer.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
-export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
-  name: RadialGradientTemplate.name,
-  props: RadialGradientTemplate.props,
-  update(node: CoreNode) {
+export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
+  name: LinearGradientTemplate.name,
+  props: LinearGradientTemplate.props,
+  update() {
     assertTruthy(this.props);
-
-    this.uniform2f(
-      'u_projection',
-      this.props.pivot[0] * node.width,
-      this.props.pivot[1] * node.height,
-    );
-    this.uniform2f('u_size', this.props.width * 0.5, this.props.height * 0.5);
+    this.uniform1f('u_angle', this.props.angle - (Math.PI / 180) * 90);
     this.uniform1fv('u_stops', new Float32Array(this.props.stops));
     const colors: number[] = [];
     for (let i = 0; i < this.props.colors.length; i++) {
@@ -29,10 +22,10 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
     }
     this.uniform4fv('u_colors', new Float32Array(colors));
   },
-  getCacheMarkers(props: RadialGradientProps) {
+  getCacheMarkers(props: LinearGradientProps) {
     return `colors:${props.colors.length}`;
   },
-  fragment(renderer: WebGlRenderer, props: RadialGradientProps) {
+  fragment(renderer: WebGlRenderer, props: LinearGradientProps) {
     return `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -47,8 +40,7 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
 
     uniform sampler2D u_texture;
 
-    uniform vec2 u_projection;
-    uniform vec2 u_size;
+    uniform float u_angle;
     uniform float u_stops[${props.stops.length}];
     uniform vec4 u_colors[${props.colors.length}];
 
@@ -61,8 +53,12 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 point = v_textureCoordinate.xy * u_dimensions;
-      float dist = length((point - u_projection) / u_size);
+      float a = u_angle;
+      float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
+      vec2 f = calcPoint(lineDist * 0.5, a);
+      vec2 t = calcPoint(lineDist * 0.5, a + PI);
+      vec2 gradVec = t - f;
+      float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
       ${genGradientColors(props.stops.length)}
       gl_FragColor = mix(color, colorOut, clamp(colorOut.a, 0.0, 1.0));
     }

@@ -1,5 +1,5 @@
-import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
-import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
+import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import { validateArrayLength4 } from './shaderUtils.js';
 
 /**

@@ -45,7 +45,7 @@ import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
-import { Default } from './shaders/Default.js';
+import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 

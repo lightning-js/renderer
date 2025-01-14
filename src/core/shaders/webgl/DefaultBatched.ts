@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { WebGlShaderType } from '../WebGlShaderNode.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const DefaultBatched: WebGlShaderType = {
   name: 'DefaultBatched',

@@ -1,37 +1,29 @@
-import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 
 /**
- * Properties of the {@link RadialGradient} shader
+ * Properties of the {@link LinearGradient} shader
  */
-export interface RadialGradientProps {
+export interface LinearGradientProps {
   /**
-   * Array of colors to be used in the RadialGradient shader
+   * Array of colors to be used in the LinearGradient shader
    *
    * @default [0xff000000, 0xffffffff]
    */
   colors: number[];
   /**
+   * Angle of the LinearGradient shader, Angle in Radians
+   *
+   * @default 0
+   */
+  angle: number;
+  /**
    * Array of color stops
    */
   stops: number[];
-  /**
-   * Width of the RadialGradientEffect
-   */
-  width: number;
-  /**
-   * height of the RadialGradientEffect
-   *
-   * @remarks if not defined uses the width value
-   */
-  height: number;
-  /**
-   * center point of where the RadialGradientEffect is drawn
-   */
-  pivot: [number, number];
 }
 
-export const RadialGradientTemplate: CoreShaderType<RadialGradientProps> = {
-  name: 'RadialGradient',
+export const LinearGradientTemplate: CoreShaderType<LinearGradientProps> = {
+  name: 'LinearGradient',
   props: {
     colors: {
       default: [0x000000ff, 0xffffffff],
@@ -58,8 +50,6 @@ export const RadialGradientTemplate: CoreShaderType<RadialGradientProps> = {
         return value;
       },
     },
-    width: 50,
-    height: 50,
-    pivot: [0.5, 0.5],
+    angle: 0,
   },
 };

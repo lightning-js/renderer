@@ -1,11 +1,11 @@
-import { assertTruthy } from '../../../../utils.js';
-import { calcFactoredRadiusArray } from '../../../lib/utils.js';
+import { assertTruthy } from '../../../utils.js';
+import { calcFactoredRadiusArray } from '../../lib/utils.js';
 import {
   HolePunchTemplate,
   type HolePunchProps,
-} from '../../../shaders/HolePunchTemplate.js';
-import type { Vec4 } from '../internal/ShaderUtils.js';
-import type { WebGlShaderType } from '../WebGlShaderNode.js';
+} from '../templates/HolePunchTemplate.js';
+import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const HolePunch: WebGlShaderType<HolePunchProps> = {
   name: HolePunchTemplate.name,

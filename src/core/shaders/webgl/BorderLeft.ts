@@ -1,13 +1,13 @@
+import { assertTruthy } from '../../../utils.js';
 import {
-  BorderTopTemplate,
-  type BorderTopProps,
-} from '../../../shaders/BorderTopTemplate.js';
-import type { WebGlShaderType } from '../WebGlShaderNode.js';
-import { assertTruthy } from '../../../../utils.js';
+  BorderLeftTemplate,
+  type BorderLeftProps,
+} from '../templates/BorderLeftTemplate.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
-export const BorderTop: WebGlShaderType<BorderTopProps> = {
-  name: BorderTopTemplate.name,
-  props: BorderTopTemplate.props,
+export const BorderLeft: WebGlShaderType<BorderLeftProps> = {
+  name: BorderLeftTemplate.name,
+  props: BorderLeftTemplate.props,
   update() {
     assertTruthy(this.props);
     this.uniform1f('u_width', this.props.width);
@@ -33,9 +33,9 @@ export const BorderTop: WebGlShaderType<BorderTopProps> = {
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
 
-      vec2 pos = vec2(0.0, u_width * 0.5);
+      vec2 pos = vec2(u_width * 0.5, 0.0);
       vec2 p = v_textureCoordinate.xy * u_dimensions - pos + 1.0;
-      vec2 size = vec2(u_dimensions.x, u_width * 0.5) + 1.5;
+      vec2 size = vec2(u_width * 0.5, u_dimensions.y) + 1.5;
       vec2 dist = abs(p) - size;
       float shape = min(max(dist.x, dist.y), 0.0) + length(max(dist, 0.0));
       gl_FragColor = mix(color, u_color, clamp(-shape, 0.0, 1.0)) * u_alpha;

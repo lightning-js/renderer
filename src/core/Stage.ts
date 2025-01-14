@@ -183,6 +183,7 @@ export class Stage {
     this.pixelRatio =
       options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
 
+    console.log('pixelRatio', this.pixelRatio);
     this.renderer = new renderEngine({
       stage: this,
       canvas,

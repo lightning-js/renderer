@@ -19,12 +19,6 @@
 
 import type { QuadOptions } from '../../CoreRenderer.js';
 
-import {
-  ROUNDED_RECTANGLE_SHADER_TYPE,
-  UnsupportedShader,
-} from '../shaders/UnsupportedShader.js';
-import { formatRgba, parseColorRgba } from './ColorUtils.js';
-
 type Direction = 'Top' | 'Right' | 'Bottom' | 'Left';
 
 /*

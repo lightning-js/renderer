@@ -1,5 +1,5 @@
-import { assertTruthy } from '../../utils.js';
-import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+import { assertTruthy } from '../../../utils.js';
+import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 
 export const validateArrayLength4 = (value: number | number[]): Vec4 => {
   if (!Array.isArray(value)) {

@@ -61,4 +61,13 @@ export default async function ({
     }),
     parent: testRoot,
   });
+
+  const GreenRect3 = renderer.createNode({
+    x: 720,
+    y: 520,
+    width: 600,
+    height: 400,
+    color: 0x0000ffff,
+    parent: testRoot,
+  });
 }

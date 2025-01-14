@@ -1,4 +1,4 @@
-import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 import { validateArrayLength4 } from './shaderUtils.js';
 
 /**

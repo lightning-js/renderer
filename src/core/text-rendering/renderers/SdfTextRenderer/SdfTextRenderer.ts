@@ -49,10 +49,7 @@ import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
 import { WebGlRenderOp } from '../../../renderers/webgl/WebGlRenderOp.js';
 import { BufferCollection } from '../../../renderers/webgl/internal/BufferCollection.js';
-import {
-  Sdf,
-  type SdfShaderProps,
-} from '../../../renderers/webgl/shaders/SdfShader.js';
+import { Sdf, type SdfShaderProps } from '../../../shaders/webgl/SdfShader.js';
 import type { WebGlCtxTexture } from '../../../renderers/webgl/WebGlCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';

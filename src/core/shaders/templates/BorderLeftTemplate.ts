@@ -1,4 +1,4 @@
-import type { CoreShaderType } from '../renderers/CoreShaderNode.js';
+import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 
 /**
  * Properties of the {@link BorderLeft} shader

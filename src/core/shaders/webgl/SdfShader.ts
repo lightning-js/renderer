@@ -16,12 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { getNormalizedRgbaComponents } from '../../../lib/utils.js';
-import type { WebGlShaderType } from '../WebGlShaderNode.js';
+import { getNormalizedRgbaComponents } from '../../lib/utils.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-declare module '../../../CoreShaderManager.js' {
+declare module '../../CoreShaderManager.js' {
   interface ShaderMap {
     sdf: typeof Sdf;
   }

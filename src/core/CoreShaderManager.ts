@@ -93,8 +93,6 @@ export class CoreShaderManager {
       }
     }
 
-    console.log('shaderKey:', shaderKey);
-
     /**
      * get shaderProgram by cacheKey
      */
