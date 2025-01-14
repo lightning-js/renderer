@@ -20,6 +20,7 @@
 import {
   assertTruthy,
   getNewId,
+  isProductionEnvironment,
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
@@ -413,7 +414,11 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
-   * Whether to prevent the node from being cleaned up
+   * [Deprecated]: Prevents the texture from being cleaned up when the Node is removed
+   *
+   * @remarks
+   * Please use the `preventCleanup` property on {@link TextureOptions} instead.
+   *
    * @default false
    */
   preventCleanup: boolean;
@@ -768,6 +773,12 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderState,
     );
 
+    if (isProductionEnvironment() === false && props.preventCleanup === true) {
+      console.warn(
+        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
+      );
+    }
+
     // if the default texture isn't loaded yet, wait for it to load
     // this only happens when the node is created before the stage is ready
     if (
@@ -790,7 +801,12 @@ export class CoreNode extends EventEmitter {
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
-      texture.preventCleanup = this.props.preventCleanup;
+      if (this.textureOptions.preload === true) {
+        this.stage.txManager.loadTexture(texture);
+      }
+
+      texture.preventCleanup =
+        this.props.textureOptions?.preventCleanup ?? false;
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
@@ -2027,11 +2043,17 @@ export class CoreNode extends EventEmitter {
   }
 
   get preventCleanup(): boolean {
-    return this.props.preventCleanup;
+    return this.props.textureOptions.preventCleanup || false;
   }
 
   set preventCleanup(value: boolean) {
-    this.props.preventCleanup = value;
+    if (isProductionEnvironment() === false) {
+      console.warn(
+        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
+      );
+    }
+
+    this.props.textureOptions.preventCleanup = value;
   }
 
   get rtt(): boolean {

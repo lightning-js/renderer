@@ -108,6 +108,32 @@ export type ResizeModeOptions =
  */
 export interface TextureOptions {
   /**
+   * Preload the texture immediately even if it's not being rendered to the
+   * screen.
+   *
+   * @remarks
+   * This allows the texture to be used immediately without any delay when it
+   * is first needed for rendering. Otherwise the loading process will start
+   * when the texture is first rendered, which may cause a delay in that texture
+   * being shown properly.
+   *
+   * @defaultValue `false`
+   */
+  preload?: boolean;
+
+  /**
+   * Prevent clean up of the texture when it is no longer being used.
+   *
+   * @remarks
+   * This is useful when you want to keep the texture in memory for later use.
+   * Regardless of whether the texture is being used or not, it will not be
+   * cleaned up.
+   *
+   * @defaultValue `false`
+   */
+  preventCleanup?: boolean;
+
+  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
