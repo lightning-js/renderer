@@ -87,7 +87,7 @@ const defaultPhysicalPixelRatio = 1;
   const logFps = urlParams.get('fps') === 'true';
   const enableContextSpy = urlParams.get('contextSpy') === 'true';
   const perfMultiplier = Number(urlParams.get('multiplier')) || 1;
-  const resolution = Number(urlParams.get('resolution')) || 720;
+  const resolution = Number(urlParams.get('resolution')) || defaultResolution;
   const enableInspector = urlParams.get('inspector') === 'true';
   const forceWebGL2 = urlParams.get('webgl2') === 'true';
   const textureProcessingLimit =
