@@ -4,11 +4,18 @@ import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Stage } from '../../Stage.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
-import type { UniformCollection } from './internal/ShaderUtils.js';
+import type {
+  UniformCollection,
+  Vec2,
+  Vec3,
+  Vec4,
+} from './internal/ShaderUtils.js';
 import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
-type ShaderSource<T> = string | ((renderer: WebGlRenderer, props: T) => string);
+export type ShaderSource<T> =
+  | string
+  | ((renderer: WebGlRenderer, props: T) => string);
 
 export type WebGlShaderType<T extends object = Record<string, unknown>> =
   CoreShaderType<T> & {
@@ -24,7 +31,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
      * This function is called when one of the props is changed, here you can update the uniforms you use in the fragment / vertex shader.
      * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
      */
-    update?: (this: WebGlShaderNode<T>, node: CoreNode, props?: T) => void;
+    update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
 
     /**
      * only used for SDF shader, will be removed in the future.
@@ -185,11 +192,24 @@ export class WebGlShaderNode<
    * Sets the value of a vec2 array uniform variable.
    *
    * @param location - The location of the uniform variable.
-   * @param value - The array of vec2 values to set.
+   * @param value - The array of vec2 values to set as FloatArray.
    */
   uniform2fv(location: string, value: Float32Array) {
     this.uniforms.single[location] = {
       method: 'uniform2fv',
+      value,
+    };
+  }
+
+  /**
+   * Sets the value of a vec2 array uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param value - The array of vec2 values to set.
+   */
+  uniform2fa(location: string, value: Vec2) {
+    this.uniforms.vec2[location] = {
+      method: 'uniform2f',
       value,
     };
   }
@@ -233,6 +253,19 @@ export class WebGlShaderNode<
     this.uniforms.vec3[location] = {
       method: 'uniform3f',
       value: [v0, v1, v2],
+    };
+  }
+
+  /**
+   * Sets the value of a vec3 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param
+   */
+  uniform3fa(location: string, value: Vec3) {
+    this.uniforms.vec3[location] = {
+      method: 'uniform3f',
+      value,
     };
   }
 
@@ -290,6 +323,18 @@ export class WebGlShaderNode<
     this.uniforms.vec4[location] = {
       method: 'uniform4f',
       value: [v0, v1, v2, v3],
+    };
+  }
+
+  /**
+   * Sets an array of numbers
+   * @param location The location of the uniform variable.
+   * @param value
+   */
+  uniform4fa(location: string, value: Vec4) {
+    this.uniforms.vec4[location] = {
+      method: 'uniform4f',
+      value,
     };
   }
 

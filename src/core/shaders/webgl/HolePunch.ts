@@ -1,4 +1,3 @@
-import { assertTruthy } from '../../../utils.js';
 import { calcFactoredRadiusArray } from '../../lib/utils.js';
 import {
   HolePunchTemplate,
@@ -11,18 +10,18 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
   name: HolePunchTemplate.name,
   props: HolePunchTemplate.props,
   update() {
-    assertTruthy(this.props);
-
-    this.uniform2f('u_pos', this.props.x, this.props.y);
+    this.uniform2f('u_pos', this.props!.x, this.props!.y);
     //precalculate to halfSize once instead of for every pixel
-    this.uniform2f('u_size', this.props.width * 0.5, this.props.height * 0.5);
+    this.uniform2f('u_size', this.props!.width * 0.5, this.props!.height * 0.5);
 
-    const fRadius = calcFactoredRadiusArray(
-      this.props.radius as Vec4,
-      this.props.width,
-      this.props.height,
+    this.uniform4fa(
+      'u_radius',
+      calcFactoredRadiusArray(
+        this.props!.radius as Vec4,
+        this.props!.width,
+        this.props!.height,
+      ),
     );
-    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
   },
   getCacheMarkers(props: HolePunchProps) {
     return `radiusArray:${Array.isArray(props.radius)}`;
@@ -55,7 +54,7 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
       p = abs(p) - u_size + r.x;
-      float dist = min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x;
+      float dist = min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x + 2.0;
       float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, dist);
       gl_FragColor = mix(color, vec4(0.0), min(color.a, roundedAlpha));
     }

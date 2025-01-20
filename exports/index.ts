@@ -56,13 +56,9 @@ export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js'
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
-export * from '../src/core/shaders/templates/BorderBottomTemplate.js';
-export * from '../src/core/shaders/templates/BorderTopTemplate.js';
-export * from '../src/core/shaders/templates/BorderLeftTemplate.js';
-export * from '../src/core/shaders/templates/BorderRightTemplate.js';
 export * from '../src/core/shaders/templates/BorderTemplate.js';
 export * from '../src/core/shaders/templates/HolePunchTemplate.js';
-export * from '../src/core/shaders/templates/RoundedRectangleTemplate.js';
+export * from '../src/core/shaders/templates/RoundedTemplate.js';
 export * from '../src/core/shaders/templates/LinearGradientTemplate.js';
 export * from '../src/core/shaders/templates/RadialGradientTemplate.js';
 

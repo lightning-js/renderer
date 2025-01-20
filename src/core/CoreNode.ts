@@ -1017,7 +1017,7 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.props.parent;
-    let renderState = null;
+    let renderState: CoreNodeRenderState | null = null;
 
     // Handle specific RTT updates at this node level
     if (this.updateType & UpdateType.RenderTexture && this.rtt) {

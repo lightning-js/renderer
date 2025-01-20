@@ -1,4 +1,3 @@
-import { assertTruthy } from '../../../utils.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import {
   LinearGradientTemplate,
@@ -12,12 +11,11 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
   name: LinearGradientTemplate.name,
   props: LinearGradientTemplate.props,
   update() {
-    assertTruthy(this.props);
-    this.uniform1f('u_angle', this.props.angle - (Math.PI / 180) * 90);
-    this.uniform1fv('u_stops', new Float32Array(this.props.stops));
+    this.uniform1f('u_angle', this.props!.angle - (Math.PI / 180) * 90);
+    this.uniform1fv('u_stops', new Float32Array(this.props!.stops));
     const colors: number[] = [];
-    for (let i = 0; i < this.props.colors.length; i++) {
-      const norm = getNormalizedRgbaComponents(this.props.colors[i]!);
+    for (let i = 0; i < this.props!.colors.length; i++) {
+      const norm = getNormalizedRgbaComponents(this.props!.colors[i]!);
       colors.push(norm[0], norm[1], norm[2], norm[3]);
     }
     this.uniform4fv('u_colors', new Float32Array(colors));

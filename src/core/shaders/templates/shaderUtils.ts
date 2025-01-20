@@ -24,3 +24,7 @@ export const validateArrayLength4 = (value: number | number[]): Vec4 => {
   value[3] = value[0];
   return value as Vec4;
 };
+
+export type PrefixedType<T, P extends string | undefined = undefined> = {
+  [Key in keyof T as P extends string ? `${P}-${string & Key}` : Key]: T[Key];
+};

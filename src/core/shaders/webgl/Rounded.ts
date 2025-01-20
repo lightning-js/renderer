@@ -19,30 +19,30 @@
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 import { calcFactoredRadiusArray } from '../../lib/utils.js';
 import {
-  RoundedRectangleTemplate,
-  type RoundedRectangleProps,
-} from '../templates/RoundedRectangleTemplate.js';
-import { assertTruthy } from '../../../utils.js';
+  RoundedTemplate,
+  type RoundedProps,
+} from '../templates/RoundedTemplate.js';
 import type { CoreNode } from '../../CoreNode.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 
 /**
  * Similar to the {@link DefaultShader} but cuts out 4 rounded rectangle corners
- * as defined by the specified corner {@link RoundedRectangleProps.radius}
+ * as defined by the specified corner {@link RoundedProps.radius}
  */
-export const RoundedRectangle: WebGlShaderType<RoundedRectangleProps> = {
-  name: RoundedRectangleTemplate.name,
-  props: RoundedRectangleTemplate.props,
+export const Rounded: WebGlShaderType<RoundedProps> = {
+  name: RoundedTemplate.name,
+  props: RoundedTemplate.props,
   update(node: CoreNode) {
-    assertTruthy(this.props);
-    const fRadius = calcFactoredRadiusArray(
-      this.props.radius as Vec4,
-      node.width,
-      node.height,
+    this.uniform4fa(
+      'u_radius',
+      calcFactoredRadiusArray(
+        this.props!.radius as Vec4,
+        node.width,
+        node.height,
+      ),
     );
-    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
   },
-  getCacheMarkers(props: RoundedRectangleProps) {
+  getCacheMarkers(props: RoundedProps) {
     return `radiusArray:${Array.isArray(props.radius)}`;
   },
   fragment: `
@@ -64,16 +64,17 @@ export const RoundedRectangle: WebGlShaderType<RoundedRectangleProps> = {
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 halfDimensions = u_dimensions * 0.5;
+      vec2 dims = u_dimensions * u_pixelRatio;
+      vec2 halfDimensions = dims * 0.5;
 
-      vec2 p = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec2 p = v_textureCoordinate.xy * dims - halfDimensions;
       vec4 r = u_radius;
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
       p = abs(p) - halfDimensions + r.x;
-      float dist = min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x;
-      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, dist);
-      gl_FragColor = mix(vec4(0.0), color, min(color.a, roundedAlpha));
+      float dist = (min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x) + 2.0;
+
+      gl_FragColor = mix(vec4(0.0), color, clamp(-dist, 0.0, 1.0));
     }
   `,
 };

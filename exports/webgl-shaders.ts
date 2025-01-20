@@ -1,9 +1,9 @@
-export { RoundedRectangle } from '../src/core/shaders/webgl/RoundedRectangle.js';
+export { Rounded } from '../src/core/shaders/webgl/Rounded.js';
+export { RoundedWithBorder } from '../src/core/shaders/webgl/RoundedWithBorder.js';
+export { RoundedWithBorderAndShadow } from '../src/core/shaders/webgl/RoundedWithBorderAndShadow.js';
+export { RoundedWithShadow } from '../src/core/shaders/webgl/RoundedWithShadow.js';
 export { Border } from '../src/core/shaders/webgl/Border.js';
-export { BorderTop } from '../src/core/shaders/webgl/BorderTop.js';
-export { BorderBottom } from '../src/core/shaders/webgl/BorderBottom.js';
-export { BorderLeft } from '../src/core/shaders/webgl/BorderLeft.js';
-export { BorderRight } from '../src/core/shaders/webgl/BorderRight.js';
+export { Shadow } from '../src/core/shaders/webgl/Shadow.js';
 export { HolePunch } from '../src/core/shaders/webgl/HolePunch.js';
 export { LinearGradient } from '../src/core/shaders/webgl/LinearGradient.js';
 export { RadialGradient } from '../src/core/shaders/webgl/RadialGradient.js';

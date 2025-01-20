@@ -1,6 +1,6 @@
 import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
-import { validateArrayLength4 } from './shaderUtils.js';
+import { validateArrayLength4, type PrefixedType } from './shaderUtils.js';
 
 /**
  * Properties of the {@link Border} shader
@@ -19,12 +19,6 @@ export interface BorderProps {
    */
   color: number;
   /**
-   * Corner radius, in pixels, to cut out of the corners
-   *
-   * @defaultValue 0
-   */
-  radius: number | [number, number, number, number];
-  /**
    * Top width
    */
   top: number;
@@ -42,53 +36,59 @@ export interface BorderProps {
   left: number;
 }
 
+export function getBorderProps<P extends string>(
+  prefix?: P,
+): PrefixedType<BorderProps, P> {
+  const pf = prefix && prefix.length > 0 ? `${prefix}-` : '';
+  const width = pf + 'width';
+  return {
+    [width]: {
+      default: [0, 0, 0, 0],
+      resolve: validateArrayLength4,
+    },
+    [pf + 'color']: 0xffffffff,
+    [pf + 'top']: {
+      default: 0,
+      set(value, props) {
+        (props[width] as Vec4)[0] = value;
+      },
+      get(props) {
+        return (props[width] as Vec4)[0];
+      },
+    },
+    [pf + 'right']: {
+      default: 0,
+      set(value, props) {
+        (props[width] as Vec4)[1] = value;
+      },
+      get(props) {
+        return (props[width] as Vec4)[1];
+      },
+    },
+    [pf + 'bottom']: {
+      default: 0,
+      set(value, props) {
+        (props[width] as Vec4)[2] = value;
+      },
+      get(props) {
+        return (props[width] as Vec4)[2];
+      },
+    },
+    [pf + 'left']: {
+      default: 0,
+      set(value, props) {
+        (props[width] as Vec4)[3] = value;
+      },
+      get(props) {
+        return (props[width] as Vec4)[3];
+      },
+    },
+  } as PrefixedType<BorderProps, P>;
+}
+
+type PlainBorderProps = PrefixedType<BorderProps>;
+
 export const BorderTemplate: CoreShaderType<BorderProps> = {
   name: 'Border',
-  props: {
-    width: {
-      default: [0, 0, 0, 0],
-      resolve: validateArrayLength4,
-    },
-    color: 0xffffffff,
-    radius: {
-      default: [0, 0, 0, 0],
-      resolve: validateArrayLength4,
-    },
-    top: {
-      default: 0,
-      set(value, props) {
-        (props.width as Vec4)[0] = value;
-      },
-      get(props) {
-        return (props.width as Vec4)[0];
-      },
-    },
-    right: {
-      default: 0,
-      set(value, props) {
-        (props.width as Vec4)[1] = value;
-      },
-      get(props) {
-        return (props.width as Vec4)[1];
-      },
-    },
-    bottom: {
-      default: 0,
-      set(value, props) {
-        (props.width as Vec4)[2] = value;
-      },
-      get(props) {
-        return (props.width as Vec4)[2];
-      },
-    },
-    left: {
-      default: 0,
-      set(value, props) {
-        (props.width as Vec4)[3] = value;
-      },
-      get(props) {
-        return (props.width as Vec4)[3];
-      },
-    },
-  },
+  props: getBorderProps() as PlainBorderProps,
 };
