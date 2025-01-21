@@ -27,16 +27,15 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
   props,
   update(node: CoreNode) {
     this.uniformRGBA('u_shadow_color', this.props!['shadow-color']!);
-    this.uniform4fv(
-      'u_shadow',
-      new Float32Array(this.props!['shadow-projection']!),
+    this.uniform4fa('u_shadow', this.props!['shadow-projection']!);
+    this.uniform4fa(
+      'u_radius',
+      calcFactoredRadiusArray(
+        this.props!.radius as Vec4,
+        node.width,
+        node.height,
+      ),
     );
-    const fRadius = calcFactoredRadiusArray(
-      this.props!.radius as Vec4,
-      node.width,
-      node.height,
-    );
-    this.uniform4f('u_radius', fRadius[0], fRadius[1], fRadius[2], fRadius[3]);
   },
   vertex: Shadow.vertex as string,
   fragment: `
