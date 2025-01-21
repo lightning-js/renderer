@@ -49,7 +49,7 @@ export class WebTrFontFace extends TrFontFace {
     const determinedDescriptors = this.descriptors;
 
     // Convert TrFontFaceDescriptors to CSS FontFaceDescriptors
-    const cssDescriptors: FontFaceDescriptors = {
+    let cssDescriptors: FontFaceDescriptors = {
       style: determinedDescriptors.style,
       weight:
         typeof determinedDescriptors.weight === 'number'
@@ -61,7 +61,11 @@ export class WebTrFontFace extends TrFontFace {
       display: determinedDescriptors.display,
     };
 
-    const fontFace = new FontFace(
+    cssDescriptors = Object.fromEntries(
+      Object.entries(cssDescriptors).filter(([, value]) => value !== undefined),
+    );
+
+    var fontFace = new FontFace(
       fontFamily,
       `url(${fontUrlWithoutParentheses})`,
       cssDescriptors,
@@ -71,14 +75,12 @@ export class WebTrFontFace extends TrFontFace {
       fontFace
         .load()
         .then(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           (this.loaded as boolean) = true;
           this.emit('loaded');
         })
         .catch(console.error);
     } else {
       // Default font
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       (this.loaded as boolean) = true;
       this.emit('loaded');
     }
