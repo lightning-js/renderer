@@ -2284,7 +2284,7 @@ export class CoreNode extends EventEmitter {
 
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable); // WVB TODO: check if this is correct
+      value.setRenderableOwner(this, this.isRenderable);
       this.loadTexture();
     }
 
