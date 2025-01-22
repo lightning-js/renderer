@@ -232,6 +232,10 @@ export abstract class Texture extends EventEmitter {
       return;
     }
 
+    if (this.state === 'loading' || this.state === 'loaded') {
+      return;
+    }
+
     this.txManager.loadTexture(this);
   }
 
