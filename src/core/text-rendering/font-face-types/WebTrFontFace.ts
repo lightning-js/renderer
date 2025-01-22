@@ -65,7 +65,7 @@ export class WebTrFontFace extends TrFontFace {
       Object.entries(cssDescriptors).filter(([, value]) => value !== undefined),
     );
 
-    var fontFace = new FontFace(
+    const fontFace = new FontFace(
       fontFamily,
       `url(${fontUrlWithoutParentheses})`,
       cssDescriptors,
