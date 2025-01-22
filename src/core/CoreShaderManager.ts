@@ -43,7 +43,10 @@ export type OptionalShaderProps<T extends keyof ShaderMap> = PartialShaderProps<
 export class CoreShaderManager {
   protected shTypes: Record<string, CoreShaderType> = {};
   protected shCache: Map<string, CoreShaderProgram> = new Map();
+
   protected valuesCache: Map<string, Record<string, unknown>> = new Map();
+  protected valuesCacheUsage: Map<string, number> = new Map();
+
   protected attachedShader: CoreShaderProgram | null = null;
 
   constructor(readonly stage: Stage) {}
@@ -114,12 +117,44 @@ export class CoreShaderManager {
     );
   }
 
+  mutateShaderValueUsage(key: string, mutation: number) {
+    let usage = this.valuesCacheUsage.get(key) || 0;
+    this.valuesCacheUsage.set(key, usage + mutation);
+  }
+
   getShaderValues(key: string) {
-    return this.valuesCache.get(key);
+    const values = this.valuesCache.get(key);
+    if (values === undefined) {
+      return undefined;
+    }
+    this.mutateShaderValueUsage(key, 1);
+    return values;
   }
 
   setShaderValues(key: string, values: Record<string, unknown>) {
     this.valuesCache.set(key, values);
+    this.mutateShaderValueUsage(key, 1);
+  }
+
+  cleanup() {
+    const values = [...this.valuesCacheUsage.entries()].sort(
+      (entryA, entryB) => {
+        if (entryA[1] < entryB[1]) {
+          return -1;
+        } else if (entryA[1] > entryB[1]) {
+          return 1;
+        }
+        return 0;
+      },
+    );
+
+    for (let i = 0; i < values.length; i++) {
+      if (values[i]![1] > 0) {
+        break;
+      }
+      this.valuesCacheUsage.delete(values[i]![0]);
+      this.valuesCache.delete(values[i]![0]);
+    }
   }
 
   useShader(shader: CoreShaderProgram): void {

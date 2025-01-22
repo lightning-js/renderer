@@ -58,7 +58,7 @@ export class WebGlShaderNode<
   declare readonly program: WebGlShaderProgram;
   private updater: ((node: CoreNode, props?: Props) => void) | undefined =
     undefined;
-  private valueKey: string | undefined = '';
+  private valueKey: string = '';
   uniforms: UniformCollection = {
     single: {},
     vec2: {},
@@ -82,11 +82,20 @@ export class WebGlShaderNode<
           this.updater!(this.node as CoreNode, this.props);
           return;
         }
-
+        const prevKey = '';
         this.valueKey = '';
         for (const key in this.resolvedProps) {
           this.valueKey += `${key}:${this.resolvedProps[key]!};`;
         }
+
+        if (prevKey === this.valueKey) {
+          return;
+        }
+
+        if (prevKey.length > 0) {
+          this.stage.shManager.mutateShaderValueUsage(prevKey, -1);
+        }
+
         const values = this.stage.shManager.getShaderValues(
           this.valueKey,
         ) as unknown as UniformCollection;

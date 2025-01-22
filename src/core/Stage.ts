@@ -43,7 +43,6 @@ import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
-import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
 import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
@@ -374,6 +373,7 @@ export class Stage {
 
     // Check if we need to cleanup textures
     if (this.txMemManager.criticalCleanupRequested) {
+      this.shManager.cleanup();
       this.txMemManager.cleanup();
     }
 
