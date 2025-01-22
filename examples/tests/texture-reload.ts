@@ -20,6 +20,8 @@
 import type { INode, RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
+import rockoPng from '../assets/rocko.png';
+
 export function customSettings(): Partial<RendererMainSettings> {
   return {
     textureMemory: {
@@ -54,7 +56,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const screenWidth = renderer.settings.appWidth;
   const screenHeight = renderer.settings.appHeight;
   const nodeSize = 128; // Each node will be 128x128 pixels
-  const memoryThreshold = 125 * 1024 * 1024; // 50 MB
+  const memoryThreshold = 130 * 1024 * 1024; // 130 MB
   const textureSize = nodeSize * nodeSize * 3; // RGBA bytes per pixel
   const maxNodes = Math.ceil(memoryThreshold / textureSize);
   const nodes: INode[] = [];
@@ -64,18 +66,18 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     text: `Texture Reload Test`,
     fontSize: 45,
     parent: testRoot,
-    x: 900,
+    x: 500,
     y: 50,
   });
 
-  const status = renderer.createTextNode({
+  const finalStatus = renderer.createTextNode({
     fontFamily: 'Ubuntu',
-    text: `Creating nodes...`,
+    text: `Running...`,
     fontSize: 30,
     parent: testRoot,
     color: 0xffff00ff,
-    x: 900,
-    y: 150,
+    x: 500,
+    y: 100,
   });
 
   // Create nodes with unique noise textures until the memory threshold is reached
@@ -100,83 +102,235 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   console.log(`Created ${nodes.length} nodes. Memory threshold reached.`);
-  status.text = `Created ${nodes.length} nodes. Memory threshold reached.`;
 
-  // Choose a node to move offscreen
-  function getNode() {
-    const testNode = nodes[0];
-    if (!testNode) {
-      throw new Error('Test failed: No node found to move offscreen.');
+  const testNode = async function (testNode: INode) {
+    let textureFreed = false;
+    let textureLoaded = false;
+    let timedOut = false;
+    let timeOutTimer: NodeJS.Timeout | null = null;
+
+    function resetTimeout() {
+      if (timeOutTimer) {
+        clearTimeout(timeOutTimer);
+      }
+
+      timeOutTimer = setTimeout(() => {
+        timedOut = true;
+      }, 10000);
     }
-    return testNode;
-  }
 
-  let textureFreed = false;
-  let textureLoaded = false;
+    testNode.on('freed', () => {
+      console.log('Texture freed event received.');
+      textureFreed = true;
+      textureLoaded = false;
+    });
 
-  const testNode = getNode();
-  testNode.on('freed', () => {
-    console.log('Texture freed event received.');
-    textureFreed = true;
-    textureLoaded = false;
+    testNode.on('loaded', () => {
+      console.log('Texture loaded event received.');
+      textureLoaded = true;
+      textureFreed = false;
+    });
+
+    // Wait for the texture to be freed
+    console.log('Waiting for texture to be loaded...');
+    while (!textureLoaded && !timedOut) {
+      await delay(100);
+    }
+
+    if (timedOut) {
+      console.error('Texture failed to load within 10 seconds.');
+      return false;
+    }
+
+    resetTimeout();
+
+    // Move the node offscreen
+    console.log('Moving node offscreen...');
+    // Move the node out of bounds
+    queueMicrotask(() => {
+      testNode.x = -screenWidth * 2;
+      testNode.y = -screenHeight * 2;
+    });
+
+    // Wait for the texture to be freed
+    console.log('Waiting for texture to be freed...');
+    while (!textureFreed && !timedOut) {
+      renderer.rerender();
+      await delay(100);
+    }
+
+    if (timedOut) {
+      console.error('Texture failed to free within 10 seconds.');
+      return false;
+    }
+
+    resetTimeout();
+
+    // Move the node back into bounds
+    console.log('Moving node back into view...');
+    testNode.x = 0;
+    testNode.y = 0;
+
+    // Wait for the texture to be reloaded
+    console.log('Waiting for texture to be reloaded...');
+    while (!textureLoaded && !timedOut) {
+      await delay(100);
+    }
+
+    if (timedOut) {
+      console.error('Texture failed to reload within 10 seconds.');
+      return false;
+    }
+
+    if (timeOutTimer) {
+      clearTimeout(timeOutTimer);
+    }
+
+    if (textureLoaded) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  const image = renderer.createTexture('ImageTexture', {
+    src: rockoPng,
   });
 
-  testNode.on('loaded', () => {
-    console.log('Texture loaded event received.');
-    textureLoaded = true;
-    textureFreed = false;
-  });
+  const nodeSpawnX = 1100;
+  const nodeSpawnY = 30;
 
-  // Wait for the texture to be freed
-  console.log('Waiting for texture to be loaded...');
-  status.text = `Waiting for texture to be loaded...`;
-  while (!textureLoaded) {
-    await delay(100);
+  const testCases: Record<string, () => INode> = {
+    'Noise Texture': () =>
+      renderer.createNode({
+        texture: renderer.createTexture('NoiseTexture', {
+          width: nodeSize,
+          height: nodeSize,
+          cacheId: Math.random(),
+        }),
+        x: nodeSpawnX,
+        y: nodeSpawnY,
+        width: nodeSize,
+        height: nodeSize,
+        parent: testRoot,
+      }),
+    'Image Texture': () =>
+      renderer.createNode({
+        x: nodeSpawnX,
+        y: nodeSpawnY,
+        width: nodeSize,
+        height: nodeSize,
+        src: rockoPng,
+        parent: testRoot,
+      }),
+    // No need to test color textures, they all sample from the same 1x1 pixel texture
+    // and are not subject to the same memory constraints as other textures
+    // "Color Texture": () => renderer.createNode({
+    //   color: 0xff00ff, // Magenta
+    //   x: nodeSpawnX,
+    //   y: nodeSpawnY,
+    //   width: nodeSize,
+    //   height: nodeSize,
+    //   parent: testRoot,
+    // }),
+    SubTexture: () =>
+      renderer.createNode({
+        texture: renderer.createTexture('SubTexture', {
+          texture: image,
+          x: 30,
+          y: 0,
+          width: 50,
+          height: 50,
+        }),
+        x: nodeSpawnX,
+        y: nodeSpawnY,
+        width: nodeSize,
+        height: nodeSize,
+        parent: testRoot,
+      }),
+    'RTT Node': () => {
+      const rtt = renderer.createNode({
+        rtt: true,
+        x: nodeSpawnX,
+        y: nodeSpawnY,
+        width: nodeSize,
+        height: nodeSize,
+        parent: testRoot,
+      });
+
+      const child = renderer.createNode({
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        color: 0xff0000ff,
+        parent: rtt,
+      });
+
+      const child2 = renderer.createNode({
+        x: 0,
+        y: 20,
+        width: 100,
+        height: 100,
+        src: rockoPng,
+        parent: rtt,
+      });
+
+      return rtt;
+    },
+  };
+
+  // Run all tests
+  let allTestsPassed = true;
+  let lastStatusOffSet = 30;
+  let testIdx = 1;
+
+  for (const [name, createNode] of Object.entries(testCases)) {
+    console.log(`${testIdx}. Running test for: ${name}`);
+    finalStatus.text = `${testIdx}. Running test for: ${name}`;
+
+    const testNodeInstance = createNode(); // Create the test node dynamically
+
+    const result = await testNode(testNodeInstance);
+
+    if (!result) {
+      console.error(`${testIdx}. Test failed for: ${name}`);
+      finalStatus.text = `Test failed for: ${name}`;
+      finalStatus.color = 0xff0000ff;
+      allTestsPassed = false;
+    }
+
+    console.log(`${testIdx}. Test passed for: ${name}`);
+
+    testNodeInstance.x = 500;
+    testNodeInstance.y = lastStatusOffSet + 128;
+    testNodeInstance.width = 128;
+    testNodeInstance.height = 128;
+
+    const status = result ? 'passed' : 'failed';
+
+    renderer.createTextNode({
+      fontFamily: 'Ubuntu',
+      text: `${testIdx}. Test ${status} for: ${name}`,
+      fontSize: 30,
+      parent: testRoot,
+      color: result ? 0x00ff00ff : 0xff0000ff,
+      x: 630,
+      y: lastStatusOffSet + 128 + 128 / 2,
+    });
+
+    lastStatusOffSet += 130;
+    testIdx++;
   }
 
-  // Move the node offscreen
-  console.log('Moving node offscreen...');
-  status.text = `Moving node offscreen...`;
-  // Move the node out of bounds
-  testNode.x = -screenWidth * 2;
-  testNode.y = -screenHeight * 2;
-
-  // Wait for the texture to be freed
-  console.log('Waiting for texture to be freed...');
-  status.text = `Waiting for texture to be freed...`;
-  while (!textureFreed) {
-    await delay(100);
-  }
-
-  // Move the node back into bounds
-  console.log('Moving node back into view...');
-  status.text = `Moving node back into view...`;
-  testNode.x = 0;
-  testNode.y = 0;
-
-  // Wait for the texture to be reloaded
-  console.log('Waiting for texture to be reloaded...');
-  status.text = `Waiting for texture to be reloaded...`;
-  while (!textureLoaded) {
-    await delay(100);
-  }
-
-  if (textureLoaded) {
-    console.log('Test passed: Texture was freed and reloaded successfully.');
-    status.text = `Test passed: Texture was freed and reloaded successfully.`;
-    status.color = 0x00ff00ff;
-
-    // make texture really big in the center of the screen to display it to the user
-    testNode.x = screenWidth / 2 - nodeSize / 2;
-    testNode.y = screenHeight / 2 - nodeSize / 2;
-    testNode.width = nodeSize * 4;
-    testNode.height = nodeSize * 4;
+  if (allTestsPassed) {
+    console.log('All tests passed successfully!');
+    finalStatus.text = `All tests passed successfully!`;
+    finalStatus.color = 0x00ff00ff;
   } else {
-    console.error('Test failed: Texture was not freed or reloaded correctly.');
-    status.text = `Test failed: Texture was not freed or reloaded correctly.`;
-    status.color = 0xff0000ff;
-    throw new Error(
-      'Test failed: Texture was not freed or reloaded correctly.',
-    );
+    console.error('One or more tests failed.');
+    finalStatus.text = `One or more tests failed.`;
+    finalStatus.color = 0xff0000ff;
+    throw new Error('Test suite failed.');
   }
 }
