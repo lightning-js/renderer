@@ -64,12 +64,12 @@ export class RadialGradientEffect extends ShaderEffect {
 
   static override getEffectKey(props: RadialGradientEffectProps): string {
     if ((props.colors as unknown as ShaderEffectValueMap).value as number[]) {
-      return `linearGradient${
+      return `radialGradient${
         ((props.colors as unknown as ShaderEffectValueMap).value as number[])
           .length
       }`;
     }
-    return `linearGradient${props.colors!.length}`;
+    return `radialGradient${props.colors!.length}`;
   }
 
   static override resolveDefaults(

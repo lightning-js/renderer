@@ -32,10 +32,10 @@ import {
   type CoreWebGlExtensions,
   getWebGlParameters,
   getWebGlExtensions,
+  type WebGlColor,
 } from './internal/RendererUtils.js';
 import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 import { Texture, TextureType } from '../../textures/Texture.js';
-import { ColorTexture } from '../../textures/ColorTexture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCoreCtxSubTexture } from './WebGlCoreCtxSubTexture.js';
 import { CoreShaderManager } from '../../CoreShaderManager.js';
@@ -52,7 +52,6 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import type { CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
-import { ImageTexture } from '../../textures/ImageTexture.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -86,10 +85,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
   defaultShader: WebGlCoreShader;
   quadBufferCollection: BufferCollection;
 
+  clearColor: WebGlColor = {
+    raw: 0x00000000,
+    normalized: [0, 0, 0, 0],
+  };
+
   /**
    * White pixel texture used by default when no texture is specified.
    */
-  defaultTexture: Texture;
 
   quadBufferUsage = 0;
   /**
@@ -108,29 +111,16 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     const { canvas, clearColor, bufferMemory } = options;
 
-    this.defaultTexture = new ColorTexture(this.txManager);
-
-    // Mark the default texture as ALWAYS renderable
-    // This prevents it from ever being cleaned up.
-    // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
-
-    // When the default texture is loaded, request a render in case the
-    // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
-    this.defaultTexture.once('loaded', () => {
-      this.stage.requestRender();
-    });
-
     const gl = createWebGLContext(
       canvas,
       options.forceWebGL2,
       options.contextSpy,
     );
     const glw = (this.glw = new WebGlContextWrapper(gl));
-
-    const color = getNormalizedRgbaComponents(clearColor);
     glw.viewport(0, 0, canvas.width, canvas.height);
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+
+    this.updateClearColor(clearColor);
+
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
@@ -231,7 +221,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
   addQuad(params: QuadOptions) {
     const { fQuadBuffer, uiQuadBuffer } = this;
-    let texture = params.texture || this.defaultTexture;
+    let texture = params.texture;
+
+    assertTruthy(texture !== null, 'Texture is required');
 
     /**
      * If the shader props contain any automatic properties, update it with the
@@ -249,8 +241,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
       }
     }
 
-    assertTruthy(texture.ctxTexture !== undefined, 'Invalid texture type');
-
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
     const targetDims = { width: -1, height: -1 };
     targetDims.width = params.width;
@@ -264,7 +254,6 @@ export class WebGlCoreRenderer extends CoreRenderer {
     );
 
     if (this.reuseRenderOp(params) === false) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.newRenderOp(
         targetShader,
         params.shaderProps as Record<string, unknown>,
@@ -347,7 +336,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture.ctxTexture !== undefined);
+    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
@@ -717,6 +706,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
         continue;
       }
 
+      if (!node.texture || !node.texture.ctxTexture) {
+        console.warn('Texture not loaded for RTT node', node);
+        continue;
+      }
+
       // Set the active RTT node to the current node
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
@@ -754,9 +748,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       node.hasRTTupdates = false;
     }
 
-    const color = getNormalizedRgbaComponents(this.stage.options.clearColor);
+    const clearColor = this.clearColor.normalized;
     // Restore the default clear color
-    glw.clearColor(color[0]!, color[1]!, color[2]!, color[3]!);
+    glw.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
 
     // Bind the default framebuffer
     glw.bindFramebuffer(null);
@@ -783,5 +777,29 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
   override getDefShaderCtr(): BaseShaderController {
     return this.defShaderCtrl;
+  }
+
+  /**
+   * Updates the WebGL context's clear color and clears the color buffer.
+   *
+   * @param color - The color to set as the clear color, represented as a 32-bit integer.
+   */
+  updateClearColor(color: number) {
+    if (this.clearColor.raw === color) {
+      return;
+    }
+    const glw = this.glw;
+    const normalizedColor = getNormalizedRgbaComponents(color);
+    glw.clearColor(
+      normalizedColor[0],
+      normalizedColor[1],
+      normalizedColor[2],
+      normalizedColor[3],
+    );
+    this.clearColor = {
+      raw: color,
+      normalized: normalizedColor,
+    };
+    glw.clear();
   }
 }

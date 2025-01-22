@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { CreateImageBitmapSupport } from '../CoreTextureManager.js';
 import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
@@ -58,8 +59,15 @@ function createImageWorker() {
     y: number | null,
     width: number | null,
     height: number | null,
+    options: {
+      supportsOptionsCreateImageBitmap: boolean;
+      supportsFullCreateImageBitmap: boolean;
+    },
   ): Promise<getImageReturn> {
     return new Promise(function (resolve, reject) {
+      var supportsOptionsCreateImageBitmap =
+        options.supportsOptionsCreateImageBitmap;
+      var supportsFullCreateImageBitmap = options.supportsFullCreateImageBitmap;
       var xhr = new XMLHttpRequest();
       xhr.open('GET', src, true);
       xhr.responseType = 'blob';
@@ -75,7 +83,12 @@ function createImageWorker() {
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
 
-        if (width !== null && height !== null) {
+        // createImageBitmap with crop and options
+        if (
+          supportsFullCreateImageBitmap === true &&
+          width !== null &&
+          height !== null
+        ) {
           createImageBitmap(blob, x || 0, y || 0, width, height, {
             premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
             colorSpaceConversion: 'none',
@@ -88,19 +101,29 @@ function createImageWorker() {
               reject(error);
             });
           return;
-        }
-
-        createImageBitmap(blob, {
-          premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        })
-          .then(function (data) {
-            resolve({ data, premultiplyAlpha: premultiplyAlpha });
+        } else if (supportsOptionsCreateImageBitmap === true) {
+          createImageBitmap(blob, {
+            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
           })
-          .catch(function (error) {
-            reject(error);
-          });
+            .then(function (data) {
+              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+            })
+            .catch(function (error) {
+              reject(error);
+            });
+        } else {
+          // Fallback for browsers that do not support createImageBitmap with options
+          // this is supported for Chrome v50 to v52/54 that doesn't support options
+          createImageBitmap(blob)
+            .then(function (data) {
+              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+            })
+            .catch(function (error) {
+              reject(error);
+            });
+        }
       };
 
       xhr.onerror = function () {
@@ -122,7 +145,14 @@ function createImageWorker() {
     var width = event.data.sw;
     var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha, x, y, width, height)
+    // these will be set to true if the browser supports the createImageBitmap options or full
+    var supportsOptionsCreateImageBitmap = false;
+    var supportsFullCreateImageBitmap = false;
+
+    getImage(src, premultiplyAlpha, x, y, width, height, {
+      supportsOptionsCreateImageBitmap,
+      supportsFullCreateImageBitmap,
+    })
       .then(function (data) {
         self.postMessage({ id: id, src: src, data: data });
       })
@@ -140,8 +170,14 @@ export class ImageWorkerManager {
   workerIndex = 0;
   nextId = 0;
 
-  constructor(numImageWorkers: number) {
-    this.workers = this.createWorkers(numImageWorkers);
+  constructor(
+    numImageWorkers: number,
+    createImageBitmapSupport: CreateImageBitmapSupport,
+  ) {
+    this.workers = this.createWorkers(
+      numImageWorkers,
+      createImageBitmapSupport,
+    );
     this.workers.forEach((worker) => {
       worker.onmessage = this.handleMessage.bind(this);
     });
@@ -161,10 +197,29 @@ export class ImageWorkerManager {
     }
   }
 
-  private createWorkers(numWorkers = 1): Worker[] {
-    const workerCode = `(${createImageWorker.toString()})()`;
+  private createWorkers(
+    numWorkers = 1,
+    createImageBitmapSupport: CreateImageBitmapSupport,
+  ): Worker[] {
+    let workerCode = `(${createImageWorker.toString()})()`;
 
-    const blob: Blob = new Blob([workerCode.replace('"use strict";', '')], {
+    // Replace placeholders with actual initialization values
+    if (createImageBitmapSupport.options) {
+      workerCode = workerCode.replace(
+        'var supportsOptionsCreateImageBitmap = false;',
+        'var supportsOptionsCreateImageBitmap = true;',
+      );
+    }
+
+    if (createImageBitmapSupport.full) {
+      workerCode = workerCode.replace(
+        'var supportsFullCreateImageBitmap = false;',
+        'var supportsFullCreateImageBitmap = true;',
+      );
+    }
+
+    workerCode = workerCode.replace('"use strict";', '');
+    const blob: Blob = new Blob([workerCode], {
       type: 'application/javascript',
     });
     const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);

@@ -84,6 +84,99 @@ export function getBorder(
   return undefined;
 }
 
+export function roundRect(
+  this: CanvasRenderingContext2D | Path2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number | DOMPointInit | (number | DOMPointInit)[],
+) {
+  const context = Object.getPrototypeOf(this) as Path2D;
+  if (!context.roundRect) {
+    const fixOverlappingCorners = (radii: {
+      topLeft: number;
+      topRight: number;
+      bottomRight: number;
+      bottomLeft: number;
+    }) => {
+      const maxRadius = Math.min(width / 2, height / 2);
+      const totalHorizontal =
+        radii.topLeft + radii.topRight + radii.bottomRight + radii.bottomLeft;
+
+      if (totalHorizontal > width || totalHorizontal > height) {
+        const scale =
+          maxRadius /
+          Math.max(
+            radii.topLeft,
+            radii.topRight,
+            radii.bottomRight,
+            radii.bottomLeft,
+          );
+        radii.topLeft *= scale;
+        radii.topRight *= scale;
+        radii.bottomRight *= scale;
+        radii.bottomLeft *= scale;
+      }
+    };
+    const radii =
+      typeof radius === 'number'
+        ? {
+            topLeft: radius,
+            topRight: radius,
+            bottomRight: radius,
+            bottomLeft: radius,
+          }
+        : { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0, ...radius };
+
+    fixOverlappingCorners(radii);
+
+    this.moveTo(x + radii.topLeft, y);
+    this.lineTo(x + width - radii.topRight, y);
+    this.ellipse(
+      x + width - radii.topRight,
+      y + radii.topRight,
+      radii.topRight,
+      radii.topRight,
+      0,
+      1.5 * Math.PI,
+      2 * Math.PI,
+    );
+    this.lineTo(x + width, y + height - radii.bottomRight);
+    this.ellipse(
+      x + width - radii.bottomRight,
+      y + height - radii.bottomRight,
+      radii.bottomRight,
+      radii.bottomRight,
+      0,
+      0,
+      0.5 * Math.PI,
+    );
+    this.lineTo(x + radii.bottomLeft, y + height);
+    this.ellipse(
+      x + radii.bottomLeft,
+      y + height - radii.bottomLeft,
+      radii.bottomLeft,
+      radii.bottomLeft,
+      0,
+      0.5 * Math.PI,
+      Math.PI,
+    );
+    this.lineTo(x, y + radii.topLeft);
+    this.ellipse(
+      x + radii.topLeft,
+      y + radii.topLeft,
+      radii.topLeft,
+      radii.topLeft,
+      0,
+      Math.PI,
+      1.5 * Math.PI,
+    );
+  } else {
+    this.roundRect(x, y, width, height, radius);
+  }
+}
+
 export function strokeLine(
   ctx: CanvasRenderingContext2D,
   x: number,

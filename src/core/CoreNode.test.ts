@@ -17,12 +17,14 @@
  * limitations under the License.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { type TextureOptions } from './CoreTextureManager.js';
 import { type BaseShaderController } from '../main-api/ShaderController';
+import { createBound } from './lib/utils.js';
+import { ImageTexture } from './textures/ImageTexture.js';
 
 describe('set color()', () => {
   const defaultProps: CoreNodeProps = {
@@ -65,8 +67,25 @@ describe('set color()', () => {
     strictBounds: false,
   };
 
+const clippingRect = {
+  x: 0,
+  y: 0,
+  width: 200,
+  height: 200,
+  valid: false,
+};
+
+const stage = mock<Stage>({
+  strictBound: createBound(0, 0, 200, 200),
+  preloadBound: createBound(0, 0, 200, 200),
+  defaultTexture: {
+    state: 'loaded',
+  },
+});
+
+describe('set color()', () => {
   it('should set all color subcomponents.', () => {
-    const node = new CoreNode(mock<Stage>(), defaultProps);
+    const node = new CoreNode(stage, defaultProps);
     node.colorBl = 0x99aabbff;
     node.colorBr = 0xaabbccff;
     node.colorTl = 0xbbcceeff;
@@ -86,11 +105,97 @@ describe('set color()', () => {
   });
 
   it('should set update type.', () => {
-    const node = new CoreNode(mock<Stage>(), defaultProps);
+    const node = new CoreNode(stage, defaultProps);
     node.updateType = 0;
 
     node.color = 0xffffffff;
 
     expect(node.updateType).toBe(UpdateType.PremultipliedColors);
+  });
+});
+
+describe('isRenderable checks', () => {
+  it('should return false if node is not renderable', () => {
+    const node = new CoreNode(stage, defaultProps);
+    expect(node.isRenderable).toBe(false);
+  });
+
+  it('visible node that is a color texture', () => {
+    const node = new CoreNode(stage, defaultProps);
+    node.alpha = 1;
+    node.x = 0;
+    node.y = 0;
+    node.width = 100;
+    node.height = 100;
+    node.color = 0xffffffff;
+
+    node.update(0, clippingRect);
+    expect(node.isRenderable).toBe(true);
+  });
+
+  it('visible node that is a texture', () => {
+    const node = new CoreNode(stage, defaultProps);
+    node.alpha = 1;
+    node.x = 0;
+    node.y = 0;
+    node.width = 100;
+    node.height = 100;
+    node.texture = mock<ImageTexture>({
+      state: 'initial',
+    });
+
+    node.update(0, clippingRect);
+    expect(node.isRenderable).toBe(false);
+
+    node.texture.state = 'loaded';
+    node.setUpdateType(UpdateType.IsRenderable);
+    node.update(1, clippingRect);
+
+    expect(node.isRenderable).toBe(true);
+  });
+
+  it('a node with a texture with alpha 0 should not be renderable', () => {
+    const node = new CoreNode(stage, defaultProps);
+    node.alpha = 0;
+    node.x = 0;
+    node.y = 0;
+    node.width = 100;
+    node.height = 100;
+    node.texture = mock<ImageTexture>({
+      state: 'loaded',
+    });
+
+    node.update(0, clippingRect);
+    expect(node.isRenderable).toBe(false);
+  });
+
+  it('a node with a texture that is OutOfBounds should not be renderable', () => {
+    const node = new CoreNode(stage, defaultProps);
+    node.alpha = 1;
+    node.x = 300;
+    node.y = 300;
+    node.width = 100;
+    node.height = 100;
+    node.texture = mock<ImageTexture>({
+      state: 'loaded',
+    });
+
+    node.update(0, clippingRect);
+    expect(node.isRenderable).toBe(false);
+  });
+
+  it('a node with a freed texture should not be renderable', () => {
+    const node = new CoreNode(stage, defaultProps);
+    node.alpha = 1;
+    node.x = 0;
+    node.y = 0;
+    node.width = 100;
+    node.height = 100;
+    node.texture = mock<ImageTexture>({
+      state: 'freed',
+    });
+
+    node.update(0, clippingRect);
+    expect(node.isRenderable).toBe(false);
   });
 });

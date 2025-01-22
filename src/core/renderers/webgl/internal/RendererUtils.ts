@@ -141,8 +141,15 @@ export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
 export function isHTMLImageElement(obj: unknown): obj is HTMLImageElement {
   return (
     obj !== null &&
-    typeof obj === 'object' &&
-    obj.constructor &&
-    obj.constructor.name === 'HTMLImageElement'
+    ((typeof obj === 'object' &&
+      obj.constructor &&
+      obj.constructor.name === 'HTMLImageElement') ||
+      (typeof HTMLImageElement !== 'undefined' &&
+        obj instanceof HTMLImageElement))
   );
+}
+
+export interface WebGlColor {
+  raw: number;
+  normalized: [number, number, number, number];
 }

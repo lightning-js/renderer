@@ -25,6 +25,7 @@ import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
+import { EventEmitter } from '../common/EventEmitter.js';
 
 /**
  * Augmentable map of texture class types
@@ -40,6 +41,12 @@ export interface TextureMap {
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
   RenderTexture: typeof RenderTexture;
+}
+
+export interface CreateImageBitmapSupport {
+  basic: boolean; // Supports createImageBitmap(image)
+  options: boolean; // Supports createImageBitmap(image, options)
+  full: boolean; // Supports createImageBitmap(image, sx, sy, sw, sh, options)
 }
 
 export type ExtractProps<Type> = Type extends { z$__type__Props: infer Props }
@@ -115,6 +122,18 @@ export interface TextureOptions {
   preload?: boolean;
 
   /**
+   * Prevent clean up of the texture when it is no longer being used.
+   *
+   * @remarks
+   * This is useful when you want to keep the texture in memory for later use.
+   * Regardless of whether the texture is being used or not, it will not be
+   * cleaned up.
+   *
+   * @defaultValue `false`
+   */
+  preventCleanup?: boolean;
+
+  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
@@ -138,7 +157,7 @@ export interface TextureOptions {
   resizeMode?: ResizeModeOptions;
 }
 
-export class CoreTextureManager {
+export class CoreTextureManager extends EventEmitter {
   /**
    * Map of textures by cache key
    */
@@ -154,8 +173,19 @@ export class CoreTextureManager {
    */
   txConstructors: Partial<TextureMap> = {};
 
+  private downloadTextureSourceQueue: Array<Texture> = [];
+  private priorityQueue: Array<Texture> = [];
+  private uploadTextureQueue: Array<Texture> = [];
+  private initialized = false;
+
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
+  imageBitmapSupported = {
+    basic: false,
+    options: false,
+    full: false,
+  };
+
   hasWorker = !!self.Worker;
   /**
    * Renderer that this texture manager is associated with
@@ -178,22 +208,123 @@ export class CoreTextureManager {
   frameTime = 0;
 
   constructor(numImageWorkers: number) {
-    // Register default known texture types
-    if (this.hasCreateImageBitmap && this.hasWorker && numImageWorkers > 0) {
-      this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
-    }
+    super();
+    this.validateCreateImageBitmap()
+      .then((result) => {
+        this.hasCreateImageBitmap =
+          result.basic || result.options || result.full;
+        this.imageBitmapSupported = result;
 
-    if (!this.hasCreateImageBitmap) {
-      console.warn(
-        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-      );
-    }
+        if (!this.hasCreateImageBitmap) {
+          console.warn(
+            '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+          );
+        }
+
+        if (
+          this.hasCreateImageBitmap &&
+          this.hasWorker &&
+          numImageWorkers > 0
+        ) {
+          this.imageWorkerManager = new ImageWorkerManager(
+            numImageWorkers,
+            result,
+          );
+        } else {
+          console.warn(
+            '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
+          );
+        }
+
+        this.initialized = true;
+        this.emit('initialized');
+      })
+      .catch((e) => {
+        console.warn(
+          '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
+        );
+
+        // initialized without image worker manager and createImageBitmap
+        this.initialized = true;
+        this.emit('initialized');
+      });
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
     this.registerTextureType('SubTexture', SubTexture);
     this.registerTextureType('RenderTexture', RenderTexture);
+  }
+
+  private async validateCreateImageBitmap(): Promise<CreateImageBitmapSupport> {
+    // Test if createImageBitmap is supported using a simple 1x1 PNG image
+    // prettier-ignore
+    const pngBinaryData = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47,
+      0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
+      0x00, 0x00, 0x00, 0x0d, // IHDR chunk length
+      0x49, 0x48, 0x44, 0x52, // "IHDR" chunk type
+      0x00, 0x00, 0x00, 0x01, // Width: 1
+      0x00, 0x00, 0x00, 0x01, // Height: 1
+      0x01,                   // Bit depth: 1
+      0x03,                   // Color type: Indexed
+      0x00,                   // Compression method: Deflate
+      0x00,                   // Filter method: None
+      0x00,                   // Interlace method: None
+      0x25, 0xdb, 0x56, 0xca, // CRC for IHDR
+      0x00, 0x00, 0x00, 0x03, // PLTE chunk length
+      0x50, 0x4c, 0x54, 0x45, // "PLTE" chunk type
+      0x00, 0x00, 0x00,       // Palette entry: Black
+      0xa7, 0x7a, 0x3d, 0xda, // CRC for PLTE
+      0x00, 0x00, 0x00, 0x01, // tRNS chunk length
+      0x74, 0x52, 0x4e, 0x53, // "tRNS" chunk type
+      0x00,                   // Transparency for black: Fully transparent
+      0x40, 0xe6, 0xd8, 0x66, // CRC for tRNS
+      0x00, 0x00, 0x00, 0x0a, // IDAT chunk length
+      0x49, 0x44, 0x41, 0x54, // "IDAT" chunk type
+      0x08, 0xd7,             // Deflate header
+      0x63, 0x60, 0x00, 0x00,
+      0x00, 0x02, 0x00, 0x01, // Zlib-compressed data
+      0xe2, 0x21, 0xbc, 0x33, // CRC for IDAT
+      0x00, 0x00, 0x00, 0x00, // IEND chunk length
+      0x49, 0x45, 0x4e, 0x44, // "IEND" chunk type
+      0xae, 0x42, 0x60, 0x82, // CRC for IEND
+    ]);
+
+    const support: CreateImageBitmapSupport = {
+      basic: false,
+      options: false,
+      full: false,
+    };
+
+    // Test basic createImageBitmap support
+    const blob = new Blob([pngBinaryData], { type: 'image/png' });
+    const bitmap = await createImageBitmap(blob);
+    bitmap.close?.();
+    support.basic = true;
+
+    // Test createImageBitmap with options support
+    try {
+      const options = { premultiplyAlpha: 'none' as const };
+      const bitmapWithOptions = await createImageBitmap(blob, options);
+      bitmapWithOptions.close?.();
+      support.options = true;
+    } catch (e) {
+      /* ignore */
+    }
+
+    // Test createImageBitmap with full options support
+    try {
+      const bitmapWithFullOptions = await createImageBitmap(blob, 0, 0, 1, 1, {
+        premultiplyAlpha: 'none',
+      });
+      bitmapWithFullOptions.close?.();
+      support.full = true;
+    } catch (e) {
+      /* ignore */
+    }
+
+    return support;
   }
 
   registerTextureType<Type extends keyof TextureMap>(
@@ -203,7 +334,33 @@ export class CoreTextureManager {
     this.txConstructors[textureType] = textureClass;
   }
 
-  loadTexture<Type extends keyof TextureMap>(
+  /**
+   * Enqueue a texture for downloading its source image.
+   */
+  enqueueDownloadTextureSource(texture: Texture): void {
+    if (!this.downloadTextureSourceQueue.includes(texture)) {
+      this.downloadTextureSourceQueue.push(texture);
+    }
+  }
+
+  /**
+   * Enqueue a texture for uploading to the GPU.
+   *
+   * @param texture - The texture to upload
+   */
+  enqueueUploadTexture(texture: Texture): void {
+    if (this.uploadTextureQueue.includes(texture) === false) {
+      this.uploadTextureQueue.push(texture);
+    }
+  }
+
+  /**
+   * Create a texture
+   *
+   * @param textureType - The type of texture to create
+   * @param props - The properties to use for the texture
+   */
+  createTexture<Type extends keyof TextureMap>(
     textureType: Type,
     props: ExtractProps<TextureMap[Type]>,
   ): InstanceType<TextureMap[Type]> {
@@ -213,27 +370,146 @@ export class CoreTextureManager {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
 
-    if (!texture) {
-      const cacheKey = TextureClass.makeCacheKey(props as any);
-      if (cacheKey && this.keyCache.has(cacheKey)) {
-        // console.log('Getting texture by cache key', cacheKey);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        texture = this.keyCache.get(cacheKey)!;
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        texture = new TextureClass(this, props as any);
-        if (cacheKey) {
-          this.initTextureToCache(texture, cacheKey);
-        }
+    const cacheKey = TextureClass.makeCacheKey(props as any);
+    if (cacheKey && this.keyCache.has(cacheKey)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      texture = this.keyCache.get(cacheKey)!;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      texture = new TextureClass(this, props as any);
+
+      if (cacheKey) {
+        this.initTextureToCache(texture, cacheKey);
       }
     }
+
     return texture as InstanceType<TextureMap[Type]>;
   }
 
-  private initTextureToCache(texture: Texture, cacheKey: string) {
+  /**
+   * Override loadTexture to use the batched approach.
+   *
+   * @param texture - The texture to load
+   * @param immediate - Whether to prioritize the texture for immediate loading
+   */
+  loadTexture(texture: Texture, priority?: boolean): void {
+    if (texture.state === 'loaded' || texture.state === 'loading') {
+      return;
+    }
+
+    texture.setSourceState('loading');
+    texture.setCoreCtxState('loading');
+
+    // if we're not initialized, just queue the texture into the priority queue
+    if (this.initialized === false) {
+      this.priorityQueue.push(texture);
+      return;
+    }
+
+    // prioritize the texture for immediate loading
+    if (priority === true) {
+      texture
+        .getTextureData()
+        .then(() => {
+          this.uploadTexture(texture);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+
+    // enqueue the texture for download and upload
+    this.enqueueDownloadTextureSource(texture);
+  }
+
+  /**
+   * Upload a texture to the GPU
+   *
+   * @param texture Texture to upload
+   */
+  uploadTexture(texture: Texture): void {
+    const coreContext = texture.loadCtxTexture();
+    coreContext.load();
+  }
+
+  /**
+   * Process a limited number of downloads and uploads.
+   *
+   * @param maxItems - The maximum number of items to process
+   */
+  processSome(maxItems = 0): void {
+    if (this.initialized === false) {
+      return;
+    }
+
+    let itemsProcessed = 0;
+
+    // Process priority queue
+    while (
+      this.priorityQueue.length > 0 &&
+      (maxItems === 0 || itemsProcessed < maxItems)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.priorityQueue.shift()!;
+      texture.getTextureData().then(() => {
+        this.uploadTexture(texture);
+      });
+      itemsProcessed++;
+    }
+
+    // Process uploads
+    while (
+      this.uploadTextureQueue.length > 0 &&
+      (maxItems === 0 || itemsProcessed < maxItems)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.uploadTexture(this.uploadTextureQueue.shift()!);
+      itemsProcessed++;
+    }
+
+    // Process downloads
+    while (
+      this.downloadTextureSourceQueue.length > 0 &&
+      (maxItems === 0 || itemsProcessed < maxItems)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const texture = this.downloadTextureSourceQueue.shift()!;
+      queueMicrotask(() => {
+        texture.getTextureData().then(() => {
+          this.enqueueUploadTexture(texture);
+        });
+      });
+
+      itemsProcessed++;
+    }
+  }
+
+  public hasUpdates(): boolean {
+    return (
+      this.downloadTextureSourceQueue.length > 0 ||
+      this.uploadTextureQueue.length > 0
+    );
+  }
+
+  /**
+   * Initialize a texture to the cache
+   *
+   * @param texture Texture to cache
+   * @param cacheKey Cache key for the texture
+   */
+  initTextureToCache(texture: Texture, cacheKey: string) {
     const { keyCache, inverseKeyCache } = this;
     keyCache.set(cacheKey, texture);
     inverseKeyCache.set(texture, cacheKey);
+  }
+
+  /**
+   * Get a texture from the cache
+   *
+   * @param cacheKey
+   */
+  getTextureFromCache(cacheKey: string): Texture | undefined {
+    return this.keyCache.get(cacheKey);
   }
 
   /**
@@ -250,5 +526,23 @@ export class CoreTextureManager {
     if (cacheKey) {
       keyCache.delete(cacheKey);
     }
+  }
+
+  /**
+   * Resolve a parent texture from the cache or fallback to the provided texture.
+   *
+   * @param texture - The provided texture to resolve.
+   * @returns The cached or provided texture.
+   */
+  resolveParentTexture(texture: ImageTexture): Texture {
+    if (!texture?.props) {
+      return texture;
+    }
+
+    const cacheKey = ImageTexture.makeCacheKey(texture.props);
+    const cachedTexture = cacheKey
+      ? this.getTextureFromCache(cacheKey)
+      : undefined;
+    return cachedTexture ?? texture;
   }
 }

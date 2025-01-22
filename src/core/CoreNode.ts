@@ -20,16 +20,17 @@
 import {
   assertTruthy,
   getNewId,
+  isProductionEnvironment,
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
-import type {
-  Texture,
-  TextureFailedEventHandler,
-  TextureFreedEventHandler,
-  TextureLoadedEventHandler,
+import {
+  type Texture,
+  type TextureFailedEventHandler,
+  type TextureFreedEventHandler,
+  type TextureLoadedEventHandler,
 } from './textures/Texture.js';
 import type {
   Dimensions,
@@ -419,7 +420,11 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
-   * Whether to prevent the node from being cleaned up
+   * [Deprecated]: Prevents the texture from being cleaned up when the Node is removed
+   *
+   * @remarks
+   * Please use the `preventCleanup` property on {@link TextureOptions} instead.
+   *
    * @default false
    */
   preventCleanup: boolean;
@@ -748,6 +753,7 @@ export class CoreNode extends EventEmitter {
   public calcZIndex = 0;
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
+  public rttParent: CoreNode | null = null;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
@@ -783,6 +789,23 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderBounds |
         UpdateType.RenderState,
     );
+
+    if (isProductionEnvironment() === false && props.preventCleanup === true) {
+      console.warn(
+        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
+      );
+    }
+
+    // if the default texture isn't loaded yet, wait for it to load
+    // this only happens when the node is created before the stage is ready
+    if (
+      this.stage.defaultTexture &&
+      this.stage.defaultTexture.state !== 'loaded'
+    ) {
+      this.stage.defaultTexture.once('loaded', () => {
+        this.setUpdateType(UpdateType.IsRenderable);
+      });
+    }
   }
 
   //#region Textures
@@ -795,12 +818,12 @@ export class CoreNode extends EventEmitter {
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
-      texture.preventCleanup = this.props.preventCleanup;
-      // Preload texture if required
-      if (this.textureOptions.preload) {
-        texture.ctxTexture.load();
+      if (this.textureOptions.preload === true) {
+        this.stage.txManager.loadTexture(texture);
       }
 
+      texture.preventCleanup =
+        this.props.textureOptions?.preventCleanup ?? false;
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
@@ -845,6 +868,7 @@ export class CoreNode extends EventEmitter {
 
   private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
+    this.setUpdateType(UpdateType.IsRenderable);
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -855,10 +879,13 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('loaded', {
-      type: 'texture',
-      dimensions,
-    } satisfies NodeTextureLoadedPayload);
+    // ignore 1x1 pixel textures
+    if (dimensions.width > 1 && dimensions.height > 1) {
+      this.emit('loaded', {
+        type: 'texture',
+        dimensions,
+      } satisfies NodeTextureLoadedPayload);
+    }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
     if (this.props.textureOptions?.resizeMode?.type === 'contain') {
@@ -867,6 +894,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -879,6 +908,8 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    this.setUpdateType(UpdateType.IsRenderable);
+
     // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
@@ -1016,7 +1047,7 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.RenderTexture && this.rtt) {
       // Only the RTT node itself triggers `renderToTexture`
       this.hasRTTupdates = true;
-      this.stage.renderer?.renderToTexture(this);
+      this.loadRenderTexture();
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -1154,7 +1185,18 @@ export class CoreNode extends EventEmitter {
           continue;
         }
 
-        child.update(delta, this.clippingRect);
+        let childClippingRect = this.clippingRect;
+        if (this.rtt === true) {
+          childClippingRect = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            valid: false,
+          };
+        }
+
+        child.update(delta, childClippingRect);
       }
     }
 
@@ -1185,17 +1227,20 @@ export class CoreNode extends EventEmitter {
     this.childUpdateType = 0;
   }
 
+  private findParentRTTNode(): CoreNode | null {
+    let rttNode: CoreNode | null = this.parent;
+    while (rttNode && !rttNode.rtt) {
+      rttNode = rttNode.parent;
+    }
+    return rttNode;
+  }
+
   private notifyParentRTTOfUpdate() {
     if (this.parent === null) {
       return;
     }
 
-    let rttNode: CoreNode | null = this.parent;
-    // Traverse up to find the RTT root node
-    while (rttNode && !rttNode.rtt) {
-      rttNode = rttNode.parent;
-    }
-
+    const rttNode = this.rttParent || this.findParentRTTNode();
     if (!rttNode) {
       return;
     }
@@ -1208,64 +1253,6 @@ export class CoreNode extends EventEmitter {
     if (rttNode.parentHasRenderTexture === true) {
       rttNode.notifyParentRTTOfUpdate();
     }
-  }
-
-  //check if CoreNode is renderable based on props
-  hasRenderableProperties(): boolean {
-    if (this.props.texture) {
-      return true;
-    }
-
-    if (!this.props.width || !this.props.height) {
-      return false;
-    }
-
-    if (this.props.shader !== this.stage.defShaderCtr) {
-      return true;
-    }
-
-    if (this.props.clipping) {
-      return true;
-    }
-
-    if (this.props.color !== 0) {
-      return true;
-    }
-
-    // Consider removing these checks and just using the color property check above.
-    // Maybe add a forceRender prop for nodes that should always render.
-    if (this.props.colorTop !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBottom !== 0) {
-      return true;
-    }
-
-    if (this.props.colorLeft !== 0) {
-      return true;
-    }
-
-    if (this.props.colorRight !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorTr !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBl !== 0) {
-      return true;
-    }
-
-    if (this.props.colorBr !== 0) {
-      return true;
-    }
-    return false;
   }
 
   checkRenderBounds(): CoreNodeRenderState {
@@ -1284,6 +1271,11 @@ export class CoreNode extends EventEmitter {
     // check if we're larger then our parent, we're definitely in the viewport
     if (boundLargeThanBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
+    }
+
+    // if we are part of a parent render texture, we're always in bounds
+    if (this.parentHasRenderTexture === true) {
+      return CoreNodeRenderState.InBounds;
     }
 
     // check if we dont have dimensions, take our parent's render state
@@ -1392,25 +1384,100 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
-   * This function updates the `isRenderable` property based on certain conditions.
-   *
-   * @returns
+   * Updates the `isRenderable` property based on various conditions.
    */
   updateIsRenderable() {
-    let newIsRenderable;
-    if (this.worldAlpha === 0 || !this.hasRenderableProperties()) {
-      newIsRenderable = false;
-    } else {
-      newIsRenderable = this.renderState > CoreNodeRenderState.OutOfBounds;
+    let newIsRenderable = false;
+    let needsTextureOwnership = false;
+
+    // If the node is out of bounds or has an alpha of 0, it is not renderable
+    if (this.checkBasicRenderability() === false) {
+      this.updateTextureOwnership(false);
+      this.setRenderable(false);
+      return;
     }
-    if (this.isRenderable !== newIsRenderable) {
-      this.isRenderable = newIsRenderable;
-      this.onChangeIsRenderable(newIsRenderable);
+
+    if (this.texture !== null) {
+      needsTextureOwnership = true;
+
+      // we're only renderable if the texture state is loaded
+      newIsRenderable = this.texture.state === 'loaded';
+    } else if (
+      (this.hasShader() || this.hasColorProperties() === true) &&
+      this.hasDimensions() === true
+    ) {
+      // This mean we have dimensions and a color set, so we can render a ColorTexture
+      if (
+        this.stage.defaultTexture &&
+        this.stage.defaultTexture.state === 'loaded'
+      ) {
+        newIsRenderable = true;
+      }
+    }
+
+    this.updateTextureOwnership(needsTextureOwnership);
+    this.setRenderable(newIsRenderable);
+  }
+
+  /**
+   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   */
+  checkBasicRenderability(): boolean {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    } else {
+      return true;
     }
   }
 
-  onChangeIsRenderable(isRenderable: boolean) {
+  /**
+   * Sets the renderable state and triggers changes if necessary.
+   * @param isRenderable - The new renderable state
+   */
+  setRenderable(isRenderable: boolean) {
+    this.isRenderable = isRenderable;
+  }
+
+  /**
+   * Changes the renderable state of the node.
+   */
+  updateTextureOwnership(isRenderable: boolean) {
     this.texture?.setRenderableOwner(this, isRenderable);
+  }
+
+  /**
+   * Checks if the node is out of the viewport bounds.
+   */
+  isOutOfBounds(): boolean {
+    return this.renderState <= CoreNodeRenderState.OutOfBounds;
+  }
+
+  /**
+   * Checks if the node has dimensions (width/height)
+   */
+  hasDimensions(): boolean {
+    return this.props.width !== 0 && this.props.height !== 0;
+  }
+
+  /**
+   * Checks if the node has any color properties set.
+   */
+  hasColorProperties(): boolean {
+    return (
+      this.props.color !== 0 ||
+      this.props.colorTop !== 0 ||
+      this.props.colorBottom !== 0 ||
+      this.props.colorLeft !== 0 ||
+      this.props.colorRight !== 0 ||
+      this.props.colorTl !== 0 ||
+      this.props.colorTr !== 0 ||
+      this.props.colorBl !== 0 ||
+      this.props.colorBr !== 0
+    );
+  }
+
+  hasShader(): boolean {
+    return this.props.shader !== null;
   }
 
   calculateRenderCoords() {
@@ -1562,7 +1629,9 @@ export class CoreNode extends EventEmitter {
       colorTr: this.premultipliedColorTr,
       colorBl: this.premultipliedColorBl,
       colorBr: this.premultipliedColorBr,
-      texture: this.texture,
+      // if we do not have a texture, use the default texture
+      // this assumes any renderable node is either a distinct texture or a ColorTexture
+      texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
       zIndex: this.zIndex,
       shader: this.shader.shader,
@@ -1643,11 +1712,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1663,11 +1732,11 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt) {
-        this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+        this.texture = this.stage.txManager.createTexture('RenderTexture', {
           width: this.width,
           height: this.height,
         });
-        this.textureOptions.preload = true;
+
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -2019,11 +2088,17 @@ export class CoreNode extends EventEmitter {
   }
 
   get preventCleanup(): boolean {
-    return this.props.preventCleanup;
+    return this.props.textureOptions.preventCleanup || false;
   }
 
   set preventCleanup(value: boolean) {
-    this.props.preventCleanup = value;
+    if (isProductionEnvironment() === false) {
+      console.warn(
+        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
+      );
+    }
+
+    this.props.textureOptions.preventCleanup = value;
   }
 
   get rtt(): boolean {
@@ -2036,7 +2111,7 @@ export class CoreNode extends EventEmitter {
     }
     this.props.rtt = value;
 
-    if (value) {
+    if (value === true) {
       this.initRenderTexture();
       this.markChildrenWithRTT();
     } else {
@@ -2045,17 +2120,36 @@ export class CoreNode extends EventEmitter {
 
     this.setUpdateType(UpdateType.RenderTexture);
 
-    if (this.parentHasRenderTexture) {
+    if (this.parentHasRenderTexture === true) {
       this.notifyParentRTTOfUpdate();
     }
   }
   private initRenderTexture() {
-    this.texture = this.stage.txManager.loadTexture('RenderTexture', {
+    this.texture = this.stage.txManager.createTexture('RenderTexture', {
       width: this.width,
       height: this.height,
     });
-    this.textureOptions.preload = true;
-    this.stage.renderer?.renderToTexture(this); // Only this RTT node
+
+    this.loadRenderTexture();
+  }
+
+  private loadRenderTexture() {
+    if (this.texture === null) {
+      return;
+    }
+
+    // If the texture is already loaded, render to it immediately
+    if (this.texture.state === 'loaded') {
+      this.stage.renderer?.renderToTexture(this);
+      return;
+    }
+
+    // call load immediately to ensure the texture is created
+    this.stage.txManager.loadTexture(this.texture, true);
+    this.texture.once('loaded', () => {
+      this.stage.renderer?.renderToTexture(this); // Only this RTT node
+      this.setUpdateType(UpdateType.IsRenderable);
+    });
   }
 
   private cleanupRenderTexture() {
@@ -2099,6 +2193,7 @@ export class CoreNode extends EventEmitter {
     for (const child of this.children) {
       // force child to update everything as the RTT inheritance has changed
       child.parentHasRenderTexture = false;
+      child.rttParent = null;
       child.setUpdateType(UpdateType.All);
       child.clearRTTInheritance();
     }
@@ -2134,7 +2229,7 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    this.texture = this.stage.txManager.loadTexture('ImageTexture', {
+    this.texture = this.stage.txManager.createTexture('ImageTexture', {
       src: imageUrl,
       width: this.props.width,
       height: this.props.height,
@@ -2225,16 +2320,19 @@ export class CoreNode extends EventEmitter {
     if (this.props.texture === value) {
       return;
     }
+
     const oldTexture = this.props.texture;
     if (oldTexture) {
       oldTexture.setRenderableOwner(this, false);
       this.unloadTexture();
     }
+
     this.props.texture = value;
-    if (value) {
-      value.setRenderableOwner(this, this.isRenderable);
+    if (value !== null) {
+      value.setRenderableOwner(this, this.isRenderable); // WVB TODO: check if this is correct
       this.loadTexture();
     }
+
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
@@ -2265,12 +2363,12 @@ export class CoreNode extends EventEmitter {
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     const animation = new CoreAnimation(this, props, settings);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+
     const controller = new CoreAnimationController(
       this.stage.animationManager,
       animation,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return controller;
   }
 

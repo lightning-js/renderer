@@ -63,7 +63,9 @@ export class RenderTexture extends Texture {
     this.props.height = value;
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
+    this.setSourceState('loaded');
+
     return {
       data: null,
       premultiplyAlpha: null,

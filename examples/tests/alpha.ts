@@ -26,12 +26,6 @@ export async function automation(settings: ExampleSettings) {
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
-  /*
-   * redRect will persist and change color every frame
-   * greenRect will persist and be detached and reattached to the root every second
-   * blueRect will be created and destroyed every 500 ms
-   */
-
   const parent = renderer.createNode({
     x: 200,
     y: 240,
@@ -55,8 +49,5 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     alpha: 1,
   });
 
-  /*
-   * End: Sprite Map Demo
-   */
   console.log('ready!');
 }

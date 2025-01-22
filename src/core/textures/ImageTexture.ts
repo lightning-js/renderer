@@ -119,7 +119,7 @@ export interface ImageTextureProps {
  * {@link ImageTextureProps.premultiplyAlpha} prop to `false`.
  */
 export class ImageTexture extends Texture {
-  props: Required<ImageTextureProps>;
+  public props: Required<ImageTextureProps>;
 
   public override type: TextureType = TextureType.image;
 
@@ -132,64 +132,142 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  async loadImage(src: string) {
-    const { premultiplyAlpha, sx, sy, sw, sh, width, height } = this.props;
+  async loadImageFallback(src: string, hasAlpha: boolean) {
+    const img = new Image();
 
-    if (this.txManager.imageWorkerManager !== null) {
-      return await this.txManager.imageWorkerManager.getImage(
-        src,
-        premultiplyAlpha,
-        sx,
-        sy,
-        sw,
-        sh,
-      );
-    } else if (this.txManager.hasCreateImageBitmap === true) {
-      const response = await fetch(src);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
+    if (!src.startsWith('data:')) {
+      img.crossOrigin = 'Anonymous';
+    }
 
-      if (sw !== null && sh !== null) {
-        return {
-          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
-            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          }),
-          premultiplyAlpha: hasAlphaChannel,
+    return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
+      (resolve) => {
+        img.onload = () => {
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
         };
-      }
 
-      return {
-        data: await createImageBitmap(blob, {
-          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-          colorSpaceConversion: 'none',
-          imageOrientation: 'none',
-        }),
-        premultiplyAlpha: hasAlphaChannel,
-      };
-    } else {
-      const img = new Image();
-      if (!src.startsWith('data:')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.src = src;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
+        img.onerror = () => {
+          console.warn('Image loading failed, returning fallback object.');
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
+        };
+
+        img.src = src;
+      },
+    );
+  }
+
+  async createImageBitmap(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
+  ): Promise<{
+    data: ImageBitmap | HTMLImageElement;
+    premultiplyAlpha: boolean;
+  }> {
+    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
+    const imageBitmapSupported = this.txManager.imageBitmapSupported;
+
+    if (
+      imageBitmapSupported.full === true &&
+      sx !== null &&
+      sy !== null &&
+      sw !== null &&
+      sh !== null
+    ) {
+      // createImageBitmap with crop
+      const bitmap = await createImageBitmap(blob, sx, sy, sw, sh, {
+        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
       });
-
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else if (imageBitmapSupported.options === true) {
+      // createImageBitmap without crop but with options
+      const bitmap = await createImageBitmap(blob, {
+        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      });
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else {
+      // basic createImageBitmap without options or crop
+      // this is supported for Chrome v50 to v52/54 that doesn't support options
       return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
+        data: await createImageBitmap(blob),
+        premultiplyAlpha: hasAlphaChannel,
       };
     }
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  async loadImage(src: string) {
+    const { premultiplyAlpha, sx, sy, sw, sh } = this.props;
+
+    if (this.txManager.hasCreateImageBitmap === true) {
+      if (
+        this.txManager.hasWorker === true &&
+        this.txManager.imageWorkerManager !== null
+      ) {
+        return this.txManager.imageWorkerManager.getImage(
+          src,
+          premultiplyAlpha,
+          sx,
+          sy,
+          sw,
+          sh,
+        );
+      }
+
+      const blob = await fetch(src).then((response) => response.blob());
+      return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
+    }
+
+    return this.loadImageFallback(src, premultiplyAlpha ?? true);
+  }
+
+  override async getTextureSource(): Promise<TextureData> {
+    let resp;
+    try {
+      resp = await this.determineImageTypeAndLoadImage();
+    } catch (e) {
+      this.setSourceState('failed', e as Error);
+      return {
+        data: null,
+      };
+    }
+
+    if (resp.data === null) {
+      this.setSourceState('failed', Error('ImageTexture: No image data'));
+      return {
+        data: null,
+      };
+    }
+
+    let width, height;
+    // check if resp.data is typeof Uint8ClampedArray else
+    // use resp.data.width and resp.data.height
+    if (resp.data instanceof Uint8Array) {
+      width = this.props.width ?? 0;
+      height = this.props.height ?? 0;
+    } else {
+      width = resp.data?.width ?? (this.props.width || 0);
+      height = resp.data?.height ?? (this.props.height || 0);
+    }
+
+    // we're loaded!
+    this.setSourceState('loaded', {
+      width,
+      height,
+    });
+
+    return {
+      data: resp.data,
+      premultiplyAlpha: this.props.premultiplyAlpha ?? true,
+    };
+  }
+
+  determineImageTypeAndLoadImage() {
     const { src, premultiplyAlpha, type } = this.props;
     if (src === null) {
       return {

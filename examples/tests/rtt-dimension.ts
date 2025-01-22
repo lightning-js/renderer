@@ -29,6 +29,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: 300,
     parent: node,
     rtt: true,
+    clipping: true,
     zIndex: 5,
     colorTop: 0xfff00fff,
     colorBottom: 0x00ffffff,
@@ -262,6 +263,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     switch (i) {
       case 1:
         rttNode.rtt = false;
+        rttNode.clipping = false;
         rttNode2.rtt = false;
         rttNode3.rtt = false;
         break;
@@ -288,6 +290,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       default:
         // Reset to initial state
         rttNode.rtt = true;
+        rttNode.clipping = true;
         rttNode2.rtt = true;
         rttNode3.rtt = true;
         nestedRTTNode1.rtt = true;

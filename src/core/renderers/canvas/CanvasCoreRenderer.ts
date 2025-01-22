@@ -22,7 +22,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import type { CoreShaderManager } from '../../CoreShaderManager.js';
 import { getRgbaComponents, type RGBA } from '../../lib/utils.js';
 import { SubTexture } from '../../textures/SubTexture.js';
-import type { Texture } from '../../textures/Texture.js';
+import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   CoreRenderer,
@@ -30,7 +30,12 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasCoreTexture } from './CanvasCoreTexture.js';
-import { getBorder, getRadius, strokeLine } from './internal/C2DShaderUtils.js';
+import {
+  getBorder,
+  getRadius,
+  roundRect,
+  strokeLine,
+} from './internal/C2DShaderUtils.js';
 import {
   formatRgba,
   parseColorRgba,
@@ -38,6 +43,7 @@ import {
   type IParsedColor,
 } from './internal/ColorUtils.js';
 import { UnsupportedShader } from './shaders/UnsupportedShader.js';
+import { assertTruthy } from '../../../utils.js';
 
 export class CanvasCoreRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -73,7 +79,6 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
 
   reset(): void {
-    // eslint-disable-next-line no-self-assign
     this.canvas.width = this.canvas.width; // quick reset canvas
 
     const ctx = this.context;
@@ -114,6 +119,17 @@ export class CanvasCoreRenderer extends CoreRenderer {
       | { x: number; y: number; width: number; height: number }
       | undefined;
 
+    const textureType = texture?.type;
+    assertTruthy(textureType, 'Texture type is not defined');
+
+    // The Canvas2D renderer only supports image and color textures
+    if (
+      textureType !== TextureType.image &&
+      textureType !== TextureType.color
+    ) {
+      return;
+    }
+
     if (texture) {
       if (texture instanceof SubTexture) {
         frame = texture.props;
@@ -122,10 +138,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
       ctxTexture = texture.ctxTexture as CanvasCoreTexture;
       if (texture.state === 'freed') {
-        ctxTexture.load();
         return;
       }
-      if (texture.state !== 'loaded' || !ctxTexture.hasImage()) {
+      if (texture.state !== 'loaded') {
         return;
       }
     }
@@ -166,11 +181,11 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
     if (radius) {
       const path = new Path2D();
-      path.roundRect(tx, ty, width, height, radius);
+      roundRect.call(path, tx, ty, width, height, radius);
       ctx.clip(path);
     }
 
-    if (ctxTexture) {
+    if (textureType === TextureType.image && ctxTexture) {
       const image = ctxTexture.getImage(color);
       ctx.globalAlpha = color.a ?? alpha;
       if (frame) {
@@ -186,10 +201,15 @@ export class CanvasCoreRenderer extends CoreRenderer {
           height,
         );
       } else {
-        ctx.drawImage(image, tx, ty, width, height);
+        try {
+          ctx.drawImage(image, tx, ty, width, height);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          // noop
+        }
       }
       ctx.globalAlpha = 1;
-    } else if (hasGradient) {
+    } else if (textureType === TextureType.color && hasGradient) {
       let endX: number = tx;
       let endY: number = ty;
       let endColor: IParsedColor;
@@ -209,7 +229,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
       gradient.addColorStop(1, formatRgba(endColor));
       ctx.fillStyle = gradient;
       ctx.fillRect(tx, ty, width, height);
-    } else {
+    } else if (textureType === TextureType.color) {
       ctx.fillStyle = formatRgba(color);
       ctx.fillRect(tx, ty, width, height);
     }
@@ -224,7 +244,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.strokeStyle = borderColor;
       ctx.globalAlpha = alpha;
       if (radius) {
-        ctx.roundRect(
+        roundRect.call(
+          ctx,
           tx + borderInnerWidth,
           ty + borderInnerWidth,
           width - borderWidth,
@@ -330,5 +351,14 @@ export class CanvasCoreRenderer extends CoreRenderer {
   }
   getBufferInfo(): null {
     return null;
+  }
+
+  /**
+   * Updates the clear color of the canvas renderer.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  updateClearColor(color: number) {
+    this.clearColor = color ? getRgbaComponents(color) : undefined;
   }
 }

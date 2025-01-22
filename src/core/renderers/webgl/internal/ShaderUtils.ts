@@ -100,8 +100,14 @@ export function createShader(
 ) {
   const shader = glw.createShader(type);
   if (!shader) {
-    throw new Error(`Unable to create shader type: ${type}. Source: ${source}`);
+    const glError = glw.getError();
+    throw new Error(
+      `Unable to create the shader: ${
+        type === glw.VERTEX_SHADER ? 'VERTEX_SHADER' : 'FRAGMENT_SHADER'
+      }.${glError ? ` WebGlContext Error: ${glError}` : ''}`,
+    );
   }
+
   glw.shaderSource(shader, source);
   glw.compileShader(shader);
   const success = !!glw.getShaderParameter(shader, glw.COMPILE_STATUS);
@@ -109,7 +115,7 @@ export function createShader(
     return shader;
   }
 
-  console.log(glw.getShaderInfoLog(shader));
+  console.error(glw.getShaderInfoLog(shader));
   glw.deleteShader(shader);
 }
 
@@ -131,7 +137,7 @@ export function createProgram(
     return program;
   }
 
-  console.log(glw.getProgramInfoLog(program));
+  console.warn(glw.getProgramInfoLog(program));
   glw.deleteProgram(program);
   return undefined;
 }
