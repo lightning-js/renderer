@@ -368,15 +368,20 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override hasRenderableProperties(): boolean {
+  override checkBasicRenderability() {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    }
+
     if (this.trState && this.trState.props.text !== '') {
       return true;
     }
-    return super.hasRenderableProperties();
+
+    return false;
   }
 
-  override onChangeIsRenderable(isRenderable: boolean) {
-    super.onChangeIsRenderable(isRenderable);
+  override setRenderable(isRenderable: boolean) {
+    super.setRenderable(isRenderable);
     this.textRenderer.setIsRenderable(this.trState, isRenderable);
   }
 

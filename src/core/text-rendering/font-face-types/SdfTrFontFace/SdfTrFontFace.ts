@@ -89,6 +89,13 @@ export class SdfTrFontFace<
     // Load the texture
     stage.txManager.loadTexture(this.texture, true);
 
+    // FIXME This is a stop-gap solution to avoid Font Face textures to be cleaned up
+    // Ideally we do want to clean up the textures if they're not being used to save as much memory as possible
+    // However, we need to make sure that the font face is reloaded if the texture is cleaned up and needed again
+    // and make sure the SdfFontRenderer is properly guarded against textures being reloaded
+    // for now this will do the trick and the increase on memory is not that big
+    this.texture.preventCleanup = true;
+
     this.texture.on('loaded', () => {
       this.checkLoaded();
       // Make sure we mark the stage for a re-render (in case the font's texture was freed and reloaded)

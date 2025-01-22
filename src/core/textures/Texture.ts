@@ -101,7 +101,12 @@ export interface TextureData {
   premultiplyAlpha?: boolean | null;
 }
 
-export type TextureState = 'freed' | 'loading' | 'loaded' | 'failed';
+export type TextureState =
+  | 'initial'
+  | 'freed'
+  | 'loading'
+  | 'loaded'
+  | 'failed';
 
 export enum TextureType {
   'generic' = 0,
@@ -155,11 +160,11 @@ export abstract class Texture extends EventEmitter {
   readonly error: Error | null = null;
 
   // aggregate state
-  public state: TextureState = 'freed';
+  public state: TextureState = 'initial';
   // texture source state
-  private sourceState: TextureState = 'freed';
+  private sourceState: TextureState = 'initial';
   // texture (gpu) state
-  private coreCtxState: TextureState = 'freed';
+  private coreCtxState: TextureState = 'initial';
 
   readonly renderableOwners = new Set<unknown>();
 
@@ -195,13 +200,23 @@ export abstract class Texture extends EventEmitter {
    */
   setRenderableOwner(owner: unknown, renderable: boolean): void {
     const oldSize = this.renderableOwners.size;
-    if (renderable) {
-      this.renderableOwners.add(owner);
+
+    if (renderable === true) {
+      if (this.renderableOwners.has(owner) === false) {
+        // Add the owner to the set
+        this.renderableOwners.add(owner);
+      }
+
       const newSize = this.renderableOwners.size;
       if (newSize > oldSize && newSize === 1) {
         (this.renderable as boolean) = true;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(true);
+
+        // Check if the texture needs to be added to the loading queue
+        if (this.state === 'freed' || this.state === 'initial') {
+          this.txManager.loadTexture(this);
+        }
       }
     } else {
       this.renderableOwners.delete(owner);
@@ -249,6 +264,7 @@ export abstract class Texture extends EventEmitter {
     this.ctxTexture?.free();
     if (this.textureData !== null) {
       this.textureData = null;
+      this.setSourceState('freed');
     }
   }
 
