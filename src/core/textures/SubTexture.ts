@@ -143,7 +143,6 @@ export class SubTexture extends Texture {
   };
 
   private onParentTxFreed = () => {
-    console.log('Parent texture freed, freeing sub-texture');
     this.setSourceState('freed');
   };
 

@@ -356,12 +356,6 @@ export abstract class Texture extends EventEmitter {
     } else if (sourceState === 'loaded' && ctxState === 'loaded') {
       newState = 'loaded';
       payload = this.dimensions; // Dimensions set by the source
-      // } else if (
-      //   (sourceState === 'loaded' && ctxState === 'freed') ||
-      //   (ctxState === 'loaded' && sourceState === 'freed')
-      // ) {
-      //   // If one is loaded and the other is freed, then we are in a loading state
-      //   newState = 'loading';
     } else {
       newState = 'freed';
     }
