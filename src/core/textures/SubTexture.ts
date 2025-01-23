@@ -111,9 +111,13 @@ export class SubTexture extends Texture {
         this.onParentTxLoaded(parentTx, parentTx.dimensions!);
       } else if (parentTx.state === 'failed') {
         this.onParentTxFailed(parentTx, parentTx.error!);
+      } else if (parentTx.state === 'freed') {
+        this.onParentTxFreed();
       }
+
       parentTx.on('loaded', this.onParentTxLoaded);
       parentTx.on('failed', this.onParentTxFailed);
+      parentTx.on('freed', this.onParentTxFreed);
     });
   }
 
@@ -136,6 +140,11 @@ export class SubTexture extends Texture {
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
     this.setSourceState('failed', error);
+  };
+
+  private onParentTxFreed = () => {
+    console.log('Parent texture freed, freeing sub-texture');
+    this.setSourceState('freed');
   };
 
   override onChangeIsRenderable(isRenderable: boolean): void {

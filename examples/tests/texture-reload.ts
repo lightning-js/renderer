@@ -52,7 +52,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const screenWidth = renderer.settings.appWidth;
   const screenHeight = renderer.settings.appHeight;
   const nodeSize = 128; // Each node will be 128x128 pixels
@@ -197,6 +197,14 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     src: rockoPng,
   });
 
+  image.on('loaded', () => {
+    console.warn('Parent Image texture loaded.');
+  });
+
+  image.on('freed', () => {
+    console.warn('Parent Image texture freed.');
+  });
+
   const nodeSpawnX = 1100;
   const nodeSpawnY = 30;
 
@@ -212,15 +220,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         y: nodeSpawnY,
         width: nodeSize,
         height: nodeSize,
-        parent: testRoot,
-      }),
-    'Image Texture': () =>
-      renderer.createNode({
-        x: nodeSpawnX,
-        y: nodeSpawnY,
-        width: nodeSize,
-        height: nodeSize,
-        src: rockoPng,
         parent: testRoot,
       }),
     // No need to test color textures, they all sample from the same 1x1 pixel texture
@@ -246,6 +245,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         y: nodeSpawnY,
         width: nodeSize,
         height: nodeSize,
+        parent: testRoot,
+      }),
+    'Image Texture': () =>
+      renderer.createNode({
+        x: nodeSpawnX,
+        y: nodeSpawnY,
+        width: nodeSize,
+        height: nodeSize,
+        src: rockoPng,
         parent: testRoot,
       }),
     'RTT Node': () => {
@@ -294,20 +302,18 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const result = await testNode(testNodeInstance);
 
     if (!result) {
-      console.error(`${testIdx}. Test failed for: ${name}`);
       finalStatus.text = `Test failed for: ${name}`;
       finalStatus.color = 0xff0000ff;
       allTestsPassed = false;
     }
 
-    console.log(`${testIdx}. Test passed for: ${name}`);
+    const status = result ? 'passed' : 'failed';
+    console.log(`${testIdx}. Test ${result} for: ${name}`);
 
     testNodeInstance.x = 500;
     testNodeInstance.y = lastStatusOffSet + 128;
     testNodeInstance.width = 128;
     testNodeInstance.height = 128;
-
-    const status = result ? 'passed' : 'failed';
 
     renderer.createTextNode({
       fontFamily: 'Ubuntu',
@@ -327,10 +333,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     console.log('All tests passed successfully!');
     finalStatus.text = `All tests passed successfully!`;
     finalStatus.color = 0x00ff00ff;
+
+    return true;
   } else {
     console.error('One or more tests failed.');
     finalStatus.text = `One or more tests failed.`;
     finalStatus.color = 0xff0000ff;
-    throw new Error('Test suite failed.');
+    return false;
   }
 }
