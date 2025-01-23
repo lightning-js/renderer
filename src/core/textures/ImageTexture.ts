@@ -136,7 +136,7 @@ export class ImageTexture extends Texture {
     const img = new Image();
 
     if (!src.startsWith('data:')) {
-      img.crossOrigin = 'Anonymous';
+      img.crossOrigin = 'anonymous';
     }
 
     return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
