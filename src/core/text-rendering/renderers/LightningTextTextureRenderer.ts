@@ -399,6 +399,16 @@ export class LightningTextTextureRenderer {
       innerWidth = maxLineWidth;
     }
 
+    // If word wrap is enabled the width needs to be the width of the text.
+    if (
+      this._settings.wordWrap &&
+      w > maxLineWidth &&
+      this._settings.textAlign === 'left' &&
+      lines.length === 1
+    ) {
+      width = maxLineWidth + paddingLeft + paddingRight;
+    }
+
     let height;
     if (h) {
       height = h;
