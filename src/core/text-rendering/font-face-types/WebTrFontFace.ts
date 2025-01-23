@@ -61,9 +61,12 @@ export class WebTrFontFace extends TrFontFace {
       display: determinedDescriptors.display,
     };
 
-    cssDescriptors = Object.fromEntries(
-      Object.entries(cssDescriptors).filter(([, value]) => value !== undefined),
-    );
+    for (const k in cssDescriptors) {
+      const key = k as keyof FontFaceDescriptors;
+      if (cssDescriptors[key] === undefined) {
+        delete cssDescriptors[key];
+      }
+    }
 
     const fontFace = new FontFace(
       fontFamily,
