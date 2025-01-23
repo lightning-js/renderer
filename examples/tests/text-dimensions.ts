@@ -102,6 +102,16 @@ export default async function test(settings: ExampleSettings) {
       text1.text = 'SDF 2nd';
       text1.textRendererOverride = 'sdf';
     },
+    () => {
+      // Test when text ends with space for correct width
+      text1.text = 'Canvas ';
+      text1.textRendererOverride = 'canvas';
+    },
+    () => {
+      // Test when text ends with space for correct width
+      text1.text = 'SDF ';
+      text1.textRendererOverride = 'sdf';
+    },
   ];
   /**
    * Run the next mutation in the list
