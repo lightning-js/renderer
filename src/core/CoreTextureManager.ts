@@ -26,6 +26,7 @@ import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
+import { getTimeStamp } from './platform.js';
 
 /**
  * Augmentable map of texture class types
@@ -437,40 +438,38 @@ export class CoreTextureManager extends EventEmitter {
    *
    * @param maxItems - The maximum number of items to process
    */
-  processSome(maxItems = 0): void {
+  processSome(maxProcessingTime: number): void {
     if (this.initialized === false) {
       return;
     }
 
-    let itemsProcessed = 0;
+    const startTime = getTimeStamp();
 
     // Process priority queue
     while (
       this.priorityQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.shift()!;
       texture.getTextureData().then(() => {
         this.uploadTexture(texture);
       });
-      itemsProcessed++;
     }
 
     // Process uploads
     while (
       this.uploadTextureQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.uploadTexture(this.uploadTextureQueue.shift()!);
-      itemsProcessed++;
     }
 
     // Process downloads
     while (
       this.downloadTextureSourceQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
@@ -479,8 +478,6 @@ export class CoreTextureManager extends EventEmitter {
           this.enqueueUploadTexture(texture);
         });
       });
-
-      itemsProcessed++;
     }
   }
 
