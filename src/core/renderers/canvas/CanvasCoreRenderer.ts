@@ -122,10 +122,11 @@ export class CanvasCoreRenderer extends CoreRenderer {
     const textureType = texture?.type;
     assertTruthy(textureType, 'Texture type is not defined');
 
-    // The Canvas2D renderer only supports image and color textures
+    // The Canvas2D renderer only supports image and color textures and subTexture images
     if (
       textureType !== TextureType.image &&
-      textureType !== TextureType.color
+      textureType !== TextureType.color &&
+      textureType !== TextureType.subTexture
     ) {
       return;
     }
@@ -140,7 +141,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
       if (texture.state === 'freed') {
         return;
       }
-      if (texture.state !== 'loaded') {
+      if (
+        texture.state !== 'loaded' ||
+        (textureType === TextureType.subTexture && !ctxTexture.hasImage())
+      ) {
         return;
       }
     }
@@ -185,7 +189,11 @@ export class CanvasCoreRenderer extends CoreRenderer {
       ctx.clip(path);
     }
 
-    if (textureType === TextureType.image && ctxTexture) {
+    if (
+      (textureType === TextureType.image ||
+        textureType === TextureType.subTexture) &&
+      ctxTexture
+    ) {
       const image = ctxTexture.getImage(color);
       ctx.globalAlpha = color.a ?? alpha;
       if (frame) {
