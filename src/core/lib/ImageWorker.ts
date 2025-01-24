@@ -68,71 +68,64 @@ function createImageWorker() {
       var supportsOptionsCreateImageBitmap =
         options.supportsOptionsCreateImageBitmap;
       var supportsFullCreateImageBitmap = options.supportsFullCreateImageBitmap;
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.responseType = 'blob';
 
-      xhr.onload = function () {
-        if (xhr.status !== 200) {
-          return reject(new Error('Failed to load image: ' + xhr.statusText));
-        }
+      fetch(src)
+        .then((response) => response.blob())
+        .then((blob) => {
+          var withAlphaChannel =
+            premultiplyAlpha !== undefined
+              ? premultiplyAlpha
+              : hasAlphaChannel(blob.type);
 
-        var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
-
-        // createImageBitmap with crop and options
-        if (
-          supportsFullCreateImageBitmap === true &&
-          width !== null &&
-          height !== null
-        ) {
-          createImageBitmap(blob, x || 0, y || 0, width, height, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
-            .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+          // createImageBitmap with crop and options
+          if (
+            supportsFullCreateImageBitmap === true &&
+            width !== null &&
+            height !== null
+          ) {
+            createImageBitmap(blob, x || 0, y || 0, width, height, {
+              premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+              colorSpaceConversion: 'none',
+              imageOrientation: 'none',
             })
-            .catch(function (error) {
-              reject(error);
-            });
-          return;
-        } else if (supportsOptionsCreateImageBitmap === true) {
-          createImageBitmap(blob, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
-            .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+              .then(function (data) {
+                resolve({ data, premultiplyAlpha: premultiplyAlpha });
+              })
+              .catch(function (error) {
+                reject(error);
+              });
+            return;
+          } else if (supportsOptionsCreateImageBitmap === true) {
+            createImageBitmap(blob, {
+              premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+              colorSpaceConversion: 'none',
+              imageOrientation: 'none',
             })
-            .catch(function (error) {
-              reject(error);
-            });
-        } else {
-          // Fallback for browsers that do not support createImageBitmap with options
-          // this is supported for Chrome v50 to v52/54 that doesn't support options
-          createImageBitmap(blob)
-            .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
-            })
-            .catch(function (error) {
-              reject(error);
-            });
-        }
-      };
-
-      xhr.onerror = function () {
-        reject(
-          new Error('Network error occurred while trying to fetch the image.'),
-        );
-      };
-
-      xhr.send();
+              .then(function (data) {
+                resolve({ data, premultiplyAlpha: premultiplyAlpha });
+              })
+              .catch(function (error) {
+                reject(error);
+              });
+          } else {
+            // Fallback for browsers that do not support createImageBitmap with options
+            // this is supported for Chrome v50 to v52/54 that doesn't support options
+            createImageBitmap(blob)
+              .then(function (data) {
+                resolve({ data, premultiplyAlpha: premultiplyAlpha });
+              })
+              .catch(function (error) {
+                reject(error);
+              });
+          }
+        })
+        .catch((error) => {
+          reject(
+            new Error(
+              'Network error occurred while trying to fetch the image.',
+            ),
+          );
+        });
     });
   }
 

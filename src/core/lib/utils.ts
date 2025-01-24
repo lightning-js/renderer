@@ -304,3 +304,7 @@ export function convertUrlToAbsolute(url: string): string {
   const absoluteUrl = new URL(url, self.location.href);
   return absoluteUrl.href;
 }
+
+export function isBase64Image(src: string) {
+  return src.startsWith('data:') === true;
+}
