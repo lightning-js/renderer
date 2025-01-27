@@ -228,15 +228,16 @@ export interface RendererMainSettings {
   strictBounds?: boolean;
 
   /**
-   * Texture Processing Limit
+   * Texture Processing Limit (in milliseconds)
    *
    * @remarks
-   * The maximum number of textures to process in a single frame. This is used to
-   * prevent the renderer from processing too many textures in a single frame.
+   * The maximum amount of time the renderer is allowed to process textures in a
+   * single frame. If the processing time exceeds this limit, the renderer will
+   * skip processing the remaining textures and continue rendering the frame.
    *
-   * @defaultValue `0`
+   * @defaultValue `10`
    */
-  textureProcessingLimit?: number;
+  textureProcessingTimeLimit?: number;
 
   /**
    * Canvas object to use for rendering
@@ -337,7 +338,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
       strictBounds: settings.strictBounds ?? true,
-      textureProcessingLimit: settings.textureProcessingLimit || 0,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
     };
     this.settings = resolvedSettings;
@@ -381,7 +382,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: this.settings.fontEngines,
       inspector: this.settings.inspector !== null,
       strictBounds: this.settings.strictBounds,
-      textureProcessingLimit: this.settings.textureProcessingLimit,
+      textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
     });
 
     // Extract the root node

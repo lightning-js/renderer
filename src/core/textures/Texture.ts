@@ -212,11 +212,7 @@ export abstract class Texture extends EventEmitter {
         (this.renderable as boolean) = true;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(true);
-
-        // Check if the texture needs to be added to the loading queue
-        if (this.state === 'freed' || this.state === 'initial') {
-          this.txManager.loadTexture(this);
-        }
+        this.load();
       }
     } else {
       this.renderableOwners.delete(owner);
@@ -227,6 +223,20 @@ export abstract class Texture extends EventEmitter {
         this.onChangeIsRenderable?.(false);
       }
     }
+  }
+
+  load(): void {
+    if (this.sourceState === 'loaded' && this.coreCtxState === 'freed') {
+      // we need to load the texture data to the gpu
+      this.txManager.enqueueUploadTexture(this);
+      return;
+    }
+
+    if (this.state === 'loading' || this.state === 'loaded') {
+      return;
+    }
+
+    this.txManager.loadTexture(this);
   }
 
   /**
@@ -262,10 +272,18 @@ export abstract class Texture extends EventEmitter {
    */
   free(): void {
     this.ctxTexture?.free();
-    if (this.textureData !== null) {
-      this.textureData = null;
-      this.setSourceState('freed');
-    }
+  }
+
+  /**
+   * Free the source texture data for this Texture.
+   *
+   * @remarks
+   * The texture data is the source data that is used to populate the CoreContextTexture.
+   * e.g. ImageData that is downloaded from a URL.
+   */
+  freeTextureData(): void {
+    this.textureData = null;
+    this.setSourceState('freed');
   }
 
   private setState(
@@ -338,12 +356,6 @@ export abstract class Texture extends EventEmitter {
     } else if (sourceState === 'loaded' && ctxState === 'loaded') {
       newState = 'loaded';
       payload = this.dimensions; // Dimensions set by the source
-    } else if (
-      (sourceState === 'loaded' && ctxState === 'freed') ||
-      (ctxState === 'loaded' && sourceState === 'freed')
-    ) {
-      // If one is loaded and the other is freed, then we are in a loading state
-      newState = 'loading';
     } else {
       newState = 'freed';
     }

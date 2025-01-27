@@ -83,7 +83,8 @@ export class CanvasRenderer extends CoreRenderer {
     // The Canvas2D renderer only supports image and color textures
     if (
       textureType !== TextureType.image &&
-      textureType !== TextureType.color
+      textureType !== TextureType.color &&
+      textureType !== TextureType.subTexture
     ) {
       return;
     }

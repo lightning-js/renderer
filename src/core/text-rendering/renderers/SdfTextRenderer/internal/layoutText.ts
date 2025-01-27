@@ -121,12 +121,17 @@ export function layoutText(
     xStart: -1,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const shaper = trFontFace.shaper;
 
   const shaperProps: FontShaperProps = {
     letterSpacing: vertexLSpacing,
   };
+
+  // HACK: The space is used as a word boundary. When a text ends with a space, we need to
+  // add an extra space to ensure the space is included in the line width calculation.
+  if (text.endsWith(' ')) {
+    text += ' ';
+  }
 
   // Get glyphs
   let glyphs = shaper.shapeText(

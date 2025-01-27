@@ -307,6 +307,10 @@ export function convertUrlToAbsolute(url: string): string {
   return absoluteUrl.href;
 }
 
+export function isBase64Image(src: string) {
+  return src.startsWith('data:') === true;
+}
+
 export function calcFactoredRadius(
   radius: number,
   width: number,
