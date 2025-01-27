@@ -23,7 +23,7 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute } from '../lib/utils.js';
+import { convertUrlToAbsolute, isBase64Image } from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 
 /**
@@ -135,7 +135,7 @@ export class ImageTexture extends Texture {
   async loadImageFallback(src: string, hasAlpha: boolean) {
     const img = new Image();
 
-    if (!src.startsWith('data:')) {
+    if (isBase64Image(src) === false) {
       img.crossOrigin = 'anonymous';
     }
 
@@ -206,6 +206,7 @@ export class ImageTexture extends Texture {
 
     if (this.txManager.hasCreateImageBitmap === true) {
       if (
+        isBase64Image(src) === false &&
         this.txManager.hasWorker === true &&
         this.txManager.imageWorkerManager !== null
       ) {
