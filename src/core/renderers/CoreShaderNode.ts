@@ -1,7 +1,6 @@
-import { assertTruthy, deepClone } from '../../utils.js';
+import { deepClone } from '../../utils.js';
 import { UpdateType, type CoreNode } from '../CoreNode.js';
 import type { Stage } from '../Stage.js';
-import type { CoreShaderProgram } from './CoreShaderProgram.js';
 
 export interface AdvShaderProp<T = any, Props = Record<string, unknown>> {
   /**
@@ -42,7 +41,7 @@ export function resolveShaderProps(
     const pConfig = propsConfig[key]! as AdvancedShaderProp;
     const hasValue = props[key] !== undefined;
 
-    if (hasValue && pConfig.resolve !== undefined) {
+    if (pConfig.resolve !== undefined) {
       props[key] = pConfig.resolve!(props[key], props);
       continue;
     }
@@ -75,7 +74,6 @@ export interface CoreShaderType<
 
 export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
-  readonly program: CoreShaderProgram;
   readonly shaderType: CoreShaderType<Props>;
   protected propsConfig: ShaderProps<Props> | undefined;
   protected resolvedProps: Props | undefined = undefined;
@@ -86,12 +84,10 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   constructor(
     readonly shaderKey: string,
     type: CoreShaderType<Props>,
-    program: CoreShaderProgram,
     stage: Stage,
     props?: Props,
   ) {
     this.stage = stage;
-    this.program = program;
     this.shaderType = type;
 
     if (props !== undefined) {
@@ -106,21 +102,26 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   private defineProps(props: Props) {
     const definedProps = {};
     for (const key in props) {
+      const propConfig = this.shaderType.props![key];
+      const isAdvancedProp = isAdvancedShaderProp(propConfig);
+
       Object.defineProperty(definedProps, key, {
         get: () => {
           return this.resolvedProps![key as keyof Props];
         },
         set: (value) => {
-          this.resolvedProps![key as keyof Props] = value;
-          if (
-            isAdvancedShaderProp(this.shaderType.props![key]) &&
-            this.shaderType.props![key].set !== undefined
-          ) {
-            this.shaderType.props![key].set(
+          // this.resolvedProps![key as keyof Props] = value;
+          if (isAdvancedProp === true && propConfig.resolve !== undefined) {
+            this.resolvedProps![key] = propConfig.resolve(
               value,
-              this.resolvedProps as Record<string, unknown>,
+              this.resolvedProps![key]!,
             );
+          } else if (isAdvancedProp === true && propConfig.set !== undefined) {
+            propConfig.set(value, this.resolvedProps![key]!);
+          } else {
+            this.resolvedProps![key] = value;
           }
+
           if (this.update !== undefined) {
             this.node?.setUpdateType(UpdateType.RecalcUniforms);
           } else {

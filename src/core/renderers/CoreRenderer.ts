@@ -87,12 +87,12 @@ export abstract class CoreRenderer {
   abstract createShaderProgram(
     shaderConfig: Readonly<CoreShaderType>,
     props?: Record<string, unknown>,
-  ): CoreShaderProgram;
+  ): CoreShaderProgram | null;
   abstract createShaderNode(
     shaderKey: string,
     shaderType: Readonly<CoreShaderType>,
-    program: CoreShaderProgram,
     props?: Record<string, unknown>,
+    program?: CoreShaderProgram,
   ): CoreShaderNode;
   abstract getDefaultShaderNode(): CoreShaderNode | null;
   abstract get renderToTextureActive(): boolean;

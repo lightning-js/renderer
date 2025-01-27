@@ -55,7 +55,12 @@ export const HolePunchTemplate: CoreShaderType<HolePunchProps> = {
     height: 50,
     radius: {
       default: [0, 0, 0, 0],
-      resolve: validateArrayLength4,
+      resolve(value) {
+        if (value !== undefined) {
+          return validateArrayLength4(value);
+        }
+        return ([] as number[]).concat(this.default);
+      },
     },
   },
 };

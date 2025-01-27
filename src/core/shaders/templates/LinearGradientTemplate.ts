@@ -28,20 +28,20 @@ export const LinearGradientTemplate: CoreShaderType<LinearGradientProps> = {
     colors: {
       default: [0x000000ff, 0xffffffff],
       resolve(value) {
-        if (value.length > 0) {
+        if (value !== undefined && value.length > 0) {
           return value;
         }
-        for (let i = 0; i < this.default.length; i++) {
-          value[i] = this.default[i]!;
-        }
-        return value;
+        return ([] as number[]).concat(this.default);
       },
     },
     stops: {
       default: [0, 1],
       resolve(value, props) {
-        if (value.length === props.colors.length) {
+        if (value !== undefined && value.length === props.colors.length) {
           return value;
+        }
+        if (value === undefined) {
+          value = [];
         }
         const len = props.colors.length;
         for (let i = 0; i < len; i++) {

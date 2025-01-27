@@ -3,28 +3,14 @@ import { calcFactoredRadiusArray } from '../../lib/utils.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 import {
-  RoundedTemplate,
-  type RoundedProps,
-} from '../templates/RoundedTemplate.js';
-import type { PrefixedType } from '../templates/shaderUtils.js';
-import {
-  getShadowProps,
-  type ShadowProps,
-} from '../templates/ShadowTemplate.js';
+  RoundedWithShadowTemplate,
+  type RoundedWithShadowProps,
+} from '../templates/RoundedWithShadowTemplate.js';
 import { Shadow } from './Shadow.js';
 
-export type RoundedWithShadowProps = RoundedProps &
-  PrefixedType<ShadowProps, 'shadow'>;
-
-const props = Object.assign(
-  {},
-  RoundedTemplate.props,
-  getShadowProps('shadow'),
-) as RoundedWithShadowProps;
-
 export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
-  name: 'RoundedWithShadow',
-  props,
+  name: RoundedWithShadowTemplate.name,
+  props: RoundedWithShadowTemplate.props,
   update(node: CoreNode) {
     this.uniformRGBA('u_shadow_color', this.props!['shadow-color']!);
     this.uniform4fa('u_shadow', this.props!['shadow-projection']!);

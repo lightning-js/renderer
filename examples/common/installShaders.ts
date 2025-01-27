@@ -1,7 +1,12 @@
 import { type Stage } from '@lightningjs/renderer';
 
 export async function installShaders(stage: Stage, renderMode: string) {
-  const shaders = await import(`@lightningjs/renderer/webgl/shaders`);
+  let shaders;
+  if (renderMode === 'webgl') {
+    shaders = await import('@lightningjs/renderer/webgl/shaders');
+  } else if (renderMode === 'canvas') {
+    shaders = await import('@lightningjs/renderer/canvas/shaders');
+  }
   stage.shManager.registerShaderType('Rounded', shaders.Rounded);
   stage.shManager.registerShaderType(
     'RoundedWithBorder',

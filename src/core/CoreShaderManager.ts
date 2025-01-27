@@ -80,7 +80,6 @@ export class CoreShaderManager {
     }
 
     const shType = this.shTypes[name as string] as ShaderMap[Name];
-
     let shaderKey = name as string;
     if (shType.props !== undefined) {
       /**
@@ -96,6 +95,11 @@ export class CoreShaderManager {
       }
     }
 
+    if (this.stage.renderer.mode === 'canvas') {
+      return this.stage.renderer.createShaderNode(shaderKey, shType, props);
+      return;
+    }
+
     /**
      * get shaderProgram by cacheKey
      */
@@ -105,15 +109,15 @@ export class CoreShaderManager {
      * if shaderProgram was not found create a new one
      */
     if (shProgram === undefined) {
-      shProgram = this.stage.renderer.createShaderProgram(shType, props);
+      shProgram = this.stage.renderer.createShaderProgram(shType, props)!;
       this.shCache.set(shaderKey, shProgram);
     }
 
     return this.stage.renderer.createShaderNode(
       shaderKey,
       shType,
-      shProgram,
       props,
+      shProgram,
     );
   }
 

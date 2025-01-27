@@ -336,14 +336,6 @@ export function calcFactoredRadiusArray(
     radius[2],
     radius[3],
   ];
-  // result[0] = radius[0] || 0;
-  // result[1] = radius[1] || result[0];
-  // result[2] = radius[2] || result[0];
-  // result[3] = radius[3] || result[0];
-  // if (radius.length === 2) {
-  //   result[2] = result[0];
-  //   result[3] = result[1];
-  // }
   const factor = Math.min(
     Math.min(
       Math.min(

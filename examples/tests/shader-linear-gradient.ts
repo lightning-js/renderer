@@ -25,6 +25,8 @@ export default async function ({
     parent: testRoot,
   });
 
+  // RedRect.shader.props.angle = 50;
+
   const RedRect2 = renderer.createNode({
     x: 720,
     y: 20,

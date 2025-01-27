@@ -1630,7 +1630,6 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-    assertTruthy(this.texture);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({

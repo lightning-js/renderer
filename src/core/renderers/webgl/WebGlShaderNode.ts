@@ -55,7 +55,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
 export class WebGlShaderNode<
   Props extends object = Record<string, unknown>,
 > extends CoreShaderNode<Props> {
-  declare readonly program: WebGlShaderProgram;
+  readonly program: WebGlShaderProgram;
   private updater: ((node: CoreNode, props?: Props) => void) | undefined =
     undefined;
   private valueKey: string = '';
@@ -73,16 +73,17 @@ export class WebGlShaderNode<
     stage: Stage,
     props?: Props,
   ) {
-    super(shaderKey, config, program, stage, props);
+    super(shaderKey, config, stage, props);
+    this.program = program;
     if (config.update !== undefined) {
-      this.updater = config.update;
+      this.updater = config.update!;
 
       this.update = () => {
         if (this.props === undefined) {
           this.updater!(this.node as CoreNode, this.props);
           return;
         }
-        const prevKey = '';
+        const prevKey = this.valueKey;
         this.valueKey = '';
         for (const key in this.resolvedProps) {
           this.valueKey += `${key}:${this.resolvedProps[key]!};`;

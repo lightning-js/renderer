@@ -3,35 +3,15 @@ import { calcFactoredRadiusArray, valuesAreEqual } from '../../lib/utils.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 import {
-  getBorderProps,
-  type BorderProps,
-} from '../templates/BorderTemplate.js';
-import {
-  RoundedTemplate,
-  type RoundedProps,
-} from '../templates/RoundedTemplate.js';
-import type { PrefixedType } from '../templates/shaderUtils.js';
-import {
-  getShadowProps,
-  type ShadowProps,
-} from '../templates/ShadowTemplate.js';
+  RoundedWithBorderAndShadowTemplate,
+  type RoundedWithBorderAndShadowProps,
+} from '../templates/RoundedWithBorderAndShadowTemplate.js';
 import { Shadow } from './Shadow.js';
-
-export type RoundedWithBorderAndShadowProps = RoundedProps &
-  PrefixedType<BorderProps, 'border'> &
-  PrefixedType<ShadowProps, 'shadow'>;
-
-const props = Object.assign(
-  {},
-  RoundedTemplate.props,
-  getBorderProps('border'),
-  getShadowProps('shadow'),
-) as RoundedWithBorderAndShadowProps;
 
 export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndShadowProps> =
   {
-    name: 'RoundedWithBorderAndShadow',
-    props,
+    name: RoundedWithBorderAndShadowTemplate.name,
+    props: RoundedWithBorderAndShadowTemplate.props,
     update(node: CoreNode) {
       this.uniformRGBA('u_border_color', this.props!['border-color']);
       this.uniform4fa('u_border_width', this.props!['border-width'] as Vec4);
@@ -91,8 +71,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       r.z = r.x - (max(w.y, w.z) - min(w.y, w.z));
       r.w = r.w - (max(w.w, w.z) - min(w.w, w.z));
 
-      p.x = p.x + (w[1] - w[3]);
-      p.y = p.y - (w[0] - w[2]);
+      p.x = p.x + (w[1] - w[3]) * u_pixelRatio;
+      p.y = p.y - (w[0] - w[2]) * u_pixelRatio;
       vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5 + u_pixelRatio;
       float borderDist = roundedBox(p, size, r);
       return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));

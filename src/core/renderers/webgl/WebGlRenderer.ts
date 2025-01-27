@@ -186,13 +186,13 @@ export class WebGlRenderer extends CoreRenderer {
   createShaderNode(
     shaderKey: string,
     shaderType: WebGlShaderType,
-    program: WebGlShaderProgram,
     props?: Record<string, unknown>,
+    program?: WebGlShaderProgram,
   ) {
     return new WebGlShaderNode(
       shaderKey,
       shaderType,
-      program,
+      program!,
       this.stage,
       props,
     );

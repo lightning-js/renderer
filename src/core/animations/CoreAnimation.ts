@@ -69,8 +69,12 @@ export class CoreAnimation extends EventEmitter {
       } else if (key === 'shaderProps' && node.shader !== null) {
         this.propValuesMap['shaderProps'] = {};
         for (const key in props.shaderProps) {
+          let start = node.shader.props![key];
+          if (Array.isArray(start) === true) {
+            start = start[0];
+          }
           this.propValuesMap['shaderProps'][key] = {
-            start: node.shader.props![key] as number,
+            start,
             target: props.shaderProps[key] as number,
           };
         }
