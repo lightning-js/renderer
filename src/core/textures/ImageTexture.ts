@@ -135,7 +135,7 @@ export class ImageTexture extends Texture {
   async loadImageFallback(src: string, hasAlpha: boolean) {
     const img = new Image();
 
-    if (!isBase64Image(src)) {
+    if (isBase64Image(src) === false) {
       img.crossOrigin = 'anonymous';
     }
 
@@ -206,7 +206,7 @@ export class ImageTexture extends Texture {
 
     if (this.txManager.hasCreateImageBitmap === true) {
       if (
-        !isBase64Image(src) &&
+        isBase64Image(src) === false &&
         this.txManager.hasWorker === true &&
         this.txManager.imageWorkerManager !== null
       ) {
