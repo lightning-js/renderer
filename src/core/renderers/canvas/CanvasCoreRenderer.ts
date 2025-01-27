@@ -141,10 +141,7 @@ export class CanvasCoreRenderer extends CoreRenderer {
       if (texture.state === 'freed') {
         return;
       }
-      if (
-        texture.state !== 'loaded' ||
-        (textureType === TextureType.subTexture && !ctxTexture.hasImage())
-      ) {
+      if (texture.state !== 'loaded') {
         return;
       }
     }
