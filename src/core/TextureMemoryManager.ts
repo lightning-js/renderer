@@ -16,6 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { isProductionEnvironment } from '../utils.js';
 import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
@@ -67,6 +68,17 @@ export interface TextureMemoryManagerSettings {
    * @defaultValue `false`
    */
   debugLogging: boolean;
+
+  /**
+   * Baseline memory allocation for the Texture Memory Manager
+   *
+   * @remarks
+   * Baseline texture memory is an allocation of memory by simply having a 1080p WebGL context.
+   * This will be used on top of the memory used by textures to determine when to trigger a cleanup.
+   *
+   * @defaultValue `25e6` (25 MB)
+   */
+  baselineMemoryAllocation: number;
 }
 
 export interface MemoryInfo {
@@ -76,6 +88,7 @@ export interface MemoryInfo {
   memUsed: number;
   renderableTexturesLoaded: number;
   loadedTextures: number;
+  baselineMemoryAllocation: number;
 }
 
 /**
@@ -122,6 +135,7 @@ export class TextureMemoryManager {
     this.targetThreshold = Math.round(criticalThreshold * targetFraction);
     this.cleanupInterval = settings.cleanupInterval;
     this.debugLogging = settings.debugLogging;
+    this.memUsed = Math.round(settings.baselineMemoryAllocation);
 
     if (settings.debugLogging) {
       let lastMemUse = 0;
@@ -241,9 +255,12 @@ export class TextureMemoryManager {
         memUsed: this.memUsed,
         criticalThreshold: this.criticalThreshold,
       });
-      console.warn(
-        `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
-      );
+
+      if (this.debugLogging === true || isProductionEnvironment() === false) {
+        console.warn(
+          `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
+        );
+      }
     }
   }
 
@@ -272,6 +289,7 @@ export class TextureMemoryManager {
       memUsed: this.memUsed,
       renderableTexturesLoaded,
       loadedTextures: this.loadedTextures.size,
+      baselineMemoryAllocation: this.memUsed - renderableMemUsed,
     };
   }
 }
