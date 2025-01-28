@@ -29,7 +29,7 @@ import { type TextureData } from '../textures/Texture.js';
  * @returns
  */
 export function isSvgImage(url: string): boolean {
-  return /\.(svg)$/.test(url);
+  return /\.(svg)(\?.*)?$/.test(url);
 }
 
 /**
