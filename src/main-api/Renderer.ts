@@ -354,12 +354,16 @@ export class RendererMain extends EventEmitter {
    */
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
+
     const resolvedTxSettings: TextureMemoryManagerSettings = {
       criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
       targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
       cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
       debugLogging: settings.textureMemory?.debugLogging || false,
+      baselineMemoryAllocation:
+        settings.textureMemory?.baselineMemoryAllocation || 26e6,
     };
+
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,

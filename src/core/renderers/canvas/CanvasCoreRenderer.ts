@@ -126,7 +126,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
     if (
       textureType !== TextureType.image &&
       textureType !== TextureType.color &&
-      textureType !== TextureType.subTexture
+      textureType !== TextureType.subTexture &&
+      textureType !== TextureType.noise
     ) {
       return;
     }
@@ -188,7 +189,8 @@ export class CanvasCoreRenderer extends CoreRenderer {
 
     if (
       (textureType === TextureType.image ||
-        textureType === TextureType.subTexture) &&
+        textureType === TextureType.subTexture ||
+        textureType === TextureType.noise) &&
       ctxTexture
     ) {
       const image = ctxTexture.getImage(color);
