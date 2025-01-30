@@ -221,6 +221,7 @@ export abstract class Texture extends EventEmitter {
         (this.renderable as boolean) = false;
         (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(false);
+        this.txManager.orphanTexture(this);
       }
     }
   }
