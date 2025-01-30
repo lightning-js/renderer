@@ -85,12 +85,12 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     }
 
     this.state = 'loading';
-    this.textureSource.setCoreCtxState('loading');
+    this.textureSource.setState('loading');
     this._nativeCtxTexture = this.createNativeCtxTexture();
 
     if (this._nativeCtxTexture === null) {
       this.state = 'failed';
-      this.textureSource.setCoreCtxState(
+      this.textureSource.setState(
         'failed',
         new Error('Could not create WebGL Texture'),
       );
@@ -110,7 +110,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         this._h = height;
         // Update the texture source's width and height so that it can be used
         // for rendering.
-        this.textureSource.setCoreCtxState('loaded', { width, height });
+        this.textureSource.setState('loaded', { width, height });
       })
       .catch((err) => {
         // If the texture has been freed while loading, return early.
@@ -118,7 +118,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           return;
         }
         this.state = 'failed';
-        this.textureSource.setCoreCtxState('failed', err);
+        this.textureSource.setState('failed', err);
         console.error(err);
       });
   }
@@ -248,7 +248,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       return;
     }
     this.state = 'freed';
-    this.textureSource.setCoreCtxState('freed');
+    this.textureSource.setState('freed');
     this._w = 0;
     this._h = 0;
     if (!this._nativeCtxTexture) {

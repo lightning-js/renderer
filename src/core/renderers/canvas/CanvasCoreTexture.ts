@@ -36,22 +36,22 @@ export class CanvasCoreTexture extends CoreContextTexture {
     | undefined;
 
   load(): void {
-    this.textureSource.setCoreCtxState('loading');
+    this.textureSource.setState('loading');
 
     this.onLoadRequest()
       .then((size) => {
-        this.textureSource.setCoreCtxState('loaded', size);
+        this.textureSource.setState('loaded', size);
         this.updateMemSize();
       })
       .catch((err) => {
-        this.textureSource.setCoreCtxState('failed', err as Error);
+        this.textureSource.setState('failed', err as Error);
       });
   }
 
   free(): void {
     this.image = undefined;
     this.tintCache = undefined;
-    this.textureSource.setCoreCtxState('freed');
+    this.textureSource.setState('freed');
     this.setTextureMemUse(0);
   }
 
