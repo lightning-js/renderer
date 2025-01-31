@@ -109,6 +109,7 @@ export interface MemoryInfo {
 export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: Map<Texture, number> = new Map();
+  private orphanedTextures: Texture[] = [];
   private criticalThreshold: number;
   private targetThreshold: number;
   private cleanupInterval: number;
@@ -161,6 +162,36 @@ export class TextureMemoryManager {
     }
   }
 
+  /**
+   * Add a texture to the orphaned textures list
+   *
+   * @param texture - The texture to add to the orphaned textures list
+   */
+  addToOrphanedTextures(texture: Texture) {
+    // If the texture can be cleaned up, add it to the orphaned textures list
+    if (texture.preventCleanup === false) {
+      this.orphanedTextures.push(texture);
+    }
+  }
+
+  /**
+   * Remove a texture from the orphaned textures list
+   *
+   * @param texture - The texture to remove from the orphaned textures list
+   */
+  removeFromOrphanedTextures(texture: Texture) {
+    const index = this.orphanedTextures.indexOf(texture);
+    if (index !== -1) {
+      this.orphanedTextures.splice(index, 1);
+    }
+  }
+
+  /**
+   * Set the memory usage of a texture
+   *
+   * @param texture - The texture to set memory usage for
+   * @param byteSize - The size of the texture in bytes
+   */
   setTextureMemUse(texture: Texture, byteSize: number) {
     if (this.loadedTextures.has(texture)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -193,7 +224,7 @@ export class TextureMemoryManager {
     this.lastCleanupTime = this.frameTime;
     this.criticalCleanupRequested = false;
 
-    if (critical) {
+    if (critical === true) {
       this.stage.queueFrameEvent('criticalCleanup', {
         memUsed: this.memUsed,
         criticalThreshold: this.criticalThreshold,
@@ -206,48 +237,14 @@ export class TextureMemoryManager {
       );
     }
 
-    /**
-     * Sort the loaded textures by renderability, then by last touch time.
-     *
-     * This will ensure that the array is ordered by the following:
-     * - Non-renderable textures, starting at the least recently rendered
-     * - Renderable textures, starting at the least recently rendered
-     */
-    const textures = [...this.loadedTextures.keys()].sort(
-      (textureA, textureB) => {
-        const txARenderable = textureA.renderable;
-        const txBRenderable = textureB.renderable;
-        if (txARenderable === txBRenderable) {
-          return (
-            textureA.lastRenderableChangeTime -
-            textureB.lastRenderableChangeTime
-          );
-        } else if (txARenderable) {
-          return 1;
-        } else if (txBRenderable) {
-          return -1;
-        }
-        return 0;
-      },
-    );
-
     // Free non-renderable textures until we reach the target threshold
     const memTarget = this.targetThreshold;
     const txManager = this.stage.txManager;
-    for (const texture of textures) {
-      if (texture.renderable) {
-        // Stop at the first renderable texture (The rest are renderable because of the sort above)
-        // We don't want to free renderable textures because they will just likely be reloaded in the next frame
-        break;
-      }
-      if (texture.preventCleanup === false) {
-        texture.free();
-        txManager.removeTextureFromCache(texture);
-      }
-      if (this.memUsed <= memTarget) {
-        // Stop once we've freed enough textures to reach under the target threshold
-        break;
-      }
+
+    while (this.memUsed >= memTarget && this.orphanedTextures.length > 0) {
+      const texture = this.orphanedTextures.shift()!;
+      texture.free();
+      txManager.removeTextureFromCache(texture);
     }
 
     if (this.memUsed >= this.criticalThreshold) {
