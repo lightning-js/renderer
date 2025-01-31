@@ -147,8 +147,6 @@ export abstract class Texture extends EventEmitter {
 
   readonly renderable: boolean = false;
 
-  readonly lastRenderableChangeTime = 0;
-
   public type: TextureType = TextureType.generic;
 
   public preventCleanup = false;
@@ -196,6 +194,7 @@ export abstract class Texture extends EventEmitter {
       if (newSize < oldSize && newSize === 0) {
         (this.renderable as boolean) = false;
         this.onChangeIsRenderable?.(false);
+        this.txManager.orphanTexture(this);
       }
     }
   }
