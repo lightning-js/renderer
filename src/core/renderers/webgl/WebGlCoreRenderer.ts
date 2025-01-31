@@ -95,6 +95,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
 
   quadBufferUsage = 0;
+  numQuadsRendered = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -606,6 +607,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
       renderOp.draw();
     }
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
+
+    // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
+    const QUAD_SIZE_IN_BYTES = 4 * (6 * arr.BYTES_PER_ELEMENT); // 6 attributes per vertex
+    this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
+  }
+
+  getQuadCount(): number {
+    return this.numQuadsRendered;
   }
 
   renderToTexture(node: CoreNode) {
