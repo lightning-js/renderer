@@ -407,8 +407,7 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    texture.setSourceState('loading');
-    texture.setCoreCtxState('loading');
+    texture.setState('loading');
 
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
