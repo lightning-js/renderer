@@ -232,14 +232,14 @@ export class ImageTexture extends Texture {
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
-      this.setSourceState('failed', e as Error);
+      this.setState('failed', e as Error);
       return {
         data: null,
       };
     }
 
     if (resp.data === null) {
-      this.setSourceState('failed', Error('ImageTexture: No image data'));
+      this.setState('failed', Error('ImageTexture: No image data'));
       return {
         data: null,
       };
@@ -257,7 +257,7 @@ export class ImageTexture extends Texture {
     }
 
     // we're loaded!
-    this.setSourceState('loaded', {
+    this.setState('fetched', {
       width,
       height,
     });

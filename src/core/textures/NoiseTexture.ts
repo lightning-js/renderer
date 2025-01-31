@@ -75,7 +75,7 @@ export class NoiseTexture extends Texture {
       pixelData8[i + 3] = 255;
     }
 
-    this.setSourceState('loaded');
+    this.setState('fetched');
 
     return {
       data: new ImageData(pixelData8, width, height),

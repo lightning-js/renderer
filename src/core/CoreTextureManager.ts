@@ -407,8 +407,7 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    texture.setSourceState('loading');
-    texture.setCoreCtxState('loading');
+    texture.setState('loading');
 
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
@@ -462,6 +461,10 @@ export class CoreTextureManager extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.shift()!;
       texture.getTextureData().then(() => {
+        if (texture.state === 'failed') {
+          return;
+        }
+
         this.uploadTexture(texture);
       });
     }
@@ -484,6 +487,10 @@ export class CoreTextureManager extends EventEmitter {
       const texture = this.downloadTextureSourceQueue.shift()!;
       queueMicrotask(() => {
         texture.getTextureData().then(() => {
+          if (texture.state === 'failed') {
+            return;
+          }
+
           this.enqueueUploadTexture(texture);
         });
       });
