@@ -114,10 +114,13 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
           if (isAdvancedProp === true && propConfig.resolve !== undefined) {
             this.resolvedProps![key] = propConfig.resolve(
               value,
-              this.resolvedProps![key]!,
+              this.resolvedProps as Record<string, unknown>,
             );
           } else if (isAdvancedProp === true && propConfig.set !== undefined) {
-            propConfig.set(value, this.resolvedProps![key]!);
+            propConfig.set(
+              value,
+              this.resolvedProps as Record<string, unknown>,
+            );
           } else {
             this.resolvedProps![key] = value;
           }

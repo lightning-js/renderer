@@ -109,7 +109,6 @@ export class WebGlRenderOp extends CoreRenderOp {
 
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 24) * 6 * 2;
-
     // Clipping
     if (this.quad.clippingRect.valid) {
       const { x, y, width, height } = this.quad.clippingRect;
@@ -122,7 +121,6 @@ export class WebGlRenderOp extends CoreRenderOp {
       const clipWidth = Math.round(width * pixelRatio);
       const clipHeight = Math.round(height * pixelRatio);
       let clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
-
       // if parent has render texture, we need to adjust the scissor rect
       // to be relative to the parent's framebuffer
       if (this.quad.parentHasRenderTexture) {

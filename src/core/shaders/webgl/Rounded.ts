@@ -33,12 +33,6 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
   name: RoundedTemplate.name,
   props: RoundedTemplate.props,
   update(node: CoreNode) {
-    const rad = calcFactoredRadiusArray(
-      this.props!.radius as Vec4,
-      node.width,
-      node.height,
-    );
-    console.log('rad', rad);
     this.uniform4fa(
       'u_radius',
       calcFactoredRadiusArray(
@@ -51,6 +45,45 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
   getCacheMarkers(props: RoundedProps) {
     return `radiusArray:${Array.isArray(props.radius)}`;
   },
+  vertex: `
+  # ifdef GL_FRAGMENT_PRECISION_HIGH
+  precision highp float;
+  # else
+  precision mediump float;
+  # endif
+
+  attribute vec2 a_position;
+  attribute vec2 a_textureCoordinate;
+  attribute vec4 a_color;
+  attribute vec2 a_nodeCoordinate;
+
+  uniform vec2 u_resolution;
+  uniform float u_pixelRatio;
+  uniform vec2 u_dimensions;
+  uniform vec4 u_shadow;
+
+  varying vec4 v_color;
+  varying vec2 v_textureCoordinate;
+  varying vec2 v_uv;
+
+  void main() {
+    vec2 normalized = a_position * u_pixelRatio;
+    v_uv = normalized / u_resolution;
+
+    // vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
+    vec2 clipSpace = v_uv * 2.0 - 1.0;
+    clipSpace.y = -clipSpace.y;
+
+    // vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
+    // vec2 shadowEdge = outerEdge;
+    // vec2 vertexPos = normalized + outerEdge + shadowEdge;
+
+    v_color = a_color;
+    v_textureCoordinate = a_textureCoordinate;
+
+    gl_Position = vec4(clipSpace, 0.0, 1.0);
+  }
+`,
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -66,13 +99,13 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
 
     varying vec4 v_color;
     varying vec2 v_textureCoordinate;
-    varying vec2 v_position;
+    varying vec2 v_uv;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
-      vec2 q = abs(p) - s + r.x;
-      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x) + 2.0;
+      vec2 q = abs(p) - (s - u_pixelRatio * 5.) + r.x;
+      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
 
     void main() {
@@ -82,13 +115,10 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
 
       vec2 p = v_textureCoordinate.xy * dims - halfDimensions;
       vec4 r = u_radius;
-      r.xy = (p.x > 0.0) ? r.yz : r.xw;
-      r.x = (p.y > 0.0) ? r.y : r.x;
-      p = abs(p) - halfDimensions + r.x;
-
-      float dist = (min(max(p.x, p.y), 0.0) + length(max(p, 0.0)) - r.x) + 2.0;
-      dist = 1.0 - smoothstep(0.0, u_pixelRatio, dist);
-      gl_FragColor = mix(vec4(0.0), color, min(color.a, dist));
+      float dist = roundedBox(p, halfDimensions, u_radius);
+      dist = 1.0 - smoothstep(0.0, 1.0, dist);
+      gl_FragColor = vec4(v_uv.x, 0.0, 0.0, 1.0);
+      // gl_FragColor = mix(vec4(0.0), color, min(color.a, dist));
     }
   `,
 };

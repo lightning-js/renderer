@@ -46,6 +46,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     uniform float u_alpha;
     uniform vec2 u_dimensions;
     uniform sampler2D u_texture;
+    uniform float u_rtt;
 
     uniform vec4 u_radius;
     uniform vec4 u_border_width;
@@ -61,26 +62,29 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
+      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
-      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x) + 2.0;
+      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
 
     float asymBorderWidth(vec2 p, float d, vec4 r, vec4 w) {
-      r.x = r.x - (max(w.w, w.x) - min(w.w, w.x));
-      r.y = r.y - (max(w.y, w.x) - min(w.y, w.x));
-      r.z = r.x - (max(w.y, w.z) - min(w.y, w.z));
-      r.w = r.w - (max(w.w, w.z) - min(w.w, w.z));
+      r.x = (r.x - (max(w.w, w.x) - min(w.w, w.x))) * 0.5;
+      r.y = (r.y - (max(w.y, w.x) - min(w.y, w.x))) * 0.5;
+      r.z = (r.x - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
+      r.w = (r.w - (max(w.w, w.z) - min(w.w, w.z))) * 0.5;
 
-      p.x = p.x + (w[1] - w[3]) * u_pixelRatio;
-      p.y = p.y - (w[0] - w[2]) * u_pixelRatio;
-      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5 + u_pixelRatio;
-      float borderDist = roundedBox(p, size, r);
+      p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;
+      p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
+
+      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
+      float borderDist = roundedBox(p, size + 2.0, r);
       return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
     }
 
     float shadowBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
+      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
       return 1.0 - smoothstep(-u_shadow.z, u_shadow.z, dist);

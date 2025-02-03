@@ -24,6 +24,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
 
     uniform vec2 u_resolution;
     uniform float u_pixelRatio;
+    uniform float u_rtt;
     uniform vec2 u_dimensions;
 
     uniform vec4 u_shadow;
@@ -32,6 +33,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     varying vec2 v_textureCoordinate;
 
     void main() {
+      // vec2 origin = u_rtt > 0 ? u_dimensions : u_resulution;
       vec2 screenSpace = vec2(2.0 / u_resolution.x,  -2.0 / u_resolution.y);
       vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
 
@@ -42,7 +44,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
 
       v_color = a_color;
-      v_textureCoordinate = a_textureCoordinate + (screenSpace + shadowEdge) / u_dimensions;
+      v_textureCoordinate = a_textureCoordinate + (screenSpace + shadowEdge) / (u_dimensions);
     }
   `,
   fragment: `
@@ -72,6 +74,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     float shadowBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
+      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
       return 1.0 - smoothstep(-u_shadow.z, u_shadow.z, dist);

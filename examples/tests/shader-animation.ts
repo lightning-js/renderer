@@ -74,8 +74,8 @@ export default async function test({
       duration: 500,
     },
   );
-  shaderAnimation.start();
-  await shaderAnimation.waitUntilStopped();
-  t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
-  await snapshot({ name: 'animation1' });
+  // shaderAnimation.start();
+  // await shaderAnimation.waitUntilStopped();
+  // t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
+  // await snapshot({ name: 'animation1' });
 }

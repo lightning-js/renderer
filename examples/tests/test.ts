@@ -18,7 +18,6 @@
  */
 
 import { type INode, type IAnimationController } from '@lightningjs/renderer';
-import { RoundedRectangle } from '@lightningjs/renderer/webgl/shaders';
 import rocko from '../assets/rocko.png';
 import elevator from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
@@ -32,7 +31,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     width: 100,
     height: 100,
     color: 0xff0000ff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 10,
     }),
     parent: testRoot,

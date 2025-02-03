@@ -50,13 +50,15 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
+      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
-      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x) + 2.0;
+      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
 
     float shadowBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
+      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
       return 1.0 - smoothstep(-u_shadow.z, u_shadow.z, dist);

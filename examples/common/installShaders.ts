@@ -16,6 +16,10 @@ export async function installShaders(stage: Stage, renderMode: string) {
     'RoundedWithShadow',
     shaders.RoundedWithShadow,
   );
+  stage.shManager.registerShaderType(
+    'RoundedWithBorderAndShadow',
+    shaders.RoundedWithBorderAndShadow,
+  );
   stage.shManager.registerShaderType('Border', shaders.Border);
   stage.shManager.registerShaderType('Shadow', shaders.Shadow);
   stage.shManager.registerShaderType('HolePunch', shaders.HolePunch);

@@ -44,7 +44,12 @@ export function getBorderProps<P extends string>(
   return {
     [width]: {
       default: [0, 0, 0, 0],
-      resolve: validateArrayLength4,
+      resolve(value) {
+        if (value !== undefined) {
+          return validateArrayLength4(value);
+        }
+        return ([] as number[]).concat(this.default);
+      },
     },
     [pf + 'color']: 0xffffffff,
     [pf + 'top']: {

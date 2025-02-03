@@ -207,6 +207,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       );
     }
 
+    this.glw.uniform1f('u_rtt', renderOp.quad.rtt ? 1 : 0);
+
     if (this.useSystemAlpha) {
       this.glw.uniform1f('u_alpha', renderOp.quad.alpha);
     }
@@ -224,6 +226,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         this.glw,
         renderOp.sdfShaderProps,
       );
+      return;
     }
 
     if (renderOp.shader.props) {

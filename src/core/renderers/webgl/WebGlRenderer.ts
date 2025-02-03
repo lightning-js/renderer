@@ -530,7 +530,7 @@ export class WebGlRenderer extends CoreRenderer {
     const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-
+    console.log('arr', arr);
     const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 

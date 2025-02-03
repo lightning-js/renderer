@@ -41,15 +41,16 @@ export const Border: WebGlShaderType<BorderProps> = {
     varying vec2 v_textureCoordinate;
 
     float box(vec2 p, vec2 s) {
-      vec2 q = abs(p) - s;
-      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) + 2.0;
+      vec2 q = abs(p) - (s - (4.0 - u_pixelRatio));
+      return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0)));
     }
 
     float asymBorderWidth(vec2 p, float d, vec4 w) {
-      p.x = p.x + (w[1] - w[3]) * u_pixelRatio;
-      p.y = p.y - (w[0] - w[2]) * u_pixelRatio;
-      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5 + u_pixelRatio;
-      float borderDist = box(p, size);
+      p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;
+      p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
+
+      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
+      float borderDist = box(p, size + 2.0);
       return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
     }
 
