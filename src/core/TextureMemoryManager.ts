@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 import { isProductionEnvironment } from '../utils.js';
+import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
 import type { Texture } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
@@ -168,6 +169,11 @@ export class TextureMemoryManager {
    * @param texture - The texture to add to the orphaned textures list
    */
   addToOrphanedTextures(texture: Texture) {
+    // if the texture is already in the orphaned textures list add it at the end
+    if (this.orphanedTextures.includes(texture)) {
+      this.removeFromOrphanedTextures(texture);
+    }
+
     // If the texture can be cleaned up, add it to the orphaned textures list
     if (texture.preventCleanup === false) {
       this.orphanedTextures.push(texture);
@@ -240,9 +246,21 @@ export class TextureMemoryManager {
     // Free non-renderable textures until we reach the target threshold
     const memTarget = this.targetThreshold;
     const txManager = this.stage.txManager;
+    const timestamp = getTimeStamp();
 
-    while (this.memUsed >= memTarget && this.orphanedTextures.length > 0) {
+    while (
+      this.memUsed >= memTarget &&
+      this.orphanedTextures.length > 0 &&
+      // if it a non-critical cleanup, we will only cleanup for 10ms
+      (critical || getTimeStamp() - timestamp < 10)
+    ) {
       const texture = this.orphanedTextures.shift()!;
+
+      if (texture.renderable === true) {
+        // If the texture is renderable, we can't free it up
+        continue;
+      }
+
       texture.free();
       txManager.removeTextureFromCache(texture);
     }
