@@ -108,7 +108,7 @@ export class WebGlRenderOp extends CoreRenderOp {
     this.shader.program.bindRenderOp(this);
 
     // TODO: Reduce calculations required
-    const quadIdx = (this.bufferIdx / 24) * 6 * 2;
+    const quadIdx = (this.bufferIdx / 32) * 6 * 2;
     // Clipping
     if (this.quad.clippingRect.valid) {
       const { x, y, width, height } = this.quad.clippingRect;

@@ -234,9 +234,9 @@ export const DefaultVertexSource = `
   # endif
 
   attribute vec2 a_position;
-  attribute vec2 a_textureCoordinate;
+  attribute vec2 a_textureCoords;
   attribute vec4 a_color;
-  attribute vec2 a_nodeCoordinate;
+  attribute vec2 a_nodeCoords;
 
   uniform vec2 u_resolution;
   uniform float u_pixelRatio;
@@ -244,17 +244,17 @@ export const DefaultVertexSource = `
   uniform vec4 u_shadow;
 
   varying vec4 v_color;
-  varying vec2 v_textureCoordinate;
+  varying vec2 v_textureCoords;
 
   void main() {
     vec2 normalized = a_position * u_pixelRatio;
     vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
 
-    vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
+    vec2 outerEdge = clamp(a_textureCoords * 2.0 - vec2(1.0), -1.0, 1.0);
     vec2 shadowEdge = outerEdge;
     vec2 vertexPos = normalized + outerEdge + shadowEdge;
     v_color = a_color;
-    v_textureCoordinate = a_textureCoordinate;
+    v_textureCoords = a_textureCoords;
 
     gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
   }

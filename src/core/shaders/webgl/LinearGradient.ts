@@ -43,20 +43,20 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
     uniform vec4 u_colors[${props.colors.length}];
 
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
 
     vec2 calcPoint(float d, float angle) {
       return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       float a = u_angle;
       float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
       vec2 f = calcPoint(lineDist * 0.5, a);
       vec2 t = calcPoint(lineDist * 0.5, a + PI);
       vec2 gradVec = t - f;
-      float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
+      float dist = dot(v_textureCoords.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
       ${genGradientColors(props.stops.length)}
       gl_FragColor = mix(color, colorOut, clamp(colorOut.a, 0.0, 1.0));
     }

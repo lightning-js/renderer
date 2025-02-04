@@ -125,7 +125,7 @@ export class WebGlRenderer extends CoreRenderer {
     };
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
-    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = 8 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
       {
         buffer: quadBuffer,
@@ -138,8 +138,8 @@ export class WebGlRenderer extends CoreRenderer {
             stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
             offset: 0, // start at the beginning of the buffer
           },
-          a_textureCoordinate: {
-            name: 'a_textureCoordinate',
+          a_textureCoords: {
+            name: 'a_textureCoords',
             size: 2,
             type: glw.FLOAT,
             normalized: false,
@@ -161,6 +161,14 @@ export class WebGlRenderer extends CoreRenderer {
             normalized: false,
             stride,
             offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+          },
+          a_nodeCoords: {
+            name: 'a_nodeCoords',
+            size: 2,
+            type: glw.FLOAT,
+            normalized: false,
+            stride,
+            offset: 6 * Float32Array.BYTES_PER_ELEMENT,
           },
         },
       },
@@ -316,110 +324,48 @@ export class WebGlRenderer extends CoreRenderer {
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
-    if (params.renderCoords) {
-      // Upper-Left
-      fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
-      fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = params.colorTl; // color
-      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+    assertTruthy(params.renderCoords);
 
-      // Upper-Right
-      fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
-      fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = params.colorTr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
+    // Upper-Left
+    fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
+    fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
+    fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
+    fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+    uiQuadBuffer[bufferIdx++] = params.colorTl; // color
+    fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+    fQuadBuffer[bufferIdx++] = 0; //node X coord
+    fQuadBuffer[bufferIdx++] = 0; //node y coord
 
-      // Lower-Left
-      fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
-      fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-      fQuadBuffer[bufferIdx++] = texCoordX1;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBl;
-      fQuadBuffer[bufferIdx++] = textureIdx;
+    // Upper-Right
+    fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
+    fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
+    fQuadBuffer[bufferIdx++] = texCoordX2;
+    fQuadBuffer[bufferIdx++] = texCoordY1;
+    uiQuadBuffer[bufferIdx++] = params.colorTr;
+    fQuadBuffer[bufferIdx++] = textureIdx;
+    fQuadBuffer[bufferIdx++] = 1; //node X coord
+    fQuadBuffer[bufferIdx++] = 0; //node y coord
 
-      // Lower-Right
-      fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
-      fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-    } else if (params.tb !== 0 || params.tc !== 0) {
-      // Upper-Left
-      fQuadBuffer[bufferIdx++] = params.tx; // vertexX
-      fQuadBuffer[bufferIdx++] = params.ty; // vertexY
-      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = params.colorTl; // color
-      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+    // Lower-Left
+    fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
+    fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
+    fQuadBuffer[bufferIdx++] = texCoordX1;
+    fQuadBuffer[bufferIdx++] = texCoordY2;
+    uiQuadBuffer[bufferIdx++] = params.colorBl;
+    fQuadBuffer[bufferIdx++] = textureIdx;
+    fQuadBuffer[bufferIdx++] = 0; //node X coord
+    fQuadBuffer[bufferIdx++] = 1; //node y coord
 
-      // Upper-Right
-      fQuadBuffer[bufferIdx++] = params.tx + params.width * params.ta;
-      fQuadBuffer[bufferIdx++] = params.ty + params.width * params.tc;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = params.colorTr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
+    // Lower-Right
+    fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
+    fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
+    fQuadBuffer[bufferIdx++] = texCoordX2;
+    fQuadBuffer[bufferIdx++] = texCoordY2;
+    uiQuadBuffer[bufferIdx++] = params.colorBr;
+    fQuadBuffer[bufferIdx++] = textureIdx;
+    fQuadBuffer[bufferIdx++] = 1; //node X coord
+    fQuadBuffer[bufferIdx++] = 1; //node y coord
 
-      // Lower-Left
-      fQuadBuffer[bufferIdx++] = params.tx + params.height * params.tb;
-      fQuadBuffer[bufferIdx++] = params.ty + params.height * params.td;
-      fQuadBuffer[bufferIdx++] = texCoordX1;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBl;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-
-      // Lower-Right
-      fQuadBuffer[bufferIdx++] =
-        params.tx + params.width * params.ta + params.height * params.tb;
-      fQuadBuffer[bufferIdx++] =
-        params.ty + params.width * params.tc + params.height * params.td;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-    } else {
-      // Calculate the right corner of the quad
-      // multiplied by the scale
-      const rightCornerX = params.tx + params.width * params.ta;
-      const rightCornerY = params.ty + params.height * params.td;
-
-      // Upper-Left
-      fQuadBuffer[bufferIdx++] = params.tx; // vertexX
-      fQuadBuffer[bufferIdx++] = params.ty; // vertexY
-      fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-      fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
-      uiQuadBuffer[bufferIdx++] = params.colorTl; // color
-      fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
-
-      // Upper-Right
-      fQuadBuffer[bufferIdx++] = rightCornerX;
-      fQuadBuffer[bufferIdx++] = params.ty;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY1;
-      uiQuadBuffer[bufferIdx++] = params.colorTr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-
-      // Lower-Left
-      fQuadBuffer[bufferIdx++] = params.tx;
-      fQuadBuffer[bufferIdx++] = rightCornerY;
-      fQuadBuffer[bufferIdx++] = texCoordX1;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBl;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-
-      // Lower-Right
-      fQuadBuffer[bufferIdx++] = rightCornerX;
-      fQuadBuffer[bufferIdx++] = rightCornerY;
-      fQuadBuffer[bufferIdx++] = texCoordX2;
-      fQuadBuffer[bufferIdx++] = texCoordY2;
-      uiQuadBuffer[bufferIdx++] = params.colorBr;
-      fQuadBuffer[bufferIdx++] = textureIdx;
-    }
     // Update the length of the current render op
     this.curRenderOp.length += WORDS_PER_QUAD;
     this.curRenderOp.numQuads++;
@@ -530,7 +476,6 @@ export class WebGlRenderer extends CoreRenderer {
     const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-    console.log('arr', arr);
     const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 

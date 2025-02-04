@@ -46,7 +46,7 @@ export const DefaultBatched: WebGlShaderType = {
     precision mediump float;
     # endif
 
-    attribute vec2 a_textureCoordinate;
+    attribute vec2 a_textureCoords;
     attribute vec2 a_position;
     attribute vec4 a_color;
     attribute float a_textureIndex;
@@ -56,7 +56,7 @@ export const DefaultBatched: WebGlShaderType = {
     uniform float u_pixelRatio;
 
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
     varying float v_textureIndex;
 
     void main(){
@@ -66,7 +66,7 @@ export const DefaultBatched: WebGlShaderType = {
 
       // pass to fragment
       v_color = a_color;
-      v_textureCoordinate = a_textureCoordinate;
+      v_textureCoords = a_textureCoords;
       v_textureIndex = a_textureIndex;
 
       // flip y
@@ -89,7 +89,7 @@ export const DefaultBatched: WebGlShaderType = {
       uniform sampler2D u_textures[txUnits];
 
       varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
+      varying vec2 v_textureCoords;
       varying float v_textureIndex;
 
       vec4 sampleFromTexture(sampler2D textures[${textureUnits}], int idx, vec2 uv) {
@@ -106,7 +106,7 @@ export const DefaultBatched: WebGlShaderType = {
       }
 
       void main(){
-        gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoordinate);
+        gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoords);
       }
     `;
   },

@@ -79,7 +79,7 @@ export class MyCustomShader extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
+      attributes: ['a_position', 'a_textureCoords', 'a_color'],
       uniforms: [
         { name: 'u_resolution', uniform: 'uniform2fv' },
         { name: 'u_pixelRatio', uniform: 'uniform1f' },
@@ -163,14 +163,14 @@ export class MyCustomShader extends WebGlCoreShader {
       # endif
 
       attribute vec2 a_position;
-      attribute vec2 a_textureCoordinate;
+      attribute vec2 a_textureCoords;
       attribute vec4 a_color;
 
       uniform vec2 u_resolution;
       uniform float u_pixelRatio;
 
       varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
+      varying vec2 v_textureCoords;
 
       void main() {
         vec2 normalized = a_position * u_pixelRatio / u_resolution;
@@ -179,7 +179,7 @@ export class MyCustomShader extends WebGlCoreShader {
 
         // pass to fragment
         v_color = a_color;
-        v_textureCoordinate = a_textureCoordinate;
+        v_textureCoords = a_textureCoords;
 
         // flip y
         gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
@@ -198,7 +198,7 @@ export class MyCustomShader extends WebGlCoreShader {
       uniform vec2 u_bottomLeft;
       uniform vec2 u_bottomRight;
 
-      varying vec2 v_textureCoordinate;
+      varying vec2 v_textureCoords;
       varying vec4 v_color;
 
       float xross(in vec2 a, in vec2 b) {
@@ -232,7 +232,7 @@ export class MyCustomShader extends WebGlCoreShader {
 
       void main(void){
         vec4 color = vec4(0.0);
-        vec2 texUv = invBilinear(v_textureCoordinate, u_topLeft, u_topRight, u_bottomRight, u_bottomLeft);
+        vec2 texUv = invBilinear(v_textureCoords, u_topLeft, u_topRight, u_bottomRight, u_bottomLeft);
 
         if (texUv.x > -0.5) {
           color = texture2D(u_texture, texUv) * v_color;

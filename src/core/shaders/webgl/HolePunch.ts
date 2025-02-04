@@ -45,11 +45,11 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
 
     uniform vec4 u_color;
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 p = (v_textureCoordinate.xy * u_dimensions.xy - u_pos) - u_size;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
+      vec2 p = (v_textureCoords.xy * u_dimensions.xy - u_pos) - u_size;
       vec4 r = u_radius;
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;

@@ -50,15 +50,15 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
     uniform vec4 u_colors[${props.colors.length}];
 
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
 
     vec2 calcPoint(float d, float angle) {
       return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
-      vec2 point = v_textureCoordinate.xy * u_dimensions;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
+      vec2 point = v_textureCoords.xy * u_dimensions;
       float dist = length((point - u_projection) / u_size);
       ${genGradientColors(props.stops.length)}
       gl_FragColor = mix(color, colorOut, clamp(colorOut.a, 0.0, 1.0));

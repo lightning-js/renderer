@@ -44,8 +44,8 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
     uniform int u_asymWidth;
 
     varying vec4 v_color;
-    varying vec2 v_position;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
@@ -65,10 +65,10 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = roundedBox(boxUv, halfDimensions, u_radius);
 
       float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);

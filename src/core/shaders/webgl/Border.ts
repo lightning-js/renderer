@@ -38,7 +38,7 @@ export const Border: WebGlShaderType<BorderProps> = {
 
     varying vec4 v_color;
     varying vec2 v_position;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
 
     float box(vec2 p, vec2 s) {
       vec2 q = abs(p) - (s - (4.0 - u_pixelRatio));
@@ -55,10 +55,10 @@ export const Border: WebGlShaderType<BorderProps> = {
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec2 boxUv = v_textureCoords.xy * u_dimensions - halfDimensions;
       float boxDist = box(boxUv, halfDimensions);
 
       float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);

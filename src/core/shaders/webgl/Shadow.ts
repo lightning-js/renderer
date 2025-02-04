@@ -19,8 +19,9 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     # endif
 
     attribute vec2 a_position;
-    attribute vec2 a_textureCoordinate;
+    attribute vec2 a_textureCoords;
     attribute vec4 a_color;
+    attribute vec2 a_nodeCoords;
 
     uniform vec2 u_resolution;
     uniform float u_pixelRatio;
@@ -30,12 +31,12 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     uniform vec4 u_shadow;
 
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
 
     void main() {
-      // vec2 origin = u_rtt > 0 ? u_dimensions : u_resulution;
       vec2 screenSpace = vec2(2.0 / u_resolution.x,  -2.0 / u_resolution.y);
-      vec2 outerEdge = clamp(a_textureCoordinate * 2.0 - vec2(1.0), -1.0, 1.0);
+      vec2 outerEdge = clamp(a_nodeCoords * 2.0 - vec2(1.0), -1.0, 1.0);
 
       vec2 shadowEdge = outerEdge * (u_shadow.w + u_shadow.z) + u_shadow.xy;
       vec2 normVertexPos = a_position * u_pixelRatio;
@@ -44,7 +45,8 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
 
       v_color = a_color;
-      v_textureCoordinate = a_textureCoordinate + (screenSpace + shadowEdge) / (u_dimensions);
+      v_nodeCoords = a_nodeCoords + (screenSpace + shadowEdge) / (u_dimensions);
+      v_textureCoords = a_textureCoords + (screenSpace + shadowEdge) / (u_dimensions);
     }
   `,
   fragment: `
@@ -64,7 +66,8 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     uniform vec4 u_shadow;
 
     varying vec4 v_color;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
 
     float box(vec2 p, vec2 s) {
       vec2 q = abs(p) - s;
@@ -81,10 +84,10 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec2 boxUv = a_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = box(boxUv, halfDimensions);
 
       float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);

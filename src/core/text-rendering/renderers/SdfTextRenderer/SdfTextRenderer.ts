@@ -641,8 +641,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
               stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
               offset: 0, // start at the beginning of the buffer
             },
-            a_textureCoordinate: {
-              name: 'a_textureCoordinate',
+            a_textureCoords: {
+              name: 'a_textureCoords',
               size: 2,
               type: glw.FLOAT,
               normalized: false,
@@ -660,7 +660,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     if (!bufferUploaded) {
       const glw = renderer.glw;
 
-      const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
+      const buffer = webGlBuffers?.getBuffer('a_textureCoords') ?? null;
       glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
     }

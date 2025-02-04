@@ -6,12 +6,12 @@ import {
   RoundedWithBorderTemplate,
   type RoundedWithBorderProps,
 } from '../templates/RoundedWithBorderTemplate.js';
+import { Rounded } from './Rounded.js';
 
 export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
   name: RoundedWithBorderTemplate.name,
   props: RoundedWithBorderTemplate.props,
   update(node: CoreNode) {
-    console.log('update', this.stage);
     this.uniformRGBA('u_border_color', this.props!['border-color']);
     this.uniform4fa('u_border_width', this.props!['border-width'] as Vec4);
     this.uniform1i(
@@ -27,6 +27,7 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       ),
     );
   },
+  vertex: Rounded.vertex,
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -47,13 +48,12 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     uniform int u_border_asym;
 
     varying vec4 v_color;
-    varying vec2 v_position;
-    varying vec2 v_textureCoordinate;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
-      // s -= u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
@@ -68,15 +68,15 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
 
       vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
-      float borderDist = roundedBox(p, size + 2.0, r);
+      float borderDist = roundedBox(p, size + u_pixelRatio, r);
       return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
     }
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
+      vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = v_textureCoordinate.xy * u_dimensions - halfDimensions;
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = roundedBox(boxUv, halfDimensions, u_radius);
 
       float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
