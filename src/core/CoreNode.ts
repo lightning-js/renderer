@@ -717,7 +717,7 @@ export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
-  readonly props: CoreNodeProps;
+  readonly props!: CoreNodeProps;
 
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -752,19 +752,7 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = {
-      ...props,
-      parent: null,
-      texture: null,
-      src: null,
-      rtt: false,
-    };
-
-    // Assign props to instance
-    this.parent = props.parent;
-    this.texture = props.texture;
-    this.src = props.src;
-    this.rtt = props.rtt;
+    this.setProps(props);
 
     this.setUpdateType(
       UpdateType.ScaleRotate |
@@ -847,6 +835,22 @@ export class CoreNode extends EventEmitter {
       this.width = dimensions.width;
       this.height = dimensions.height;
     }
+  }
+
+  setProps(props: CoreNodeProps): void {
+    (this.props as CoreNodeProps) = {
+      ...props,
+      parent: null,
+      texture: null,
+      src: null,
+      rtt: false,
+    };
+
+    // Assign props to instance
+    this.parent = props.parent;
+    this.texture = props.texture;
+    this.src = props.src;
+    this.rtt = props.rtt;
   }
 
   private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
@@ -2327,8 +2331,121 @@ export class CoreNode extends EventEmitter {
     return controller;
   }
 
-  flush() {
-    // no-op
+  /**
+   * Resets the state of the node to its initial values.
+   */
+  resetState(): void {
+    this.props.x = 0;
+    this.props.y = 0;
+    this.props.width = 0;
+    this.props.height = 0;
+    this.props.alpha = 1;
+    this.props.scaleX = 1;
+    this.props.scaleY = 1;
+    this.props.rotation = 0;
+    this.props.mountX = 0;
+    this.props.mountY = 0;
+    this.props.pivotX = 0.5;
+    this.props.pivotY = 0.5;
+    this.props.color = 0xffffffff;
+    this.props.colorTop = 0xffffffff;
+    this.props.colorBottom = 0xffffffff;
+    this.props.colorLeft = 0xffffffff;
+    this.props.colorRight = 0xffffffff;
+    this.props.colorTl = 0xffffffff;
+    this.props.colorTr = 0xffffffff;
+    this.props.colorBl = 0xffffffff;
+    this.props.colorBr = 0xffffffff;
+    this.props.zIndex = 0;
+    this.props.rtt = false;
+    this.props.clipping = false;
+    this.props.autosize = false;
+    this.props.strictBounds = false;
+    this.props.data = undefined;
+    this.props.src = null;
+
+    this.globalTransform = undefined;
+    this.scaleRotateTransform = undefined;
+    this.localTransform = undefined;
+    this.renderCoords = undefined;
+    this.renderBound = undefined;
+    this.strictBound = undefined;
+    this.preloadBound = undefined;
+    this.clippingRect.valid = false;
+
+    this.isRenderable = false;
+    this.renderState = CoreNodeRenderState.Init;
+    this.worldAlpha = 1;
+
+    this.src = null;
+    this.rtt = false;
+    this.texture = null;
+    this.shader = this.stage.defShaderCtr;
+    this.rttParent = null;
+
+    // reset children
+    this.children.forEach((child) => child.resetState());
+  }
+
+  /**
+   * Adds a child node at a specific index in the children array.
+   * If the index is out of bounds, the child is added at the closest valid position.
+   * If the child already has a parent, it is removed from its current parent first.
+   *
+   * @param child - The CoreNode to add
+   * @param index - The index to insert the child at
+   */
+  addChildAt(child: CoreNode, index: number): void {
+    assertTruthy(
+      !child || child === this,
+      'Cannot add an invalid child or self as a child.',
+    );
+
+    // Remove from previous parent
+    if (child.parent !== null) {
+      child.parent = null;
+    }
+
+    // Ensure index is within bounds
+    index = Math.max(0, Math.min(index, this.children.length));
+
+    this.children.splice(index, 0, child);
+    child.parent = this;
+
+    this.setUpdateType(UpdateType.Children | UpdateType.ZIndexSortedChildren);
+    child.setUpdateType(UpdateType.All);
+
+    // Apply RTT inheritance if needed
+    if (this.rtt || this.parentHasRenderTexture) {
+      child.applyRTTInheritance(this);
+    }
+  }
+
+  /**
+   * Removes a child node at a specific index in the children array.
+   * If the index is out of bounds, the function does nothing.
+   *
+   * @param index - The index of the child to remove
+   * @returns The removed CoreNode if successful, otherwise null
+   */
+  removeChildAt(index: number): CoreNode | null {
+    assertTruthy(
+      index < 0 || index >= this.children.length,
+      'Index out of bounds.',
+    );
+
+    const child = this.children[index];
+    if (child === undefined) {
+      return null;
+    }
+
+    this.children.splice(index, 1);
+    child.parent = null;
+    child.setUpdateType(UpdateType.All);
+    child.clearRTTInheritance();
+    this.setUpdateType(UpdateType.Children | UpdateType.ZIndexSortedChildren);
+
+    return child;
   }
 
   //#endregion Properties
