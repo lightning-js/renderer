@@ -106,7 +106,7 @@ export class SdfTrFontFace<
     // Set this.data to the fetched data from dataUrl
     fetchJson(atlasDataUrl)
       .then((response) => {
-        this.data = response as SdfFontData;
+        this.data = JSON.parse(response as unknown as string) as SdfFontData;
         assertTruthy(this.data);
         // Add all the glyphs to the glyph map
 
