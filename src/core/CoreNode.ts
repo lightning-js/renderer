@@ -839,18 +839,6 @@ export class CoreNode extends EventEmitter {
     });
   }
 
-  createDefaultTexture(): void {
-    // load default texture if no texture is set
-    if (
-      this.stage.defaultTexture !== null &&
-      this.props.src === null &&
-      this.props.texture === null &&
-      this.props.rtt === false
-    ) {
-      this.texture = this.stage.defaultTexture;
-    }
-  }
-
   unloadTexture(): void {
     if (this.texture !== null) {
       this.texture.off('loaded', this.onTextureLoaded);
@@ -2319,9 +2307,6 @@ export class CoreNode extends EventEmitter {
     if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);
       this.loadTexture();
-    } else {
-      // If the texture is null, create a default texture
-      this.createDefaultTexture();
     }
 
     this.setUpdateType(UpdateType.IsRenderable);

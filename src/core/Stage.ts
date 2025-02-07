@@ -373,7 +373,6 @@ export class Stage {
 
     // Check if we need to cleanup textures
     if (this.txMemManager.criticalCleanupRequested) {
-      this.shManager.cleanup();
       this.txMemManager.cleanup();
     }
 

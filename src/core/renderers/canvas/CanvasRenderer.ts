@@ -84,7 +84,8 @@ export class CanvasRenderer extends CoreRenderer {
     if (
       textureType !== TextureType.image &&
       textureType !== TextureType.color &&
-      textureType !== TextureType.subTexture
+      textureType !== TextureType.subTexture &&
+      textureType !== TextureType.noise
     ) {
       return;
     }
@@ -156,19 +157,24 @@ export class CanvasRenderer extends CoreRenderer {
   renderContext(quad: QuadOptions) {
     const color = quad.colorTl;
     const textureType = quad.texture?.type;
-    if (textureType === TextureType.image && quad.texture?.ctxTexture) {
+    if (
+      (textureType === TextureType.image ||
+        textureType === TextureType.subTexture ||
+        textureType === TextureType.noise) &&
+      quad.texture?.ctxTexture
+    ) {
       const tintColor = parseColor(color);
       const image = (quad.texture.ctxTexture as CanvasTexture).getImage(
         tintColor,
       );
       this.context.globalAlpha = tintColor.a ?? quad.alpha;
-      if (quad.texture instanceof SubTexture) {
+      if (textureType === TextureType.subTexture) {
         this.context.drawImage(
           image,
-          quad.texture.props.x,
-          quad.texture.props.y,
-          quad.texture.props.width,
-          quad.texture.props.height,
+          (quad.texture as SubTexture).props.x,
+          (quad.texture as SubTexture).props.y,
+          (quad.texture as SubTexture).props.width,
+          (quad.texture as SubTexture).props.height,
           quad.tx,
           quad.ty,
           quad.width,

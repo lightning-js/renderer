@@ -37,6 +37,7 @@ export const startLoop = (stage: Stage) => {
         if (stage.txMemManager.checkCleanup()) {
           stage.txMemManager.cleanup();
         }
+        stage.shManager.cleanup();
         stage.eventBus.emit('idle');
         isIdle = true;
       }
