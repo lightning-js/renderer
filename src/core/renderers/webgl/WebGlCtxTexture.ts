@@ -85,12 +85,12 @@ export class WebGlCtxTexture extends CoreContextTexture {
     }
 
     this.state = 'loading';
-    this.textureSource.setCoreCtxState('loading');
+    this.textureSource.setState('loading');
     this._nativeCtxTexture = this.createNativeCtxTexture();
 
     if (this._nativeCtxTexture === null) {
       this.state = 'failed';
-      this.textureSource.setCoreCtxState(
+      this.textureSource.setState(
         'failed',
         new Error('Could not create WebGL Texture'),
       );
@@ -110,7 +110,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
         this._h = height;
         // Update the texture source's width and height so that it can be used
         // for rendering.
-        this.textureSource.setCoreCtxState('loaded', { width, height });
+        this.textureSource.setState('loaded', { width, height });
       })
       .catch((err) => {
         // If the texture has been freed while loading, return early.
@@ -118,7 +118,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
           return;
         }
         this.state = 'failed';
-        this.textureSource.setCoreCtxState('failed', err);
+        this.textureSource.setState('failed', err);
         console.error(err);
       });
   }
@@ -146,8 +146,9 @@ export class WebGlCtxTexture extends CoreContextTexture {
     glw.activeTexture(0);
 
     const tdata = textureData.data;
-    const format = textureData.premultiplyAlpha ? glw.RGBA : glw.RGB;
-    const formatBytes = format === glw.RGBA ? 4 : 3;
+    const format = glw.RGBA;
+    const formatBytes = 4;
+    const memoryPadding = 1.1; // Add padding to account for GPU Padding
 
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
@@ -166,12 +167,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
       );
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
-      this.setTextureMemUse(width * height * formatBytes);
 
-      // generate mipmaps for power-of-2 textures or in WebGL2RenderingContext
-      if (glw.isWebGl2() || (isPowerOfTwo(width) && isPowerOfTwo(height))) {
-        glw.generateMipmap();
-      }
+      this.setTextureMemUse(height * width * formatBytes * memoryPadding);
     } else if (tdata === null) {
       width = 0;
       height = 0;
@@ -251,7 +248,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       return;
     }
     this.state = 'freed';
-    this.textureSource.setCoreCtxState('freed');
+    this.textureSource.setState('freed');
     this._w = 0;
     this._h = 0;
     if (!this._nativeCtxTexture) {

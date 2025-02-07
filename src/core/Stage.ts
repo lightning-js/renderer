@@ -151,7 +151,7 @@ export class Stage {
     } = options;
 
     this.eventBus = options.eventBus;
-    this.txManager = new CoreTextureManager(numImageWorkers);
+    this.txManager = new CoreTextureManager(this, numImageWorkers);
 
     // Wait for the Texture Manager to initialize
     // once it does, request a render

@@ -27,6 +27,7 @@ import { RenderTexture } from './textures/RenderTexture.js';
 import type { Texture } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { getTimeStamp } from './platform.js';
+import type { Stage } from './Stage.js';
 
 /**
  * Augmentable map of texture class types
@@ -178,6 +179,7 @@ export class CoreTextureManager extends EventEmitter {
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
+  private stage: Stage;
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
@@ -208,8 +210,9 @@ export class CoreTextureManager extends EventEmitter {
    */
   frameTime = 0;
 
-  constructor(numImageWorkers: number) {
+  constructor(stage: Stage, numImageWorkers: number) {
     super();
+    this.stage = stage;
     this.validateCreateImageBitmap()
       .then((result) => {
         this.hasCreateImageBitmap =
@@ -387,6 +390,10 @@ export class CoreTextureManager extends EventEmitter {
     return texture as InstanceType<TextureMap[Type]>;
   }
 
+  orphanTexture(texture: Texture): void {
+    this.stage.txMemManager.addToOrphanedTextures(texture);
+  }
+
   /**
    * Override loadTexture to use the batched approach.
    *
@@ -394,12 +401,13 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   loadTexture(texture: Texture, priority?: boolean): void {
+    this.stage.txMemManager.removeFromOrphanedTextures(texture);
+
     if (texture.state === 'loaded' || texture.state === 'loading') {
       return;
     }
 
-    texture.setSourceState('loading');
-    texture.setCoreCtxState('loading');
+    texture.setState('loading');
 
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
@@ -453,6 +461,10 @@ export class CoreTextureManager extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.shift()!;
       texture.getTextureData().then(() => {
+        if (texture.state === 'failed') {
+          return;
+        }
+
         this.uploadTexture(texture);
       });
     }
@@ -475,6 +487,10 @@ export class CoreTextureManager extends EventEmitter {
       const texture = this.downloadTextureSourceQueue.shift()!;
       queueMicrotask(() => {
         texture.getTextureData().then(() => {
+          if (texture.state === 'failed') {
+            return;
+          }
+
           this.enqueueUploadTexture(texture);
         });
       });

@@ -147,7 +147,7 @@ export class MemMonitor extends Component {
       mount: 0.5,
     });
 
-    const numLines = 9;
+    const numLines = 11;
     const infoTextY =
       this.node.height - MARGIN - INFO_TEXT_LINEHEIGHT * numLines;
 
@@ -186,7 +186,7 @@ export class MemMonitor extends Component {
 
     this.renderableMemUsedText = renderer.createTextNode({
       x: MARGIN,
-      y: infoTextY + INFO_TEXT_LINEHEIGHT * 5,
+      y: infoTextY + INFO_TEXT_LINEHEIGHT * 6,
       text: '',
       fontFamily: 'Ubuntu',
       parent: this.node,
@@ -197,7 +197,7 @@ export class MemMonitor extends Component {
 
     this.cacheInfoText = renderer.createTextNode({
       x: MARGIN,
-      y: infoTextY + INFO_TEXT_LINEHEIGHT * 8,
+      y: infoTextY + INFO_TEXT_LINEHEIGHT * 9,
       text: '',
       fontFamily: 'Ubuntu',
       parent: this.node,
@@ -221,7 +221,12 @@ export class MemMonitor extends Component {
 
   update() {
     const payload = this.renderer.stage.txMemManager.getMemoryInfo();
-    const { criticalThreshold, memUsed, renderableMemUsed } = payload;
+    const {
+      criticalThreshold,
+      memUsed,
+      renderableMemUsed,
+      baselineMemoryAllocation,
+    } = payload;
     const renderableMemoryFraction = renderableMemUsed / criticalThreshold;
     const memUsedFraction = memUsed / criticalThreshold;
     this.memUsedBar.height = BAR_HEIGHT * memUsedFraction;
@@ -229,7 +234,8 @@ export class MemMonitor extends Component {
     this.renderableMemBar.y = BAR_HEIGHT - this.renderableMemBar.height;
     this.memUsedBar.y = BAR_HEIGHT - this.memUsedBar.height;
     this.memUsedText.text = `
-Textures Loaded
+Memory Used
+- Base: ${bytesToMb(baselineMemoryAllocation)} mb
 - Size: ${bytesToMb(memUsed)} mb (${(memUsedFraction * 100).toFixed(1)}%)
 - Count: ${payload.loadedTextures}
 `.trim();

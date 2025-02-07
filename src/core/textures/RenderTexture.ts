@@ -64,7 +64,7 @@ export class RenderTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    this.setSourceState('loaded');
+    this.setState('fetched');
 
     return {
       data: null,
