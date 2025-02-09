@@ -24,7 +24,7 @@ import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
-import type { Texture } from './textures/Texture.js';
+import { TextureType, type Texture } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
@@ -391,6 +391,22 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   orphanTexture(texture: Texture): void {
+    // if it is part of the download or upload queue, remove it
+    const downloadIndex = this.downloadTextureSourceQueue.indexOf(texture);
+    if (downloadIndex !== -1) {
+      this.downloadTextureSourceQueue.splice(downloadIndex, 1);
+    }
+
+    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
+    if (uploadIndex !== -1) {
+      this.uploadTextureQueue.splice(uploadIndex, 1);
+    }
+
+    if (texture.type === TextureType.subTexture) {
+      // ignore subtextures
+      return;
+    }
+
     this.stage.txMemManager.addToOrphanedTextures(texture);
   }
 
@@ -403,7 +419,7 @@ export class CoreTextureManager extends EventEmitter {
   loadTexture(texture: Texture, priority?: boolean): void {
     this.stage.txMemManager.removeFromOrphanedTextures(texture);
 
-    if (texture.state === 'loaded' || texture.state === 'loading') {
+    if (texture.state !== 'initial' && texture.state !== 'freed') {
       return;
     }
 
@@ -413,6 +429,17 @@ export class CoreTextureManager extends EventEmitter {
     if (this.initialized === false) {
       this.priorityQueue.push(texture);
       return;
+    }
+
+    // if texture is a subtexture and parent is already loaded, set state to fetched
+    // and push it directly to upload queue
+    if (texture.type === TextureType.subTexture) {
+      const parentTexture = (texture as SubTexture).parentTexture;
+      if (parentTexture.state === 'loaded') {
+        texture.setState('fetched');
+        this.enqueueUploadTexture(texture);
+        return;
+      }
     }
 
     // prioritize the texture for immediate loading
@@ -437,8 +464,22 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture Texture to upload
    */
   uploadTexture(texture: Texture): void {
+    if (texture.state !== 'fetched') {
+      return;
+    }
+
     const coreContext = texture.loadCtxTexture();
     coreContext.load();
+  }
+
+  /**
+   * Check if a texture is being processed
+   */
+  isProcessingTexture(texture: Texture): boolean {
+    return (
+      this.downloadTextureSourceQueue.includes(texture) ||
+      this.uploadTextureQueue.includes(texture)
+    );
   }
 
   /**
@@ -459,12 +500,8 @@ export class CoreTextureManager extends EventEmitter {
       getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.priorityQueue.shift()!;
+      const texture = this.priorityQueue.pop()!;
       texture.getTextureData().then(() => {
-        if (texture.state === 'failed') {
-          return;
-        }
-
         this.uploadTexture(texture);
       });
     }
@@ -475,7 +512,7 @@ export class CoreTextureManager extends EventEmitter {
       getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.uploadTexture(this.uploadTextureQueue.shift()!);
+      this.uploadTexture(this.uploadTextureQueue.pop()!);
     }
 
     // Process downloads
@@ -485,14 +522,10 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
-      queueMicrotask(() => {
-        texture.getTextureData().then(() => {
-          if (texture.state === 'failed') {
-            return;
-          }
-
+      texture.getTextureData().then(() => {
+        if (texture.state === 'fetched') {
           this.enqueueUploadTexture(texture);
-        });
+        }
       });
     }
   }
