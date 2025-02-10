@@ -431,15 +431,17 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    // if texture is a subtexture and parent is already loaded, set state to fetched
-    // and push it directly to upload queue
-    if (texture.type === TextureType.subTexture) {
-      const parentTexture = (texture as SubTexture).parentTexture;
-      if (parentTexture.state === 'loaded') {
-        texture.setState('fetched');
-        this.enqueueUploadTexture(texture);
-        return;
-      }
+    // these types of textures don't need to be downloaded
+    // Technically the noise texture shouldn't either, but it's a special case
+    // and not really used in production so who cares ¯\_(ツ)_/¯
+    if (
+      texture.type === TextureType.subTexture ||
+      texture.type === TextureType.color ||
+      texture.type === TextureType.renderToTexture
+    ) {
+      texture.setState('fetched');
+      this.enqueueUploadTexture(texture);
+      return;
     }
 
     // prioritize the texture for immediate loading
