@@ -66,8 +66,8 @@ export const updateFloat32ArrayLength4 = (values: ShaderEffectValueMap) => {
     const floatArray = values.programValue;
     floatArray[0] = validatedValue[0]!;
     floatArray[1] = validatedValue[1]!;
-    floatArray[2] = validatedValue[1]!;
-    floatArray[3] = validatedValue[1]!;
+    floatArray[2] = validatedValue[2]!;
+    floatArray[3] = validatedValue[3]!;
   } else {
     values.programValue = new Float32Array(validatedValue);
   }
