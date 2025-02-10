@@ -73,7 +73,8 @@ function createImageWorker() {
       xhr.responseType = 'blob';
 
       xhr.onload = function () {
-        if (xhr.status !== 200) {
+        // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
+        if (xhr.status !== 200 && xhr.status !== 0) {
           return reject(new Error('Failed to load image: ' + xhr.statusText));
         }
 
