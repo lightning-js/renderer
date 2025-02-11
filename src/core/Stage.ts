@@ -710,4 +710,14 @@ export class Stage {
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
+
+  /**
+   * Cleanup Orphaned Textures
+   *
+   * @remarks
+   * This method is used to cleanup orphaned textures that are no longer in use.
+   */
+  cleanup() {
+    this.txMemManager.cleanup();
+  }
 }
