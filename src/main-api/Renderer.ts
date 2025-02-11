@@ -319,6 +319,8 @@ export interface RendererMainSettings {
  *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
  * - `frameTick`
  *   - Emitted every frame tick
+ * - `quadsUpdate`
+ *  - Emitted when number of quads rendered is updated
  * - `idle`
  *   - Emitted when the renderer is idle (no changes to the scene
  *     graph/animations running)
