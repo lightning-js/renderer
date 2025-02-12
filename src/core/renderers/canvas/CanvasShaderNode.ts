@@ -4,28 +4,31 @@ import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type { CanvasRenderer } from './CanvasRenderer.js';
 
-export type CanvasShaderType<T extends object = Record<string, unknown>> =
-  CoreShaderType<T> & {
-    render: (
-      this: CanvasShaderNode<T>,
-      ctx: CanvasRenderingContext2D,
-      quad: QuadOptions,
-      renderContext: () => void,
-    ) => void;
-    update?: (this: CanvasShaderNode<T>, node: CoreNode) => void;
-    /**
-     * Set this to true when using ctx functions that scale, clip, rotate, etc..
-     */
-    saveAndRestore?: boolean;
-  };
+export type CanvasShaderType<
+  T extends object = Record<string, unknown>,
+  C extends object = Record<string, unknown>,
+> = CoreShaderType<T> & {
+  render: (
+    this: CanvasShaderNode<T, C>,
+    ctx: CanvasRenderingContext2D,
+    quad: QuadOptions,
+    renderContext: () => void,
+  ) => void;
+  update?: (this: CanvasShaderNode<T, C>, node: CoreNode) => void;
+  /**
+   * Set this to true when using ctx functions that scale, clip, rotate, etc..
+   */
+  saveAndRestore?: boolean;
+};
 
 export class CanvasShaderNode<
   Props extends object = Record<string, unknown>,
+  Computed extends object = Record<string, unknown>,
 > extends CoreShaderNode<Props> {
   private updater: ((node: CoreNode, props?: Props) => void) | undefined =
     undefined;
   private valueKey: string = '';
-  precomputed: Record<string, unknown> = {};
+  computed: Partial<Computed> = {};
   applySNR: boolean;
   render: CanvasShaderType<Props>['render'];
 
@@ -60,15 +63,15 @@ export class CanvasShaderNode<
           this.stage.shManager.mutateShaderValueUsage(prevKey, -1);
         }
 
-        const precomputed = this.stage.shManager.getShaderValues(
+        const computed = this.stage.shManager.getShaderValues(
           this.valueKey,
         ) as Record<string, unknown>;
-        if (precomputed !== undefined) {
-          this.precomputed = precomputed;
+        if (computed !== undefined) {
+          this.computed = computed as Computed;
         }
-        this.precomputed = {};
+        this.computed = {};
         this.updater!(this.node as CoreNode);
-        this.stage.shManager.setShaderValues(this.valueKey, this.precomputed);
+        this.stage.shManager.setShaderValues(this.valueKey, this.computed);
       };
     }
   }

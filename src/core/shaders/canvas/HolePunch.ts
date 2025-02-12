@@ -7,11 +7,18 @@ import {
 } from '../templates/HolePunchTemplate.js';
 import { roundRect } from './utils/render.js';
 
-export const HolePunch: CanvasShaderType<HolePunchProps> = {
+export interface ComputedHolePunchValues {
+  radius: Vec4;
+}
+
+export const HolePunch: CanvasShaderType<
+  HolePunchProps,
+  ComputedHolePunchValues
+> = {
   name: HolePunchTemplate.name,
   props: HolePunchTemplate.props,
   update() {
-    this.precomputed.radius = calcFactoredRadiusArray(
+    this.computed.radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,
       this.props!.width,
       this.props!.height,
@@ -28,7 +35,7 @@ export const HolePunch: CanvasShaderType<HolePunchProps> = {
       quad.ty + y,
       width,
       height,
-      this.precomputed.radius as Vec4,
+      this.computed.radius!,
     );
     ctx.closePath();
     ctx.fillStyle = 'black';

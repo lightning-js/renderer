@@ -253,7 +253,7 @@ async function initRenderer(
       inspector,
       renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
-      textureProcessingLimit: textureProcessingLimit,
+      textureProcessingTimeLimit: textureProcessingLimit,
       ...customSettings,
     },
     'app',

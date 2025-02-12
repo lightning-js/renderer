@@ -4,14 +4,10 @@ import elevatorPng from '../assets/elevator.png';
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await test(settings);
-  // await settings.snapshot();
+  await settings.snapshot();
 }
 
-export default async function ({
-  renderer,
-  testRoot,
-  snapshot,
-}: ExampleSettings) {
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const RedRect = renderer.createNode({
     x: 20,
     y: 20,

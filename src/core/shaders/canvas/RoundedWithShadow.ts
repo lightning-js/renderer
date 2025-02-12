@@ -5,9 +5,16 @@ import {
   RoundedWithShadowTemplate,
   type RoundedWithShadowProps,
 } from '../templates/RoundedWithShadowTemplate.js';
+import type { ComputedRoundedValues } from './Rounded.js';
+import type { ComputedShadowValues } from './Shadow.js';
 import * as render from './utils/render.js';
 
-export const RoundedWithShadow: CanvasShaderType<RoundedWithShadowProps> = {
+type ComputedValues = ComputedRoundedValues & ComputedShadowValues;
+
+export const RoundedWithShadow: CanvasShaderType<
+  RoundedWithShadowProps,
+  ComputedValues
+> = {
   name: RoundedWithShadowTemplate.name,
   props: RoundedWithShadowTemplate.props,
   saveAndRestore: true,
@@ -17,13 +24,11 @@ export const RoundedWithShadow: CanvasShaderType<RoundedWithShadowProps> = {
       node.width,
       node.height,
     );
-    this.precomputed.radius = radius;
-    this.precomputed.shadowColor = this.toColorString(
-      this.props!['shadow-color'],
-    );
-    this.precomputed.shadowRadius = radius.map(
+    this.computed.radius = radius;
+    this.computed.shadowColor = this.toColorString(this.props!['shadow-color']);
+    this.computed.shadowRadius = radius.map(
       (value) => value + this.props!['shadow-blur'],
-    );
+    ) as Vec4;
   },
   render(ctx, quad, renderContext) {
     const { tx, ty, width, height } = quad;
@@ -34,21 +39,14 @@ export const RoundedWithShadow: CanvasShaderType<RoundedWithShadowProps> = {
       ty,
       width,
       height,
-      this.precomputed.shadowColor as string,
+      this.computed.shadowColor!,
       this.props!['shadow-projection'],
-      this.precomputed.shadowRadius as Vec4,
+      this.computed.shadowRadius!,
       this.stage.pixelRatio,
     );
 
     const path = new Path2D();
-    render.roundRect(
-      path,
-      tx,
-      ty,
-      width,
-      height,
-      this.precomputed.radius as Vec4,
-    );
+    render.roundRect(path, tx, ty, width, height, this.computed.radius!);
     ctx.clip(path);
     renderContext();
   },

@@ -4,7 +4,19 @@ import {
   type RadialGradientProps,
 } from '../templates/RadialGradientTemplate.js';
 
-export const RadialGradient: CanvasShaderType<RadialGradientProps> = {
+export interface ComputedRadialGradientValues {
+  pivotX: number;
+  pivotY: number;
+  scaleX: number;
+  scaleY: number;
+  size: number;
+  colors: string[];
+}
+
+export const RadialGradient: CanvasShaderType<
+  RadialGradientProps,
+  ComputedRadialGradientValues
+> = {
   name: RadialGradientTemplate.name,
   props: RadialGradientTemplate.props,
   update(node) {
@@ -19,7 +31,7 @@ export const RadialGradient: CanvasShaderType<RadialGradientProps> = {
       scaleY = pHeight / pWidth;
     }
 
-    this.precomputed = {
+    this.computed = {
       pivotX: this.props!.pivot[0] * node.width,
       pivotY: this.props!.pivot[1] * node.height,
       scaleX,
@@ -31,11 +43,8 @@ export const RadialGradient: CanvasShaderType<RadialGradientProps> = {
   render(ctx, quad, renderContext) {
     renderContext();
 
-    const { scaleX, scaleY, pivotX, pivotY } = this.precomputed as Record<
-      string,
-      number
-    >;
-    const colors = this.precomputed.colors as string[];
+    const { scaleX, scaleY, pivotX, pivotY } = this.computed!;
+    const colors = this.computed.colors!;
     let x = quad.tx + pivotX!;
     let y = quad.ty + pivotY!;
 
@@ -46,7 +55,7 @@ export const RadialGradient: CanvasShaderType<RadialGradientProps> = {
         0,
         x,
         y,
-        this.precomputed.size as number,
+        this.computed.size!,
       );
 
       for (let i = 0; i < colors.length; i++) {
@@ -68,7 +77,7 @@ export const RadialGradient: CanvasShaderType<RadialGradientProps> = {
       0,
       x,
       y,
-      this.precomputed.size as number,
+      this.computed.size!,
     );
 
     for (let i = 0; i < colors.length; i++) {

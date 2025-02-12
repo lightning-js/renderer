@@ -6,13 +6,18 @@ import {
 } from '../templates/ShadowTemplate.js';
 import { shadow } from './utils/render.js';
 
-export const Shadow: CanvasShaderType<ShadowProps> = {
+export interface ComputedShadowValues {
+  shadowColor: string;
+  shadowRadius: Vec4;
+}
+
+export const Shadow: CanvasShaderType<ShadowProps, ComputedShadowValues> = {
   name: ShadowTemplate.name,
   props: ShadowTemplate.props,
   update() {
-    this.precomputed.shadowColor = this.toColorString(this.props!['color']);
+    this.computed.shadowColor = this.toColorString(this.props!['color']);
     const blur = this.props!['blur'];
-    this.precomputed.shadowRadius = [blur, blur, blur, blur];
+    this.computed.shadowRadius = [blur, blur, blur, blur];
   },
   render(ctx, quad, renderContext) {
     shadow(
@@ -21,9 +26,9 @@ export const Shadow: CanvasShaderType<ShadowProps> = {
       quad.ty,
       quad.width,
       quad.height,
-      this.precomputed.shadowColor as string,
+      this.computed.shadowColor!,
       this.props!['projection'],
-      this.precomputed.shadowRadius as Vec4,
+      this.computed.shadowRadius!,
       this.stage.pixelRatio,
     );
     renderContext();

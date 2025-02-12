@@ -20,12 +20,6 @@ import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-
-declare module '../../CoreShaderManager.js' {
-  interface ShaderMap {
-    sdf: typeof Sdf;
-  }
-}
 /**
  * Properties of the {@link SdfShader}
  */

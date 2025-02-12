@@ -38,7 +38,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       vec2 screenSpace = vec2(2.0 / u_resolution.x,  -2.0 / u_resolution.y);
       vec2 outerEdge = clamp(a_nodeCoords * 2.0 - vec2(1.0), -1.0, 1.0);
 
-      vec2 shadowEdge = outerEdge * (u_shadow.w + u_shadow.z) + u_shadow.xy;
+      vec2 shadowEdge = outerEdge * ((u_shadow.w * 2.0)+ u_shadow.z) + u_shadow.xy;
       vec2 normVertexPos = a_position * u_pixelRatio;
 
       vec2 vertexPos = (a_position + outerEdge + shadowEdge) * u_pixelRatio;
@@ -74,27 +74,24 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) + 2.0;
     }
 
-    float shadowBox(vec2 p, vec2 s, vec4 r) {
-      r.xy = (p.x > 0.0) ? r.yz : r.xw;
-      r.x = (p.y > 0.0) ? r.y : r.x;
-      s -= 4.0 - u_pixelRatio;
-      vec2 q = abs(p) - s + r.x;
-      float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-      return 1.0 - smoothstep(-u_shadow.z, u_shadow.z, dist);
+    float shadowBox(vec2 p, vec2 s, float r) {
+      vec2 q = abs(p) - s + r;
+      float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+      return 1.0 - smoothstep(-(u_shadow.w * u_pixelRatio), (u_shadow.w + u_shadow.z) * u_pixelRatio, dist);
     }
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = a_nodeCoords.xy * u_dimensions - halfDimensions;
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = box(boxUv, halfDimensions);
 
       float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
-      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_shadow.z);
+      float shadowDist = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w * 0.5, u_shadow.z);
 
       vec4 resColor = vec4(0.0);
-      resColor = mix(resColor, u_color, shadowAlpha);
+      resColor = mix(resColor, u_color, shadowDist);
       resColor = mix(resColor, color, min(color.a, boxAlpha));
       gl_FragColor = resColor * u_alpha;
     }

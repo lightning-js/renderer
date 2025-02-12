@@ -62,7 +62,6 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
-      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
@@ -70,24 +69,23 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     float asymBorderWidth(vec2 p, float d, vec4 r, vec4 w) {
       r.x = (r.x - (max(w.w, w.x) - min(w.w, w.x))) * 0.5;
       r.y = (r.y - (max(w.y, w.x) - min(w.y, w.x))) * 0.5;
-      r.z = (r.x - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
+      r.z = (r.z - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
       r.w = (r.w - (max(w.w, w.z) - min(w.w, w.z))) * 0.5;
 
       p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;
       p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
 
       vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
-      float borderDist = roundedBox(p, size + 2.0, r);
+      float borderDist = roundedBox(p, size, r);
       return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
     }
 
     float shadowBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
       r.x = (p.y > 0.0) ? r.y : r.x;
-      s -= 4.0 - u_pixelRatio;
       vec2 q = abs(p) - s + r.x;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-      return 1.0 - smoothstep(-u_shadow.z, u_shadow.z, dist);
+      return 1.0 - smoothstep(-(u_shadow.w * u_pixelRatio), (u_shadow.w + u_shadow.z) * u_pixelRatio, dist);
     }
 
     void main() {
@@ -107,7 +105,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         borderAlpha = 1.0 - smoothstep(u_border_width[0], u_border_width[0], abs(outerBoxDist));
       }
 
-      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_radius + u_shadow.z);
+      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w * 0.5, u_radius + u_shadow.z);
 
       vec4 resColor = vec4(0.0);
       resColor = mix(resColor, u_shadow_color, shadowAlpha);

@@ -5,9 +5,16 @@ import {
   RoundedWithBorderTemplate,
   type RoundedWithBorderProps,
 } from '../templates/RoundedWithBorderTemplate.js';
+import type { ComputedBorderValues } from './Border.js';
+import type { ComputedRoundedValues } from './Rounded.js';
 import { roundedRectWithBorder } from './utils/render.js';
 
-export const RoundedWithBorder: CanvasShaderType<RoundedWithBorderProps> = {
+type ComputedValues = ComputedRoundedValues & ComputedBorderValues;
+
+export const RoundedWithBorder: CanvasShaderType<
+  RoundedWithBorderProps,
+  ComputedValues
+> = {
   name: RoundedWithBorderTemplate.name,
   props: RoundedWithBorderTemplate.props,
   saveAndRestore: true,
@@ -17,17 +24,15 @@ export const RoundedWithBorder: CanvasShaderType<RoundedWithBorderProps> = {
       node.width,
       node.height,
     );
-    this.precomputed.radius = radius;
-    this.precomputed.borderColor = this.toColorString(
-      this.props!['border-color'],
-    );
-    this.precomputed.borderAsym = !valuesAreEqual(
+    this.computed.radius = radius;
+    this.computed.borderColor = this.toColorString(this.props!['border-color']);
+    this.computed.borderAsym = !valuesAreEqual(
       this.props!['border-width'] as number[],
     );
     const borderWidth = this.props!['border-width'] as Vec4;
-    this.precomputed.borderRadius = radius.map((value, index) =>
+    this.computed.borderRadius = radius.map((value, index) =>
       Math.max(0, value - borderWidth[index]! * 0.5),
-    );
+    ) as Vec4;
   },
   render(ctx, quad, renderContext) {
     roundedRectWithBorder(
@@ -36,11 +41,11 @@ export const RoundedWithBorder: CanvasShaderType<RoundedWithBorderProps> = {
       quad.ty,
       quad.width,
       quad.height,
-      this.precomputed.radius as Vec4,
+      this.computed.radius!,
       this.props!['border-width'] as Vec4,
-      this.precomputed.borderRadius as Vec4,
-      this.precomputed.borderColor as string,
-      this.precomputed.borderAsym as boolean,
+      this.computed.borderRadius!,
+      this.computed.borderColor!,
+      this.computed.borderAsym!,
       renderContext,
     );
   },

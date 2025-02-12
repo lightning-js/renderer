@@ -61,7 +61,7 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     float asymBorderWidth(vec2 p, float d, vec4 r, vec4 w) {
       r.x = (r.x - (max(w.w, w.x) - min(w.w, w.x))) * 0.5;
       r.y = (r.y - (max(w.y, w.x) - min(w.y, w.x))) * 0.5;
-      r.z = (r.x - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
+      r.z = (r.z - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
       r.w = (r.w - (max(w.w, w.z) - min(w.w, w.z))) * 0.5;
 
       p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;

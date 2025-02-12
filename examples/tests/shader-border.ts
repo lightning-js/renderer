@@ -1,13 +1,12 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { Border } from '@lightningjs/renderer/webgl/shaders';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await test(settings);
-  // await settings.snapshot();
+  await settings.snapshot();
 }
 
-export default async function ({
+export default async function test({
   renderer,
   testRoot,
   snapshot,

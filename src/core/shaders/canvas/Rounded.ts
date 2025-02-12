@@ -7,12 +7,16 @@ import {
 } from '../templates/RoundedTemplate.js';
 import { roundRect } from './utils/render.js';
 
-export const Rounded: CanvasShaderType<RoundedProps> = {
+export interface ComputedRoundedValues {
+  radius: Vec4;
+}
+
+export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
   name: RoundedTemplate.name,
   props: RoundedTemplate.props,
   saveAndRestore: true,
   update(node) {
-    this.precomputed.radius = calcFactoredRadiusArray(
+    this.computed.radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,
       node.width,
       node.height,
@@ -26,7 +30,7 @@ export const Rounded: CanvasShaderType<RoundedProps> = {
       quad.ty,
       quad.width,
       quad.height,
-      this.precomputed.radius as Vec4,
+      this.computed.radius!,
     );
     ctx.clip(path);
 

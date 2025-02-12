@@ -3,14 +3,10 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await test(settings);
-  // await settings.snapshot();
+  await settings.snapshot();
 }
 
-export default async function ({
-  renderer,
-  testRoot,
-  snapshot,
-}: ExampleSettings) {
+export default async function test({ renderer, testRoot }: ExampleSettings) {
   const RedRect = renderer.createNode({
     x: 20,
     y: 20,
@@ -112,8 +108,10 @@ export default async function ({
     height: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
-      'bottom-right': 20,
-      'border-right': 10,
+      'border-width': 10,
+      'border-left': 20,
+      'border-right': 20,
+      radius: 50,
     }),
     parent: testRoot,
   });

@@ -1,4 +1,3 @@
-import type { CoreNode } from '../../CoreNode.js';
 import { valuesAreEqual } from '../../lib/utils.js';
 import type { CanvasShaderType } from '../../renderers/canvas/CanvasShaderNode.js';
 import {
@@ -12,21 +11,23 @@ import {
 } from '../templates/BorderTemplate.js';
 import { strokeLine } from './utils/render.js';
 
-export const Border: CanvasShaderType<BorderProps> = {
+export interface ComputedBorderValues {
+  borderColor: string;
+  borderAsym: boolean;
+  borderRadius: Vec4;
+}
+
+export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
   name: BorderTemplate.name,
   props: BorderTemplate.props,
-  update(node: CoreNode) {
-    this.precomputed.borderColor = formatRgba(
-      parseColorRgba(this.props!.color),
-    );
-    this.precomputed.borderAsym = !valuesAreEqual(
-      this.props!.width as number[],
-    );
+  update() {
+    this.computed.borderColor = formatRgba(parseColorRgba(this.props!.color));
+    this.computed.borderAsym = !valuesAreEqual(this.props!.width as number[]);
   },
   render(ctx, quad, renderContext) {
     renderContext();
-    ctx.strokeStyle = this.precomputed.borderColor as string;
-    if (this.precomputed.borderAsym === false && this.props!.width[0] > 0) {
+    ctx.strokeStyle = this.computed.borderColor!;
+    if (this.computed.borderAsym === false && this.props!.width[0] > 0) {
       const bWidth = this.props!.width[0];
       const bHalfWidth = bWidth * 0.5;
       ctx.lineWidth = bWidth;

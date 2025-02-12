@@ -18,6 +18,7 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 export const Default: WebGlShaderType = {
   name: 'Default',
   vertex: `
