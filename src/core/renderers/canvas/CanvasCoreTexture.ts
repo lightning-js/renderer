@@ -41,10 +41,12 @@ export class CanvasCoreTexture extends CoreContextTexture {
     this.onLoadRequest()
       .then((size) => {
         this.textureSource.setState('loaded', size);
+        this.textureSource.freeTextureData();
         this.updateMemSize();
       })
       .catch((err) => {
         this.textureSource.setState('failed', err as Error);
+        this.textureSource.freeTextureData();
       });
   }
 
@@ -53,6 +55,7 @@ export class CanvasCoreTexture extends CoreContextTexture {
     this.tintCache = undefined;
     this.textureSource.setState('freed');
     this.setTextureMemUse(0);
+    this.textureSource.freeTextureData();
   }
 
   updateMemSize(): void {

@@ -366,7 +366,6 @@ export class Stage {
     }
 
     // Process some textures
-    // TODO this should have a configurable amount
     this.txManager.processSome(this.options.textureProcessingTimeLimit);
 
     // Reset render operations and clear the canvas

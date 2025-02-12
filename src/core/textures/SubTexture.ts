@@ -137,14 +137,10 @@ export class SubTexture extends Texture {
       width: this.props.width,
       height: this.props.height,
     });
-
-    // free our source, if any
-    this.freeTextureData();
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
     this.forwardParentTxState('failed', error);
-    this.free();
   };
 
   private onParentTxFetched = () => {
@@ -164,7 +160,6 @@ export class SubTexture extends Texture {
 
   private onParentTxFreed = () => {
     this.forwardParentTxState('freed');
-    this.free();
   };
 
   private forwardParentTxState(
@@ -182,24 +177,9 @@ export class SubTexture extends Texture {
   override async getTextureSource(): Promise<TextureData> {
     // Check if parent texture is loaded
     return new Promise((resolve, reject) => {
-      if (this.parentTexture.state === 'loaded') {
-        resolve({
-          data: this.props,
-        });
-      }
-
-      this.parentTexture.once('loaded', (target, data) => {
-        resolve({
-          data: this.props,
-        });
-      });
-
-      this.parentTexture.once('failed', (target, error) => {
-        reject(error);
-      });
-
-      this.parentTexture.once('freed', () => {
-        reject(new Error('Parent texture was freed'));
+      this.setState('fetched');
+      resolve({
+        data: this.props,
       });
     });
   }
