@@ -18,20 +18,10 @@
  */
 
 import type { QuadOptions } from '../../CoreRenderer.js';
-import type { BorderEffectProps } from '../../webgl/shaders/effects/BorderEffect.js';
-import type { RadiusEffectProps } from '../../webgl/shaders/effects/RadiusEffect.js';
-import type { EffectDescUnion } from '../../webgl/shaders/effects/ShaderEffect.js';
-import {
-  ROUNDED_RECTANGLE_SHADER_TYPE,
-  UnsupportedShader,
-} from '../shaders/UnsupportedShader.js';
-import { formatRgba, parseColorRgba } from './ColorUtils.js';
 
 type Direction = 'Top' | 'Right' | 'Bottom' | 'Left';
 
-/**
- * Extract `RoundedRectangle` shader radius to apply as a clipping
- */
+/*
 export function getRadius(quad: QuadOptions): RadiusEffectProps['radius'] {
   if (quad.shader instanceof UnsupportedShader) {
     const shType = quad.shader.shType;
@@ -54,8 +44,6 @@ export function getRadius(quad: QuadOptions): RadiusEffectProps['radius'] {
   return 0;
 }
 
-/**
- * Extract `RoundedRectangle` shader radius to apply as a clipping */
 export function getBorder(
   quad: QuadOptions,
   direction: '' | Direction = '',
@@ -229,3 +217,4 @@ export function strokeLine(
   ctx.lineTo(ex, ey);
   ctx.stroke();
 }
+*/

@@ -24,7 +24,7 @@ import {
 } from '../core/CoreNode.js';
 import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
-import type { BaseShaderController } from './ShaderController.js';
+import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 
 /**
  * A visual Node in the Renderer scene graph.
@@ -44,11 +44,11 @@ import type { BaseShaderController } from './ShaderController.js';
  * Users of the Renderer API, should generally interact with INode objects
  * instead of CoreNode objects.
  */
-export interface INode<SC extends BaseShaderController = BaseShaderController>
+export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
   extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
-  shader: SC;
+  shader: ShaderNode;
   animate(
-    props: Partial<INodeAnimateProps<SC>>,
+    props: Partial<INodeAnimateProps<ShaderNode>>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
   parent: INode | null;
@@ -57,19 +57,17 @@ export interface INode<SC extends BaseShaderController = BaseShaderController>
 /**
  * Properties used to animate() a Node
  */
-export interface INodeAnimateProps<
-  SC extends BaseShaderController = BaseShaderController,
-> extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
-  shaderProps: Partial<SC['props']>;
+export interface INodeAnimateProps<ShNode extends CoreShaderNode>
+  extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
+  shaderProps: Partial<ShNode['props']>;
 }
 
 /**
  * Properties used to create a new Node
  */
-export interface INodeProps<
-  SC extends BaseShaderController = BaseShaderController,
-> extends Omit<CoreNodeProps, 'shader' | 'parent'> {
-  shader: SC;
+export interface INodeProps<ShNode extends CoreShaderNode>
+  extends Omit<CoreNodeProps, 'shader' | 'parent'> {
+  shader: ShNode;
   parent: INode | null;
 }
 
@@ -87,7 +85,7 @@ export interface INodeProps<
  */
 export interface ITextNode extends Omit<CoreTextNode, 'animate' | 'parent'> {
   animate(
-    props: Partial<INodeAnimateProps<BaseShaderController>>,
+    props: Partial<INodeAnimateProps<CoreShaderNode>>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
   parent: INode | null;

@@ -20,7 +20,7 @@
 // import type { Renderer } from '../../../Renderer';
 import { assertTruthy } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
-import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
+import { WebGlRenderer } from '../../../renderers/webgl/WebGlRenderer.js';
 import { ImageTexture } from '../../../textures/ImageTexture.js';
 import {
   TrFontFace,
@@ -73,7 +73,7 @@ export class SdfTrFontFace<
     this.type = type;
     const renderer = stage.renderer;
     assertTruthy(
-      renderer instanceof WebGlCoreRenderer,
+      renderer instanceof WebGlRenderer,
       'SDF Font Faces can only be used with the WebGL Renderer',
     );
 

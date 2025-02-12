@@ -55,7 +55,7 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
-import type { BaseShaderController } from '../main-api/ShaderController.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -195,6 +195,11 @@ export enum UpdateType {
    * All
    */
   All = 14335,
+
+  /**
+   * RecalcUniforms
+   */
+  RecalcUniforms = 16384,
 }
 
 /**
@@ -441,7 +446,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: BaseShaderController;
+  shader: CoreShaderNode<any> | null;
   /**
    * Image URL
    *
@@ -752,17 +757,18 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = {
-      ...props,
+    this.props = Object.assign({}, props, {
       parent: null,
       texture: null,
+      shader: null,
       src: null,
       rtt: false,
-    };
+    });
 
     // Assign props to instance
     this.parent = props.parent;
     this.texture = props.texture;
+    this.shader = props.shader;
     this.src = props.src;
     this.rtt = props.rtt;
 
@@ -1024,7 +1030,7 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.props.parent;
-    let renderState = null;
+    let renderState: CoreNodeRenderState | null = null;
 
     // Handle specific RTT updates at this node level
     if (this.updateType & UpdateType.RenderTexture && this.rtt) {
@@ -1052,7 +1058,11 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
+      this.setUpdateType(
+        UpdateType.RenderState |
+          UpdateType.Children |
+          UpdateType.RecalcUniforms,
+      );
       this.childUpdateType |= UpdateType.Global;
 
       if (this.clipping === true) {
@@ -1153,6 +1163,14 @@ export class CoreNode extends EventEmitter {
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
       return;
+    }
+
+    if (
+      this.shader?.update !== undefined &&
+      this.updateType & UpdateType.Local &&
+      this.updateType & UpdateType.RecalcUniforms
+    ) {
+      this.shader.update();
     }
 
     if (this.updateType & UpdateType.Children && this.children.length > 0) {
@@ -1569,7 +1587,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = this.stage.defShaderCtr;
+    this.props.shader = this.stage.defShaderNode;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
@@ -1614,8 +1632,7 @@ export class CoreNode extends EventEmitter {
       texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
       zIndex: this.zIndex,
-      shader: this.shader.shader,
-      shaderProps: this.shader.getResolvedProps(),
+      shader: this.props.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
       tx: this.globalTransform.tx,
@@ -2154,17 +2171,21 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  get shader(): BaseShaderController {
+  get shader(): CoreShaderNode<any> | null {
     return this.props.shader;
   }
 
-  set shader(value: BaseShaderController) {
-    if (this.props.shader === value) {
+  set shader(shader: CoreShaderNode<any> | null) {
+    if (this.props.shader === shader) {
       return;
     }
-
-    this.props.shader = value;
-
+    if (shader === null) {
+      this.props.shader = this.stage.defShaderNode;
+      this.setUpdateType(UpdateType.IsRenderable);
+      return;
+    }
+    shader.attachNode(this);
+    this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
