@@ -360,6 +360,10 @@ export class CanvasCoreRenderer extends CoreRenderer {
     return null;
   }
 
+  getQuadCount(): null {
+    return null;
+  }
+
   /**
    * Updates the clear color of the canvas renderer.
    *

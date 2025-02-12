@@ -319,6 +319,8 @@ export interface RendererMainSettings {
  *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
  * - `frameTick`
  *   - Emitted every frame tick
+ * - `quadsUpdate`
+ *  - Emitted when number of quads rendered is updated
  * - `idle`
  *   - Emitted when the renderer is idle (no changes to the scene
  *     graph/animations running)
@@ -685,6 +687,26 @@ export class RendererMain extends EventEmitter {
    */
   rerender() {
     this.stage.requestRender();
+  }
+
+  /**
+   * Cleanup textures that are not being used
+   *
+   * @remarks
+   * This can be used to free up GFX memory used by textures that are no longer
+   * being displayed.
+   *
+   * This routine is also called automatically when the memory used by textures
+   * exceeds the critical threshold on frame generation **OR** when the renderer
+   * is idle and the memory used by textures exceeds the target threshold.
+   *
+   * **NOTE**: This is a heavy operation and should be used sparingly.
+   * **NOTE2**: This will not cleanup textures that are currently being displayed.
+   * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
+   * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
+   */
+  cleanup() {
+    this.stage.cleanup();
   }
 
   /**
