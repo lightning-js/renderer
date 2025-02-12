@@ -261,6 +261,10 @@ export class CanvasRenderer extends CoreRenderer {
     return null;
   }
 
+  getQuadCount(): null {
+    return null;
+  }
+
   getParsedColor(color: number, isRGBA: boolean = false) {
     let out = this.parsedColorCache.get(color);
     if (out !== undefined) {

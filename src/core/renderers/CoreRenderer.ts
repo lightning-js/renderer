@@ -101,5 +101,6 @@ export abstract class CoreRenderer {
   abstract removeRTTNode(node: CoreNode): void;
   abstract renderToTexture(node: CoreNode): void;
   abstract getBufferInfo(): BufferInfo | null;
+  abstract getQuadCount(): number | null;
   abstract updateClearColor(color: number): void;
 }

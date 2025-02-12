@@ -38,6 +38,7 @@ import { ContextSpy } from './lib/ContextSpy.js';
 import type {
   FpsUpdatePayload,
   FrameTickPayload,
+  QuadsUpdatePayload,
 } from '../common/CommonTypes.js';
 import {
   TextureMemoryManager,
@@ -124,6 +125,7 @@ export class Stage {
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
+  private numQuadsRendered = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
   private fontResolveMap: Record<string, CanvasTextRenderer | SdfTextRenderer> =
@@ -389,6 +391,7 @@ export class Stage {
     renderer?.render();
 
     this.calculateFps();
+    this.calculateQuads();
 
     // Reset renderRequested flag if it was set
     if (renderRequested) {
@@ -449,6 +452,16 @@ export class Stage {
         } satisfies FpsUpdatePayload);
         this.contextSpy?.reset();
       }
+    }
+  }
+
+  calculateQuads() {
+    const quads = this.renderer.getQuadCount();
+    if (quads && quads !== this.numQuadsRendered) {
+      this.numQuadsRendered = quads;
+      this.queueFrameEvent('quadsUpdate', {
+        quads,
+      } satisfies QuadsUpdatePayload);
     }
   }
 
@@ -683,6 +696,16 @@ export class Stage {
       imageType: props.imageType,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
+  }
+
+  /**
+   * Cleanup Orphaned Textures
+   *
+   * @remarks
+   * This method is used to cleanup orphaned textures that are no longer in use.
+   */
+  cleanup() {
+    this.txMemManager.cleanup();
   }
 
   set clearColor(value: number) {

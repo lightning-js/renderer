@@ -25,6 +25,7 @@ import {
 } from '../lib/textureCompression.js';
 import { convertUrlToAbsolute, isBase64Image } from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
+import { fetchJson } from '../text-rendering/font-face-types/utils.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -220,7 +221,9 @@ export class ImageTexture extends Texture {
         );
       }
 
-      const blob = await fetch(src).then((response) => response.blob());
+      const blob = await fetchJson(src, 'blob').then(
+        (response) => response as Blob,
+      );
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
 
