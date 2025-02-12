@@ -479,8 +479,8 @@ export class CoreTextureManager extends EventEmitter {
    */
   isProcessingTexture(texture: Texture): boolean {
     return (
-      this.downloadTextureSourceQueue.includes(texture) ||
-      this.uploadTextureQueue.includes(texture)
+      this.downloadTextureSourceQueue.includes(texture) === true ||
+      this.uploadTextureQueue.includes(texture) === true
     );
   }
 
