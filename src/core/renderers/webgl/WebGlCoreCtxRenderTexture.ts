@@ -27,7 +27,7 @@ import { WebGlCoreCtxTexture } from './WebGlCoreCtxTexture.js';
 export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
   declare textureSource: RenderTexture;
 
-  readonly framebuffer: WebGLFramebuffer;
+  public framebuffer: WebGLFramebuffer | null = null;
 
   constructor(
     glw: WebGlContextWrapper,
@@ -35,10 +35,6 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
     textureSource: RenderTexture,
   ) {
     super(glw, memManager, textureSource);
-    // Create Framebuffer object
-    const framebuffer = glw.createFramebuffer();
-    assertTruthy(framebuffer, 'Unable to create framebuffer');
-    this.framebuffer = framebuffer;
   }
 
   override async onLoadRequest(): Promise<Dimensions> {
@@ -46,6 +42,9 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
     const nativeTexture = (this._nativeCtxTexture =
       this.createNativeCtxTexture());
     const { width, height } = this.textureSource;
+
+    // Create Framebuffer object
+    this.framebuffer = glw.createFramebuffer();
 
     // Set the dimensions of the render texture
     glw.texImage2D(
@@ -75,5 +74,13 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
       width,
       height,
     };
+  }
+
+  override free(): void {
+    super.free();
+
+    // Delete the framebuffer
+    this.glw.deleteFramebuffer(this.framebuffer);
+    this.framebuffer = null;
   }
 }

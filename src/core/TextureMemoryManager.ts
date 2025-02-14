@@ -116,6 +116,7 @@ export class TextureMemoryManager {
   private cleanupInterval: number;
   private debugLogging: boolean;
   private lastCleanupTime = 0;
+  private baselineMemoryAllocation: number;
   public criticalCleanupRequested = false;
   /**
    * The current frame time in milliseconds
@@ -137,6 +138,9 @@ export class TextureMemoryManager {
     this.targetThreshold = Math.round(criticalThreshold * targetFraction);
     this.cleanupInterval = settings.cleanupInterval;
     this.debugLogging = settings.debugLogging;
+    this.baselineMemoryAllocation = Math.round(
+      settings.baselineMemoryAllocation,
+    );
     this.memUsed = Math.round(settings.baselineMemoryAllocation);
 
     if (settings.debugLogging) {
@@ -304,7 +308,7 @@ export class TextureMemoryManager {
       memUsed: this.memUsed,
       renderableTexturesLoaded,
       loadedTextures: this.loadedTextures.size,
-      baselineMemoryAllocation: this.memUsed - renderableMemUsed,
+      baselineMemoryAllocation: this.baselineMemoryAllocation,
     };
   }
 }
