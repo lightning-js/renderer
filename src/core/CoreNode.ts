@@ -1167,8 +1167,8 @@ export class CoreNode extends EventEmitter {
 
     if (
       this.shader?.update !== undefined &&
-      this.updateType & UpdateType.Local &&
-      this.updateType & UpdateType.RecalcUniforms
+      (this.updateType & UpdateType.Local ||
+        this.updateType & UpdateType.RecalcUniforms)
     ) {
       this.shader.update();
     }

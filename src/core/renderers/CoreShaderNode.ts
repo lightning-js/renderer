@@ -125,8 +125,8 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
             this.resolvedProps![key] = value;
           }
 
-          if (this.update !== undefined) {
-            this.node?.setUpdateType(UpdateType.RecalcUniforms);
+          if (this.update !== undefined && this.node !== null) {
+            this.node.setUpdateType(UpdateType.RecalcUniforms);
           } else {
             this.stage.requestRender();
           }
