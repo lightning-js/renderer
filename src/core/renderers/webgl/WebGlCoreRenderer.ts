@@ -52,6 +52,7 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, type CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
+import { CoreTextNode } from '../../CoreTextNode.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -694,9 +695,41 @@ export class WebGlCoreRenderer extends CoreRenderer {
     return maxIndex;
   }
 
+  flattenRTTNode(node: CoreNode) {
+    if (node === null) {
+      return;
+    }
+
+    console.log('Flattening RTT node', node);
+
+    // Flatten all children of the node
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+      if (child === undefined) {
+        return;
+      }
+
+      child.isFlattened = true;
+
+      if (child.texture === null || child.texture.state !== 'loaded') {
+        continue;
+      }
+
+      if (child instanceof CoreTextNode) {
+        // @todo handle SDF text nodes that are flattened
+        console.log('Flattening SDF text node', child);
+      } else {
+        if (child.texture && child.texture.state === 'loaded') {
+          child.unloadTexture();
+        }
+
+        this.flattenRTTNode(child);
+      }
+    }
+  }
+
   renderRTTNodes() {
     const { glw } = this;
-    const { txManager } = this.stage;
 
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
@@ -718,6 +751,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
       // Skip nodes that do not have a loaded texture
       if (node.texture === null || node.texture.state !== 'loaded') {
+        continue;
+      }
+
+      // its a nested RTT node that has been flattened, ignore it
+      if (node.isFlattened === true) {
         continue;
       }
 
@@ -756,6 +794,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       // Reset render operations
       this.renderOps.length = 0;
       node.hasRTTupdates = false;
+
+      // make sure children are released
+      this.flattenRTTNode(node);
     }
 
     const clearColor = this.clearColor.normalized;

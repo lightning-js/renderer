@@ -748,6 +748,7 @@ export class CoreNode extends EventEmitter {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
   public rttParent: CoreNode | null = null;
+  public isFlattened = false;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
@@ -1013,6 +1014,43 @@ export class CoreNode extends EventEmitter {
    * @param delta
    */
   update(delta: number, parentClippingRect: RectWithValid): void {
+    if (this.isFlattened === true && this.updateType > 0) {
+      // the only update we'll do when flattened is children
+      let newUpdateType = 0;
+      if (this.updateType & UpdateType.Children) {
+        newUpdateType = UpdateType.Children;
+      }
+
+      if (this.updateType & UpdateType.RenderBounds) {
+        newUpdateType |= UpdateType.RenderBounds;
+      }
+
+      let flattenedRenderState = this.checkRenderBounds();
+      if (flattenedRenderState > this.renderState) {
+        // we just went into bounds, so we need to update the render state
+        this.isFlattened = false;
+        this.setUpdateType(UpdateType.All);
+        this.notifyParentRTTOfUpdate();
+      } else {
+        this.setUpdateType(newUpdateType);
+      }
+
+      // we're flat and our renderstate didn't change, so we can unload
+      // if (this.isFlattened === true && this.texture !== null && this.texture.state === 'loaded') {
+      //   console.log('unloading texture');
+      //   this.unloadTexture();
+      // }
+
+      this.renderState = flattenedRenderState;
+      // this.updateType = newUpdateType;
+    } else if (
+      this.isFlattened === false &&
+      this.parentHasRenderTexture === true &&
+      this.updateType > 0
+    ) {
+      this.notifyParentRTTOfUpdate();
+    }
+
     if (this.updateType & UpdateType.ScaleRotate) {
       this.updateScaleRotateTransform();
       this.setUpdateType(UpdateType.Local);
@@ -1178,13 +1216,6 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    // If the node has an RTT parent and requires a texture re-render, inform the RTT parent
-    // if (this.parentHasRenderTexture && this.updateType & UpdateType.RenderTexture) {
-    // @TODO have a more scoped down updateType for RTT updates
-    if (this.parentHasRenderTexture && this.updateType > 0) {
-      this.notifyParentRTTOfUpdate();
-    }
-
     // Sorting children MUST happen after children have been updated so
     // that they have the oppotunity to update their calculated zIndex.
     if (this.updateType & UpdateType.ZIndexSortedChildren) {
@@ -1252,6 +1283,12 @@ export class CoreNode extends EventEmitter {
     }
 
     // If an RTT node is found, mark it for re-rendering
+    console.log(
+      'notifyParentRTTOfUpdate child: ',
+      this._id,
+      'parent:',
+      rttNode._id,
+    );
     rttNode.hasRTTupdates = true;
     rttNode.setUpdateType(UpdateType.RenderTexture);
 
@@ -2335,6 +2372,15 @@ export class CoreNode extends EventEmitter {
 
   flush() {
     // no-op
+  }
+
+  reloadTexture() {
+    if (this.texture === null) {
+      return;
+    }
+
+    this.texture.setRenderableOwner(this, true);
+    this.loadTexture();
   }
 
   //#endregion Properties
