@@ -392,15 +392,7 @@ export class CoreTextureManager extends EventEmitter {
 
   orphanTexture(texture: Texture): void {
     // if it is part of the download or upload queue, remove it
-    const downloadIndex = this.downloadTextureSourceQueue.indexOf(texture);
-    if (downloadIndex !== -1) {
-      this.downloadTextureSourceQueue.splice(downloadIndex, 1);
-    }
-
-    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
-    if (uploadIndex !== -1) {
-      this.uploadTextureQueue.splice(uploadIndex, 1);
-    }
+    this.removeTextureFromQueue(texture);
 
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures
@@ -419,11 +411,39 @@ export class CoreTextureManager extends EventEmitter {
   loadTexture(texture: Texture, priority?: boolean): void {
     this.stage.txMemManager.removeFromOrphanedTextures(texture);
 
-    if (texture.state !== 'initial' && texture.state !== 'freed') {
+    // if the texture is already loaded, don't load it again
+    if (
+      texture.ctxTexture !== undefined &&
+      texture.ctxTexture.state === 'loaded'
+    ) {
+      texture.setState('loaded');
+      return;
+    }
+
+    // if the texture is already being processed, don't load it again
+    if (
+      this.downloadTextureSourceQueue.includes(texture) === true ||
+      this.uploadTextureQueue.includes(texture) === true
+    ) {
       return;
     }
 
     texture.setState('loading');
+
+    // if the texture is already loading, free it, this can happen if the texture is
+    // orphaned and then reloaded
+    if (
+      texture.ctxTexture !== undefined &&
+      texture.ctxTexture.state === 'loading'
+    ) {
+      // if the texture has texture data, queue it for upload
+      if (texture.textureData !== null) {
+        this.enqueueUploadTexture(texture);
+      }
+
+      // else we will have to re-download the texture
+      texture.free();
+    }
 
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
@@ -466,7 +486,12 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture Texture to upload
    */
   uploadTexture(texture: Texture): void {
-    if (texture.state !== 'fetched') {
+    if (
+      this.stage.txMemManager.doNotExceedCriticalThreshold === true &&
+      this.stage.txMemManager.criticalCleanupRequested
+    ) {
+      // we're at a critical memory threshold, don't upload textures
+      this.enqueueUploadTexture(texture);
       return;
     }
 
@@ -573,6 +598,23 @@ export class CoreTextureManager extends EventEmitter {
     const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
       keyCache.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Remove texture from the queue's
+   *
+   * @param texture - The texture to remove
+   */
+  removeTextureFromQueue(texture: Texture): void {
+    const downloadIndex = this.downloadTextureSourceQueue.indexOf(texture);
+    if (downloadIndex !== -1) {
+      this.downloadTextureSourceQueue.splice(downloadIndex, 1);
+    }
+
+    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
+    if (uploadIndex !== -1) {
+      this.uploadTextureQueue.splice(uploadIndex, 1);
     }
   }
 

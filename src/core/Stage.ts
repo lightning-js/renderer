@@ -372,8 +372,13 @@ export class Stage {
     renderer.reset();
 
     // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested) {
-      this.txMemManager.cleanup();
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup(false);
+
+      if (this.txMemManager.criticalCleanupRequested === true) {
+        // If we still need to cleanup, request another but aggressive cleanup
+        this.txMemManager.cleanup(true);
+      }
     }
 
     // If we have RTT nodes draw them first
@@ -716,7 +721,7 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup() {
-    this.txMemManager.cleanup();
+  cleanup(aggressive: boolean) {
+    this.txMemManager.cleanup(aggressive);
   }
 }
