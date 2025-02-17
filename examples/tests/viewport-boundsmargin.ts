@@ -214,6 +214,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
       // boundsmargin on text should be out of bounds
       case 11:
+        renderer.stage.setBoundsMargin(100);
         redText.x = -500;
         redText.boundsMargin = 300;
         break;
