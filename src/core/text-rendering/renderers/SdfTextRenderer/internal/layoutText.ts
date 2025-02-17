@@ -251,18 +251,17 @@ export function layoutText(
               shaperProps,
               new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
             );
-            curX =
-              lastWord.xStart + overflowSuffVertexWidth < vertexW
-                ? lastWord.xStart
-                : previousWord.xStart + overflowSuffVertexWidth < vertexW
-                ? previousWord.xStart
-                : 0;
-            bufferOffset =
-              lastWord.xStart + overflowSuffVertexWidth < vertexW
-                ? lastWord.bufferOffset
-                : previousWord.xStart + overflowSuffVertexWidth < vertexW
-                ? previousWord.bufferOffset
-                : 0;
+            if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
+              curX = lastWord.xStart;
+              bufferOffset = lastWord.bufferOffset;
+            } else if (
+              previousWord.xStart + overflowSuffVertexWidth <
+              vertexW
+            ) {
+              curX = previousWord.xStart;
+              bufferOffset = previousWord.bufferOffset;
+            }
+
             // HACK: For the rest of the line when inserting the overflow suffix,
             // set contain = 'none' to prevent an infinite loop.
             contain = 'none';
@@ -329,18 +328,16 @@ export function layoutText(
           } else {
             // Check if the overflow suffix will fit
             if (curX + overflowSuffVertexWidth >= vertexW) {
-              curX =
-                lastWord.xStart + overflowSuffVertexWidth < vertexW
-                  ? lastWord.xStart
-                  : previousWord.xStart + overflowSuffVertexWidth < vertexW
-                  ? previousWord.xStart
-                  : curX;
-              bufferOffset =
-                lastWord.xStart + overflowSuffVertexWidth < vertexW
-                  ? lastWord.bufferOffset
-                  : previousWord.xStart + overflowSuffVertexWidth < vertexW
-                  ? previousWord.bufferOffset
-                  : bufferOffset;
+              if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
+                curX = lastWord.xStart;
+                bufferOffset = lastWord.bufferOffset;
+              } else if (
+                previousWord.xStart + overflowSuffVertexWidth <
+                vertexW
+              ) {
+                curX = previousWord.xStart;
+                bufferOffset = previousWord.bufferOffset;
+              }
             }
             // The whole line won't fit, so we need to add the overflow suffix
             glyphs = shaper.shapeText(
