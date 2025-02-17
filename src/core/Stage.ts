@@ -56,6 +56,7 @@ import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRe
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
+import type { RendererMainSettings } from '../main-api/Renderer.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -429,6 +430,20 @@ export class Stage {
       this.eventBus.emit(name, data);
     }
     this.frameEventQueue = [];
+  }
+
+  setOptions(options: Partial<RendererMainSettings>) {
+    console.log('setOptions', options);
+    const updatedSettings = {
+      ...this.options,
+      ...options,
+    } as Readonly<Required<RendererMainSettings>>;
+    (this as { options: Readonly<Required<RendererMainSettings>> }).options =
+      updatedSettings;
+
+    if (options.clearColor !== undefined) {
+      this.setClearColor(options.clearColor);
+    }
   }
 
   calculateFps() {

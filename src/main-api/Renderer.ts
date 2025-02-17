@@ -291,6 +291,13 @@ export interface RendererMainSettings {
 }
 
 /**
+ * Partial Renderer Main Settings for updating settings
+ */
+export type PartialRendererMainSettings = Partial<
+  Pick<RendererMainSettings, 'clearColor' | 'fpsUpdateInterval'>
+>;
+
+/**
  * The Renderer Main API
  *
  * @remarks
@@ -716,5 +723,28 @@ export class RendererMain extends EventEmitter {
    */
   setClearColor(color: number) {
     this.stage.setClearColor(color);
+  }
+
+  setOptions(options: Partial<PartialRendererMainSettings>) {
+    const allowedOptions: Partial<RendererMainSettings> = {};
+    const allowedKeys: (keyof PartialRendererMainSettings)[] = [
+      'clearColor',
+      'fpsUpdateInterval',
+    ]; // List of allowed settings
+
+    for (const key of allowedKeys) {
+      if (options[key] !== undefined) {
+        allowedOptions[key] = options[key];
+      }
+    }
+
+    const updatedSettings = {
+      ...this.settings,
+      ...allowedOptions,
+    } as Readonly<Required<RendererMainSettings>>;
+
+    (this as { settings: Readonly<Required<RendererMainSettings>> }).settings =
+      updatedSettings;
+    this.stage.setOptions(allowedOptions);
   }
 }
