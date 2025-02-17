@@ -177,6 +177,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
       // first parent text in view
       case 5:
+        renderer.stage.setBoundsMargin(100);
         boundaryRect1.clipping = true;
         redText.x = -100;
         boundaryRect1.boundsMargin = 100;
@@ -214,7 +215,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
       // boundsmargin on text should be out of bounds
       case 11:
-        renderer.stage.setBoundsMargin(100);
         redText.x = -500;
         redText.boundsMargin = 300;
         break;
