@@ -269,15 +269,16 @@ export interface RendererMainSettings {
   strictBounds?: boolean;
 
   /**
-   * Texture Processing Limit
+   * Texture Processing Limit (in milliseconds)
    *
    * @remarks
-   * The maximum number of textures to process in a single frame. This is used to
-   * prevent the renderer from processing too many textures in a single frame.
+   * The maximum amount of time the renderer is allowed to process textures in a
+   * single frame. If the processing time exceeds this limit, the renderer will
+   * skip processing the remaining textures and continue rendering the frame.
    *
-   * @defaultValue `0`
+   * @defaultValue `10`
    */
-  textureProcessingLimit?: number;
+  textureProcessingTimeLimit?: number;
 
   /**
    * Canvas object to use for rendering
@@ -318,6 +319,8 @@ export interface RendererMainSettings {
  *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
  * - `frameTick`
  *   - Emitted every frame tick
+ * - `quadsUpdate`
+ *  - Emitted when number of quads rendered is updated
  * - `idle`
  *   - Emitted when the renderer is idle (no changes to the scene
  *     graph/animations running)
@@ -353,12 +356,16 @@ export class RendererMain extends EventEmitter {
    */
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
+
     const resolvedTxSettings: TextureMemoryManagerSettings = {
       criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
       targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
       cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
       debugLogging: settings.textureMemory?.debugLogging || false,
+      baselineMemoryAllocation:
+        settings.textureMemory?.baselineMemoryAllocation || 26e6,
     };
+
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
@@ -378,7 +385,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
       strictBounds: settings.strictBounds ?? true,
-      textureProcessingLimit: settings.textureProcessingLimit || 0,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
     };
     this.settings = resolvedSettings;
@@ -422,7 +429,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: this.settings.fontEngines,
       inspector: this.settings.inspector !== null,
       strictBounds: this.settings.strictBounds,
-      textureProcessingLimit: this.settings.textureProcessingLimit,
+      textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
     });
 
     // Extract the root node
@@ -680,6 +687,26 @@ export class RendererMain extends EventEmitter {
    */
   rerender() {
     this.stage.requestRender();
+  }
+
+  /**
+   * Cleanup textures that are not being used
+   *
+   * @remarks
+   * This can be used to free up GFX memory used by textures that are no longer
+   * being displayed.
+   *
+   * This routine is also called automatically when the memory used by textures
+   * exceeds the critical threshold on frame generation **OR** when the renderer
+   * is idle and the memory used by textures exceeds the target threshold.
+   *
+   * **NOTE**: This is a heavy operation and should be used sparingly.
+   * **NOTE2**: This will not cleanup textures that are currently being displayed.
+   * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
+   * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
+   */
+  cleanup() {
+    this.stage.cleanup();
   }
 
   /**

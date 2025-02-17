@@ -243,6 +243,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontFamily: 'Ubuntu',
   });
 
+  let curPage = 0;
   window.addEventListener('keydown', (e) => {
     if (e.key === 'r') {
       rttNode.rtt = !rttNode.rtt;
@@ -255,6 +256,22 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     if (e.key === 'w') {
       rttNode.width = rttNode.width === 200 ? 300 : 200;
       rttNode.height = rttNode.height === 200 ? 300 : 200;
+    }
+
+    if (e.key === 'ArrowRight') {
+      if (curPage > 6) {
+        curPage = 0;
+      }
+
+      page(curPage++);
+    }
+
+    if (e.key === 'ArrowLeft') {
+      if (curPage < 1) {
+        curPage = 7;
+      }
+
+      page(curPage--);
     }
   });
 

@@ -424,6 +424,16 @@ export class WebGlContextWrapper {
 
   /**
    * ```
+   * gl.deleteFramebuffer(framebuffer);
+   *
+   * @param framebuffer
+   */
+  deleteFramebuffer(framebuffer: WebGLFramebuffer | null) {
+    this.gl.deleteFramebuffer(framebuffer);
+  }
+
+  /**
+   * ```
    * gl.viewport(x, y, width, height);
    * ```
    */

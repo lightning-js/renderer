@@ -78,5 +78,5 @@ See docs/ManualRegressionTests.md for more information.
       cacheId: Math.floor(Math.random() * 100000),
     });
     screen.textureOptions.preload = true;
-  }, 10);
+  }, 100);
 }

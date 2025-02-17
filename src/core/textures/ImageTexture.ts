@@ -23,8 +23,9 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute } from '../lib/utils.js';
+import { convertUrlToAbsolute, isBase64Image } from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
+import { fetchJson } from '../text-rendering/font-face-types/utils.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -135,8 +136,8 @@ export class ImageTexture extends Texture {
   async loadImageFallback(src: string, hasAlpha: boolean) {
     const img = new Image();
 
-    if (!src.startsWith('data:')) {
-      img.crossOrigin = 'Anonymous';
+    if (isBase64Image(src) === false) {
+      img.crossOrigin = 'anonymous';
     }
 
     return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
@@ -206,6 +207,7 @@ export class ImageTexture extends Texture {
 
     if (this.txManager.hasCreateImageBitmap === true) {
       if (
+        isBase64Image(src) === false &&
         this.txManager.hasWorker === true &&
         this.txManager.imageWorkerManager !== null
       ) {
@@ -219,7 +221,9 @@ export class ImageTexture extends Texture {
         );
       }
 
-      const blob = await fetch(src).then((response) => response.blob());
+      const blob = await fetchJson(src, 'blob').then(
+        (response) => response as Blob,
+      );
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
 
@@ -231,14 +235,14 @@ export class ImageTexture extends Texture {
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
-      this.setSourceState('failed', e as Error);
+      this.setState('failed', e as Error);
       return {
         data: null,
       };
     }
 
     if (resp.data === null) {
-      this.setSourceState('failed', Error('ImageTexture: No image data'));
+      this.setState('failed', Error('ImageTexture: No image data'));
       return {
         data: null,
       };
@@ -256,7 +260,7 @@ export class ImageTexture extends Texture {
     }
 
     // we're loaded!
-    this.setSourceState('loaded', {
+    this.setState('fetched', {
       width,
       height,
     });

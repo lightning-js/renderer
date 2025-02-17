@@ -24,8 +24,10 @@ import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
-import type { Texture } from './textures/Texture.js';
+import { TextureType, type Texture } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
+import { getTimeStamp } from './platform.js';
+import type { Stage } from './Stage.js';
 
 /**
  * Augmentable map of texture class types
@@ -177,6 +179,7 @@ export class CoreTextureManager extends EventEmitter {
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
+  private stage: Stage;
 
   imageWorkerManager: ImageWorkerManager | null = null;
   hasCreateImageBitmap = !!self.createImageBitmap;
@@ -207,8 +210,9 @@ export class CoreTextureManager extends EventEmitter {
    */
   frameTime = 0;
 
-  constructor(numImageWorkers: number) {
+  constructor(stage: Stage, numImageWorkers: number) {
     super();
+    this.stage = stage;
     this.validateCreateImageBitmap()
       .then((result) => {
         this.hasCreateImageBitmap =
@@ -386,6 +390,26 @@ export class CoreTextureManager extends EventEmitter {
     return texture as InstanceType<TextureMap[Type]>;
   }
 
+  orphanTexture(texture: Texture): void {
+    // if it is part of the download or upload queue, remove it
+    const downloadIndex = this.downloadTextureSourceQueue.indexOf(texture);
+    if (downloadIndex !== -1) {
+      this.downloadTextureSourceQueue.splice(downloadIndex, 1);
+    }
+
+    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
+    if (uploadIndex !== -1) {
+      this.uploadTextureQueue.splice(uploadIndex, 1);
+    }
+
+    if (texture.type === TextureType.subTexture) {
+      // ignore subtextures
+      return;
+    }
+
+    this.stage.txMemManager.addToOrphanedTextures(texture);
+  }
+
   /**
    * Override loadTexture to use the batched approach.
    *
@@ -393,16 +417,30 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   loadTexture(texture: Texture, priority?: boolean): void {
-    if (texture.state === 'loaded' || texture.state === 'loading') {
+    this.stage.txMemManager.removeFromOrphanedTextures(texture);
+
+    if (texture.state !== 'initial' && texture.state !== 'freed') {
       return;
     }
 
-    texture.setSourceState('loading');
-    texture.setCoreCtxState('loading');
+    texture.setState('loading');
 
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
       this.priorityQueue.push(texture);
+      return;
+    }
+
+    // these types of textures don't need to be downloaded
+    // Technically the noise texture shouldn't either, but it's a special case
+    // and not really used in production so who cares ¯\_(ツ)_/¯
+    if (
+      texture.type === TextureType.subTexture ||
+      texture.type === TextureType.color ||
+      texture.type === TextureType.renderToTexture
+    ) {
+      texture.setState('fetched');
+      this.enqueueUploadTexture(texture);
       return;
     }
 
@@ -428,8 +466,22 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture Texture to upload
    */
   uploadTexture(texture: Texture): void {
+    if (texture.state !== 'fetched') {
+      return;
+    }
+
     const coreContext = texture.loadCtxTexture();
     coreContext.load();
+  }
+
+  /**
+   * Check if a texture is being processed
+   */
+  isProcessingTexture(texture: Texture): boolean {
+    return (
+      this.downloadTextureSourceQueue.includes(texture) === true ||
+      this.uploadTextureQueue.includes(texture) === true
+    );
   }
 
   /**
@@ -437,50 +489,46 @@ export class CoreTextureManager extends EventEmitter {
    *
    * @param maxItems - The maximum number of items to process
    */
-  processSome(maxItems = 0): void {
+  processSome(maxProcessingTime: number): void {
     if (this.initialized === false) {
       return;
     }
 
-    let itemsProcessed = 0;
+    const startTime = getTimeStamp();
 
     // Process priority queue
     while (
       this.priorityQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.priorityQueue.shift()!;
+      const texture = this.priorityQueue.pop()!;
       texture.getTextureData().then(() => {
         this.uploadTexture(texture);
       });
-      itemsProcessed++;
     }
 
     // Process uploads
     while (
       this.uploadTextureQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.uploadTexture(this.uploadTextureQueue.shift()!);
-      itemsProcessed++;
+      this.uploadTexture(this.uploadTextureQueue.pop()!);
     }
 
     // Process downloads
     while (
       this.downloadTextureSourceQueue.length > 0 &&
-      (maxItems === 0 || itemsProcessed < maxItems)
+      getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
-      queueMicrotask(() => {
-        texture.getTextureData().then(() => {
+      texture.getTextureData().then(() => {
+        if (texture.state === 'fetched') {
           this.enqueueUploadTexture(texture);
-        });
+        }
       });
-
-      itemsProcessed++;
     }
   }
 

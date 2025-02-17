@@ -49,7 +49,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { WebGlCoreShader } from './WebGlCoreShader.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
-import type { CoreNode } from '../../CoreNode.js';
+import { CoreNodeRenderState, type CoreNode } from '../../CoreNode.js';
 import { WebGlCoreCtxRenderTexture } from './WebGlCoreCtxRenderTexture.js';
 import type { BaseShaderController } from '../../../main-api/ShaderController.js';
 
@@ -95,6 +95,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
    */
 
   quadBufferUsage = 0;
+  numQuadsRendered = 0;
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -543,25 +544,25 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     // Switching clipping rect will require a new render operation
-    if (!compareRect(this.curRenderOp.clippingRect, clippingRect)) {
+    if (compareRect(this.curRenderOp.clippingRect, clippingRect) === false) {
       return false;
     }
 
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (parentHasRenderTexture || rtt) {
+    if (parentHasRenderTexture !== undefined || rtt !== undefined) {
       return false;
     }
 
     // Check if the shader can batch the shader properties
     if (
       this.curRenderOp.shader !== this.defaultShader &&
-      (!shaderProps ||
-        !this.curRenderOp.shader.canBatchShaderProps(
+      (shaderProps === null ||
+        this.curRenderOp.shader.canBatchShaderProps(
           this.curRenderOp.shaderProps,
           shaderProps,
-        ))
+        ) === false)
     ) {
       return false;
     }
@@ -590,22 +591,22 @@ export class WebGlCoreRenderer extends CoreRenderer {
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
 
-    const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
+    const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
-    const doLog = false; // idx++ % 100 === 0;
-    if (doLog) {
-      console.log('renderOps', this.renderOps.length);
-    }
-
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      const renderOp = this.renderOps[i] as WebGlCoreRenderOp;
-      if (doLog) {
-        console.log('Quads per operation', renderOp.numQuads);
-      }
-      renderOp.draw();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.renderOps[i]!.draw();
     }
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
+
+    // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
+    const QUAD_SIZE_IN_BYTES = 4 * (6 * arr.BYTES_PER_ELEMENT); // 6 attributes per vertex
+    this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
+  }
+
+  getQuadCount(): number {
+    return this.numQuadsRendered;
   }
 
   renderToTexture(node: CoreNode) {
@@ -702,12 +703,21 @@ export class WebGlCoreRenderer extends CoreRenderer {
       const node = this.rttNodes[i];
 
       // Skip nodes that don't have RTT updates
-      if (!node || !node.hasRTTupdates) {
+      if (node === undefined || node.hasRTTupdates === false) {
         continue;
       }
 
-      if (!node.texture || !node.texture.ctxTexture) {
-        console.warn('Texture not loaded for RTT node', node);
+      // Skip nodes that are not visible
+      if (
+        node.worldAlpha === 0 ||
+        (node.strictBounds === true &&
+          node.renderState === CoreNodeRenderState.OutOfBounds)
+      ) {
+        continue;
+      }
+
+      // Skip nodes that do not have a loaded texture
+      if (node.texture === null || node.texture.state !== 'loaded') {
         continue;
       }
 
@@ -732,7 +742,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
 
-        if (!child) {
+        if (child === undefined) {
           continue;
         }
 

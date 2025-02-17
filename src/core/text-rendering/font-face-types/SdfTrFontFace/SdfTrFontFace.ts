@@ -27,6 +27,7 @@ import {
   type NormalizedFontMetrics,
   type TrFontFaceOptions,
 } from '../TrFontFace.js';
+import { fetchJson } from '../utils.js';
 import type { FontShaper } from './internal/FontShaper.js';
 import { SdfFontShaper, type SdfFontData } from './internal/SdfFontShaper.js';
 
@@ -62,9 +63,9 @@ export class SdfTrFontFace<
    * in SDF/vertex units.
    */
   public readonly maxCharHeight: number = 0;
-  public readonly data: SdfFontData | undefined;
   public readonly shaper: FontShaper | undefined;
   public readonly glyphMap: Map<number, SdfFontData['chars'][0]> = new Map();
+  public data: SdfFontData | undefined;
 
   constructor(type: FontTypeT, options: SdfTrFontFaceOptions) {
     super(options);
@@ -103,10 +104,9 @@ export class SdfTrFontFace<
     });
 
     // Set this.data to the fetched data from dataUrl
-    fetch(atlasDataUrl)
-      .then(async (response) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        (this.data as SdfFontData) = await response.json();
+    fetchJson(atlasDataUrl)
+      .then((response) => {
+        this.data = JSON.parse(response as unknown as string) as SdfFontData;
         assertTruthy(this.data);
         // Add all the glyphs to the glyph map
 
