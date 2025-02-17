@@ -117,8 +117,8 @@ export function shadow(
   ctx.scale(scaleFactor, scaleFactor);
   ctx.shadowColor = color;
   ctx.shadowBlur = projection[2] * pixelRatio;
-  ctx.shadowOffsetX = projection[0] + cw * pixelRatio - projection[3];
-  ctx.shadowOffsetY = projection[1] + ch * pixelRatio - projection[3];
+  ctx.shadowOffsetX = projection[0] + cw * pixelRatio - projection[3] * 0.5;
+  ctx.shadowOffsetY = projection[1] + ch * pixelRatio - projection[3] * 0.5;
 
   const spreadFactor = projection[3];
   ctx.beginPath();
