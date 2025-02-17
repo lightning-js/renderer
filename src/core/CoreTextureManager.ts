@@ -411,6 +411,11 @@ export class CoreTextureManager extends EventEmitter {
   loadTexture(texture: Texture, priority?: boolean): void {
     this.stage.txMemManager.removeFromOrphanedTextures(texture);
 
+    if (texture.type === TextureType.subTexture) {
+      // ignore subtextures - they get loaded through their parent
+      return;
+    }
+
     // if the texture is already loaded, don't load it again
     if (
       texture.ctxTexture !== undefined &&
@@ -455,7 +460,6 @@ export class CoreTextureManager extends EventEmitter {
     // Technically the noise texture shouldn't either, but it's a special case
     // and not really used in production so who cares ¯\_(ツ)_/¯
     if (
-      texture.type === TextureType.subTexture ||
       texture.type === TextureType.color ||
       texture.type === TextureType.renderToTexture
     ) {
