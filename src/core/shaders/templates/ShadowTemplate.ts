@@ -28,7 +28,7 @@ export interface ShadowProps {
   /**
    * Shadow Projection [offsetX, offsetY, blur, spread]
    *
-   * @default [0, 10, 5, 5]
+   * @default [0, 0, 5, 5]
    */
   projection: [number, number, number, number];
   /**
@@ -58,7 +58,7 @@ export function getShadowProps<P extends string>(
   return {
     [pf + 'color']: 0x000000ff,
     [projection]: {
-      default: [0, 0, 10, 5],
+      default: [0, 0, 5, 5],
     },
     [pf + 'x']: {
       default: 0,

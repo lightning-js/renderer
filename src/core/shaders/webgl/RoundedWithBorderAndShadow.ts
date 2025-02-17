@@ -102,7 +102,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       r.x = (p.y > 0.0) ? r.y : r.x;
       vec2 q = abs(p) - s + r.x;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-      return 1.0 - smoothstep(-(u_shadow.w * u_pixelRatio), (u_shadow.w + u_shadow.z) * u_pixelRatio, dist);
+      return 1.0 - smoothstep(-u_shadow.w, u_shadow.w + u_shadow.z, dist);
     }
 
     void main() {
@@ -122,7 +122,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         borderAlpha = 1.0 - smoothstep(u_border_width[0], u_border_width[0], abs(outerBoxDist));
       }
 
-      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w * 0.5, u_radius + u_shadow.z);
+      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_radius + u_shadow.z);
 
       vec4 resColor = vec4(0.0);
       resColor = mix(resColor, u_shadow_color, shadowAlpha);

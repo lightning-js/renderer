@@ -94,7 +94,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     float shadowBox(vec2 p, vec2 s, float r) {
       vec2 q = abs(p) - s + r;
       float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
-      return 1.0 - smoothstep(-(u_shadow.w * u_pixelRatio), (u_shadow.w + u_shadow.z) * u_pixelRatio, dist);
+      return 1.0 - smoothstep(-u_shadow.w, u_shadow.w + u_shadow.z, dist);
     }
 
     void main() {
@@ -105,7 +105,7 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       float boxDist = box(boxUv, halfDimensions);
 
       float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
-      float shadowDist = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w * 0.5, u_shadow.z);
+      float shadowDist = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_shadow.z);
 
       vec4 resColor = vec4(0.0);
       resColor = mix(resColor, u_color, shadowDist);
