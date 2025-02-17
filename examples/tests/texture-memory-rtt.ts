@@ -24,8 +24,6 @@ export function customSettings(): Partial<RendererMainSettings> {
   return {
     textureMemory: {
       cleanupInterval: 5000,
-      criticalThreshold: 25e6,
-      baselineMemoryAllocation: 5e6,
       debugLogging: true,
     },
   };
@@ -54,10 +52,38 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const textureSize = nodeSize * nodeSize * 4 * 1.1; // RGBA bytes per pixel
   const memoryBaseline = 25e6; // 25 MB
   const maxNodes = Math.ceil((memoryThreshold - memoryBaseline) / textureSize);
+  const nodes: INode[] = [];
 
   console.log(`Creating ${maxNodes} nodes...`);
 
-  let testMode: 'normal' | 'rtt' = 'normal';
+  let lastNoiseNodePosition = 0;
+  const generateNoiseNodes = (count: number) => {
+    // Create nodes with unique noise textures until the memory threshold is reached
+    for (let i = 0; i < count; i++) {
+      const x = (i % 27) * 10;
+      const y = ~~(i / 27) * 10;
+
+      const node = renderer.createNode({
+        x,
+        y: lastNoiseNodePosition + y,
+        width: nodeSize,
+        height: nodeSize,
+        parent: testRoot,
+        color: randomColor(),
+        texture: renderer.createTexture('NoiseTexture', {
+          width: nodeSize,
+          height: nodeSize,
+          cacheId: i + Math.random(),
+        }),
+      });
+      nodes.push(node);
+    }
+
+    lastNoiseNodePosition = nodes[nodes.length - 1]!.y + 10;
+  };
+
+  generateNoiseNodes(maxNodes);
+  console.log(`Created ${nodes.length} nodes. Memory threshold reached.`);
 
   const clippingNode = renderer.createNode({
     x: 600,
@@ -77,24 +103,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: clippingNode,
     color: 0x000000ff,
     clipping: false,
-  });
-
-  const currentModeText = renderer.createTextNode({
-    x: 10,
-    y: 40,
-    parent: testRoot,
-    text: `Current mode: ${testMode}`,
-    fontSize: 20,
-    color: 0xffffffff,
-  });
-
-  const modeExplainText = renderer.createTextNode({
-    x: 10,
-    y: 10,
-    parent: testRoot,
-    text: 'Press SPACE to switch mode',
-    fontSize: 20,
-    color: 0xffffffff,
   });
 
   const nodeWidth = 200;
@@ -126,10 +134,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const childNode = renderer.createNode({
         x: x, // Adjust position by subtracting the gap
         y: 0,
-        width: nodeWidth, // Width of the green node
-        height: nodeHeight, // Slightly smaller height
+        width: nodeWidth,
+        height: nodeHeight,
         parent: rowNode,
-        rtt: testMode === 'rtt',
+        rtt: true,
       });
 
       const imageNode = renderer.createNode({
@@ -157,50 +165,40 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     return items;
   };
 
-  const nodes: INode[][] = [];
-  const spawnRows = async (amountOfRows: number) => {
-    for (let rowIndex = 0; rowIndex < amountOfRows; rowIndex++) {
-      console.log(`Spawning row ${rowIndex + 1}`);
-      nodes.push(spawnRow(rowIndex, 20));
-    }
+  // Generate up to 200 rows
+  const amountOfRows = 20;
+  for (let rowIndex = 0; rowIndex < amountOfRows; rowIndex++) {
+    console.log(`Spawning row ${rowIndex + 1}`);
+    spawnRow(rowIndex);
+  }
 
-    // adjust container node size
-    containerNode.height = amountOfRows * (nodeHeight + gap);
-  };
-
-  await spawnRows(20);
+  // adjust container node size
+  containerNode.height = amountOfRows * (nodeHeight + gap);
 
   window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowDown') {
-      if (containerNode.y > clippingNode.height + 200) {
-        return;
-      }
-
+      // move container down
       containerNode.y += 50;
     }
 
     if (e.key === 'ArrowUp') {
-      if (containerNode.y < containerNode.height * -1 - 200) {
-        return;
-      }
-
       // move container up
       containerNode.y -= 50;
     }
 
-    // space switches mode
-    if (e.key === ' ' || e.key === 'Enter') {
-      testMode = testMode === 'normal' ? 'rtt' : 'normal';
+    if (e.key === 'ArrowLeft') {
+      generateNoiseNodes(27);
+    }
 
-      currentModeText.text = `Current mode: ${testMode}`;
-
-      nodes.forEach((row) => {
-        row.forEach((node) => {
+    if (e.key === 'ArrowRight') {
+      for (let i = 0; i < 27; i++) {
+        const node = nodes.pop();
+        if (node) {
           node.destroy();
-        });
-      });
+        }
+      }
 
-      spawnRows(20);
+      lastNoiseNodePosition -= 10;
     }
   });
 }

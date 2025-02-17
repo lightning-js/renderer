@@ -1034,9 +1034,7 @@ export class CoreNode extends EventEmitter {
 
     // Handle specific RTT updates at this node level
     if (this.updateType & UpdateType.RenderTexture && this.rtt) {
-      // Only the RTT node itself triggers `renderToTexture`
       this.hasRTTupdates = true;
-      this.loadRenderTexture();
     }
 
     if (this.updateType & UpdateType.Global) {
@@ -1218,6 +1216,16 @@ export class CoreNode extends EventEmitter {
     if (renderState === CoreNodeRenderState.OutOfBounds) {
       this.updateRenderState(renderState);
       this.updateIsRenderable();
+
+      if (
+        this.rtt === true &&
+        renderState === CoreNodeRenderState.OutOfBounds
+      ) {
+        // notify children that we are going out of bounds
+        // we have to do this now before we stop processing the render tree
+        this.notifyChildrenRTTOfUpdate(renderState);
+        // this.childUpdateType |= UpdateType.RenderState;
+      }
     }
 
     // reset update type
@@ -1231,6 +1239,24 @@ export class CoreNode extends EventEmitter {
       rttNode = rttNode.parent;
     }
     return rttNode;
+  }
+
+  private getRTTParentRenderState(): CoreNodeRenderState | null {
+    const rttNode = this.rttParent || this.findParentRTTNode();
+    if (!rttNode) {
+      return null;
+    }
+
+    return rttNode.renderState;
+  }
+
+  private notifyChildrenRTTOfUpdate(renderState: CoreNodeRenderState) {
+    for (const child of this.children) {
+      // force child to update render state
+      child.updateRenderState(renderState);
+      child.updateIsRenderable();
+      child.notifyChildrenRTTOfUpdate(renderState);
+    }
   }
 
   private notifyParentRTTOfUpdate() {
@@ -1258,6 +1284,11 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.strictBound);
     assertTruthy(this.preloadBound);
 
+    // if we are part of a parent render texture, we're always in bounds
+    if (this.parentHasRenderTexture === true) {
+      return this.getRTTParentRenderState() || CoreNodeRenderState.OutOfBounds;
+    }
+
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
@@ -1269,11 +1300,6 @@ export class CoreNode extends EventEmitter {
     // check if we're larger then our parent, we're definitely in the viewport
     if (boundLargeThanBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
-    }
-
-    // if we are part of a parent render texture, we're always in bounds
-    if (this.parentHasRenderTexture === true) {
-      return CoreNodeRenderState.InBounds;
     }
 
     // check if we dont have dimensions, take our parent's render state
@@ -2102,33 +2128,13 @@ export class CoreNode extends EventEmitter {
       height: this.height,
     });
 
-    this.loadRenderTexture();
-  }
-
-  private loadRenderTexture() {
-    if (this.texture === null) {
-      return;
-    }
-
-    // If the texture is already loaded, render to it immediately
-    if (this.texture.state === 'loaded') {
-      this.stage.renderer?.renderToTexture(this);
-      return;
-    }
-
-    // call load immediately to ensure the texture is created
-    this.stage.txManager.loadTexture(this.texture, true);
-    this.texture.once('loaded', () => {
-      this.stage.renderer?.renderToTexture(this); // Only this RTT node
-      this.setUpdateType(UpdateType.IsRenderable);
-    });
+    this.stage.renderer.renderToTexture(this);
   }
 
   private cleanupRenderTexture() {
     this.unloadTexture();
     this.clearRTTInheritance();
 
-    this.stage.renderer?.removeRTTNode(this);
     this.hasRTTupdates = false;
     this.texture = null;
   }

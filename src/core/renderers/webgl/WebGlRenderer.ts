@@ -43,7 +43,7 @@ import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
-import type { CoreNode } from '../../CoreNode.js';
+import { CoreNodeRenderState, type CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
@@ -433,14 +433,14 @@ export class WebGlRenderer extends CoreRenderer {
     }
 
     // Switching clipping rect will require a new render operation
-    if (!compareRect(this.curRenderOp.quad.clippingRect, clippingRect)) {
+    if (compareRect(this.curRenderOp.clippingRect, clippingRect) === false) {
       return false;
     }
 
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (parentHasRenderTexture || rtt) {
+    if (parentHasRenderTexture !== undefined || rtt !== undefined) {
       return false;
     }
 
@@ -477,20 +477,13 @@ export class WebGlRenderer extends CoreRenderer {
     const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-    const buffer = this.quadBufferCollection.getBuffer('a_position') ?? null;
+
+    const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
-    const doLog = false; // idx++ % 100 === 0;
-    if (doLog) {
-      console.log('renderOps', this.renderOps.length);
-    }
-
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      const renderOp = this.renderOps[i] as WebGlRenderOp;
-      if (doLog) {
-        console.log('Quads per operation', renderOp.numQuads);
-      }
-      renderOp.draw();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.renderOps[i]!.draw();
     }
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
 
@@ -595,12 +588,21 @@ export class WebGlRenderer extends CoreRenderer {
       const node = this.rttNodes[i];
 
       // Skip nodes that don't have RTT updates
-      if (!node || !node.hasRTTupdates) {
+      if (node === undefined || node.hasRTTupdates === false) {
         continue;
       }
 
-      if (!node.texture || !node.texture.ctxTexture) {
-        console.warn('Texture not loaded for RTT node', node);
+      // Skip nodes that are not visible
+      if (
+        node.worldAlpha === 0 ||
+        (node.strictBounds === true &&
+          node.renderState === CoreNodeRenderState.OutOfBounds)
+      ) {
+        continue;
+      }
+
+      // Skip nodes that do not have a loaded texture
+      if (node.texture === null || node.texture.state !== 'loaded') {
         continue;
       }
 
@@ -625,7 +627,7 @@ export class WebGlRenderer extends CoreRenderer {
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
 
-        if (!child) {
+        if (child === undefined) {
           continue;
         }
 

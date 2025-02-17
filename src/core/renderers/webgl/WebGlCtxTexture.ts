@@ -111,6 +111,9 @@ export class WebGlCtxTexture extends CoreContextTexture {
         // Update the texture source's width and height so that it can be used
         // for rendering.
         this.textureSource.setState('loaded', { width, height });
+
+        // cleanup source texture data
+        this.textureSource.freeTextureData();
       })
       .catch((err) => {
         // If the texture has been freed while loading, return early.
@@ -119,6 +122,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
         }
         this.state = 'failed';
         this.textureSource.setState('failed', err);
+        this.textureSource.freeTextureData();
         console.error(err);
       });
   }
@@ -247,6 +251,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     if (this.state === 'freed') {
       return;
     }
+
     this.state = 'freed';
     this.textureSource.setState('freed');
     this._w = 0;
@@ -259,6 +264,9 @@ export class WebGlCtxTexture extends CoreContextTexture {
     glw.deleteTexture(this._nativeCtxTexture);
     this.setTextureMemUse(0);
     this._nativeCtxTexture = null;
+
+    // if the texture still has source data, free it
+    this.textureSource.freeTextureData();
   }
 
   /**

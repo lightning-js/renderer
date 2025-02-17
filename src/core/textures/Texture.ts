@@ -200,15 +200,6 @@ export abstract class Texture extends EventEmitter {
   }
 
   load(): void {
-    if (
-      this.state === 'fetching' ||
-      this.state === 'loading' ||
-      this.state === 'loaded' ||
-      this.state === 'failed'
-    ) {
-      return;
-    }
-
     this.txManager.loadTexture(this);
   }
 
@@ -245,7 +236,6 @@ export abstract class Texture extends EventEmitter {
    */
   free(): void {
     this.ctxTexture?.free();
-    this.textureData = null;
   }
 
   /**

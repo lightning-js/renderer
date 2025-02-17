@@ -43,6 +43,7 @@ export class MemMonitor extends Component {
   // private memTextNode: ITextNode;
   private bar: INode;
   private renderableMemBar: INode;
+  private baseMemBar: INode;
   private memUsedBar: INode;
   private criticalText: ITextNode;
   private criticalTick: INode;
@@ -50,6 +51,7 @@ export class MemMonitor extends Component {
   private targetTick: INode;
   private criticalInfoText: ITextNode;
   private targetInfoText: ITextNode;
+  private baseInfoText: ITextNode;
   private memUsedText: ITextNode;
   private renderableMemUsedText: ITextNode;
   private cacheInfoText: ITextNode;
@@ -71,6 +73,15 @@ export class MemMonitor extends Component {
       height: BAR_HEIGHT,
       parent: this.node,
       color: 0x00000000,
+    });
+
+    this.baseMemBar = renderer.createNode({
+      x: 0,
+      y: 0,
+      width: BAR_WIDTH,
+      height: 0,
+      parent: this.bar,
+      color: 0x808080ff,
     });
 
     this.memUsedBar = renderer.createNode({
@@ -173,9 +184,20 @@ export class MemMonitor extends Component {
       color: 0x000000ff,
     });
 
-    this.memUsedText = renderer.createTextNode({
+    this.baseInfoText = renderer.createTextNode({
       x: MARGIN,
       y: infoTextY + INFO_TEXT_LINEHEIGHT * 2,
+      text: 'Base:',
+      fontFamily: 'Ubuntu',
+      parent: this.node,
+      fontSize: INFO_TEXT_SIZE,
+      lineHeight: INFO_TEXT_LINEHEIGHT,
+      color: 0x000000ff,
+    });
+
+    this.memUsedText = renderer.createTextNode({
+      x: MARGIN,
+      y: infoTextY + INFO_TEXT_LINEHEIGHT * 3,
       text: '',
       fontFamily: 'Ubuntu',
       parent: this.node,
@@ -227,15 +249,27 @@ export class MemMonitor extends Component {
       renderableMemUsed,
       baselineMemoryAllocation,
     } = payload;
-    const renderableMemoryFraction = renderableMemUsed / criticalThreshold;
-    const memUsedFraction = memUsed / criticalThreshold;
+    const baseUsedFraction = baselineMemoryAllocation / criticalThreshold;
+    const renderableMemoryFraction = Math.max(
+      renderableMemUsed / criticalThreshold - baseUsedFraction,
+      0,
+    );
+    const memUsedFraction = Math.max(
+      memUsed / criticalThreshold - baseUsedFraction,
+      0,
+    );
+
+    this.baseMemBar.height = BAR_HEIGHT * baseUsedFraction;
+    this.baseMemBar.y = BAR_HEIGHT - this.baseMemBar.height;
     this.memUsedBar.height = BAR_HEIGHT * memUsedFraction;
+    this.memUsedBar.y =
+      BAR_HEIGHT - this.memUsedBar.height - this.baseMemBar.height;
     this.renderableMemBar.height = BAR_HEIGHT * renderableMemoryFraction;
-    this.renderableMemBar.y = BAR_HEIGHT - this.renderableMemBar.height;
-    this.memUsedBar.y = BAR_HEIGHT - this.memUsedBar.height;
+    this.renderableMemBar.y =
+      BAR_HEIGHT - this.renderableMemBar.height - this.baseMemBar.height;
+
     this.memUsedText.text = `
 Memory Used
-- Base: ${bytesToMb(baselineMemoryAllocation)} mb
 - Size: ${bytesToMb(memUsed)} mb (${(memUsedFraction * 100).toFixed(1)}%)
 - Count: ${payload.loadedTextures}
 `.trim();
@@ -247,6 +281,7 @@ Renderable Loaded
 - Count: ${payload.renderableTexturesLoaded}
 `.trim();
     this.cacheInfoText.text = `Cache Size: ${this.renderer.stage.txManager.keyCache.size}`;
+    this.baseInfoText.text = `Base: ${bytesToMb(baselineMemoryAllocation)} mb`;
   }
 
   get interval() {
