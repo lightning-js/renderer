@@ -433,7 +433,9 @@ export class WebGlRenderer extends CoreRenderer {
     }
 
     // Switching clipping rect will require a new render operation
-    if (compareRect(this.curRenderOp.clippingRect, clippingRect) === false) {
+    if (
+      compareRect(this.curRenderOp.quad.clippingRect, clippingRect) === false
+    ) {
       return false;
     }
 
