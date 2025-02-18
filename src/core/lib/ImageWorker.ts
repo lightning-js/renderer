@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { CreateImageBitmapSupport } from '../CoreTextureManager.js';
+import type { CreateImageBitmapSupport } from '../lib/validateImageBitmap.js';
 import { type TextureData } from '../textures/Texture.js';
 
 type MessageCallback = [(value: any) => void, (reason: any) => void];
@@ -84,6 +84,14 @@ function createImageWorker() {
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
 
+        console.log('worker', src, x, y, width, height, premultiplyAlpha);
+        console.log(
+          'using createImageBitmap options:',
+          supportsOptionsCreateImageBitmap,
+          'full:',
+          supportsFullCreateImageBitmap,
+        );
+
         // createImageBitmap with crop and options
         if (
           supportsFullCreateImageBitmap === true &&
@@ -102,7 +110,11 @@ function createImageWorker() {
               reject(error);
             });
           return;
-        } else if (supportsOptionsCreateImageBitmap === true) {
+        } else if (
+          supportsOptionsCreateImageBitmap === true ||
+          (supportsFullCreateImageBitmap === true &&
+            (width === null || height === null))
+        ) {
           createImageBitmap(blob, {
             premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
             colorSpaceConversion: 'none',
@@ -150,6 +162,8 @@ function createImageWorker() {
     var supportsOptionsCreateImageBitmap = false;
     var supportsFullCreateImageBitmap = false;
 
+    console.log('worker', src, x, y, width, height, premultiplyAlpha);
+
     getImage(src, premultiplyAlpha, x, y, width, height, {
       supportsOptionsCreateImageBitmap,
       supportsFullCreateImageBitmap,
@@ -175,6 +189,7 @@ export class ImageWorkerManager {
     numImageWorkers: number,
     createImageBitmapSupport: CreateImageBitmapSupport,
   ) {
+    console.log('Creating ImageWorkerManager with', numImageWorkers, 'workers');
     this.workers = this.createWorkers(
       numImageWorkers,
       createImageBitmapSupport,

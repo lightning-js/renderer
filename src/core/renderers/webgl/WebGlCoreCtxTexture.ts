@@ -120,6 +120,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         if (this.state === 'freed') {
           return;
         }
+
         this.state = 'failed';
         this.textureSource.setState('failed', err);
         this.textureSource.freeTextureData();
@@ -134,7 +135,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     const { glw } = this;
     const textureData = this.textureSource.textureData;
     if (textureData === null || this._nativeCtxTexture === null) {
-      throw new Error('Texture data or native texture is null');
+      throw new Error(
+        'Texture data or native texture is null ' + this.textureSource.type,
+      );
     }
 
     // Set to a 1x1 transparent texture

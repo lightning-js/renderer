@@ -77,6 +77,7 @@ export interface StageOptions {
   inspector: boolean;
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
+  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
 }
 
 export type StageFpsUpdateHandler = (
@@ -150,10 +151,14 @@ export class Stage {
       textureMemory,
       renderEngine,
       fontEngines,
+      createImageBitmapSupport,
     } = options;
 
     this.eventBus = options.eventBus;
-    this.txManager = new CoreTextureManager(this, numImageWorkers);
+    this.txManager = new CoreTextureManager(this, {
+      numImageWorkers,
+      createImageBitmapSupport,
+    });
 
     // Wait for the Texture Manager to initialize
     // once it does, request a render
@@ -307,12 +312,17 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
+    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
         color: 0xffffffff,
       },
     );
+
+    this.defaultTexture?.on('loaded', () => {
+      console.log('Default texture loaded');
+    });
 
     assertTruthy(this.defaultTexture instanceof ColorTexture);
 

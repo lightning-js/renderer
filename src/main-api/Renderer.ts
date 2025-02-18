@@ -288,6 +288,31 @@ export interface RendererMainSettings {
    * element will be created and appended to the target element.
    */
   canvas?: HTMLCanvasElement;
+
+  /**
+   * createImageBitmap support for the runtime
+   *
+   * @remarks
+   * This is used to determine if and which version of the createImageBitmap API
+   * is supported by the runtime. This is used to determine if the renderer can
+   * use createImageBitmap to load images.
+   *
+   * Options supported
+   * - Auto - Automatically determine the supported version
+   * - Basic - Supports createImageBitmap(image)
+   * - Options - Supports createImageBitmap(image, options)
+   * - Full - Supports createImageBitmap(image, sx, sy, sw, sh, options)
+   *
+   * Note with auto detection, the renderer will attempt to use the most advanced
+   * version of the API available. If the API is not available, the renderer will
+   * fall back to the next available version.
+   *
+   * This will affect startup performance as the renderer will need to determine
+   * the supported version of the API.
+   *
+   * @defaultValue `options`
+   */
+  createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
 }
 
 /**
@@ -389,6 +414,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: settings.strictBounds ?? true,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
+      createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
     };
     this.settings = resolvedSettings;
 
@@ -432,6 +458,7 @@ export class RendererMain extends EventEmitter {
       inspector: this.settings.inspector !== null,
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
+      createImageBitmapSupport: this.settings.createImageBitmapSupport,
     });
 
     // Extract the root node

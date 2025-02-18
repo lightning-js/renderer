@@ -170,21 +170,18 @@ export class ImageTexture extends Texture {
     const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
     const imageBitmapSupported = this.txManager.imageBitmapSupported;
 
-    if (
-      imageBitmapSupported.full === true &&
-      sx !== null &&
-      sy !== null &&
-      sw !== null &&
-      sh !== null
-    ) {
+    if (imageBitmapSupported.full === true && sw !== null && sh !== null) {
       // createImageBitmap with crop
-      const bitmap = await createImageBitmap(blob, sx, sy, sw, sh, {
+      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else if (imageBitmapSupported.options === true) {
+    } else if (
+      imageBitmapSupported.options === true ||
+      (imageBitmapSupported.full === true && (sw === null || sh === null))
+    ) {
       // createImageBitmap without crop but with options
       const bitmap = await createImageBitmap(blob, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
