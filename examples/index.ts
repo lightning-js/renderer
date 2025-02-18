@@ -236,7 +236,7 @@ async function initRenderer(
   physicalPixelRatio: number,
   enableInspector: boolean,
   forceWebGL2?: boolean,
-  textureProcessingLimit?: number,
+  textureProcessingTimeLimit?: number,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let inspector: typeof Inspector | undefined;
@@ -256,7 +256,7 @@ async function initRenderer(
       renderEngine:
         renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
-      textureProcessingLimit: textureProcessingLimit,
+      textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
     },
     'app',

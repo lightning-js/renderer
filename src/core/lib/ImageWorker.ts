@@ -84,14 +84,6 @@ function createImageWorker() {
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
 
-        console.log('worker', src, x, y, width, height, premultiplyAlpha);
-        console.log(
-          'using createImageBitmap options:',
-          supportsOptionsCreateImageBitmap,
-          'full:',
-          supportsFullCreateImageBitmap,
-        );
-
         // createImageBitmap with crop and options
         if (
           supportsFullCreateImageBitmap === true &&
@@ -162,8 +154,6 @@ function createImageWorker() {
     var supportsOptionsCreateImageBitmap = false;
     var supportsFullCreateImageBitmap = false;
 
-    console.log('worker', src, x, y, width, height, premultiplyAlpha);
-
     getImage(src, premultiplyAlpha, x, y, width, height, {
       supportsOptionsCreateImageBitmap,
       supportsFullCreateImageBitmap,
@@ -189,7 +179,6 @@ export class ImageWorkerManager {
     numImageWorkers: number,
     createImageBitmapSupport: CreateImageBitmapSupport,
   ) {
-    console.log('Creating ImageWorkerManager with', numImageWorkers, 'workers');
     this.workers = this.createWorkers(
       numImageWorkers,
       createImageBitmapSupport,
