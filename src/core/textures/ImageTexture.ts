@@ -178,18 +178,7 @@ export class ImageTexture extends Texture {
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else if (
-      imageBitmapSupported.options === true ||
-      (imageBitmapSupported.full === true && (sw === null || sh === null))
-    ) {
-      // createImageBitmap without crop but with options
-      const bitmap = await createImageBitmap(blob, {
-        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      });
-      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else {
+    } else if (imageBitmapSupported.basic === true) {
       // basic createImageBitmap without options or crop
       // this is supported for Chrome v50 to v52/54 that doesn't support options
       return {
@@ -197,6 +186,14 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     }
+
+    // default createImageBitmap without crop but with options
+    const bitmap = await createImageBitmap(blob, {
+      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+      colorSpaceConversion: 'none',
+      imageOrientation: 'none',
+    });
+    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
   }
 
   async loadImage(src: string) {

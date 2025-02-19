@@ -103,15 +103,12 @@ function createImageWorker() {
             });
           return;
         } else if (
-          supportsOptionsCreateImageBitmap === true ||
-          (supportsFullCreateImageBitmap === true &&
-            (width === null || height === null))
+          supportsOptionsCreateImageBitmap === false &&
+          supportsOptionsCreateImageBitmap === false
         ) {
-          createImageBitmap(blob, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
+          // Fallback for browsers that do not support createImageBitmap with options
+          // this is supported for Chrome v50 to v52/54 that doesn't support options
+          createImageBitmap(blob)
             .then(function (data) {
               resolve({ data, premultiplyAlpha: premultiplyAlpha });
             })
@@ -119,9 +116,11 @@ function createImageWorker() {
               reject(error);
             });
         } else {
-          // Fallback for browsers that do not support createImageBitmap with options
-          // this is supported for Chrome v50 to v52/54 that doesn't support options
-          createImageBitmap(blob)
+          createImageBitmap(blob, {
+            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            colorSpaceConversion: 'none',
+            imageOrientation: 'none',
+          })
             .then(function (data) {
               resolve({ data, premultiplyAlpha: premultiplyAlpha });
             })
@@ -209,14 +208,19 @@ export class ImageWorkerManager {
     let workerCode = `(${createImageWorker.toString()})()`;
 
     // Replace placeholders with actual initialization values
-    if (createImageBitmapSupport.options) {
+    if (createImageBitmapSupport.options === true) {
       workerCode = workerCode.replace(
         'var supportsOptionsCreateImageBitmap = false;',
         'var supportsOptionsCreateImageBitmap = true;',
       );
     }
 
-    if (createImageBitmapSupport.full) {
+    if (createImageBitmapSupport.full === true) {
+      workerCode = workerCode.replace(
+        'var supportsOptionsCreateImageBitmap = false;',
+        'var supportsOptionsCreateImageBitmap = true;',
+      );
+
       workerCode = workerCode.replace(
         'var supportsFullCreateImageBitmap = false;',
         'var supportsFullCreateImageBitmap = true;',
