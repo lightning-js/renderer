@@ -17,12 +17,13 @@
  * limitations under the License.
  */
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { Default } from '../../shaders/webgl/Default.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderOp } from './WebGlRenderOp.js';
 import type { WebGlRenderer } from './WebGlRenderer.js';
-import type { WebGlShaderNode, WebGlShaderType } from './WebGlShaderNode.js';
+import type { WebGlShaderType } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -86,7 +87,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         : config.vertex;
 
     if (vertexSource === undefined) {
-      vertexSource = DefaultVertexSource;
+      vertexSource = Default.vertex as string;
     }
 
     const fragmentSource =

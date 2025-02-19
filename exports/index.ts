@@ -55,6 +55,7 @@ export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js'
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
+export * from '../src/core/renderers/CoreShaderNode.js';
 export * from '../src/core/shaders/templates/BorderTemplate.js';
 export * from '../src/core/shaders/templates/HolePunchTemplate.js';
 export * from '../src/core/shaders/templates/RoundedTemplate.js';

@@ -14,6 +14,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+export * from '../src/core/renderers/webgl/WebGlShaderNode.js';
 
 export { Rounded } from '../src/core/shaders/webgl/Rounded.js';
 export { RoundedWithBorder } from '../src/core/shaders/webgl/RoundedWithBorder.js';

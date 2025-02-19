@@ -15,6 +15,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export * from '../src/core/renderers/canvas/CanvasShaderNode.js';
+
 export { Rounded } from '../src/core/shaders/canvas/Rounded.js';
 export { RoundedWithBorder } from '../src/core/shaders/canvas/RoundedWithBorder.js';
 export { RoundedWithBorderAndShadow } from '../src/core/shaders/canvas/RoundedWithBorderAndShadow.js';

@@ -87,7 +87,6 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
     //renderer applies these uniforms automatically
     uniform vec2 u_resolution;
     uniform vec2 u_dimensions;
-    uniform float u_pixelRatio;
     uniform float u_alpha;
     uniform sampler2D u_texture;
 
