@@ -310,7 +310,7 @@ export interface RendererMainSettings {
    * This will affect startup performance as the renderer will need to determine
    * the supported version of the API.
    *
-   * @defaultValue `options`
+   * @defaultValue `full`
    */
   createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
 }
