@@ -320,12 +320,7 @@ export class Stage {
       },
     );
 
-    this.defaultTexture?.on('loaded', () => {
-      console.log('Default texture loaded');
-    });
-
     assertTruthy(this.defaultTexture instanceof ColorTexture);
-
     this.txManager.loadTexture(this.defaultTexture, true);
 
     // Mark the default texture as ALWAYS renderable

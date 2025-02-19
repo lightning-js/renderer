@@ -362,7 +362,6 @@ export class CoreTextureManager extends EventEmitter {
 
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures - they get loaded through their parent
-      console.log('Ignoring subtexture');
       return;
     }
 
@@ -443,7 +442,7 @@ export class CoreTextureManager extends EventEmitter {
   uploadTexture(texture: Texture): void {
     if (
       this.stage.txMemManager.doNotExceedCriticalThreshold === true &&
-      this.stage.txMemManager.criticalCleanupRequested
+      this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
       this.enqueueUploadTexture(texture);
