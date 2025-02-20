@@ -24,7 +24,6 @@ import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const Border: WebGlShaderType<BorderProps> = {
-  name: BorderTemplate.name,
   props: BorderTemplate.props,
   update() {
     this.uniform4fa('u_width', this.props!.width as Vec4);

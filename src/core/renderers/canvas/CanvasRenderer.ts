@@ -33,6 +33,7 @@ import {
 } from './internal/ColorUtils.js';
 import { assertTruthy } from '../../../utils.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
+import type { CoreShaderType } from '../CoreShaderNode.js';
 
 export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -240,6 +241,10 @@ export class CanvasRenderer extends CoreRenderer {
 
   createShaderProgram(shaderConfig) {
     return null;
+  }
+
+  override supportsShaderType(shaderType: Readonly<CanvasShaderType>): boolean {
+    return shaderType.render !== undefined;
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {

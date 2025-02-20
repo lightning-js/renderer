@@ -26,7 +26,6 @@ import {
 import { Rounded } from './Rounded.js';
 
 export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
-  name: RoundedWithBorderTemplate.name,
   props: RoundedWithBorderTemplate.props,
   update(node: CoreNode) {
     this.uniformRGBA('u_border_color', this.props!['border-color']);

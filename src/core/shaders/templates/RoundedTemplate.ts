@@ -48,7 +48,6 @@ export interface RoundedProps {
 }
 
 export const RoundedTemplate: CoreShaderType<RoundedProps> = {
-  name: 'Rounded',
   props: {
     radius: {
       default: [0, 0, 0, 0],

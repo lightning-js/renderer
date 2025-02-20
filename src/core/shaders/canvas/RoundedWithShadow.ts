@@ -32,7 +32,6 @@ export const RoundedWithShadow: CanvasShaderType<
   RoundedWithShadowProps,
   ComputedValues
 > = {
-  name: RoundedWithShadowTemplate.name,
   props: RoundedWithShadowTemplate.props,
   saveAndRestore: true,
   update(node) {

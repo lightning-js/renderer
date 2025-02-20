@@ -29,7 +29,6 @@ export interface ComputedRoundedValues {
 }
 
 export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
-  name: RoundedTemplate.name,
   props: RoundedTemplate.props,
   saveAndRestore: true,
   update(node) {

@@ -35,7 +35,6 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
   RoundedWithBorderAndShadowProps,
   ComputedValues
 > = {
-  name: RoundedWithBorderAndShadowTemplate.name,
   props: RoundedWithBorderAndShadowTemplate.props,
   update(node) {
     const radius = calcFactoredRadiusArray(

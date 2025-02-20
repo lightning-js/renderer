@@ -111,6 +111,5 @@ export function getBorderProps<P extends string>(
 type PlainBorderProps = PrefixedType<BorderProps>;
 
 export const BorderTemplate: CoreShaderType<BorderProps> = {
-  name: 'Border',
   props: getBorderProps() as PlainBorderProps,
 };

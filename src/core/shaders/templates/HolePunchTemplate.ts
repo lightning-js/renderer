@@ -64,7 +64,6 @@ export interface HolePunchProps {
 }
 
 export const HolePunchTemplate: CoreShaderType<HolePunchProps> = {
-  name: 'HolePunch',
   props: {
     x: 0,
     y: 0,

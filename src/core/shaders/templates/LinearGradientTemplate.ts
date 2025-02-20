@@ -40,7 +40,6 @@ export interface LinearGradientProps {
 }
 
 export const LinearGradientTemplate: CoreShaderType<LinearGradientProps> = {
-  name: 'LinearGradient',
   props: {
     colors: {
       default: [0x000000ff, 0xffffffff],

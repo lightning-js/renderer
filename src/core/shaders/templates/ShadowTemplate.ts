@@ -102,6 +102,5 @@ export function getShadowProps<P extends string>(
 type PlainShadowProps = PrefixedType<ShadowProps>;
 
 export const ShadowTemplate: CoreShaderType<ShadowProps> = {
-  name: 'Shadow',
   props: getShadowProps() as PlainShadowProps,
 };

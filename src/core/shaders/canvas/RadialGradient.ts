@@ -34,7 +34,6 @@ export const RadialGradient: CanvasShaderType<
   RadialGradientProps,
   ComputedRadialGradientValues
 > = {
-  name: RadialGradientTemplate.name,
   props: RadialGradientTemplate.props,
   update(node) {
     let scaleX = 1;

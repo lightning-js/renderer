@@ -48,6 +48,7 @@ import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
+import type { CoreShaderType } from '../CoreShaderNode.js';
 
 const WORDS_PER_QUAD = 24;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -205,6 +206,11 @@ export class WebGlRenderer extends CoreRenderer {
       this.stage,
       props,
     );
+  }
+
+  override supportsShaderType(shaderType: Readonly<WebGlShaderType>): boolean {
+    //if shadertype doesnt have a fragment source we cant use it
+    return shaderType.fragment !== undefined;
   }
 
   createCtxTexture(textureSource: Texture): CoreContextTexture {

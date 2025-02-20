@@ -51,7 +51,6 @@ export interface SdfShaderProps {
  * remove it.
  */
 export const Sdf: WebGlShaderType<SdfShaderProps> = {
-  name: 'Sdf',
   props: {
     transform: IDENTITY_MATRIX_3x3,
     scrollY: 0,

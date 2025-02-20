@@ -36,7 +36,6 @@
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const DefaultBatched: WebGlShaderType = {
-  name: 'DefaultBatched',
   supportsIndexedTextures: true,
 
   // override bindTextures(texture: WebGlCoreCtxTexture[]) {

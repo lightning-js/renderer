@@ -25,7 +25,6 @@ import type { WebGlRenderer } from '../../renderers/webgl/WebGlRenderer.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
-  name: LinearGradientTemplate.name,
   props: LinearGradientTemplate.props,
   update() {
     this.uniform1f('u_angle', this.props!.angle - (Math.PI / 180) * 90);

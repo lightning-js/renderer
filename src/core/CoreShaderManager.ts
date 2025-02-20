@@ -18,6 +18,7 @@
  */
 import { deepClone } from '../utils.js';
 import {
+  CoreShaderNode,
   resolveShaderProps,
   type CoreShaderType,
 } from './renderers/CoreShaderNode.js';
@@ -57,7 +58,13 @@ export class CoreShaderManager {
   ): void {
     if (this.shTypes[name as string] !== undefined) {
       console.warn(
-        `ShaderType already exists with the name: ${name}. Breaking of registration.`,
+        `ShaderType already exists with the name: ${name}. Breaking off registration.`,
+      );
+      return;
+    }
+    if (this.stage.renderer.supportsShaderType(shType) === false) {
+      console.warn(
+        `The renderer being used does not support this shader type. Breaking off registration.`,
       );
       return;
     }
@@ -74,12 +81,14 @@ export class CoreShaderManager {
   createShader<Name extends keyof ShaderMap>(
     name: Name,
     props?: Record<string, unknown>,
-  ) {
-    if (!this.stage.renderer) {
-      throw new Error(`Renderer is not been defined`);
-    }
-
+  ): CoreShaderNode | null {
     const shType = this.shTypes[name as string] as ShaderMap[Name];
+    if (shType === undefined) {
+      console.warn(
+        `ShaderType not found falling back on renderer default shader`,
+      );
+      return this.stage.defShaderNode;
+    }
     let shaderKey = name as string;
     if (shType.props !== undefined) {
       /**
@@ -97,7 +106,6 @@ export class CoreShaderManager {
 
     if (this.stage.renderer.mode === 'canvas') {
       return this.stage.renderer.createShaderNode(shaderKey, shType, props);
-      return;
     }
 
     /**

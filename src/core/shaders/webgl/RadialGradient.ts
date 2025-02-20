@@ -26,7 +26,6 @@ import type { WebGlRenderer } from '../../renderers/webgl/WebGlRenderer.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
-  name: RadialGradientTemplate.name,
   props: RadialGradientTemplate.props,
   update(node: CoreNode) {
     this.uniform2f(

@@ -64,7 +64,6 @@ export function resolveShaderProps(
 export interface CoreShaderType<
   Props extends object = Record<string, unknown>,
 > {
-  name: string;
   props?: ShaderProps<Props>;
   /**
    * used for making a cache key to check for reusability

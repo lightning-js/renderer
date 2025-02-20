@@ -26,7 +26,6 @@ import {
 import { Shadow } from './Shadow.js';
 
 export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
-  name: RoundedWithShadowTemplate.name,
   props: RoundedWithShadowTemplate.props,
   update(node: CoreNode) {
     this.uniformRGBA('u_shadow_color', this.props!['shadow-color']!);

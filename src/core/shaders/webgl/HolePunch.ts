@@ -24,7 +24,6 @@ import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const HolePunch: WebGlShaderType<HolePunchProps> = {
-  name: HolePunchTemplate.name,
   props: HolePunchTemplate.props,
   update() {
     this.uniform2f('u_pos', this.props!.x, this.props!.y);

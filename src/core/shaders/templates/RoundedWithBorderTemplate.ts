@@ -31,6 +31,5 @@ const props = Object.assign(
 
 export const RoundedWithBorderTemplate: CoreShaderType<RoundedWithBorderProps> =
   {
-    name: 'RoundedWithBorder',
     props,
   };

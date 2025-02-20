@@ -29,7 +29,6 @@ export interface ComputedShadowValues {
 }
 
 export const Shadow: CanvasShaderType<ShadowProps, ComputedShadowValues> = {
-  name: ShadowTemplate.name,
   props: ShadowTemplate.props,
   update() {
     this.computed.shadowColor = this.toColorString(this.props!['color']);

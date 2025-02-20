@@ -37,7 +37,6 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
  */
 
 export const Default: WebGlShaderType = {
-  name: 'Default',
   vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;

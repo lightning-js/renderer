@@ -33,7 +33,6 @@ export const LinearGradient: CanvasShaderType<
   LinearGradientProps,
   ComputedLinearGradientValues
 > = {
-  name: LinearGradientTemplate.name,
   props: LinearGradientTemplate.props,
   update(node) {
     const angle = this.props!.angle - (Math.PI / 180) * 90;

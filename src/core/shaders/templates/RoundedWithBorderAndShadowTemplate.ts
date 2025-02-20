@@ -34,6 +34,5 @@ const props = Object.assign(
 
 export const RoundedWithBorderAndShadowTemplate: CoreShaderType<RoundedWithBorderAndShadowProps> =
   {
-    name: 'RoundedWithBorderAndShadow',
     props,
   };

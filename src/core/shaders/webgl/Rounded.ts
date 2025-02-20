@@ -30,7 +30,6 @@ import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
  * as defined by the specified corner {@link RoundedProps.radius}
  */
 export const Rounded: WebGlShaderType<RoundedProps> = {
-  name: RoundedTemplate.name,
   props: RoundedTemplate.props,
   update(node: CoreNode) {
     this.uniform4fa(
@@ -41,9 +40,6 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
         node.height,
       ),
     );
-  },
-  getCacheMarkers(props: RoundedProps) {
-    return `radiusArray:${Array.isArray(props.radius)}`;
   },
   vertex: `
   # ifdef GL_FRAGMENT_PRECISION_HIGH

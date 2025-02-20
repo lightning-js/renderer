@@ -32,7 +32,6 @@ export const RoundedWithBorder: CanvasShaderType<
   RoundedWithBorderProps,
   ComputedValues
 > = {
-  name: RoundedWithBorderTemplate.name,
   props: RoundedWithBorderTemplate.props,
   saveAndRestore: true,
   update(node) {

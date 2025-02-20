@@ -48,7 +48,6 @@ export interface RadialGradientProps {
 }
 
 export const RadialGradientTemplate: CoreShaderType<RadialGradientProps> = {
-  name: 'RadialGradient',
   props: {
     colors: {
       default: [0x000000ff, 0xffffffff],

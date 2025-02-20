@@ -32,7 +32,6 @@ export const HolePunch: CanvasShaderType<
   HolePunchProps,
   ComputedHolePunchValues
 > = {
-  name: HolePunchTemplate.name,
   props: HolePunchTemplate.props,
   update() {
     this.computed.radius = calcFactoredRadiusArray(

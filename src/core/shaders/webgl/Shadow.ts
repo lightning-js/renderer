@@ -22,7 +22,6 @@ import {
 } from '../templates/ShadowTemplate.js';
 
 export const Shadow: WebGlShaderType<ShadowProps> = {
-  name: ShadowTemplate.name,
   props: ShadowTemplate.props,
   update() {
     this.uniformRGBA('u_color', this.props!.color);

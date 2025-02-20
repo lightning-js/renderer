@@ -35,7 +35,6 @@ export interface ComputedBorderValues {
 }
 
 export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
-  name: BorderTemplate.name,
   props: BorderTemplate.props,
   update() {
     this.computed.borderColor = formatRgba(parseColorRgba(this.props!.color));
