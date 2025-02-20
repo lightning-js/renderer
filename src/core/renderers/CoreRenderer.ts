@@ -18,21 +18,16 @@
  */
 
 import type { Dimensions } from '../../common/CommonTypes.js';
-import type { BaseShaderController } from '../../main-api/ShaderController.js';
 import type { CoreNode } from '../CoreNode.js';
-import type { CoreShaderManager } from '../CoreShaderManager.js';
-import type {
-  CoreTextureManager,
-  TextureOptions,
-} from '../CoreTextureManager.js';
+import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
-import type { TextureMemoryManager } from '../TextureMemoryManager.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
+import type { CoreShaderProgram } from './CoreShaderProgram.js';
 import type { Texture } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
-import type { CoreShader } from './CoreShader.js';
+import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
 
 export interface QuadOptions {
   width: number;
@@ -44,8 +39,7 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
+  shader: CoreShaderNode | null;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
@@ -55,20 +49,14 @@ export interface QuadOptions {
   tc: number;
   td: number;
   renderCoords?: RenderCoords;
-  rtt?: boolean;
-  parentHasRenderTexture?: boolean;
-  framebufferDimensions?: Dimensions;
+  rtt: boolean;
+  parentHasRenderTexture: boolean;
+  framebufferDimensions: Dimensions;
 }
 
 export interface CoreRendererOptions {
   stage: Stage;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  pixelRatio: number;
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
-  clearColor: number;
-  bufferMemory: number;
   contextSpy: ContextSpy | null;
   forceWebGL2: boolean;
 }
@@ -85,24 +73,29 @@ export abstract class CoreRenderer {
   readonly stage: Stage;
 
   //// Core Managers
-  txManager: CoreTextureManager;
-  txMemManager: TextureMemoryManager;
-  shManager: CoreShaderManager;
   rttNodes: CoreNode[] = [];
 
   constructor(options: CoreRendererOptions) {
     this.options = options;
     this.stage = options.stage;
-    this.txManager = options.txManager;
-    this.txMemManager = options.txMemManager;
-    this.shManager = options.shManager;
   }
 
   abstract reset(): void;
   abstract render(surface?: 'screen' | CoreContextTexture): void;
   abstract addQuad(quad: QuadOptions): void;
   abstract createCtxTexture(textureSource: Texture): CoreContextTexture;
-  abstract getShaderManager(): CoreShaderManager;
+  abstract createShaderProgram(
+    shaderConfig: Readonly<CoreShaderType>,
+    props?: Record<string, unknown>,
+  ): CoreShaderProgram | null;
+  abstract createShaderNode(
+    shaderKey: string,
+    shaderType: Readonly<CoreShaderType>,
+    props?: Record<string, unknown>,
+    program?: CoreShaderProgram,
+  ): CoreShaderNode;
+  abstract supportsShaderType(shaderType: Readonly<CoreShaderType>): boolean;
+  abstract getDefaultShaderNode(): CoreShaderNode | null;
   abstract get renderToTextureActive(): boolean;
   abstract get activeRttNode(): CoreNode | null;
   abstract renderRTTNodes(): void;
@@ -110,6 +103,5 @@ export abstract class CoreRenderer {
   abstract renderToTexture(node: CoreNode): void;
   abstract getBufferInfo(): BufferInfo | null;
   abstract getQuadCount(): number | null;
-  abstract getDefShaderCtr(): BaseShaderController;
   abstract updateClearColor(color: number): void;
 }

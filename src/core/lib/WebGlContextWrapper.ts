@@ -202,9 +202,8 @@ export class WebGlContextWrapper {
    * @param textureUnit
    */
   activeTexture(textureUnit: number) {
-    const { gl } = this;
     if (this.activeTextureUnit !== textureUnit) {
-      gl.activeTexture(textureUnit + gl.TEXTURE0);
+      this.gl.activeTexture(textureUnit + this.gl.TEXTURE0);
       this.activeTextureUnit = textureUnit;
     }
   }
@@ -219,19 +218,16 @@ export class WebGlContextWrapper {
    * @param texture
    */
   bindTexture(texture: WebGLTexture | null) {
-    const { gl, activeTextureUnit, texture2dUnits } = this;
-
-    if (texture2dUnits[activeTextureUnit] === texture) {
+    if (this.texture2dUnits[this.activeTextureUnit] === texture) {
       return;
     }
-    texture2dUnits[activeTextureUnit] = texture;
+    this.texture2dUnits[this.activeTextureUnit] = texture;
 
-    gl.bindTexture(this.gl.TEXTURE_2D, texture);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
   }
 
   private _getActiveTexture(): WebGLTexture | null {
-    const { activeTextureUnit, texture2dUnits } = this;
-    return texture2dUnits[activeTextureUnit]!;
+    return this.texture2dUnits[this.activeTextureUnit]!;
   }
 
   /**
@@ -246,22 +242,20 @@ export class WebGlContextWrapper {
    * @returns
    */
   texParameteri(pname: number, param: number) {
-    const { gl, texture2dParams } = this;
-
     const activeTexture = this._getActiveTexture();
     if (!activeTexture) {
       throw new Error('No active texture');
     }
-    let textureParams = texture2dParams.get(activeTexture);
+    let textureParams = this.texture2dParams.get(activeTexture);
     if (!textureParams) {
       textureParams = {};
-      texture2dParams.set(activeTexture, textureParams);
+      this.texture2dParams.set(activeTexture, textureParams);
     }
     if (textureParams[pname] === param) {
       return;
     }
     textureParams[pname] = param;
-    gl.texParameteri(gl.TEXTURE_2D, pname, param);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, pname, param);
   }
 
   /**
@@ -317,10 +311,9 @@ export class WebGlContextWrapper {
     type?: any,
     pixels?: any,
   ) {
-    const { gl } = this;
     if (format) {
-      gl.texImage2D(
-        gl.TEXTURE_2D,
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
         level,
         internalFormat,
         widthOrFormat,
@@ -331,8 +324,8 @@ export class WebGlContextWrapper {
         pixels,
       );
     } else {
-      gl.texImage2D(
-        gl.TEXTURE_2D,
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
         level,
         internalFormat,
         widthOrFormat,
@@ -358,9 +351,8 @@ export class WebGlContextWrapper {
     border: GLint,
     data?: ArrayBufferView,
   ): void {
-    const { gl } = this;
-    gl.compressedTexImage2D(
-      gl.TEXTURE_2D,
+    this.gl.compressedTexImage2D(
+      this.gl.TEXTURE_2D,
       level,
       internalformat,
       width,
@@ -378,8 +370,7 @@ export class WebGlContextWrapper {
    * @param param
    */
   pixelStorei(pname: GLenum, param: GLint | GLboolean) {
-    const { gl } = this;
-    gl.pixelStorei(pname, param);
+    this.gl.pixelStorei(pname, param);
   }
 
   /**
@@ -391,8 +382,7 @@ export class WebGlContextWrapper {
    * **WebGL Difference**: Bind target is always `gl.TEXTURE_2D`
    */
   generateMipmap() {
-    const { gl } = this;
-    gl.generateMipmap(gl.TEXTURE_2D);
+    this.gl.generateMipmap(this.gl.TEXTURE_2D);
   }
 
   /**
@@ -403,8 +393,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   createTexture() {
-    const { gl } = this;
-    return gl.createTexture();
+    return this.gl.createTexture();
   }
 
   /**
@@ -415,11 +404,10 @@ export class WebGlContextWrapper {
    * @param texture
    */
   deleteTexture(texture: WebGLTexture | null) {
-    const { gl } = this;
     if (texture) {
       this.texture2dParams.delete(texture);
     }
-    gl.deleteTexture(texture);
+    this.gl.deleteTexture(texture);
   }
 
   /**
@@ -438,8 +426,7 @@ export class WebGlContextWrapper {
    * ```
    */
   viewport(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
-    const { gl } = this;
-    gl.viewport(x, y, width, height);
+    this.gl.viewport(x, y, width, height);
   }
 
   /**
@@ -453,8 +440,7 @@ export class WebGlContextWrapper {
    * @param alpha
    */
   clearColor(red: GLclampf, green: GLclampf, blue: GLclampf, alpha: GLclampf) {
-    const { gl } = this;
-    gl.clearColor(red, green, blue, alpha);
+    this.gl.clearColor(red, green, blue, alpha);
   }
 
   /**
@@ -464,14 +450,13 @@ export class WebGlContextWrapper {
    * @param enable
    */
   setScissorTest(enable: boolean) {
-    const { gl, scissorEnabled } = this;
-    if (enable === scissorEnabled) {
+    if (enable === this.scissorEnabled) {
       return;
     }
     if (enable) {
-      gl.enable(gl.SCISSOR_TEST);
+      this.gl.enable(this.gl.SCISSOR_TEST);
     } else {
-      gl.disable(gl.SCISSOR_TEST);
+      this.gl.disable(this.gl.SCISSOR_TEST);
     }
     this.scissorEnabled = enable;
   }
@@ -487,14 +472,13 @@ export class WebGlContextWrapper {
    * @param height
    */
   scissor(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
-    const { gl, scissorX, scissorY, scissorWidth, scissorHeight } = this;
     if (
-      x !== scissorX ||
-      y !== scissorY ||
-      width !== scissorWidth ||
-      height !== scissorHeight
+      x !== this.scissorX ||
+      y !== this.scissorY ||
+      width !== this.scissorWidth ||
+      height !== this.scissorHeight
     ) {
-      gl.scissor(x, y, width, height);
+      this.gl.scissor(x, y, width, height);
       this.scissorX = x;
       this.scissorY = y;
       this.scissorWidth = width;
@@ -511,14 +495,13 @@ export class WebGlContextWrapper {
    * @returns
    */
   setBlend(blend: boolean) {
-    const { gl, blendEnabled } = this;
-    if (blend === blendEnabled) {
+    if (blend === this.blendEnabled) {
       return;
     }
     if (blend) {
-      gl.enable(gl.BLEND);
+      this.gl.enable(this.gl.BLEND);
     } else {
-      gl.disable(gl.BLEND);
+      this.gl.disable(this.gl.BLEND);
     }
     this.blendEnabled = blend;
   }
@@ -532,14 +515,13 @@ export class WebGlContextWrapper {
    * @param dst
    */
   blendFunc(src: GLenum, dst: GLenum) {
-    const { gl, blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha } = this;
     if (
-      src !== blendSrcRgb ||
-      dst !== blendDstRgb ||
-      src !== blendSrcAlpha ||
-      dst !== blendDstAlpha
+      src !== this.blendSrcRgb ||
+      dst !== this.blendDstRgb ||
+      src !== this.blendSrcAlpha ||
+      dst !== this.blendDstAlpha
     ) {
-      gl.blendFunc(src, dst);
+      this.gl.blendFunc(src, dst);
       this.blendSrcRgb = src;
       this.blendDstRgb = dst;
       this.blendSrcAlpha = src;
@@ -555,8 +537,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   createBuffer() {
-    const { gl } = this;
-    return gl.createBuffer();
+    return this.gl.createBuffer();
   }
 
   /**
@@ -566,8 +547,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   createFramebuffer() {
-    const { gl } = this;
-    return gl.createFramebuffer();
+    return this.gl.createFramebuffer();
   }
 
   /**
@@ -578,8 +558,7 @@ export class WebGlContextWrapper {
    * @param framebuffer
    */
   bindFramebuffer(framebuffer: WebGLFramebuffer | null) {
-    const { gl } = this;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
   }
 
   /**
@@ -595,7 +574,7 @@ export class WebGlContextWrapper {
     texture: WebGLTexture | null,
     level: GLint,
   ) {
-    const { gl } = this;
+    const gl = this.gl;
     gl.framebufferTexture2D(
       gl.FRAMEBUFFER,
       attachment,
@@ -614,8 +593,7 @@ export class WebGlContextWrapper {
    * **WebGL Difference**: Clear mask is always `gl.COLOR_BUFFER_BIT`
    */
   clear() {
-    const { gl } = this;
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 
   /**
@@ -636,12 +614,11 @@ export class WebGlContextWrapper {
     data: ArrayBufferView,
     usage: GLenum,
   ) {
-    const { gl, boundArrayBuffer } = this;
-    if (boundArrayBuffer !== buffer) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    if (this.boundArrayBuffer !== buffer) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
       this.boundArrayBuffer = buffer;
     }
-    gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, data, usage);
   }
 
   /**
@@ -661,12 +638,11 @@ export class WebGlContextWrapper {
     data: ArrayBufferView,
     usage: GLenum,
   ) {
-    const { gl, boundElementArrayBuffer } = this;
-    if (boundElementArrayBuffer !== buffer) {
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    if (this.boundElementArrayBuffer !== buffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer);
       this.boundElementArrayBuffer = buffer;
     }
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, usage);
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, data, usage);
   }
 
   /**
@@ -695,12 +671,50 @@ export class WebGlContextWrapper {
     stride: GLsizei,
     offset: GLintptr,
   ) {
-    const { gl, boundArrayBuffer } = this;
-    if (boundArrayBuffer !== buffer) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    if (this.boundArrayBuffer !== buffer) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
       this.boundArrayBuffer = buffer;
     }
-    gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+    this.gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+  }
+
+  /**
+   * Returns object with Attribute names as key and numbers as location values
+   *
+   * @param program
+   * @returns object with numbers
+   */
+  getUniformLocations(program: WebGLProgram): Record<string, number> {
+    const gl = this.gl;
+    const length = gl.getProgramParameter(
+      program,
+      gl.ACTIVE_UNIFORMS,
+    ) as number;
+    const result = {} as Record<string, number>;
+    for (let i = 0; i < length; i++) {
+      const { name } = gl.getActiveUniform(program, i) as WebGLActiveInfo;
+      result[name] = i;
+    }
+    return result;
+  }
+
+  /**
+   * Returns object with Attribute names as key and numbers as location values
+   * @param program
+   * @returns object with numbers
+   */
+  getAttributeLocations(program: WebGLProgram): Record<string, number> {
+    const gl = this.gl;
+    const length = gl.getProgramParameter(
+      program,
+      gl.ACTIVE_ATTRIBUTES,
+    ) as number;
+    const result = {} as Record<string, number>;
+    for (let i = 0; i < length; i++) {
+      const { name } = gl.getActiveAttrib(program, i) as WebGLActiveInfo;
+      result[name] = i;
+    }
+    return result;
   }
 
   /**
@@ -712,11 +726,10 @@ export class WebGlContextWrapper {
    * @returns
    */
   useProgram(program: WebGLProgram | null) {
-    const { gl, curProgram } = this;
-    if (curProgram === program) {
+    if (this.curProgram === program) {
       return;
     }
-    gl.useProgram(program);
+    this.gl.useProgram(program);
     this.curProgram = program;
   }
 
@@ -726,9 +739,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param v0 - The value to set.
    */
-  uniform1f(location: WebGLUniformLocation | null, v0: number) {
-    const { gl } = this;
-    gl.uniform1f(location, v0);
+  uniform1f(location: string, v0: number) {
+    this.gl.uniform1f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+    );
   }
 
   /**
@@ -737,12 +752,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  uniform1fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform1fv(location, value);
+  uniform1fv(location: string, value: Float32Array) {
+    this.gl.uniform1fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -751,9 +765,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param v0 - The value to set.
    */
-  uniform1i(location: WebGLUniformLocation | null, v0: number) {
-    const { gl } = this;
-    gl.uniform1i(location, v0);
+  uniform1i(location: string, v0: number) {
+    this.gl.uniform1i(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+    );
   }
 
   /**
@@ -762,12 +778,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of values to set.
    */
-  uniform1iv(
-    location: WebGLUniformLocation | null,
-    value: Int32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform1iv(location, value);
+  uniform1iv(location: string, value: Int32Array) {
+    this.gl.uniform1iv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -777,9 +792,12 @@ export class WebGlContextWrapper {
    * @param v0 - The first component of the vector.
    * @param v1 - The second component of the vector.
    */
-  uniform2f(location: WebGLUniformLocation | null, v0: number, v1: number) {
-    const { gl } = this;
-    gl.uniform2f(location, v0, v1);
+  uniform2f(location: string, v0: number, v1: number) {
+    this.gl.uniform2f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+    );
   }
 
   /**
@@ -788,12 +806,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec2 values to set.
    */
-  uniform2fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform2fv(location, value);
+  uniform2fv(location: string, value: Float32Array) {
+    this.gl.uniform2fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -803,9 +820,12 @@ export class WebGlContextWrapper {
    * @param v0 - The first component of the vector.
    * @param v1 - The second component of the vector.
    */
-  uniform2i(location: WebGLUniformLocation | null, v0: number, v1: number) {
-    const { gl } = this;
-    gl.uniform2i(location, v0, v1);
+  uniform2i(location: string, v0: number, v1: number) {
+    this.gl.uniform2i(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+    );
   }
 
   /**
@@ -814,12 +834,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec2 values to set.
    */
-  uniform2iv(
-    location: WebGLUniformLocation | null,
-    value: Int32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform2iv(location, value);
+  uniform2iv(location: string, value: Int32Array) {
+    this.gl.uniform2iv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -830,14 +849,13 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    * @param v2 - The third component of the vector.
    */
-  uniform3f(
-    location: WebGLUniformLocation | null,
-    v0: number,
-    v1: number,
-    v2: number,
-  ) {
-    const { gl } = this;
-    gl.uniform3f(location, v0, v1, v2);
+  uniform3f(location: string, v0: number, v1: number, v2: number) {
+    this.gl.uniform3f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+      v2,
+    );
   }
 
   /**
@@ -846,12 +864,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec3 values to set.
    */
-  uniform3fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform3fv(location, value);
+  uniform3fv(location: string, value: Float32Array) {
+    this.gl.uniform3fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -862,14 +879,13 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    * @param v2 - The third component of the vector.
    */
-  uniform3i(
-    location: WebGLUniformLocation | null,
-    v0: number,
-    v1: number,
-    v2: number,
-  ) {
-    const { gl } = this;
-    gl.uniform3i(location, v0, v1, v2);
+  uniform3i(location: string, v0: number, v1: number, v2: number) {
+    this.gl.uniform3i(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+      v2,
+    );
   }
 
   /**
@@ -878,12 +894,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec3 values to set.
    */
-  uniform3iv(
-    location: WebGLUniformLocation | null,
-    value: Int32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform3iv(location, value);
+  uniform3iv(location: string, value: Int32Array) {
+    this.gl.uniform3iv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -895,15 +910,14 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    * @param v3 - The fourth component of the vector.
    */
-  uniform4f(
-    location: WebGLUniformLocation | null,
-    v0: number,
-    v1: number,
-    v2: number,
-    v3: number,
-  ) {
-    const { gl } = this;
-    gl.uniform4f(location, v0, v1, v2, v3);
+  uniform4f(location: string, v0: number, v1: number, v2: number, v3: number) {
+    this.gl.uniform4f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+      v2,
+      v3,
+    );
   }
 
   /**
@@ -912,12 +926,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of vec4 values to set.
    */
-  uniform4fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform4fv(location, value);
+  uniform4fv(location: string, value: Float32Array) {
+    this.gl.uniform4fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -929,15 +942,14 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    * @param v3 - The fourth component of the vector.
    */
-  uniform4i(
-    location: WebGLUniformLocation | null,
-    v0: number,
-    v1: number,
-    v2: number,
-    v3: number,
-  ) {
-    const { gl } = this;
-    gl.uniform4i(location, v0, v1, v2, v3);
+  uniform4i(location: string, v0: number, v1: number, v2: number, v3: number) {
+    this.gl.uniform4i(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      v0,
+      v1,
+      v2,
+      v3,
+    );
   }
 
   /**
@@ -946,12 +958,11 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of ivec4 values to set.
    */
-  uniform4iv(
-    location: WebGLUniformLocation | null,
-    value: Int32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniform4iv(location, value);
+  uniform4iv(location: string, value: Int32Array) {
+    this.gl.uniform4iv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value,
+    );
   }
 
   /**
@@ -961,12 +972,12 @@ export class WebGlContextWrapper {
    * @param transpose - Whether to transpose the matrix.
    * @param value - The array of mat2 values to set.
    */
-  uniformMatrix2fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniformMatrix2fv(location, false, value);
+  uniformMatrix2fv(location: string, value: Float32Array) {
+    this.gl.uniformMatrix2fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      false,
+      value,
+    );
   }
 
   /**
@@ -974,12 +985,12 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of mat2 values to set.
    */
-  uniformMatrix3fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniformMatrix3fv(location, false, value);
+  uniformMatrix3fv(location: string, value: Float32Array) {
+    this.gl.uniformMatrix3fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      false,
+      value,
+    );
   }
 
   /**
@@ -987,12 +998,12 @@ export class WebGlContextWrapper {
    * @param location - The location of the uniform variable.
    * @param value - The array of mat4 values to set.
    */
-  uniformMatrix4fv(
-    location: WebGLUniformLocation | null,
-    value: Float32Array | number[],
-  ) {
-    const { gl } = this;
-    gl.uniformMatrix4fv(location, false, value);
+  uniformMatrix4fv(location: string, value: Float32Array) {
+    this.gl.uniformMatrix4fv(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      false,
+      value,
+    );
   }
 
   /**
@@ -1004,8 +1015,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getParameter(pname: GLenum): any {
-    const { gl } = this;
-    return gl.getParameter(pname);
+    return this.gl.getParameter(pname);
   }
 
   /**
@@ -1019,8 +1029,7 @@ export class WebGlContextWrapper {
    * @param offset
    */
   drawElements(mode: GLenum, count: GLsizei, type: GLenum, offset: GLintptr) {
-    const { gl } = this;
-    gl.drawElements(mode, count, type, offset);
+    this.gl.drawElements(mode, count, type, offset);
   }
 
   /**
@@ -1032,8 +1041,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getExtension(name: string) {
-    const { gl } = this;
-    return gl.getExtension(name);
+    return this.gl.getExtension(name);
   }
 
   /**
@@ -1044,8 +1052,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getError() {
-    const { gl } = this;
-    return gl.getError();
+    return this.gl.getError();
   }
 
   /**
@@ -1056,9 +1063,10 @@ export class WebGlContextWrapper {
    * @returns
    */
   createVertexArray() {
-    const { gl } = this;
-    assertTruthy(gl instanceof WebGL2RenderingContext);
-    return gl.createVertexArray();
+    if (this.gl instanceof WebGL2RenderingContext) {
+      return this.gl.createVertexArray();
+    }
+    return undefined;
   }
 
   /**
@@ -1069,9 +1077,9 @@ export class WebGlContextWrapper {
    * @param vertexArray
    */
   bindVertexArray(vertexArray: WebGLVertexArrayObject | null) {
-    const { gl } = this;
-    assertTruthy(gl instanceof WebGL2RenderingContext);
-    gl.bindVertexArray(vertexArray);
+    if (this.gl instanceof WebGL2RenderingContext) {
+      this.gl.bindVertexArray(vertexArray);
+    }
   }
 
   /**
@@ -1084,8 +1092,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getAttribLocation(program: WebGLProgram, name: string) {
-    const { gl } = this;
-    return gl.getAttribLocation(program, name);
+    return this.gl.getAttribLocation(program, name);
   }
 
   /**
@@ -1098,8 +1105,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getUniformLocation(program: WebGLProgram, name: string) {
-    const { gl } = this;
-    return gl.getUniformLocation(program, name);
+    return this.gl.getUniformLocation(program, name);
   }
 
   /**
@@ -1110,8 +1116,7 @@ export class WebGlContextWrapper {
    * @param index
    */
   enableVertexAttribArray(index: number) {
-    const { gl } = this;
-    gl.enableVertexAttribArray(index);
+    this.gl.enableVertexAttribArray(index);
   }
 
   /**
@@ -1122,8 +1127,7 @@ export class WebGlContextWrapper {
    * @param index
    */
   disableVertexAttribArray(index: number) {
-    const { gl } = this;
-    gl.disableVertexAttribArray(index);
+    this.gl.disableVertexAttribArray(index);
   }
 
   /**
@@ -1135,8 +1139,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   createShader(type: number) {
-    const { gl } = this;
-    return gl.createShader(type);
+    return this.gl.createShader(type);
   }
 
   /**
@@ -1148,8 +1151,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   compileShader(shader: WebGLShader) {
-    const { gl } = this;
-    gl.compileShader(shader);
+    this.gl.compileShader(shader);
   }
 
   /**
@@ -1161,8 +1163,7 @@ export class WebGlContextWrapper {
    * @param shader
    */
   attachShader(program: WebGLProgram, shader: WebGLShader) {
-    const { gl } = this;
-    gl.attachShader(program, shader);
+    this.gl.attachShader(program, shader);
   }
 
   /**
@@ -1173,8 +1174,7 @@ export class WebGlContextWrapper {
    * @param program
    */
   linkProgram(program: WebGLProgram) {
-    const { gl } = this;
-    gl.linkProgram(program);
+    this.gl.linkProgram(program);
   }
 
   /**
@@ -1185,8 +1185,7 @@ export class WebGlContextWrapper {
    * @param shader
    */
   deleteProgram(shader: WebGLProgram) {
-    const { gl } = this;
-    gl.deleteProgram(shader);
+    this.gl.deleteProgram(shader);
   }
 
   /**
@@ -1198,8 +1197,7 @@ export class WebGlContextWrapper {
    * @param pname
    */
   getShaderParameter(shader: WebGLShader, pname: GLenum) {
-    const { gl } = this;
-    return gl.getShaderParameter(shader, pname);
+    return this.gl.getShaderParameter(shader, pname);
   }
 
   /**
@@ -1210,8 +1208,7 @@ export class WebGlContextWrapper {
    * @param shader
    */
   getShaderInfoLog(shader: WebGLShader) {
-    const { gl } = this;
-    return gl.getShaderInfoLog(shader);
+    return this.gl.getShaderInfoLog(shader);
   }
 
   /**
@@ -1222,8 +1219,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   createProgram() {
-    const { gl } = this;
-    return gl.createProgram();
+    return this.gl.createProgram();
   }
 
   /**
@@ -1236,8 +1232,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getProgramParameter(program: WebGLProgram, pname: GLenum) {
-    const { gl } = this;
-    return gl.getProgramParameter(program, pname);
+    return this.gl.getProgramParameter(program, pname);
   }
 
   /**
@@ -1249,8 +1244,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getProgramInfoLog(program: WebGLProgram) {
-    const { gl } = this;
-    return gl.getProgramInfoLog(program);
+    return this.gl.getProgramInfoLog(program);
   }
 
   /**
@@ -1262,8 +1256,7 @@ export class WebGlContextWrapper {
    * @param source
    */
   shaderSource(shader: WebGLShader, source: string) {
-    const { gl } = this;
-    gl.shaderSource(shader, source);
+    this.gl.shaderSource(shader, source);
   }
 
   /**
@@ -1274,8 +1267,7 @@ export class WebGlContextWrapper {
    * @param shader
    */
   deleteShader(shader: WebGLShader) {
-    const { gl } = this;
-    gl.deleteShader(shader);
+    this.gl.deleteShader(shader);
   }
 }
 

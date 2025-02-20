@@ -57,7 +57,7 @@ export const loadCompressedTexture = async (
 const loadKTXData = async (buffer: ArrayBuffer): Promise<TextureData> => {
   const view = new DataView(buffer);
   const littleEndian = view.getUint32(12) === 16909060 ? true : false;
-  const mipmaps = [];
+  const mipmaps: ArrayBuffer[] = [];
 
   const data = {
     glInternalFormat: view.getUint32(28, littleEndian),
@@ -111,10 +111,10 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
   const header = new Int32Array(arrayBuffer, 0, pvrHeaderLength);
 
   // @ts-expect-error Object possibly undefined
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+
   const dataOffset = header[pvrMetadata] + 52;
   const pvrtcData = new Uint8Array(arrayBuffer, dataOffset);
-  const mipmaps = [];
+  const mipmaps: Uint8Array[] = [];
   const data = {
     pixelWidth: header[pvrWidth],
     pixelHeight: header[pvrHeight],

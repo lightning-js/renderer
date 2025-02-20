@@ -44,7 +44,7 @@ import type {
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+
 export interface TextRendererMap {}
 
 export interface TextRendererState {
@@ -546,12 +546,5 @@ export abstract class TextRenderer<
 
   abstract updateState(state: StateT): void;
 
-  renderQuads?(
-    state: StateT,
-    transform: Matrix3d,
-    clippingRect: RectWithValid,
-    alpha: number,
-    parentHasRenderTexture: boolean,
-    framebufferDimensions: Dimensions | undefined,
-  ): void;
+  renderQuads?(node: CoreTextNode): void;
 }

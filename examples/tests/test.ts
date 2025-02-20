@@ -31,8 +31,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     width: 100,
     height: 100,
     color: 0xff0000ff,
-    shader: renderer.createShader('RoundedRectangle', {
-      radius: 50,
+    shader: renderer.createShader('Rounded', {
+      radius: 10,
     }),
     parent: testRoot,
   });
@@ -174,16 +174,14 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       height: renderer.settings.appHeight,
       cacheId: Math.floor(Math.random() * 100000),
     });
-    shaft.textureOptions.preload = true;
   }, 1000);
 
   // setTimeout required for ThreadX right now because the emit() that sends
   // the animation to the renderer worker doesn't work until the Node is fully
   // shared to the worker.
   let rockoAnimation: IAnimationController | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+
   setTimeout(async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       // force behind elevator
       rockoRect.zIndex = 1;
@@ -240,9 +238,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   let elevatorAnimation: IAnimationController | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   setTimeout(async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       elevatorNumber.text = 'Dn';
       elevatorRect.color = 0x0000ffff;

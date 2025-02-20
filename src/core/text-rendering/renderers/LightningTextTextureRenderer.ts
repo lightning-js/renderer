@@ -137,6 +137,13 @@ export interface RenderInfo {
   metrics: NormalizedFontMetrics;
 }
 
+export interface LineType {
+  text: string;
+  x: number;
+  y: number;
+  w: number;
+}
+
 /**
  * Calculate height for the canvas
  *
@@ -199,10 +206,10 @@ export class LightningTextTextureRenderer {
   _getFontSetting() {
     const ff = [this._settings.fontFamily];
 
-    const ffs = [];
+    const ffs: string[] = [];
     for (let i = 0, n = ff.length; i < n; i++) {
       if (ff[i] === 'serif' || ff[i] === 'sans-serif') {
-        ffs.push(ff[i]);
+        ffs.push(ff[i]!);
       } else {
         ffs.push(`"${ff[i]!}"`);
       }
@@ -339,7 +346,7 @@ export class LightningTextTextureRenderer {
     if (calcMaxLines && lines.length > calcMaxLines) {
       const usedLines = lines.slice(0, calcMaxLines);
 
-      let otherLines = null;
+      let otherLines: string[] | null = null;
       if (this._settings.overflowSuffix) {
         // Wrap again with max lines suffix enabled.
         const w = this._settings.overflowSuffix
@@ -354,7 +361,7 @@ export class LightningTextTextureRenderer {
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
           this._settings.overflowSuffix
         }`;
-        otherLines = [al.l.length > 1 ? al.l[1] : ''];
+        otherLines = [al.l.length > 1 ? al.l[1]! : ''];
       } else {
         otherLines = [''];
       }
@@ -515,7 +522,7 @@ export class LightningTextTextureRenderer {
     let linePositionX;
     let linePositionY;
 
-    const drawLines = [];
+    const drawLines: LineType[] = [];
 
     const { metrics } = renderInfo;
 
