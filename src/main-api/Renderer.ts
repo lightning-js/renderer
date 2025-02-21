@@ -294,7 +294,10 @@ export interface RendererMainSettings {
  * Partial Renderer Main Settings for updating settings
  */
 export type PartialRendererMainSettings = Partial<
-  Pick<RendererMainSettings, 'clearColor' | 'fpsUpdateInterval'>
+  Pick<
+    RendererMainSettings,
+    'boundsMargin' | 'clearColor' | 'fpsUpdateInterval'
+  >
 >;
 
 /**
@@ -725,16 +728,29 @@ export class RendererMain extends EventEmitter {
     this.stage.setClearColor(color);
   }
 
+  /**
+   * Set options for the renderer
+   *
+   * @param options
+   */
   setOptions(options: Partial<PartialRendererMainSettings>) {
     const allowedOptions: Partial<RendererMainSettings> = {};
     const allowedKeys: (keyof PartialRendererMainSettings)[] = [
+      'boundsMargin',
       'clearColor',
       'fpsUpdateInterval',
     ]; // List of allowed settings
 
     for (const key of allowedKeys) {
       if (options[key] !== undefined) {
-        allowedOptions[key] = options[key];
+        let value = options[key];
+        if (key === 'boundsMargin') {
+          value = Array.isArray(options[key])
+            ? options[key]
+            : [options[key], options[key], options[key], options[key]];
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+        allowedOptions[key] = value as any;
       }
     }
 

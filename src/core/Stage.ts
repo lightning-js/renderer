@@ -432,20 +432,6 @@ export class Stage {
     this.frameEventQueue = [];
   }
 
-  setOptions(options: Partial<RendererMainSettings>) {
-    console.log('setOptions', options);
-    const updatedSettings = {
-      ...this.options,
-      ...options,
-    } as Readonly<Required<RendererMainSettings>>;
-    (this as { options: Readonly<Required<RendererMainSettings>> }).options =
-      updatedSettings;
-
-    if (options.clearColor !== undefined) {
-      this.setClearColor(options.clearColor);
-    }
-  }
-
   calculateFps() {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
@@ -733,5 +719,23 @@ export class Stage {
    */
   cleanup() {
     this.txMemManager.cleanup();
+  }
+
+  /**
+   * Set the options for the Stage
+   *
+   * @param options
+   */
+  setOptions(options: Partial<RendererMainSettings>) {
+    const updatedSettings = {
+      ...this.options,
+      ...options,
+    } as Readonly<Required<RendererMainSettings>>;
+    (this as { options: Readonly<Required<RendererMainSettings>> }).options =
+      updatedSettings;
+
+    if (options.clearColor !== undefined) {
+      this.setClearColor(options.clearColor);
+    }
   }
 }
