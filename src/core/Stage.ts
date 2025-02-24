@@ -748,5 +748,9 @@ export class Stage {
     if (options.clearColor !== undefined) {
       this.setClearColor(options.clearColor);
     }
+
+    if (options.boundsMargin !== undefined) {
+      this.setBoundsMargin(options.boundsMargin);
+    }
   }
 }
