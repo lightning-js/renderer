@@ -117,11 +117,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const rowNode = renderer.createNode({
       x: 0,
       y: y,
-      width: containerNode.width,
+      width: (nodeWidth + gap) * amount,
       height: nodeHeight,
       parent: containerNode,
       // color: 0x000000ff,
-      // rtt: true
+      rtt: true,
     });
 
     for (let i = 0; i < amount; i++) {

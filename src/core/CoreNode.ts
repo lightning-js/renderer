@@ -731,7 +731,9 @@ export class CoreNode extends EventEmitter {
   public globalTransform?: Matrix3d;
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
+  public sceneGlobalTransform?: Matrix3d;
   public renderCoords?: RenderCoords;
+  public sceneRenderCoords?: RenderCoords;
   public renderBound?: Bound;
   public strictBound?: Bound;
   public preloadBound?: Bound;
@@ -1051,16 +1053,38 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.Global) {
       assertTruthy(this.localTransform);
 
-      this.globalTransform = Matrix3d.copy(
-        parent?.globalTransform || this.localTransform,
-        this.globalTransform,
-      );
-
-      if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+      if (this.parentHasRenderTexture === true && parent?.rtt === true) {
+        // we are at the start of the RTT chain, so we need to reset the globalTransform
+        // for correct RTT rendering
         this.globalTransform = Matrix3d.identity();
+
+        // Maintain a full scene global transform for bounds detection
+        this.sceneGlobalTransform = Matrix3d.copy(
+          parent?.globalTransform || Matrix3d.identity(),
+        ).multiply(this.localTransform);
+      } else if (
+        this.parentHasRenderTexture === true &&
+        parent?.rtt === false
+      ) {
+        // we're part of an RTT chain but our parent is not the main RTT node
+        // so we need to propogate the sceneGlobalTransform of the parent
+        // to maintain a full scene global transform for bounds detection
+        this.sceneGlobalTransform = Matrix3d.copy(
+          parent?.sceneGlobalTransform || this.localTransform,
+        ).multiply(this.localTransform);
+
+        this.globalTransform = Matrix3d.copy(
+          parent?.globalTransform || this.localTransform,
+          this.globalTransform,
+        );
+      } else {
+        this.globalTransform = Matrix3d.copy(
+          parent?.globalTransform || this.localTransform,
+          this.globalTransform,
+        );
       }
 
-      if (parent) {
+      if (parent !== null) {
         this.globalTransform.multiply(this.localTransform);
       }
 
@@ -1286,11 +1310,6 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.strictBound);
     assertTruthy(this.preloadBound);
 
-    // if we are part of a parent render texture, we're always in bounds
-    if (this.parentHasRenderTexture === true) {
-      return this.getRTTParentRenderState() || CoreNodeRenderState.OutOfBounds;
-    }
-
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
@@ -1316,7 +1335,9 @@ export class CoreNode extends EventEmitter {
   }
 
   updateBoundingRect() {
-    const { renderCoords, globalTransform: transform } = this;
+    const transform = this.sceneGlobalTransform || this.globalTransform;
+    const renderCoords = this.sceneRenderCoords || this.renderCoords;
+
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
@@ -1377,7 +1398,10 @@ export class CoreNode extends EventEmitter {
 
     // clipping is enabled and we are in bounds create our own bounds
     const { x, y, width, height } = this.props;
-    const { tx, ty } = this.globalTransform || {};
+
+    // Pick the global transform if available, otherwise use the local transform
+    // global transform is only available if the node in an RTT chain
+    const { tx, ty } = this.sceneGlobalTransform || this.globalTransform || {};
     const _x = tx ?? x;
     const _y = ty ?? y;
     this.strictBound = createBound(
@@ -1507,13 +1531,19 @@ export class CoreNode extends EventEmitter {
   }
 
   calculateRenderCoords() {
-    const { width, height, globalTransform: transform } = this;
-    assertTruthy(transform);
-    const { tx, ty, ta, tb, tc, td } = transform;
+    const {
+      width,
+      height,
+      globalTransform: gt,
+      sceneGlobalTransform: sgt,
+    } = this;
+    assertTruthy(gt);
+
+    // Regular renderCoords for RTT-local rendering
+    const { tx, ty, ta, tb, tc, td } = gt;
     if (tb === 0 && tc === 0) {
       const minX = tx;
       const maxX = tx + width * ta;
-
       const minY = ty;
       const maxY = ty + height * td;
       this.renderCoords = RenderCoords.translate(
@@ -1547,6 +1577,41 @@ export class CoreNode extends EventEmitter {
         ty + height * td,
         this.renderCoords,
       );
+    }
+
+    // Now calculate scene-level render coordinates for bounds detection
+    // This is only done if the node is part of an RTT chain
+    if (sgt !== undefined) {
+      const { tx: sTx, ty: sTy, ta: sTa, tb: sTb, tc: sTc, td: sTd } = sgt;
+      if (sTb === 0 && sTc === 0) {
+        const sMinX = sTx;
+        const sMaxX = sTx + width * sTa;
+        const sMinY = sTy;
+        const sMaxY = sTy + height * sTd;
+        this.sceneRenderCoords = RenderCoords.translate(
+          sMinX,
+          sMinY,
+          sMaxX,
+          sMinY,
+          sMaxX,
+          sMaxY,
+          sMinX,
+          sMaxY,
+          this.sceneRenderCoords,
+        );
+      } else {
+        this.sceneRenderCoords = RenderCoords.translate(
+          sTx,
+          sTy,
+          sTx + width * sTa,
+          sTy + width * sTc,
+          sTx + width * sTa + height * sTb,
+          sTy + width * sTc + height * sTd,
+          sTx + height * sTb,
+          sTy + height * sTd,
+          this.sceneRenderCoords,
+        );
+      }
     }
   }
 
