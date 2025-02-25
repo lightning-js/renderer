@@ -396,6 +396,11 @@ export class Inspector {
     //   return;
     // }
 
+    if (property === 'rtt' && value) {
+      div.setAttribute('data-rtt', String(value));
+      return;
+    }
+
     // CSS mappable attribute
     if (stylePropertyMap[property]) {
       const mappedStyleResponse = stylePropertyMap[property]?.(value);

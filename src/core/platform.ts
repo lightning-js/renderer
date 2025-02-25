@@ -34,12 +34,14 @@ export const startLoop = (stage: Stage) => {
       setTimeout(runLoop, 16.666666666666668);
 
       if (!isIdle) {
-        if (stage.txMemManager.checkCleanup()) {
-          stage.txMemManager.cleanup();
-        }
         stage.eventBus.emit('idle');
         isIdle = true;
       }
+
+      if (stage.txMemManager.checkCleanup() === true) {
+        stage.txMemManager.cleanup(false);
+      }
+
       stage.flushFrameEvents();
       return;
     }

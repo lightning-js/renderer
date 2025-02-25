@@ -23,7 +23,10 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 export function customSettings(): Partial<RendererMainSettings> {
   return {
     textureMemory: {
-      cleanupInterval: 5000,
+      targetThresholdLevel: 0.5,
+      cleanupInterval: 1000,
+      criticalThreshold: 95e6,
+      doNotExceedCriticalThreshold: true,
       debugLogging: true,
     },
   };
@@ -48,7 +51,7 @@ function randomColor() {
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   const nodeSize = 128; // Each node will be 128x128 pixels
-  const memoryThreshold = 130 * 1024 * 1024; // 130 MB
+  const memoryThreshold = 70 * 1024 * 1024; // 130 MB
   const textureSize = nodeSize * nodeSize * 4 * 1.1; // RGBA bytes per pixel
   const memoryBaseline = 25e6; // 25 MB
   const maxNodes = Math.ceil((memoryThreshold - memoryBaseline) / textureSize);
@@ -137,7 +140,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         width: nodeWidth,
         height: nodeHeight,
         parent: rowNode,
-        rtt: true,
+        rtt: false,
       });
 
       const imageNode = renderer.createNode({

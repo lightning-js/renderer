@@ -170,29 +170,15 @@ export class ImageTexture extends Texture {
     const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
     const imageBitmapSupported = this.txManager.imageBitmapSupported;
 
-    if (
-      imageBitmapSupported.full === true &&
-      sx !== null &&
-      sy !== null &&
-      sw !== null &&
-      sh !== null
-    ) {
+    if (imageBitmapSupported.full === true && sw !== null && sh !== null) {
       // createImageBitmap with crop
-      const bitmap = await createImageBitmap(blob, sx, sy, sw, sh, {
+      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else if (imageBitmapSupported.options === true) {
-      // createImageBitmap without crop but with options
-      const bitmap = await createImageBitmap(blob, {
-        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      });
-      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else {
+    } else if (imageBitmapSupported.basic === true) {
       // basic createImageBitmap without options or crop
       // this is supported for Chrome v50 to v52/54 that doesn't support options
       return {
@@ -200,6 +186,14 @@ export class ImageTexture extends Texture {
         premultiplyAlpha: hasAlphaChannel,
       };
     }
+
+    // default createImageBitmap without crop but with options
+    const bitmap = await createImageBitmap(blob, {
+      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+      colorSpaceConversion: 'none',
+      imageOrientation: 'none',
+    });
+    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
   }
 
   async loadImage(src: string) {
