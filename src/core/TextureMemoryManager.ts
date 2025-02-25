@@ -258,9 +258,9 @@ export class TextureMemoryManager {
       this.orphanedTextures.length > 0 &&
       (critical || getTimeStamp() - timestamp < 10)
     ) {
-      const texture = this.orphanedTextures.shift()!;
+      const texture = this.orphanedTextures.shift();
 
-      if (!texture) {
+      if (texture === undefined) {
         continue;
       }
 
@@ -284,7 +284,7 @@ export class TextureMemoryManager {
     const textures = [...this.loadedTextures.keys()];
     for (let i = 0; i < textures.length; i++) {
       const texture = textures[i];
-      if (!texture) {
+      if (texture === undefined) {
         continue;
       }
 
@@ -302,8 +302,8 @@ export class TextureMemoryManager {
     }
 
     while (this.memUsed >= memTarget && filteredAndSortedTextures.length > 0) {
-      const texture = filteredAndSortedTextures.shift()!;
-      if (!texture) {
+      const texture = filteredAndSortedTextures.shift();
+      if (texture === undefined) {
         continue;
       }
 
@@ -333,7 +333,7 @@ export class TextureMemoryManager {
       });
     }
 
-    if (this.debugLogging) {
+    if (this.debugLogging === true) {
       console.log(
         `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}. Aggressive: ${aggressive}`,
       );
@@ -372,18 +372,15 @@ export class TextureMemoryManager {
    */
   getMemoryInfo(): MemoryInfo {
     let renderableTexturesLoaded = 0;
-    let renderableMemUsed = [...this.loadedTextures.keys()].reduce(
+    const renderableMemUsed = [...this.loadedTextures.keys()].reduce(
       (acc, texture) => {
         renderableTexturesLoaded += texture.renderable ? 1 : 0;
         return (
           acc + (texture.renderable ? this.loadedTextures.get(texture)! : 0)
         );
       },
-      0,
+      this.baselineMemoryAllocation,
     );
-
-    // add baseline to renderableMemUsed
-    renderableMemUsed += this.baselineMemoryAllocation;
 
     return {
       criticalThreshold: this.criticalThreshold,
