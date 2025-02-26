@@ -1073,6 +1073,11 @@ export class CoreNode extends EventEmitter {
           parent?.sceneGlobalTransform || this.localTransform,
         ).multiply(this.localTransform);
 
+        this.sceneRenderCoords = this.calculateRenderCoords(
+          this.sceneGlobalTransform,
+          this.sceneRenderCoords,
+        );
+
         this.globalTransform = Matrix3d.copy(
           parent?.globalTransform || this.localTransform,
           this.globalTransform,
@@ -1088,7 +1093,10 @@ export class CoreNode extends EventEmitter {
         this.globalTransform.multiply(this.localTransform);
       }
 
-      this.calculateRenderCoords();
+      this.renderCoords = this.calculateRenderCoords(
+        this.globalTransform,
+        this.renderCoords,
+      );
       this.updateBoundingRect();
 
       this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
@@ -1530,23 +1538,15 @@ export class CoreNode extends EventEmitter {
     return this.props.shader !== null;
   }
 
-  calculateRenderCoords() {
-    const {
-      width,
-      height,
-      globalTransform: gt,
-      sceneGlobalTransform: sgt,
-    } = this;
-    assertTruthy(gt);
-
-    // Regular renderCoords for RTT-local rendering
-    const { tx, ty, ta, tb, tc, td } = gt;
+  calculateRenderCoords(transform: Matrix3d, renderCoords?: RenderCoords) {
+    const { width, height } = this;
+    const { tx, ty, ta, tb, tc, td } = transform;
     if (tb === 0 && tc === 0) {
       const minX = tx;
       const maxX = tx + width * ta;
       const minY = ty;
       const maxY = ty + height * td;
-      this.renderCoords = RenderCoords.translate(
+      return RenderCoords.translate(
         //top-left
         minX,
         minY,
@@ -1559,60 +1559,24 @@ export class CoreNode extends EventEmitter {
         //bottom-left
         minX,
         maxY,
-        this.renderCoords,
-      );
-    } else {
-      this.renderCoords = RenderCoords.translate(
-        //top-left
-        tx,
-        ty,
-        //top-right
-        tx + width * ta,
-        ty + width * tc,
-        //bottom-right
-        tx + width * ta + height * tb,
-        ty + width * tc + height * td,
-        //bottom-left
-        tx + height * tb,
-        ty + height * td,
-        this.renderCoords,
+        renderCoords,
       );
     }
-
-    // Now calculate scene-level render coordinates for bounds detection
-    // This is only done if the node is part of an RTT chain
-    if (sgt !== undefined) {
-      const { tx: sTx, ty: sTy, ta: sTa, tb: sTb, tc: sTc, td: sTd } = sgt;
-      if (sTb === 0 && sTc === 0) {
-        const sMinX = sTx;
-        const sMaxX = sTx + width * sTa;
-        const sMinY = sTy;
-        const sMaxY = sTy + height * sTd;
-        this.sceneRenderCoords = RenderCoords.translate(
-          sMinX,
-          sMinY,
-          sMaxX,
-          sMinY,
-          sMaxX,
-          sMaxY,
-          sMinX,
-          sMaxY,
-          this.sceneRenderCoords,
-        );
-      } else {
-        this.sceneRenderCoords = RenderCoords.translate(
-          sTx,
-          sTy,
-          sTx + width * sTa,
-          sTy + width * sTc,
-          sTx + width * sTa + height * sTb,
-          sTy + width * sTc + height * sTd,
-          sTx + height * sTb,
-          sTy + height * sTd,
-          this.sceneRenderCoords,
-        );
-      }
-    }
+    return RenderCoords.translate(
+      //top-left
+      tx,
+      ty,
+      //top-right
+      tx + width * ta,
+      ty + width * tc,
+      //bottom-right
+      tx + width * ta + height * tb,
+      ty + width * tc + height * td,
+      //bottom-left
+      tx + height * tb,
+      ty + height * td,
+      renderCoords,
+    );
   }
 
   /**
