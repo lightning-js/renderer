@@ -1073,11 +1073,6 @@ export class CoreNode extends EventEmitter {
           parent?.sceneGlobalTransform || this.localTransform,
         ).multiply(this.localTransform);
 
-        this.sceneRenderCoords = this.calculateRenderCoords(
-          this.sceneGlobalTransform,
-          this.sceneRenderCoords,
-        );
-
         this.globalTransform = Matrix3d.copy(
           parent?.globalTransform || this.localTransform,
           this.globalTransform,
@@ -1092,11 +1087,7 @@ export class CoreNode extends EventEmitter {
       if (parent !== null) {
         this.globalTransform.multiply(this.localTransform);
       }
-
-      this.renderCoords = this.calculateRenderCoords(
-        this.globalTransform,
-        this.renderCoords,
-      );
+      this.calculateRenderCoords();
       this.updateBoundingRect();
 
       this.setUpdateType(UpdateType.RenderState | UpdateType.Children);
@@ -1538,15 +1529,15 @@ export class CoreNode extends EventEmitter {
     return this.props.shader !== null;
   }
 
-  calculateRenderCoords(transform: Matrix3d, renderCoords?: RenderCoords) {
+  calculateRenderCoords() {
     const { width, height } = this;
-    const { tx, ty, ta, tb, tc, td } = transform;
+    const { tx, ty, ta, tb, tc, td } = this.globalTransform!;
     if (tb === 0 && tc === 0) {
       const minX = tx;
       const maxX = tx + width * ta;
       const minY = ty;
       const maxY = ty + height * td;
-      return RenderCoords.translate(
+      this.renderCoords = RenderCoords.translate(
         //top-left
         minX,
         minY,
@@ -1559,24 +1550,74 @@ export class CoreNode extends EventEmitter {
         //bottom-left
         minX,
         maxY,
-        renderCoords,
+        this.renderCoords,
+      );
+    } else {
+      this.renderCoords = RenderCoords.translate(
+        //top-left
+        tx,
+        ty,
+        //top-right
+        tx + width * ta,
+        ty + width * tc,
+        //bottom-right
+        tx + width * ta + height * tb,
+        ty + width * tc + height * td,
+        //bottom-left
+        tx + height * tb,
+        ty + height * td,
+        this.renderCoords,
       );
     }
-    return RenderCoords.translate(
-      //top-left
-      tx,
-      ty,
-      //top-right
-      tx + width * ta,
-      ty + width * tc,
-      //bottom-right
-      tx + width * ta + height * tb,
-      ty + width * tc + height * td,
-      //bottom-left
-      tx + height * tb,
-      ty + height * td,
-      renderCoords,
-    );
+    if (this.sceneGlobalTransform === undefined) {
+      return;
+    }
+
+    const {
+      tx: stx,
+      ty: sty,
+      ta: sta,
+      tb: stb,
+      tc: stc,
+      td: std,
+    } = this.sceneGlobalTransform;
+    if (stb === 0 && stc === 0) {
+      const minX = stx;
+      const maxX = stx + width * sta;
+      const minY = sty;
+      const maxY = sty + height * std;
+      this.sceneRenderCoords = RenderCoords.translate(
+        //top-left
+        minX,
+        minY,
+        //top-right
+        maxX,
+        minY,
+        //bottom-right
+        maxX,
+        maxY,
+        //bottom-left
+        minX,
+        maxY,
+        this.sceneRenderCoords,
+      );
+    } else {
+      this.sceneRenderCoords = RenderCoords.translate(
+        //top-left
+        stx,
+        sty,
+        //top-right
+        stx + width * sta,
+        sty + width * stc,
+        //bottom-right
+        stx + width * sta + height * stb,
+        sty + width * stc + height * std,
+        //bottom-left
+        stx + height * stb,
+        sty + height * std,
+        this.sceneRenderCoords,
+      );
+    }
   }
 
   /**
@@ -1591,7 +1632,6 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.globalTransform);
     const { clippingRect, props, globalTransform: gt } = this;
     const { clipping } = props;
-
     const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
     if (clipping === true && isRotated === false) {

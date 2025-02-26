@@ -113,7 +113,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const nodeHeight = 200;
   const gap = 10; // Define the gap between items
 
-  const spawnRow = function (rowIndex = 0, amount = 20) {
+  const spawnRow = function (rowIndex = 0, amount = 8) {
     let totalWidth = 0; // Track the total width used in the current row
     const y = rowIndex * (nodeHeight + gap);
 
