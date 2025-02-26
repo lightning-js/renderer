@@ -78,6 +78,7 @@ export interface StageOptions {
   inspector: boolean;
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
+  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
 }
 
 export type StageFpsUpdateHandler = (
@@ -151,10 +152,14 @@ export class Stage {
       textureMemory,
       renderEngine,
       fontEngines,
+      createImageBitmapSupport,
     } = options;
 
     this.eventBus = options.eventBus;
-    this.txManager = new CoreTextureManager(this, numImageWorkers);
+    this.txManager = new CoreTextureManager(this, {
+      numImageWorkers,
+      createImageBitmapSupport,
+    });
 
     // Wait for the Texture Manager to initialize
     // once it does, request a render
@@ -309,6 +314,7 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
+    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
@@ -317,7 +323,6 @@ export class Stage {
     );
 
     assertTruthy(this.defaultTexture instanceof ColorTexture);
-
     this.txManager.loadTexture(this.defaultTexture, true);
 
     // Mark the default texture as ALWAYS renderable
@@ -374,8 +379,13 @@ export class Stage {
     renderer.reset();
 
     // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested) {
-      this.txMemManager.cleanup();
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup(false);
+
+      if (this.txMemManager.criticalCleanupRequested === true) {
+        // If we still need to cleanup, request another but aggressive cleanup
+        this.txMemManager.cleanup(true);
+      }
     }
 
     // If we have RTT nodes draw them first
@@ -727,7 +737,7 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup() {
-    this.txMemManager.cleanup();
+  cleanup(aggressive: boolean) {
+    this.txMemManager.cleanup(aggressive);
   }
 }
