@@ -313,6 +313,16 @@ export interface RendererMainSettings {
    * @defaultValue `full`
    */
   createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
+
+  /**
+   * Enable using fetch instead of XMLHttpRequest for image loading
+   *
+   * @remarks
+   * This is used to force the use of fetch instead of XMLHttpRequest for the image loader.
+   *
+   * @defaultValue `false`
+   */
+  useFetchForTextures?: boolean;
 }
 
 /**
@@ -415,6 +425,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
+      useFetchForTextures: settings.useFetchForTextures || false,
     };
     this.settings = resolvedSettings;
 
@@ -459,6 +470,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
       createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      useFetchForTextures: this.settings.useFetchForTextures,
     });
 
     // Extract the root node

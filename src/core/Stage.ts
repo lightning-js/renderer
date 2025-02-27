@@ -79,6 +79,7 @@ export interface StageOptions {
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  useFetchForTextures: boolean;
 }
 
 export type StageFpsUpdateHandler = (
@@ -153,12 +154,14 @@ export class Stage {
       renderEngine,
       fontEngines,
       createImageBitmapSupport,
+      useFetchForTextures: useFetchForTextures,
     } = options;
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
+      useFetchForTextures: useFetchForTextures,
     });
 
     // Wait for the Texture Manager to initialize

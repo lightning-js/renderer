@@ -215,9 +215,16 @@ export class ImageTexture extends Texture {
         );
       }
 
-      const blob = await fetchJson(src, 'blob').then(
-        (response) => response as Blob,
-      );
+      let blob;
+
+      if (this.txManager.useFetchForTextures === true) {
+        blob = await fetch(src).then((response) => response.blob());
+      } else {
+        blob = await fetchJson(src, 'blob').then(
+          (response) => response as Blob,
+        );
+      }
+
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
 
