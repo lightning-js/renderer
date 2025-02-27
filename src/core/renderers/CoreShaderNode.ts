@@ -61,16 +61,29 @@ export function resolveShaderProps(
   }
 }
 
+/**
+ * CoreShaderType is a template for ShaderTypes the renderer.
+ * You could view a ShaderType as a configuration object that contains methods,
+ * and values that you can use to alter the way a node is drawn by the Renderer.
+ */
 export interface CoreShaderType<
   Props extends object = Record<string, unknown>,
 > {
+  /**
+   * Values you use to draw the Shader
+   */
   props?: ShaderProps<Props>;
   /**
-   * used for making a cache key to check for reusability
+   * used for making a cache key to check for reusability, currently only used for webgl ShaderTypes but might be needed for other types of renderer
    */
   getCacheMarkers?: (props: Props) => string;
 }
 
+/**
+ * CoreShaderNode is a base class that manages the shader prop values.
+ * When a prop is being updated the CoreShaderNode will notify either the associated CoreNode,
+ * or the Stage that there has been a change and a new render of the scene.
+ */
 export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
   readonly shaderType: CoreShaderType<Props>;
@@ -149,8 +162,6 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
 
   set props(props: Props | undefined) {
     if (props === undefined) {
-      this.resolvedProps = undefined;
-      this.definedProps = undefined;
       return;
     }
     for (const key in props) {

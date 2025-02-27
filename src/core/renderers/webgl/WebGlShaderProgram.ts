@@ -28,7 +28,6 @@ import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
   createShader,
-  DefaultVertexSource,
   type UniformSet1Param,
   type UniformSet2Params,
   type UniformSet3Params,
@@ -222,6 +221,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       );
     }
 
+    /**temporary fix to make sdf texts work */
     if (renderOp.sdfShaderProps !== undefined) {
       (renderOp.shader.shaderType as WebGlShaderType).onSdfBind?.call(
         this.glw,
@@ -231,6 +231,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     if (renderOp.shader.props) {
+      /**
+       * loop over all precalculated uniform types
+       */
       for (const key in renderOp.shader.uniforms.single) {
         const { method, value } = renderOp.shader.uniforms.single[key]!;
         this.glw[method as keyof UniformSet1Param](key, value as never);

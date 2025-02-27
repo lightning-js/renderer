@@ -36,6 +36,7 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
   ComputedValues
 > = {
   props: RoundedWithBorderAndShadowTemplate.props,
+  saveAndRestore: true,
   update(node) {
     const radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,

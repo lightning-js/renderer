@@ -45,6 +45,9 @@ export class CoreShaderManager {
   protected shTypes: Record<string, CoreShaderType> = {};
   protected shCache: Map<string, CoreShaderProgram> = new Map();
 
+  /**
+   * valuesCache is used to store calculations that can be shared between shader nodes.
+   */
   protected valuesCache: Map<string, Record<string, unknown>> = new Map();
   protected valuesCacheUsage: Map<string, number> = new Map();
 
@@ -56,12 +59,18 @@ export class CoreShaderManager {
     name: Name,
     shType: ShaderMap[Name],
   ): void {
+    /**
+     * block name duplicates
+     */
     if (this.shTypes[name as string] !== undefined) {
       console.warn(
         `ShaderType already exists with the name: ${name}. Breaking off registration.`,
       );
       return;
     }
+    /**
+     * Check renderer if shader type is supported.
+     */
     if (this.stage.renderer.supportsShaderType(shType) === false) {
       console.warn(
         `The renderer being used does not support this shader type. Breaking off registration.`,

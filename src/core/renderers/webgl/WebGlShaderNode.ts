@@ -17,6 +17,9 @@ export type ShaderSource<T> =
   | string
   | ((renderer: WebGlRenderer, props: T) => string);
 
+/**
+ * This is the WebGL specific ShaderType @mixes CoreShaderType
+ */
 export type WebGlShaderType<T extends object = Record<string, unknown>> =
   CoreShaderType<T> & {
     /**
@@ -35,13 +38,13 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
 
     /**
      * only used for SDF shader, will be removed in the future.
-     * @returns
+     *
+     * @warning don't use this in your shader type
      */
     onSdfBind?: (this: WebGlContextWrapper, props: T) => void;
     /**
-     * This function is used to check if the shader can bereused based on quad info
+     * This function is used to check if the shader can be reused based on quad info
      * @param props
-     * @returns
      */
     canBatch?: (renderOpA: QuadOptions, renderOpB: QuadOptions) => boolean;
     /**
