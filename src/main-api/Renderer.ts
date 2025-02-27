@@ -247,6 +247,31 @@ export interface RendererMainSettings {
    * element will be created and appended to the target element.
    */
   canvas?: HTMLCanvasElement;
+
+  /**
+   * createImageBitmap support for the runtime
+   *
+   * @remarks
+   * This is used to determine if and which version of the createImageBitmap API
+   * is supported by the runtime. This is used to determine if the renderer can
+   * use createImageBitmap to load images.
+   *
+   * Options supported
+   * - Auto - Automatically determine the supported version
+   * - Basic - Supports createImageBitmap(image)
+   * - Options - Supports createImageBitmap(image, options)
+   * - Full - Supports createImageBitmap(image, sx, sy, sw, sh, options)
+   *
+   * Note with auto detection, the renderer will attempt to use the most advanced
+   * version of the API available. If the API is not available, the renderer will
+   * fall back to the next available version.
+   *
+   * This will affect startup performance as the renderer will need to determine
+   * the supported version of the API.
+   *
+   * @defaultValue `full`
+   */
+  createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
 }
 
 /**
@@ -319,10 +344,12 @@ export class RendererMain extends EventEmitter {
     const resolvedTxSettings: TextureMemoryManagerSettings = {
       criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
       targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
-      cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
+      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
       debugLogging: settings.textureMemory?.debugLogging || false,
       baselineMemoryAllocation:
         settings.textureMemory?.baselineMemoryAllocation || 26e6,
+      doNotExceedCriticalThreshold:
+        settings.textureMemory?.doNotExceedCriticalThreshold || false,
     };
 
     const resolvedSettings: Required<RendererMainSettings> = {
@@ -346,6 +373,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: settings.strictBounds ?? true,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
+      createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
     };
     this.settings = resolvedSettings;
 
@@ -389,6 +417,7 @@ export class RendererMain extends EventEmitter {
       inspector: this.settings.inspector !== null,
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
+      createImageBitmapSupport: this.settings.createImageBitmapSupport,
     });
 
     // Extract the root node
@@ -590,6 +619,8 @@ export class RendererMain extends EventEmitter {
   /**
    * Cleanup textures that are not being used
    *
+   * @param aggressive - If true, will cleanup all textures, regardless of render status
+   *
    * @remarks
    * This can be used to free up GFX memory used by textures that are no longer
    * being displayed.
@@ -603,8 +634,8 @@ export class RendererMain extends EventEmitter {
    * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
    * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
    */
-  cleanup() {
-    this.stage.cleanup();
+  cleanup(aggressive: boolean = false) {
+    this.stage.cleanup(aggressive);
   }
 
   /**

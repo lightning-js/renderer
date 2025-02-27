@@ -120,6 +120,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
         if (this.state === 'freed') {
           return;
         }
+
         this.state = 'failed';
         this.textureSource.setState('failed', err);
         this.textureSource.freeTextureData();
@@ -133,17 +134,16 @@ export class WebGlCtxTexture extends CoreContextTexture {
   async onLoadRequest(): Promise<Dimensions> {
     const { glw } = this;
     const textureData = this.textureSource.textureData;
-    assertTruthy(textureData, 'Texture data is null');
+    if (textureData === null || this._nativeCtxTexture === null) {
+      throw new Error(
+        'Texture data or native texture is null ' + this.textureSource.type,
+      );
+    }
 
     // Set to a 1x1 transparent texture
     glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
     this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
-    // If the texture has been freed while loading, return early.
-    if (!this._nativeCtxTexture) {
-      assertTruthy(this.state === 'freed');
-      return { width: 0, height: 0 };
-    }
     let width = 0;
     let height = 0;
 
@@ -256,14 +256,12 @@ export class WebGlCtxTexture extends CoreContextTexture {
     this.textureSource.setState('freed');
     this._w = 0;
     this._h = 0;
-    if (!this._nativeCtxTexture) {
-      return;
-    }
-    const { glw } = this;
 
-    glw.deleteTexture(this._nativeCtxTexture);
-    this.setTextureMemUse(0);
-    this._nativeCtxTexture = null;
+    if (this._nativeCtxTexture !== null) {
+      this.glw.deleteTexture(this._nativeCtxTexture);
+      this.setTextureMemUse(0);
+      this._nativeCtxTexture = null;
+    }
 
     // if the texture still has source data, free it
     this.textureSource.freeTextureData();

@@ -23,7 +23,10 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 export function customSettings(): Partial<RendererMainSettings> {
   return {
     textureMemory: {
-      cleanupInterval: 5000,
+      targetThresholdLevel: 0.5,
+      cleanupInterval: 1000,
+      criticalThreshold: 95e6,
+      doNotExceedCriticalThreshold: true,
       debugLogging: true,
     },
   };
@@ -48,7 +51,7 @@ function randomColor() {
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   const nodeSize = 128; // Each node will be 128x128 pixels
-  const memoryThreshold = 130 * 1024 * 1024; // 130 MB
+  const memoryThreshold = 70 * 1024 * 1024; // 130 MB
   const textureSize = nodeSize * nodeSize * 4 * 1.1; // RGBA bytes per pixel
   const memoryBaseline = 25e6; // 25 MB
   const maxNodes = Math.ceil((memoryThreshold - memoryBaseline) / textureSize);
@@ -101,27 +104,27 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     width: 1300,
     height: 800,
     parent: clippingNode,
-    color: 0x000000ff,
+    // color: 0x000000ff,
     clipping: false,
+    // rtt: true
   });
 
   const nodeWidth = 200;
   const nodeHeight = 200;
   const gap = 10; // Define the gap between items
 
-  const spawnRow = function (rowIndex = 0, amount = 20) {
-    const items = [];
-
+  const spawnRow = function (rowIndex = 0, amount = 8) {
     let totalWidth = 0; // Track the total width used in the current row
     const y = rowIndex * (nodeHeight + gap);
 
     const rowNode = renderer.createNode({
       x: 0,
       y: y,
-      width: containerNode.width,
+      width: (nodeWidth + gap) * amount,
       height: nodeHeight,
       parent: containerNode,
-      color: 0x000000ff,
+      // color: 0x000000ff,
+      rtt: true,
     });
 
     for (let i = 0; i < amount; i++) {
@@ -137,7 +140,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         width: nodeWidth,
         height: nodeHeight,
         parent: rowNode,
-        rtt: true,
+        rtt: false,
       });
 
       const imageNode = renderer.createNode({
@@ -158,18 +161,47 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         fontSize: 20,
         color: 0xffffffff,
       });
-
-      items.push(childNode);
     }
 
-    return items;
+    return rowNode;
   };
+
+  const focusNode = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: nodeWidth + gap + gap,
+    height: nodeHeight + gap,
+    parent: containerNode,
+    alpha: 0.5,
+    shader: renderer.createDynamicShader([
+      renderer.createEffect(
+        'radius',
+        {
+          radius: 0,
+        },
+        'r1',
+      ),
+      renderer.createEffect(
+        'border',
+        {
+          color: 0xff00ffff,
+          width: 10,
+        },
+        'e1',
+      ),
+    ]),
+    zIndex: 100,
+  });
 
   // Generate up to 200 rows
   const amountOfRows = 20;
+  const rowNodes: INode[] = [];
+  let rowNodeIdx = 0;
+  let colNodeIdx = 0;
+  let selectedNode: INode | null = null;
   for (let rowIndex = 0; rowIndex < amountOfRows; rowIndex++) {
     console.log(`Spawning row ${rowIndex + 1}`);
-    spawnRow(rowIndex);
+    rowNodes.push(spawnRow(rowIndex));
   }
 
   // adjust container node size
@@ -178,19 +210,58 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowDown') {
       // move container down
-      containerNode.y += 50;
+      rowNodeIdx++;
+      colNodeIdx = 0;
+      containerNode.y = rowNodeIdx * nodeHeight;
     }
 
     if (e.key === 'ArrowUp') {
       // move container up
-      containerNode.y -= 50;
-    }
-
-    if (e.key === 'ArrowLeft') {
-      generateNoiseNodes(27);
+      rowNodeIdx--;
+      colNodeIdx = 0;
+      containerNode.y = rowNodeIdx * nodeHeight;
     }
 
     if (e.key === 'ArrowRight') {
+      // move container right
+      // containerNode.x += 50;
+      selectedNode = rowNodes[-rowNodeIdx] || null;
+      if (selectedNode) {
+        selectedNode.x -= nodeWidth + gap;
+        colNodeIdx++;
+        selectedNode.data = { colNodeIdx };
+      }
+    }
+
+    if (e.key === 'ArrowLeft') {
+      // move container left
+      selectedNode = rowNodes[-rowNodeIdx] || null;
+      if (selectedNode) {
+        selectedNode.x += nodeWidth + gap;
+        colNodeIdx--;
+        selectedNode.data = { colNodeIdx };
+      }
+    }
+
+    console.log(
+      `Container position: ${containerNode.x}, ${containerNode.y} - Row idx ${rowNodeIdx}`,
+    );
+    // move focusnode
+
+    // let localSelectColIdx: number = Number(selectedNode?.data?.colNodeIdx) || 0;
+    // if (localSelectColIdx) {
+    //   // focusNode.x = (localSelectColIdx * nodeWidth);
+    // } else {
+    //   focusNode.x = 0;
+    // }
+
+    focusNode.y = -rowNodeIdx * (nodeHeight + gap);
+
+    if (e.key === 'a') {
+      generateNoiseNodes(27);
+    }
+
+    if (e.key === 'd') {
       for (let i = 0; i < 27; i++) {
         const node = nodes.pop();
         if (node) {

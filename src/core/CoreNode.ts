@@ -274,6 +274,12 @@ export interface CoreNodeProps {
    */
   autosize: boolean;
   /**
+   * Margin around the Node's bounds for preloading
+   *
+   * @default `null`
+   */
+  boundsMargin: number | [number, number, number, number] | null;
+  /**
    * Clipping Mode
    *
    * @remarks
@@ -730,7 +736,9 @@ export class CoreNode extends EventEmitter {
   public globalTransform?: Matrix3d;
   public scaleRotateTransform?: Matrix3d;
   public localTransform?: Matrix3d;
+  public sceneGlobalTransform?: Matrix3d;
   public renderCoords?: RenderCoords;
+  public sceneRenderCoords?: RenderCoords;
   public renderBound?: Bound;
   public strictBound?: Bound;
   public preloadBound?: Bound;
@@ -771,6 +779,17 @@ export class CoreNode extends EventEmitter {
     this.shader = props.shader;
     this.src = props.src;
     this.rtt = props.rtt;
+
+    if (props.boundsMargin) {
+      this.boundsMargin = Array.isArray(props.boundsMargin)
+        ? props.boundsMargin
+        : [
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+            props.boundsMargin,
+          ];
+    }
 
     this.setUpdateType(
       UpdateType.ScaleRotate |
@@ -1040,19 +1059,40 @@ export class CoreNode extends EventEmitter {
     if (this.updateType & UpdateType.Global) {
       assertTruthy(this.localTransform);
 
-      this.globalTransform = Matrix3d.copy(
-        parent?.globalTransform || this.localTransform,
-        this.globalTransform,
-      );
-
-      if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+      if (this.parentHasRenderTexture === true && parent?.rtt === true) {
+        // we are at the start of the RTT chain, so we need to reset the globalTransform
+        // for correct RTT rendering
         this.globalTransform = Matrix3d.identity();
+
+        // Maintain a full scene global transform for bounds detection
+        this.sceneGlobalTransform = Matrix3d.copy(
+          parent?.globalTransform || Matrix3d.identity(),
+        ).multiply(this.localTransform);
+      } else if (
+        this.parentHasRenderTexture === true &&
+        parent?.rtt === false
+      ) {
+        // we're part of an RTT chain but our parent is not the main RTT node
+        // so we need to propogate the sceneGlobalTransform of the parent
+        // to maintain a full scene global transform for bounds detection
+        this.sceneGlobalTransform = Matrix3d.copy(
+          parent?.sceneGlobalTransform || this.localTransform,
+        ).multiply(this.localTransform);
+
+        this.globalTransform = Matrix3d.copy(
+          parent?.globalTransform || this.localTransform,
+          this.globalTransform,
+        );
+      } else {
+        this.globalTransform = Matrix3d.copy(
+          parent?.globalTransform || this.localTransform,
+          this.globalTransform,
+        );
       }
 
-      if (parent) {
+      if (parent !== null) {
         this.globalTransform.multiply(this.localTransform);
       }
-
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
@@ -1073,6 +1113,8 @@ export class CoreNode extends EventEmitter {
       this.createRenderBounds();
       this.setUpdateType(UpdateType.RenderState);
       this.setUpdateType(UpdateType.Children);
+
+      this.childUpdateType |= UpdateType.RenderBounds;
     }
 
     if (this.updateType & UpdateType.RenderState) {
@@ -1160,6 +1202,7 @@ export class CoreNode extends EventEmitter {
       this.props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
+      this.updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
@@ -1284,11 +1327,6 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.strictBound);
     assertTruthy(this.preloadBound);
 
-    // if we are part of a parent render texture, we're always in bounds
-    if (this.parentHasRenderTexture === true) {
-      return this.getRTTParentRenderState() || CoreNodeRenderState.OutOfBounds;
-    }
-
     if (boundInsideBound(this.renderBound, this.strictBound)) {
       return CoreNodeRenderState.InViewport;
     }
@@ -1314,7 +1352,9 @@ export class CoreNode extends EventEmitter {
   }
 
   updateBoundingRect() {
-    const { renderCoords, globalTransform: transform } = this;
+    const transform = this.sceneGlobalTransform || this.globalTransform;
+    const renderCoords = this.sceneRenderCoords || this.renderCoords;
+
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
@@ -1349,7 +1389,7 @@ export class CoreNode extends EventEmitter {
 
       this.preloadBound = createPreloadBounds(
         this.strictBound,
-        this.stage.boundsMargin,
+        this.boundsMargin as [number, number, number, number],
       );
     } else {
       // no parent or parent does not have a bound, take the stage boundaries
@@ -1375,7 +1415,10 @@ export class CoreNode extends EventEmitter {
 
     // clipping is enabled and we are in bounds create our own bounds
     const { x, y, width, height } = this.props;
-    const { tx, ty } = this.globalTransform || {};
+
+    // Pick the global transform if available, otherwise use the local transform
+    // global transform is only available if the node in an RTT chain
+    const { tx, ty } = this.sceneGlobalTransform || this.globalTransform || {};
     const _x = tx ?? x;
     const _y = ty ?? y;
     this.strictBound = createBound(
@@ -1388,7 +1431,7 @@ export class CoreNode extends EventEmitter {
 
     this.preloadBound = createPreloadBounds(
       this.strictBound,
-      this.stage.boundsMargin,
+      this.boundsMargin as [number, number, number, number],
     );
   }
 
@@ -1505,13 +1548,11 @@ export class CoreNode extends EventEmitter {
   }
 
   calculateRenderCoords() {
-    const { width, height, globalTransform: transform } = this;
-    assertTruthy(transform);
-    const { tx, ty, ta, tb, tc, td } = transform;
+    const { width, height } = this;
+    const { tx, ty, ta, tb, tc, td } = this.globalTransform!;
     if (tb === 0 && tc === 0) {
       const minX = tx;
       const maxX = tx + width * ta;
-
       const minY = ty;
       const maxY = ty + height * td;
       this.renderCoords = RenderCoords.translate(
@@ -1546,6 +1587,55 @@ export class CoreNode extends EventEmitter {
         this.renderCoords,
       );
     }
+    if (this.sceneGlobalTransform === undefined) {
+      return;
+    }
+
+    const {
+      tx: stx,
+      ty: sty,
+      ta: sta,
+      tb: stb,
+      tc: stc,
+      td: std,
+    } = this.sceneGlobalTransform;
+    if (stb === 0 && stc === 0) {
+      const minX = stx;
+      const maxX = stx + width * sta;
+      const minY = sty;
+      const maxY = sty + height * std;
+      this.sceneRenderCoords = RenderCoords.translate(
+        //top-left
+        minX,
+        minY,
+        //top-right
+        maxX,
+        minY,
+        //bottom-right
+        maxX,
+        maxY,
+        //bottom-left
+        minX,
+        maxY,
+        this.sceneRenderCoords,
+      );
+    } else {
+      this.sceneRenderCoords = RenderCoords.translate(
+        //top-left
+        stx,
+        sty,
+        //top-right
+        stx + width * sta,
+        sty + width * stc,
+        //bottom-right
+        stx + width * sta + height * stb,
+        sty + width * stc + height * std,
+        //bottom-left
+        stx + height * stb,
+        sty + height * std,
+        this.sceneRenderCoords,
+      );
+    }
   }
 
   /**
@@ -1560,7 +1650,6 @@ export class CoreNode extends EventEmitter {
     assertTruthy(this.globalTransform);
     const { clippingRect, props, globalTransform: gt } = this;
     const { clipping } = props;
-
     const isRotated = gt.tb !== 0 || gt.tc !== 0;
 
     if (clipping === true && isRotated === false) {
@@ -1902,6 +1991,31 @@ export class CoreNode extends EventEmitter {
 
   set autosize(value: boolean) {
     this.props.autosize = value;
+  }
+
+  get boundsMargin(): number | [number, number, number, number] | null {
+    return (
+      this.props.boundsMargin ??
+      this.parent?.boundsMargin ??
+      this.stage.boundsMargin
+    );
+  }
+
+  set boundsMargin(value: number | [number, number, number, number] | null) {
+    if (value === this.props.boundsMargin) {
+      return;
+    }
+
+    if (value === null) {
+      this.props.boundsMargin = value;
+    } else {
+      const bm: [number, number, number, number] = Array.isArray(value)
+        ? value
+        : [value, value, value, value];
+
+      this.props.boundsMargin = bm;
+    }
+    this.setUpdateType(UpdateType.RenderBounds);
   }
 
   get clipping(): boolean {

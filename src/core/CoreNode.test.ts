@@ -29,6 +29,7 @@ describe('set color()', () => {
   const defaultProps: CoreNodeProps = {
     alpha: 0,
     autosize: false,
+    boundsMargin: null,
     clipping: false,
     color: 0,
     colorBl: 0,
@@ -90,6 +91,7 @@ describe('set color()', () => {
       node.colorTr = 0xcceeffff;
 
       node.color = 0xffffffff;
+      node.color = 0xffffffff;
 
       expect(node.color).toBe(0xffffffff);
       expect(node.colorBl).toBe(0xffffffff);
@@ -106,6 +108,7 @@ describe('set color()', () => {
       const node = new CoreNode(stage, defaultProps);
       node.updateType = 0;
 
+      node.color = 0xffffffff;
       node.color = 0xffffffff;
 
       expect(node.updateType).toBe(UpdateType.PremultipliedColors);
