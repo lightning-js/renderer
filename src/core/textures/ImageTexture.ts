@@ -40,7 +40,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData | (() => ImageData | null);
+  src?: string | Blob | ImageData | (() => ImageData | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -133,10 +133,10 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  async loadImageFallback(src: string, hasAlpha: boolean) {
+  async loadImageFallback(src: string | Blob, hasAlpha: boolean) {
     const img = new Image();
 
-    if (isBase64Image(src) === false) {
+    if (typeof src === 'string' && isBase64Image(src) === false) {
       img.crossOrigin = 'anonymous';
     }
 
@@ -151,7 +151,11 @@ export class ImageTexture extends Texture {
           resolve({ data: img, premultiplyAlpha: hasAlpha });
         };
 
-        img.src = src;
+        if (src instanceof Blob) {
+          img.src = URL.createObjectURL(src);
+        } else {
+          img.src = src;
+        }
       },
     );
   }
@@ -274,6 +278,14 @@ export class ImageTexture extends Texture {
     }
 
     if (typeof src !== 'string') {
+      if (src instanceof Blob) {
+        if (this.txManager.hasCreateImageBitmap === true) {
+          const { sx, sy, sw, sh } = this.props;
+          return this.createImageBitmap(src, premultiplyAlpha, sx, sy, sw, sh);
+        } else {
+          return this.loadImageFallback(src, premultiplyAlpha ?? true);
+        }
+      }
       if (src instanceof ImageData) {
         return {
           data: src,
