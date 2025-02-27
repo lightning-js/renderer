@@ -688,7 +688,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       {
         sdfShaderProps: {
           transform: node.globalTransform!.getFloatArr(),
-          color: mergeColorAlpha(color, node.alpha),
+          color: mergeColorAlpha(color, node.worldAlpha),
           size: fontSize / (trFontFace.data?.info.size || 0),
           scrollY,
           distanceRange,
@@ -696,7 +696,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         },
         sdfBuffers: state.webGlBuffers as BufferCollection,
         shader: this.sdfShader,
-        alpha: node.alpha,
+        alpha: node.worldAlpha,
         clippingRect: node.clippingRect,
         height: textH,
         width: textW,
