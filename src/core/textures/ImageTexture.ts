@@ -23,7 +23,11 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute, isBase64Image } from '../lib/utils.js';
+import {
+  convertUrlToAbsolute,
+  dataURIToBlob,
+  isBase64Image,
+} from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 import { fetchJson } from '../text-rendering/font-face-types/utils.js';
 
@@ -215,9 +219,16 @@ export class ImageTexture extends Texture {
         );
       }
 
-      const blob = await fetchJson(src, 'blob').then(
-        (response) => response as Blob,
-      );
+      let blob;
+
+      if (isBase64Image(src) === true) {
+        blob = dataURIToBlob(src);
+      } else {
+        blob = await fetchJson(src, 'blob').then(
+          (response) => response as Blob,
+        );
+      }
+
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
 
