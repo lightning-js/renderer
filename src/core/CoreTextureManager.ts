@@ -64,6 +64,7 @@ export interface TextureManagerDebugInfo {
 export interface TextureManagerSettings {
   numImageWorkers: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  useFetchForTextures: boolean;
 }
 
 export type ResizeModeOptions =
@@ -192,6 +193,7 @@ export class CoreTextureManager extends EventEmitter {
     options: false,
     full: false,
   };
+  useFetchForTextures = false;
 
   hasWorker = !!self.Worker;
   /**
@@ -217,9 +219,15 @@ export class CoreTextureManager extends EventEmitter {
   constructor(stage: Stage, settings: TextureManagerSettings) {
     super();
 
-    const { numImageWorkers, createImageBitmapSupport } = settings;
+    const {
+      numImageWorkers,
+      createImageBitmapSupport,
+      useFetchForTextures: useFetchForTextures,
+    } = settings;
+
     this.stage = stage;
     this.numImageWorkers = numImageWorkers;
+    this.useFetchForTextures = useFetchForTextures;
 
     if (createImageBitmapSupport === 'auto') {
       validateCreateImageBitmap()

@@ -62,23 +62,16 @@ function createImageWorker() {
     options: {
       supportsOptionsCreateImageBitmap: boolean;
       supportsFullCreateImageBitmap: boolean;
+      useFetchForTextures: boolean;
     },
   ): Promise<getImageReturn> {
     return new Promise(function (resolve, reject) {
       var supportsOptionsCreateImageBitmap =
         options.supportsOptionsCreateImageBitmap;
       var supportsFullCreateImageBitmap = options.supportsFullCreateImageBitmap;
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.responseType = 'blob';
+      var useFetchForTextures = options.useFetchForTextures;
 
-      xhr.onload = function () {
-        // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
-        if (xhr.status !== 200 && xhr.status !== 0) {
-          return reject(new Error('Failed to load image: ' + xhr.statusText));
-        }
-
-        var blob = xhr.response;
+      const onFetchSuccess = (blob: Blob) => {
         var withAlphaChannel =
           premultiplyAlpha !== undefined
             ? premultiplyAlpha
@@ -130,13 +123,44 @@ function createImageWorker() {
         }
       };
 
-      xhr.onerror = function () {
-        reject(
-          new Error('Network error occurred while trying to fetch the image.'),
-        );
-      };
+      if (useFetchForTextures === true) {
+        fetch(src)
+          .then((response) => response.blob())
+          .then((blob) => {
+            onFetchSuccess(blob);
+          })
+          .catch((error) => {
+            reject(
+              new Error(
+                'Network error occurred while trying to fetch the image.',
+              ),
+            );
+          });
+      } else {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', src, true);
+        xhr.responseType = 'blob';
 
-      xhr.send();
+        xhr.onload = function () {
+          // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
+          if (xhr.status !== 200 && xhr.status !== 0) {
+            return reject(new Error('Failed to load image: ' + xhr.statusText));
+          }
+
+          var blob = xhr.response;
+          onFetchSuccess(blob);
+        };
+
+        xhr.onerror = function () {
+          reject(
+            new Error(
+              'Network error occurred while trying to fetch the image.',
+            ),
+          );
+        };
+
+        xhr.send();
+      }
     });
   }
 
@@ -152,10 +176,12 @@ function createImageWorker() {
     // these will be set to true if the browser supports the createImageBitmap options or full
     var supportsOptionsCreateImageBitmap = false;
     var supportsFullCreateImageBitmap = false;
+    var useFetchForTextures = false;
 
     getImage(src, premultiplyAlpha, x, y, width, height, {
       supportsOptionsCreateImageBitmap,
       supportsFullCreateImageBitmap,
+      useFetchForTextures,
     })
       .then(function (data) {
         self.postMessage({ id: id, src: src, data: data });
