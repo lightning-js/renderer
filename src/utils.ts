@@ -246,3 +246,22 @@ let nextId = 1;
 export function getNewId(): number {
   return nextId++;
 }
+
+/**
+ * Makes a deep clone of an object
+ * @param object
+ * @returns
+ */
+export function deepClone<T>(obj: T): T {
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => deepClone(item)) as T;
+  }
+  const copy = {} as Record<string, unknown>;
+  for (const key in obj) {
+    copy[key] = deepClone(obj[key]);
+  }
+  return copy as T;
+}

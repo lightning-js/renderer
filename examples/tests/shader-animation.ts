@@ -44,7 +44,7 @@ export default async function test({
     x: 90,
     y: 90,
     color: 0xff0000ff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 100,
     }),
     parent: testRoot,
@@ -57,53 +57,6 @@ export default async function test({
     fontSize: 40,
     fontFamily: 'Ubuntu',
     text: 'radius: 100',
-    parent: testRoot,
-    color: 0xffffffff,
-  });
-
-  const t2 = renderer.createNode({
-    ...nodeSize,
-    x: 90,
-    y: 540,
-    color: 0x00ff00ff,
-    shader: renderer.createDynamicShader([
-      renderer.createEffect(
-        'radius',
-        {
-          radius: 0,
-        },
-        'r1',
-      ),
-      renderer.createEffect(
-        'border',
-        {
-          color: 0xff00ffff,
-          width: 10,
-        },
-        'e1',
-      ),
-    ]),
-    parent: testRoot,
-  });
-
-  const t2Radius = renderer.createTextNode({
-    mountX: 1,
-    x: testRoot.width - 90,
-    y: 540,
-    fontSize: 40,
-    fontFamily: 'Ubuntu',
-    text: 'radius: 0',
-    parent: testRoot,
-    color: 0xffffffff,
-  });
-
-  const t2Border = renderer.createTextNode({
-    mountX: 1,
-    x: testRoot.width - 90,
-    y: 590,
-    fontSize: 40,
-    fontFamily: 'Ubuntu',
-    text: 'border: 10',
     parent: testRoot,
     color: 0xffffffff,
   });
@@ -121,34 +74,8 @@ export default async function test({
       duration: 500,
     },
   );
-  shaderAnimation.start();
-  await shaderAnimation.waitUntilStopped();
-  t1Radius.text = 'radius: ' + t1.shader.props.radius!.toString();
-
-  await snapshot({ name: 'animation1' });
-
-  const shaderAnimation2 = t2.animate(
-    {
-      x: 1140,
-      shaderProps: {
-        r1: {
-          radius: 150,
-        },
-        e1: {
-          width: 50,
-        },
-      },
-    },
-    {
-      duration: 500,
-    },
-  );
-
-  shaderAnimation2.start();
-  await shaderAnimation2.waitUntilStopped();
-  t2Radius.text = 'radius: ' + t2.shader.props.r1.radius!.toString();
-  t2Border.text = 'border: ' + t2.shader.props.e1.width!.toString();
-
-  await snapshot({ name: 'animation2' });
-  console.log('ready!');
+  // shaderAnimation.start();
+  // await shaderAnimation.waitUntilStopped();
+  // t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
+  // await snapshot({ name: 'animation1' });
 }

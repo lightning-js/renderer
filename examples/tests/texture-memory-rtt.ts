@@ -173,23 +173,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     height: nodeHeight + gap,
     parent: containerNode,
     alpha: 0.5,
-    shader: renderer.createDynamicShader([
-      renderer.createEffect(
-        'radius',
-        {
-          radius: 0,
-        },
-        'r1',
-      ),
-      renderer.createEffect(
-        'border',
-        {
-          color: 0xff00ffff,
-          width: 10,
-        },
-        'e1',
-      ),
-    ]),
+    shader: renderer.createShader('Border', {
+      color: 0xff00ffff,
+      width: 10,
+    }),
     zIndex: 100,
   });
 

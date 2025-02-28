@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+
 export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
 
 export type RGBA = [r: number, g: number, b: number, a: number];
@@ -307,4 +309,53 @@ export function convertUrlToAbsolute(url: string): string {
 
 export function isBase64Image(src: string) {
   return src.startsWith('data:') === true;
+}
+
+export function calcFactoredRadius(
+  radius: number,
+  width: number,
+  height: number,
+): number {
+  return radius * Math.min(Math.min(width, height) / (2.0 * radius), 1);
+}
+
+export function valuesAreEqual(values: number[]) {
+  let prevValue = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (prevValue !== values[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function calcFactoredRadiusArray(
+  radius: Vec4,
+  width: number,
+  height: number,
+): [number, number, number, number] {
+  const result: [number, number, number, number] = [
+    radius[0],
+    radius[1],
+    radius[2],
+    radius[3],
+  ];
+  const factor = Math.min(
+    Math.min(
+      Math.min(
+        width / Math.max(width, radius[0] + radius[1]),
+        width / Math.max(width, radius[2] + radius[3]),
+      ),
+      Math.min(
+        height / Math.max(height, radius[0] + radius[3]),
+        height / Math.max(height, radius[1] + radius[2]),
+      ),
+    ),
+    1,
+  );
+  result[0] *= factor;
+  result[1] *= factor;
+  result[2] *= factor;
+  result[3] *= factor;
+  return result;
 }

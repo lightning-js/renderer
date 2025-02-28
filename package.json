@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "2.13.0",
+  "version": "3.0.0-beta1",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -8,7 +8,9 @@
     ".": "./dist/exports/index.js",
     "./utils": "./dist/exports/utils.js",
     "./canvas": "./dist/exports/canvas.js",
+    "./canvas/shaders": "./dist/exports/canvas-shaders.js",
     "./webgl": "./dist/exports/webgl.js",
+    "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {

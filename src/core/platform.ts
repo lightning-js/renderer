@@ -34,6 +34,7 @@ export const startLoop = (stage: Stage) => {
       setTimeout(runLoop, 16.666666666666668);
 
       if (!isIdle) {
+        stage.shManager.cleanup();
         stage.eventBus.emit('idle');
         isIdle = true;
       }

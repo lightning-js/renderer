@@ -43,7 +43,7 @@ export function getFontSetting(
     ff = [ff];
   }
 
-  const ffs = [];
+  const ffs: string[] = [];
   for (let i = 0, n = ff.length; i < n; i++) {
     let curFf = ff[i];
     // Replace the default font face `null` with the actual default font face set

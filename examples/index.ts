@@ -23,12 +23,9 @@ import {
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
+import { WebGlRenderer, SdfTextRenderer } from '@lightningjs/renderer/webgl';
 import {
-  WebGlCoreRenderer,
-  SdfTextRenderer,
-} from '@lightningjs/renderer/webgl';
-import {
-  CanvasCoreRenderer,
+  CanvasRenderer,
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
@@ -43,6 +40,7 @@ import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
 import { setupMathRandom } from './common/setupMathRandom.js';
+import { installShaders } from './common/installShaders.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -253,14 +251,14 @@ async function initRenderer(
       enableContextSpy,
       forceWebGL2,
       inspector,
-      renderEngine:
-        renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
+      renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
     },
     'app',
   );
+  await installShaders(renderer.stage, renderMode);
   installFonts(renderer.stage);
 
   /**
