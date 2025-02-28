@@ -308,3 +308,77 @@ export function convertUrlToAbsolute(url: string): string {
 export function isBase64Image(src: string) {
   return src.startsWith('data:') === true;
 }
+
+export function calcFactoredRadius(
+  radius: number,
+  width: number,
+  height: number,
+): number {
+  return radius * Math.min(Math.min(width, height) / (2.0 * radius), 1);
+}
+
+export function valuesAreEqual(values: number[]) {
+  let prevValue = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (prevValue !== values[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function calcFactoredRadiusArray(
+  radius: [number, number, number, number],
+  width: number,
+  height: number,
+): [number, number, number, number] {
+  const result: [number, number, number, number] = [
+    radius[0],
+    radius[1],
+    radius[2],
+    radius[3],
+  ];
+  const factor = Math.min(
+    Math.min(
+      Math.min(
+        width / Math.max(width, radius[0] + radius[1]),
+        width / Math.max(width, radius[2] + radius[3]),
+      ),
+      Math.min(
+        height / Math.max(height, radius[0] + radius[3]),
+        height / Math.max(height, radius[1] + radius[2]),
+      ),
+    ),
+    1,
+  );
+  result[0] *= factor;
+  result[1] *= factor;
+  result[2] *= factor;
+  result[3] *= factor;
+  return result;
+}
+
+export function dataURIToBlob(dataURI: string): Blob {
+  dataURI = dataURI.replace(/^data:/, '');
+
+  const type = dataURI.match(/image\/[^;]+/)?.[0] || '';
+  const base64 = dataURI.replace(/^[^,]+,/, '');
+
+  const sliceSize = 1024;
+  const byteCharacters = atob(base64);
+  const bytesLength = byteCharacters.length;
+  const slicesCount = Math.ceil(bytesLength / sliceSize);
+  const byteArrays = new Array(slicesCount);
+
+  for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+    const begin = sliceIndex * sliceSize;
+    const end = Math.min(begin + sliceSize, bytesLength);
+
+    const bytes = new Array(end - begin);
+    for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+      bytes[i] = byteCharacters[offset]?.charCodeAt(0);
+    }
+    byteArrays[sliceIndex] = new Uint8Array(bytes);
+  }
+  return new Blob(byteArrays, { type });
+}
