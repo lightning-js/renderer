@@ -57,15 +57,16 @@ export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
 /**
  * Properties used to animate() a Node
  */
-export interface INodeAnimateProps<ShNode extends CoreShaderNode>
-  extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
+export interface INodeAnimateProps<
+  ShNode extends CoreShaderNode = CoreShaderNode,
+> extends Omit<CoreNodeAnimateProps, 'shaderProps'> {
   shaderProps: Partial<ShNode['props']>;
 }
 
 /**
  * Properties used to create a new Node
  */
-export interface INodeProps<ShNode extends CoreShaderNode>
+export interface INodeProps<ShNode extends CoreShaderNode = CoreShaderNode>
   extends Omit<CoreNodeProps, 'shader' | 'parent'> {
   shader: ShNode;
   parent: INode | null;
