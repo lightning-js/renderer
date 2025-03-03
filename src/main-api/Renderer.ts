@@ -557,7 +557,7 @@ export class RendererMain extends EventEmitter {
     props?: OptionalShaderProps<ShType>,
   ) {
     return this.stage.shManager.createShader(shType, props) as CoreShaderNode<
-      ExtractShaderProps<ShType>
+      NonNullable<ExtractShaderProps<ShType>>
     >;
   }
 
