@@ -730,6 +730,7 @@ export class CoreNode extends EventEmitter {
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
+  private hasShaderUpdater = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -765,15 +766,16 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = Object.assign({}, props, {
+    this.props = {
+      ...props,
       parent: null,
       texture: null,
       shader: null,
       src: null,
       rtt: false,
-    });
+    };
 
-    // Assign props to instance
+    // Assign props to instances
     this.parent = props.parent;
     this.texture = props.texture;
     this.shader = props.shader;
@@ -1207,13 +1209,11 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.shader !== null &&
-      this.shader.shaderKey !== 'default' &&
-      this.shader.update !== undefined &&
-      (this.updateType & UpdateType.Local ||
-        this.updateType & UpdateType.RecalcUniforms)
+      this.hasShaderUpdater === true &&
+      this.updateType & UpdateType.RecalcUniforms
     ) {
-      this.shader.update();
+      //this exists because the boolean hasShaderUpdater === true
+      this.shader!.update!();
     }
 
     if (this.updateType & UpdateType.Children && this.children.length > 0) {
@@ -2302,11 +2302,15 @@ export class CoreNode extends EventEmitter {
       return;
     }
     if (shader === null) {
+      this.hasShaderUpdater = false;
       this.props.shader = this.stage.defShaderNode;
       this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
-    shader.attachNode(this);
+    if (shader.shaderKey !== 'default') {
+      this.hasShaderUpdater = shader.update !== undefined;
+      shader.attachNode(this);
+    }
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable);
   }
