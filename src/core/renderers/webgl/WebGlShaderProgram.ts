@@ -141,31 +141,45 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(renderOpA: QuadOptions, renderOpB: QuadOptions): boolean {
-    const lifecycleCheck = this.lifecycle.canBatch
-      ? this.lifecycle.canBatch(renderOpA, renderOpB)
-      : true;
-    if (!lifecycleCheck) {
-      return false;
+  reuseRenderOp(
+    incomingQuad: QuadOptions,
+    currentRenderOp: WebGlRenderOp,
+  ): boolean {
+    if (this.lifecycle.canBatch !== undefined) {
+      return this.lifecycle.canBatch(incomingQuad, currentRenderOp);
     }
 
-    if (this.useSystemAlpha) {
-      if (renderOpA.alpha !== renderOpB.alpha) {
+    if (this.useSystemAlpha === true) {
+      if (incomingQuad.alpha !== currentRenderOp.alpha) {
         return false;
       }
     }
 
-    if (this.useSystemDimensions) {
+    if (this.useSystemDimensions === true) {
       if (
-        renderOpA.width !== renderOpB.width ||
-        renderOpA.height !== renderOpB.height
+        incomingQuad.width !== currentRenderOp.width ||
+        incomingQuad.height !== currentRenderOp.height
       ) {
         return false;
       }
     }
+    let shaderPropsA: Record<string, unknown> | undefined = undefined;
+    let shaderPropsB: Record<string, unknown> | undefined = undefined;
 
-    const shaderPropsA = renderOpA.shader?.getResolvedProps();
-    const shaderPropsB = renderOpB.shader?.getResolvedProps();
+    if (incomingQuad.shader !== null) {
+      shaderPropsA = incomingQuad.shader.resolvedProps;
+    }
+    if (currentRenderOp.shader !== null) {
+      shaderPropsB = currentRenderOp.shader.resolvedProps;
+    }
+
+    if (
+      (shaderPropsA === undefined && shaderPropsB !== undefined) ||
+      (shaderPropsA !== undefined && shaderPropsB === undefined)
+    ) {
+      return false;
+    }
+
     if (shaderPropsA !== undefined && shaderPropsB !== undefined) {
       for (const key in shaderPropsA) {
         if (shaderPropsA[key] !== shaderPropsB[key]) {
@@ -181,17 +195,17 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.bindBufferCollection(renderOp.buffers);
     this.bindTextures(renderOp.textures);
 
-    const { parentHasRenderTexture } = renderOp.quad;
+    const { parentHasRenderTexture } = renderOp;
 
     // Skip if the parent and current operation both have render textures
-    if (renderOp.quad.rtt && parentHasRenderTexture) {
+    if (renderOp.rtt === true && parentHasRenderTexture === true) {
       return;
     }
 
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
-    if (parentHasRenderTexture) {
-      const { width, height } = renderOp.quad.framebufferDimensions!;
+    if (parentHasRenderTexture === true) {
+      const { width, height } = renderOp.framebufferDimensions!;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);
@@ -207,19 +221,13 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       );
     }
 
-    this.glw.uniform1f('u_rtt', renderOp.quad.rtt ? 1 : 0);
+    // if (this.useSystemAlpha) {
+    this.glw.uniform1f('u_alpha', renderOp.alpha);
+    // }
 
-    if (this.useSystemAlpha) {
-      this.glw.uniform1f('u_alpha', renderOp.quad.alpha);
-    }
-
-    if (this.useSystemDimensions) {
-      this.glw.uniform2f(
-        'u_dimensions',
-        renderOp.quad.width,
-        renderOp.quad.height,
-      );
-    }
+    // if (this.useSystemDimensions) {
+    this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
+    // }
 
     /**temporary fix to make sdf texts work */
     if (renderOp.sdfShaderProps !== undefined) {
@@ -230,7 +238,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return;
     }
 
-    if (renderOp.shader.props) {
+    if (renderOp.shader.props !== undefined) {
       /**
        * loop over all precalculated uniform types
        */
@@ -276,7 +284,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       const name = attribs[i]!;
       const resolvedBuffer = buffer.getBuffer(name);
       const resolvedInfo = buffer.getAttributeInfo(name);
-      if (!resolvedBuffer || !resolvedInfo) {
+      if (resolvedBuffer === undefined || resolvedInfo === undefined) {
         continue;
       }
       glw.enableVertexAttribArray(i);

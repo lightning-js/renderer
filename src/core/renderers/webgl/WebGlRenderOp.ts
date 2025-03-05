@@ -24,6 +24,8 @@ import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreTextNode } from '../../CoreTextNode.js';
+import type { RectWithValid } from '../../lib/utils.js';
+import type { Dimensions } from '../../../common/CommonTypes.js';
 
 type ReqQuad =
   | 'alpha'
@@ -56,15 +58,29 @@ export class WebGlRenderOp extends CoreRenderOp {
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
   readonly shader: WebGlShaderNode;
+  readonly width: number;
+  readonly height: number;
+  readonly clippingRect: RectWithValid;
+  readonly rtt: boolean;
+  readonly parentHasRenderTexture: boolean;
+  readonly framebufferDimensions?: Dimensions;
+  readonly alpha: number;
 
   constructor(
     readonly renderer: WebGlRenderer,
-    readonly quad: RenderOpQuadOptions,
+    quad: RenderOpQuadOptions,
     readonly bufferIdx: number,
   ) {
     super();
     this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
     this.shader = quad.shader as WebGlShaderNode;
+    this.width = quad.width;
+    this.height = quad.height;
+    this.clippingRect = quad.clippingRect;
+    this.parentHasRenderTexture = quad.parentHasRenderTexture;
+    this.framebufferDimensions = quad.framebufferDimensions;
+    this.rtt = quad.rtt;
+    this.alpha = quad.alpha;
 
     /**
      * related to line 51
@@ -110,11 +126,10 @@ export class WebGlRenderOp extends CoreRenderOp {
     // TODO: Reduce calculations required
     const quadIdx = (this.bufferIdx / 32) * 6 * 2;
     // Clipping
-    if (this.quad.clippingRect.valid) {
-      const { x, y, width, height } = this.quad.clippingRect;
-      const pixelRatio = this.quad.parentHasRenderTexture
-        ? 1
-        : stage.pixelRatio;
+    if (this.clippingRect.valid === true) {
+      const { x, y, width, height } = this.clippingRect;
+      const pixelRatio =
+        this.parentHasRenderTexture === true ? 1 : stage.pixelRatio;
       const canvasHeight = options.canvas.height;
 
       const clipX = Math.round(x * pixelRatio);
@@ -123,9 +138,9 @@ export class WebGlRenderOp extends CoreRenderOp {
       let clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
       // if parent has render texture, we need to adjust the scissor rect
       // to be relative to the parent's framebuffer
-      if (this.quad.parentHasRenderTexture) {
-        clipY = this.quad.framebufferDimensions
-          ? this.quad.framebufferDimensions.height - this.quad.height
+      if (this.parentHasRenderTexture) {
+        clipY = this.framebufferDimensions
+          ? this.framebufferDimensions.height - this.height
           : 0;
       }
 

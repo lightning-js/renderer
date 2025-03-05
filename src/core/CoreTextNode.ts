@@ -409,14 +409,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
-    if (this.parentHasRenderTexture && this.props.parent?.rtt) {
-      this.globalTransform = Matrix3d.identity();
-      if (this.localTransform) {
-        this.globalTransform.multiply(this.localTransform);
-      }
-    }
+    // if (this.parentHasRenderTexture && this.props.parent?.rtt) {
+    //   this.globalTransform = Matrix3d.identity();
+    //   if (this.localTransform) {
+    //     this.globalTransform.multiply(this.localTransform);
+    //   }
+    // }
 
-    assertTruthy(this.globalTransform);
+    // assertTruthy(this.globalTransform);
 
     this.textRenderer.renderQuads(this);
   }

@@ -50,7 +50,7 @@ import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { CoreShaderType } from '../CoreShaderNode.js';
 
-const WORDS_PER_QUAD = 24;
+const WORDS_PER_QUAD = 32;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlRendererOptions = CoreRendererOptions;
@@ -252,12 +252,10 @@ export class WebGlRenderer extends CoreRenderer {
 
     assertTruthy(texture !== null, 'Texture is required');
 
-    let { curBufferIdx: bufferIdx, curRenderOp } = this;
+    let { curBufferIdx: bufferIdx } = this;
 
     if (this.reuseRenderOp(params) === false) {
       this.newRenderOp(params, bufferIdx);
-      curRenderOp = this.curRenderOp;
-      assertTruthy(curRenderOp);
     }
 
     let texCoordX1 = 0;
@@ -374,7 +372,7 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = 1; //node y coord
 
     // Update the length of the current render op
-    this.curRenderOp.length += WORDS_PER_QUAD;
+    // this.curRenderOp.length += WORDS_PER_QUAD;
     this.curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
   }
@@ -386,7 +384,7 @@ export class WebGlRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(quad: QuadOptions, bufferIdx: number) {
+  private newRenderOp(quad: QuadOptions | WebGlRenderOp, bufferIdx: number) {
     const curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -416,7 +414,7 @@ export class WebGlRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(this.curRenderOp.quad as QuadOptions, bufferIdx);
+      this.newRenderOp(this.curRenderOp, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
@@ -428,19 +426,17 @@ export class WebGlRenderer extends CoreRenderer {
    * @returns
    */
   reuseRenderOp(params: QuadOptions): boolean {
-    const { shader, parentHasRenderTexture, rtt, clippingRect } = params;
-
     // Switching shader program will require a new render operation
     if (
       this.curRenderOp?.shader.shaderKey !==
-      (shader as WebGlShaderNode).shaderKey
+      (params.shader as WebGlShaderNode).shaderKey
     ) {
       return false;
     }
 
     // Switching clipping rect will require a new render operation
     if (
-      compareRect(this.curRenderOp.quad.clippingRect, clippingRect) === false
+      compareRect(this.curRenderOp.clippingRect, params.clippingRect) === false
     ) {
       return false;
     }
@@ -448,16 +444,23 @@ export class WebGlRenderer extends CoreRenderer {
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (parentHasRenderTexture !== undefined || rtt !== undefined) {
+    if (
+      params.parentHasRenderTexture !== undefined ||
+      params.rtt !== undefined
+    ) {
       return false;
+    }
+
+    if (
+      this.curRenderOp.shader.shaderKey === 'default' &&
+      params.shader?.shaderKey === 'default'
+    ) {
+      return true;
     }
 
     // Check if the shader can batch the shader properties
     if (
-      !this.curRenderOp.shader.program.reuseRenderOp(
-        params,
-        this.curRenderOp.quad as QuadOptions,
-      )
+      !this.curRenderOp.shader.program.reuseRenderOp(params, this.curRenderOp)
     ) {
       return false;
     }
@@ -682,9 +685,9 @@ export class WebGlRenderer extends CoreRenderer {
     if (this.defaultShaderNode !== null) {
       return this.defaultShaderNode as WebGlShaderNode;
     }
-    this.stage.shManager.registerShaderType('Default', Default);
+    this.stage.shManager.registerShaderType('default', Default);
     this.defaultShaderNode = this.stage.shManager.createShader(
-      'Default',
+      'default',
     ) as WebGlShaderNode;
     return this.defaultShaderNode;
   }

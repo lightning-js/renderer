@@ -1207,7 +1207,9 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.shader?.update !== undefined &&
+      this.shader !== null &&
+      this.shader.shaderKey !== 'default' &&
+      this.shader.update !== undefined &&
       (this.updateType & UpdateType.Local ||
         this.updateType & UpdateType.RecalcUniforms)
     ) {
@@ -1702,7 +1704,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = this.stage.defShaderNode;
+    this.props.shader = null;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
