@@ -86,7 +86,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     pivot: 0,
     text: 'red',
     fontSize: 80,
-    fontFamily: 'sans-serif',
+    fontFamily: 'Ubuntu-ssdf',
     parent: boundaryRect2,
   });
 
@@ -104,6 +104,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontSize: 30,
     x: 10,
     y: 50,
+    fontFamily: 'Ubuntu-ssdf',
     parent: testRoot,
   });
 
@@ -112,6 +113,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontSize: 30,
     x: 800,
     y: 10,
+    fontFamily: 'Ubuntu-ssdf',
     parent: testRoot,
   });
 
@@ -120,6 +122,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontSize: 30,
     x: 800,
     y: 50,
+    fontFamily: 'Ubuntu-ssdf',
     parent: testRoot,
   });
 

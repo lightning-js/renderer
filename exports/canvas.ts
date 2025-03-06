@@ -36,4 +36,10 @@
  */
 
 export { CanvasTextRenderer } from '../src/core/text-rendering/renderers/CanvasTextRenderer.js';
-export { CanvasCoreRenderer } from '../src/core/renderers/canvas/CanvasCoreRenderer.js';
+export { CanvasRenderer } from '../src/core/renderers/canvas/CanvasRenderer.js';
+export { CanvasTexture } from '../src/core/renderers/canvas/CanvasTexture.js';
+export * from '../src/core/renderers/canvas/CanvasShaderNode.js';
+/**
+ * @deprecated Use CanvasRenderer.
+ */
+export { CanvasRenderer as CanvasCoreRenderer } from '../src/core/renderers/canvas/CanvasRenderer.js';

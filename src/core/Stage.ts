@@ -27,7 +27,7 @@ import {
 } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
+import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   TextRenderer,
   type TextRendererMap,
@@ -45,15 +45,14 @@ import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
-import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
-import type { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
-import type { BaseShaderController } from '../main-api/ShaderController.js';
+import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
+import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
@@ -72,13 +71,14 @@ export interface StageOptions {
   enableContextSpy: boolean;
   forceWebGL2: boolean;
   numImageWorkers: number;
-  renderEngine: typeof WebGlCoreRenderer | typeof CanvasCoreRenderer;
+  renderEngine: typeof WebGlRenderer | typeof CanvasRenderer;
   eventBus: EventEmitter;
   quadBufferSize: number;
   fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
   inspector: boolean;
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
+  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
 }
 
 export type StageFpsUpdateHandler = (
@@ -91,7 +91,6 @@ export type StageFrameTickHandler = (
   frameTickData: FrameTickPayload,
 ) => void;
 
-const bufferMemory = 2e6;
 const autoStart = true;
 
 export class Stage {
@@ -105,12 +104,13 @@ export class Stage {
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
   public boundsMargin: [number, number, number, number];
-  public readonly defShaderCtr: BaseShaderController;
+  public readonly defShaderNode: CoreShaderNode | null = null;
   public readonly strictBound: Bound;
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-
+  public readonly pixelRatio: number;
+  public readonly bufferMemory: number = 2e6;
   /**
    * Renderer Event Bus for the Stage to emit events onto
    *
@@ -125,6 +125,7 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private numQuadsRendered = 0;
@@ -152,10 +153,14 @@ export class Stage {
       textureMemory,
       renderEngine,
       fontEngines,
+      createImageBitmapSupport,
     } = options;
 
     this.eventBus = options.eventBus;
-    this.txManager = new CoreTextureManager(this, numImageWorkers);
+    this.txManager = new CoreTextureManager(this, {
+      numImageWorkers,
+      createImageBitmapSupport,
+    });
 
     // Wait for the Texture Manager to initialize
     // once it does, request a render
@@ -164,7 +169,7 @@ export class Stage {
     });
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
-    this.shManager = new CoreShaderManager();
+
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
     this.strictBounds = options.strictBounds;
@@ -181,25 +186,25 @@ export class Stage {
     this.strictBound = createBound(0, 0, appWidth, appHeight);
     this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
-    const rendererOptions: CoreRendererOptions = {
+    this.clrColor = clearColor;
+
+    this.pixelRatio =
+      options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
+
+    this.renderer = new renderEngine({
       stage: this,
       canvas,
-      pixelRatio:
-        options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio,
-      clearColor: clearColor ?? 0xff000000,
-      bufferMemory,
-      txManager: this.txManager,
-      txMemManager: this.txMemManager,
-      shManager: this.shManager,
       contextSpy: this.contextSpy,
       forceWebGL2,
-    };
+    });
 
-    this.renderer = new renderEngine(rendererOptions);
+    this.shManager = new CoreShaderManager(this);
+
+    this.defShaderNode = this.renderer.getDefaultShaderNode();
+
     const renderMode = this.renderer.mode || 'webgl';
 
     this.createDefaultTexture();
-    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -267,7 +272,7 @@ export class Stage {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: this.defShaderCtr,
+      shader: this.defShaderNode,
       rtt: false,
       src: null,
       scale: 1,
@@ -284,6 +289,7 @@ export class Stage {
   }
 
   setClearColor(color: number) {
+    this.clearColor = color;
     this.renderer.updateClearColor(color);
     this.renderRequested = true;
   }
@@ -310,6 +316,7 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
+    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
@@ -318,7 +325,6 @@ export class Stage {
     );
 
     assertTruthy(this.defaultTexture instanceof ColorTexture);
-
     this.txManager.loadTexture(this.defaultTexture, true);
 
     // Mark the default texture as ALWAYS renderable
@@ -375,8 +381,13 @@ export class Stage {
     renderer.reset();
 
     // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested) {
-      this.txMemManager.cleanup();
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup(false);
+
+      if (this.txMemManager.criticalCleanupRequested === true) {
+        // If we still need to cleanup, request another but aggressive cleanup
+        this.txMemManager.cleanup(true);
+      }
     }
 
     // If we have RTT nodes draw them first
@@ -580,20 +591,6 @@ export class Stage {
     return resolvedTextRenderer as unknown as TextRenderer;
   }
 
-  /**
-   * Create a shader controller instance
-   *
-   * @param type
-   * @param props
-   * @returns
-   */
-  createShaderCtr(
-    type: keyof ShaderMap,
-    props: Record<string, unknown>,
-  ): BaseShaderController {
-    return this.shManager.loadShader(type, props);
-  }
-
   createNode(props: Partial<CoreNodeProps>) {
     const resolvedProps = this.resolveNodeDefaults(props);
     return new CoreNode(this, resolvedProps);
@@ -696,7 +693,7 @@ export class Stage {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? this.defShaderCtr,
+      shader: props.shader ?? this.defShaderNode,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,
@@ -728,8 +725,18 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup() {
-    this.txMemManager.cleanup();
+  cleanup(aggressive: boolean) {
+    this.txMemManager.cleanup(aggressive);
+  }
+
+  set clearColor(value: number) {
+    this.renderer.updateClearColor(value);
+    this.renderRequested = true;
+    this.clrColor = value;
+  }
+
+  get clearColor() {
+    return this.clrColor;
   }
 
   /**

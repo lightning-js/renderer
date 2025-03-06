@@ -22,7 +22,6 @@ import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { type TextureOptions } from './CoreTextureManager.js';
-import { type BaseShaderController } from '../main-api/ShaderController';
 import { createBound } from './lib/utils.js';
 import { ImageTexture } from './textures/ImageTexture.js';
 
@@ -54,7 +53,7 @@ describe('set color()', () => {
     scale: 0,
     scaleX: 0,
     scaleY: 0,
-    shader: mock<BaseShaderController>(),
+    shader: null,
     src: '',
     texture: null,
     textureOptions: {} as TextureOptions,
@@ -92,6 +91,7 @@ describe('set color()', () => {
       node.colorTr = 0xcceeffff;
 
       node.color = 0xffffffff;
+      node.color = 0xffffffff;
 
       expect(node.color).toBe(0xffffffff);
       expect(node.colorBl).toBe(0xffffffff);
@@ -108,6 +108,7 @@ describe('set color()', () => {
       const node = new CoreNode(stage, defaultProps);
       node.updateType = 0;
 
+      node.color = 0xffffffff;
       node.color = 0xffffffff;
 
       expect(node.updateType).toBe(UpdateType.PremultipliedColors);

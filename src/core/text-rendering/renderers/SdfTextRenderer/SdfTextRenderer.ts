@@ -44,21 +44,21 @@ import {
   type SdfRenderWindow,
 } from './internal/setRenderWindow.js';
 import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
-import { TrFontManager, type FontFamilyMap } from '../../TrFontManager.js';
+import { type FontFamilyMap } from '../../TrFontManager.js';
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
-import { WebGlCoreRenderOp } from '../../../renderers/webgl/WebGlCoreRenderOp.js';
+import { WebGlRenderOp } from '../../../renderers/webgl/WebGlRenderOp.js';
 import { BufferCollection } from '../../../renderers/webgl/internal/BufferCollection.js';
-import type {
-  SdfShader,
-  SdfShaderProps,
-} from '../../../renderers/webgl/shaders/SdfShader.js';
-import type { WebGlCoreCtxTexture } from '../../../renderers/webgl/WebGlCoreCtxTexture.js';
+import { Sdf, type SdfShaderProps } from '../../../shaders/webgl/SdfShader.js';
+import type { WebGlCtxTexture } from '../../../renderers/webgl/WebGlCtxTexture.js';
 import { EventEmitter } from '../../../../common/EventEmitter.js';
 import type { Matrix3d } from '../../../lib/Matrix3d.js';
 import type { Dimensions } from '../../../../common/CommonTypes.js';
-import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
+import { WebGlRenderer } from '../../../renderers/webgl/WebGlRenderer.js';
 import { calcDefaultLineHeight } from '../../TextRenderingUtils.js';
+import type { WebGlShaderProgram } from '../../../renderers/webgl/WebGlShaderProgram.js';
+import type { WebGlShaderNode } from '../../../renderers/webgl/WebGlShaderNode.js';
+import type { CoreTextNode } from '../../../CoreTextNode.js';
 
 declare module '../TextRenderer.js' {
   interface TextRendererMap {
@@ -139,21 +139,17 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.ssdfFontFamilies,
     this.msdfFontFamilies,
   ];
-  private sdfShader: SdfShader;
+  private sdfShader: WebGlShaderNode;
   private rendererBounds: Bound;
 
   public type: 'canvas' | 'sdf' = 'sdf';
 
   constructor(stage: Stage) {
     super(stage);
-    this.sdfShader = this.stage.shManager.loadShader('SdfShader', {
-      transform: new Float32Array(),
-      color: 0,
-      size: 0,
-      scrollY: 0,
-      distanceRange: 0,
-      debug: false,
-    }).shader;
+    this.stage.shManager.registerShaderType('Sdf', Sdf);
+    this.sdfShader = this.stage.shManager.createShader(
+      'Sdf',
+    ) as WebGlShaderNode;
     this.rendererBounds = {
       x1: 0,
       y1: 0,
@@ -601,21 +597,15 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     this.setStatus(state, 'loaded');
   }
 
-  override renderQuads(
-    state: SdfTextRendererState,
-    transform: Matrix3d,
-    clippingRect: Readonly<RectWithValid>,
-    alpha: number,
-    parentHasRenderTexture: boolean,
-    framebufferDimensions: Dimensions,
-  ): void {
+  override renderQuads(node: CoreTextNode): void {
+    const state = node.trState as SdfTextRendererState;
     if (!state.vertexBuffer) {
       // Nothing to draw
       return;
     }
 
     const renderer = this.stage.renderer;
-    assertTruthy(renderer instanceof WebGlCoreRenderer);
+    assertTruthy(renderer instanceof WebGlRenderer);
 
     const { fontSize, color, contain, scrollable, zIndex, debug } = state.props;
 
@@ -651,8 +641,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
               stride, // 0 = move forward size * sizeof(type) each iteration to get the next position
               offset: 0, // start at the beginning of the buffer
             },
-            a_textureCoordinate: {
-              name: 'a_textureCoordinate',
+            a_textureCoords: {
+              name: 'a_textureCoords',
               size: 2,
               type: glw.FLOAT,
               normalized: false,
@@ -670,7 +660,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     if (!bufferUploaded) {
       const glw = renderer.glw;
 
-      const buffer = webGlBuffers?.getBuffer('a_textureCoordinate') ?? null;
+      const buffer = webGlBuffers?.getBuffer('a_textureCoords') ?? null;
       glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW);
       state.bufferUploaded = true;
     }
@@ -680,50 +670,48 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       assertTruthy(elementBounds.valid);
       const elementRect = convertBoundToRect(elementBounds, tmpRect);
 
-      if (clippingRect.valid) {
+      if (node.clippingRect.valid) {
         state.clippingRect.valid = true;
-        clippingRect = intersectRect(
-          clippingRect,
+        node.clippingRect = intersectRect(
+          node.clippingRect,
           elementRect,
           state.clippingRect,
         );
       } else {
         state.clippingRect.valid = true;
-        clippingRect = copyRect(elementRect, state.clippingRect);
+        node.clippingRect = copyRect(elementRect, state.clippingRect);
       }
     }
 
-    const renderOp = new WebGlCoreRenderOp(
-      renderer.glw,
-      renderer.options,
-      webGlBuffers,
-      this.sdfShader,
+    const renderOp = new WebGlRenderOp(
+      renderer,
       {
-        transform: transform.getFloatArr(),
-        // IMPORTANT: The SDF Shader expects the color NOT to be premultiplied
-        // for the best blending results. Which is why we use `mergeColorAlpha`
-        // instead of `mergeColorAlphaPremultiplied` here.
-        color: mergeColorAlpha(color, alpha),
-        size: fontSize / (trFontFace.data?.info.size || 0),
-        scrollY,
-        distanceRange,
-        debug: debug.sdfShaderDebug,
-      } satisfies SdfShaderProps,
-      alpha,
-      clippingRect,
-      { height: textH, width: textW },
+        sdfShaderProps: {
+          transform: node.globalTransform!.getFloatArr(),
+          color: mergeColorAlpha(color, node.worldAlpha),
+          size: fontSize / (trFontFace.data?.info.size || 0),
+          scrollY,
+          distanceRange,
+          debug: debug.sdfShaderDebug,
+        },
+        sdfBuffers: state.webGlBuffers as BufferCollection,
+        shader: this.sdfShader,
+        alpha: node.worldAlpha,
+        clippingRect: node.clippingRect,
+        height: textH,
+        width: textW,
+        rtt: false,
+        parentHasRenderTexture: node.parentHasRenderTexture,
+        framebufferDimensions: node.framebufferDimensions,
+      },
       0,
-      zIndex,
-      false,
-      parentHasRenderTexture,
-      framebufferDimensions,
     );
 
     const texture = state.trFontFace?.texture;
     assertTruthy(texture);
     const ctxTexture = texture.ctxTexture;
 
-    renderOp.addTexture(ctxTexture as WebGlCoreCtxTexture);
+    renderOp.addTexture(ctxTexture as WebGlCtxTexture);
     renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 

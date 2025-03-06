@@ -16,5 +16,7 @@
     "./exports/**/*.ts",
     "./test/mockdata/**/*.json"
   ],
-  "exclude": []
+  "exclude": [
+    "./src/core/renderers/webgl/effect/*.ts"
+  ]
 }

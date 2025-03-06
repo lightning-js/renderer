@@ -62,13 +62,25 @@ const stylePropertyMap: {
 
     return { prop: 'height', value: `${h}px` };
   },
+  fontSize: (fs) => {
+    if (fs === 0) {
+      return null;
+    }
+
+    return { prop: 'font-size', value: `${fs}px` };
+  },
+  lineHeight: (lh) => {
+    if (lh === 0) {
+      return null;
+    }
+
+    return { prop: 'line-height', value: `${lh}px` };
+  },
   zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
-  fontSize: () => 'font-size',
   fontStyle: () => 'font-style',
   fontWeight: () => 'font-weight',
   fontStretch: () => 'font-stretch',
-  lineHeight: () => 'line-height',
   letterSpacing: () => 'letter-spacing',
   textAlign: () => 'text-align',
   overflowSuffix: () => 'overflow-suffix',
@@ -395,6 +407,11 @@ export class Inspector {
     //   div.setAttribute(`data-${property}`, color);
     //   return;
     // }
+
+    if (property === 'rtt' && value) {
+      div.setAttribute('data-rtt', String(value));
+      return;
+    }
 
     // CSS mappable attribute
     if (stylePropertyMap[property]) {
