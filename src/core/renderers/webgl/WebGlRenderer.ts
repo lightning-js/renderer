@@ -372,7 +372,6 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = 1; //node y coord
 
     // Update the length of the current render op
-    // this.curRenderOp.length += WORDS_PER_QUAD;
     this.curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
   }
@@ -460,7 +459,10 @@ export class WebGlRenderer extends CoreRenderer {
 
     // Check if the shader can batch the shader properties
     if (
-      !this.curRenderOp.shader.program.reuseRenderOp(params, this.curRenderOp)
+      this.curRenderOp.shader.program.reuseRenderOp(
+        params,
+        this.curRenderOp,
+      ) === false
     ) {
       return false;
     }

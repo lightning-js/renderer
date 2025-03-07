@@ -46,7 +46,6 @@ type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
  *
  */
 export class WebGlRenderOp extends CoreRenderOp {
-  length = 0;
   numQuads = 0;
   textures: WebGlCtxTexture[] = [];
 
