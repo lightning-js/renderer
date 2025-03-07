@@ -597,8 +597,7 @@ export class Stage {
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
-    const resolvedProps = {
-      ...this.resolveNodeDefaults(props),
+    const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -618,8 +617,7 @@ export class Stage {
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
       debug: props.debug ?? {},
-      shaderProps: null,
-    };
+    });
 
     const resolvedTextRenderer = this.resolveTextRenderer(
       resolvedProps,
