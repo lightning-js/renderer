@@ -66,9 +66,7 @@ export function resolveShaderProps(
  * You could view a ShaderType as a configuration object that contains methods,
  * and values that you can use to alter the way a node is drawn by the Renderer.
  */
-export interface CoreShaderType<
-  Props extends object = Record<string, unknown>,
-> {
+export interface CoreShaderType<Props extends object = any> {
   /**
    * Values you use to draw the Shader
    */

@@ -25,7 +25,7 @@ import {
 import type { CoreShaderProgram } from './renderers/CoreShaderProgram.js';
 import type { Stage } from './Stage.js';
 
-export type ShaderMap = Record<string, CoreShaderType<any>>;
+export type ShaderMap = Record<string, CoreShaderType>;
 
 export type ExtractProps<Props> = {
   [K in keyof Props]: Props[K] extends { default: infer D } ? D : Props[K];
@@ -40,7 +40,7 @@ export type OptionalShaderProps<T extends keyof ShaderMap> = PartialShaderProps<
 >;
 
 export class CoreShaderManager {
-  protected shTypes: Record<string, CoreShaderType<any>> = {};
+  protected shTypes: Record<string, ShaderMap> = {};
   protected shCache: Map<string, CoreShaderProgram> = new Map();
 
   /**
@@ -53,7 +53,7 @@ export class CoreShaderManager {
 
   constructor(readonly stage: Stage) {}
 
-  registerShaderType(name: string, shType: CoreShaderType<any>): void {
+  registerShaderType(name: string, shType: CoreShaderType): void {
     /**
      * block name duplicates
      */
@@ -72,7 +72,7 @@ export class CoreShaderManager {
       );
       return;
     }
-    this.shTypes[name] = deepClone(shType);
+    this.shTypes[name] = deepClone(shType) as ShaderMap;
   }
 
   /**
