@@ -280,7 +280,7 @@ export class ImageTexture extends Texture {
     };
   }
 
-  determineImageTypeAndLoadImage() {
+  async determineImageTypeAndLoadImage() {
     const { src, premultiplyAlpha, type } = this.props;
     if (src === null) {
       return {
@@ -338,12 +338,9 @@ export class ImageTexture extends Texture {
       );
     }
 
-    if (type === 'compressed') {
-      return loadCompressedTexture(absoluteSrc);
-    }
-
-    if (isCompressedTextureContainer(src) === true) {
-      return loadCompressedTexture(absoluteSrc);
+    const containerBuffer = await isCompressedTextureContainer(absoluteSrc);
+    if (containerBuffer !== null) {
+      return loadCompressedTexture(containerBuffer);
     }
 
     // default
