@@ -1360,12 +1360,16 @@ export class CoreNode extends EventEmitter {
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
-    const { tb, tc } = transform;
-    const { x1, y1, x3, y3 } = renderCoords;
-    if (tb === 0 || tc === 0) {
-      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
+    if (transform.tb === 0 || transform.tc === 0) {
+      this.renderBound = createBound(
+        renderCoords.x1,
+        renderCoords.y1,
+        renderCoords.x3,
+        renderCoords.y3,
+        this.renderBound,
+      );
     } else {
-      const { x2, x4, y2, y4 } = renderCoords;
+      const { x1, y1, x2, y2, x3, y3, x4, y4 } = renderCoords;
       this.renderBound = createBound(
         Math.min(x1, x2, x3, x4),
         Math.min(y1, y2, y3, y4),

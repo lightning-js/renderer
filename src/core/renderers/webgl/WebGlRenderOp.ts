@@ -65,6 +65,7 @@ export class WebGlRenderOp extends CoreRenderOp {
   readonly parentHasRenderTexture: boolean;
   readonly framebufferDimensions?: Dimensions;
   readonly alpha: number;
+  readonly pixelRatio: number;
 
   constructor(
     readonly renderer: WebGlRenderer,
@@ -81,6 +82,8 @@ export class WebGlRenderOp extends CoreRenderOp {
     this.framebufferDimensions = quad.framebufferDimensions;
     this.rtt = quad.rtt;
     this.alpha = quad.alpha;
+    this.pixelRatio =
+      this.parentHasRenderTexture === true ? 1 : renderer.stage.pixelRatio;
 
     /**
      * related to line 51
@@ -127,15 +130,14 @@ export class WebGlRenderOp extends CoreRenderOp {
     const quadIdx = (this.bufferIdx / 32) * 6 * 2;
     // Clipping
     if (this.clippingRect.valid === true) {
-      const { x, y, width, height } = this.clippingRect;
-      const pixelRatio =
-        this.parentHasRenderTexture === true ? 1 : stage.pixelRatio;
-      const canvasHeight = options.canvas.height;
-
-      const clipX = Math.round(x * pixelRatio);
-      const clipWidth = Math.round(width * pixelRatio);
-      const clipHeight = Math.round(height * pixelRatio);
-      let clipY = Math.round(canvasHeight - clipHeight - y * pixelRatio);
+      const clipX = Math.round(this.clippingRect.x * this.pixelRatio);
+      const clipWidth = Math.round(this.clippingRect.width * this.pixelRatio);
+      const clipHeight = Math.round(this.clippingRect.height * this.pixelRatio);
+      let clipY = Math.round(
+        options.canvas.height -
+          clipHeight -
+          this.clippingRect.y * this.pixelRatio,
+      );
       // if parent has render texture, we need to adjust the scissor rect
       // to be relative to the parent's framebuffer
       if (this.parentHasRenderTexture) {
