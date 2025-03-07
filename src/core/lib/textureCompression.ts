@@ -20,33 +20,76 @@
 import { type TextureData } from '../textures/Texture.js';
 
 /**
- * Tests if the given location is a compressed texture container
- * @param url
- * @remarks
- * This function is used to determine if the given image url is a compressed
- * and only supports the following extensions: .ktx and .pvr
- * @returns
+ * Checks if the texture at the given URL is in a compressed format (KTX or PVR).
+ *
+ * @param url - The URL of the texture to check.
+ * @returns A promise that resolves to the ArrayBuffer of the texture if it is in a compressed format, or null otherwise.
  */
-export function isCompressedTextureContainer(url: string): boolean {
-  return /\.(ktx|pvr)$/.test(url);
+export async function isCompressedTextureContainer(
+  url: string,
+): Promise<ArrayBuffer | null> {
+  const response = await fetch(url);
+  const arrayBuffer = await response.arrayBuffer();
+  const compressedFormat = getCompressedFormat(arrayBuffer);
+  if (compressedFormat === 'KTX' || compressedFormat === 'PVR') {
+    return arrayBuffer;
+  }
+  return null;
 }
 
 /**
- * Loads a compressed texture container
- * @param url
- * @returns
+ * Determines the compressed texture format of the given ArrayBuffer.
+ *
+ * This function checks the magic numbers of the buffer to identify if it is
+ * in KTX or PVR format. If neither format is detected, it returns "UNKNOWN".
+ *
+ * @param buffer - The ArrayBuffer containing the texture data.
+ * @returns A string representing the compressed format: "KTX", "PVR", or "UNKNOWN".
+ */
+function getCompressedFormat(buffer: ArrayBuffer): string {
+  const dataView = new DataView(buffer);
+  // Check for KTX magic number
+  const KTX_MAGIC = [
+    0xab, 0x4b, 0x54, 0x58, 0x20, 0x31, 0x31, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a,
+  ];
+  let isKTX = true;
+  for (let i = 0; i < KTX_MAGIC.length; i++) {
+    if (dataView.getUint8(i) !== KTX_MAGIC[i]) {
+      isKTX = false;
+      break;
+    }
+  }
+  if (isKTX) return 'KTX';
+
+  // Check for PVR magic number (first 4 bytes should be 0x03525650 in little-endian)
+  const PVR_MAGIC = 0x03525650;
+  const magic = dataView.getUint32(0, true); // little-endian
+  if (magic === PVR_MAGIC) return 'PVR';
+
+  return 'UNKNOWN';
+}
+
+/**
+ * Loads a compressed texture from the given buffer.
+ *
+ * This function determines the compressed format of the texture data
+ * and loads it accordingly. Currently, it supports KTX and PVR formats.
+ *
+ * @param buffer - The ArrayBuffer containing the compressed texture data.
+ * @returns A promise that resolves to the loaded TextureData.
+ * @throws Will throw an error if the texture format is unsupported.
  */
 export const loadCompressedTexture = async (
-  url: string,
+  buffer: ArrayBuffer,
 ): Promise<TextureData> => {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-
-  if (url.indexOf('.ktx') !== -1) {
-    return loadKTXData(arrayBuffer);
+  const compressedFormat = getCompressedFormat(buffer);
+  if (compressedFormat === 'KTX') {
+    return loadKTXData(buffer);
   }
-
-  return loadPVRData(arrayBuffer);
+  if (compressedFormat === 'PVR') {
+    return loadPVRData(buffer);
+  }
+  throw new Error('Unsupported texture format');
 };
 
 /**
