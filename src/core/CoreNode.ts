@@ -1209,8 +1209,8 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.hasShaderUpdater === true &&
-      this.updateType & UpdateType.RecalcUniforms
+      this.updateType & UpdateType.RecalcUniforms &&
+      this.hasShaderUpdater === true
     ) {
       //this exists because the boolean hasShaderUpdater === true
       this.shader!.update!();
