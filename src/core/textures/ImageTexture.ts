@@ -23,7 +23,11 @@ import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute, isBase64Image } from '../lib/utils.js';
+import {
+  convertUrlToAbsolute,
+  dataURIToBlob,
+  isBase64Image,
+} from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 import { fetchJson } from '../text-rendering/font-face-types/utils.js';
 
@@ -40,7 +44,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData | (() => ImageData | null);
+  src?: string | Blob | ImageData | (() => ImageData | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -133,10 +137,10 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  async loadImageFallback(src: string, hasAlpha: boolean) {
+  async loadImageFallback(src: string | Blob, hasAlpha: boolean) {
     const img = new Image();
 
-    if (isBase64Image(src) === false) {
+    if (typeof src === 'string' && isBase64Image(src) === false) {
       img.crossOrigin = 'anonymous';
     }
 
@@ -151,7 +155,11 @@ export class ImageTexture extends Texture {
           resolve({ data: img, premultiplyAlpha: hasAlpha });
         };
 
-        img.src = src;
+        if (src instanceof Blob) {
+          img.src = URL.createObjectURL(src);
+        } else {
+          img.src = src;
+        }
       },
     );
   }
@@ -215,9 +223,16 @@ export class ImageTexture extends Texture {
         );
       }
 
-      const blob = await fetchJson(src, 'blob').then(
-        (response) => response as Blob,
-      );
+      let blob;
+
+      if (isBase64Image(src) === true) {
+        blob = dataURIToBlob(src);
+      } else {
+        blob = await fetchJson(src, 'blob').then(
+          (response) => response as Blob,
+        );
+      }
+
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
     }
 
@@ -274,6 +289,14 @@ export class ImageTexture extends Texture {
     }
 
     if (typeof src !== 'string') {
+      if (src instanceof Blob) {
+        if (this.txManager.hasCreateImageBitmap === true) {
+          const { sx, sy, sw, sh } = this.props;
+          return this.createImageBitmap(src, premultiplyAlpha, sx, sy, sw, sh);
+        } else {
+          return this.loadImageFallback(src, premultiplyAlpha ?? true);
+        }
+      }
       if (src instanceof ImageData) {
         return {
           data: src,
