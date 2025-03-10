@@ -22,12 +22,15 @@ import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;
 const PADDING = 20;
+const POSITION = null;
 
 export interface TestRowOptions {
   renderer: RendererMain;
   rowNode: INode;
   containerSize?: number;
+  containerHeight?: number;
   padding?: number;
+  descriptionPosition?: 'top' | 'bottom';
 }
 
 export async function constructTestRow(
@@ -38,28 +41,36 @@ export async function constructTestRow(
     renderer,
     rowNode,
     containerSize = CONTAINER_SIZE,
+    containerHeight = containerSize,
     padding = PADDING,
+    descriptionPosition = POSITION,
   } = options;
   let curX = 0;
   const curY = 0;
   for (const testNode of testNodes) {
+    let textPos =
+      descriptionPosition === 'top'
+        ? 0
+        : descriptionPosition === 'bottom'
+        ? containerHeight + padding
+        : containerHeight / 2;
     if (typeof testNode === 'string') {
       const dimensions = await waitForLoadedDimensions(
         renderer.createTextNode({
-          mountY: 0.5,
+          mountY: descriptionPosition ? 1 : 0.5,
           x: curX,
-          y: containerSize / 2,
+          y: textPos,
           text: testNode,
           parent: rowNode,
         }),
       );
-      curX += dimensions.width + padding;
+      curX += descriptionPosition ? 0 : dimensions.width + padding;
     } else {
       const container = renderer.createNode({
         parent: rowNode,
         color: 0xffffffff,
         width: containerSize,
-        height: containerSize,
+        height: containerHeight,
         clipping: true,
         x: curX,
         y: curY,
@@ -68,5 +79,5 @@ export async function constructTestRow(
       curX += containerSize + padding;
     }
   }
-  return curY + containerSize;
+  return curY + containerHeight;
 }
