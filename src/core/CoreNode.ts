@@ -730,6 +730,7 @@ export class CoreNode extends EventEmitter {
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
+  private hasShaderUpdater = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -765,15 +766,16 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = Object.assign({}, props, {
+    this.props = {
+      ...props,
       parent: null,
       texture: null,
       shader: null,
       src: null,
       rtt: false,
-    });
+    };
 
-    // Assign props to instance
+    // Assign props to instances
     this.parent = props.parent;
     this.texture = props.texture;
     this.shader = props.shader;
@@ -1207,11 +1209,11 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.shader?.update !== undefined &&
-      (this.updateType & UpdateType.Local ||
-        this.updateType & UpdateType.RecalcUniforms)
+      this.updateType & UpdateType.RecalcUniforms &&
+      this.hasShaderUpdater === true
     ) {
-      this.shader.update();
+      //this exists because the boolean hasShaderUpdater === true
+      this.shader!.update!();
     }
 
     if (this.updateType & UpdateType.Children && this.children.length > 0) {
@@ -1358,12 +1360,16 @@ export class CoreNode extends EventEmitter {
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
-    const { tb, tc } = transform;
-    const { x1, y1, x3, y3 } = renderCoords;
-    if (tb === 0 || tc === 0) {
-      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
+    if (transform.tb === 0 || transform.tc === 0) {
+      this.renderBound = createBound(
+        renderCoords.x1,
+        renderCoords.y1,
+        renderCoords.x3,
+        renderCoords.y3,
+        this.renderBound,
+      );
     } else {
-      const { x2, x4, y2, y4 } = renderCoords;
+      const { x1, y1, x2, y2, x3, y3, x4, y4 } = renderCoords;
       this.renderBound = createBound(
         Math.min(x1, x2, x3, x4),
         Math.min(y1, y2, y3, y4),
@@ -1702,7 +1708,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = this.stage.defShaderNode;
+    this.props.shader = null;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
@@ -2300,11 +2306,15 @@ export class CoreNode extends EventEmitter {
       return;
     }
     if (shader === null) {
+      this.hasShaderUpdater = false;
       this.props.shader = this.stage.defShaderNode;
       this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
-    shader.attachNode(this);
+    if (shader.shaderKey !== 'default') {
+      this.hasShaderUpdater = shader.update !== undefined;
+      shader.attachNode(this);
+    }
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable);
   }

@@ -88,7 +88,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
   readonly shaderType: CoreShaderType<Props>;
   protected propsConfig: ShaderProps<Props> | undefined;
-  protected resolvedProps: Props | undefined = undefined;
+  readonly resolvedProps: Props | undefined = undefined;
   protected definedProps: Props | undefined = undefined;
   protected node: CoreNode | null = null;
   update: (() => void) | undefined = undefined;
@@ -150,10 +150,6 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
 
   attachNode(node: CoreNode) {
     this.node = node;
-  }
-
-  getResolvedProps() {
-    return this.resolvedProps;
   }
 
   get props(): Props | undefined {

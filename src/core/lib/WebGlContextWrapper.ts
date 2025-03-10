@@ -3,6 +3,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
 import { assertTruthy } from '../../utils.js';
+import type {
+  Vec2,
+  Vec3,
+  Vec4,
+} from '../renderers/webgl/internal/ShaderUtils.js';
 import { isWebGl2 } from '../renderers/webgl/internal/WebGlUtils.js';
 
 /**
@@ -801,6 +806,20 @@ export class WebGlContextWrapper {
   }
 
   /**
+   * Sets the value of a vec3 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v - array of 4 numbers.
+   */
+  uniform2fa(location: string, value: Vec2) {
+    this.gl.uniform2f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value[0],
+      value[1],
+    );
+  }
+
+  /**
    * Sets the value of a vec2 array uniform variable.
    *
    * @param location - The location of the uniform variable.
@@ -855,6 +874,21 @@ export class WebGlContextWrapper {
       v0,
       v1,
       v2,
+    );
+  }
+
+  /**
+   * Sets the value of a vec3 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v - array of 4 numbers.
+   */
+  uniform3fa(location: string, value: Vec3) {
+    this.gl.uniform3f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value[0],
+      value[1],
+      value[2],
     );
   }
 
@@ -917,6 +951,22 @@ export class WebGlContextWrapper {
       v1,
       v2,
       v3,
+    );
+  }
+
+  /**
+   * Sets the value of a vec4 uniform variable.
+   *
+   * @param location - The location of the uniform variable.
+   * @param v - array of 4 numbers.
+   */
+  uniform4fa(location: string, value: Vec4) {
+    this.gl.uniform4f(
+      this.gl.getUniformLocation(this.curProgram!, location),
+      value[0],
+      value[1],
+      value[2],
+      value[3],
     );
   }
 

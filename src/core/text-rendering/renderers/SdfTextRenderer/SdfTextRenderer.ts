@@ -712,7 +712,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     const ctxTexture = texture.ctxTexture;
 
     renderOp.addTexture(ctxTexture as WebGlCtxTexture);
-    renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 
     renderer.addRenderOp(renderOp);
