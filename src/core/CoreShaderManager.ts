@@ -40,7 +40,7 @@ export type OptionalShaderProps<T extends keyof ShaderMap> = PartialShaderProps<
 >;
 
 export class CoreShaderManager {
-  protected shTypes: Record<string, ShaderMap> = {};
+  protected shTypes: ShaderMap = {};
   protected shCache: Map<string, CoreShaderProgram> = new Map();
 
   /**
@@ -72,7 +72,7 @@ export class CoreShaderManager {
       );
       return;
     }
-    this.shTypes[name] = deepClone(shType) as ShaderMap;
+    this.shTypes[name] = deepClone(shType);
   }
 
   /**
