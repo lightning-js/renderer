@@ -748,7 +748,7 @@ export class LightningTextTextureRenderer {
             result = word;
             spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
           } else {
-            resultLines.push(result);
+            if (result.length > 0) resultLines.push(result);
             result = '';
             spaceLeft = wordWrapWidth - indent;
             const letters = word.split('');
@@ -757,8 +757,8 @@ export class LightningTextTextureRenderer {
               const letterWidth = this.measureText(letter, letterSpacing);
               if (letterWidth > spaceLeft) {
                 resultLines.push(result);
-                result = letter;
-                spaceLeft = wordWrapWidth - letterWidth;
+                result = '';
+                spaceLeft = wordWrapWidth - indent;
               } else {
                 result += letter;
                 spaceLeft -= letterWidth;

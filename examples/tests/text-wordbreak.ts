@@ -27,7 +27,7 @@ export default async function test(settings: ExampleSettings) {
   return pageContainer;
 }
 
-const containerSize = 553;
+const containerSize = 555;
 const containerHeight = 200;
 const descriptionPosition = 'top';
 const NODE_PROPS = {

@@ -302,7 +302,8 @@ export function layoutText(
           lastWord.xStart === 0 &&
           nextLineWillFit
         ) {
-          // The current word is wider than the line width and we are breaking words
+          // The current word which starts the line is wider than the line width
+          // proceed to next line
           glyphs = shaper.shapeText(
             shaperProps,
             new PeekableIterator(
@@ -314,10 +315,12 @@ export function layoutText(
         } else if (
           contain !== 'none' &&
           wordBreak === 'break-word' &&
+          lastWord.xStart === 0 &&
           charEndX + overflowSuffVertexWidth >= vertexW &&
           nextLineWillFit === false
         ) {
-          // wordBreak: break-all - the current letter is about to go of the edge
+          // wordBreak: break-word - the current letter is about to go of the edge
+          // and the next line will not fit, so we add the overflow suffix
           glyphs = shaper.shapeText(
             shaperProps,
             new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
