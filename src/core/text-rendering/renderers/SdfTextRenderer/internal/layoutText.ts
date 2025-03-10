@@ -55,6 +55,7 @@ export function layoutText(
   forceFullLayoutCalc: TextRendererState['forceFullLayoutCalc'],
   scrollable: TrProps['scrollable'],
   overflowSuffix: TrProps['overflowSuffix'],
+  wordBreak: TrProps['wordBreak'],
   maxLines: TrProps['maxLines'],
 ): {
   bufferNumFloats: number;
@@ -222,8 +223,37 @@ export function layoutText(
       if (glyph.mapped) {
         // Mapped glyph
         const charEndX = curX + glyph.xOffset + glyph.width;
-        // Word wrap check
+
         if (
+          wordBreak === 'break-all' &&
+          charEndX >= vertexW &&
+          nextLineWillFit
+        ) {
+          // wordBreak: break-all - the current letter is about to go of the edge
+          // of the container width and the next line will fit, so we break to the next line
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(
+              getUnicodeCodepoints(text, glyph.cluster),
+              glyph.cluster,
+            ),
+          );
+          break;
+        } else if (
+          contain !== 'none' &&
+          wordBreak === 'break-all' &&
+          charEndX + overflowSuffVertexWidth >= vertexW &&
+          nextLineWillFit === false
+        ) {
+          // wordBreak: break-all - the current letter is about to go of the edge
+          // of the container width and the next line will not fit, so we add the overflow suffix
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
+          );
+          contain = 'none';
+        } else if (
+          // Word wrap check
           // We are containing the text
           contain !== 'none' &&
           // The current glyph reaches outside the contained width
@@ -266,6 +296,33 @@ export function layoutText(
             // set contain = 'none' to prevent an infinite loop.
             contain = 'none';
           }
+        } else if (
+          wordBreak === 'break-word' &&
+          charEndX >= vertexW &&
+          lastWord.xStart === 0 &&
+          nextLineWillFit
+        ) {
+          // The current word is wider than the line width and we are breaking words
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(
+              getUnicodeCodepoints(text, glyph.cluster),
+              glyph.cluster,
+            ),
+          );
+          break;
+        } else if (
+          contain !== 'none' &&
+          wordBreak === 'break-word' &&
+          charEndX + overflowSuffVertexWidth >= vertexW &&
+          nextLineWillFit === false
+        ) {
+          // wordBreak: break-all - the current letter is about to go of the edge
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
+          );
+          contain = 'none';
         } else {
           // This glyph fits, so we can add it to the buffer
           const quadX = curX + glyph.xOffset;

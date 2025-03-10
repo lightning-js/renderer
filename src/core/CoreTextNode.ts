@@ -108,6 +108,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       textBaseline: props.textBaseline,
       verticalAlign: props.verticalAlign,
       overflowSuffix: props.overflowSuffix,
+      wordBreak: props.wordBreak,
     });
 
     this.trState = textRendererState;
@@ -348,6 +349,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
     this.textRenderer.set.overflowSuffix(this.trState, value);
+  }
+
+  get wordBreak(): CoreTextNodeProps['wordBreak'] {
+    return this.trState.props.wordBreak;
+  }
+
+  set wordBreak(value: CoreTextNodeProps['wordBreak']) {
+    this.textRenderer.set.wordBreak(this.trState, value);
   }
 
   get debug(): CoreTextNodeProps['debug'] {

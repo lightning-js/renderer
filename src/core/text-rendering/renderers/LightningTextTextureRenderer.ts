@@ -74,7 +74,7 @@ export interface Settings {
   trFontFace: WebTrFontFace | null;
   wordWrap: boolean;
   wordWrapWidth: number;
-  wordBreak: boolean;
+  wordBreak: 'normal' | 'break-all' | 'break-word';
   textOverflow: TextOverflow | null;
   lineHeight: number | null;
   textBaseline: TextBaseline;
@@ -298,6 +298,7 @@ export class LightningTextTextureRenderer {
     }
 
     // Text overflow
+    // TODO Probably never used
     if (this._settings.textOverflow && !this._settings.wordWrap) {
       let suffix;
       switch (this._settings.textOverflow) {
@@ -717,7 +718,54 @@ export class LightningTextTextureRenderer {
           ? wordWidth
           : wordWidth + this.measureText(space, letterSpacing);
 
-        if (j === 0 || wordWidthWithSpace > spaceLeft) {
+        if (
+          this._settings.wordBreak === 'break-all' &&
+          wordWidthWithSpace > spaceLeft
+        ) {
+          const letters = word.split('');
+          for (let k = 0; k < letters.length; k++) {
+            const letter = letters[k]!;
+            const letterWidthWithSpace =
+              k > 0
+                ? this.measureText(letter, letterSpacing)
+                : this.measureText(space + letter, letterSpacing);
+
+            if (letterWidthWithSpace > spaceLeft) {
+              resultLines.push(result);
+              result = letter;
+              spaceLeft = wordWrapWidth - letterWidthWithSpace;
+            } else {
+              spaceLeft -= letterWidthWithSpace;
+              result += k > 0 ? letter : space + letter;
+            }
+          }
+        } else if (
+          this._settings.wordBreak === 'break-word' &&
+          wordWidthWithSpace > spaceLeft
+        ) {
+          if (wordWidth < wordWrapWidth) {
+            resultLines.push(result);
+            result = word;
+            spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
+          } else {
+            resultLines.push(result);
+            result = '';
+            spaceLeft = wordWrapWidth - indent;
+            const letters = word.split('');
+            for (let k = 0; k < letters.length; k++) {
+              const letter = letters[k]!;
+              const letterWidth = this.measureText(letter, letterSpacing);
+              if (letterWidth > spaceLeft) {
+                resultLines.push(result);
+                result = letter;
+                spaceLeft = wordWrapWidth - letterWidth;
+              } else {
+                result += letter;
+                spaceLeft -= letterWidth;
+              }
+            }
+          }
+        } else if (j === 0 || wordWidthWithSpace > spaceLeft) {
           if (j > 0) {
             resultLines.push(result);
             result = '';
@@ -768,7 +816,7 @@ export class LightningTextTextureRenderer {
       trFontFace: null,
       wordWrap: true,
       wordWrapWidth: 0,
-      wordBreak: false,
+      wordBreak: 'normal',
       textOverflow: '',
       lineHeight: null,
       textBaseline: 'alphabetic',

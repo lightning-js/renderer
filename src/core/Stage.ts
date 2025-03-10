@@ -618,6 +618,7 @@ export class Stage {
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
+      wordBreak: props.wordBreak ?? 'normal',
       debug: props.debug ?? {},
       shaderProps: null,
     };

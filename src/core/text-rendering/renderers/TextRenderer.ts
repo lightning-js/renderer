@@ -44,7 +44,7 @@ import type {
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface TextRendererMap {}
 
 export interface TextRendererState {
@@ -318,6 +318,20 @@ export interface TrProps extends TrFontProps {
    */
   overflowSuffix: string;
 
+  /**
+   * Word Break for text
+   *
+   * @remarks
+   * This property sets how words should break when reaching the end of a line.
+   *
+   * - `'normal'`: Use the default line break rule.
+   * - `'break-all'`: To prevent overflow, word breaks should happen between any two characters.
+   * - `'break-word'`: To prevent overflow, word breaks should happen between words. If words are too long word breaks happen between any two characters.
+   *
+   * @default "normal"
+   */
+  wordBreak: 'normal' | 'break-all' | 'break-word';
+
   zIndex: number;
 
   debug: Partial<TextRendererDebugProps>;
@@ -396,6 +410,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   overflowSuffix: (state, value) => {
     state.props.overflowSuffix = value;
+  },
+  wordBreak: (state, value) => {
+    state.props.wordBreak = value;
   },
   debug: (state, value) => {
     state.props.debug = value;
