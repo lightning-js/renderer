@@ -136,9 +136,8 @@ export abstract class Texture extends EventEmitter {
    * Until the texture data is loaded for the first time the value will be
    * `null`.
    */
-  private dimensions: Dimensions | null = null;
-
-  private error: Error | null = null;
+  private _dimensions: Dimensions | null = null;
+  private _error: Error | null = null;
 
   // aggregate state
   public state: TextureState = 'initial';
@@ -157,6 +156,14 @@ export abstract class Texture extends EventEmitter {
 
   constructor(protected txManager: CoreTextureManager) {
     super();
+  }
+
+  get dimensions(): Dimensions | null {
+    return this._dimensions;
+  }
+
+  get error(): Error | null {
+    return this._error;
   }
 
   /**
@@ -265,13 +272,13 @@ export abstract class Texture extends EventEmitter {
         (errorOrDimensions.width !== undefined ||
           errorOrDimensions.height !== undefined)
       ) {
-        this.dimensions = errorOrDimensions;
+        this._dimensions = errorOrDimensions;
       }
 
       payload = this.dimensions;
     } else if (state === 'failed') {
-      this.error = errorOrDimensions as Error;
-      payload = this.error;
+      this._error = errorOrDimensions as Error;
+      payload = this._error;
     }
 
     // emit the new state
