@@ -136,7 +136,7 @@ export abstract class Texture extends EventEmitter {
    * Until the texture data is loaded for the first time the value will be
    * `null`.
    */
-  readonly dimensions: Readonly<Dimensions> | null = null;
+  private dimensions: Dimensions | null = null;
 
   readonly error: Error | null = null;
 
@@ -260,13 +260,12 @@ export abstract class Texture extends EventEmitter {
     let payload: Error | Dimensions | null = null;
     if (state === 'loaded') {
       if (errorOrDimensions) {
-        if (errorOrDimensions instanceof Error) {
-          (this.dimensions as unknown as Error) = errorOrDimensions;
-        } else if (
-          errorOrDimensions.width !== undefined ||
-          errorOrDimensions.height !== undefined
+        if (
+          !(errorOrDimensions instanceof Error) &&
+          (errorOrDimensions.width !== undefined ||
+            errorOrDimensions.height !== undefined)
         ) {
-          (this.dimensions as Dimensions) = errorOrDimensions;
+          this.dimensions = errorOrDimensions;
         }
       }
 
