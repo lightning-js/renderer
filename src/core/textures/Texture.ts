@@ -259,14 +259,13 @@ export abstract class Texture extends EventEmitter {
 
     let payload: Error | Dimensions | null = null;
     if (state === 'loaded') {
-      if (errorOrDimensions) {
-        if (
-          !(errorOrDimensions instanceof Error) &&
-          (errorOrDimensions.width !== undefined ||
-            errorOrDimensions.height !== undefined)
-        ) {
-          this.dimensions = errorOrDimensions;
-        }
+      if (
+        errorOrDimensions &&
+        !(errorOrDimensions instanceof Error) &&
+        (errorOrDimensions.width !== undefined ||
+          errorOrDimensions.height !== undefined)
+      ) {
+        this.dimensions = errorOrDimensions;
       }
 
       payload = this.dimensions;
