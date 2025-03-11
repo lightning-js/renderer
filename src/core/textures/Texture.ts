@@ -138,7 +138,7 @@ export abstract class Texture extends EventEmitter {
    */
   private dimensions: Dimensions | null = null;
 
-  readonly error: Error | null = null;
+  private error: Error | null = null;
 
   // aggregate state
   public state: TextureState = 'initial';
@@ -270,7 +270,7 @@ export abstract class Texture extends EventEmitter {
 
       payload = this.dimensions;
     } else if (state === 'failed') {
-      (this.error as Error) = errorOrDimensions as Error;
+      this.error = errorOrDimensions as Error;
       payload = this.error;
     }
 
