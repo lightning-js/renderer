@@ -275,7 +275,7 @@ export abstract class Texture extends EventEmitter {
         this._dimensions = errorOrDimensions;
       }
 
-      payload = this.dimensions;
+      payload = this._dimensions;
     } else if (state === 'failed') {
       this._error = errorOrDimensions as Error;
       payload = this._error;
