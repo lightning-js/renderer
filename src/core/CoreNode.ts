@@ -28,6 +28,7 @@ import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
   type Texture,
+  type TextureCoords,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
   type TextureLoadedEventHandler,
@@ -750,6 +751,7 @@ export class CoreNode extends EventEmitter {
     height: 0,
     valid: false,
   };
+  public textureCoords?: TextureCoords;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
@@ -895,6 +897,10 @@ export class CoreNode extends EventEmitter {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
+
+      if (this.stage.renderer.getTextureCoords !== undefined) {
+        this.textureCoords = this.stage.renderer.getTextureCoords(this);
+      }
     }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
@@ -1752,6 +1758,7 @@ export class CoreNode extends EventEmitter {
       // this assumes any renderable node is either a distinct texture or a ColorTexture
       texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
+      textureCoords: this.textureCoords,
       zIndex: this.zIndex,
       shader: this.props.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,

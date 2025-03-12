@@ -100,6 +100,11 @@ export interface TextureData {
    */
   premultiplyAlpha?: boolean | null;
 }
+/**
+ * TextureCoords generally numbers between 0 - 1
+ * [x1, y1, x2, y2]
+ */
+export type TextureCoords = [number, number, number, number];
 
 export type TextureState =
   | 'initial' // Before anything is loaded

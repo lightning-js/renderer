@@ -35,7 +35,11 @@ import {
   type WebGlColor,
 } from './internal/RendererUtils.js';
 import { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import { Texture, TextureType } from '../../textures/Texture.js';
+import {
+  Texture,
+  TextureType,
+  type TextureCoords,
+} from '../../textures/Texture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCtxSubTexture } from './WebGlCtxSubTexture.js';
 import { BufferCollection } from './internal/BufferCollection.js';
@@ -48,7 +52,6 @@ import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
-import type { CoreShaderType } from '../CoreShaderNode.js';
 
 const WORDS_PER_QUAD = 32;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
@@ -76,6 +79,8 @@ export class WebGlRenderer extends CoreRenderer {
   curRenderOp: WebGlRenderOp | null = null;
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
+
+  defaultTextureCoords: TextureCoords = [0, 0, 1, 1];
 
   //// Default Shader
   defaultShaderNode: WebGlShaderNode | null = null;
@@ -258,70 +263,10 @@ export class WebGlRenderer extends CoreRenderer {
       this.newRenderOp(params, bufferIdx);
     }
 
-    let texCoordX1 = 0;
-    let texCoordY1 = 0;
-    let texCoordX2 = 1;
-    let texCoordY2 = 1;
+    const textureCoords = params.textureCoords || this.defaultTextureCoords;
 
     if (texture.type === TextureType.subTexture) {
-      const {
-        x: tx,
-        y: ty,
-        width: tw,
-        height: th,
-      } = (texture as SubTexture).props;
-      const { width: parentW = 0, height: parentH = 0 } = (
-        texture as SubTexture
-      ).parentTexture.dimensions || { width: 0, height: 0 };
-      texCoordX1 = tx / parentW;
-      texCoordX2 = texCoordX1 + tw / parentW;
-      texCoordY1 = ty / parentH;
-      texCoordY2 = texCoordY1 + th / parentH;
       texture = (texture as SubTexture).parentTexture;
-    }
-
-    if (
-      texture.type === TextureType.image &&
-      params.textureOptions !== null &&
-      params.textureOptions.resizeMode !== undefined &&
-      texture.dimensions !== null
-    ) {
-      const resizeMode = params.textureOptions.resizeMode;
-      const { width: tw, height: th } = texture.dimensions;
-      if (resizeMode.type === 'cover') {
-        const scaleX = params.width / tw;
-        const scaleY = params.height / th;
-        const scale = Math.max(scaleX, scaleY);
-        const precision = 1 / scale;
-        // Determine based on width
-        if (scale && scaleX && scaleX < scale) {
-          const desiredSize = precision * params.width;
-          texCoordX1 = (1 - desiredSize / tw) * (resizeMode.clipX ?? 0.5);
-          texCoordX2 = texCoordX1 + desiredSize / tw;
-        }
-        // Determine based on height
-        if (scale && scaleY && scaleY < scale) {
-          const desiredSize = precision * params.height;
-          texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
-          texCoordY2 = texCoordY1 + desiredSize / th;
-        }
-      }
-    }
-
-    // Flip texture coordinates if dictated by texture options
-    let flipY = 0;
-    if (params.textureOptions !== null) {
-      if (params.textureOptions.flipX === true) {
-        [texCoordX1, texCoordX2] = [texCoordX2, texCoordX1];
-      }
-
-      // convert to integer for bitwise operation below
-      flipY = +(params.textureOptions.flipY || false);
-    }
-
-    // Eitherone should be true
-    if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
-      [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
     const ctxTexture = texture.ctxTexture as WebGlCtxTexture;
@@ -334,8 +279,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
     fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-    fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-    fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+    fQuadBuffer[bufferIdx++] = textureCoords[0]; // texCoordX
+    fQuadBuffer[bufferIdx++] = textureCoords[1]; // texCoordY
     uiQuadBuffer[bufferIdx++] = params.colorTl; // color
     fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -344,8 +289,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-    fQuadBuffer[bufferIdx++] = texCoordX2;
-    fQuadBuffer[bufferIdx++] = texCoordY1;
+    fQuadBuffer[bufferIdx++] = textureCoords[2];
+    fQuadBuffer[bufferIdx++] = textureCoords[1];
     uiQuadBuffer[bufferIdx++] = params.colorTr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -354,8 +299,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-    fQuadBuffer[bufferIdx++] = texCoordX1;
-    fQuadBuffer[bufferIdx++] = texCoordY2;
+    fQuadBuffer[bufferIdx++] = textureCoords[0];
+    fQuadBuffer[bufferIdx++] = textureCoords[3];
     uiQuadBuffer[bufferIdx++] = params.colorBl;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -364,8 +309,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-    fQuadBuffer[bufferIdx++] = texCoordX2;
-    fQuadBuffer[bufferIdx++] = texCoordY2;
+    fQuadBuffer[bufferIdx++] = textureCoords[2];
+    fQuadBuffer[bufferIdx++] = textureCoords[3];
     uiQuadBuffer[bufferIdx++] = params.colorBr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -692,6 +637,84 @@ export class WebGlRenderer extends CoreRenderer {
       'default',
     ) as WebGlShaderNode;
     return this.defaultShaderNode;
+  }
+
+  getTextureCoords(node: CoreNode): TextureCoords | undefined {
+    const { texture, textureOptions } = node;
+    if (texture === null) {
+      return undefined;
+    }
+    if (
+      texture.type === TextureType.subTexture ||
+      texture.type === TextureType.image ||
+      texture.type === TextureType.renderToTexture ||
+      textureOptions !== null
+    ) {
+      const result = [0, 0, 1, 1];
+
+      if (texture.type === TextureType.subTexture) {
+        const props = (texture as SubTexture).props;
+        const { width: parentW = 0, height: parentH = 0 } = (
+          texture as SubTexture
+        ).parentTexture.dimensions || { width: 0, height: 0 };
+
+        console.log('parent', props.x, props.y, parentH, parentW);
+        result[0] = props.x / parentW;
+        result[1] = result[0] + props.width / parentW;
+        result[2] = props.y / parentH;
+        result[3] = result[2] + props.height / parentH;
+        console.log('result', result);
+      }
+
+      if (
+        texture.type === TextureType.image &&
+        textureOptions !== null &&
+        textureOptions.resizeMode !== undefined &&
+        texture.dimensions !== null
+      ) {
+        const resizeMode = textureOptions.resizeMode;
+        const dimensions = texture.dimensions;
+        if (resizeMode.type === 'cover') {
+          const scaleX = node.props.width / dimensions.width;
+          const scaleY = node.props.height / dimensions.height;
+          const scale = Math.max(scaleX, scaleY);
+          const precision = 1 / scale;
+          // Determine based on width
+          if (scaleX < scale) {
+            const desiredSize = precision * node.props.width;
+            result[0] =
+              (1 - desiredSize / dimensions.width) * (resizeMode.clipX ?? 0.5);
+            result[1] = result[0] + desiredSize / dimensions.width;
+          }
+          // Determine based on height
+          if (scaleY < scale) {
+            const desiredSize = precision * node.props.height;
+            result[2] =
+              (1 - desiredSize / dimensions.height) * (resizeMode.clipY ?? 0.5);
+            result[3] = result[2] + desiredSize / dimensions.height;
+          }
+        }
+      }
+
+      // Flip texture coordinates if dictated by texture options
+      let flipY = 0;
+      if (textureOptions !== null) {
+        if (textureOptions.flipX === true) {
+          [result[0], result[2]] = [result[2]!, result[0]!];
+        }
+
+        // convert to integer for bitwise operation below
+        flipY = +(textureOptions.flipY || false);
+      }
+
+      // Eitherone should be true
+      if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
+        [result[1], result[3]] = [result[3]!, result[1]!];
+      }
+      return result as TextureCoords;
+    }
+
+    return undefined;
   }
 
   /**
