@@ -39,10 +39,35 @@ export abstract class Platform {
   abstract startLoop(stage: Stage): void;
 
   /**
-   * Returns the platform createImageBitmap function
-   * @returns {createImageBitmap}
+   * Abstracted createImageBitmap method.
+   * @param blob - The image source to create the ImageBitmap from.
+   * @param sxOrOptions - The source rectangle x coordinate or ImageBitmapOptions.
+   * @param sy - The source rectangle y coordinate.
+   * @param sw - The source rectangle width.
+   * @param sh - The source rectangle height.
+   * @param options - The ImageBitmapOptions.
+   * @returns A promise that resolves with the created ImageBitmap.
    */
-  abstract get createImageBitmap(): typeof createImageBitmap;
+  abstract createImageBitmap(blob: ImageBitmapSource): Promise<ImageBitmap>;
+  abstract createImageBitmap(
+    blob: ImageBitmapSource,
+    options: ImageBitmapOptions,
+  ): Promise<ImageBitmap>;
+  abstract createImageBitmap(
+    blob: ImageBitmapSource,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+  ): Promise<ImageBitmap>;
+  abstract createImageBitmap(
+    blob: ImageBitmapSource,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    options: ImageBitmapOptions,
+  ): Promise<ImageBitmap>;
 
   /**
    * Retrieves the current timestamp.
