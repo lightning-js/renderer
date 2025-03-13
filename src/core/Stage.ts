@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { startLoop, getTimeStamp } from './platform.js';
+
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import {
@@ -56,6 +56,8 @@ import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
+import type { Platform } from './platforms/Platform.js';
+import type { WebPlatform } from './platforms/web/WebPlatform.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -78,6 +80,7 @@ export interface StageOptions {
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  platform: Platform | WebPlatform;
 }
 
 export type StageFpsUpdateHandler = (
@@ -110,6 +113,8 @@ export class Stage {
   public readonly defaultTexture: Texture | null = null;
   public readonly pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
+  public readonly platform: Platform | WebPlatform | null = null;
+
   /**
    * Renderer Event Bus for the Stage to emit events onto
    *
@@ -153,7 +158,15 @@ export class Stage {
       renderEngine,
       fontEngines,
       createImageBitmapSupport,
+      platform,
     } = options;
+
+    assertTruthy(
+      platform !== null,
+      'A CorePlatform is not provided in the options',
+    );
+
+    this.platform = platform;
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(this, {
@@ -282,8 +295,8 @@ export class Stage {
     this.root = rootNode;
 
     // execute platform start loop
-    if (autoStart) {
-      startLoop(this);
+    if (autoStart === true) {
+      this.platform.startLoop(this);
     }
   }
 
@@ -294,7 +307,7 @@ export class Stage {
   }
 
   updateFrameTime() {
-    const newFrameTime = getTimeStamp();
+    const newFrameTime = this.platform!.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.deltaTime = !this.lastFrameTime

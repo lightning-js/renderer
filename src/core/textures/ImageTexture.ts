@@ -30,6 +30,7 @@ import {
 } from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 import { fetchJson } from '../text-rendering/font-face-types/utils.js';
+import type { Platform } from '../platforms/Platform.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -124,12 +125,15 @@ export interface ImageTextureProps {
  * {@link ImageTextureProps.premultiplyAlpha} prop to `false`.
  */
 export class ImageTexture extends Texture {
-  public props: Required<ImageTextureProps>;
+  private platform: Platform;
 
+  public props: Required<ImageTextureProps>;
   public override type: TextureType = TextureType.image;
 
   constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
     super(txManager);
+
+    this.platform = txManager.platform;
     this.props = ImageTexture.resolveDefaults(props);
   }
 
@@ -180,23 +184,30 @@ export class ImageTexture extends Texture {
 
     if (imageBitmapSupported.full === true && sw !== null && sh !== null) {
       // createImageBitmap with crop
-      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
-        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      });
+      const bitmap = await this.platform.createImageBitmap(
+        blob,
+        sx || 0,
+        sy || 0,
+        sw,
+        sh,
+        {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        },
+      );
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
     } else if (imageBitmapSupported.basic === true) {
       // basic createImageBitmap without options or crop
       // this is supported for Chrome v50 to v52/54 that doesn't support options
       return {
-        data: await createImageBitmap(blob),
+        data: await this.platform.createImageBitmap(blob),
         premultiplyAlpha: hasAlphaChannel,
       };
     }
 
     // default createImageBitmap without crop but with options
-    const bitmap = await createImageBitmap(blob, {
+    const bitmap = await this.platform.createImageBitmap(blob, {
       premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
       colorSpaceConversion: 'none',
       imageOrientation: 'none',
