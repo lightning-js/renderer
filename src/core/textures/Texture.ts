@@ -22,6 +22,7 @@ import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
+import type { Bound } from '../lib/utils.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -102,9 +103,8 @@ export interface TextureData {
 }
 /**
  * TextureCoords generally numbers between 0 - 1
- * [x1, y1, x2, y2]
  */
-export type TextureCoords = [number, number, number, number];
+export type TextureCoords = Bound;
 
 export type TextureState =
   | 'initial' // Before anything is loaded

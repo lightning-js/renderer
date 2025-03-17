@@ -292,7 +292,7 @@ export class CanvasRenderer extends CoreRenderer {
     this.clearColor = this.getParsedColor(color);
   }
 
-  override getDefaultShaderNode() {
+  getDefaultShaderNode() {
     return null;
   }
 }

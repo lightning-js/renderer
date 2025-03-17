@@ -80,7 +80,12 @@ export class WebGlRenderer extends CoreRenderer {
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
 
-  defaultTextureCoords: TextureCoords = [0, 0, 1, 1];
+  defaultTextureCoords: TextureCoords = {
+    x1: 0,
+    y1: 0,
+    x2: 1,
+    y2: 1,
+  };
 
   //// Default Shader
   defaultShaderNode: WebGlShaderNode | null = null;
@@ -263,7 +268,7 @@ export class WebGlRenderer extends CoreRenderer {
       this.newRenderOp(params, bufferIdx);
     }
 
-    const textureCoords = params.textureCoords || this.defaultTextureCoords;
+    const textureCoords = params.textureCoords;
 
     if (texture.type === TextureType.subTexture) {
       texture = (texture as SubTexture).parentTexture;
@@ -279,8 +284,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
     fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-    fQuadBuffer[bufferIdx++] = textureCoords[0]; // texCoordX
-    fQuadBuffer[bufferIdx++] = textureCoords[1]; // texCoordY
+    fQuadBuffer[bufferIdx++] = textureCoords!.x1; // texCoordX
+    fQuadBuffer[bufferIdx++] = textureCoords!.y1; // texCoordY
     uiQuadBuffer[bufferIdx++] = params.colorTl; // color
     fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -289,8 +294,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-    fQuadBuffer[bufferIdx++] = textureCoords[2];
-    fQuadBuffer[bufferIdx++] = textureCoords[1];
+    fQuadBuffer[bufferIdx++] = textureCoords!.x2;
+    fQuadBuffer[bufferIdx++] = textureCoords!.y1;
     uiQuadBuffer[bufferIdx++] = params.colorTr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -299,8 +304,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-    fQuadBuffer[bufferIdx++] = textureCoords[0];
-    fQuadBuffer[bufferIdx++] = textureCoords[3];
+    fQuadBuffer[bufferIdx++] = textureCoords!.x1;
+    fQuadBuffer[bufferIdx++] = textureCoords!.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBl;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -309,8 +314,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-    fQuadBuffer[bufferIdx++] = textureCoords[2];
-    fQuadBuffer[bufferIdx++] = textureCoords[3];
+    fQuadBuffer[bufferIdx++] = textureCoords!.x2;
+    fQuadBuffer[bufferIdx++] = textureCoords!.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -639,31 +644,35 @@ export class WebGlRenderer extends CoreRenderer {
     return this.defaultShaderNode;
   }
 
-  getTextureCoords(node: CoreNode): TextureCoords | undefined {
-    const { texture, textureOptions } = node;
+  override getTextureCoords(node: CoreNode): TextureCoords {
+    const texture = node.texture;
     if (texture === null) {
-      return undefined;
+      return this.defaultTextureCoords;
     }
+
+    const textureOptions = node.textureOptions;
     if (
       texture.type === TextureType.subTexture ||
       texture.type === TextureType.image ||
       texture.type === TextureType.renderToTexture ||
       textureOptions !== null
     ) {
-      const result = [0, 0, 1, 1];
+      const result = {
+        x1: 0,
+        y1: 0,
+        x2: 1,
+        y2: 1,
+      };
 
       if (texture.type === TextureType.subTexture) {
         const props = (texture as SubTexture).props;
         const { width: parentW = 0, height: parentH = 0 } = (
           texture as SubTexture
         ).parentTexture.dimensions || { width: 0, height: 0 };
-
-        console.log('parent', props.x, props.y, parentH, parentW);
-        result[0] = props.x / parentW;
-        result[1] = result[0] + props.width / parentW;
-        result[2] = props.y / parentH;
-        result[3] = result[2] + props.height / parentH;
-        console.log('result', result);
+        result.x1 = props.x / parentW;
+        result.x2 = result.x1 + props.width / parentW;
+        result.y1 = props.y / parentH;
+        result.y2 = result.y1 + props.height / parentH;
       }
 
       if (
@@ -682,16 +691,16 @@ export class WebGlRenderer extends CoreRenderer {
           // Determine based on width
           if (scaleX < scale) {
             const desiredSize = precision * node.props.width;
-            result[0] =
+            result.x1 =
               (1 - desiredSize / dimensions.width) * (resizeMode.clipX ?? 0.5);
-            result[1] = result[0] + desiredSize / dimensions.width;
+            result.x2 = result.x1 + desiredSize / dimensions.width;
           }
           // Determine based on height
           if (scaleY < scale) {
             const desiredSize = precision * node.props.height;
-            result[2] =
+            result.y1 =
               (1 - desiredSize / dimensions.height) * (resizeMode.clipY ?? 0.5);
-            result[3] = result[2] + desiredSize / dimensions.height;
+            result.y2 = result.y1 + desiredSize / dimensions.height;
           }
         }
       }
@@ -700,7 +709,7 @@ export class WebGlRenderer extends CoreRenderer {
       let flipY = 0;
       if (textureOptions !== null) {
         if (textureOptions.flipX === true) {
-          [result[0], result[2]] = [result[2]!, result[0]!];
+          [result.x1, result.x2] = [result.x2, result.x1];
         }
 
         // convert to integer for bitwise operation below
@@ -709,12 +718,12 @@ export class WebGlRenderer extends CoreRenderer {
 
       // Eitherone should be true
       if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
-        [result[1], result[3]] = [result[3]!, result[1]!];
+        [result.y1, result.y2] = [result.y2, result.y1];
       }
       return result as TextureCoords;
     }
 
-    return undefined;
+    return this.defaultTextureCoords;
   }
 
   /**

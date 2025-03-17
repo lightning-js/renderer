@@ -897,10 +897,6 @@ export class CoreNode extends EventEmitter {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
-
-      if (this.stage.renderer.getTextureCoords !== undefined) {
-        this.textureCoords = this.stage.renderer.getTextureCoords(this);
-      }
     }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
@@ -1261,6 +1257,14 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
+    if (
+      this.stage.renderer.getTextureCoords !== undefined &&
+      this.textureCoords === undefined &&
+      this.isRenderable === true
+    ) {
+      this.textureCoords = this.stage.renderer.getTextureCoords(this);
+    }
+
     // If we're out of bounds, apply the render state now
     // this is done so nodes can finish their entire update loop before
     // being marked as out of bounds
@@ -1290,15 +1294,6 @@ export class CoreNode extends EventEmitter {
       rttNode = rttNode.parent;
     }
     return rttNode;
-  }
-
-  private getRTTParentRenderState(): CoreNodeRenderState | null {
-    const rttNode = this.rttParent || this.findParentRTTNode();
-    if (!rttNode) {
-      return null;
-    }
-
-    return rttNode.renderState;
   }
 
   private notifyChildrenRTTOfUpdate(renderState: CoreNodeRenderState) {
@@ -2440,6 +2435,7 @@ export class CoreNode extends EventEmitter {
       this.unloadTexture();
     }
 
+    this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);

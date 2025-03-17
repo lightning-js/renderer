@@ -105,5 +105,5 @@ export abstract class CoreRenderer {
   abstract getBufferInfo(): BufferInfo | null;
   abstract getQuadCount(): number | null;
   abstract updateClearColor(color: number): void;
-  abstract getTextureCoords?(node: CoreNode): TextureCoords | undefined;
+  getTextureCoords?(node: CoreNode): TextureCoords;
 }
