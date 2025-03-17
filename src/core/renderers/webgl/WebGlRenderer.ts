@@ -268,24 +268,22 @@ export class WebGlRenderer extends CoreRenderer {
       this.newRenderOp(params, bufferIdx);
     }
 
-    const textureCoords = params.textureCoords;
-
     if (texture.type === TextureType.subTexture) {
       texture = (texture as SubTexture).parentTexture;
     }
 
-    const ctxTexture = texture.ctxTexture as WebGlCtxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCtxTexture);
-    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    assertTruthy(texture.ctxTexture instanceof WebGlCtxTexture);
+    const textureIdx = this.addTexture(texture.ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
     assertTruthy(params.renderCoords);
+    assertTruthy(params.textureCoords);
 
     // Upper-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
     fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-    fQuadBuffer[bufferIdx++] = textureCoords!.x1; // texCoordX
-    fQuadBuffer[bufferIdx++] = textureCoords!.y1; // texCoordY
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x1; // texCoordX
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y1; // texCoordY
     uiQuadBuffer[bufferIdx++] = params.colorTl; // color
     fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -294,8 +292,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-    fQuadBuffer[bufferIdx++] = textureCoords!.x2;
-    fQuadBuffer[bufferIdx++] = textureCoords!.y1;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y1;
     uiQuadBuffer[bufferIdx++] = params.colorTr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -304,8 +302,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-    fQuadBuffer[bufferIdx++] = textureCoords!.x1;
-    fQuadBuffer[bufferIdx++] = textureCoords!.y2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x1;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBl;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -314,8 +312,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-    fQuadBuffer[bufferIdx++] = textureCoords!.x2;
-    fQuadBuffer[bufferIdx++] = textureCoords!.y2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
