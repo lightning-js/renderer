@@ -752,6 +752,7 @@ export class CoreNode extends EventEmitter {
     valid: false,
   };
   public textureCoords?: TextureCoords;
+  public updateTextureCoords?: boolean = false;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
@@ -1257,12 +1258,9 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
-    if (
-      this.stage.renderer.getTextureCoords !== undefined &&
-      this.textureCoords === undefined &&
-      this.isRenderable === true
-    ) {
-      this.textureCoords = this.stage.renderer.getTextureCoords(this);
+    if (this.updateTextureCoords === true) {
+      this.updateTextureCoords = false;
+      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
     }
 
     // If we're out of bounds, apply the render state now
@@ -1510,6 +1508,13 @@ export class CoreNode extends EventEmitter {
    */
   setRenderable(isRenderable: boolean) {
     this.isRenderable = isRenderable;
+    if (
+      isRenderable === true &&
+      this.stage.calculateTextureCoord === true &&
+      this.textureCoords === undefined
+    ) {
+      this.updateTextureCoords = true;
+    }
   }
 
   /**
