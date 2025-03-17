@@ -222,7 +222,7 @@ export class CoreTextureManager extends EventEmitter {
 
     const { numImageWorkers, createImageBitmapSupport } = settings;
     this.stage = stage;
-    this.platform = stage.platform!;
+    this.platform = stage.platform;
     this.numImageWorkers = numImageWorkers;
 
     if (createImageBitmapSupport === 'auto') {

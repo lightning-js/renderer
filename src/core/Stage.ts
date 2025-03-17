@@ -113,7 +113,7 @@ export class Stage {
   public readonly defaultTexture: Texture | null = null;
   public readonly pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
-  public readonly platform: Platform | WebPlatform | null = null;
+  public readonly platform: Platform | WebPlatform;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
