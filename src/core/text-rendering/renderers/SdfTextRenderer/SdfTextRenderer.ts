@@ -281,6 +281,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.overflowSuffix = value;
         this.invalidateLayoutCache(state);
       },
+      wordBreak: (state, value) => {
+        state.props.wordBreak = value;
+        this.invalidateLayoutCache(state);
+      },
       debug: (state, value) => {
         state.props.debug = value;
       },
@@ -435,6 +439,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       verticalAlign,
       scrollable,
       overflowSuffix,
+      wordBreak,
       maxLines,
     } = state.props;
 
@@ -573,6 +578,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       forceFullLayoutCalc,
       scrollable,
       overflowSuffix,
+      wordBreak,
       maxLines,
     );
 
