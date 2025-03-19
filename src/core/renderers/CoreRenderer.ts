@@ -25,7 +25,7 @@ import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { RenderCoords } from '../lib/RenderCoords.js';
 import type { RectWithValid } from '../lib/utils.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
-import type { Texture } from '../textures/Texture.js';
+import type { Texture, TextureCoords } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
 
@@ -38,6 +38,7 @@ export interface QuadOptions {
   colorBr: number;
   texture: Texture | null;
   textureOptions: TextureOptions | null;
+  textureCoords: TextureCoords | undefined;
   zIndex: number;
   shader: CoreShaderNode | null;
   alpha: number;
@@ -104,4 +105,5 @@ export abstract class CoreRenderer {
   abstract getBufferInfo(): BufferInfo | null;
   abstract getQuadCount(): number | null;
   abstract updateClearColor(color: number): void;
+  getTextureCoords?(node: CoreNode): TextureCoords;
 }

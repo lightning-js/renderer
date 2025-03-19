@@ -28,6 +28,7 @@ import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
   type Texture,
+  type TextureCoords,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
   type TextureLoadedEventHandler,
@@ -750,6 +751,8 @@ export class CoreNode extends EventEmitter {
     height: 0,
     valid: false,
   };
+  public textureCoords?: TextureCoords;
+  public updateTextureCoords?: boolean = false;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
@@ -1255,6 +1258,11 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
+    if (this.updateTextureCoords === true) {
+      this.updateTextureCoords = false;
+      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+    }
+
     // If we're out of bounds, apply the render state now
     // this is done so nodes can finish their entire update loop before
     // being marked as out of bounds
@@ -1284,15 +1292,6 @@ export class CoreNode extends EventEmitter {
       rttNode = rttNode.parent;
     }
     return rttNode;
-  }
-
-  private getRTTParentRenderState(): CoreNodeRenderState | null {
-    const rttNode = this.rttParent || this.findParentRTTNode();
-    if (!rttNode) {
-      return null;
-    }
-
-    return rttNode.renderState;
   }
 
   private notifyChildrenRTTOfUpdate(renderState: CoreNodeRenderState) {
@@ -1509,6 +1508,13 @@ export class CoreNode extends EventEmitter {
    */
   setRenderable(isRenderable: boolean) {
     this.isRenderable = isRenderable;
+    if (
+      isRenderable === true &&
+      this.stage.calculateTextureCoord === true &&
+      this.textureCoords === undefined
+    ) {
+      this.updateTextureCoords = true;
+    }
   }
 
   /**
@@ -1752,6 +1758,7 @@ export class CoreNode extends EventEmitter {
       // this assumes any renderable node is either a distinct texture or a ColorTexture
       texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
+      textureCoords: this.textureCoords,
       zIndex: this.zIndex,
       shader: this.props.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,
@@ -2433,6 +2440,7 @@ export class CoreNode extends EventEmitter {
       this.unloadTexture();
     }
 
+    this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);

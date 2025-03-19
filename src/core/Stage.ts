@@ -110,6 +110,7 @@ export class Stage {
   public readonly defaultTexture: Texture | null = null;
   public readonly pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
+  public readonly calculateTextureCoord: boolean;
   /**
    * Renderer Event Bus for the Stage to emit events onto
    *
@@ -200,6 +201,7 @@ export class Stage {
     this.shManager = new CoreShaderManager(this);
 
     this.defShaderNode = this.renderer.getDefaultShaderNode();
+    this.calculateTextureCoord = this.renderer.getTextureCoords !== undefined;
 
     const renderMode = this.renderer.mode || 'webgl';
 
