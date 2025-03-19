@@ -114,6 +114,7 @@ export class Stage {
   public readonly pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
+  public readonly calculateTextureCoord: boolean;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -213,6 +214,7 @@ export class Stage {
     this.shManager = new CoreShaderManager(this);
 
     this.defShaderNode = this.renderer.getDefaultShaderNode();
+    this.calculateTextureCoord = this.renderer.getTextureCoords !== undefined;
 
     const renderMode = this.renderer.mode || 'webgl';
 
@@ -629,6 +631,7 @@ export class Stage {
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
+      wordBreak: props.wordBreak ?? 'normal',
       debug: props.debug ?? {},
     });
 
