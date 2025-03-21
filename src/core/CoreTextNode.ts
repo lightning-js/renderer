@@ -188,6 +188,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override set color(value: number) {
     this.textRenderer.set.color(this.trState, value);
+    this.setUpdateType(UpdateType.RenderTexture);
   }
 
   get text(): string {
