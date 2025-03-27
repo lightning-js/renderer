@@ -2323,7 +2323,7 @@ export class CoreNode extends EventEmitter {
       shader.attachNode(this);
     }
     this.props.shader = shader;
-    this.setUpdateType(UpdateType.IsRenderable);
+    this.setUpdateType(UpdateType.IsRenderable | UpdateType.RecalcUniforms);
   }
 
   get src(): string | null {
