@@ -2408,7 +2408,7 @@ export class CoreNode extends EventEmitter {
     if (this.parentHasRenderTexture && !this.rtt && this.parent) {
       return this.parent.framebufferDimensions;
     }
-    return { width: this.width, height: this.height };
+    return this;
   }
 
   /**
