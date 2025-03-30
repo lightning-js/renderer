@@ -88,6 +88,7 @@ const defaultPhysicalPixelRatio = 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
   const enableInspector = urlParams.get('inspector') === 'true';
   const forceWebGL2 = urlParams.get('webgl2') === 'true';
+  const debug = urlParams.get('debug') === 'true';
   const textureProcessingLimit =
     Number(urlParams.get('textureProcessingLimit')) || 0;
 
@@ -115,6 +116,7 @@ const defaultPhysicalPixelRatio = 1;
       enableInspector,
       forceWebGL2,
       textureProcessingLimit,
+      debug,
     );
     return;
   }
@@ -138,6 +140,7 @@ async function runTest(
   enableInspector: boolean,
   forceWebGL2: boolean,
   textureProcessingLimit: number,
+  debug: boolean,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -161,6 +164,7 @@ async function runTest(
     forceWebGL2,
     textureProcessingLimit,
     customSettings,
+    debug,
   );
 
   let testRoot = renderer.root;
@@ -236,6 +240,7 @@ async function initRenderer(
   forceWebGL2?: boolean,
   textureProcessingTimeLimit?: number,
   customSettings?: Partial<RendererMainSettings>,
+  debug?: boolean,
 ) {
   let inspector: typeof Inspector | undefined;
   if (enableInspector) inspector = Inspector;
@@ -255,6 +260,7 @@ async function initRenderer(
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
+      debug,
     },
     'app',
   );

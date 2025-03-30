@@ -50,6 +50,7 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, type CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
+import { Debug } from '../../shaders/webgl/Debug.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 
@@ -102,6 +103,7 @@ export class WebGlRenderer extends CoreRenderer {
 
   quadBufferUsage = 0;
   numQuadsRendered = 0;
+  defaultShader = 'default';
   /**
    * Whether the renderer is currently rendering to a texture.
    */
@@ -129,6 +131,8 @@ export class WebGlRenderer extends CoreRenderer {
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
+    glw.enableDepthTest();
+
     createIndexBuffer(glw, this.stage.bufferMemory);
 
     this.system = {
@@ -137,7 +141,7 @@ export class WebGlRenderer extends CoreRenderer {
     };
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
-    const stride = 8 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = 9 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
       {
         buffer: quadBuffer,
@@ -181,6 +185,14 @@ export class WebGlRenderer extends CoreRenderer {
             normalized: false,
             stride,
             offset: 6 * Float32Array.BYTES_PER_ELEMENT,
+          },
+          a_zIndex: {
+            name: 'a_depth',
+            size: 1,
+            type: glw.FLOAT,
+            normalized: false,
+            stride,
+            offset: 8 * Float32Array.BYTES_PER_ELEMENT,
           },
         },
       },
@@ -257,9 +269,13 @@ export class WebGlRenderer extends CoreRenderer {
    * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
   addQuad(params: QuadOptions) {
+    const zIndex = params.zIndex || 0; // Extract zIndex from params or default to 0
     const { fQuadBuffer, uiQuadBuffer } = this;
     let texture = params.texture;
-
+    const normalizedZIndex = zIndex / 100;
+    console.log('normalizedZIndex', normalizedZIndex);
+    // const normalizedZIndex = 0.6;
+    //
     assertTruthy(texture !== null, 'Texture is required');
 
     let { curBufferIdx: bufferIdx } = this;
@@ -288,6 +304,7 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
     fQuadBuffer[bufferIdx++] = 0; //node X coord
     fQuadBuffer[bufferIdx++] = 0; //node y coord
+    fQuadBuffer[bufferIdx++] = normalizedZIndex;
 
     // Upper-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
@@ -298,6 +315,7 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
     fQuadBuffer[bufferIdx++] = 0; //node y coord
+    fQuadBuffer[bufferIdx++] = normalizedZIndex;
 
     // Lower-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
@@ -308,6 +326,7 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 0; //node X coord
     fQuadBuffer[bufferIdx++] = 1; //node y coord
+    fQuadBuffer[bufferIdx++] = normalizedZIndex;
 
     // Lower-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
@@ -318,6 +337,7 @@ export class WebGlRenderer extends CoreRenderer {
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
     fQuadBuffer[bufferIdx++] = 1; //node y coord
+    fQuadBuffer[bufferIdx++] = normalizedZIndex;
 
     // Update the length of the current render op
     this.curRenderOp.numQuads++;
@@ -449,7 +469,7 @@ export class WebGlRenderer extends CoreRenderer {
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
 
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
-    const QUAD_SIZE_IN_BYTES = 4 * (8 * arr.BYTES_PER_ELEMENT); // 8 attributes per vertex
+    const QUAD_SIZE_IN_BYTES = 4 * (9 * arr.BYTES_PER_ELEMENT); // 9 attributes per vertex
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
   }
 
@@ -636,8 +656,9 @@ export class WebGlRenderer extends CoreRenderer {
       return this.defaultShaderNode as WebGlShaderNode;
     }
     this.stage.shManager.registerShaderType('default', Default);
+    this.stage.shManager.registerShaderType('debug', Debug);
     this.defaultShaderNode = this.stage.shManager.createShader(
-      'default',
+      this.stage.options.debug ? 'debug' : 'default',
     ) as WebGlShaderNode;
     return this.defaultShaderNode;
   }

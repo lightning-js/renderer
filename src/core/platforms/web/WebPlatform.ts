@@ -47,9 +47,11 @@ export class WebPlatform extends Platform {
       isIdle = false;
       stage.drawFrame();
       stage.flushFrameEvents();
+      stage.currentZIndex = 0;
       requestAnimationFrame(runLoop);
     };
-    requestAnimationFrame(runLoop);
+    // Start the loop
+    runLoop();
   }
 
   ////////////////////////

@@ -286,6 +286,18 @@ export interface RendererMainSettings {
    * @defaultValue `null`
    */
   platform?: typeof Platform | null;
+
+  /**
+   * Enable debug mode
+   *
+   * @remarks
+   * This will enable scene debug mode in the renderer. All geometry will be replaced
+   * with a shader that renders the geometry in a debug color vec4(1.0, 0.0, 0.0, 0.1)
+   * This is useful for debugging scene overdraw issues.
+   *
+   * @defaultValue `false`
+   */
+  debug?: boolean;
 }
 
 /**
@@ -389,6 +401,7 @@ export class RendererMain extends EventEmitter {
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
+      debug: settings.debug || false,
     };
     this.settings = resolvedSettings;
 
@@ -446,6 +459,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
       createImageBitmapSupport: this.settings.createImageBitmapSupport,
       platform,
+      debug: this.settings.debug,
     });
 
     // Extract the root node

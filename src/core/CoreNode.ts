@@ -1730,7 +1730,7 @@ export class CoreNode extends EventEmitter {
     this.removeAllListeners();
   }
 
-  renderQuads(renderer: CoreRenderer): void {
+  renderQuads(renderer: CoreRenderer, providedZIndex: number): void {
     // Prevent quad rendering if parent has a render texture
     // and renderer is not currently rendering to a texture
     if (this.parentHasRenderTexture) {
@@ -1745,7 +1745,6 @@ export class CoreNode extends EventEmitter {
 
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
-
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
       width: this.props.width,

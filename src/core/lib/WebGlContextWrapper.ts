@@ -92,6 +92,8 @@ export class WebGlContextWrapper {
   public readonly COLOR_ATTACHMENT0;
   public readonly INVALID_ENUM: number;
   public readonly INVALID_OPERATION: number;
+  public readonly COLOR_BUFFER_BIT: number;
+  public readonly DEPTH_BUFFER_BIT: number;
   //#endregion WebGL Enums
 
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
@@ -186,6 +188,8 @@ export class WebGlContextWrapper {
     this.COLOR_ATTACHMENT0 = gl.COLOR_ATTACHMENT0;
     this.INVALID_ENUM = gl.INVALID_ENUM;
     this.INVALID_OPERATION = gl.INVALID_OPERATION;
+    this.COLOR_BUFFER_BIT = gl.COLOR_BUFFER_BIT;
+    this.DEPTH_BUFFER_BIT = gl.DEPTH_BUFFER_BIT;
   }
   /**
    * Returns true if the WebGL context is WebGL2
@@ -466,6 +470,12 @@ export class WebGlContextWrapper {
     this.scissorEnabled = enable;
   }
 
+  enableDepthTest() {
+    this.gl.enable(this.gl.DEPTH_TEST);
+    this.gl.depthFunc(this.gl.LEQUAL);
+    this.gl.clearDepth(0.0);
+  }
+
   /**
    * ```
    * gl.scissor(x, y, width, height);
@@ -598,7 +608,7 @@ export class WebGlContextWrapper {
    * **WebGL Difference**: Clear mask is always `gl.COLOR_BUFFER_BIT`
    */
   clear() {
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   }
 
   /**

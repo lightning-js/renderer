@@ -81,6 +81,7 @@ export interface StageOptions {
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   platform: Platform | WebPlatform;
+  debug: boolean;
 }
 
 export type StageFpsUpdateHandler = (
@@ -130,6 +131,7 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  currentZIndex = 0;
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
@@ -496,9 +498,9 @@ export class Stage {
 
     // If the node is renderable and has a loaded texture, render it
     if (node.isRenderable === true) {
-      node.renderQuads(this.renderer);
+      node.renderQuads(this.renderer, this.currentZIndex);
+      this.currentZIndex++;
     }
-
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i];
 
