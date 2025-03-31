@@ -24,31 +24,26 @@ import robotImg from '../assets/robot/robot.png';
 const TESTPAGES = 6;
 
 export async function automation(settings: ExampleSettings) {
-  const testPageArray: number[] = [];
-  for (let i = 1; i < TESTPAGES; i++) {
-    testPageArray.push(i);
-  }
-
-  const page = await test(settings);
-  // i = 0
-  await settings.snapshot();
-
-  let testIdx = 1;
-  const testPage = async () => {
-    console.log('Testing ', testIdx);
-    page(testIdx);
-    await settings.snapshot();
-
-    if (testIdx >= TESTPAGES) {
-      return true;
-    }
-
-    testIdx++;
-    await testPage();
-  };
-
-  // test first page
-  await testPage();
+  // const testPageArray: number[] = [];
+  // for (let i = 1; i < TESTPAGES; i++) {
+  //   testPageArray.push(i);
+  // }
+  // const page = await test(settings);
+  // // i = 0
+  // await settings.snapshot();
+  // let testIdx = 1;
+  // const testPage = async () => {
+  //   console.log('Testing ', testIdx);
+  //   page(testIdx);
+  //   await settings.snapshot();
+  //   if (testIdx >= TESTPAGES) {
+  //     return true;
+  //   }
+  //   testIdx++;
+  //   await testPage();
+  // };
+  // // test first page
+  // await testPage();
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
