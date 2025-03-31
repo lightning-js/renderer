@@ -7,7 +7,7 @@ import { type RendererMainSettings } from './Renderer.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';
-import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
+import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 
 /**
  * Inspector
@@ -166,6 +166,8 @@ const knownProperties = new Set<string>([
 export class Inspector {
   private root: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private mutationObserver: MutationObserver = new MutationObserver(() => {});
+  private resizeObserver: ResizeObserver = new ResizeObserver(() => {});
   private height = 1080;
   private width = 1920;
   private scaleX = 1;
@@ -196,18 +198,18 @@ export class Inspector {
     document.body.appendChild(this.root);
 
     //listen for changes on canvas
-    const mutationObserver = new MutationObserver(
+    this.mutationObserver = new MutationObserver(
       this.setRootPosition.bind(this),
     );
-    mutationObserver.observe(canvas, {
+    this.mutationObserver.observe(canvas, {
       attributes: true,
       childList: false,
       subtree: false,
     });
 
     // Create a ResizeObserver to watch for changes in the element's size
-    const resizeObserver = new ResizeObserver(this.setRootPosition.bind(this));
-    resizeObserver.observe(canvas);
+    this.resizeObserver = new ResizeObserver(this.setRootPosition.bind(this));
+    this.resizeObserver.observe(canvas);
 
     //listen for changes on window
     window.addEventListener('resize', this.setRootPosition.bind(this));
@@ -257,6 +259,24 @@ export class Inspector {
     }
 
     return div;
+  }
+
+  createNodes(node: CoreNode): boolean {
+    if (this.root === null) {
+      return false;
+    }
+
+    const div = this.root.querySelector(`[id="${node.id}"]`);
+    if (div === null && node instanceof CoreTextNode) {
+      this.createTextNode(node);
+    } else if (div === null && node instanceof CoreNode) {
+      this.createNode(node);
+    }
+
+    for (const child of node.children) {
+      this.createNodes(child);
+    }
+    return true;
   }
 
   createNode(node: CoreNode): CoreNode {
@@ -346,6 +366,18 @@ export class Inspector {
     });
 
     return node;
+  }
+
+  public destroy() {
+    // Remove DOM observers
+    this.mutationObserver.disconnect();
+    this.resizeObserver.disconnect();
+
+    // Remove resize listener
+    window.removeEventListener('resize', this.setRootPosition.bind(this));
+    if (this.root && this.root.parentNode) {
+      this.root.remove();
+    }
   }
 
   destroyNode(id: number) {
@@ -473,6 +505,19 @@ export class Inspector {
       }
       return;
     }
+  }
+
+  updateViewport(
+    width: number,
+    height: number,
+    deviceLogicalPixelRatio: number,
+  ) {
+    this.scaleX = deviceLogicalPixelRatio ?? 1;
+    this.scaleY = deviceLogicalPixelRatio ?? 1;
+
+    this.width = width;
+    this.height = height;
+    this.setRootPosition();
   }
 
   // simple animation handler

@@ -109,7 +109,7 @@ export class WebGlRenderer extends CoreRenderer {
     const gl = createWebGLContext(
       options.canvas,
       options.forceWebGL2,
-      options.contextSpy,
+      this.stage.contextSpy,
     );
     const glw = (this.glw = new WebGlContextWrapper(gl));
     glw.viewport(0, 0, options.canvas.width, options.canvas.height);
@@ -660,6 +660,10 @@ export class WebGlRenderer extends CoreRenderer {
 
     glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
     this.renderToTextureActive = false;
+  }
+
+  updateViewport(): void {
+    this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
 
   removeRTTNode(node: CoreNode) {

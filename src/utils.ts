@@ -53,7 +53,9 @@ export function createWebGLContext(
       get(target, prop) {
         const value = target[prop as never] as unknown;
         if (typeof value === 'function') {
-          contextSpy.increment(String(prop));
+          if (contextSpy.enabled) {
+            contextSpy.increment(String(prop));
+          }
           return value.bind(target);
         }
         return value;

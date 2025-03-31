@@ -23,6 +23,7 @@
  */
 export class ContextSpy {
   private data: Record<string, number> = {};
+  public enabled: boolean = false;
 
   reset() {
     this.data = {};

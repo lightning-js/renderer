@@ -105,11 +105,11 @@ export class Stage {
   public readonly root: CoreNode;
   public boundsMargin: [number, number, number, number];
   public readonly defShaderNode: CoreShaderNode | null = null;
-  public readonly strictBound: Bound;
-  public readonly preloadBound: Bound;
+  public strictBound: Bound;
+  public preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-  public readonly pixelRatio: number;
+  public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -171,7 +171,9 @@ export class Stage {
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
     this.animationManager = new AnimationManager();
-    this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+    this.contextSpy = new ContextSpy();
+    this.contextSpy.enabled = enableContextSpy;
+
     this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
@@ -645,6 +647,20 @@ export class Stage {
   }
 
   /**
+   * Update the viewport bounds
+   */
+  updateViewportBounds() {
+    const { appWidth, appHeight } = this.options;
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.boundsMargin,
+    );
+    this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.root.childUpdateType |= UpdateType.RenderBounds;
+  }
+
+  /**
    * Resolves the default property values for a Node
    *
    * @remarks
@@ -737,27 +753,5 @@ export class Stage {
 
   get clearColor() {
     return this.clrColor;
-  }
-
-  /**
-   * Set the options for the Stage
-   *
-   * @param options
-   */
-  setOptions(options: Partial<RendererMainSettings>) {
-    const updatedSettings = {
-      ...this.options,
-      ...options,
-    } as Readonly<Required<RendererMainSettings>>;
-    (this as { options: Readonly<Required<RendererMainSettings>> }).options =
-      updatedSettings;
-
-    if (options.clearColor !== undefined) {
-      this.setClearColor(options.clearColor);
-    }
-
-    if (options.boundsMargin !== undefined) {
-      this.setBoundsMargin(options.boundsMargin);
-    }
   }
 }
