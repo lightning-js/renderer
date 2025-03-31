@@ -194,9 +194,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       // Red text should be out of bounds
       case 1:
         renderer.setOptions({
-          appWidth: 550,
-          appHeight: 1000,
-          fpsUpdateInterval: 100,
+          // appWidth: 550,
+          // appHeight: 1000,
+          // fpsUpdateInterval: 100,
           enableContextSpy: true,
         });
         break;

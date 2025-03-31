@@ -286,7 +286,6 @@ export type PartialRendererMainSettings = Partial<
     | 'clearColor'
     | 'deviceLogicalPixelRatio'
     | 'devicePhysicalPixelRatio'
-    | 'enableContextSpy'
     | 'fpsUpdateInterval'
     | 'inspector'
     | 'textureMemory'
@@ -705,17 +704,16 @@ export class RendererMain extends EventEmitter {
   setOptions(options: Partial<PartialRendererMainSettings>) {
     const allowedOptions: Partial<Record<keyof RendererMainSettings, any>> = {};
     const allowedKeys: (keyof PartialRendererMainSettings)[] = [
-      'appWidth', // done
-      'appHeight', // done
-      'boundsMargin', // done
-      'clearColor', // done
-      'deviceLogicalPixelRatio', // done
-      'devicePhysicalPixelRatio', // done
-      'enableContextSpy', // Callbacks too heavy?
-      'inspector', // Rebuild Children of root they are added during creation
-      'fpsUpdateInterval', // done
-      'textureMemory', // done
-      'textureProcessingTimeLimit', // done
+      'appWidth',
+      'appHeight',
+      'boundsMargin',
+      'clearColor',
+      'deviceLogicalPixelRatio',
+      'devicePhysicalPixelRatio',
+      'inspector',
+      'fpsUpdateInterval',
+      'textureMemory',
+      'textureProcessingTimeLimit',
     ]; // List of allowed settings
 
     if (options.textureMemory !== undefined) {
@@ -800,11 +798,6 @@ export class RendererMain extends EventEmitter {
 
     if (options.clearColor !== undefined) {
       this.stage.setClearColor(options.clearColor);
-    }
-
-    if (options.enableContextSpy !== undefined) {
-      if (this.stage.contextSpy)
-        this.stage.contextSpy.enabled = options.enableContextSpy;
     }
 
     if (needDimensionsUpdate) {

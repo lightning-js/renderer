@@ -171,9 +171,7 @@ export class Stage {
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
     this.animationManager = new AnimationManager();
-    this.contextSpy = new ContextSpy();
-    this.contextSpy.enabled = enableContextSpy;
-
+    this.contextSpy = enableContextSpy ? new ContextSpy() : null;
     this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
