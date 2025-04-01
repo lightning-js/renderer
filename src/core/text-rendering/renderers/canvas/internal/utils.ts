@@ -17,8 +17,9 @@
  * limitations under the License.
  */
 
-import type { NormalizedFontMetrics } from './font-face-types/TrFontFace.js';
-import type { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
+import type { NormalizedFontMetrics } from '../../../font-face-types/TrFontFace.js';
+import type { WebTrFontFace } from '../../../font-face-types/WebTrFontFace.js';
+import { type TextBaseline } from './types.js';
 
 /**
  * Returns CSS font setting string for use in canvas context.
@@ -105,9 +106,9 @@ export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
  * @param space
  */
 export function measureText(
-  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   word: string,
   space = 0,
+  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): number {
   if (!space) {
     return context.measureText(word).width;
@@ -203,40 +204,97 @@ export interface WrapTextResult {
  * Applies newlines to a string to have it optimally fit into the horizontal
  * bounds set by the Text object's wordWrapWidth property.
  *
- * @param context
  * @param text
  * @param wordWrapWidth
- * @param letterSpacing
- * @param indent
+ * @param suffix
+ * @param context
+ */
+export function wrapWord(word: string, wordWrapWidth: number, suffix: string, context: CanvasRenderingContext2D) {
+  const suffixWidth = context.measureText(suffix).width;
+  const wordLen = word.length;
+  const wordWidth = context.measureText(word).width;
+
+  /* If word fits wrapWidth, do nothing */
+  if (wordWidth <= wordWrapWidth) {
+    return word;
+  }
+
+  /* Make initial guess for text cuttoff */
+  let cutoffIndex = Math.floor((wordWrapWidth * wordLen) / wordWidth);
+  let truncWordWidth =
+    context.measureText(word.substring(0, cutoffIndex)).width +
+    suffixWidth;
+
+  /* In case guess was overestimated, shrink it letter by letter. */
+  if (truncWordWidth > wordWrapWidth) {
+    while (cutoffIndex > 0) {
+      truncWordWidth =
+        context.measureText(word.substring(0, cutoffIndex)).width +
+        suffixWidth;
+      if (truncWordWidth > wordWrapWidth) {
+        cutoffIndex -= 1;
+      } else {
+        break;
+      }
+    }
+
+    /* In case guess was underestimated, extend it letter by letter. */
+  } else {
+    while (cutoffIndex < wordLen) {
+      truncWordWidth =
+        context.measureText(word.substring(0, cutoffIndex)).width +
+        suffixWidth;
+      if (truncWordWidth < wordWrapWidth) {
+        cutoffIndex += 1;
+      } else {
+        // Finally, when bound is crossed, retract last letter.
+        cutoffIndex -= 1;
+        break;
+      }
+    }
+  }
+
+  /* If wrapWidth is too short to even contain suffix alone, return empty string */
+  return (
+    word.substring(0, cutoffIndex) +
+    (wordWrapWidth >= suffixWidth ? suffix : '')
+  );
+}
+
+/**
+ * Applies newlines to a string to have it optimally fit into the horizontal
+ * bounds set by the Text object's wordWrapWidth property.
  */
 export function wrapText(
-  context: CanvasRenderingContext2D,
   text: string,
   wordWrapWidth: number,
   letterSpacing: number,
-  indent: number,
-): WrapTextResult {
-  // Greedy wrapping algorithm that will wrap words as the line grows longer.
-  // than its horizontal bounds.
-  const spaceRegex = / |\u200B/g;
+  indent = 0,
+  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+) {
+  const spaceRegex = / |\u200B/g; // ZWSP and spaces
   const lines = text.split(/\r?\n/g);
   let allLines: string[] = [];
   const realNewlines: number[] = [];
+
   for (let i = 0; i < lines.length; i++) {
     const resultLines: string[] = [];
     let result = '';
     let spaceLeft = wordWrapWidth - indent;
+
+    // Split the line into words, considering ZWSP
     const words = lines[i]!.split(spaceRegex);
     const spaces = lines[i]!.match(spaceRegex) || [];
+
     for (let j = 0; j < words.length; j++) {
       const space = spaces[j - 1] || '';
       const word = words[j]!;
-      const wordWidth = measureText(context, word, letterSpacing);
-      const wordWidthWithSpace =
-        wordWidth + measureText(context, space, letterSpacing);
+      const wordWidth = measureText(word, letterSpacing, context);
+      const wordWidthWithSpace = isZeroWidthSpace(space)
+        ? wordWidth
+        : wordWidth + measureText(space, letterSpacing, context);
+
       if (j === 0 || wordWidthWithSpace > spaceLeft) {
-        // Skip printing the newline if it's the first word of the line that is.
-        // greater than the word wrap width.
         if (j > 0) {
           resultLines.push(result);
           result = '';
@@ -251,7 +309,6 @@ export function wrapText(
 
     resultLines.push(result);
     result = '';
-
     allLines = allLines.concat(resultLines);
 
     if (i < lines.length - 1) {
@@ -260,4 +317,29 @@ export function wrapText(
   }
 
   return { l: allLines, n: realNewlines };
+}
+
+
+/**
+ * Calculate height for the canvas
+ *
+ * @param textBaseline
+ * @param fontSize
+ * @param lineHeight
+ * @param numLines
+ * @param offsetY
+ * @returns
+ */
+export function calcHeight(
+  textBaseline: TextBaseline,
+  fontSize: number,
+  lineHeight: number,
+  numLines: number
+) {
+  const baselineOffset = textBaseline !== 'bottom' ? 0.5 * fontSize : 0;
+  return (
+    lineHeight * (numLines - 1) +
+    baselineOffset +
+    Math.max(lineHeight, fontSize)
+  );
 }

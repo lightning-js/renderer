@@ -39,7 +39,7 @@ import type {
   EffectDescUnion,
 } from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
-import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
+import type { CanvasTextRenderer } from '../core/text-rendering/renderers/canvas/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
 import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';

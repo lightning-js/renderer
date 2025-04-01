@@ -51,10 +51,11 @@ import type { BaseShaderController } from '../main-api/ShaderController.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import type { CanvasTextRenderer } from './text-rendering/renderers/canvas/CanvasTextRenderer.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
+import { CoreTextCanvasNode } from './CoreTextNodeCanvas.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -496,7 +497,7 @@ export class Stage {
    * @returns
    */
   resolveTextRenderer(
-    trProps: TrProps,
+    trProps: CoreTextNodeProps,
     textRendererOverride: keyof TextRendererMap | null = null,
   ): TextRenderer | null {
     const fontCacheString = `${trProps.fontFamily}${trProps.fontStyle}${
@@ -606,14 +607,17 @@ export class Stage {
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
-      debug: props.debug ?? {},
+      debug: false,
       shaderProps: null,
     };
 
-    const resolvedTextRenderer = this.resolveTextRenderer(
-      resolvedProps,
-      props.textRendererOverride,
-    );
+    // lock to canvas for now
+    const resolvedTextRenderer = this.textRenderers.canvas as unknown as TextRenderer;
+
+    // const resolvedTextRenderer = this.resolveTextRenderer(
+    //   resolvedProps,
+    //   props.textRendererOverride,
+    // );
 
     if (!resolvedTextRenderer) {
       throw new Error(
@@ -621,7 +625,7 @@ export class Stage {
       );
     }
 
-    return new CoreTextNode(this, resolvedProps, resolvedTextRenderer);
+    return new CoreTextCanvasNode(this, resolvedProps, resolvedTextRenderer);
   }
 
   /**

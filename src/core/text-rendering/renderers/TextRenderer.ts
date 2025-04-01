@@ -30,7 +30,7 @@ import type {
 import type {
   TextBaseline,
   TextVerticalAlign,
-} from './LightningTextTextureRenderer.js';
+} from './canvas/LightningTextTextureRenderer.js';
 
 /**
  * Augmentable map of text renderer type IDs to text renderer types.
@@ -44,7 +44,7 @@ import type {
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+ 
 export interface TextRendererMap {}
 
 export interface TextRendererState {
