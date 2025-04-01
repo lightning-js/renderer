@@ -426,15 +426,6 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
-   * [Deprecated]: Prevents the texture from being cleaned up when the Node is removed
-   *
-   * @remarks
-   * Please use the `preventCleanup` property on {@link TextureOptions} instead.
-   *
-   * @default false
-   */
-  preventCleanup: boolean;
-  /**
    * Options to associate with the Node's Texture
    */
   textureOptions: TextureOptions;
@@ -802,12 +793,6 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderBounds |
         UpdateType.RenderState,
     );
-
-    if (isProductionEnvironment() === false && props.preventCleanup === true) {
-      console.warn(
-        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
-      );
-    }
 
     // if the default texture isn't loaded yet, wait for it to load
     // this only happens when the node is created before the stage is ready
@@ -2210,20 +2195,6 @@ export class CoreNode extends EventEmitter {
 
     // fetch render bounds from parent
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
-  }
-
-  get preventCleanup(): boolean {
-    return this.props.textureOptions.preventCleanup || false;
-  }
-
-  set preventCleanup(value: boolean) {
-    if (isProductionEnvironment() === false) {
-      console.warn(
-        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
-      );
-    }
-
-    this.props.textureOptions.preventCleanup = value;
   }
 
   get rtt(): boolean {
