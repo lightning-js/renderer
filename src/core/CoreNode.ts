@@ -21,6 +21,7 @@ import {
   assertTruthy,
   getNewId,
   mergeColorAlphaPremultiplied,
+  isProductionEnvironment,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
@@ -802,7 +803,7 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderState,
     );
 
-    if (isProductionEnvironment() === false && props.preventCleanup === true) {
+    if (isProductionEnvironment === false && props.preventCleanup === true) {
       console.warn(
         'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
       );
@@ -2209,7 +2210,7 @@ export class CoreNode extends EventEmitter {
   }
 
   set preventCleanup(value: boolean) {
-    if (isProductionEnvironment() === false) {
+    if (isProductionEnvironment === false) {
       console.warn(
         'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
       );
