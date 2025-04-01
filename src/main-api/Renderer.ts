@@ -19,7 +19,7 @@
 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { assertTruthy, isProductionEnvironment } from '../utils.js';
+import { isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
@@ -466,7 +466,7 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (inspector && !isProductionEnvironment()) {
+    if (inspector && isProductionEnvironment === false) {
       this.inspector = new inspector(canvas, resolvedSettings);
     }
   }
@@ -489,8 +489,6 @@ export class RendererMain extends EventEmitter {
   createNode<ShNode extends CoreShaderNode<any>>(
     props: Partial<INodeProps<ShNode>>,
   ): INode<ShNode> {
-    assertTruthy(this.stage, 'Stage is not initialized');
-
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {

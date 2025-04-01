@@ -20,7 +20,6 @@
 import {
   assertTruthy,
   getNewId,
-  isProductionEnvironment,
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
@@ -1380,8 +1379,6 @@ export class CoreNode extends EventEmitter {
   }
 
   createRenderBounds(): void {
-    assertTruthy(this.stage);
-
     if (this.parent !== null && this.parent.strictBound !== undefined) {
       // we have a parent with a valid bound, copy it
       const parentBound = this.parent.strictBound;
@@ -1744,7 +1741,6 @@ export class CoreNode extends EventEmitter {
     }
 
     assertTruthy(this.globalTransform);
-    assertTruthy(this.renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -2183,10 +2179,6 @@ export class CoreNode extends EventEmitter {
     this.props.parent = newParent;
     if (oldParent) {
       const index = oldParent.children.indexOf(this);
-      assertTruthy(
-        index !== -1,
-        "CoreNode.parent: Node not found in old parent's children!",
-      );
       oldParent.children.splice(index, 1);
       oldParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,

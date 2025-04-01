@@ -34,7 +34,6 @@ import type {
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
-import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
