@@ -751,18 +751,16 @@ export class RendererMain extends EventEmitter {
       this.stage as { options: Readonly<Required<RendererMainSettings>> }
     ).options = updatedSettings;
 
-    if (options.inspector !== undefined) {
-      if (!isProductionEnvironment()) {
-        if (options.inspector === false) {
-          this.inspector?.destroy();
-          this.inspector = null;
-        } else if (
-          this.inspector === null ||
-          this.inspector.constructor !== options.inspector
-        ) {
-          this.inspector = new options.inspector(this.canvas, this.settings);
-          this.inspector?.createNodes(this.root as unknown as CoreNode);
-        }
+    if (options.inspector !== undefined && !isProductionEnvironment()) {
+      if (options.inspector === false) {
+        this.inspector?.destroy();
+        this.inspector = null;
+      } else if (
+        this.inspector === null ||
+        this.inspector.constructor !== options.inspector
+      ) {
+        this.inspector = new options.inspector(this.canvas, this.settings);
+        this.inspector?.createNodes(this.root as unknown as CoreNode);
       }
     }
 

@@ -343,6 +343,7 @@ export class Inspector {
         this.destroyNode(node.id);
         originalDestroy.call(node);
       },
+      configurable: true,
     });
 
     const originalAnimate = node.animate;
@@ -363,6 +364,7 @@ export class Inspector {
 
         return animationController;
       },
+      configurable: true,
     });
 
     return node;
