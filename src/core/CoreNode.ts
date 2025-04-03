@@ -28,6 +28,7 @@ import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
   type Texture,
+  type TextureCoords,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
   type TextureLoadedEventHandler,
@@ -425,15 +426,6 @@ export interface CoreNodeProps {
   texture: Texture | null;
 
   /**
-   * [Deprecated]: Prevents the texture from being cleaned up when the Node is removed
-   *
-   * @remarks
-   * Please use the `preventCleanup` property on {@link TextureOptions} instead.
-   *
-   * @default false
-   */
-  preventCleanup: boolean;
-  /**
    * Options to associate with the Node's Texture
    */
   textureOptions: TextureOptions;
@@ -730,6 +722,7 @@ export class CoreNode extends EventEmitter {
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
+  private hasShaderUpdater = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -749,6 +742,8 @@ export class CoreNode extends EventEmitter {
     height: 0,
     valid: false,
   };
+  public textureCoords?: TextureCoords;
+  public updateTextureCoords?: boolean = false;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
@@ -765,15 +760,16 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
-    this.props = Object.assign({}, props, {
+    this.props = {
+      ...props,
       parent: null,
       texture: null,
       shader: null,
       src: null,
       rtt: false,
-    });
+    };
 
-    // Assign props to instance
+    // Assign props to instances
     this.parent = props.parent;
     this.texture = props.texture;
     this.shader = props.shader;
@@ -797,12 +793,6 @@ export class CoreNode extends EventEmitter {
         UpdateType.RenderBounds |
         UpdateType.RenderState,
     );
-
-    if (isProductionEnvironment() === false && props.preventCleanup === true) {
-      console.warn(
-        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
-      );
-    }
 
     // if the default texture isn't loaded yet, wait for it to load
     // this only happens when the node is created before the stage is ready
@@ -1207,11 +1197,11 @@ export class CoreNode extends EventEmitter {
     }
 
     if (
-      this.shader?.update !== undefined &&
-      (this.updateType & UpdateType.Local ||
-        this.updateType & UpdateType.RecalcUniforms)
+      this.updateType & UpdateType.RecalcUniforms &&
+      this.hasShaderUpdater === true
     ) {
-      this.shader.update();
+      //this exists because the boolean hasShaderUpdater === true
+      this.shader!.update!();
     }
 
     if (this.updateType & UpdateType.Children && this.children.length > 0) {
@@ -1253,6 +1243,11 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
+    if (this.updateTextureCoords === true) {
+      this.updateTextureCoords = false;
+      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+    }
+
     // If we're out of bounds, apply the render state now
     // this is done so nodes can finish their entire update loop before
     // being marked as out of bounds
@@ -1282,15 +1277,6 @@ export class CoreNode extends EventEmitter {
       rttNode = rttNode.parent;
     }
     return rttNode;
-  }
-
-  private getRTTParentRenderState(): CoreNodeRenderState | null {
-    const rttNode = this.rttParent || this.findParentRTTNode();
-    if (!rttNode) {
-      return null;
-    }
-
-    return rttNode.renderState;
   }
 
   private notifyChildrenRTTOfUpdate(renderState: CoreNodeRenderState) {
@@ -1358,12 +1344,16 @@ export class CoreNode extends EventEmitter {
     assertTruthy(transform);
     assertTruthy(renderCoords);
 
-    const { tb, tc } = transform;
-    const { x1, y1, x3, y3 } = renderCoords;
-    if (tb === 0 || tc === 0) {
-      this.renderBound = createBound(x1, y1, x3, y3, this.renderBound);
+    if (transform.tb === 0 || transform.tc === 0) {
+      this.renderBound = createBound(
+        renderCoords.x1,
+        renderCoords.y1,
+        renderCoords.x3,
+        renderCoords.y3,
+        this.renderBound,
+      );
     } else {
-      const { x2, x4, y2, y4 } = renderCoords;
+      const { x1, y1, x2, y2, x3, y3, x4, y4 } = renderCoords;
       this.renderBound = createBound(
         Math.min(x1, x2, x3, x4),
         Math.min(y1, y2, y3, y4),
@@ -1503,6 +1493,13 @@ export class CoreNode extends EventEmitter {
    */
   setRenderable(isRenderable: boolean) {
     this.isRenderable = isRenderable;
+    if (
+      isRenderable === true &&
+      this.stage.calculateTextureCoord === true &&
+      this.textureCoords === undefined
+    ) {
+      this.updateTextureCoords = true;
+    }
   }
 
   /**
@@ -1702,7 +1699,7 @@ export class CoreNode extends EventEmitter {
     this.localTransform = undefined;
 
     this.props.texture = null;
-    this.props.shader = this.stage.defShaderNode;
+    this.props.shader = null;
 
     while (this.children.length > 0) {
       this.children[0]?.destroy();
@@ -1746,6 +1743,7 @@ export class CoreNode extends EventEmitter {
       // this assumes any renderable node is either a distinct texture or a ColorTexture
       texture: this.texture || this.stage.defaultTexture,
       textureOptions: this.textureOptions,
+      textureCoords: this.textureCoords,
       zIndex: this.zIndex,
       shader: this.props.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,
@@ -2199,20 +2197,6 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
   }
 
-  get preventCleanup(): boolean {
-    return this.props.textureOptions.preventCleanup || false;
-  }
-
-  set preventCleanup(value: boolean) {
-    if (isProductionEnvironment() === false) {
-      console.warn(
-        'CoreNode.preventCleanup: Is deprecated and will be removed in upcoming release, please use textureOptions.preventCleanup instead',
-      );
-    }
-
-    this.props.textureOptions.preventCleanup = value;
-  }
-
   get rtt(): boolean {
     return this.props.rtt;
   }
@@ -2300,13 +2284,17 @@ export class CoreNode extends EventEmitter {
       return;
     }
     if (shader === null) {
+      this.hasShaderUpdater = false;
       this.props.shader = this.stage.defShaderNode;
       this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
-    shader.attachNode(this);
+    if (shader.shaderKey !== 'default') {
+      this.hasShaderUpdater = shader.update !== undefined;
+      shader.attachNode(this);
+    }
     this.props.shader = shader;
-    this.setUpdateType(UpdateType.IsRenderable);
+    this.setUpdateType(UpdateType.IsRenderable | UpdateType.RecalcUniforms);
   }
 
   get src(): string | null {
@@ -2423,6 +2411,7 @@ export class CoreNode extends EventEmitter {
       this.unloadTexture();
     }
 
+    this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);

@@ -64,8 +64,11 @@ export class CanvasTexture extends CoreContextTexture {
     // - tinted image
     const mult = this.tintCache ? 8 : 4;
     if (this.textureSource.dimensions) {
-      const { width, height } = this.textureSource.dimensions;
-      this.setTextureMemUse(width * height * mult);
+      this.setTextureMemUse(
+        this.textureSource.dimensions.width *
+          this.textureSource.dimensions.height *
+          mult,
+      );
     }
   }
 

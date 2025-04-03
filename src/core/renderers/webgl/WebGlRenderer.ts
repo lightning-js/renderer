@@ -35,7 +35,11 @@ import {
   type WebGlColor,
 } from './internal/RendererUtils.js';
 import { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import { Texture, TextureType } from '../../textures/Texture.js';
+import {
+  Texture,
+  TextureType,
+  type TextureCoords,
+} from '../../textures/Texture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCtxSubTexture } from './WebGlCtxSubTexture.js';
 import { BufferCollection } from './internal/BufferCollection.js';
@@ -48,9 +52,8 @@ import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
-import type { CoreShaderType } from '../CoreShaderNode.js';
 
-const WORDS_PER_QUAD = 24;
+const WORDS_PER_QUAD = 32;
 // const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlRendererOptions = CoreRendererOptions;
@@ -76,6 +79,13 @@ export class WebGlRenderer extends CoreRenderer {
   curRenderOp: WebGlRenderOp | null = null;
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
+
+  defaultTextureCoords: TextureCoords = {
+    x1: 0,
+    y1: 0,
+    x2: 1,
+    y2: 1,
+  };
 
   //// Default Shader
   defaultShaderNode: WebGlShaderNode | null = null;
@@ -252,92 +262,28 @@ export class WebGlRenderer extends CoreRenderer {
 
     assertTruthy(texture !== null, 'Texture is required');
 
-    let { curBufferIdx: bufferIdx, curRenderOp } = this;
+    let { curBufferIdx: bufferIdx } = this;
 
     if (this.reuseRenderOp(params) === false) {
       this.newRenderOp(params, bufferIdx);
-      curRenderOp = this.curRenderOp;
-      assertTruthy(curRenderOp);
     }
 
-    let texCoordX1 = 0;
-    let texCoordY1 = 0;
-    let texCoordX2 = 1;
-    let texCoordY2 = 1;
-
     if (texture.type === TextureType.subTexture) {
-      const {
-        x: tx,
-        y: ty,
-        width: tw,
-        height: th,
-      } = (texture as SubTexture).props;
-      const { width: parentW = 0, height: parentH = 0 } = (
-        texture as SubTexture
-      ).parentTexture.dimensions || { width: 0, height: 0 };
-      texCoordX1 = tx / parentW;
-      texCoordX2 = texCoordX1 + tw / parentW;
-      texCoordY1 = ty / parentH;
-      texCoordY2 = texCoordY1 + th / parentH;
       texture = (texture as SubTexture).parentTexture;
     }
 
-    if (
-      texture.type === TextureType.image &&
-      params.textureOptions !== null &&
-      params.textureOptions.resizeMode !== undefined &&
-      texture.dimensions !== null
-    ) {
-      const resizeMode = params.textureOptions.resizeMode;
-      const { width: tw, height: th } = texture.dimensions;
-      if (resizeMode.type === 'cover') {
-        const scaleX = params.width / tw;
-        const scaleY = params.height / th;
-        const scale = Math.max(scaleX, scaleY);
-        const precision = 1 / scale;
-        // Determine based on width
-        if (scale && scaleX && scaleX < scale) {
-          const desiredSize = precision * params.width;
-          texCoordX1 = (1 - desiredSize / tw) * (resizeMode.clipX ?? 0.5);
-          texCoordX2 = texCoordX1 + desiredSize / tw;
-        }
-        // Determine based on height
-        if (scale && scaleY && scaleY < scale) {
-          const desiredSize = precision * params.height;
-          texCoordY1 = (1 - desiredSize / th) * (resizeMode.clipY ?? 0.5);
-          texCoordY2 = texCoordY1 + desiredSize / th;
-        }
-      }
-    }
-
-    // Flip texture coordinates if dictated by texture options
-    let flipY = 0;
-    if (params.textureOptions !== null) {
-      if (params.textureOptions.flipX === true) {
-        [texCoordX1, texCoordX2] = [texCoordX2, texCoordX1];
-      }
-
-      // convert to integer for bitwise operation below
-      flipY = +(params.textureOptions.flipY || false);
-    }
-
-    // Eitherone should be true
-    if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
-      [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
-    }
-
-    const ctxTexture = texture.ctxTexture as WebGlCtxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCtxTexture);
-    const textureIdx = this.addTexture(ctxTexture, bufferIdx);
+    assertTruthy(texture.ctxTexture instanceof WebGlCtxTexture);
+    const textureIdx = this.addTexture(texture.ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
     assertTruthy(params.renderCoords);
+    assertTruthy(params.textureCoords);
 
     // Upper-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
     fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-    fQuadBuffer[bufferIdx++] = texCoordX1; // texCoordX
-    fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x1; // texCoordX
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y1; // texCoordY
     uiQuadBuffer[bufferIdx++] = params.colorTl; // color
     fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -346,8 +292,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upper-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-    fQuadBuffer[bufferIdx++] = texCoordX2;
-    fQuadBuffer[bufferIdx++] = texCoordY1;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y1;
     uiQuadBuffer[bufferIdx++] = params.colorTr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
@@ -356,8 +302,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Left
     fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-    fQuadBuffer[bufferIdx++] = texCoordX1;
-    fQuadBuffer[bufferIdx++] = texCoordY2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x1;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBl;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 0; //node X coord
@@ -366,15 +312,14 @@ export class WebGlRenderer extends CoreRenderer {
     // Lower-Right
     fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
     fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-    fQuadBuffer[bufferIdx++] = texCoordX2;
-    fQuadBuffer[bufferIdx++] = texCoordY2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
+    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
     uiQuadBuffer[bufferIdx++] = params.colorBr;
     fQuadBuffer[bufferIdx++] = textureIdx;
     fQuadBuffer[bufferIdx++] = 1; //node X coord
     fQuadBuffer[bufferIdx++] = 1; //node y coord
 
     // Update the length of the current render op
-    this.curRenderOp.length += WORDS_PER_QUAD;
     this.curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
   }
@@ -386,7 +331,7 @@ export class WebGlRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(quad: QuadOptions, bufferIdx: number) {
+  private newRenderOp(quad: QuadOptions | WebGlRenderOp, bufferIdx: number) {
     const curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -416,7 +361,7 @@ export class WebGlRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(this.curRenderOp.quad as QuadOptions, bufferIdx);
+      this.newRenderOp(this.curRenderOp, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
@@ -428,19 +373,17 @@ export class WebGlRenderer extends CoreRenderer {
    * @returns
    */
   reuseRenderOp(params: QuadOptions): boolean {
-    const { shader, parentHasRenderTexture, rtt, clippingRect } = params;
-
     // Switching shader program will require a new render operation
     if (
       this.curRenderOp?.shader.shaderKey !==
-      (shader as WebGlShaderNode).shaderKey
+      (params.shader as WebGlShaderNode).shaderKey
     ) {
       return false;
     }
 
     // Switching clipping rect will require a new render operation
     if (
-      compareRect(this.curRenderOp.quad.clippingRect, clippingRect) === false
+      compareRect(this.curRenderOp.clippingRect, params.clippingRect) === false
     ) {
       return false;
     }
@@ -448,16 +391,26 @@ export class WebGlRenderer extends CoreRenderer {
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (parentHasRenderTexture !== undefined || rtt !== undefined) {
+    if (
+      params.parentHasRenderTexture !== undefined ||
+      params.rtt !== undefined
+    ) {
       return false;
+    }
+
+    if (
+      this.curRenderOp.shader.shaderKey === 'default' &&
+      params.shader?.shaderKey === 'default'
+    ) {
+      return true;
     }
 
     // Check if the shader can batch the shader properties
     if (
-      !this.curRenderOp.shader.program.reuseRenderOp(
+      this.curRenderOp.shader.program.reuseRenderOp(
         params,
-        this.curRenderOp.quad as QuadOptions,
-      )
+        this.curRenderOp,
+      ) === false
     ) {
       return false;
     }
@@ -686,11 +639,93 @@ export class WebGlRenderer extends CoreRenderer {
     if (this.defaultShaderNode !== null) {
       return this.defaultShaderNode as WebGlShaderNode;
     }
-    this.stage.shManager.registerShaderType('Default', Default);
+    this.stage.shManager.registerShaderType('default', Default);
     this.defaultShaderNode = this.stage.shManager.createShader(
-      'Default',
+      'default',
     ) as WebGlShaderNode;
     return this.defaultShaderNode;
+  }
+
+  override getTextureCoords(node: CoreNode): TextureCoords {
+    const texture = node.texture;
+    if (texture === null) {
+      return this.defaultTextureCoords;
+    }
+
+    const textureOptions = node.textureOptions;
+    if (
+      texture.type === TextureType.subTexture ||
+      texture.type === TextureType.image ||
+      texture.type === TextureType.renderToTexture ||
+      textureOptions !== null
+    ) {
+      const result = {
+        x1: 0,
+        y1: 0,
+        x2: 1,
+        y2: 1,
+      };
+
+      if (texture.type === TextureType.subTexture) {
+        const props = (texture as SubTexture).props;
+        const { width: parentW = 0, height: parentH = 0 } = (
+          texture as SubTexture
+        ).parentTexture.dimensions || { width: 0, height: 0 };
+        result.x1 = props.x / parentW;
+        result.x2 = result.x1 + props.width / parentW;
+        result.y1 = props.y / parentH;
+        result.y2 = result.y1 + props.height / parentH;
+      }
+
+      if (
+        texture.type === TextureType.image &&
+        textureOptions !== null &&
+        textureOptions.resizeMode !== undefined &&
+        texture.dimensions !== null
+      ) {
+        const resizeMode = textureOptions.resizeMode;
+        const dimensions = texture.dimensions;
+        if (resizeMode.type === 'cover') {
+          const scaleX = node.props.width / dimensions.width;
+          const scaleY = node.props.height / dimensions.height;
+          const scale = Math.max(scaleX, scaleY);
+          const precision = 1 / scale;
+          // Determine based on width
+          if (scaleX < scale) {
+            const desiredSize = precision * node.props.width;
+            result.x1 =
+              (1 - desiredSize / dimensions.width) * (resizeMode.clipX ?? 0.5);
+            result.x2 = result.x1 + desiredSize / dimensions.width;
+          }
+          // Determine based on height
+          if (scaleY < scale) {
+            const desiredSize = precision * node.props.height;
+            result.y1 =
+              (1 - desiredSize / dimensions.height) * (resizeMode.clipY ?? 0.5);
+            result.y2 = result.y1 + desiredSize / dimensions.height;
+          }
+        }
+      }
+
+      // Flip texture coordinates if dictated by texture options
+      let flipY = 0;
+      if (textureOptions !== null) {
+        if (textureOptions.flipX === true) {
+          [result.x1, result.x2] = [result.x2, result.x1];
+        }
+
+        // convert to integer for bitwise operation below
+        flipY = +(textureOptions.flipY || false);
+      }
+
+      // Eitherone should be true
+      if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
+        [result.y1, result.y2] = [result.y2, result.y1];
+      }
+      return result as TextureCoords;
+    }
+
+    return this.defaultTextureCoords;
   }
 
   /**

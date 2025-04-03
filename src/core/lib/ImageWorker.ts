@@ -158,7 +158,8 @@ function createImageWorker() {
       supportsFullCreateImageBitmap,
     })
       .then(function (data) {
-        self.postMessage({ id: id, src: src, data: data });
+        // @ts-ignore ts has wrong postMessage signature
+        self.postMessage({ id: id, src: src, data: data }, [data.data]);
       })
       .catch(function (error) {
         self.postMessage({ id: id, src: src, error: error.message });

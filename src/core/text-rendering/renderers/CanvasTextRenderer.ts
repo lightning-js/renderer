@@ -217,6 +217,10 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
         state.props.verticalAlign = value;
         this.invalidateLayoutCache(state);
       },
+      wordBreak: (state, value) => {
+        state.props.wordBreak = value;
+        this.invalidateLayoutCache(state);
+      },
       overflowSuffix: (state, value) => {
         state.props.overflowSuffix = value;
         this.invalidateLayoutCache(state);
@@ -435,6 +439,7 @@ export class CanvasTextRenderer extends TextRenderer<CanvasTextRendererState> {
       textBaseline: state.props.textBaseline,
       verticalAlign: state.props.verticalAlign,
       overflowSuffix: state.props.overflowSuffix,
+      wordBreak: state.props.wordBreak,
       w: state.props.contain !== 'none' ? state.props.width : undefined,
     };
     state.renderInfo = state.lightning2TextRenderer.calculateRenderInfo();

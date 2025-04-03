@@ -33,7 +33,6 @@ import {
 } from './internal/ColorUtils.js';
 import { assertTruthy } from '../../../utils.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
-import type { CoreShaderType } from '../CoreShaderNode.js';
 
 export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -297,7 +296,7 @@ export class CanvasRenderer extends CoreRenderer {
     // noop
   }
 
-  override getDefaultShaderNode() {
+  getDefaultShaderNode() {
     return null;
   }
 }
