@@ -1757,7 +1757,10 @@ export class CoreNode extends EventEmitter {
       renderCoords: this.renderCoords,
       rtt: this.rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
-      framebufferDimensions: this.framebufferDimensions,
+      framebufferDimensions:
+        this.parentHasRenderTexture === true
+          ? this.parentFramebufferDimensions
+          : null,
     });
   }
 
@@ -2370,16 +2373,15 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
-   * Returns the framebuffer dimensions of the node.
-   * If the node has a render texture, the dimensions are the same as the node's dimensions.
-   * If the node does not have a render texture, the dimensions are inherited from the parent.
-   * If the node parent has a render texture and the node is a render texture, the nodes dimensions are used.
+   * Returns the framebuffer dimensions of the RTT parent
    */
-  get framebufferDimensions(): Dimensions {
-    if (this.parentHasRenderTexture && !this.rtt && this.parent) {
-      return this.parent.framebufferDimensions;
-    }
-    return { width: this.width, height: this.height };
+  get parentFramebufferDimensions(): Dimensions {
+    const rttParent = this.rttParent || this.findParentRTTNode();
+
+    return {
+      width: rttParent!.width,
+      height: rttParent!.height,
+    };
   }
 
   /**
