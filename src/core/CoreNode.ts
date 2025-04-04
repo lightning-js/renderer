@@ -1827,7 +1827,7 @@ export class CoreNode extends EventEmitter {
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
 
-      if (this.framebufferDimensions !== null) {
+      if (this.props.rtt === true && this.framebufferDimensions !== null) {
         this.framebufferDimensions.width = value;
         this.texture = this.stage.txManager.createTexture(
           'RenderTexture',
@@ -1848,7 +1848,7 @@ export class CoreNode extends EventEmitter {
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
 
-      if (this.framebufferDimensions !== null) {
+      if (this.props.rtt === true && this.framebufferDimensions !== null) {
         this.framebufferDimensions.height = value;
         this.texture = this.stage.txManager.createTexture(
           'RenderTexture',
