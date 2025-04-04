@@ -756,6 +756,10 @@ export class CoreNode extends EventEmitter {
   public hasRTTupdates = false;
   public parentHasRenderTexture = false;
   public rttParent: CoreNode | null = null;
+  /**
+   * only used when rtt = true
+   */
+  public framebufferDimensions: Dimensions | null = null;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
@@ -1729,7 +1733,6 @@ export class CoreNode extends EventEmitter {
     }
 
     assertTruthy(this.globalTransform);
-    assertTruthy(this.renderCoords);
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1824,11 +1827,12 @@ export class CoreNode extends EventEmitter {
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
 
-      if (this.props.rtt) {
-        this.texture = this.stage.txManager.createTexture('RenderTexture', {
-          width: this.width,
-          height: this.height,
-        });
+      if (this.framebufferDimensions !== null) {
+        this.framebufferDimensions.width = value;
+        this.texture = this.stage.txManager.createTexture(
+          'RenderTexture',
+          this.framebufferDimensions,
+        );
 
         this.setUpdateType(UpdateType.RenderTexture);
       }
@@ -1844,11 +1848,12 @@ export class CoreNode extends EventEmitter {
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
 
-      if (this.props.rtt) {
-        this.texture = this.stage.txManager.createTexture('RenderTexture', {
-          width: this.width,
-          height: this.height,
-        });
+      if (this.framebufferDimensions !== null) {
+        this.framebufferDimensions.height = value;
+        this.texture = this.stage.txManager.createTexture(
+          'RenderTexture',
+          this.framebufferDimensions,
+        );
 
         this.setUpdateType(UpdateType.RenderTexture);
       }
@@ -2224,11 +2229,14 @@ export class CoreNode extends EventEmitter {
     }
   }
   private initRenderTexture() {
-    this.texture = this.stage.txManager.createTexture('RenderTexture', {
+    this.framebufferDimensions = {
       width: this.width,
       height: this.height,
-    });
-
+    };
+    this.texture = this.stage.txManager.createTexture(
+      'RenderTexture',
+      this.framebufferDimensions,
+    );
     this.stage.renderer.renderToTexture(this);
   }
 
@@ -2238,6 +2246,7 @@ export class CoreNode extends EventEmitter {
 
     this.hasRTTupdates = false;
     this.texture = null;
+    this.framebufferDimensions = null;
   }
 
   private markChildrenWithRTT(node: CoreNode | null = null) {
@@ -2376,12 +2385,11 @@ export class CoreNode extends EventEmitter {
    * Returns the framebuffer dimensions of the RTT parent
    */
   get parentFramebufferDimensions(): Dimensions {
-    const rttParent = this.rttParent || this.findParentRTTNode();
-
-    return {
-      width: rttParent!.width,
-      height: rttParent!.height,
-    };
+    if (this.rttParent !== null) {
+      return this.rttParent.framebufferDimensions as Dimensions;
+    }
+    this.rttParent = this.findParentRTTNode() as CoreNode;
+    return this.rttParent.framebufferDimensions as Dimensions;
   }
 
   /**
