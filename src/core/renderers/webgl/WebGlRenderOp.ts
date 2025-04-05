@@ -62,7 +62,7 @@ export class WebGlRenderOp extends CoreRenderOp {
   readonly clippingRect: RectWithValid;
   readonly rtt: boolean;
   readonly parentHasRenderTexture: boolean;
-  readonly framebufferDimensions?: Dimensions;
+  readonly framebufferDimensions?: Dimensions | null;
   readonly alpha: number;
   readonly pixelRatio: number;
 

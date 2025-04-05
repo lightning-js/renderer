@@ -52,7 +52,7 @@ export interface QuadOptions {
   renderCoords?: RenderCoords;
   rtt: boolean;
   parentHasRenderTexture: boolean;
-  framebufferDimensions: Dimensions;
+  framebufferDimensions: Dimensions | null;
 }
 
 export interface CoreRendererOptions {

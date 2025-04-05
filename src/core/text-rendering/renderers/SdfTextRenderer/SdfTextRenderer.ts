@@ -708,7 +708,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         width: textW,
         rtt: false,
         parentHasRenderTexture: node.parentHasRenderTexture,
-        framebufferDimensions: node.framebufferDimensions,
+        framebufferDimensions:
+          node.parentHasRenderTexture === true
+            ? node.parentFramebufferDimensions
+            : null,
       },
       0,
     );
