@@ -289,6 +289,25 @@ export interface RendererMainSettings {
 }
 
 /**
+ * Partial Renderer Main Settings for updating settings
+ */
+export type PartialRendererMainSettings = Partial<
+  Pick<
+    RendererMainSettings,
+    | 'appWidth'
+    | 'appHeight'
+    | 'boundsMargin'
+    | 'clearColor'
+    | 'deviceLogicalPixelRatio'
+    | 'devicePhysicalPixelRatio'
+    | 'fpsUpdateInterval'
+    | 'inspector'
+    | 'textureMemory'
+    | 'textureProcessingTimeLimit'
+  >
+>;
+
+/**
  * The Renderer Main API
  *
  * @remarks
@@ -341,7 +360,7 @@ export interface RendererMainSettings {
 export class RendererMain extends EventEmitter {
   readonly root: INode;
   readonly canvas: HTMLCanvasElement;
-  readonly settings: Readonly<Required<RendererMainSettings>>;
+  protected settings: Required<RendererMainSettings>;
   readonly stage: Stage;
   private inspector: Inspector | null = null;
 
@@ -355,16 +374,9 @@ export class RendererMain extends EventEmitter {
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
 
-    const resolvedTxSettings: TextureMemoryManagerSettings = {
-      criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
-      targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
-      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
-      debugLogging: settings.textureMemory?.debugLogging || false,
-      baselineMemoryAllocation:
-        settings.textureMemory?.baselineMemoryAllocation || 26e6,
-      doNotExceedCriticalThreshold:
-        settings.textureMemory?.doNotExceedCriticalThreshold || false,
-    };
+    const resolvedTxSettings = this.resolveTxSettings(
+      settings.textureMemory || {},
+    );
 
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
@@ -469,6 +481,43 @@ export class RendererMain extends EventEmitter {
     if (inspector && !isProductionEnvironment()) {
       this.inspector = new inspector(canvas, resolvedSettings);
     }
+  }
+
+  /**
+   * Resolves the Texture Memory Manager values
+   *
+   * @param props
+   * @returns
+   */
+  private resolveTxSettings(
+    textureMemory: Partial<TextureMemoryManagerSettings>,
+  ): TextureMemoryManagerSettings {
+    const currentTxSettings = this.settings?.textureMemory || {};
+
+    return {
+      criticalThreshold:
+        textureMemory?.criticalThreshold ??
+        currentTxSettings?.criticalThreshold ??
+        124e6,
+      targetThresholdLevel:
+        textureMemory?.targetThresholdLevel ??
+        currentTxSettings?.targetThresholdLevel ??
+        0.5,
+      cleanupInterval:
+        textureMemory?.cleanupInterval ??
+        currentTxSettings?.cleanupInterval ??
+        5000,
+      debugLogging:
+        textureMemory?.debugLogging ?? currentTxSettings?.debugLogging ?? false,
+      baselineMemoryAllocation:
+        textureMemory?.baselineMemoryAllocation ??
+        currentTxSettings?.baselineMemoryAllocation ??
+        26e6,
+      doNotExceedCriticalThreshold:
+        textureMemory?.doNotExceedCriticalThreshold ??
+        currentTxSettings?.doNotExceedCriticalThreshold ??
+        false,
+    };
   }
 
   /**
@@ -671,5 +720,136 @@ export class RendererMain extends EventEmitter {
    */
   setClearColor(color: number) {
     this.stage.setClearColor(color);
+  }
+
+  /**
+   * Set options for the renderer
+   *
+   * @param options
+   */
+  setOptions(options: Partial<PartialRendererMainSettings>) {
+    const allowedOptions: Partial<Record<keyof RendererMainSettings, any>> = {};
+    const allowedKeys: (keyof PartialRendererMainSettings)[] = [
+      'appWidth',
+      'appHeight',
+      'boundsMargin',
+      'clearColor',
+      'deviceLogicalPixelRatio',
+      'devicePhysicalPixelRatio',
+      'inspector',
+      'fpsUpdateInterval',
+      'textureMemory',
+      'textureProcessingTimeLimit',
+    ]; // List of allowed settings
+
+    if (options.textureMemory !== undefined) {
+      const textureMemory = (options.textureMemory = this.resolveTxSettings(
+        options.textureMemory,
+      ));
+      this.stage.txMemManager.updateSettings(textureMemory);
+      this.stage.txMemManager.cleanup();
+    }
+
+    for (const key of allowedKeys) {
+      if (options[key] !== undefined) {
+        let value = options[key];
+        if (key === 'boundsMargin') {
+          value = Array.isArray(options[key])
+            ? options[key]
+            : [options[key], options[key], options[key], options[key]];
+        }
+
+        allowedOptions[key] = value;
+      }
+    }
+
+    this.settings = {
+      ...this.settings,
+      ...allowedOptions,
+    };
+
+    const updatedSettings = {
+      ...this.stage.options,
+      ...allowedOptions,
+      inspector: this.settings.inspector !== null,
+    } as Readonly<Required<RendererMainSettings>>;
+    (
+      this.stage as { options: Readonly<Required<RendererMainSettings>> }
+    ).options = updatedSettings;
+
+    if (options.inspector !== undefined && !isProductionEnvironment()) {
+      if (options.inspector === false) {
+        this.inspector?.destroy();
+        this.inspector = null;
+      } else if (
+        this.inspector === null ||
+        this.inspector.constructor !== options.inspector
+      ) {
+        this.inspector = new options.inspector(this.canvas, this.settings);
+        this.inspector?.createNodes(this.root as unknown as CoreNode);
+      }
+    }
+
+    let needDimensionsUpdate = false;
+
+    if (
+      options.deviceLogicalPixelRatio ||
+      options.devicePhysicalPixelRatio !== undefined
+    ) {
+      this.stage.pixelRatio =
+        this.settings.devicePhysicalPixelRatio *
+        this.settings.deviceLogicalPixelRatio;
+      this.inspector?.updateViewport(
+        this.settings.appWidth,
+        this.settings.appHeight,
+        this.settings.deviceLogicalPixelRatio,
+      );
+      needDimensionsUpdate = true;
+    }
+
+    if (options.appWidth !== undefined || options.appHeight !== undefined) {
+      this.inspector?.updateViewport(
+        this.settings.appWidth,
+        this.settings.appHeight,
+        this.settings.deviceLogicalPixelRatio,
+      );
+      needDimensionsUpdate = true;
+    }
+
+    if (options.boundsMargin !== undefined) {
+      this.stage.setBoundsMargin(options.boundsMargin);
+    }
+
+    if (options.clearColor !== undefined) {
+      this.stage.setClearColor(options.clearColor);
+    }
+
+    if (needDimensionsUpdate) {
+      this.updateAppDimensions();
+    }
+  }
+
+  private updateAppDimensions() {
+    const {
+      appWidth,
+      appHeight,
+      deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio,
+    } = this.settings;
+
+    const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
+    const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
+
+    this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
+
+    this.stage.renderer.updateViewport();
+
+    this.root.width = appWidth;
+    this.root.height = appHeight;
+    this.stage.updateViewportBounds();
   }
 }
