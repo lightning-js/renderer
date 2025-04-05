@@ -89,7 +89,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
-  if (isProductionEnvironment) return;
+  if (isProductionEnvironment === true) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
