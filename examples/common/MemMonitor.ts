@@ -106,7 +106,7 @@ export class MemMonitor extends Component {
     renderer.createNode({
       width: BAR_WIDTH,
       height: BAR_HEIGHT,
-      rtt: true,
+      color: 0x00000000,
       shader: renderer.createShader('Border', {
         width: 4,
         color: 0x000000cc,

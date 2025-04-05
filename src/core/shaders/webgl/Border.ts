@@ -25,14 +25,51 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
 export const Border: WebGlShaderType<BorderProps> = {
   props: BorderTemplate.props,
-  update() {
-    this.uniform4fa('u_width', this.props!.width as Vec4);
-    this.uniform1i(
-      'u_asymWidth',
-      valuesAreEqual(this.props!.width as number[]) ? 0 : 1,
-    );
-    this.uniformRGBA('u_color', this.props!.color);
+  update(node) {
+    this.uniform4fa('u_borderWidth', this.props!.width as Vec4);
+    this.uniformRGBA('u_borderColor', this.props!.color);
   },
+  vertex: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+
+    attribute vec2 a_position;
+    attribute vec2 a_textureCoords;
+    attribute vec4 a_color;
+    attribute vec2 a_nodeCoords;
+
+    uniform vec2 u_resolution;
+    uniform float u_pixelRatio;
+    uniform vec2 u_dimensions;
+
+    uniform vec4 u_radius;
+    uniform vec4 u_borderWidth;
+
+    varying vec4 v_color;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
+
+    varying vec2 v_innerSize;
+    varying vec2 v_halfDimensions;
+
+    void main() {
+      vec2 normalized = a_position * u_pixelRatio;
+      vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
+
+      v_color = a_color;
+      v_nodeCoords = a_nodeCoords;
+      v_textureCoords = a_textureCoords;
+
+      v_halfDimensions = u_dimensions * 0.5;
+      v_innerSize = vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]), u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) * 0.5 - 0.5;
+
+      gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
+      gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
+    }
+  `,
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -47,49 +84,32 @@ export const Border: WebGlShaderType<BorderProps> = {
     uniform vec2 u_dimensions;
     uniform sampler2D u_texture;
 
-    uniform vec4 u_width;
-    uniform vec4 u_color;
-
-    uniform int u_asymWidth;
+    uniform vec4 u_borderWidth;
+    uniform vec4 u_borderColor;
 
     varying vec4 v_color;
-    varying vec2 v_position;
+    varying vec2 v_nodeCoords;
     varying vec2 v_textureCoords;
 
+    varying vec2 v_innerSize;
+    varying vec2 v_halfDimensions;
+
     float box(vec2 p, vec2 s) {
-      vec2 q = abs(p) - (s - (4.0 - u_pixelRatio));
+      vec2 q = abs(p) - s;
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0)));
-    }
-
-    float asymBorderWidth(vec2 p, float d, vec4 w) {
-      p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;
-      p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
-
-      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
-      float borderDist = box(p, size + 2.0);
-      return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
     }
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
-      vec2 halfDimensions = (u_dimensions * 0.5);
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
 
-      vec2 boxUv = v_textureCoords.xy * u_dimensions - halfDimensions;
-      float boxDist = box(boxUv, halfDimensions);
+      boxUv.x += u_borderWidth.y > u_borderWidth.w ? (u_borderWidth.y - u_borderWidth.w) * 0.5 : -(u_borderWidth.w - u_borderWidth.y) * 0.5;
+      boxUv.y += u_borderWidth.z > u_borderWidth.x ? (u_borderWidth.z - u_borderWidth.x) * 0.5 : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
 
-      float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
-      float borderAlpha = 0.0;
+      float innerDist = box(boxUv, v_innerSize);
+      float innerAlpha = 1.0 - smoothstep(0.0, 1.0, innerDist);
 
-      if(u_asymWidth == 1) {
-        borderAlpha = asymBorderWidth(boxUv, boxDist, u_width);
-      }
-      else {
-        borderAlpha = 1.0 - smoothstep(u_width[0], u_width[0], abs(boxDist));
-      }
-
-      vec4 resColor = vec4(0.0);
-      resColor = mix(resColor, color, min(color.a, boxAlpha));
-      resColor = mix(resColor, u_color, min(u_color.a, min(borderAlpha, boxAlpha)));
+      vec4 resColor = mix(u_borderColor, color, innerAlpha);
       gl_FragColor = resColor * u_alpha;
     }
   `,

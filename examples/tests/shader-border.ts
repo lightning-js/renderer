@@ -34,7 +34,7 @@ export default async function test({
     width: 200,
     height: 200,
     color: 0xff0000ff,
-    shader: renderer.createShader('Border'),
+    shader: renderer.createShader('Border', { width: 1 }),
     parent: testRoot,
   });
 
@@ -92,6 +92,112 @@ export default async function test({
     color: 0x00ff00ff,
     shader: renderer.createShader('Border', {
       left: 10,
+    }),
+    parent: testRoot,
+  });
+
+  const BlueRect = renderer.createNode({
+    x: 20,
+    y: 480,
+    width: 200,
+    height: 200,
+    color: 0x0000ffff,
+    shader: renderer.createShader('RoundedWithBorder', {
+      radius: 10,
+      'border-width': 1,
+    }),
+    parent: testRoot,
+  });
+
+  const BlueRect2 = renderer.createNode({
+    x: 250,
+    y: 480,
+    width: 200,
+    height: 200,
+    color: 0x0000ffff,
+    shader: renderer.createShader('RoundedWithBorder', {
+      'top-right': 20,
+      'border-top': 10,
+    }),
+    parent: testRoot,
+  });
+
+  const BlueRect3 = renderer.createNode({
+    x: 480,
+    y: 480,
+    width: 200,
+    height: 200,
+    color: 0x0000ffff,
+    shader: renderer.createShader('RoundedWithBorder', {
+      'border-width': 10,
+      'border-left': 20,
+      'border-right': 20,
+      radius: 50,
+    }),
+    parent: testRoot,
+  });
+
+  const BlueRect4 = renderer.createNode({
+    x: 710,
+    y: 480,
+    width: 200,
+    height: 200,
+    color: 0x0000ffff,
+    shader: renderer.createShader('RoundedWithBorder', {
+      'bottom-left': 20,
+      'border-bottom': 10,
+    }),
+    parent: testRoot,
+  });
+
+  const YellowRect = renderer.createNode({
+    x: 20,
+    y: 710,
+    width: 200,
+    height: 200,
+    color: 0xff9900ff,
+    shader: renderer.createShader('RoundedWithBorderAndShadow', {
+      'top-left': 20,
+      'border-width': 1,
+    }),
+    parent: testRoot,
+  });
+
+  const YellowRect2 = renderer.createNode({
+    x: 250,
+    y: 710,
+    width: 200,
+    height: 200,
+    color: 0xff9900ff,
+    shader: renderer.createShader('RoundedWithBorderAndShadow', {
+      'top-right': 20,
+      'border-width': 1,
+    }),
+    parent: testRoot,
+  });
+
+  const YellowRect3 = renderer.createNode({
+    x: 480,
+    y: 710,
+    width: 200,
+    height: 200,
+    color: 0xff9900ff,
+    shader: renderer.createShader('RoundedWithBorderAndShadow', {
+      'bottom-right': 20,
+      'border-width': 1,
+    }),
+    parent: testRoot,
+  });
+
+  const YellowRect4 = renderer.createNode({
+    x: 710,
+    y: 710,
+    width: 200,
+    height: 200,
+    color: 0xff9900ff,
+    shader: renderer.createShader('RoundedWithBorderAndShadow', {
+      'bottom-left': 20,
+      'border-width': 1,
     }),
     parent: testRoot,
   });
