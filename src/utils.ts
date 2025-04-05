@@ -65,6 +65,15 @@ export function createWebGLContext(
 }
 
 /**
+ * Checks if we're in a development environment or not.
+ *
+ * @returns
+ */
+declare const __DEV__: boolean;
+export const isProductionEnvironment =
+  typeof __DEV__ !== 'undefined' ? !__DEV__ : true;
+
+/**
  * Asserts a condition is truthy, otherwise throws an error
  *
  * @remarks
@@ -80,7 +89,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
-  if (isProductionEnvironment() === true) return;
+  if (isProductionEnvironment === true) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
@@ -228,15 +237,6 @@ export function deg2Rad(degrees: number): number {
  */
 export function getImageAspectRatio(width: number, height: number): number {
   return width / height;
-}
-
-/**
- * Checks import.meta if env is production
- *
- * @returns
- */
-export function isProductionEnvironment(): boolean {
-  return import.meta.env && import.meta.env.PROD;
 }
 
 /**

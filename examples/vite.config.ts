@@ -81,5 +81,8 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
         'Cross-Origin-Embedder-Policy': 'require-corp',
       },
     },
+    define: {
+      __DEV__: true,
+    },
   };
 });
