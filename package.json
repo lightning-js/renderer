@@ -14,7 +14,6 @@
     "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {
-    "preinstall": "node scripts/please-use-pnpm.js",
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
     "build": "tsc --build",

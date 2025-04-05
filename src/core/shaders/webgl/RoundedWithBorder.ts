@@ -16,24 +16,20 @@
  */
 
 import type { CoreNode } from '../../CoreNode.js';
-import { calcFactoredRadiusArray, valuesAreEqual } from '../../lib/utils.js';
+import { calcFactoredRadiusArray } from '../../lib/utils.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 import {
   RoundedWithBorderTemplate,
   type RoundedWithBorderProps,
 } from '../templates/RoundedWithBorderTemplate.js';
-import { Rounded } from './Rounded.js';
 
 export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
   props: RoundedWithBorderTemplate.props,
   update(node: CoreNode) {
-    this.uniformRGBA('u_border_color', this.props!['border-color']);
-    this.uniform4fa('u_border_width', this.props!['border-width'] as Vec4);
-    this.uniform1i(
-      'u_border_asym',
-      valuesAreEqual(this.props!['border-width'] as number[]) ? 0 : 1,
-    );
+    this.uniformRGBA('u_borderColor', this.props!['border-color']);
+    this.uniform4fa('u_borderWidth', this.props!['border-width'] as Vec4);
+
     this.uniform4fa(
       'u_radius',
       calcFactoredRadiusArray(
@@ -43,7 +39,56 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       ),
     );
   },
-  vertex: Rounded.vertex,
+  vertex: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+
+    attribute vec2 a_position;
+    attribute vec2 a_textureCoords;
+    attribute vec4 a_color;
+    attribute vec2 a_nodeCoords;
+
+    uniform vec2 u_resolution;
+    uniform float u_pixelRatio;
+    uniform vec2 u_dimensions;
+
+    uniform vec4 u_radius;
+    uniform vec4 u_borderWidth;
+
+    varying vec4 v_color;
+    varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
+
+    varying vec4 v_innerRadius;
+    varying vec2 v_innerSize;
+    varying vec2 v_halfDimensions;
+
+    void main() {
+      vec2 normalized = a_position * u_pixelRatio;
+      vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
+
+      v_color = a_color;
+      v_nodeCoords = a_nodeCoords;
+      v_textureCoords = a_textureCoords;
+
+      v_halfDimensions = u_dimensions * 0.5;
+
+      v_innerRadius = vec4(
+        max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
+        max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
+        max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
+        max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
+      );
+
+      v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) + 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+
+      gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
+      gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
+    }
+  `,
   fragment: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -59,13 +104,16 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
 
     uniform vec4 u_radius;
 
-    uniform vec4 u_border_width;
-    uniform vec4 u_border_color;
-    uniform int u_border_asym;
+    uniform vec4 u_borderWidth;
+    uniform vec4 u_borderColor;
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
     varying vec2 v_nodeCoords;
+
+    varying vec2 v_halfDimensions;
+    varying vec4 v_innerRadius;
+    varying vec2 v_innerSize;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
@@ -74,40 +122,22 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
 
-    float asymBorderWidth(vec2 p, float d, vec4 r, vec4 w) {
-      r.x = (r.x - (max(w.w, w.x) - min(w.w, w.x))) * 0.5;
-      r.y = (r.y - (max(w.y, w.x) - min(w.y, w.x))) * 0.5;
-      r.z = (r.z - (max(w.y, w.z) - min(w.y, w.z))) * 0.5;
-      r.w = (r.w - (max(w.w, w.z) - min(w.w, w.z))) * 0.5;
-
-      p.x += w.y > w.w ? (w.y - w.w) * 0.5 : -(w.w - w.y) * 0.5;
-      p.y += w.z > w.x ? (w.z - w.x) * 0.5 : -(w.x - w.z) * 0.5;
-
-      vec2 size = vec2(u_dimensions.x - (w[3] + w[1]), u_dimensions.y - (w[0] + w[2])) * 0.5;
-      float borderDist = roundedBox(p, size + u_pixelRatio, r);
-      return 1.0 - smoothstep(0.0, u_pixelRatio, max(-borderDist, d));
-    }
-
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
-      vec2 halfDimensions = (u_dimensions * 0.5);
 
-      vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
-      float boxDist = roundedBox(boxUv, halfDimensions, u_radius);
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
+      float outerDist = roundedBox(boxUv, v_halfDimensions, u_radius);
 
-      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
-      float borderAlpha = 0.0;
+      float outerAlpha = 1.0 - smoothstep(0.0, 1.0, outerDist);
 
-      if(u_border_asym == 1) {
-        borderAlpha = asymBorderWidth(boxUv, boxDist, u_radius, u_border_width);
-      }
-      else {
-        borderAlpha = 1.0 - smoothstep(u_border_width[0] - u_pixelRatio, u_border_width[0], abs(boxDist));
-      }
+      boxUv.x += u_borderWidth.y > u_borderWidth.w ? (u_borderWidth.y - u_borderWidth.w) * 0.5 : -(u_borderWidth.w - u_borderWidth.y) * 0.5;
+      boxUv.y += u_borderWidth.z > u_borderWidth.x ? ((u_borderWidth.z - u_borderWidth.x) * 0.5 + 0.5) : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
 
-      vec4 resColor = vec4(0.0);
-      resColor = mix(resColor, color, min(color.a, roundedAlpha));
-      resColor = mix(resColor, u_border_color, min(u_border_color.a, min(borderAlpha, roundedAlpha)));
+      float innerDist = roundedBox(boxUv, v_innerSize, v_innerRadius);
+      float innerAlpha = 1.0 - smoothstep(0.0, 1.0, innerDist);
+
+      vec4 resColor = mix(u_borderColor, color, innerAlpha);
+      resColor = mix(vec4(0.0), resColor, outerAlpha);
       gl_FragColor = resColor * u_alpha;
     }
   `,

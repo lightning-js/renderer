@@ -62,7 +62,6 @@ describe('set color()', () => {
     y: 0,
     zIndex: 0,
     zIndexLocked: 0,
-    preventCleanup: false,
     strictBounds: false,
   };
 
