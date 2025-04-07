@@ -772,10 +772,12 @@ export class RendererMain extends EventEmitter {
       inspector: this.settings.inspector !== null,
     } as Readonly<Required<RendererMainSettings>>;
     (
-      this.stage as { options: Readonly<Required<RendererMainSettings>> }
+      this.stage as unknown as {
+        options: Readonly<Required<RendererMainSettings>>;
+      }
     ).options = updatedSettings;
 
-    if (options.inspector !== undefined && !isProductionEnvironment()) {
+    if (options.inspector !== undefined && !isProductionEnvironment) {
       if (options.inspector === false) {
         this.inspector?.destroy();
         this.inspector = null;
