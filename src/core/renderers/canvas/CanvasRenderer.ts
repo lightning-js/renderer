@@ -297,7 +297,7 @@ export class CanvasRenderer extends CoreRenderer {
     // noop
   }
 
-  override getDefaultShaderNode() {
+  getDefaultShaderNode() {
     return null;
   }
 }

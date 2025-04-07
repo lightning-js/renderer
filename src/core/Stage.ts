@@ -56,7 +56,6 @@ import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
-import type { RendererMainSettings } from '../main-api/Renderer.js';
 
 export interface StageOptions {
   appWidth: number;
