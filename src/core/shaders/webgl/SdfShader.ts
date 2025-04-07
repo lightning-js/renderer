@@ -62,10 +62,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
   onSdfBind(props) {
     this.uniformMatrix3fv('u_transform', props.transform);
     this.uniform1f('u_scrollY', props.scrollY);
-    this.uniform4fv(
-      'u_color',
-      new Float32Array(getNormalizedRgbaComponents(props.color)),
-    );
+    this.uniform4fa('u_color', getNormalizedRgbaComponents(props.color));
     this.uniform1f('u_size', props.size);
     this.uniform1f('u_distanceRange', props.distanceRange);
     this.uniform1i('u_debug', props.debug ? 1 : 0);

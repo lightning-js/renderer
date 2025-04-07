@@ -45,10 +45,14 @@ export const RoundedWithBorder: CanvasShaderType<
     this.computed.borderAsym = !valuesAreEqual(
       this.props!['border-width'] as number[],
     );
-    const borderWidth = this.props!['border-width'] as Vec4;
-    this.computed.borderRadius = radius.map((value, index) =>
-      Math.max(0, value - borderWidth[index]! * 0.5),
-    ) as Vec4;
+    //following vec4 convention 0, 1, 2, 3 => x, y, z, w;
+    const [x, y, z, w] = this.props!['border-width'] as Vec4;
+    this.computed.borderRadius = [
+      Math.max(0.0, radius[0] - Math.max(x, w) * 0.5),
+      Math.max(0.0, radius[1] - Math.max(x, y) * 0.5),
+      Math.max(0.0, radius[2] - Math.max(z, y) * 0.5),
+      Math.max(0.0, radius[3] - Math.max(z, w) * 0.5),
+    ];
   },
   render(ctx, quad, renderContext) {
     roundedRectWithBorder(

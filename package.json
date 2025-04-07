@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "3.0.0-beta1",
+  "version": "3.0.0-beta6",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -14,7 +14,6 @@
     "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {
-    "preinstall": "node scripts/please-use-pnpm.js",
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
     "build": "tsc --build",
@@ -88,6 +87,6 @@
   "engines": {
     "npm": ">= 10.0.0",
     "pnpm": ">= 8.9.2",
-    "node": ">= 20.9.0"
+    "node": ">= 18.0.0"
   }
 }

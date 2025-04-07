@@ -19,7 +19,7 @@
 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { assertTruthy, isProductionEnvironment } from '../utils.js';
+import { isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
@@ -36,6 +36,8 @@ import type {
   OptionalShaderProps,
   ShaderMap,
 } from '../core/CoreShaderManager.js';
+import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
+import { Platform } from '../core/platforms/Platform.js';
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -272,6 +274,18 @@ export interface RendererMainSettings {
    * @defaultValue `full`
    */
   createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
+
+  /**
+   * Provide an alternative platform abstraction layer
+   *
+   * @remarks
+   * By default the Lightning 3 renderer will load a webplatform, assuming it runs
+   * inside a web browsr. However for special cases there might be a need to provide
+   * an abstracted platform layer to run on non-web or non-standard JS engines
+   *
+   * @defaultValue `null`
+   */
+  platform?: typeof Platform | null;
 }
 
 /**
@@ -386,6 +400,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
+      platform: settings.platform || null,
     };
     this.settings = resolvedSettings;
 
@@ -397,6 +412,18 @@ export class RendererMain extends EventEmitter {
       inspector,
       canvas,
     } = resolvedSettings;
+
+    let platform;
+    if (
+      settings.platform !== undefined &&
+      settings.platform !== null &&
+      settings.platform.prototype instanceof Platform === true
+    ) {
+      // @ts-ignore - if Platform is a valid class, it will be used
+      platform = new settings.platform();
+    } else {
+      platform = new WebPlatform();
+    }
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
@@ -430,6 +457,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
       createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      platform,
     });
 
     // Extract the root node
@@ -450,7 +478,7 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (inspector && !isProductionEnvironment()) {
+    if (inspector && isProductionEnvironment === false) {
       this.inspector = new inspector(canvas, resolvedSettings);
     }
   }
@@ -510,16 +538,12 @@ export class RendererMain extends EventEmitter {
   createNode<ShNode extends CoreShaderNode<any>>(
     props: Partial<INodeProps<ShNode>>,
   ): INode<ShNode> {
-    assertTruthy(this.stage, 'Stage is not initialized');
-
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
       return this.inspector.createNode(node) as unknown as INode<ShNode>;
     }
 
-    // FIXME onDestroy event? node.once('beforeDestroy'
-    // FIXME onCreate event?
     return node as unknown as INode<ShNode>;
   }
 
@@ -606,7 +630,7 @@ export class RendererMain extends EventEmitter {
     props?: OptionalShaderProps<ShType>,
   ) {
     return this.stage.shManager.createShader(shType, props) as CoreShaderNode<
-      ExtractShaderProps<ShType>
+      NonNullable<ExtractShaderProps<ShType>>
     >;
   }
 

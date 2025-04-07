@@ -66,9 +66,7 @@ export function resolveShaderProps(
  * You could view a ShaderType as a configuration object that contains methods,
  * and values that you can use to alter the way a node is drawn by the Renderer.
  */
-export interface CoreShaderType<
-  Props extends object = Record<string, unknown>,
-> {
+export interface CoreShaderType<Props extends object = any> {
   /**
    * Values you use to draw the Shader
    */
@@ -88,7 +86,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly stage: Stage;
   readonly shaderType: CoreShaderType<Props>;
   protected propsConfig: ShaderProps<Props> | undefined;
-  protected resolvedProps: Props | undefined = undefined;
+  readonly resolvedProps: Props | undefined = undefined;
   protected definedProps: Props | undefined = undefined;
   protected node: CoreNode | null = null;
   update: (() => void) | undefined = undefined;
@@ -150,10 +148,6 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
 
   attachNode(node: CoreNode) {
     this.node = node;
-  }
-
-  getResolvedProps() {
-    return this.resolvedProps;
   }
 
   get props(): Props | undefined {

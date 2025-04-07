@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 import { isProductionEnvironment } from '../utils.js';
-import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
 import { TextureType, type Texture } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
@@ -220,12 +219,12 @@ export class TextureMemoryManager {
     // Free non-renderable textures until we reach the target threshold
     const memTarget = this.targetThreshold;
     const txManager = this.stage.txManager;
-    const timestamp = getTimeStamp();
+    const timestamp = this.stage.platform.getTimeStamp();
 
     while (
       this.memUsed >= memTarget &&
       this.orphanedTextures.length > 0 &&
-      (critical || getTimeStamp() - timestamp < 10)
+      (critical || this.stage.platform.getTimeStamp() - timestamp < 10)
     ) {
       const texture = this.orphanedTextures.shift();
 
@@ -322,7 +321,7 @@ export class TextureMemoryManager {
         criticalThreshold: this.criticalThreshold,
       });
 
-      if (this.debugLogging === true || isProductionEnvironment() === false) {
+      if (this.debugLogging === true || isProductionEnvironment === false) {
         console.warn(
           `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
         );

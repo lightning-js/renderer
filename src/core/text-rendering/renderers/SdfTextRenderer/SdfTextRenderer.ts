@@ -281,6 +281,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.overflowSuffix = value;
         this.invalidateLayoutCache(state);
       },
+      wordBreak: (state, value) => {
+        state.props.wordBreak = value;
+        this.invalidateLayoutCache(state);
+      },
       debug: (state, value) => {
         state.props.debug = value;
       },
@@ -435,6 +439,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       verticalAlign,
       scrollable,
       overflowSuffix,
+      wordBreak,
       maxLines,
     } = state.props;
 
@@ -573,6 +578,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       forceFullLayoutCalc,
       scrollable,
       overflowSuffix,
+      wordBreak,
       maxLines,
     );
 
@@ -702,7 +708,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         width: textW,
         rtt: false,
         parentHasRenderTexture: node.parentHasRenderTexture,
-        framebufferDimensions: node.framebufferDimensions,
+        framebufferDimensions:
+          node.parentHasRenderTexture === true
+            ? node.parentFramebufferDimensions
+            : null,
       },
       0,
     );
@@ -712,7 +721,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     const ctxTexture = texture.ctxTexture;
 
     renderOp.addTexture(ctxTexture as WebGlCtxTexture);
-    renderOp.length = state.bufferNumFloats;
     renderOp.numQuads = state.bufferNumQuads;
 
     renderer.addRenderOp(renderOp);

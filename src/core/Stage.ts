@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { startLoop, getTimeStamp } from './platform.js';
+
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import {
@@ -56,6 +56,8 @@ import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
+import type { Platform } from './platforms/Platform.js';
+import type { WebPlatform } from './platforms/web/WebPlatform.js';
 
 export interface StageOptions {
   appWidth: number;
@@ -78,6 +80,7 @@ export interface StageOptions {
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  platform: Platform | WebPlatform;
 }
 
 export type StageFpsUpdateHandler = (
@@ -110,6 +113,9 @@ export class Stage {
   public readonly defaultTexture: Texture | null = null;
   public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
+  public readonly platform: Platform | WebPlatform;
+  public readonly calculateTextureCoord: boolean;
+
   /**
    * Renderer Event Bus for the Stage to emit events onto
    *
@@ -153,7 +159,15 @@ export class Stage {
       renderEngine,
       fontEngines,
       createImageBitmapSupport,
+      platform,
     } = options;
+
+    assertTruthy(
+      platform !== null,
+      'A CorePlatform is not provided in the options',
+    );
+
+    this.platform = platform;
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(this, {
@@ -200,6 +214,7 @@ export class Stage {
     this.shManager = new CoreShaderManager(this);
 
     this.defShaderNode = this.renderer.getDefaultShaderNode();
+    this.calculateTextureCoord = this.renderer.getTextureCoords !== undefined;
 
     const renderMode = this.renderer.mode || 'webgl';
 
@@ -275,15 +290,14 @@ export class Stage {
       rtt: false,
       src: null,
       scale: 1,
-      preventCleanup: false,
       strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
 
     // execute platform start loop
-    if (autoStart) {
-      startLoop(this);
+    if (autoStart === true) {
+      this.platform.startLoop(this);
     }
   }
 
@@ -294,7 +308,7 @@ export class Stage {
   }
 
   updateFrameTime() {
-    const newFrameTime = getTimeStamp();
+    const newFrameTime = this.platform!.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.deltaTime = !this.lastFrameTime
@@ -315,7 +329,6 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
-    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
@@ -597,8 +610,7 @@ export class Stage {
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
-    const resolvedProps = {
-      ...this.resolveNodeDefaults(props),
+    const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -617,9 +629,9 @@ export class Stage {
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
+      wordBreak: props.wordBreak ?? 'normal',
       debug: props.debug ?? {},
-      shaderProps: null,
-    };
+    });
 
     const resolvedTextRenderer = this.resolveTextRenderer(
       resolvedProps,
@@ -726,7 +738,6 @@ export class Stage {
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
       data: data,
-      preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
