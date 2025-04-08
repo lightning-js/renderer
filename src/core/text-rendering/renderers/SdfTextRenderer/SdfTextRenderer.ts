@@ -659,7 +659,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         },
       ]);
       state.bufferUploaded = false;
-      assertTruthy(state.webGlBuffers);
       webGlBuffers = state.webGlBuffers;
     }
 
@@ -671,9 +670,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       state.bufferUploaded = true;
     }
 
-    assertTruthy(trFontFace);
     if (scrollable && contain === 'both') {
-      assertTruthy(elementBounds.valid);
       const elementRect = convertBoundToRect(elementBounds, tmpRect);
 
       if (node.clippingRect.valid) {
@@ -695,7 +692,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         sdfShaderProps: {
           transform: node.globalTransform!.getFloatArr(),
           color: mergeColorAlpha(color, node.worldAlpha),
-          size: fontSize / (trFontFace.data?.info.size || 0),
+          size: fontSize / (trFontFace!.data?.info.size || 0),
           scrollY,
           distanceRange,
           debug: debug.sdfShaderDebug,
@@ -717,65 +714,12 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     );
 
     const texture = state.trFontFace?.texture;
-    assertTruthy(texture);
-    const ctxTexture = texture.ctxTexture;
+    const ctxTexture = texture!.ctxTexture;
 
     renderOp.addTexture(ctxTexture as WebGlCtxTexture);
     renderOp.numQuads = state.bufferNumQuads;
 
     renderer.addRenderOp(renderOp);
-
-    // if (!debug.disableScissor) {
-    //   renderer.enableScissor(
-    //     visibleRect.x,
-    //     visibleRect.y,
-    //     visibleRect.w,
-    //     visibleRect.h,
-    //   );
-    // }
-
-    // Draw the arrays
-    // gl.drawArrays(
-    //   gl.TRIANGLES, // Primitive type
-    //   0,
-    //   bufferNumVertices, // Number of verticies
-    // );
-
-    // renderer.disableScissor();
-
-    // if (debug.showElementRect) {
-    //   this.renderer.drawBorder(
-    //     Colors.Blue,
-    //     elementRect.x,
-    //     elementRect.y,
-    //     elementRect.w,
-    //     elementRect.h,
-    //   );
-    // }
-
-    // if (debug.showVisibleRect) {
-    //   this.renderer.drawBorder(
-    //     Colors.Green,
-    //     visibleRect.x,
-    //     visibleRect.y,
-    //     visibleRect.w,
-    //     visibleRect.h,
-    //   );
-    // }
-
-    // if (debug.showRenderWindow && renderWindow) {
-    //   this.renderer.drawBorder(
-    //     Colors.Red,
-    //     x + renderWindow.x1,
-    //     y + renderWindow.y1 - scrollY,
-    //     x + renderWindow.x2 - (x + renderWindow.x1),
-    //     y + renderWindow.y2 - scrollY - (y + renderWindow.y1 - scrollY),
-    //   );
-    // }
-    // if (debug.printLayoutTime) {
-    //   debugData.drawSum += performance.now() - drawStartTime;
-    //   debugData.drawCount++;
-    // }
   }
 
   override setIsRenderable(

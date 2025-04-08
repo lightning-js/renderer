@@ -378,12 +378,12 @@ export class Stage {
    * Start a new frame draw
    */
   drawFrame() {
-    const { renderer, renderRequested } = this;
-    assertTruthy(renderer);
+    const { renderer, renderRequested, root } = this;
+    const txMemManager = this.txMemManager;
 
     // Update tree if needed
-    if (this.root.updateType !== 0) {
-      this.root.update(this.deltaTime, this.root.clippingRect);
+    if (root.updateType !== 0) {
+      root.update(this.deltaTime, root.clippingRect);
     }
 
     // Process some textures
@@ -393,12 +393,12 @@ export class Stage {
     renderer.reset();
 
     // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested === true) {
-      this.txMemManager.cleanup(false);
+    if (txMemManager.criticalCleanupRequested === true) {
+      txMemManager.cleanup(false);
 
-      if (this.txMemManager.criticalCleanupRequested === true) {
+      if (txMemManager.criticalCleanupRequested === true) {
         // If we still need to cleanup, request another but aggressive cleanup
-        this.txMemManager.cleanup(true);
+        txMemManager.cleanup(true);
       }
     }
 
@@ -412,13 +412,13 @@ export class Stage {
     this.addQuads(this.root);
 
     // Perform render pass
-    renderer?.render();
+    renderer.render();
 
     this.calculateFps();
     this.calculateQuads();
 
     // Reset renderRequested flag if it was set
-    if (renderRequested) {
+    if (renderRequested === true) {
       this.renderRequested = false;
     }
   }
@@ -668,18 +668,23 @@ export class Stage {
    */
   protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const color = props.color ?? 0xffffffff;
-    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
-    const colorTr =
-      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
-    const colorBl =
-      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
-    const colorBr =
-      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const colorTop = props.colorTop ?? color;
+    const colorBottom = props.colorBottom ?? color;
+    const colorLeft = props.colorLeft ?? color;
+    const colorRight = props.colorRight ?? color;
 
-    let data = {};
-    if (this.options.inspector === true) {
-      data = santizeCustomDataMap(props.data ?? {});
-    }
+    const colorTl = props.colorTl ?? colorTop ?? colorLeft ?? color;
+    const colorTr = props.colorTr ?? colorTop ?? colorRight ?? color;
+    const colorBl = props.colorBl ?? colorBottom ?? colorLeft ?? color;
+    const colorBr = props.colorBr ?? colorBottom ?? colorRight ?? color;
+
+    const scale = props.scale ?? null;
+    const mount = props.mount ?? 0;
+    const pivot = props.pivot ?? 0.5;
+
+    const data = this.options.inspector
+      ? santizeCustomDataMap(props.data ?? {})
+      : {};
 
     return {
       x: props.x ?? 0,
@@ -691,39 +696,37 @@ export class Stage {
       boundsMargin: props.boundsMargin ?? null,
       clipping: props.clipping ?? false,
       color,
-      colorTop: props.colorTop ?? color,
-      colorBottom: props.colorBottom ?? color,
-      colorLeft: props.colorLeft ?? color,
-      colorRight: props.colorRight ?? color,
-      colorBl,
-      colorBr,
+      colorTop,
+      colorBottom,
+      colorLeft,
+      colorRight,
       colorTl,
       colorTr,
+      colorBl,
+      colorBr,
       zIndex: props.zIndex ?? 0,
       zIndexLocked: props.zIndexLocked ?? 0,
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
       shader: props.shader ?? this.defShaderNode,
-      // Since setting the `src` will trigger a texture load, we need to set it after
-      // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,
       srcHeight: props.srcHeight,
       srcWidth: props.srcWidth,
       srcX: props.srcX,
       srcY: props.srcY,
-      scale: props.scale ?? null,
-      scaleX: props.scaleX ?? props.scale ?? 1,
-      scaleY: props.scaleY ?? props.scale ?? 1,
-      mount: props.mount ?? 0,
-      mountX: props.mountX ?? props.mount ?? 0,
-      mountY: props.mountY ?? props.mount ?? 0,
-      pivot: props.pivot ?? 0.5,
-      pivotX: props.pivotX ?? props.pivot ?? 0.5,
-      pivotY: props.pivotY ?? props.pivot ?? 0.5,
+      scale,
+      scaleX: props.scaleX ?? scale ?? 1,
+      scaleY: props.scaleY ?? scale ?? 1,
+      mount,
+      mountX: props.mountX ?? mount,
+      mountY: props.mountY ?? mount,
+      pivot,
+      pivotX: props.pivotX ?? pivot,
+      pivotY: props.pivotY ?? pivot,
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
-      data: data,
+      data,
       imageType: props.imageType,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
