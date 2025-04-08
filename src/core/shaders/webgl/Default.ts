@@ -82,8 +82,13 @@ export const Default: WebGlShaderType = {
     varying vec2 v_textureCoords;
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoords);
-      gl_FragColor = vec4(v_color) * texture2D(u_texture, v_textureCoords);
+      vec4 textureColor = texture2D(u_texture, v_textureCoords);
+      vec4 color = v_color * textureColor;
+
+      // Premultiply alpha after compositing is needed for the alpha
+      // to be correct when using a premultiplied alpha texture
+      color.rgb *= color.a;
+      gl_FragColor = color;
     }
   `,
 };
