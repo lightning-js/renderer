@@ -2117,10 +2117,10 @@ export class CoreNode extends EventEmitter {
     const has = value > 0;
     this.hasColorProps = has;
 
-    if (p.colorTop !== value) p.colorTop = value;
-    if (p.colorBottom !== value) p.colorBottom = value;
-    if (p.colorLeft !== value) p.colorLeft = value;
-    if (p.colorRight !== value) p.colorRight = value;
+    if (p.colorTop !== value) this.colorTop = value;
+    if (p.colorBottom !== value) this.colorBottom = value;
+    if (p.colorLeft !== value) this.colorLeft = value;
+    if (p.colorRight !== value) this.colorRight = value;
 
     this.setUpdateType(UpdateType.PremultipliedColors);
   }
