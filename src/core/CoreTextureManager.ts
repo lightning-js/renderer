@@ -481,12 +481,13 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    const startTime = this.platform.getTimeStamp();
+    const platform = this.platform;
+    const startTime = platform.getTimeStamp();
 
     // Process priority queue
     while (
       this.priorityQueue.length > 0 &&
-      this.platform.getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.pop()!;
@@ -498,7 +499,7 @@ export class CoreTextureManager extends EventEmitter {
     // Process uploads
     while (
       this.uploadTextureQueue.length > 0 &&
-      this.platform.getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.uploadTexture(this.uploadTextureQueue.pop()!);
@@ -507,7 +508,7 @@ export class CoreTextureManager extends EventEmitter {
     // Process downloads
     while (
       this.downloadTextureSourceQueue.length > 0 &&
-      this.platform.getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;
