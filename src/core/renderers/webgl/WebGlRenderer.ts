@@ -725,8 +725,7 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   /**
-   * Updates the WebGL context's clear color and clears the color buffer.
-   *
+   * Sets the glClearColor to the specified color.   *
    * @param color - The color to set as the clear color, represented as a 32-bit integer.
    */
   updateClearColor(color: number) {
@@ -745,6 +744,5 @@ export class WebGlRenderer extends CoreRenderer {
       raw: color,
       normalized: normalizedColor,
     };
-    glw.clear();
   }
 }
