@@ -134,11 +134,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.props.width = calcWidth;
       this.props.height = calcHeight;
     }
-    this.updateLocalTransform();
+
+    // Force local transform update
+    // to account for the new width and height
+    this.updateType |= UpdateType.Local;
 
     // Incase the RAF loop has been stopped already before text was loaded,
     // we request a render so it can be drawn.
-    this.stage.requestRender();
+
+    // WvB Do we really need this?
+    // this.stage.requestRender();
+
     this.emit('loaded', {
       type: 'text',
       dimensions: {

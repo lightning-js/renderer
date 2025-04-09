@@ -1075,31 +1075,25 @@ export class CoreNode extends EventEmitter {
 
     let renderState: CoreNodeRenderState | null = null;
 
-    if (
-      updateType & UpdateType.Local ||
-      this.updateType & UpdateType.ScaleRotate
-    ) {
+    if (updateType & UpdateType.Local || updateType & UpdateType.ScaleRotate) {
       this.updateLocalTransform({
         scaleRotate: (updateType & UpdateType.ScaleRotate) !== 0,
       });
 
-      // this.setUpdateType(UpdateType.Global);
       updateType |= UpdateType.Global;
     }
 
     if (updateType & UpdateType.Global) {
       // global
       let lt = this.localTransform || Matrix3d.identity();
-      let gt = this.globalTransform || Matrix3d.identity();
+      let gt = this.globalTransform || Matrix3d.copy(lt);
 
       if (parentHasRenderTexture === true) {
         if (parent?.rtt === true) {
           this.globalTransform = Matrix3d.identity();
 
           // Maintain a full scene global transform for bounds detection
-          this.sceneGlobalTransform = Matrix3d.copy(
-            parent?.globalTransform || Matrix3d.identity(),
-          ).multiply(lt);
+          this.sceneGlobalTransform = Matrix3d.copy(gt).multiply(lt);
         } else {
           // we're part of an RTT chain but our parent is not the main RTT node
           // so we need to propogate the sceneGlobalTransform of the parent
@@ -1109,7 +1103,7 @@ export class CoreNode extends EventEmitter {
             this.sceneGlobalTransform,
           ).multiply(lt);
 
-          gt = Matrix3d.copy(parent?.globalTransform || lt, gt);
+          Matrix3d.copy(parent?.globalTransform || lt, gt);
         }
       } else {
         Matrix3d.copy(parent?.globalTransform || gt, gt);
@@ -1125,12 +1119,6 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      // this.setUpdateType(
-      //   UpdateType.RenderState |
-      //     UpdateType.Children |
-      //     UpdateType.RecalcUniforms,
-      // );
-
       updateType |=
         UpdateType.RenderState |
         UpdateType.Children |
@@ -1138,24 +1126,20 @@ export class CoreNode extends EventEmitter {
       this.childUpdateType |= UpdateType.Global;
 
       if (this.clipping === true) {
-        // this.setUpdateType(UpdateType.Clipping | UpdateType.RenderBounds);
         updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
         this.childUpdateType |= UpdateType.RenderBounds;
       }
     }
 
-    if (this.updateType & UpdateType.RenderBounds) {
+    if (updateType & UpdateType.RenderBounds) {
       this.createRenderBounds();
-      // this.setUpdateType(UpdateType.RenderState);
-      // this.setUpdateType(UpdateType.Children);
       updateType |= UpdateType.RenderState | UpdateType.Children;
 
       this.childUpdateType |= UpdateType.RenderBounds;
     }
 
-    if (this.updateType & UpdateType.RenderState) {
+    if (updateType & UpdateType.RenderState) {
       renderState = this.checkRenderBounds();
-      // this.setUpdateType(UpdateType.IsRenderable);
       updateType |= UpdateType.IsRenderable;
 
       // if we're not going out of bounds, update the render state
@@ -1168,11 +1152,6 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.WorldAlpha) {
       this.worldAlpha = ((parent && parent.worldAlpha) || 1) * props.alpha;
-      // this.setUpdateType(
-      //   UpdateType.Children |
-      //     UpdateType.PremultipliedColors |
-      //     UpdateType.IsRenderable,
-      // );
 
       updateType |=
         UpdateType.Children |
@@ -1297,7 +1276,7 @@ export class CoreNode extends EventEmitter {
 
     // Sorting children MUST happen after children have been updated so
     // that they have the oppotunity to update their calculated zIndex.
-    if (this.updateType & UpdateType.ZIndexSortedChildren) {
+    if (updateType & UpdateType.ZIndexSortedChildren) {
       // reorder z-index
       this.sortChildren();
     }
@@ -1321,7 +1300,6 @@ export class CoreNode extends EventEmitter {
         // notify children that we are going out of bounds
         // we have to do this now before we stop processing the render tree
         this.notifyChildrenRTTOfUpdate(renderState);
-        // this.childUpdateType |= UpdateType.RenderState;
       }
     }
 
