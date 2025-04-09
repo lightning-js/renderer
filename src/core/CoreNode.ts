@@ -70,8 +70,6 @@ CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InBounds, 'inBounds');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.InViewport, 'inViewport');
 
-const IDENTITY = Matrix3d.identity();
-
 export enum UpdateType {
   /**
    * Child updates
@@ -1026,8 +1024,7 @@ export class CoreNode extends EventEmitter {
     const texture = props.texture;
     const textureOptions = props.textureOptions;
 
-    // this.localTransform = this.localTransform || IDENTITY;
-    let lt = this.localTransform || IDENTITY;
+    let lt = this.localTransform || Matrix3d.identity();
 
     if (options?.scaleRotate === true) {
       if (rotation === 0 && scaleX === 1 && scaleY === 1) {
@@ -1044,12 +1041,8 @@ export class CoreNode extends EventEmitter {
         Matrix3d.translate(x + px, y + py, lt)
           .multiply(scaleRotateTransform)
           .translate(-px, -py);
-        // this.localTransform = Matrix3d.translate(x + px, y + py, this.localTransform)
-        //   .multiply(scaleRotateTransform)
-        //   .translate(-px, -py);
       }
     } else {
-      // this.localTransform = Matrix3d.translate(x, y, this.localTransform);
       Matrix3d.translate(x, y, lt);
     }
 
@@ -1062,56 +1055,6 @@ export class CoreNode extends EventEmitter {
     }
 
     this.localTransform = lt;
-
-    // const props = this.props;
-    // const width = props.width;
-    // const height = props.height;
-    // const x = props.x - props.mountX * width;
-    // const y = props.y - props.mountY * height;
-
-    // const lt = this.localTransform || IDENTITY;
-
-    // if (this.scaleRotateTransform !== undefined) {
-    //   const px = props.pivotX * width;
-    //   const py = props.pivotY * height;
-
-    //   this.localTransform = Matrix3d.translate(x + px, y + py, lt)
-    //     .multiply(this.scaleRotateTransform)
-    //     .translate(-px, -py);
-    // } else {
-    //   this.localTransform = Matrix3d.translate(x, y, lt);
-    // }
-
-    // const texture = props.texture;
-    // const options = props.textureOptions;
-    // if (
-    //   texture !== null &&
-    //   texture.dimensions !== null &&
-    //   options.resizeMode?.type === 'contain'
-    // ) {
-    //   const tw = texture.dimensions.width;
-    //   const th = texture.dimensions.height;
-    //   const ta = width / tw;
-    //   const tb = height / th;
-    //   let sx = 1,
-    //     sy = 1,
-    //     dx = 0,
-    //     dy = 0;
-
-    //   if (tw / th > width / height) {
-    //     const sh = th * ta;
-    //     sy = sh / height;
-    //     dy = (height - sh) * 0.5;
-    //   } else {
-    //     const sw = tw * tb;
-    //     sx = sw / width;
-    //     dx = (width - sw) * 0.5;
-    //   }
-
-    //   this.localTransform = Matrix3d.translate(dx, dy).scale(sx, sy);
-    // }
-
-    // this.setUpdateType(UpdateType.Global);
   }
 
   /**
@@ -1139,19 +1082,19 @@ export class CoreNode extends EventEmitter {
       this.updateLocalTransform({
         scaleRotate: (updateType & UpdateType.ScaleRotate) !== 0,
       });
+
       // this.setUpdateType(UpdateType.Global);
       updateType |= UpdateType.Global;
     }
 
     if (updateType & UpdateType.Global) {
       // global
-      // this.globalTransform = this.globalTransform || IDENTITY;
-      let gt = this.globalTransform || IDENTITY;
-      let lt = this.localTransform || IDENTITY;
+      let lt = this.localTransform || Matrix3d.identity();
+      let gt = this.globalTransform || Matrix3d.identity();
 
       if (parentHasRenderTexture === true) {
         if (parent?.rtt === true) {
-          // this.globalTransform = IDENTITY;
+          this.globalTransform = Matrix3d.identity();
 
           // Maintain a full scene global transform for bounds detection
           this.sceneGlobalTransform = Matrix3d.copy(
@@ -1163,15 +1106,13 @@ export class CoreNode extends EventEmitter {
           // to maintain a full scene global transform for bounds detection
           this.sceneGlobalTransform = Matrix3d.copy(
             parent?.sceneGlobalTransform || lt,
+            this.sceneGlobalTransform,
           ).multiply(lt);
 
-          gt = Matrix3d.copy(
-            parent?.globalTransform || lt,
-            this.globalTransform,
-          );
+          gt = Matrix3d.copy(parent?.globalTransform || lt, gt);
         }
       } else {
-        gt = Matrix3d.copy(parent?.globalTransform || lt, this.globalTransform);
+        Matrix3d.copy(parent?.globalTransform || gt, gt);
       }
 
       if (parent !== null) {
