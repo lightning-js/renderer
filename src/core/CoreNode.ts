@@ -1822,6 +1822,7 @@ export class CoreNode extends EventEmitter {
 
   set width(value: number) {
     if (this.props.width !== value) {
+      this.textureCoords = undefined;
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -1843,6 +1844,7 @@ export class CoreNode extends EventEmitter {
 
   set height(value: number) {
     if (this.props.height !== value) {
+      this.textureCoords = undefined;
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
 
