@@ -82,8 +82,17 @@ export const Default: WebGlShaderType = {
     varying vec2 v_textureCoords;
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoords);
-      gl_FragColor = vec4(v_color) * texture2D(u_texture, v_textureCoords);
+      vec4 tex = texture2D(u_texture, v_textureCoords);
+      vec4 color = v_color * tex;
+
+      // Convert to linear space for better blending
+      color.rgb = pow(color.rgb, vec3(2.2));
+      color.rgb *= color.a; // Premultiply in linear space
+
+      // Back to gamma space
+      color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
+
+      gl_FragColor = color;
     }
   `,
 };
