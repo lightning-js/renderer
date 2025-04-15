@@ -107,11 +107,11 @@ export class Stage {
   public readonly root: CoreNode;
   public boundsMargin: [number, number, number, number];
   public readonly defShaderNode: CoreShaderNode | null = null;
-  public readonly strictBound: Bound;
-  public readonly preloadBound: Bound;
+  public strictBound: Bound;
+  public preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-  public readonly pixelRatio: number;
+  public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
@@ -653,6 +653,20 @@ export class Stage {
       : [value, value, value, value];
 
     this.root.setUpdateType(UpdateType.RenderBounds);
+  }
+
+  /**
+   * Update the viewport bounds
+   */
+  updateViewportBounds() {
+    const { appWidth, appHeight } = this.options;
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.boundsMargin,
+    );
+    this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.root.childUpdateType |= UpdateType.RenderBounds;
   }
 
   /**

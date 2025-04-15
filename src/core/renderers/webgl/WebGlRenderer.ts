@@ -615,6 +615,10 @@ export class WebGlRenderer extends CoreRenderer {
     this.renderToTextureActive = false;
   }
 
+  updateViewport(): void {
+    this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
+  }
+
   removeRTTNode(node: CoreNode) {
     const index = this.rttNodes.indexOf(node);
     if (index === -1) {
