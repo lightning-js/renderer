@@ -29,7 +29,7 @@ export class MyCustomTexture extends Texture {
     this.props = MyCustomTexture.resolveDefaults(props);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
     const { percent, width, height } = this.props;
     const radius = Math.min(width, height) / 2;
     const angle = 2 * Math.PI * (percent / 100);
@@ -48,6 +48,12 @@ export class MyCustomTexture extends Texture {
     ctx.closePath();
     ctx.fillStyle = 'blue';
     ctx.fill();
+
+    this.setState('fetched', {
+      width,
+      height,
+    });
+
     return {
       data: ctx.getImageData(0, 0, canvas.width, canvas.height),
     };
