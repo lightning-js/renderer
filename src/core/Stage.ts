@@ -691,13 +691,10 @@ export class Stage {
     if (nodes.length === 0) {
       return null;
     }
-    // Reverse the array so we have them in natural order
-    nodes.reverse();
-
-    let topNode: CoreNode | undefined = nodes[0];
+    let topNode = nodes[0] as CoreNode;
     for (let i = 0; i < nodes.length; i++) {
-      if ((nodes[i]?.zIndex ?? 0) > (topNode?.zIndex ?? 0)) {
-        topNode = nodes[i];
+      if (nodes[i]!.zIndex > topNode.zIndex) {
+        topNode = nodes[i]!;
       }
     }
     return topNode || null;
