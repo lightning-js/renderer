@@ -671,10 +671,10 @@ export class Stage {
     const y = data.y / this.options.deviceLogicalPixelRatio;
     const nodes: CoreNode[] = [];
     for (const node of this.interactiveNodes) {
-      if (node.renderBound === undefined) {
+      if (node.isRenderable === false) {
         continue;
       }
-      if (pointInBound(x, y, node.renderBound) === true) {
+      if (pointInBound(x, y, node.renderBound!) === true) {
         nodes.push(node);
       }
     }
@@ -686,7 +686,7 @@ export class Stage {
    * @param data
    * @returns
    */
-  getTopZindexNode(data: Point): CoreNode | null {
+  getNodeFromPosition(data: Point): CoreNode | null {
     const nodes: CoreNode[] = this.findNodesAtPoint(data);
     if (nodes.length === 0) {
       return null;
