@@ -34,7 +34,6 @@ import type {
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import { assertTruthy } from '../utils.js';
-import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
@@ -108,6 +107,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       textBaseline: props.textBaseline,
       verticalAlign: props.verticalAlign,
       overflowSuffix: props.overflowSuffix,
+      wordBreak: props.wordBreak,
     });
 
     this.trState = textRendererState;
@@ -187,6 +187,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override set color(value: number) {
     this.textRenderer.set.color(this.trState, value);
+    this.setUpdateType(UpdateType.RenderTexture);
   }
 
   get text(): string {
@@ -350,6 +351,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.overflowSuffix(this.trState, value);
   }
 
+  get wordBreak(): CoreTextNodeProps['wordBreak'] {
+    return this.trState.props.wordBreak;
+  }
+
+  set wordBreak(value: CoreTextNodeProps['wordBreak']) {
+    this.textRenderer.set.wordBreak(this.trState, value);
+  }
+
   get debug(): CoreTextNodeProps['debug'] {
     return this.trState.props.debug;
   }
@@ -368,15 +377,20 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.y(this.trState, this.globalTransform.ty);
   }
 
-  override checkRenderProps(): boolean {
+  override checkBasicRenderability() {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    }
+
     if (this.trState && this.trState.props.text !== '') {
       return true;
     }
-    return super.checkRenderProps();
+
+    return false;
   }
 
-  override onChangeIsRenderable(isRenderable: boolean) {
-    super.onChangeIsRenderable(isRenderable);
+  override setRenderable(isRenderable: boolean) {
+    super.setRenderable(isRenderable);
     this.textRenderer.setIsRenderable(this.trState, isRenderable);
   }
 
@@ -404,23 +418,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
-    if (this.parentHasRenderTexture && this.props.parent?.rtt) {
-      this.globalTransform = Matrix3d.identity();
-      if (this.localTransform) {
-        this.globalTransform.multiply(this.localTransform);
-      }
-    }
-
-    assertTruthy(this.globalTransform);
-
-    this.textRenderer.renderQuads(
-      this.trState,
-      this.globalTransform,
-      this.clippingRect,
-      this.worldAlpha,
-      this.parentHasRenderTexture,
-      this.framebufferDimensions,
-    );
+    this.textRenderer.renderQuads(this);
   }
 
   /**

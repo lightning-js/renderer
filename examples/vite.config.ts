@@ -19,6 +19,7 @@
 
 import { defineConfig } from 'vite';
 import * as path from 'path';
+import legacy from '@vitejs/plugin-legacy';
 
 /**
  * Targeting ES2019 gets us at least to WPE 2.28
@@ -49,6 +50,14 @@ const devTarget = 'es2020';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default defineConfig(({ command, mode, isSsrBuild }) => {
   return {
+    base: './',
+    plugins: [
+      legacy({
+        targets: ['chrome>=38'],
+        modernPolyfills: true,
+        additionalLegacyPolyfills: ['whatwg-fetch'],
+      }),
+    ],
     worker: {
       format: 'es',
     },
@@ -71,6 +80,9 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp',
       },
+    },
+    define: {
+      __DEV__: true,
     },
   };
 });

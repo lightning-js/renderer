@@ -17,66 +17,27 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import type { EffectMap, ShaderMap } from '../core/CoreShaderManager.js';
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { assertTruthy, isProductionEnvironment } from '../utils.js';
+import { isProductionEnvironment } from '../utils.js';
 import { Stage } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
-import type {
-  BaseShaderController,
-  ShaderController,
-} from './ShaderController.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
-import type {
-  DynamicEffects,
-  DynamicShaderController,
-} from './DynamicShaderController.js';
-import type {
-  EffectDesc,
-  EffectDescUnion,
-} from '../core/renderers/webgl/shaders/effects/ShaderEffect.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import type { WebGlCoreRenderer } from '../core/renderers/webgl/WebGlCoreRenderer.js';
-import type { CanvasCoreRenderer } from '../core/renderers/canvas/CanvasCoreRenderer.js';
+import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
+import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { Inspector } from './Inspector.js';
-
-/**
- * An immutable reference to a specific Shader type
- *
- * @remarks
- * See {@link ShaderRef} for more details.
- */
-export interface SpecificShaderRef<ShType extends keyof ShaderMap> {
-  readonly descType: 'shader';
-  readonly shType: ShType;
-  readonly props: ExtractProps<ShaderMap[ShType]>;
-}
-
-type MapShaderRefs<ShType extends keyof ShaderMap> =
-  ShType extends keyof ShaderMap ? SpecificShaderRef<ShType> : never;
-
-/**
- * An immutable reference to a Shader
- *
- * @remarks
- * This structure should only be created by the RendererMain's `createShader`
- * method. The structure is immutable and should not be modified once created.
- *
- * A `ShaderRef` exists in the Main API Space and is used to point to an actual
- * `Shader` instance in the Core API Space. The `ShaderRef` is used to
- * communicate with the Core API Space to create, load, and destroy the
- * `Shader` instance.
- *
- * This type is technically a discriminated union of all possible shader types.
- * If you'd like to represent a specific shader type, you can use the
- * `SpecificShaderRef` generic type.
- */
-export type ShaderRef = MapShaderRefs<keyof ShaderMap>;
+import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
+import type {
+  ExtractShaderProps,
+  OptionalShaderProps,
+  ShaderMap,
+} from '../core/CoreShaderManager.js';
+import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
+import { Platform } from '../core/platforms/Platform.js';
 
 /**
  * Configuration settings for {@link RendererMain}
@@ -207,7 +168,7 @@ export interface RendererMainSettings {
    * both CanvasTextRenderer and SdfTextRenderer for Text Rendering.
    *
    */
-  renderEngine: typeof CanvasCoreRenderer | typeof WebGlCoreRenderer;
+  renderEngine: typeof CanvasRenderer | typeof WebGlRenderer;
 
   /**
    * Quad buffer size in bytes
@@ -256,6 +217,75 @@ export interface RendererMainSettings {
    * @defaultValue `false`
    */
   forceWebGL2?: boolean;
+
+  /**
+   * Enable strictBounds
+   *
+   * @remarks
+   * Enable strict bounds for the renderer. This will ensure that the renderer
+   * will not render outside the bounds of the canvas.
+   *
+   * @defaultValue `true`
+   */
+  strictBounds?: boolean;
+
+  /**
+   * Texture Processing Limit (in milliseconds)
+   *
+   * @remarks
+   * The maximum amount of time the renderer is allowed to process textures in a
+   * single frame. If the processing time exceeds this limit, the renderer will
+   * skip processing the remaining textures and continue rendering the frame.
+   *
+   * @defaultValue `10`
+   */
+  textureProcessingTimeLimit?: number;
+
+  /**
+   * Canvas object to use for rendering
+   *
+   * @remarks
+   * This is used to render the scene graph. If not provided, a new canvas
+   * element will be created and appended to the target element.
+   */
+  canvas?: HTMLCanvasElement;
+
+  /**
+   * createImageBitmap support for the runtime
+   *
+   * @remarks
+   * This is used to determine if and which version of the createImageBitmap API
+   * is supported by the runtime. This is used to determine if the renderer can
+   * use createImageBitmap to load images.
+   *
+   * Options supported
+   * - Auto - Automatically determine the supported version
+   * - Basic - Supports createImageBitmap(image)
+   * - Options - Supports createImageBitmap(image, options)
+   * - Full - Supports createImageBitmap(image, sx, sy, sw, sh, options)
+   *
+   * Note with auto detection, the renderer will attempt to use the most advanced
+   * version of the API available. If the API is not available, the renderer will
+   * fall back to the next available version.
+   *
+   * This will affect startup performance as the renderer will need to determine
+   * the supported version of the API.
+   *
+   * @defaultValue `full`
+   */
+  createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
+
+  /**
+   * Provide an alternative platform abstraction layer
+   *
+   * @remarks
+   * By default the Lightning 3 renderer will load a webplatform, assuming it runs
+   * inside a web browsr. However for special cases there might be a need to provide
+   * an abstracted platform layer to run on non-web or non-standard JS engines
+   *
+   * @defaultValue `null`
+   */
+  platform?: typeof Platform | null;
 }
 
 /**
@@ -287,6 +317,8 @@ export interface RendererMainSettings {
  *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
  * - `frameTick`
  *   - Emitted every frame tick
+ * - `quadsUpdate`
+ *  - Emitted when number of quads rendered is updated
  * - `idle`
  *   - Emitted when the renderer is idle (no changes to the scene
  *     graph/animations running)
@@ -307,7 +339,7 @@ export interface RendererMainSettings {
  *     - `criticalThreshold` - The critical threshold (in bytes)
  */
 export class RendererMain extends EventEmitter {
-  readonly root: INode<ShaderController<'DefaultShader'>>;
+  readonly root: INode;
   readonly canvas: HTMLCanvasElement;
   readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
@@ -322,12 +354,18 @@ export class RendererMain extends EventEmitter {
    */
   constructor(settings: RendererMainSettings, target: string | HTMLElement) {
     super();
+
     const resolvedTxSettings: TextureMemoryManagerSettings = {
       criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
       targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
-      cleanupInterval: settings.textureMemory?.cleanupInterval || 30000,
+      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
       debugLogging: settings.textureMemory?.debugLogging || false,
+      baselineMemoryAllocation:
+        settings.textureMemory?.baselineMemoryAllocation || 26e6,
+      doNotExceedCriticalThreshold:
+        settings.textureMemory?.doNotExceedCriticalThreshold || false,
     };
+
     const resolvedSettings: Required<RendererMainSettings> = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
@@ -346,6 +384,11 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
+      strictBounds: settings.strictBounds ?? true,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
+      canvas: settings.canvas || document.createElement('canvas'),
+      createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
+      platform: settings.platform || null,
     };
     this.settings = resolvedSettings;
 
@@ -355,12 +398,24 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
       inspector,
+      canvas,
     } = resolvedSettings;
+
+    let platform;
+    if (
+      settings.platform !== undefined &&
+      settings.platform !== null &&
+      settings.platform.prototype instanceof Platform === true
+    ) {
+      // @ts-ignore - if Platform is a valid class, it will be used
+      platform = new settings.platform();
+    } else {
+      platform = new WebPlatform();
+    }
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    const canvas = document.createElement('canvas');
     this.canvas = canvas;
     canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
@@ -386,12 +441,15 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: this.settings.quadBufferSize,
       fontEngines: this.settings.fontEngines,
+      inspector: this.settings.inspector !== false,
+      strictBounds: this.settings.strictBounds,
+      textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
+      createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      platform,
     });
 
     // Extract the root node
-    this.root = this.stage.root as unknown as INode<
-      ShaderController<'DefaultShader'>
-    >;
+    this.root = this.stage.root as unknown as INode;
 
     // Get the target element and attach the canvas to it
     let targetEl: HTMLElement | null;
@@ -408,7 +466,7 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (inspector && !isProductionEnvironment()) {
+    if (inspector && isProductionEnvironment === false) {
       this.inspector = new inspector(canvas, resolvedSettings);
     }
   }
@@ -428,20 +486,16 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createNode<
-    ShCtr extends BaseShaderController = ShaderController<'DefaultShader'>,
-  >(props: Partial<INodeProps<ShCtr>>): INode<ShCtr> {
-    assertTruthy(this.stage, 'Stage is not initialized');
-
+  createNode<ShNode extends CoreShaderNode<any>>(
+    props: Partial<INodeProps<ShNode>>,
+  ): INode<ShNode> {
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
-      return this.inspector.createNode(node) as unknown as INode<ShCtr>;
+      return this.inspector.createNode(node) as unknown as INode<ShNode>;
     }
 
-    // FIXME onDestroy event? node.once('beforeDestroy'
-    // FIXME onCreate event?
-    return node as unknown as INode<ShCtr>;
+    return node as unknown as INode<ShNode>;
   }
 
   /**
@@ -462,7 +516,7 @@ export class RendererMain extends EventEmitter {
     const textNode = this.stage.createTextNode(props as CoreTextNodeProps);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode);
+      return this.inspector.createTextNode(textNode) as unknown as ITextNode;
     }
 
     return textNode as unknown as ITextNode;
@@ -504,7 +558,7 @@ export class RendererMain extends EventEmitter {
     textureType: TxType,
     props: ExtractProps<TextureMap[TxType]>,
   ): InstanceType<TextureMap[TxType]> {
-    return this.stage.txManager.loadTexture(textureType, props);
+    return this.stage.txManager.createTexture(textureType, props);
   }
 
   /**
@@ -523,73 +577,12 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createShader<ShType extends keyof ShaderMap>(
-    shaderType: ShType,
-    props?: ExtractProps<ShaderMap[ShType]>,
-  ): ShaderController<ShType> {
-    return this.stage.shManager.loadShader(shaderType, props);
-  }
-
-  /**
-   * Create a new Dynamic Shader controller
-   *
-   * @remarks
-   * A Dynamic Shader is a shader that can be composed of an array of mulitple
-   * effects. Each effect can be animated or changed after creation (provided
-   * the effect is given a name).
-   *
-   * Example:
-   * ```ts
-   * renderer.createNode({
-   *   shader: renderer.createDynamicShader([
-   *     renderer.createEffect('radius', {
-   *       radius: 0
-   *     }, 'effect1'),
-   *     renderer.createEffect('border', {
-   *       color: 0xff00ffff,
-   *       width: 10,
-   *     }, 'effect2'),
-   *   ]),
-   * });
-   * ```
-   *
-   * @param effects
-   * @returns
-   */
-  createDynamicShader<
-    T extends DynamicEffects<[...{ name?: string; type: keyof EffectMap }[]]>,
-  >(effects: [...T]): DynamicShaderController<T> {
-    return this.stage.shManager.loadDynamicShader({
-      effects: effects as EffectDescUnion[],
-    });
-  }
-
-  /**
-   * Create an effect to be used in a Dynamic Shader
-   *
-   * @remark
-   * The {name} parameter is optional but required if you want to animate the effect
-   * or change the effect's properties after creation.
-   *
-   * See {@link createDynamicShader} for an example.
-   *
-   * @param type
-   * @param props
-   * @param name
-   * @returns
-   */
-  createEffect<
-    Type extends keyof EffectMap,
-    Name extends string | undefined = undefined,
-  >(
-    type: Type,
-    props: EffectDesc<{ name: Name; type: Type }>['props'],
-    name?: Name,
-  ): EffectDesc<{ name: Name; type: Type }> {
-    return {
-      name,
-      type,
-      props,
-    };
+    shType: ShType,
+    props?: OptionalShaderProps<ShType>,
+  ) {
+    return this.stage.shManager.createShader(shType, props) as CoreShaderNode<
+      NonNullable<ExtractShaderProps<ShType>>
+    >;
   }
 
   /**
@@ -644,6 +637,37 @@ export class RendererMain extends EventEmitter {
    * May not do anything if the render loop is running on a separate worker.
    */
   rerender() {
-    throw new Error('Not implemented');
+    this.stage.requestRender();
+  }
+
+  /**
+   * Cleanup textures that are not being used
+   *
+   * @param aggressive - If true, will cleanup all textures, regardless of render status
+   *
+   * @remarks
+   * This can be used to free up GFX memory used by textures that are no longer
+   * being displayed.
+   *
+   * This routine is also called automatically when the memory used by textures
+   * exceeds the critical threshold on frame generation **OR** when the renderer
+   * is idle and the memory used by textures exceeds the target threshold.
+   *
+   * **NOTE**: This is a heavy operation and should be used sparingly.
+   * **NOTE2**: This will not cleanup textures that are currently being displayed.
+   * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
+   * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
+   */
+  cleanup(aggressive: boolean = false) {
+    this.stage.cleanup(aggressive);
+  }
+
+  /**
+   * Sets the clear color for the stage.
+   *
+   * @param color - The color to set as the clear color.
+   */
+  setClearColor(color: number) {
+    this.stage.setClearColor(color);
   }
 }

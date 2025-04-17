@@ -18,13 +18,19 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 import {
   isCompressedTextureContainer,
   loadCompressedTexture,
 } from '../lib/textureCompression.js';
-import { convertUrlToAbsolute } from '../lib/utils.js';
+import {
+  convertUrlToAbsolute,
+  dataURIToBlob,
+  isBase64Image,
+} from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
+import { fetchJson } from '../text-rendering/font-face-types/utils.js';
+import type { Platform } from '../platforms/Platform.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -39,7 +45,7 @@ export interface ImageTextureProps {
    *
    * @default ''
    */
-  src?: string | ImageData | (() => ImageData | null);
+  src?: string | Blob | ImageData | (() => ImageData | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -119,10 +125,15 @@ export interface ImageTextureProps {
  * {@link ImageTextureProps.premultiplyAlpha} prop to `false`.
  */
 export class ImageTexture extends Texture {
-  props: Required<ImageTextureProps>;
+  private platform: Platform;
+
+  public props: Required<ImageTextureProps>;
+  public override type: TextureType = TextureType.image;
 
   constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
     super(txManager);
+
+    this.platform = txManager.platform;
     this.props = ImageTexture.resolveDefaults(props);
   }
 
@@ -130,64 +141,157 @@ export class ImageTexture extends Texture {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  async loadImage(src: string) {
-    const { premultiplyAlpha, sx, sy, sw, sh, width, height } = this.props;
+  async loadImageFallback(src: string | Blob, hasAlpha: boolean) {
+    const img = new Image();
 
-    if (this.txManager.imageWorkerManager !== null) {
-      return await this.txManager.imageWorkerManager.getImage(
-        src,
-        premultiplyAlpha,
-        sx,
-        sy,
+    if (typeof src === 'string' && isBase64Image(src) === false) {
+      img.crossOrigin = 'anonymous';
+    }
+
+    return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
+      (resolve) => {
+        img.onload = () => {
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
+        };
+
+        img.onerror = () => {
+          console.warn('Image loading failed, returning fallback object.');
+          resolve({ data: img, premultiplyAlpha: hasAlpha });
+        };
+
+        if (src instanceof Blob) {
+          img.src = URL.createObjectURL(src);
+        } else {
+          img.src = src;
+        }
+      },
+    );
+  }
+
+  async createImageBitmap(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
+  ): Promise<{
+    data: ImageBitmap | HTMLImageElement;
+    premultiplyAlpha: boolean;
+  }> {
+    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
+    const imageBitmapSupported = this.txManager.imageBitmapSupported;
+
+    if (imageBitmapSupported.full === true && sw !== null && sh !== null) {
+      // createImageBitmap with crop
+      const bitmap = await this.platform.createImageBitmap(
+        blob,
+        sx || 0,
+        sy || 0,
         sw,
         sh,
-      );
-    } else if (this.txManager.hasCreateImageBitmap === true) {
-      const response = await fetch(src);
-      const blob = await response.blob();
-      const hasAlphaChannel =
-        premultiplyAlpha ?? this.hasAlphaChannel(blob.type);
-
-      if (sw !== null && sh !== null) {
-        return {
-          data: await createImageBitmap(blob, sx ?? 0, sy ?? 0, sw, sh, {
-            premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          }),
-          premultiplyAlpha: hasAlphaChannel,
-        };
-      }
-
-      return {
-        data: await createImageBitmap(blob, {
+        {
           premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
-        }),
+        },
+      );
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    } else if (imageBitmapSupported.basic === true) {
+      // basic createImageBitmap without options or crop
+      // this is supported for Chrome v50 to v52/54 that doesn't support options
+      return {
+        data: await this.platform.createImageBitmap(blob),
         premultiplyAlpha: hasAlphaChannel,
       };
-    } else {
-      const img = new Image(width || undefined, height || undefined);
-      if (!(src.substr(0, 5) === 'data:')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.src = src;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image`));
-      }).catch((e) => {
-        console.error(e);
-      });
-
-      return {
-        data: img,
-        premultiplyAlpha: premultiplyAlpha ?? true,
-      };
     }
+
+    // default createImageBitmap without crop but with options
+    const bitmap = await this.platform.createImageBitmap(blob, {
+      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+      colorSpaceConversion: 'none',
+      imageOrientation: 'none',
+    });
+    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  async loadImage(src: string) {
+    const { premultiplyAlpha, sx, sy, sw, sh } = this.props;
+
+    if (this.txManager.hasCreateImageBitmap === true) {
+      if (
+        isBase64Image(src) === false &&
+        this.txManager.hasWorker === true &&
+        this.txManager.imageWorkerManager !== null
+      ) {
+        return this.txManager.imageWorkerManager.getImage(
+          src,
+          premultiplyAlpha,
+          sx,
+          sy,
+          sw,
+          sh,
+        );
+      }
+
+      let blob;
+
+      if (isBase64Image(src) === true) {
+        blob = dataURIToBlob(src);
+      } else {
+        blob = await fetchJson(src, 'blob').then(
+          (response) => response as Blob,
+        );
+      }
+
+      return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
+    }
+
+    return this.loadImageFallback(src, premultiplyAlpha ?? true);
+  }
+
+  override async getTextureSource(): Promise<TextureData> {
+    let resp;
+    try {
+      resp = await this.determineImageTypeAndLoadImage();
+    } catch (e) {
+      this.setState('failed', e as Error);
+      return {
+        data: null,
+      };
+    }
+
+    if (resp.data === null) {
+      this.setState('failed', Error('ImageTexture: No image data'));
+      return {
+        data: null,
+      };
+    }
+
+    let width, height;
+    // check if resp.data is typeof Uint8ClampedArray else
+    // use resp.data.width and resp.data.height
+    if (resp.data instanceof Uint8Array) {
+      width = this.props.width ?? 0;
+      height = this.props.height ?? 0;
+    } else {
+      width = resp.data?.width ?? (this.props.width || 0);
+      height = resp.data?.height ?? (this.props.height || 0);
+    }
+
+    // we're loaded!
+    this.setState('fetched', {
+      width,
+      height,
+    });
+
+    return {
+      data: resp.data,
+      premultiplyAlpha: this.props.premultiplyAlpha ?? true,
+    };
+  }
+
+  determineImageTypeAndLoadImage() {
     const { src, premultiplyAlpha, type } = this.props;
     if (src === null) {
       return {
@@ -196,6 +300,14 @@ export class ImageTexture extends Texture {
     }
 
     if (typeof src !== 'string') {
+      if (src instanceof Blob) {
+        if (this.txManager.hasCreateImageBitmap === true) {
+          const { sx, sy, sw, sh } = this.props;
+          return this.createImageBitmap(src, premultiplyAlpha, sx, sy, sw, sh);
+        } else {
+          return this.loadImageFallback(src, premultiplyAlpha ?? true);
+        }
+      }
       if (src instanceof ImageData) {
         return {
           data: src,

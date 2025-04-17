@@ -20,13 +20,14 @@
 // import type { Renderer } from '../../../Renderer';
 import { assertTruthy } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
-import { WebGlCoreRenderer } from '../../../renderers/webgl/WebGlCoreRenderer.js';
+import { WebGlRenderer } from '../../../renderers/webgl/WebGlRenderer.js';
 import { ImageTexture } from '../../../textures/ImageTexture.js';
 import {
   TrFontFace,
   type NormalizedFontMetrics,
   type TrFontFaceOptions,
 } from '../TrFontFace.js';
+import { fetchJson } from '../utils.js';
 import type { FontShaper } from './internal/FontShaper.js';
 import { SdfFontShaper, type SdfFontData } from './internal/SdfFontShaper.js';
 
@@ -62,9 +63,9 @@ export class SdfTrFontFace<
    * in SDF/vertex units.
    */
   public readonly maxCharHeight: number = 0;
-  public readonly data: SdfFontData | undefined;
   public readonly shaper: FontShaper | undefined;
   public readonly glyphMap: Map<number, SdfFontData['chars'][0]> = new Map();
+  public data: SdfFontData | undefined;
 
   constructor(type: FontTypeT, options: SdfTrFontFaceOptions) {
     super(options);
@@ -72,12 +73,12 @@ export class SdfTrFontFace<
     this.type = type;
     const renderer = stage.renderer;
     assertTruthy(
-      renderer instanceof WebGlCoreRenderer,
+      renderer instanceof WebGlRenderer,
       'SDF Font Faces can only be used with the WebGL Renderer',
     );
 
     // Load image
-    this.texture = stage.txManager.loadTexture('ImageTexture', {
+    this.texture = stage.txManager.createTexture('ImageTexture', {
       src: atlasUrl,
       // IMPORTANT: The SDF shader requires the alpha channel to NOT be
       // premultiplied on the atlas texture. If it is premultiplied, the
@@ -86,23 +87,29 @@ export class SdfTrFontFace<
       premultiplyAlpha: false,
     });
 
+    // Load the texture
+    stage.txManager.loadTexture(this.texture, true);
+
+    // FIXME This is a stop-gap solution to avoid Font Face textures to be cleaned up
+    // Ideally we do want to clean up the textures if they're not being used to save as much memory as possible
+    // However, we need to make sure that the font face is reloaded if the texture is cleaned up and needed again
+    // and make sure the SdfFontRenderer is properly guarded against textures being reloaded
+    // for now this will do the trick and the increase on memory is not that big
+    this.texture.preventCleanup = true;
+
     this.texture.on('loaded', () => {
       this.checkLoaded();
       // Make sure we mark the stage for a re-render (in case the font's texture was freed and reloaded)
       stage.requestRender();
     });
 
-    // Pre-load it
-    this.texture.ctxTexture.load();
-
     // Set this.data to the fetched data from dataUrl
-    fetch(atlasDataUrl)
-      .then(async (response) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        (this.data as SdfFontData) = await response.json();
+    fetchJson(atlasDataUrl)
+      .then((response) => {
+        this.data = JSON.parse(response as unknown as string) as SdfFontData;
         assertTruthy(this.data);
         // Add all the glyphs to the glyph map
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
         let maxCharHeight = 0;
         this.data.chars.forEach((glyph) => {
           this.glyphMap.set(glyph.id, glyph);
@@ -111,10 +118,10 @@ export class SdfTrFontFace<
             maxCharHeight = charHeight;
           }
         });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
         (this.maxCharHeight as number) = maxCharHeight;
         // We know `data` is defined here, because we just set it
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
         (this.shaper as FontShaper) = new SdfFontShaper(
           this.data,
           this.glyphMap,

@@ -55,6 +55,7 @@ export function layoutText(
   forceFullLayoutCalc: TextRendererState['forceFullLayoutCalc'],
   scrollable: TrProps['scrollable'],
   overflowSuffix: TrProps['overflowSuffix'],
+  wordBreak: TrProps['wordBreak'],
   maxLines: TrProps['maxLines'],
 ): {
   bufferNumFloats: number;
@@ -121,12 +122,25 @@ export function layoutText(
     xStart: -1,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  let previousWord: {
+    bufferOffset: number;
+    xStart: number;
+  } = {
+    bufferOffset: -1,
+    xStart: -1,
+  };
+
   const shaper = trFontFace.shaper;
 
   const shaperProps: FontShaperProps = {
     letterSpacing: vertexLSpacing,
   };
+
+  // HACK: The space is used as a word boundary. When a text ends with a space, we need to
+  // add an extra space to ensure the space is included in the line width calculation.
+  if (text.endsWith(' ')) {
+    text += ' ';
+  }
 
   // Get glyphs
   let glyphs = shaper.shapeText(
@@ -164,9 +178,6 @@ export function layoutText(
         scrollable ||
         curY + vertexLineHeight + trFontFace.maxCharHeight <=
           vertexTruncateHeight);
-    const lineVertexW = nextLineWillFit
-      ? vertexW
-      : vertexW - overflowSuffVertexWidth;
     /**
      * Vertex X position to the beginning of the last word boundary. This becomes -1 when we start traversing a word.
      */
@@ -192,10 +203,16 @@ export function layoutText(
 
       // If we encounter a word boundary (white space or newline) we invalidate
       // the lastWord and set the xStartLastWordBoundary if we haven't already.
-      if (glyph.codepoint === 32 || glyph.codepoint === 10) {
+      if (
+        glyph.codepoint === 32 ||
+        glyph.codepoint === 10 ||
+        glyph.codepoint === 8203
+      ) {
         if (lastWord.codepointIndex !== -1) {
           lastWord.codepointIndex = -1;
           xStartLastWordBoundary = curX;
+          previousWord.bufferOffset = lastWord.bufferOffset;
+          previousWord.xStart = lastWord.xStart;
         }
       } else if (lastWord.codepointIndex === -1) {
         lastWord.codepointIndex = glyph.cluster;
@@ -206,12 +223,41 @@ export function layoutText(
       if (glyph.mapped) {
         // Mapped glyph
         const charEndX = curX + glyph.xOffset + glyph.width;
-        // Word wrap check
+
         if (
+          wordBreak === 'break-all' &&
+          charEndX >= vertexW &&
+          nextLineWillFit
+        ) {
+          // wordBreak: break-all - the current letter is about to go of the edge
+          // of the container width and the next line will fit, so we break to the next line
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(
+              getUnicodeCodepoints(text, glyph.cluster),
+              glyph.cluster,
+            ),
+          );
+          break;
+        } else if (
+          contain !== 'none' &&
+          wordBreak === 'break-all' &&
+          charEndX + overflowSuffVertexWidth >= vertexW &&
+          nextLineWillFit === false
+        ) {
+          // wordBreak: break-all - the current letter is about to go of the edge
+          // of the container width and the next line will not fit, so we add the overflow suffix
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
+          );
+          contain = 'none';
+        } else if (
+          // Word wrap check
           // We are containing the text
           contain !== 'none' &&
           // The current glyph reaches outside the contained width
-          charEndX >= lineVertexW &&
+          charEndX >= vertexW &&
           // There is a last word that we can break to the next line
           lastWord.codepointIndex !== -1 &&
           // Prevents infinite loop when a single word is longer than the width
@@ -235,12 +281,51 @@ export function layoutText(
               shaperProps,
               new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
             );
-            curX = lastWord.xStart;
-            bufferOffset = lastWord.bufferOffset;
+            if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
+              curX = lastWord.xStart;
+              bufferOffset = lastWord.bufferOffset;
+            } else if (
+              previousWord.xStart + overflowSuffVertexWidth <
+              vertexW
+            ) {
+              curX = previousWord.xStart;
+              bufferOffset = previousWord.bufferOffset;
+            }
+
             // HACK: For the rest of the line when inserting the overflow suffix,
             // set contain = 'none' to prevent an infinite loop.
             contain = 'none';
           }
+        } else if (
+          wordBreak === 'break-word' &&
+          charEndX >= vertexW &&
+          lastWord.xStart === 0 &&
+          nextLineWillFit
+        ) {
+          // The current word which starts the line is wider than the line width
+          // proceed to next line
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(
+              getUnicodeCodepoints(text, glyph.cluster),
+              glyph.cluster,
+            ),
+          );
+          break;
+        } else if (
+          contain !== 'none' &&
+          wordBreak === 'break-word' &&
+          lastWord.xStart === 0 &&
+          charEndX + overflowSuffVertexWidth >= vertexW &&
+          nextLineWillFit === false
+        ) {
+          // wordBreak: break-word - the current letter is about to go of the edge
+          // and the next line will not fit, so we add the overflow suffix
+          glyphs = shaper.shapeText(
+            shaperProps,
+            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
+          );
+          contain = 'none';
         } else {
           // This glyph fits, so we can add it to the buffer
           const quadX = curX + glyph.xOffset;
@@ -301,6 +386,19 @@ export function layoutText(
             // The whole line fit, so we can break to the next line
             break;
           } else {
+            // Check if the overflow suffix will fit
+            if (curX + overflowSuffVertexWidth >= vertexW) {
+              if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
+                curX = lastWord.xStart;
+                bufferOffset = lastWord.bufferOffset;
+              } else if (
+                previousWord.xStart + overflowSuffVertexWidth <
+                vertexW
+              ) {
+                curX = previousWord.xStart;
+                bufferOffset = previousWord.bufferOffset;
+              }
+            }
             // The whole line won't fit, so we need to add the overflow suffix
             glyphs = shaper.shapeText(
               shaperProps,

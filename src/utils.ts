@@ -65,6 +65,15 @@ export function createWebGLContext(
 }
 
 /**
+ * Checks if we're in a development environment or not.
+ *
+ * @returns
+ */
+declare const __DEV__: boolean;
+export const isProductionEnvironment =
+  typeof __DEV__ !== 'undefined' ? !__DEV__ : true;
+
+/**
  * Asserts a condition is truthy, otherwise throws an error
  *
  * @remarks
@@ -80,7 +89,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
-  if (isProductionEnvironment()) return;
+  if (isProductionEnvironment === true) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
@@ -231,18 +240,28 @@ export function getImageAspectRatio(width: number, height: number): number {
 }
 
 /**
- * Checks import.meta if env is production
- *
- * @returns
- */
-export function isProductionEnvironment(): boolean {
-  return import.meta.env && import.meta.env.PROD;
-}
-
-/**
  * Returns a new unique ID
  */
 let nextId = 1;
 export function getNewId(): number {
   return nextId++;
+}
+
+/**
+ * Makes a deep clone of an object
+ * @param object
+ * @returns
+ */
+export function deepClone<T>(obj: T): T {
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => deepClone(item)) as T;
+  }
+  const copy = {} as Record<string, unknown>;
+  for (const key in obj) {
+    copy[key] = deepClone(obj[key]);
+  }
+  return copy as T;
 }

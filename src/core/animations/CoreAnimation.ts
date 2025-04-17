@@ -42,10 +42,10 @@ export class CoreAnimation extends EventEmitter {
   public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
+  private delay = 0;
   private timingFunction: (t: number) => number | undefined;
 
   propValuesMap: PropValuesMap = {};
-  dynPropValuesMap: PropValuesMap | undefined = undefined;
 
   constructor(
     private node: CoreNode,
@@ -66,32 +66,17 @@ export class CoreAnimation extends EventEmitter {
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
         };
-      } else if (node.shader.type !== 'DynamicShader') {
+      } else if (key === 'shaderProps' && node.shader !== null) {
         this.propValuesMap['shaderProps'] = {};
         for (const key in props.shaderProps) {
+          let start = node.shader.props![key];
+          if (Array.isArray(start) === true) {
+            start = start[0];
+          }
           this.propValuesMap['shaderProps'][key] = {
-            start: node.shader.props[key] as number,
+            start,
             target: props.shaderProps[key] as number,
           };
-        }
-      } else {
-        const shaderPropKeys = Object.keys(props.shaderProps!);
-        const spLength = shaderPropKeys.length;
-        this.dynPropValuesMap = {};
-        for (let j = 0; j < spLength; j++) {
-          const effectName = shaderPropKeys[j]!;
-          const effect = props.shaderProps![effectName]!;
-          this.dynPropValuesMap[effectName] = {};
-          const effectProps = Object.entries(effect);
-          const eLength = effectProps.length;
-
-          for (let k = 0; k < eLength; k++) {
-            const [key, value] = effectProps[k]!;
-            this.dynPropValuesMap[effectName]![key] = {
-              start: node.shader.props[effectName][key],
-              target: value,
-            };
-          }
         }
       }
     }
@@ -109,6 +94,7 @@ export class CoreAnimation extends EventEmitter {
     };
     this.timingFunction = getTimingFunction(easing);
     this.delayFor = delay;
+    this.delay = delay;
   }
 
   reset() {
@@ -140,23 +126,9 @@ export class CoreAnimation extends EventEmitter {
     }
     if (this.propValuesMap['shaderProps'] !== undefined) {
       this.restoreValues(
-        this.node.shader.props as Record<string, number>,
+        this.node.shader!.props as Record<string, number>,
         this.propValuesMap['shaderProps'],
       );
-    }
-
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.restoreValues(
-            this.node.shader.props[key],
-            this.dynPropValuesMap[key]!,
-          );
-        }
-      }
     }
   }
 
@@ -181,17 +153,6 @@ export class CoreAnimation extends EventEmitter {
     }
     if (this.propValuesMap['shaderProps'] !== undefined) {
       this.reverseValues(this.propValuesMap['shaderProps']);
-    }
-
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.reverseValues(this.dynPropValuesMap[key]!);
-        }
-      }
     }
 
     // restore stop method if we are not looping
@@ -287,6 +248,7 @@ export class CoreAnimation extends EventEmitter {
 
     if (this.progress > 1) {
       this.progress = loop ? 0 : 1;
+      this.delayFor = this.delay;
       if (stopMethod) {
         // If there's a stop method emit finished so the stop method can be applied.
         // TODO: We should probably reevaluate how stopMethod is implemented as currently
@@ -305,25 +267,14 @@ export class CoreAnimation extends EventEmitter {
     }
     if (this.propValuesMap['shaderProps'] !== undefined) {
       this.updateValues(
-        this.node.shader.props as Record<string, number>,
+        this.node.shader!.props as Record<string, number>,
         this.propValuesMap['shaderProps'],
         easing,
       );
     }
 
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.updateValues(
-            this.node.shader.props[key],
-            this.dynPropValuesMap[key]!,
-            easing,
-          );
-        }
-      }
+    if (this.progress < 1) {
+      this.emit('tick', { progress: this.progress });
     }
 
     if (this.progress === 1) {

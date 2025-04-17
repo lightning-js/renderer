@@ -17,12 +17,17 @@
  * limitations under the License.
  */
 
+import type { Dimensions } from '../../common/CommonTypes.js';
+import { assertTruthy } from '../../utils.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
+import { ImageTexture } from './ImageTexture.js';
 import {
   Texture,
+  TextureType,
   type TextureData,
   type TextureFailedEventHandler,
   type TextureLoadedEventHandler,
+  type TextureState,
 } from './Texture.js';
 
 /**
@@ -77,10 +82,24 @@ export class SubTexture extends Texture {
   props: Required<SubTextureProps>;
   parentTexture: Texture;
 
+  public override type: TextureType = TextureType.subTexture;
+
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
     this.props = SubTexture.resolveDefaults(props || {});
-    this.parentTexture = this.props.texture;
+
+    assertTruthy(this.props.texture, 'SubTexture requires a parent texture');
+    assertTruthy(
+      this.props.texture instanceof ImageTexture,
+      'SubTexture requires an ImageTexture parent',
+    );
+
+    // Resolve parent texture from cache or fallback to provided texture
+    this.parentTexture = txManager.resolveParentTexture(this.props.texture);
+
+    if (this.renderableOwners.size > 0) {
+      this.parentTexture.setRenderableOwner(this, true);
+    }
 
     // If parent texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
@@ -90,36 +109,79 @@ export class SubTexture extends Texture {
       const parentTx = this.parentTexture;
       if (parentTx.state === 'loaded') {
         this.onParentTxLoaded(parentTx, parentTx.dimensions!);
+      } else if (parentTx.state === 'fetching') {
+        this.onParentTxFetching();
+      } else if (parentTx.state === 'fetched') {
+        this.onParentTxFetched();
+      } else if (parentTx.state === 'loading') {
+        this.onParentTxLoading();
       } else if (parentTx.state === 'failed') {
         this.onParentTxFailed(parentTx, parentTx.error!);
+      } else if (parentTx.state === 'freed') {
+        this.onParentTxFreed();
       }
+
+      parentTx.on('fetched', this.onParentTxFetched);
+      parentTx.on('loading', this.onParentTxLoading);
+      parentTx.on('fetching', this.onParentTxFetching);
       parentTx.on('loaded', this.onParentTxLoaded);
       parentTx.on('failed', this.onParentTxFailed);
+      parentTx.on('freed', this.onParentTxFreed);
     });
   }
 
   private onParentTxLoaded: TextureLoadedEventHandler = () => {
     // We ignore the parent's passed dimensions, and simply use the SubTexture's
     // configured dimensions (because that's all that matters here)
-    this.setState('loaded', {
+    this.forwardParentTxState('loaded', {
       width: this.props.width,
       height: this.props.height,
     });
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
-    this.setState('failed', error);
+    this.forwardParentTxState('failed', error);
   };
+
+  private onParentTxFetched = () => {
+    this.forwardParentTxState('fetched', {
+      width: this.props.width,
+      height: this.props.height,
+    });
+  };
+
+  private onParentTxFetching = () => {
+    this.forwardParentTxState('fetching');
+  };
+
+  private onParentTxLoading = () => {
+    this.forwardParentTxState('loading');
+  };
+
+  private onParentTxFreed = () => {
+    this.forwardParentTxState('freed');
+  };
+
+  private forwardParentTxState(
+    state: TextureState,
+    errorOrDimensions?: Error | Dimensions,
+  ) {
+    this.setState(state, errorOrDimensions);
+  }
 
   override onChangeIsRenderable(isRenderable: boolean): void {
     // Propagate the renderable owner change to the parent texture
     this.parentTexture.setRenderableOwner(this, isRenderable);
   }
 
-  override async getTextureData(): Promise<TextureData> {
-    return {
-      data: this.props,
-    };
+  override async getTextureSource(): Promise<TextureData> {
+    // Check if parent texture is loaded
+    return new Promise((resolve, reject) => {
+      this.setState('fetched');
+      resolve({
+        data: this.props,
+      });
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -18,7 +18,7 @@
  */
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
-import { Texture, type TextureData } from './Texture.js';
+import { Texture, TextureType, type TextureData } from './Texture.js';
 
 /**
  * Properties of the {@link NoiseTexture}
@@ -56,12 +56,14 @@ export interface NoiseTextureProps {
 export class NoiseTexture extends Texture {
   props: Required<NoiseTextureProps>;
 
+  public override type: TextureType = TextureType.noise;
+
   constructor(txManager: CoreTextureManager, props: NoiseTextureProps) {
     super(txManager);
     this.props = NoiseTexture.resolveDefaults(props);
   }
 
-  override async getTextureData(): Promise<TextureData> {
+  override async getTextureSource(): Promise<TextureData> {
     const { width, height } = this.props;
     const size = width * height * 4;
     const pixelData8 = new Uint8ClampedArray(size);
@@ -72,6 +74,9 @@ export class NoiseTexture extends Texture {
       pixelData8[i + 2] = v;
       pixelData8[i + 3] = 255;
     }
+
+    this.setState('fetched');
+
     return {
       data: new ImageData(pixelData8, width, height),
     };

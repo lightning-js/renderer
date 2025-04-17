@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+
 export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
 
 export type RGBA = [r: number, g: number, b: number, a: number];
@@ -265,6 +267,25 @@ export function isRectPositive(rect: Rect): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
+/**
+ * Create a preload bounds from a strict bound
+ *
+ * @param strictBound The strict boundary of the node
+ * @param boundsMargin Boundary margin to apply to the strictBound
+ * @returns
+ */
+export function createPreloadBounds(
+  strictBound: Bound,
+  boundsMargin: [number, number, number, number],
+): Bound {
+  return createBound(
+    strictBound.x1 - boundsMargin[3],
+    strictBound.y1 - boundsMargin[0],
+    strictBound.x2 + boundsMargin[1],
+    strictBound.y2 + boundsMargin[2],
+  );
+}
+
 export function convertUrlToAbsolute(url: string): string {
   // handle local file imports if the url isn't remote resource or data blob
   if (self.location.protocol === 'file:' && !PROTOCOL_REGEX.test(url)) {
@@ -288,4 +309,82 @@ export function convertUrlToAbsolute(url: string): string {
 
   const absoluteUrl = new URL(url, self.location.href);
   return absoluteUrl.href;
+}
+
+export function isBase64Image(src: string) {
+  return src.startsWith('data:') === true;
+}
+
+export function calcFactoredRadius(
+  radius: number,
+  width: number,
+  height: number,
+): number {
+  return radius * Math.min(Math.min(width, height) / (2.0 * radius), 1);
+}
+
+export function valuesAreEqual(values: number[]) {
+  let prevValue = values[0];
+  for (let i = 1; i < values.length; i++) {
+    if (prevValue !== values[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function calcFactoredRadiusArray(
+  radius: Vec4,
+  width: number,
+  height: number,
+): [number, number, number, number] {
+  const result: [number, number, number, number] = [
+    radius[0],
+    radius[1],
+    radius[2],
+    radius[3],
+  ];
+  const factor = Math.min(
+    Math.min(
+      Math.min(
+        width / Math.max(width, radius[0] + radius[1]),
+        width / Math.max(width, radius[2] + radius[3]),
+      ),
+      Math.min(
+        height / Math.max(height, radius[0] + radius[3]),
+        height / Math.max(height, radius[1] + radius[2]),
+      ),
+    ),
+    1,
+  );
+  result[0] *= factor;
+  result[1] *= factor;
+  result[2] *= factor;
+  result[3] *= factor;
+  return result;
+}
+
+export function dataURIToBlob(dataURI: string): Blob {
+  dataURI = dataURI.replace(/^data:/, '');
+
+  const type = dataURI.match(/image\/[^;]+/)?.[0] || '';
+  const base64 = dataURI.replace(/^[^,]+,/, '');
+
+  const sliceSize = 1024;
+  const byteCharacters = atob(base64);
+  const bytesLength = byteCharacters.length;
+  const slicesCount = Math.ceil(bytesLength / sliceSize);
+  const byteArrays = new Array(slicesCount);
+
+  for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+    const begin = sliceIndex * sliceSize;
+    const end = Math.min(begin + sliceSize, bytesLength);
+
+    const bytes = new Array(end - begin);
+    for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+      bytes[i] = byteCharacters[offset]?.charCodeAt(0);
+    }
+    byteArrays[sliceIndex] = new Uint8Array(bytes);
+  }
+  return new Blob(byteArrays, { type });
 }

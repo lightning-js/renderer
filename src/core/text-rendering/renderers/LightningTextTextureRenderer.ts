@@ -22,7 +22,10 @@
 import { assertTruthy } from '../../../utils.js';
 import { getRgbaString, type RGBA } from '../../lib/utils.js';
 import { calcDefaultLineHeight } from '../TextRenderingUtils.js';
-import { getWebFontMetrics } from '../TextTextureRendererUtils.js';
+import {
+  getWebFontMetrics,
+  isZeroWidthSpace,
+} from '../TextTextureRendererUtils.js';
 import type { NormalizedFontMetrics } from '../font-face-types/TrFontFace.js';
 import type { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 
@@ -71,7 +74,7 @@ export interface Settings {
   trFontFace: WebTrFontFace | null;
   wordWrap: boolean;
   wordWrapWidth: number;
-  wordBreak: boolean;
+  wordBreak: 'normal' | 'break-all' | 'break-word';
   textOverflow: TextOverflow | null;
   lineHeight: number | null;
   textBaseline: TextBaseline;
@@ -132,6 +135,13 @@ export interface RenderInfo {
   letterSpacing: number;
   textIndent: number;
   metrics: NormalizedFontMetrics;
+}
+
+export interface LineType {
+  text: string;
+  x: number;
+  y: number;
+  w: number;
 }
 
 /**
@@ -196,10 +206,10 @@ export class LightningTextTextureRenderer {
   _getFontSetting() {
     const ff = [this._settings.fontFamily];
 
-    const ffs = [];
+    const ffs: string[] = [];
     for (let i = 0, n = ff.length; i < n; i++) {
       if (ff[i] === 'serif' || ff[i] === 'sans-serif') {
-        ffs.push(ff[i]);
+        ffs.push(ff[i]!);
       } else {
         ffs.push(`"${ff[i]!}"`);
       }
@@ -295,6 +305,7 @@ export class LightningTextTextureRenderer {
     }
 
     // Text overflow
+    // TODO Probably never used
     if (this._settings.textOverflow && !this._settings.wordWrap) {
       let suffix;
       switch (this._settings.textOverflow) {
@@ -336,7 +347,7 @@ export class LightningTextTextureRenderer {
     if (calcMaxLines && lines.length > calcMaxLines) {
       const usedLines = lines.slice(0, calcMaxLines);
 
-      let otherLines = null;
+      let otherLines: string[] | null = null;
       if (this._settings.overflowSuffix) {
         // Wrap again with max lines suffix enabled.
         const w = this._settings.overflowSuffix
@@ -351,7 +362,7 @@ export class LightningTextTextureRenderer {
         usedLines[usedLines.length - 1] = `${al.l[0]!}${
           this._settings.overflowSuffix
         }`;
-        otherLines = [al.l.length > 1 ? al.l[1] : ''];
+        otherLines = [al.l.length > 1 ? al.l[1]! : ''];
       } else {
         otherLines = [''];
       }
@@ -394,6 +405,16 @@ export class LightningTextTextureRenderer {
       // Auto-set width to max text length.
       width = maxLineWidth + paddingLeft + paddingRight;
       innerWidth = maxLineWidth;
+    }
+
+    // If word wrap is enabled the width needs to be the width of the text.
+    if (
+      this._settings.wordWrap &&
+      w > maxLineWidth &&
+      this._settings.textAlign === 'left' &&
+      lines.length === 1
+    ) {
+      width = maxLineWidth + paddingLeft + paddingRight;
     }
 
     let height;
@@ -502,7 +523,7 @@ export class LightningTextTextureRenderer {
     let linePositionX;
     let linePositionY;
 
-    const drawLines = [];
+    const drawLines: LineType[] = [];
 
     const { metrics } = renderInfo;
 
@@ -682,38 +703,90 @@ export class LightningTextTextureRenderer {
     letterSpacing: number,
     indent = 0,
   ) {
-    // Greedy wrapping algorithm that will wrap words as the line grows longer.
-    // than its horizontal bounds.
+    const spaceRegex = / |\u200B/g; // ZWSP and spaces
     const lines = text.split(/\r?\n/g);
     let allLines: string[] = [];
-    const realNewlines = [];
+    const realNewlines: number[] = [];
+
     for (let i = 0; i < lines.length; i++) {
-      const resultLines = [];
+      const resultLines: string[] = [];
       let result = '';
       let spaceLeft = wordWrapWidth - indent;
-      const words = lines[i]!.split(' ');
+
+      // Split the line into words, considering ZWSP
+      const words = lines[i]!.split(spaceRegex);
+      const spaces = lines[i]!.match(spaceRegex) || [];
+
       for (let j = 0; j < words.length; j++) {
-        const wordWidth = this.measureText(words[j]!, letterSpacing);
-        const wordWidthWithSpace =
-          wordWidth + this.measureText(' ', letterSpacing);
-        if (j === 0 || wordWidthWithSpace > spaceLeft) {
-          // Skip printing the newline if it's the first word of the line that is.
-          // greater than the word wrap width.
+        const space = spaces[j - 1] || '';
+        const word = words[j]!;
+        const wordWidth = this.measureText(word, letterSpacing);
+        const wordWidthWithSpace = isZeroWidthSpace(space)
+          ? wordWidth
+          : wordWidth + this.measureText(space, letterSpacing);
+
+        if (
+          this._settings.wordBreak === 'break-all' &&
+          wordWidthWithSpace > spaceLeft
+        ) {
+          const letters = word.split('');
+          for (let k = 0; k < letters.length; k++) {
+            const letter = letters[k]!;
+            const letterWidthWithSpace =
+              k > 0
+                ? this.measureText(letter, letterSpacing)
+                : this.measureText(space + letter, letterSpacing);
+
+            if (letterWidthWithSpace > spaceLeft) {
+              resultLines.push(result);
+              result = letter;
+              spaceLeft = wordWrapWidth - letterWidthWithSpace;
+            } else {
+              spaceLeft -= letterWidthWithSpace;
+              result += k > 0 ? letter : space + letter;
+            }
+          }
+        } else if (
+          this._settings.wordBreak === 'break-word' &&
+          wordWidthWithSpace > spaceLeft
+        ) {
+          if (wordWidth < wordWrapWidth) {
+            resultLines.push(result);
+            result = word;
+            spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
+          } else {
+            if (result.length > 0) resultLines.push(result);
+            result = '';
+            spaceLeft = wordWrapWidth - indent;
+            const letters = word.split('');
+            for (let k = 0; k < letters.length; k++) {
+              const letter = letters[k]!;
+              const letterWidth = this.measureText(letter, letterSpacing);
+              if (letterWidth > spaceLeft) {
+                resultLines.push(result);
+                result = '';
+                spaceLeft = wordWrapWidth - indent;
+              } else {
+                result += letter;
+                spaceLeft -= letterWidth;
+              }
+            }
+          }
+        } else if (j === 0 || wordWidthWithSpace > spaceLeft) {
           if (j > 0) {
             resultLines.push(result);
             result = '';
           }
-          result += words[j];
+          result += word;
           spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
         } else {
           spaceLeft -= wordWidthWithSpace;
-          result += ` ${words[j]!}`;
+          result += space + word;
         }
       }
 
       resultLines.push(result);
       result = '';
-
       allLines = allLines.concat(resultLines);
 
       if (i < lines.length - 1) {
@@ -728,7 +801,13 @@ export class LightningTextTextureRenderer {
     if (!space) {
       return this._context.measureText(word).width;
     }
+
+    // Split word into characters, but skip ZWSP in the width calculation
     return word.split('').reduce((acc, char) => {
+      // Check if the character is a zero-width space and skip it
+      if (isZeroWidthSpace(char)) {
+        return acc;
+      }
       return acc + this._context.measureText(char).width + space;
     }, 0);
   }
@@ -744,7 +823,7 @@ export class LightningTextTextureRenderer {
       trFontFace: null,
       wordWrap: true,
       wordWrapWidth: 0,
-      wordBreak: false,
+      wordBreak: 'normal',
       textOverflow: '',
       lineHeight: null,
       textBaseline: 'alphabetic',

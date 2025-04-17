@@ -23,18 +23,15 @@ import {
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
+import { WebGlRenderer, SdfTextRenderer } from '@lightningjs/renderer/webgl';
 import {
-  WebGlCoreRenderer,
-  SdfTextRenderer,
-} from '@lightningjs/renderer/webgl';
-import {
-  CanvasCoreRenderer,
+  CanvasRenderer,
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
 import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
-import * as mt19937 from '@stdlib/random-base-mt19937';
+
 import type {
   ExampleSettings,
   SnapshotOptions,
@@ -42,6 +39,8 @@ import type {
 import { StatTracker } from './common/StatTracker.js';
 import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
+import { setupMathRandom } from './common/setupMathRandom.js';
+import { installShaders } from './common/installShaders.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -89,6 +88,8 @@ const defaultPhysicalPixelRatio = 1;
   const resolution = Number(urlParams.get('resolution')) || 720;
   const enableInspector = urlParams.get('inspector') === 'true';
   const forceWebGL2 = urlParams.get('webgl2') === 'true';
+  const textureProcessingLimit =
+    Number(urlParams.get('textureProcessingLimit')) || 0;
 
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
@@ -113,6 +114,7 @@ const defaultPhysicalPixelRatio = 1;
       perfMultiplier,
       enableInspector,
       forceWebGL2,
+      textureProcessingLimit,
     );
     return;
   }
@@ -135,15 +137,15 @@ async function runTest(
   perfMultiplier: number,
   enableInspector: boolean,
   forceWebGL2: boolean,
+  textureProcessingLimit: number,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
     throw new Error(`Test "${test}" not found`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const module = await testModule();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
   const customSettings: Partial<RendererMainSettings> =
     typeof module.customSettings === 'function'
       ? module.customSettings(urlParams)
@@ -157,6 +159,7 @@ async function runTest(
     physicalPixelRatio,
     enableInspector,
     forceWebGL2,
+    textureProcessingLimit,
     customSettings,
   );
 
@@ -170,9 +173,13 @@ async function runTest(
       parent: renderer.root,
       fontSize: 50,
     });
-    overlayText.once(
+    overlayText.on(
       'loaded',
-      (target: any, { dimensions }: NodeLoadedPayload) => {
+      (target: any, { type, dimensions }: NodeLoadedPayload) => {
+        if (type !== 'text') {
+          return;
+        }
+
         overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
         overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
       },
@@ -216,7 +223,6 @@ async function runTest(
     memMonitor,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   await module.default(exampleSettings);
 }
 
@@ -228,6 +234,7 @@ async function initRenderer(
   physicalPixelRatio: number,
   enableInspector: boolean,
   forceWebGL2?: boolean,
+  textureProcessingTimeLimit?: number,
   customSettings?: Partial<RendererMainSettings>,
 ) {
   let inspector: typeof Inspector | undefined;
@@ -244,13 +251,14 @@ async function initRenderer(
       enableContextSpy,
       forceWebGL2,
       inspector,
-      renderEngine:
-        renderMode === 'webgl' ? WebGlCoreRenderer : CanvasCoreRenderer,
+      renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
+      textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
     },
     'app',
   );
+  await installShaders(renderer.stage, renderMode);
   installFonts(renderer.stage);
 
   /**
@@ -374,18 +382,15 @@ async function runAutomation(
       continue;
     }
     assertTruthy(testModule);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
+    // Setup Math.random to use a seeded random number generator for consistent
+    // results in automation mode.
+    await setupMathRandom();
+
     const { automation, customSettings } = await testModule();
     console.log(`Attempting to run automation for ${testName}...`);
     if (automation) {
       console.log(`Running automation for ${testName}...`);
-      // Override Math.random() as stable random number generator
-      // - Each test gets the same sequence of random numbers
-      // - This only is in effect when tests are run in automation mode
-      const rand = mt19937.factory({ seed: 1234 });
-      Math.random = function () {
-        return rand() / rand.MAX;
-      };
       if (customSettings) {
         console.error('customSettings not supported for automation');
       } else {
@@ -429,7 +434,7 @@ async function runAutomation(
 
             // Allow some time for all images to load and the RaF to unpause
             // and render if needed.
-            await delay(200);
+            await new Promise((resolve) => setTimeout(resolve, 200));
             if (snapshot) {
               console.log(`Calling snapshot(${testName})`);
               await snapshot(testName, adjustedOptions);
@@ -458,6 +463,20 @@ async function runAutomation(
   }
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function waitForRendererIdle(renderer: RendererMain) {
+  return new Promise<void>((resolve) => {
+    let timeout: NodeJS.Timeout | undefined;
+    const startTimeout = () => {
+      timeout = setTimeout(() => {
+        resolve();
+      }, 200);
+    };
+
+    renderer.once('idle', () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      startTimeout();
+    });
+  });
 }

@@ -16,8 +16,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { isProductionEnvironment } from '../utils.js';
 import type { Stage } from './Stage.js';
-import type { Texture } from './textures/Texture.js';
+import { TextureType, type Texture } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
 
 export interface TextureMemoryManagerSettings {
@@ -51,13 +52,13 @@ export interface TextureMemoryManagerSettings {
   targetThresholdLevel: number;
 
   /**
-   * Interval between Texture Cleanups (in milliseconds)
+   * Interval between non-aggressive Texture Cleanups (in milliseconds)
    *
    * @remarks
-   * Texture Memory Manager will perform a Texture Cleanup no more
-   * frequently than this interval generally when the scene becomes idle.
+   * Texture Memory Manager will perform a non aggressive Texture Cleanup no more
+   * frequently than this interval when the scene becomes idle.
    *
-   * @defaultValue `30,000` (30 seconds)
+   * @defaultValue `5,000` (5 seconds)
    */
   cleanupInterval: number;
 
@@ -67,6 +68,24 @@ export interface TextureMemoryManagerSettings {
    * @defaultValue `false`
    */
   debugLogging: boolean;
+
+  /**
+   * Baseline memory allocation for the Texture Memory Manager
+   *
+   * @remarks
+   * Baseline texture memory is an allocation of memory by simply having a 1080p WebGL context.
+   * This will be used on top of the memory used by textures to determine when to trigger a cleanup.
+   *
+   * @defaultValue `25e6` (25 MB)
+   */
+  baselineMemoryAllocation: number;
+
+  /**
+   * Do not exceed critical threshold
+   *
+   * @defaultValue `false`
+   */
+  doNotExceedCriticalThreshold: boolean;
 }
 
 export interface MemoryInfo {
@@ -76,6 +95,7 @@ export interface MemoryInfo {
   memUsed: number;
   renderableTexturesLoaded: number;
   loadedTextures: number;
+  baselineMemoryAllocation: number;
 }
 
 /**
@@ -96,12 +116,17 @@ export interface MemoryInfo {
 export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: Map<Texture, number> = new Map();
+  private orphanedTextures: Texture[] = [];
   private criticalThreshold: number;
   private targetThreshold: number;
   private cleanupInterval: number;
   private debugLogging: boolean;
   private lastCleanupTime = 0;
+  private baselineMemoryAllocation: number;
+
   public criticalCleanupRequested = false;
+  public doNotExceedCriticalThreshold: boolean;
+
   /**
    * The current frame time in milliseconds
    *
@@ -113,15 +138,23 @@ export class TextureMemoryManager {
   public frameTime = 0;
 
   constructor(private stage: Stage, settings: TextureMemoryManagerSettings) {
-    const { criticalThreshold } = settings;
+    const { criticalThreshold, doNotExceedCriticalThreshold } = settings;
+    this.doNotExceedCriticalThreshold = doNotExceedCriticalThreshold || false;
     this.criticalThreshold = Math.round(criticalThreshold);
     const targetFraction = Math.max(
       0,
       Math.min(1, settings.targetThresholdLevel),
     );
-    this.targetThreshold = Math.round(criticalThreshold * targetFraction);
     this.cleanupInterval = settings.cleanupInterval;
     this.debugLogging = settings.debugLogging;
+    this.baselineMemoryAllocation = Math.round(
+      settings.baselineMemoryAllocation,
+    );
+    this.targetThreshold = Math.max(
+      Math.round(criticalThreshold * targetFraction),
+      this.baselineMemoryAllocation,
+    );
+    this.memUsed = Math.round(settings.baselineMemoryAllocation);
 
     if (settings.debugLogging) {
       let lastMemUse = 0;
@@ -143,11 +176,45 @@ export class TextureMemoryManager {
     // If the threshold is 0, we disable the memory manager by replacing the
     // setTextureMemUse method with a no-op function.
     if (criticalThreshold === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       this.setTextureMemUse = () => {};
     }
   }
 
+  /**
+   * Add a texture to the orphaned textures list
+   *
+   * @param texture - The texture to add to the orphaned textures list
+   */
+  addToOrphanedTextures(texture: Texture) {
+    // if the texture is already in the orphaned textures list add it at the end
+    if (this.orphanedTextures.includes(texture)) {
+      this.removeFromOrphanedTextures(texture);
+    }
+
+    // If the texture can be cleaned up, add it to the orphaned textures list
+    if (texture.preventCleanup === false) {
+      this.orphanedTextures.push(texture);
+    }
+  }
+
+  /**
+   * Remove a texture from the orphaned textures list
+   *
+   * @param texture - The texture to remove from the orphaned textures list
+   */
+  removeFromOrphanedTextures(texture: Texture) {
+    const index = this.orphanedTextures.indexOf(texture);
+    if (index !== -1) {
+      this.orphanedTextures.splice(index, 1);
+    }
+  }
+
+  /**
+   * Set the memory usage of a texture
+   *
+   * @param texture - The texture to set memory usage for
+   * @param byteSize - The size of the texture in bytes
+   */
   setTextureMemUse(texture: Texture, byteSize: number) {
     if (this.loadedTextures.has(texture)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -175,66 +242,108 @@ export class TextureMemoryManager {
     );
   }
 
-  cleanup() {
+  checkCriticalCleanup() {
+    return this.memUsed > this.criticalThreshold;
+  }
+
+  cleanupQuick(critical: boolean) {
+    // Free non-renderable textures until we reach the target threshold
+    const memTarget = this.targetThreshold;
+    const txManager = this.stage.txManager;
+    const timestamp = this.stage.platform.getTimeStamp();
+
+    while (
+      this.memUsed >= memTarget &&
+      this.orphanedTextures.length > 0 &&
+      (critical || this.stage.platform.getTimeStamp() - timestamp < 10)
+    ) {
+      const texture = this.orphanedTextures.shift();
+
+      if (texture === undefined) {
+        continue;
+      }
+
+      if (texture.renderable === true) {
+        // If the texture is renderable, we can't free it up
+        continue;
+      }
+
+      texture.free();
+      txManager.removeTextureFromCache(texture);
+    }
+  }
+
+  cleanupDeep(critical: boolean) {
+    // Free non-renderable textures until we reach the target threshold
+    const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
+    const txManager = this.stage.txManager;
+
+    // sort by renderability
+    const filteredAndSortedTextures: Texture[] = [];
+    const textures = [...this.loadedTextures.keys()];
+    for (let i = 0; i < textures.length; i++) {
+      const texture = textures[i];
+      if (texture === undefined) {
+        continue;
+      }
+
+      if (
+        texture.type === TextureType.image ||
+        texture.type === TextureType.noise ||
+        texture.type === TextureType.renderToTexture
+      ) {
+        if (texture.renderable === true) {
+          filteredAndSortedTextures.push(texture);
+        } else {
+          filteredAndSortedTextures.unshift(texture);
+        }
+      }
+    }
+
+    while (this.memUsed >= memTarget && filteredAndSortedTextures.length > 0) {
+      const texture = filteredAndSortedTextures.shift();
+      if (texture === undefined) {
+        continue;
+      }
+
+      if (texture.preventCleanup === true) {
+        continue;
+      }
+
+      if (texture.renderable === true) {
+        break;
+      }
+
+      texture.free();
+      this.removeFromOrphanedTextures(texture);
+      txManager.removeTextureFromCache(texture);
+      txManager.removeTextureFromQueue(texture);
+    }
+  }
+
+  cleanup(aggressive: boolean = false) {
     const critical = this.criticalCleanupRequested;
     this.lastCleanupTime = this.frameTime;
-    this.criticalCleanupRequested = false;
 
-    if (critical) {
+    if (critical === true) {
       this.stage.queueFrameEvent('criticalCleanup', {
         memUsed: this.memUsed,
         criticalThreshold: this.criticalThreshold,
       });
     }
 
-    if (this.debugLogging) {
+    if (this.debugLogging === true) {
       console.log(
-        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}`,
+        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}. Aggressive: ${aggressive}`,
       );
     }
 
-    /**
-     * Sort the loaded textures by renderability, then by last touch time.
-     *
-     * This will ensure that the array is ordered by the following:
-     * - Non-renderable textures, starting at the least recently rendered
-     * - Renderable textures, starting at the least recently rendered
-     */
-    const textures = [...this.loadedTextures.keys()].sort(
-      (textureA, textureB) => {
-        const txARenderable = textureA.renderable;
-        const txBRenderable = textureB.renderable;
-        if (txARenderable === txBRenderable) {
-          return (
-            textureA.lastRenderableChangeTime -
-            textureB.lastRenderableChangeTime
-          );
-        } else if (txARenderable) {
-          return 1;
-        } else if (txBRenderable) {
-          return -1;
-        }
-        return 0;
-      },
-    );
+    // try a quick cleanup first
+    this.cleanupQuick(critical);
 
-    // Free non-renderable textures until we reach the target threshold
-    const memTarget = this.targetThreshold;
-    const txManager = this.stage.txManager;
-    for (const texture of textures) {
-      if (texture.renderable) {
-        // Stop at the first renderable texture (The rest are renderable because of the sort above)
-        // We don't want to free renderable textures because they will just likely be reloaded in the next frame
-        break;
-      }
-      if (texture.preventCleanup === false) {
-        texture.ctxTexture.free();
-        txManager.removeTextureFromCache(texture);
-      }
-      if (this.memUsed <= memTarget) {
-        // Stop once we've freed enough textures to reach under the target threshold
-        break;
-      }
+    // if we're still above the target threshold, do a deep cleanup
+    if (aggressive === true && this.memUsed >= this.criticalThreshold) {
+      this.cleanupDeep(critical);
     }
 
     if (this.memUsed >= this.criticalThreshold) {
@@ -242,9 +351,14 @@ export class TextureMemoryManager {
         memUsed: this.memUsed,
         criticalThreshold: this.criticalThreshold,
       });
-      console.warn(
-        `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
-      );
+
+      if (this.debugLogging === true || isProductionEnvironment === false) {
+        console.warn(
+          `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
+        );
+      }
+    } else {
+      this.criticalCleanupRequested = false;
     }
   }
 
@@ -258,15 +372,15 @@ export class TextureMemoryManager {
   getMemoryInfo(): MemoryInfo {
     let renderableTexturesLoaded = 0;
     const renderableMemUsed = [...this.loadedTextures.keys()].reduce(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       (acc, texture) => {
         renderableTexturesLoaded += texture.renderable ? 1 : 0;
         return (
           acc + (texture.renderable ? this.loadedTextures.get(texture)! : 0)
         );
       },
-      0,
+      this.baselineMemoryAllocation,
     );
+
     return {
       criticalThreshold: this.criticalThreshold,
       targetThreshold: this.targetThreshold,
@@ -274,6 +388,7 @@ export class TextureMemoryManager {
       memUsed: this.memUsed,
       renderableTexturesLoaded,
       loadedTextures: this.loadedTextures.size,
+      baselineMemoryAllocation: this.baselineMemoryAllocation,
     };
   }
 }

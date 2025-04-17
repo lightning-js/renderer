@@ -43,7 +43,8 @@ export function measureText(
   );
   let width = 0;
   for (const glyph of glyphs) {
-    if (glyph.mapped) {
+    if (glyph.mapped && glyph.codepoint !== 8203) {
+      // Skip ZWSP (\u200B)
       width += glyph.xAdvance;
     }
   }

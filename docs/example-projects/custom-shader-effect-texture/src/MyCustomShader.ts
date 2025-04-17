@@ -21,13 +21,7 @@
  *
  * @module
  */
-import {
-  WebGlCoreShader,
-  type DimensionsShaderProp,
-  type WebGlCoreRenderer,
-  type WebGlCoreCtxTexture,
-  type ShaderProgramSources,
-} from '@lightningjs/renderer';
+import type { WebGlShaderType } from '@lightningjs/renderer/webgl';
 
 export interface Point {
   x: number;
@@ -43,7 +37,7 @@ declare module '@lightningjs/renderer' {
 /**
  * Properties of the {@link CustomShaderProps} shader
  */
-export interface CustomShaderProps extends DimensionsShaderProp {
+export interface CustomShaderProps {
   /**
    * Use normalized values rather than pixle values
    * @default false
@@ -75,171 +69,98 @@ export interface CustomShaderProps extends DimensionsShaderProp {
   bottomLeft?: Point | null;
 }
 
-export class MyCustomShader extends WebGlCoreShader {
-  constructor(renderer: WebGlCoreRenderer) {
-    super({
-      renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_dimensions', uniform: 'uniform2fv' },
-        { name: 'u_topLeft', uniform: 'uniform2fv' },
-        { name: 'u_topRight', uniform: 'uniform2fv' },
-        { name: 'u_bottomRight', uniform: 'uniform2fv' },
-        { name: 'u_bottomLeft', uniform: 'uniform2fv' },
-      ],
-    });
-  }
-
-  static z$__type__Props: CustomShaderProps;
-
-  static override resolveDefaults(
-    props: CustomShaderProps,
-  ): Required<CustomShaderProps> {
-    return {
-      normalized: props.normalized || false,
-      topLeft: props.topLeft || null,
-      topRight: props.topRight || null,
-      bottomRight: props.bottomRight || null,
-      bottomLeft: props.bottomLeft || null,
-      $dimensions: {
-        width: 0,
-        height: 0,
-      },
-    };
-  }
-
-  override bindTextures(textures: WebGlCoreCtxTexture[]) {
-    const { glw } = this;
-    glw.activeTexture(0);
-    glw.bindTexture(textures[0]!.ctxTexture);
-  }
-
-  protected override bindProps(props: Required<CustomShaderProps>): void {
-    const width = props.normalized ? 1 : props.$dimensions.width;
-    const height = props.normalized ? 1 : props.$dimensions.height;
+export const MyCustomShader: WebGlShaderType<CustomShaderProps> = {
+  props: {
+    normalized: false,
+    topLeft: null,
+    topRight: null,
+    bottomRight: null,
+    bottomLeft: null,
+  },
+  update(node) {
+    const props = this.props!;
+    const width = props.normalized ? 1 : node.width;
+    const height = props.normalized ? 1 : node.height;
 
     const topLeft = [
       (props.topLeft?.x || 0) / width,
       (props.topLeft?.y || 0) / height,
-    ];
+    ] as [number, number];
 
     const topRight = [
       (props.topRight?.x || width) / width,
       (props.topRight?.y || 0) / height,
-    ];
+    ] as [number, number];
 
     const bottomRight = [
       (props.bottomRight?.x || width) / width,
       (props.bottomRight?.y || height) / height,
-    ];
+    ] as [number, number];
 
     const bottomLeft = [
       (props.bottomLeft?.x || 0) / width,
       (props.bottomLeft?.y || height) / height,
-    ];
+    ] as [number, number];
 
-    this.setUniform('u_topLeft', new Float32Array(topLeft));
-    this.setUniform('u_topRight', new Float32Array(topRight));
-    this.setUniform('u_bottomRight', new Float32Array(bottomRight));
-    this.setUniform('u_bottomLeft', new Float32Array(bottomLeft));
-  }
+    this.uniform2fa('u_topLeft', topLeft);
+    this.uniform2fa('u_topRight', topRight);
+    this.uniform2fa('u_bottomRight', bottomRight);
+    this.uniform2fa('u_bottomLeft', bottomLeft);
+  },
+  fragment: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
 
-  override canBatchShaderProps(
-    propsA: Required<CustomShaderProps>,
-    propsB: Required<CustomShaderProps>,
-  ): boolean {
-    return JSON.stringify(propsA) === JSON.stringify(propsB);
-  }
+    uniform sampler2D u_texture;
+    uniform vec2 u_topLeft;
+    uniform vec2 u_topRight;
+    uniform vec2 u_bottomLeft;
+    uniform vec2 u_bottomRight;
 
-  static override shaderSources: ShaderProgramSources = {
-    vertex: `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
+    varying vec2 v_textureCoords;
+    varying vec4 v_color;
 
-      attribute vec2 a_position;
-      attribute vec2 a_textureCoordinate;
-      attribute vec4 a_color;
+    float xross(in vec2 a, in vec2 b) {
+      return a.x * b.y - a.y * b.x;
+    }
 
-      uniform vec2 u_resolution;
-      uniform float u_pixelRatio;
+    vec2 invBilinear(in vec2 p, in vec2 a, in vec2 b, in vec2 c, in vec2 d ){
+      vec2 e = b-a;
+      vec2 f = d-a;
+      vec2 g = a-b+c-d;
+      vec2 h = p-a;
 
-      varying vec4 v_color;
-      varying vec2 v_textureCoordinate;
+      float k2 = xross(g, f);
+      float k1 = xross(e, f) + xross(h, g);
+      float k0 = xross(h, e);
 
-      void main() {
-        vec2 normalized = a_position * u_pixelRatio / u_resolution;
-        vec2 zero_two = normalized * 2.0;
-        vec2 clip_space = zero_two - 1.0;
+      float w = k1*k1 - 4.0*k0*k2;
 
-        // pass to fragment
-        v_color = a_color;
-        v_textureCoordinate = a_textureCoordinate;
+      if( w<0.0 ) return vec2(-1.0);
 
-        // flip y
-        gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
-      }
-    `,
-    fragment: `
-      # ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      # else
-      precision mediump float;
-      # endif
+      w = sqrt(w);
 
-      uniform sampler2D u_texture;
-      uniform vec2 u_topLeft;
-      uniform vec2 u_topRight;
-      uniform vec2 u_bottomLeft;
-      uniform vec2 u_bottomRight;
+      // will fail for k0=0, which is only on the ba edge
+      float v = 2.0*k0/(-k1 - w);
+      if( v<0.0 || v>1.0 ) v = 2.0*k0/(-k1 + w);
 
-      varying vec2 v_textureCoordinate;
-      varying vec4 v_color;
+      float u = (h.x - f.x*v)/(e.x + g.x*v);
+      if( u<0.0 || u>1.0 || v<0.0 || v>1.0 ) return vec2(-1.0);
+      return vec2( u, v );
+    }
 
-      float xross(in vec2 a, in vec2 b) {
-        return a.x * b.y - a.y * b.x;
+    void main(void){
+      vec4 color = vec4(0.0);
+      vec2 texUv = invBilinear(v_textureCoords, u_topLeft, u_topRight, u_bottomRight, u_bottomLeft);
+
+      if (texUv.x > -0.5) {
+        color = texture2D(u_texture, texUv) * v_color;
       }
 
-      vec2 invBilinear(in vec2 p, in vec2 a, in vec2 b, in vec2 c, in vec2 d ){
-        vec2 e = b-a;
-        vec2 f = d-a;
-        vec2 g = a-b+c-d;
-        vec2 h = p-a;
-
-        float k2 = xross(g, f);
-        float k1 = xross(e, f) + xross(h, g);
-        float k0 = xross(h, e);
-
-        float w = k1*k1 - 4.0*k0*k2;
-
-        if( w<0.0 ) return vec2(-1.0);
-
-        w = sqrt(w);
-
-        // will fail for k0=0, which is only on the ba edge
-        float v = 2.0*k0/(-k1 - w);
-        if( v<0.0 || v>1.0 ) v = 2.0*k0/(-k1 + w);
-
-        float u = (h.x - f.x*v)/(e.x + g.x*v);
-        if( u<0.0 || u>1.0 || v<0.0 || v>1.0 ) return vec2(-1.0);
-        return vec2( u, v );
-      }
-
-      void main(void){
-        vec4 color = vec4(0.0);
-        vec2 texUv = invBilinear(v_textureCoordinate, u_topLeft, u_topRight, u_bottomRight, u_bottomLeft);
-
-        if (texUv.x > -0.5) {
-          color = texture2D(u_texture, texUv) * v_color;
-        }
-
-        gl_FragColor = color;
-      }
-    `,
-  };
-}
+      gl_FragColor = color;
+    }
+  `,
+};

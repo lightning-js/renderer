@@ -130,3 +130,17 @@ export interface FrameTickPayload {
   time: number;
   delta: number;
 }
+
+/**
+ * Event payload for when a an animtion tick event is emitted
+ */
+export interface AnimationTickPayload {
+  progress: number;
+}
+
+/**
+ * Event payload for when an QuadsUpdate event is emitted by the Stage
+ */
+export interface QuadsUpdatePayload {
+  quads: number;
+}

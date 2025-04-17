@@ -22,6 +22,7 @@ import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
+import type { Bound } from '../lib/utils.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -91,6 +92,7 @@ export interface TextureData {
     | SubTextureProps
     | CompressedData
     | HTMLImageElement
+    | Uint8Array
     | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
@@ -99,27 +101,28 @@ export interface TextureData {
    */
   premultiplyAlpha?: boolean | null;
 }
-
-export type TextureState = 'freed' | 'loading' | 'loaded' | 'failed';
-
-export interface TextureStateEventMap {
-  freed: TextureFreedEventHandler;
-  loading: TextureLoadingEventHandler;
-  loaded: TextureLoadedEventHandler;
-  failed: TextureFailedEventHandler;
-}
-
 /**
- * Like the built-in Parameters<> type but skips the first parameter (which is
- * `target` currently)
+ * TextureCoords generally numbers between 0 - 1
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ParametersSkipTarget<T extends (...args: any) => any> = T extends (
-  target: any,
-  ...args: infer P
-) => any
-  ? P
-  : never;
+export type TextureCoords = Bound;
+
+export type TextureState =
+  | 'initial' // Before anything is loaded
+  | 'fetching' // Fetching or generating texture source
+  | 'fetched' // Texture source is ready
+  | 'loading' // Uploading to GPU
+  | 'loaded' // Fully loaded and usable
+  | 'failed' // Failed to load
+  | 'freed'; // Released and must be reloaded
+
+export enum TextureType {
+  'generic' = 0,
+  'color' = 1,
+  'image' = 2,
+  'noise' = 3,
+  'renderToTexture' = 4,
+  'subTexture' = 5,
+}
 
 /**
  * Represents a source of texture data for a CoreContextTexture.
@@ -138,22 +141,34 @@ export abstract class Texture extends EventEmitter {
    * Until the texture data is loaded for the first time the value will be
    * `null`.
    */
-  readonly dimensions: Readonly<Dimensions> | null = null;
+  private _dimensions: Dimensions | null = null;
+  private _error: Error | null = null;
 
-  readonly error: Error | null = null;
-
-  readonly state: TextureState = 'freed';
+  // aggregate state
+  public state: TextureState = 'initial';
 
   readonly renderableOwners = new Set<unknown>();
 
   readonly renderable: boolean = false;
 
-  readonly lastRenderableChangeTime = 0;
+  public type: TextureType = TextureType.generic;
 
   public preventCleanup = false;
 
+  public ctxTexture: CoreContextTexture | undefined;
+
+  public textureData: TextureData | null = null;
+
   constructor(protected txManager: CoreTextureManager) {
     super();
+  }
+
+  get dimensions(): Dimensions | null {
+    return this._dimensions;
+  }
+
+  get error(): Error | null {
+    return this._error;
   }
 
   /**
@@ -172,25 +187,32 @@ export abstract class Texture extends EventEmitter {
    */
   setRenderableOwner(owner: unknown, renderable: boolean): void {
     const oldSize = this.renderableOwners.size;
-    if (renderable) {
-      this.renderableOwners.add(owner);
+
+    if (renderable === true) {
+      if (this.renderableOwners.has(owner) === false) {
+        // Add the owner to the set
+        this.renderableOwners.add(owner);
+      }
+
       const newSize = this.renderableOwners.size;
       if (newSize > oldSize && newSize === 1) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         (this.renderable as boolean) = true;
-        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(true);
+        this.load();
       }
     } else {
       this.renderableOwners.delete(owner);
       const newSize = this.renderableOwners.size;
       if (newSize < oldSize && newSize === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         (this.renderable as boolean) = false;
-        (this.lastRenderableChangeTime as number) = this.txManager.frameTime;
         this.onChangeIsRenderable?.(false);
+        this.txManager.orphanTexture(this);
       }
     }
+  }
+
+  load(): void {
+    this.txManager.loadTexture(this);
   }
 
   /**
@@ -205,54 +227,69 @@ export abstract class Texture extends EventEmitter {
   onChangeIsRenderable?(isRenderable: boolean): void;
 
   /**
-   * Get the CoreContextTexture for this Texture
+   * Load the core context texture for this Texture.
+   * The ctxTexture is created by the renderer and lives on the GPU.
    *
-   * @remarks
-   * Each Texture has a corresponding CoreContextTexture that is used to
-   * manage the texture's native data depending on the renderer's mode
-   * (WebGL, Canvas, etc).
-   *
-   * The Texture and CoreContextTexture are always linked together in a 1:1
-   * relationship.
+   * @returns
    */
-  get ctxTexture() {
-    // The first time this is called, create the ctxTexture
-    const ctxTexture = this.txManager.renderer.createCtxTexture(this);
-    // And replace this getter with the value for future calls
-    Object.defineProperty(this, 'ctxTexture', { value: ctxTexture });
-    return ctxTexture;
+  loadCtxTexture(): CoreContextTexture {
+    if (this.ctxTexture === undefined) {
+      this.ctxTexture = this.txManager.renderer.createCtxTexture(this);
+    }
+
+    return this.ctxTexture;
   }
 
   /**
-   * Set the state of the texture
+   * Free the core context texture for this Texture.
    *
-   * @remark
-   * Intended for internal-use only but declared public so that it can be set
-   * by it's associated {@link CoreContextTexture}
-   *
-   * @param state
-   * @param args
+   * @remarks
+   * The ctxTexture is created by the renderer and lives on the GPU.
    */
-  setState<State extends TextureState>(
-    state: State,
-    ...args: ParametersSkipTarget<TextureStateEventMap[State]>
+  free(): void {
+    this.ctxTexture?.free();
+  }
+
+  /**
+   * Free the source texture data for this Texture.
+   *
+   * @remarks
+   * The texture data is the source data that is used to populate the CoreContextTexture.
+   * e.g. ImageData that is downloaded from a URL.
+   */
+  freeTextureData(): void {
+    this.textureData = null;
+  }
+
+  public setState(
+    state: TextureState,
+    errorOrDimensions?: Error | Dimensions,
   ): void {
-    if (this.state !== state) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      (this.state as TextureState) = state;
-      if (state === 'loaded') {
-        const loadedArgs = args as ParametersSkipTarget<
-          TextureStateEventMap['loaded']
-        >;
-        (this.dimensions as Dimensions) = loadedArgs[0];
-      } else if (state === 'failed') {
-        const failedArgs = args as ParametersSkipTarget<
-          TextureStateEventMap['failed']
-        >;
-        (this.error as Error) = failedArgs[0];
-      }
-      this.emit(state, ...args);
+    if (this.state === state) {
+      return;
     }
+
+    let payload: Error | Dimensions | null = null;
+    if (state === 'loaded') {
+      if (
+        errorOrDimensions !== undefined &&
+        'width' in errorOrDimensions === true &&
+        'height' in errorOrDimensions === true &&
+        errorOrDimensions.width !== undefined &&
+        errorOrDimensions.height !== undefined
+      ) {
+        this._dimensions = errorOrDimensions;
+      }
+
+      payload = this._dimensions;
+    } else if (state === 'failed') {
+      this._error = errorOrDimensions as Error;
+      payload = this._error;
+    }
+
+    // emit the new state
+    this.state = state;
+    this.emit(state, payload);
   }
 
   /**
@@ -265,7 +302,22 @@ export abstract class Texture extends EventEmitter {
    * @returns
    * The texture data for this texture.
    */
-  abstract getTextureData(): Promise<TextureData>;
+  async getTextureData(): Promise<TextureData> {
+    if (this.textureData === null) {
+      this.textureData = await this.getTextureSource();
+    }
+
+    return this.textureData;
+  }
+
+  /**
+   * Get the texture source for this texture.
+   *
+   * @remarks
+   * This method is called by the CoreContextTexture when the texture is loaded.
+   * The texture source is then used to populate the CoreContextTexture.
+   */
+  abstract getTextureSource(): Promise<TextureData>;
 
   /**
    * Make a cache key for this texture.
@@ -300,7 +352,7 @@ export abstract class Texture extends EventEmitter {
   static resolveDefaults(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     props: unknown,
-  ): Record<string, unknown> {
+  ): Record<string, any> {
     return {};
   }
 }
