@@ -2445,7 +2445,7 @@ export class CoreNode extends EventEmitter {
   set interactive(value: boolean | undefined) {
     this.props.interactive = value;
     // Update Stage's interactive Set
-    if (value) {
+    if (value === true) {
       this.stage.interactiveNodes.add(this);
     }
   }

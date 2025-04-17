@@ -667,17 +667,14 @@ export class Stage {
    * @param data
    */
   findNodesAtPoint(data: Point): CoreNode[] {
-    // Convert the point to the logical pixel space
-    const point = {
-      x: data.x / this.options.deviceLogicalPixelRatio,
-      y: data.y / this.options.deviceLogicalPixelRatio,
-    };
-    const nodes = [];
+    const x = data.x / this.options.deviceLogicalPixelRatio;
+    const y = data.y / this.options.deviceLogicalPixelRatio;
+    const nodes: CoreNode[] = [];
     for (const node of this.interactiveNodes) {
-      if (!node.renderBound) {
+      if (node.renderBound === undefined) {
         continue;
       }
-      if (pointInBound(point.x, point.y, node.renderBound)) {
+      if (pointInBound(x, y, node.renderBound) === true) {
         nodes.push(node);
       }
     }
