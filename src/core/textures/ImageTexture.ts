@@ -31,6 +31,7 @@ import {
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
 import { fetchJson } from '../text-rendering/font-face-types/utils.js';
 import type { Platform } from '../platforms/Platform.js';
+import { isProductionEnvironment } from '../../utils.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -256,6 +257,12 @@ export class ImageTexture extends Texture {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
       this.setState('failed', e as Error);
+
+      // log error only in development
+      if (isProductionEnvironment === false) {
+        console.error('ImageTexture:', e);
+      }
+
       return {
         data: null,
       };
