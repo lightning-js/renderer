@@ -80,7 +80,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       };
       // const nodes: CoreNode[] = renderer.stage.findNodesAtPoint(eventData);
       const topNode: CoreNode | null =
-        renderer.stage.getTopZindexNode(eventData);
+        renderer.stage.getNodeFromPosition(eventData);
 
       if (topNode) {
         topNode.scale = 1.5;
@@ -99,9 +99,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       x,
       y,
     };
-    // const nodes: CoreNode[] = renderer.stage.findNodesAtPoint(eventData);
-    const topNode: CoreNode | null = renderer.stage.getTopZindexNode(eventData);
 
+    const topNode: CoreNode | null =
+      renderer.stage.getNodeFromPosition(eventData);
     if (topNode) {
       topNode.scale = 1.5;
       setTimeout(() => {
