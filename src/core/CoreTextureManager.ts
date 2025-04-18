@@ -394,6 +394,7 @@ export class CoreTextureManager extends EventEmitter {
       // if the texture has texture data, queue it for upload
       if (texture.textureData !== null) {
         this.enqueueUploadTexture(texture);
+        return;
       }
 
       // else we will have to re-download the texture
@@ -404,6 +405,12 @@ export class CoreTextureManager extends EventEmitter {
     if (this.initialized === false) {
       this.priorityQueue.push(texture);
       return;
+    }
+
+    // If the texture failed to load, we need to re-download it.
+    if (texture.state === 'failed') {
+      texture.free();
+      texture.freeTextureData();
     }
 
     // these types of textures don't need to be downloaded
