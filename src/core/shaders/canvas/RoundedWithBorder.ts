@@ -35,18 +35,19 @@ export const RoundedWithBorder: CanvasShaderType<
   props: RoundedWithBorderTemplate.props,
   saveAndRestore: true,
   update(node) {
+    const props = this.props!;
     const radius = calcFactoredRadiusArray(
-      this.props!.radius as Vec4,
+      props.radius as Vec4,
       node.width,
       node.height,
     );
     this.computed.radius = radius;
-    this.computed.borderColor = this.toColorString(this.props!['border-color']);
+    this.computed.borderColor = this.toColorString(props['border-color']);
     this.computed.borderAsym = !valuesAreEqual(
-      this.props!['border-width'] as number[],
+      props['border-width'] as number[],
     );
     //following vec4 convention 0, 1, 2, 3 => x, y, z, w;
-    const [x, y, z, w] = this.props!['border-width'] as Vec4;
+    const [x, y, z, w] = props['border-width'] as Vec4;
     this.computed.borderRadius = [
       Math.max(0.0, radius[0] - Math.max(x, w) * 0.5),
       Math.max(0.0, radius[1] - Math.max(x, y) * 0.5),
@@ -55,17 +56,18 @@ export const RoundedWithBorder: CanvasShaderType<
     ];
   },
   render(ctx, quad, renderContext) {
+    const computed = this.computed as ComputedValues;
     roundedRectWithBorder(
       ctx,
       quad.tx,
       quad.ty,
       quad.width,
       quad.height,
-      this.computed.radius!,
+      computed.radius,
       this.props!['border-width'] as Vec4,
-      this.computed.borderRadius!,
-      this.computed.borderColor!,
-      this.computed.borderAsym!,
+      computed.borderRadius,
+      computed.borderColor,
+      computed.borderAsym,
       renderContext,
     );
   },

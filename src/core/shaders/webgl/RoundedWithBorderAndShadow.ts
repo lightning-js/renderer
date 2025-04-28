@@ -28,19 +28,16 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
   {
     props: RoundedWithBorderAndShadowTemplate.props,
     update(node: CoreNode) {
-      this.uniformRGBA('u_borderColor', this.props!['border-color']);
-      this.uniform4fa('u_borderWidth', this.props!['border-width'] as Vec4);
+      const props = this.props!;
+      this.uniformRGBA('u_borderColor', props['border-color']);
+      this.uniform4fa('u_borderWidth', props['border-width'] as Vec4);
 
-      this.uniformRGBA('u_shadowColor', this.props!['shadow-color']);
-      this.uniform4fa('u_shadow', this.props!['shadow-projection']);
+      this.uniformRGBA('u_shadowColor', props['shadow-color']);
+      this.uniform4fa('u_shadow', props['shadow-projection']);
 
       this.uniform4fa(
         'u_radius',
-        calcFactoredRadiusArray(
-          this.props!.radius as Vec4,
-          node.width,
-          node.height,
-        ),
+        calcFactoredRadiusArray(props.radius as Vec4, node.width, node.height),
       );
     },
     vertex: `
