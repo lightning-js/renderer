@@ -46,8 +46,6 @@ import {
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
-import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
@@ -59,30 +57,15 @@ import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
+import type { RendererMainSettings } from '../main-api/Renderer.js';
 
-export interface StageOptions {
-  appWidth: number;
-  appHeight: number;
+export type StageOptions = RendererMainSettings & {
   textureMemory: TextureMemoryManagerSettings;
-  boundsMargin: number | [number, number, number, number];
-  deviceLogicalPixelRatio: number;
-  devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  clearColor: number;
   fpsUpdateInterval: number;
-  enableContextSpy: boolean;
-  forceWebGL2: boolean;
-  numImageWorkers: number;
-  renderEngine: typeof WebGlRenderer | typeof CanvasRenderer;
   eventBus: EventEmitter;
-  quadBufferSize: number;
-  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
-  inspector: boolean;
-  strictBounds: boolean;
-  textureProcessingTimeLimit: number;
-  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   platform: Platform | WebPlatform;
-}
+};
 
 export type StageFpsUpdateHandler = (
   stage: Stage,
@@ -152,7 +135,7 @@ export class Stage {
   /**
    * Stage constructor
    */
-  constructor(readonly options: StageOptions) {
+  constructor(public options: StageOptions) {
     const {
       canvas,
       clearColor,
@@ -735,7 +718,7 @@ export class Stage {
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
 
     let data = {};
-    if (this.options.inspector === true) {
+    if (this.options.inspector !== false) {
       data = santizeCustomDataMap(props.data ?? {});
     }
 
