@@ -59,12 +59,16 @@ import type { Platform } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
 
-export type StageOptions = RendererMainSettings & {
+export type StageOptions = Omit<
+  RendererMainSettings,
+  'inspector' | 'platform'
+> & {
   textureMemory: TextureMemoryManagerSettings;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   fpsUpdateInterval: number;
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
+  inspector: boolean;
 };
 
 export type StageFpsUpdateHandler = (
@@ -658,7 +662,7 @@ export class Stage {
     this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
     this.root.childUpdateType |= UpdateType.RenderBounds;
   }
-  
+
   /** Find all nodes at a given point
    * @param data
    */
@@ -718,7 +722,7 @@ export class Stage {
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
 
     let data = {};
-    if (this.options.inspector !== false) {
+    if (this.options.inspector === true) {
       data = santizeCustomDataMap(props.data ?? {});
     }
 

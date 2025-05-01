@@ -20,7 +20,7 @@
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { isProductionEnvironment } from '../utils.js';
-import { Stage } from '../core/Stage.js';
+import { Stage, type StageOptions } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
@@ -440,7 +440,7 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: settings.quadBufferSize!,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector!,
+      inspector: settings.inspector !== null,
       strictBounds: settings.strictBounds!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
@@ -741,7 +741,10 @@ export class RendererMain extends EventEmitter {
         this.inspector === null ||
         this.inspector.constructor !== options.inspector
       ) {
-        this.inspector = new options.inspector(this.canvas, stage.options);
+        this.inspector = new options.inspector(
+          this.canvas,
+          stage.options as unknown as RendererMainSettings,
+        );
         this.inspector?.createNodes(this.root as unknown as CoreNode);
       }
     }
@@ -809,7 +812,7 @@ export class RendererMain extends EventEmitter {
     this.stage.updateViewportBounds();
   }
 
-  get settings(): Readonly<RendererMainSettings> {
+  get settings(): Readonly<StageOptions> {
     return this.stage.options;
   }
 }
