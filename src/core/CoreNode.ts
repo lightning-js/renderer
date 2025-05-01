@@ -675,6 +675,12 @@ export interface CoreNodeProps {
    */
   srcY?: number;
   /**
+   * Mark the node as interactive so we can perform hit tests on it
+   * when pointer events are registered.
+   * @default false
+   */
+  interactive?: boolean;
+  /**
    * By enabling Strict bounds the renderer will not process & render child nodes of a node that is out of the visible area
    *
    * @remarks
@@ -779,6 +785,7 @@ export class CoreNode extends EventEmitter {
     this.shader = props.shader;
     this.src = props.src;
     this.rtt = props.rtt;
+    this.interactive = props.interactive;
 
     if (props.boundsMargin) {
       this.boundsMargin = Array.isArray(props.boundsMargin)
@@ -1822,6 +1829,7 @@ export class CoreNode extends EventEmitter {
 
   set width(value: number) {
     if (this.props.width !== value) {
+      this.textureCoords = undefined;
       this.props.width = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -1843,6 +1851,7 @@ export class CoreNode extends EventEmitter {
 
   set height(value: number) {
     if (this.props.height !== value) {
+      this.textureCoords = undefined;
       this.props.height = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -2431,6 +2440,23 @@ export class CoreNode extends EventEmitter {
 
   get textureOptions(): TextureOptions {
     return this.props.textureOptions;
+  }
+
+  set interactive(value: boolean | undefined) {
+    this.props.interactive = value;
+    // Update Stage's interactive Set
+    if (value === true) {
+      this.stage.interactiveNodes.add(this);
+    }
+  }
+
+  get interactive(): boolean | undefined {
+    return this.props.interactive;
+  }
+
+  setRTTUpdates(type: number) {
+    this.hasRTTupdates = true;
+    this.parent?.setRTTUpdates(type);
   }
 
   get strictBounds(): boolean {
