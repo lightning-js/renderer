@@ -479,7 +479,8 @@ export class RendererMain extends EventEmitter {
   private resolveTxSettings(
     textureMemory: Partial<TextureMemoryManagerSettings>,
   ): TextureMemoryManagerSettings {
-    const currentTxSettings = this.stage.options.textureMemory || {};
+    const currentTxSettings =
+      (this.stage && this.stage.options.textureMemory) || {};
 
     return {
       criticalThreshold:
@@ -806,5 +807,9 @@ export class RendererMain extends EventEmitter {
     this.root.width = appWidth;
     this.root.height = appHeight;
     this.stage.updateViewportBounds();
+  }
+
+  get settings(): Readonly<RendererMainSettings> {
+    return this.stage.options;
   }
 }
