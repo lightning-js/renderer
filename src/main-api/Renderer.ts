@@ -20,14 +20,14 @@
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { isProductionEnvironment } from '../utils.js';
-import { Stage } from '../core/Stage.js';
+import { Stage, type StageOptions } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
+import { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { Inspector } from './Inspector.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
@@ -40,32 +40,32 @@ import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
 import { Platform } from '../core/platforms/Platform.js';
 
 /**
- * Configuration settings for {@link RendererMain}
+ * Settings for the Renderer that can be updated during runtime.
  */
-export interface RendererMainSettings {
+export interface RendererRuntimeSettings {
   /**
    * Authored logical pixel width of the application
    *
    * @defaultValue `1920`
    */
-  appWidth?: number;
+  appWidth: number;
 
   /**
    * Authored logical pixel height of the application
    *
    * @defaultValue `1080`
    */
-  appHeight?: number;
+  appHeight: number;
 
   /**
    * Texture Memory Manager Settings
    */
-  textureMemory?: Partial<TextureMemoryManagerSettings>;
+  textureMemory: Partial<TextureMemoryManagerSettings>;
 
   /**
    * Bounds margin to extend the boundary in which a Node is added as Quad.
    */
-  boundsMargin?: number | [number, number, number, number];
+  boundsMargin: number | [number, number, number, number];
 
   /**
    * Factor to convert app-authored logical coorindates to device logical coordinates
@@ -82,7 +82,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `1`
    */
-  deviceLogicalPixelRatio?: number;
+  deviceLogicalPixelRatio: number;
 
   /**
    * Factor to convert device logical coordinates to device physical coordinates
@@ -99,14 +99,14 @@ export interface RendererMainSettings {
    *
    * @defaultValue `window.devicePixelRatio`
    */
-  devicePhysicalPixelRatio?: number;
+  devicePhysicalPixelRatio: number;
 
   /**
    * RGBA encoded number of the background to use
    *
    * @defaultValue `0x00000000`
    */
-  clearColor?: number;
+  clearColor: number;
 
   /**
    * Interval in milliseconds to receive FPS updates
@@ -116,8 +116,35 @@ export interface RendererMainSettings {
    *
    * @defaultValue `0` (disabled)
    */
-  fpsUpdateInterval?: number;
+  fpsUpdateInterval: number;
 
+  /**
+   * DOM Inspector
+   *
+   * @remarks
+   * The inspector will replicate the state of the Nodes created
+   * in the renderer and allow inspection of the state of the nodes.
+   *
+   */
+  inspector: typeof Inspector | false;
+
+  /**
+   * Texture Processing Limit (in milliseconds)
+   *
+   * @remarks
+   * The maximum amount of time the renderer is allowed to process textures in a
+   * single frame. If the processing time exceeds this limit, the renderer will
+   * skip processing the remaining textures and continue rendering the frame.
+   *
+   * @defaultValue `10`
+   */
+  textureProcessingTimeLimit: number;
+}
+
+/**
+ * Configuration settings for {@link RendererMain}
+ */
+export type RendererMainSettings = RendererRuntimeSettings & {
   /**
    * Include context call (i.e. WebGL) information in FPS updates
    *
@@ -131,7 +158,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `false` (disabled)
    */
-  enableContextSpy?: boolean;
+  enableContextSpy: boolean;
 
   /**
    * Number or Image Workers to use
@@ -143,17 +170,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `2`
    */
-  numImageWorkers?: number;
-
-  /**
-   * DOM Inspector
-   *
-   * @remarks
-   * The inspector will replicate the state of the Nodes created
-   * in the renderer and allow inspection of the state of the nodes.
-   *
-   */
-  inspector?: typeof Inspector | false;
+  numImageWorkers: number;
 
   /**
    * Renderer Engine
@@ -175,7 +192,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue 4 * 1024 * 1024
    */
-  quadBufferSize?: number;
+  quadBufferSize: number;
 
   /**
    * Font Engines
@@ -216,7 +233,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `false`
    */
-  forceWebGL2?: boolean;
+  forceWebGL2: boolean;
 
   /**
    * Enable strictBounds
@@ -227,19 +244,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `true`
    */
-  strictBounds?: boolean;
-
-  /**
-   * Texture Processing Limit (in milliseconds)
-   *
-   * @remarks
-   * The maximum amount of time the renderer is allowed to process textures in a
-   * single frame. If the processing time exceeds this limit, the renderer will
-   * skip processing the remaining textures and continue rendering the frame.
-   *
-   * @defaultValue `10`
-   */
-  textureProcessingTimeLimit?: number;
+  strictBounds: boolean;
 
   /**
    * Canvas object to use for rendering
@@ -248,7 +253,7 @@ export interface RendererMainSettings {
    * This is used to render the scene graph. If not provided, a new canvas
    * element will be created and appended to the target element.
    */
-  canvas?: HTMLCanvasElement;
+  canvas: HTMLCanvasElement;
 
   /**
    * createImageBitmap support for the runtime
@@ -273,7 +278,7 @@ export interface RendererMainSettings {
    *
    * @defaultValue `full`
    */
-  createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
+  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
 
   /**
    * Provide an alternative platform abstraction layer
@@ -285,8 +290,8 @@ export interface RendererMainSettings {
    *
    * @defaultValue `null`
    */
-  platform?: typeof Platform | null;
-}
+  platform: typeof Platform | null;
+};
 
 /**
  * The Renderer Main API
@@ -341,7 +346,6 @@ export interface RendererMainSettings {
 export class RendererMain extends EventEmitter {
   readonly root: INode;
   readonly canvas: HTMLCanvasElement;
-  readonly settings: Readonly<Required<RendererMainSettings>>;
   readonly stage: Stage;
   private inspector: Inspector | null = null;
 
@@ -352,21 +356,17 @@ export class RendererMain extends EventEmitter {
    * @param target Element ID or HTMLElement to insert the canvas into
    * @param driver Core Driver to use
    */
-  constructor(settings: RendererMainSettings, target: string | HTMLElement) {
+  constructor(
+    settings: Partial<RendererMainSettings>,
+    target: string | HTMLElement,
+  ) {
     super();
 
-    const resolvedTxSettings: TextureMemoryManagerSettings = {
-      criticalThreshold: settings.textureMemory?.criticalThreshold || 124e6,
-      targetThresholdLevel: settings.textureMemory?.targetThresholdLevel || 0.5,
-      cleanupInterval: settings.textureMemory?.cleanupInterval || 5000,
-      debugLogging: settings.textureMemory?.debugLogging || false,
-      baselineMemoryAllocation:
-        settings.textureMemory?.baselineMemoryAllocation || 26e6,
-      doNotExceedCriticalThreshold:
-        settings.textureMemory?.doNotExceedCriticalThreshold || false,
-    };
+    const resolvedTxSettings = this.resolveTxSettings(
+      settings.textureMemory || {},
+    );
 
-    const resolvedSettings: Required<RendererMainSettings> = {
+    settings = {
       appWidth: settings.appWidth || 1920,
       appHeight: settings.appHeight || 1080,
       textureMemory: resolvedTxSettings,
@@ -381,16 +381,15 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy ?? false,
       forceWebGL2: settings.forceWebGL2 ?? false,
       inspector: settings.inspector ?? false,
-      renderEngine: settings.renderEngine,
+      renderEngine: settings.renderEngine ?? WebGlRenderer,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
-      fontEngines: settings.fontEngines,
+      fontEngines: settings.fontEngines ?? [],
       strictBounds: settings.strictBounds ?? true,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
     };
-    this.settings = resolvedSettings;
 
     const {
       appWidth,
@@ -399,7 +398,7 @@ export class RendererMain extends EventEmitter {
       devicePhysicalPixelRatio,
       inspector,
       canvas,
-    } = resolvedSettings;
+    } = settings as RendererMainSettings;
 
     let platform;
     if (
@@ -425,26 +424,26 @@ export class RendererMain extends EventEmitter {
 
     // Initialize the stage
     this.stage = new Stage({
-      appWidth: this.settings.appWidth,
-      appHeight: this.settings.appHeight,
-      boundsMargin: this.settings.boundsMargin,
-      clearColor: this.settings.clearColor,
+      appWidth,
+      appHeight,
+      boundsMargin: settings.boundsMargin!,
+      clearColor: settings.clearColor!,
       canvas: this.canvas,
-      deviceLogicalPixelRatio: this.settings.deviceLogicalPixelRatio,
-      devicePhysicalPixelRatio: this.settings.devicePhysicalPixelRatio,
-      enableContextSpy: this.settings.enableContextSpy,
-      forceWebGL2: this.settings.forceWebGL2,
-      fpsUpdateInterval: this.settings.fpsUpdateInterval,
-      numImageWorkers: this.settings.numImageWorkers,
-      renderEngine: this.settings.renderEngine,
+      deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio,
+      enableContextSpy: settings.enableContextSpy!,
+      forceWebGL2: settings.forceWebGL2!,
+      fpsUpdateInterval: settings.fpsUpdateInterval!,
+      numImageWorkers: settings.numImageWorkers!,
+      renderEngine: settings.renderEngine!,
       textureMemory: resolvedTxSettings,
       eventBus: this,
-      quadBufferSize: this.settings.quadBufferSize,
-      fontEngines: this.settings.fontEngines,
-      inspector: this.settings.inspector !== false,
-      strictBounds: this.settings.strictBounds,
-      textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
-      createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      quadBufferSize: settings.quadBufferSize!,
+      fontEngines: settings.fontEngines!,
+      inspector: settings.inspector !== null,
+      strictBounds: settings.strictBounds!,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
+      createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
     });
 
@@ -467,8 +466,46 @@ export class RendererMain extends EventEmitter {
 
     // Initialize inspector (if enabled)
     if (inspector && isProductionEnvironment === false) {
-      this.inspector = new inspector(canvas, resolvedSettings);
+      this.inspector = new inspector(canvas, settings as RendererMainSettings);
     }
+  }
+
+  /**
+   * Resolves the Texture Memory Manager values
+   *
+   * @param props
+   * @returns
+   */
+  private resolveTxSettings(
+    textureMemory: Partial<TextureMemoryManagerSettings>,
+  ): TextureMemoryManagerSettings {
+    const currentTxSettings =
+      (this.stage && this.stage.options.textureMemory) || {};
+
+    return {
+      criticalThreshold:
+        textureMemory?.criticalThreshold ??
+        currentTxSettings?.criticalThreshold ??
+        124e6,
+      targetThresholdLevel:
+        textureMemory?.targetThresholdLevel ??
+        currentTxSettings?.targetThresholdLevel ??
+        0.5,
+      cleanupInterval:
+        textureMemory?.cleanupInterval ??
+        currentTxSettings?.cleanupInterval ??
+        5000,
+      debugLogging:
+        textureMemory?.debugLogging ?? currentTxSettings?.debugLogging ?? false,
+      baselineMemoryAllocation:
+        textureMemory?.baselineMemoryAllocation ??
+        currentTxSettings?.baselineMemoryAllocation ??
+        26e6,
+      doNotExceedCriticalThreshold:
+        textureMemory?.doNotExceedCriticalThreshold ??
+        currentTxSettings?.doNotExceedCriticalThreshold ??
+        false,
+    };
   }
 
   /**
@@ -669,5 +706,113 @@ export class RendererMain extends EventEmitter {
    */
   setClearColor(color: number) {
     this.stage.setClearColor(color);
+  }
+
+  /**
+   * Set options for the renderer
+   *
+   * @param options
+   */
+  setOptions(options: Partial<RendererRuntimeSettings>) {
+    const stage = this.stage;
+    if (options.textureMemory !== undefined) {
+      const textureMemory = (options.textureMemory = this.resolveTxSettings(
+        options.textureMemory,
+      ));
+      stage.txMemManager.updateSettings(textureMemory);
+      stage.txMemManager.cleanup();
+    }
+
+    if (options.boundsMargin !== undefined) {
+      let bm = options.boundsMargin!;
+      options.boundsMargin = Array.isArray(bm) ? bm : [bm, bm, bm, bm];
+    }
+
+    const stageOptions = stage.options;
+    for (let key in options) {
+      stageOptions[key] = options[key]!;
+    }
+
+    if (options.inspector !== undefined && !isProductionEnvironment) {
+      if (options.inspector === false) {
+        this.inspector?.destroy();
+        this.inspector = null;
+      } else if (
+        this.inspector === null ||
+        this.inspector.constructor !== options.inspector
+      ) {
+        this.inspector = new options.inspector(
+          this.canvas,
+          stage.options as unknown as RendererMainSettings,
+        );
+        this.inspector?.createNodes(this.root as unknown as CoreNode);
+      }
+    }
+
+    let needDimensionsUpdate = false;
+
+    if (
+      options.deviceLogicalPixelRatio ||
+      options.devicePhysicalPixelRatio !== undefined
+    ) {
+      this.stage.pixelRatio =
+        stageOptions.devicePhysicalPixelRatio *
+        stageOptions.deviceLogicalPixelRatio;
+      this.inspector?.updateViewport(
+        stageOptions.appWidth,
+        stageOptions.appHeight,
+        stageOptions.deviceLogicalPixelRatio,
+      );
+      needDimensionsUpdate = true;
+    }
+
+    if (options.appWidth !== undefined || options.appHeight !== undefined) {
+      this.inspector?.updateViewport(
+        stageOptions.appWidth,
+        stageOptions.appHeight,
+        stageOptions.deviceLogicalPixelRatio,
+      );
+      needDimensionsUpdate = true;
+    }
+
+    if (options.boundsMargin !== undefined) {
+      this.stage.setBoundsMargin(options.boundsMargin);
+    }
+
+    if (options.clearColor !== undefined) {
+      this.stage.setClearColor(options.clearColor);
+    }
+
+    if (needDimensionsUpdate) {
+      this.updateAppDimensions();
+    }
+  }
+
+  private updateAppDimensions() {
+    const {
+      appWidth,
+      appHeight,
+      deviceLogicalPixelRatio,
+      devicePhysicalPixelRatio,
+    } = this.stage.options;
+
+    const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
+    const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
+
+    this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
+
+    this.stage.renderer.updateViewport();
+
+    this.root.width = appWidth;
+    this.root.height = appHeight;
+    this.stage.updateViewportBounds();
+  }
+
+  get settings(): Readonly<StageOptions> {
+    return this.stage.options;
   }
 }

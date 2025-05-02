@@ -46,8 +46,6 @@ import {
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
-import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
@@ -59,30 +57,19 @@ import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
+import type { RendererMainSettings } from '../main-api/Renderer.js';
 
-export interface StageOptions {
-  appWidth: number;
-  appHeight: number;
+export type StageOptions = Omit<
+  RendererMainSettings,
+  'inspector' | 'platform'
+> & {
   textureMemory: TextureMemoryManagerSettings;
-  boundsMargin: number | [number, number, number, number];
-  deviceLogicalPixelRatio: number;
-  devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  clearColor: number;
   fpsUpdateInterval: number;
-  enableContextSpy: boolean;
-  forceWebGL2: boolean;
-  numImageWorkers: number;
-  renderEngine: typeof WebGlRenderer | typeof CanvasRenderer;
   eventBus: EventEmitter;
-  quadBufferSize: number;
-  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
-  inspector: boolean;
-  strictBounds: boolean;
-  textureProcessingTimeLimit: number;
-  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   platform: Platform | WebPlatform;
-}
+  inspector: boolean;
+};
 
 export type StageFpsUpdateHandler = (
   stage: Stage,
@@ -114,11 +101,11 @@ export class Stage {
   public readonly interactiveNodes: Set<CoreNode> = new Set();
   public boundsMargin: [number, number, number, number];
   public readonly defShaderNode: CoreShaderNode | null = null;
-  public readonly strictBound: Bound;
-  public readonly preloadBound: Bound;
+  public strictBound: Bound;
+  public preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-  public readonly pixelRatio: number;
+  public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
@@ -152,7 +139,7 @@ export class Stage {
   /**
    * Stage constructor
    */
-  constructor(readonly options: StageOptions) {
+  constructor(public options: StageOptions) {
     const {
       canvas,
       clearColor,
@@ -663,7 +650,20 @@ export class Stage {
   }
 
   /**
-   * Find all nodes at a given point
+   * Update the viewport bounds
+   */
+  updateViewportBounds() {
+    const { appWidth, appHeight } = this.options;
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.boundsMargin,
+    );
+    this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.root.childUpdateType |= UpdateType.RenderBounds;
+  }
+
+  /** Find all nodes at a given point
    * @param data
    */
   findNodesAtPoint(data: Point): CoreNode[] {
