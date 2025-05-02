@@ -38,9 +38,9 @@ export const RadialGradient: CanvasShaderType<
   update(node) {
     let scaleX = 1;
     let scaleY = 1;
-
-    const pWidth = this.props!.width;
-    const pHeight = this.props!.height;
+    const props = this.props as RadialGradientProps;
+    const pWidth = props.width;
+    const pHeight = props.height;
     if (pWidth > pHeight) {
       scaleX = pWidth / pHeight;
     } else if (pHeight > pWidth) {
@@ -48,34 +48,27 @@ export const RadialGradient: CanvasShaderType<
     }
 
     this.computed = {
-      pivotX: this.props!.pivot[0] * node.width,
-      pivotY: this.props!.pivot[1] * node.height,
+      pivotX: props.pivot[0] * node.width,
+      pivotY: props.pivot[1] * node.height,
       scaleX,
       scaleY,
       size: Math.min(pWidth, pHeight) * 0.5,
-      colors: this.props!.colors.map((value) => this.toColorString(value)),
+      colors: props.colors.map((value) => this.toColorString(value)),
     };
   },
   render(ctx, quad, renderContext) {
     renderContext();
-
-    const { scaleX, scaleY, pivotX, pivotY } = this.computed!;
-    const colors = this.computed.colors!;
-    let x = quad.tx + pivotX!;
-    let y = quad.ty + pivotY!;
+    const { scaleX, scaleY, pivotX, pivotY, colors, size } = this
+      .computed as ComputedRadialGradientValues;
+    let x = quad.tx + pivotX;
+    let y = quad.ty + pivotY;
+    const stops = this.props!.stops;
 
     if (scaleX === scaleY) {
-      const gradient = ctx.createRadialGradient(
-        x,
-        y,
-        0,
-        x,
-        y,
-        this.computed.size!,
-      );
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
 
       for (let i = 0; i < colors.length; i++) {
-        gradient.addColorStop(this.props!['stops'][i]!, colors[i]!);
+        gradient.addColorStop(stops[i]!, colors[i]!);
       }
 
       ctx.fillStyle = gradient;
@@ -84,28 +77,21 @@ export const RadialGradient: CanvasShaderType<
     }
 
     ctx.save();
-    ctx.scale(scaleX!, scaleY!);
-    x = x / scaleX!;
-    y = y / scaleY!;
-    const gradient = ctx.createRadialGradient(
-      x,
-      y,
-      0,
-      x,
-      y,
-      this.computed.size!,
-    );
+    ctx.scale(scaleX, scaleY);
+    x = x / scaleX;
+    y = y / scaleY;
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
 
     for (let i = 0; i < colors.length; i++) {
-      gradient.addColorStop(this.props!['stops'][i]!, colors[i]!);
+      gradient.addColorStop(stops[i]!, colors[i]!);
     }
 
     ctx.fillStyle = gradient;
     ctx.fillRect(
-      quad.tx / scaleX!,
-      quad.ty / scaleY!,
-      quad.width / scaleX!,
-      quad.height / scaleY!,
+      quad.tx / scaleX,
+      quad.ty / scaleY,
+      quad.width / scaleX,
+      quad.height / scaleY,
     );
 
     ctx.restore();
