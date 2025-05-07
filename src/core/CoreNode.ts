@@ -692,7 +692,7 @@ export interface CoreNodeProps {
    * This is a big performance gain but may be disabled in cases where the width of the parent node is
    * unknown and the render must process the child nodes regardless of the viewport status of the parent node
    *
-   * @default false
+   * @default true
    */
   strictBounds: boolean;
 }
