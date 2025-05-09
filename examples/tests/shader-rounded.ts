@@ -44,21 +44,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  const RedRect3 = renderer.createNode({
-    x: 480,
-    y: 20,
-    width: 8,
-    height: 8,
-    color: 0xff0000ff,
-    shader: renderer.createShader('Rounded', { radius: 12 }),
-    parent: testRoot,
-  });
-
-  setTimeout(() => {
-    RedRect3.width = 400;
-    RedRect3.height = 400;
-  }, 2000);
-
   const GreenRect = renderer.createNode({
     x: 20,
     y: 250,
