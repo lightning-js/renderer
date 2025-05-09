@@ -80,7 +80,14 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       vec2 vertexPos = (a_position + outerEdge + shadowEdge) * u_pixelRatio;
       gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
 
+      v_halfDimensions = u_dimensions * 0.5;
+
+      v_color = a_color;
+      v_nodeCoords = a_nodeCoords + (screenSpace + shadowEdge) / (u_dimensions);
+      v_textureCoords = a_textureCoords + (screenSpace + shadowEdge) / (u_dimensions);
+
       v_borderZero = u_borderWidth == vec4(0.0) ? 1.0 : 0.0;
+
 
       if(v_borderZero == 0.0) {
         v_innerRadius = vec4(
@@ -90,14 +97,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
           max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
         );
 
-        v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) + 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+        v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) - 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
       }
-
-      v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) - 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
-
-      v_color = a_color;
-      v_nodeCoords = a_nodeCoords + (screenSpace + shadowEdge) / (u_dimensions);
-      v_textureCoords = a_textureCoords + (screenSpace + shadowEdge) / (u_dimensions);
     }
   `,
     fragment: `
