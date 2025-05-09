@@ -65,6 +65,7 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
     varying vec2 v_halfDimensions;
+    varying float v_borderZero;
 
     void main() {
       vec2 normalized = a_position * u_pixelRatio;
@@ -76,14 +77,18 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
 
       v_halfDimensions = u_dimensions * 0.5;
 
-      v_innerRadius = vec4(
-        max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
-        max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
-        max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
-        max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
-      );
+      v_borderZero = u_borderWidth == vec4(0.0) ? 1.0 : 0.0;
 
-      v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) + 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+      if(v_borderZero == 0.0) {
+        v_innerRadius = vec4(
+          max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
+          max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
+          max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
+          max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
+        );
+
+        v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) + 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+      }
 
       gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
       gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
@@ -114,6 +119,7 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     varying vec2 v_halfDimensions;
     varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
+    varying float v_borderZero;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
@@ -129,6 +135,11 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       float outerDist = roundedBox(boxUv, v_halfDimensions, u_radius);
 
       float outerAlpha = 1.0 - smoothstep(0.0, 1.0, outerDist);
+
+      if(v_borderZero == 1.0) {
+        gl_FragColor = mix(vec4(0.0), color, outerAlpha) * u_alpha;
+        return;
+      }
 
       boxUv.x += u_borderWidth.y > u_borderWidth.w ? (u_borderWidth.y - u_borderWidth.w) * 0.5 : -(u_borderWidth.w - u_borderWidth.y) * 0.5;
       boxUv.y += u_borderWidth.z > u_borderWidth.x ? ((u_borderWidth.z - u_borderWidth.x) * 0.5 + 0.5) : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
