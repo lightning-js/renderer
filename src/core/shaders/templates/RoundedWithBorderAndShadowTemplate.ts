@@ -18,7 +18,7 @@
 import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 import { getBorderProps, type BorderProps } from './BorderTemplate.js';
 import { RoundedTemplate, type RoundedProps } from './RoundedTemplate.js';
-import type { PrefixedType } from './shaderUtils.js';
+import type { PrefixedType } from '../utils.js';
 import { getShadowProps, type ShadowProps } from './ShadowTemplate.js';
 
 export type RoundedWithBorderAndShadowProps = RoundedProps &
