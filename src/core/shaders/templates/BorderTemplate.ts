@@ -17,7 +17,7 @@
 
 import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
-import { validateArrayLength4, type PrefixedType } from './shaderUtils.js';
+import { validateArrayLength4, type PrefixedType } from '../utils.js';
 
 /**
  * Properties of the {@link Border} shader

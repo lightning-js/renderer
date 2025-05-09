@@ -16,7 +16,7 @@
  */
 
 import type { CoreShaderType } from '../../renderers/CoreShaderNode.js';
-import type { PrefixedType } from './shaderUtils.js';
+import type { PrefixedType } from '../utils.js';
 
 export interface ShadowProps {
   /**
