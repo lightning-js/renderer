@@ -67,10 +67,7 @@ export class CanvasShaderNode<
 
       this.update = () => {
         const prevKey = this.valueKey;
-        this.valueKey = '';
-        for (const key in this.resolvedProps) {
-          this.valueKey += `${key}:${this.resolvedProps[key]!};`;
-        }
+        this.valueKey = this.createValueKey();
 
         if (prevKey === this.valueKey) {
           return;
