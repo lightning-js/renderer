@@ -27,8 +27,8 @@ import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
 import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
 import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
+import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
 import type { Inspector } from './Inspector.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 import type {
@@ -381,7 +381,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy ?? false,
       forceWebGL2: settings.forceWebGL2 ?? false,
       inspector: settings.inspector ?? false,
-      renderEngine: settings.renderEngine ?? WebGlRenderer,
+      renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
       strictBounds: settings.strictBounds ?? true,
