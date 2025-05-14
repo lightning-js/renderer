@@ -708,6 +708,7 @@ export class CoreNode extends EventEmitter {
   private hasShaderUpdater = false;
   private hasColorProps = false;
 
+  public hasShaderTimeFn = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -1700,6 +1701,8 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
+
+    // add to list of renderables to be sorted before rendering
     renderer.addQuad({
       width: p.w,
       height: p.h,
@@ -1726,7 +1729,15 @@ export class CoreNode extends EventEmitter {
       framebufferDimensions: this.parentHasRenderTexture
         ? this.parentFramebufferDimensions
         : null,
+      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
     });
+  }
+
+  getTimerValue(): number {
+    if (typeof this.shader!.time === 'function') {
+      return this.shader!.time(this.stage);
+    }
+    return this.stage.elapsedTime;
   }
 
   //#region Properties
@@ -2290,6 +2301,7 @@ export class CoreNode extends EventEmitter {
     }
     if (shader.shaderKey !== 'default') {
       this.hasShaderUpdater = shader.update !== undefined;
+      this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
     }
     this.props.shader = shader;
