@@ -75,6 +75,11 @@ export interface CoreShaderType<Props extends object = any> {
    * used for making a cache key to check for reusability, currently only used for webgl ShaderTypes but might be needed for other types of renderer
    */
   getCacheMarkers?: (props: Props) => string;
+  /**
+   * timer that updates every loop, by default uses the stage elapsed time If you want to do a special calculation you can define a function.
+   * When you calculate your own value you can use the Stage timing values deltaTime, lastFrameTime, and currentFrameTime;
+   */
+  time?: boolean | ((stage: Stage) => number);
 }
 
 /**
@@ -89,6 +94,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   readonly resolvedProps: Props | undefined = undefined;
   protected definedProps: Props | undefined = undefined;
   protected node: CoreNode | null = null;
+  readonly time: CoreShaderType['time'] = undefined;
   update: (() => void) | undefined = undefined;
 
   constructor(
@@ -99,6 +105,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   ) {
     this.stage = stage;
     this.shaderType = type;
+    this.time = type.time;
 
     if (props !== undefined) {
       /**

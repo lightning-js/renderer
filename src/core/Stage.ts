@@ -121,9 +121,12 @@ export class Stage {
   public readonly eventBus: EventEmitter;
 
   /// State
+  startTime = 0;
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  elapsedTime = 0;
+  private timedNodes = 0;
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
@@ -162,6 +165,8 @@ export class Stage {
     );
 
     this.platform = platform;
+
+    this.startTime = platform.getTimeStamp();
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(this, {
@@ -302,9 +307,10 @@ export class Stage {
   }
 
   updateFrameTime() {
-    const newFrameTime = this.platform!.getTimeStamp();
+    const newFrameTime = this.platform.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
+    this.elapsedTime = this.startTime - newFrameTime;
     this.deltaTime = !this.lastFrameTime
       ? 100 / 6
       : newFrameTime - this.lastFrameTime;
@@ -415,6 +421,11 @@ export class Stage {
     if (renderRequested) {
       this.renderRequested = false;
     }
+
+    if (this.timedNodes > 0) {
+      this.timedNodes = 0;
+      this.requestRender();
+    }
   }
 
   /**
@@ -489,6 +500,9 @@ export class Stage {
     // If the node is renderable and has a loaded texture, render it
     if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
+      if (node.hasShaderTimeFn === true) {
+        this.timedNodes++;
+      }
     }
 
     for (let i = 0; i < node.children.length; i++) {

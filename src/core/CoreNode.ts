@@ -21,7 +21,6 @@ import {
   assertTruthy,
   getNewId,
   mergeColorAlphaPremultiplied,
-  isProductionEnvironment,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
@@ -729,6 +728,7 @@ export class CoreNode extends EventEmitter {
   readonly props: CoreNodeProps;
 
   private hasShaderUpdater = false;
+  public hasShaderTimeFn = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -1737,7 +1737,7 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    assertTruthy(this.globalTransform);
+    const globalTransform = this.globalTransform!;
 
     // add to list of renderables to be sorted before rendering
     renderer.addQuad({
@@ -1756,12 +1756,12 @@ export class CoreNode extends EventEmitter {
       shader: this.props.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
-      tx: this.globalTransform.tx,
-      ty: this.globalTransform.ty,
-      ta: this.globalTransform.ta,
-      tb: this.globalTransform.tb,
-      tc: this.globalTransform.tc,
-      td: this.globalTransform.td,
+      tx: globalTransform.tx,
+      ty: globalTransform.ty,
+      ta: globalTransform.ta,
+      tb: globalTransform.tb,
+      tc: globalTransform.tc,
+      td: globalTransform.td,
       renderCoords: this.renderCoords,
       rtt: this.rtt,
       parentHasRenderTexture: this.parentHasRenderTexture,
@@ -1769,7 +1769,15 @@ export class CoreNode extends EventEmitter {
         this.parentHasRenderTexture === true
           ? this.parentFramebufferDimensions
           : null,
+      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
     });
+  }
+
+  getTimerValue(): number {
+    if (typeof this.shader!.time === 'function') {
+      return this.shader!.time(this.stage);
+    }
+    return this.stage.elapsedTime;
   }
 
   //#region Properties
@@ -2306,6 +2314,7 @@ export class CoreNode extends EventEmitter {
     }
     if (shader.shaderKey !== 'default') {
       this.hasShaderUpdater = shader.update !== undefined;
+      this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
     }
     this.props.shader = shader;
