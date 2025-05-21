@@ -774,7 +774,6 @@ export class CoreNode extends EventEmitter {
     p.height = props.height;
     p.alpha = props.alpha;
     p.autosize = props.autosize;
-    p.boundsMargin = props.boundsMargin;
     p.clipping = props.clipping;
     p.color = props.color;
 
@@ -814,6 +813,7 @@ export class CoreNode extends EventEmitter {
     p.shader = null;
     p.src = null;
     p.rtt = false;
+    p.boundsMargin = null;
 
     // Assign props to instances
     this.parent = props.parent;
@@ -821,11 +821,7 @@ export class CoreNode extends EventEmitter {
     this.shader = props.shader;
     this.src = props.src;
     this.rtt = props.rtt;
-
-    const bm = props.boundsMargin;
-    if (bm !== undefined && bm !== null) {
-      this.boundsMargin = Array.isArray(bm) ? bm : [bm, bm, bm, bm];
-    }
+    this.boundsMargin = props.boundsMargin;
 
     this.setUpdateType(
       UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
