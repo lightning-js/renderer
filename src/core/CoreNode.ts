@@ -1074,8 +1074,8 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Global);
     }
 
-    const parent = this.props.parent;
     const props = this.props;
+    const parent = props.parent;
     const parentHasRenderTexture = this.parentHasRenderTexture;
     let renderState: CoreNodeRenderState | null = null;
 
@@ -1178,13 +1178,12 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.updateType & UpdateType.PremultipliedColors) {
-      const p = this.props;
       const alpha = this.worldAlpha;
 
-      const tl = p.colorTl;
-      const tr = p.colorTr;
-      const bl = p.colorBl;
-      const br = p.colorBr;
+      const tl = props.colorTl;
+      const tr = props.colorTr;
+      const bl = props.colorBl;
+      const br = props.colorBr;
 
       // Fast equality check (covers all 4 corners)
       const same = tl === tr && tl === bl && tl === br;
