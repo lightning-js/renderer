@@ -46,42 +46,30 @@ import {
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
-import type { CanvasRenderer } from './renderers/canvas/CanvasRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
+import type { RendererMainSettings } from '../main-api/Renderer.js';
 
-export interface StageOptions {
-  appWidth: number;
-  appHeight: number;
+export type StageOptions = Omit<
+  RendererMainSettings,
+  'inspector' | 'platform'
+> & {
   textureMemory: TextureMemoryManagerSettings;
-  boundsMargin: number | [number, number, number, number];
-  deviceLogicalPixelRatio: number;
-  devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  clearColor: number;
   fpsUpdateInterval: number;
-  enableContextSpy: boolean;
-  forceWebGL2: boolean;
-  numImageWorkers: number;
-  renderEngine: typeof WebGlRenderer | typeof CanvasRenderer;
   eventBus: EventEmitter;
-  quadBufferSize: number;
-  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
-  inspector: boolean;
-  strictBounds: boolean;
-  textureProcessingTimeLimit: number;
-  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   platform: Platform | WebPlatform;
-}
+  inspector: boolean;
+};
 
 export type StageFpsUpdateHandler = (
   stage: Stage,
@@ -92,6 +80,11 @@ export type StageFrameTickHandler = (
   stage: Stage,
   frameTickData: FrameTickPayload,
 ) => void;
+
+export interface Point {
+  x: number;
+  y: number;
+}
 
 const autoStart = true;
 
@@ -105,13 +98,14 @@ export class Stage {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
+  public readonly interactiveNodes: Set<CoreNode> = new Set();
   public boundsMargin: [number, number, number, number];
   public readonly defShaderNode: CoreShaderNode | null = null;
-  public readonly strictBound: Bound;
-  public readonly preloadBound: Bound;
+  public strictBound: Bound;
+  public preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
-  public readonly pixelRatio: number;
+  public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
@@ -145,7 +139,7 @@ export class Stage {
   /**
    * Stage constructor
    */
-  constructor(readonly options: StageOptions) {
+  constructor(public options: StageOptions) {
     const {
       canvas,
       clearColor,
@@ -656,6 +650,57 @@ export class Stage {
   }
 
   /**
+   * Update the viewport bounds
+   */
+  updateViewportBounds() {
+    const { appWidth, appHeight } = this.options;
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.boundsMargin,
+    );
+    this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.root.childUpdateType |= UpdateType.RenderBounds;
+  }
+
+  /** Find all nodes at a given point
+   * @param data
+   */
+  findNodesAtPoint(data: Point): CoreNode[] {
+    const x = data.x / this.options.deviceLogicalPixelRatio;
+    const y = data.y / this.options.deviceLogicalPixelRatio;
+    const nodes: CoreNode[] = [];
+    for (const node of this.interactiveNodes) {
+      if (node.isRenderable === false) {
+        continue;
+      }
+      if (pointInBound(x, y, node.renderBound!) === true) {
+        nodes.push(node);
+      }
+    }
+    return nodes;
+  }
+
+  /**
+   * Find the top node at a given point
+   * @param data
+   * @returns
+   */
+  getNodeFromPosition(data: Point): CoreNode | null {
+    const nodes: CoreNode[] = this.findNodesAtPoint(data);
+    if (nodes.length === 0) {
+      return null;
+    }
+    let topNode = nodes[0] as CoreNode;
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i]!.zIndex > topNode.zIndex) {
+        topNode = nodes[i]!;
+      }
+    }
+    return topNode || null;
+  }
+
+  /**
    * Resolves the default property values for a Node
    *
    * @remarks
@@ -728,6 +773,7 @@ export class Stage {
       rtt: props.rtt ?? false,
       data,
       imageType: props.imageType,
+      interactive: props.interactive ?? false,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }

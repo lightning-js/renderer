@@ -35,34 +35,35 @@ export const RoundedWithShadow: CanvasShaderType<
   props: RoundedWithShadowTemplate.props,
   saveAndRestore: true,
   update(node) {
+    const props = this.props!;
     const radius = calcFactoredRadiusArray(
-      this.props!.radius as Vec4,
+      props.radius as Vec4,
       node.width,
       node.height,
     );
     this.computed.radius = radius;
-    this.computed.shadowColor = this.toColorString(this.props!['shadow-color']);
+    this.computed.shadowColor = this.toColorString(props['shadow-color']);
     this.computed.shadowRadius = radius.map(
-      (value) => value + this.props!['shadow-blur'],
+      (value) => value + props['shadow-blur'],
     ) as Vec4;
   },
   render(ctx, quad, renderContext) {
     const { tx, ty, width, height } = quad;
-
+    const computed = this.computed as ComputedValues;
     render.shadow(
       ctx,
       tx,
       ty,
       width,
       height,
-      this.computed.shadowColor!,
+      computed.shadowColor,
       this.props!['shadow-projection'],
-      this.computed.shadowRadius!,
+      computed.shadowRadius,
       this.stage.pixelRatio,
     );
 
     const path = new Path2D();
-    render.roundRect(path, tx, ty, width, height, this.computed.radius!);
+    render.roundRect(path, tx, ty, width, height, computed.radius);
     ctx.clip(path);
     renderContext();
   },

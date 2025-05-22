@@ -26,17 +26,14 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 export const HolePunch: WebGlShaderType<HolePunchProps> = {
   props: HolePunchTemplate.props,
   update() {
-    this.uniform2f('u_pos', this.props!.x, this.props!.y);
+    const props = this.props!;
+    this.uniform2f('u_pos', props.x, props.y);
     //precalculate to halfSize once instead of for every pixel
-    this.uniform2f('u_size', this.props!.width * 0.5, this.props!.height * 0.5);
+    this.uniform2f('u_size', props.width * 0.5, props.height * 0.5);
 
     this.uniform4fa(
       'u_radius',
-      calcFactoredRadiusArray(
-        this.props!.radius as Vec4,
-        this.props!.width,
-        this.props!.height,
-      ),
+      calcFactoredRadiusArray(props.radius as Vec4, props.width, props.height),
     );
   },
   getCacheMarkers(props: HolePunchProps) {

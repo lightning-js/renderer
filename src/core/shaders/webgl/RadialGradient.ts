@@ -28,16 +28,17 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
   props: RadialGradientTemplate.props,
   update(node: CoreNode) {
+    const props = this.props!;
     this.uniform2f(
       'u_projection',
-      this.props!.pivot[0] * node.width,
-      this.props!.pivot[1] * node.height,
+      props.pivot[0] * node.width,
+      props.pivot[1] * node.height,
     );
-    this.uniform2f('u_size', this.props!.width * 0.5, this.props!.height * 0.5);
-    this.uniform1fv('u_stops', new Float32Array(this.props!.stops));
+    this.uniform2f('u_size', props.width * 0.5, props.height * 0.5);
+    this.uniform1fv('u_stops', new Float32Array(props.stops));
     const colors: number[] = [];
-    for (let i = 0; i < this.props!.colors.length; i++) {
-      const norm = getNormalizedRgbaComponents(this.props!.colors[i]!);
+    for (let i = 0; i < props.colors.length; i++) {
+      const norm = getNormalizedRgbaComponents(props.colors[i]!);
       colors.push(norm[0], norm[1], norm[2], norm[3]);
     }
     this.uniform4fv('u_colors', new Float32Array(colors));

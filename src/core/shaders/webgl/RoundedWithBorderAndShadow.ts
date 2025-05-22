@@ -28,19 +28,16 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
   {
     props: RoundedWithBorderAndShadowTemplate.props,
     update(node: CoreNode) {
-      this.uniformRGBA('u_borderColor', this.props!['border-color']);
-      this.uniform4fa('u_borderWidth', this.props!['border-width'] as Vec4);
+      const props = this.props!;
+      this.uniformRGBA('u_borderColor', props['border-color']);
+      this.uniform4fa('u_borderWidth', props['border-width'] as Vec4);
 
-      this.uniformRGBA('u_shadowColor', this.props!['shadow-color']);
-      this.uniform4fa('u_shadow', this.props!['shadow-projection']);
+      this.uniformRGBA('u_shadowColor', props['shadow-color']);
+      this.uniform4fa('u_shadow', props['shadow-projection']);
 
       this.uniform4fa(
         'u_radius',
-        calcFactoredRadiusArray(
-          this.props!.radius as Vec4,
-          node.width,
-          node.height,
-        ),
+        calcFactoredRadiusArray(props.radius as Vec4, node.width, node.height),
       );
     },
     vertex: `
@@ -71,6 +68,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
     varying vec2 v_halfDimensions;
+    varying float v_borderZero;
 
     void main() {
       vec2 screenSpace = vec2(2.0 / u_resolution.x,  -2.0 / u_resolution.y);
@@ -84,18 +82,23 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
 
       v_halfDimensions = u_dimensions * 0.5;
 
-      v_innerRadius = vec4(
-        max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
-        max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
-        max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
-        max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
-      );
-
-      v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) - 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
-
       v_color = a_color;
       v_nodeCoords = a_nodeCoords + (screenSpace + shadowEdge) / (u_dimensions);
       v_textureCoords = a_textureCoords + (screenSpace + shadowEdge) / (u_dimensions);
+
+      v_borderZero = u_borderWidth == vec4(0.0) ? 1.0 : 0.0;
+
+
+      if(v_borderZero == 0.0) {
+        v_innerRadius = vec4(
+          max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
+          max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
+          max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
+          max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
+        );
+
+        v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) - 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+      }
     }
   `,
     fragment: `
@@ -125,6 +128,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
     varying vec2 v_halfDimensions;
     varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
+    varying float v_borderZero;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
@@ -149,15 +153,20 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
 
       float outerAlpha = 1.0 - smoothstep(0.0, 1.0, outerDist);
 
+      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w, u_radius + u_shadow.z);
+      vec4 shadow = mix(vec4(0.0), u_shadowColor, shadowAlpha);
+
+      if(v_borderZero == 1.0) {
+        gl_FragColor = mix(shadow, color, outerAlpha) * u_alpha;
+        return;
+      }
+
       boxUv.x += u_borderWidth.y > u_borderWidth.w ? (u_borderWidth.y - u_borderWidth.w) * 0.5 : -(u_borderWidth.w - u_borderWidth.y) * 0.5;
       boxUv.y += u_borderWidth.z > u_borderWidth.x ? ((u_borderWidth.z - u_borderWidth.x) * 0.5 + 0.5) : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
 
       float innerDist = roundedBox(boxUv, v_innerSize, v_innerRadius);
       float innerAlpha = 1.0 - smoothstep(0.0, 1.0, innerDist);
 
-      float shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w, u_radius + u_shadow.z);
-
-      vec4 shadow = mix(vec4(0.0), u_shadowColor, shadowAlpha);
       vec4 resColor = mix(u_borderColor, color, innerAlpha);
       resColor = mix(shadow, resColor, outerAlpha);
       gl_FragColor = resColor * u_alpha;

@@ -117,15 +117,21 @@ export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: Map<Texture, number> = new Map();
   private orphanedTextures: Texture[] = [];
-  private criticalThreshold: number;
-  private targetThreshold: number;
-  private cleanupInterval: number;
-  private debugLogging: boolean;
+  private criticalThreshold: number = 124e6;
+  private targetThreshold: number = 0.5;
+  private cleanupInterval: number = 5000;
+  private debugLogging: boolean = false;
+  private loggingID: ReturnType<typeof setInterval> =
+    0 as unknown as ReturnType<typeof setInterval>;
   private lastCleanupTime = 0;
-  private baselineMemoryAllocation: number;
+  private baselineMemoryAllocation: number = 26e6;
 
   public criticalCleanupRequested = false;
-  public doNotExceedCriticalThreshold: boolean;
+  public doNotExceedCriticalThreshold: boolean = false;
+  private originalSetTextureMemUse: (
+    texture: Texture,
+    byteSize: number,
+  ) => void;
 
   /**
    * The current frame time in milliseconds
@@ -138,46 +144,9 @@ export class TextureMemoryManager {
   public frameTime = 0;
 
   constructor(private stage: Stage, settings: TextureMemoryManagerSettings) {
-    const { criticalThreshold, doNotExceedCriticalThreshold } = settings;
-    this.doNotExceedCriticalThreshold = doNotExceedCriticalThreshold || false;
-    this.criticalThreshold = Math.round(criticalThreshold);
-    const targetFraction = Math.max(
-      0,
-      Math.min(1, settings.targetThresholdLevel),
-    );
-    this.cleanupInterval = settings.cleanupInterval;
-    this.debugLogging = settings.debugLogging;
-    this.baselineMemoryAllocation = Math.round(
-      settings.baselineMemoryAllocation,
-    );
-    this.targetThreshold = Math.max(
-      Math.round(criticalThreshold * targetFraction),
-      this.baselineMemoryAllocation,
-    );
-    this.memUsed = Math.round(settings.baselineMemoryAllocation);
+    this.originalSetTextureMemUse = this.setTextureMemUse;
 
-    if (settings.debugLogging) {
-      let lastMemUse = 0;
-      setInterval(() => {
-        if (lastMemUse !== this.memUsed) {
-          lastMemUse = this.memUsed;
-          console.log(
-            `[TextureMemoryManager] Memory used: ${bytesToMb(
-              this.memUsed,
-            )} mb / ${bytesToMb(this.criticalThreshold)} mb (${(
-              (this.memUsed / this.criticalThreshold) *
-              100
-            ).toFixed(1)}%)`,
-          );
-        }
-      }, 1000);
-    }
-
-    // If the threshold is 0, we disable the memory manager by replacing the
-    // setTextureMemUse method with a no-op function.
-    if (criticalThreshold === 0) {
-      this.setTextureMemUse = () => {};
-    }
+    this.updateSettings(settings);
   }
 
   /**
@@ -393,5 +362,64 @@ export class TextureMemoryManager {
       loadedTextures: this.loadedTextures.size,
       baselineMemoryAllocation: this.baselineMemoryAllocation,
     };
+  }
+
+  public updateSettings(settings: TextureMemoryManagerSettings): void {
+    const { criticalThreshold, doNotExceedCriticalThreshold } = settings;
+
+    this.doNotExceedCriticalThreshold = doNotExceedCriticalThreshold || false;
+    this.criticalThreshold = Math.round(criticalThreshold);
+
+    if (this.memUsed === 0) {
+      this.memUsed = Math.round(settings.baselineMemoryAllocation);
+    } else {
+      const memUsedExBaseline = this.memUsed - this.baselineMemoryAllocation;
+      this.memUsed = Math.round(
+        settings.baselineMemoryAllocation + memUsedExBaseline,
+      );
+    }
+    this.baselineMemoryAllocation = Math.round(
+      settings.baselineMemoryAllocation,
+    );
+    const targetFraction = Math.max(
+      0,
+      Math.min(1, settings.targetThresholdLevel),
+    );
+    this.targetThreshold = Math.max(
+      Math.round(criticalThreshold * targetFraction),
+      this.baselineMemoryAllocation,
+    );
+
+    this.cleanupInterval = settings.cleanupInterval;
+    this.debugLogging = settings.debugLogging;
+
+    if (this.loggingID && !settings.debugLogging) {
+      clearInterval(this.loggingID);
+      this.loggingID = 0 as unknown as ReturnType<typeof setInterval>;
+    }
+    if (settings.debugLogging && !this.loggingID) {
+      let lastMemUse = 0;
+      this.loggingID = setInterval(() => {
+        if (lastMemUse !== this.memUsed) {
+          lastMemUse = this.memUsed;
+          console.log(
+            `[TextureMemoryManager] Memory used: ${bytesToMb(
+              this.memUsed,
+            )} mb / ${bytesToMb(this.criticalThreshold)} mb (${(
+              (this.memUsed / this.criticalThreshold) *
+              100
+            ).toFixed(1)}%)`,
+          );
+        }
+      }, 1000);
+    }
+
+    // If the threshold is 0, we disable the memory manager by replacing the
+    // setTextureMemUse method with a no-op function.
+    if (criticalThreshold === 0) {
+      this.setTextureMemUse = () => {};
+    } else {
+      this.setTextureMemUse = this.originalSetTextureMemUse;
+    }
   }
 }
