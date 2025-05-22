@@ -24,9 +24,10 @@ export function customSettings(): Partial<RendererMainSettings> {
   return {
     textureMemory: {
       cleanupInterval: 5000,
-      criticalThreshold: 25e6,
+      criticalThreshold: 13e6,
       baselineMemoryAllocation: 5e6,
-      debugLogging: true,
+      doNotExceedCriticalThreshold: true,
+      debugLogging: false,
     },
   };
 }
@@ -138,6 +139,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         height: nodeHeight,
         parent: childNode,
         src: `https://picsum.photos/id/${id}/${nodeWidth}/${nodeHeight}`, // Random images
+      });
+
+      imageNode.on('failed', () => {
+        console.log(`Image failed to load for node ${id}`);
+        childNode.color = 0xffff00ff; // Change color to yellow on error
       });
 
       const textNode = renderer.createTextNode({

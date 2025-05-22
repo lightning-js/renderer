@@ -38,37 +38,39 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
   props: RoundedWithBorderAndShadowTemplate.props,
   saveAndRestore: true,
   update(node) {
+    const props = this.props!;
     const radius = calcFactoredRadiusArray(
-      this.props!.radius as Vec4,
+      props.radius as Vec4,
       node.width,
       node.height,
     );
     this.computed.radius = radius;
-    this.computed.borderColor = this.toColorString(this.props!['border-color']);
+    this.computed.borderColor = this.toColorString(props['border-color']);
     this.computed.borderAsym = !valuesAreEqual(
-      this.props!['border-width'] as number[],
+      props['border-width'] as number[],
     );
-    const borderWidth = this.props!['border-width'] as Vec4;
+    const borderWidth = props['border-width'] as Vec4;
     this.computed.borderRadius = radius.map((value, index) =>
       Math.max(0, value - borderWidth[index]! * 0.5),
     ) as Vec4;
 
-    this.computed.shadowColor = this.toColorString(this.props!['shadow-color']);
+    this.computed.shadowColor = this.toColorString(props['shadow-color']);
     this.computed.shadowRadius = radius.map(
-      (value) => value + this.props!['shadow-blur'],
+      (value) => value + props['shadow-blur'],
     ) as Vec4;
   },
   render(ctx, quad, renderContext) {
     const { tx, ty, width, height } = quad;
+    const computed = this.computed as ComputedValues;
     render.shadow(
       ctx,
       tx,
       ty,
       height,
       width,
-      this.computed.shadowColor!,
+      computed.shadowColor,
       this.props!['shadow-projection'],
-      this.computed.shadowRadius!,
+      computed.shadowRadius,
       this.stage.pixelRatio,
     );
     render.roundedRectWithBorder(
@@ -77,11 +79,11 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
       quad.ty,
       quad.width,
       quad.height,
-      this.computed.radius!,
+      computed.radius,
       this.props!['border-width'] as Vec4,
-      this.computed.borderRadius!,
-      this.computed.borderColor!,
-      this.computed.borderAsym!,
+      computed.borderRadius,
+      computed.borderColor,
+      computed.borderAsym,
       renderContext,
     );
   },

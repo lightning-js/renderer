@@ -610,6 +610,10 @@ export class WebGlRenderer extends CoreRenderer {
     this.renderToTextureActive = false;
   }
 
+  updateViewport(): void {
+    this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
+  }
+
   removeRTTNode(node: CoreNode) {
     const index = this.rttNodes.indexOf(node);
     if (index === -1) {
@@ -720,8 +724,7 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   /**
-   * Updates the WebGL context's clear color and clears the color buffer.
-   *
+   * Sets the glClearColor to the specified color.   *
    * @param color - The color to set as the clear color, represented as a 32-bit integer.
    */
   updateClearColor(color: number) {
@@ -740,6 +743,5 @@ export class WebGlRenderer extends CoreRenderer {
       raw: color,
       normalized: normalizedColor,
     };
-    glw.clear();
   }
 }

@@ -5,7 +5,6 @@ import {
 } from '@lightningjs/renderer/webgl';
 import { CanvasTextRenderer } from '@lightningjs/renderer/canvas';
 import { Inspector } from '@lightningjs/renderer/inspector';
-import { MyCustomEffect } from './MyCustomEffect.js';
 import { MyCustomShader } from './MyCustomShader.js';
 import { MyCustomTexture } from './MyCustomTexture.js';
 import robotImg from './assets/robot.png';
