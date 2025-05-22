@@ -166,7 +166,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // If not containing, we must update the local transform to account for the
     // new width
     if (this.contain === 'none') {
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Matrix);
     }
   }
 
@@ -181,7 +181,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // If not containing in the horizontal direction, we must update the local
     // transform to account for the new height
     if (this.contain !== 'both') {
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Matrix);
     }
   }
 
