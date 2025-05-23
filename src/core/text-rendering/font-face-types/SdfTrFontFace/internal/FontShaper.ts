@@ -136,4 +136,17 @@ export abstract class FontShaper {
     props: FontShaperProps,
     codepoints: PeekableIterator<number>,
   ): Generator<MappedGlyphInfo | UnmappedCharacterInfo, void>;
+
+  abstract shapeTextWithWords(
+    props: FontShaperProps,
+    text: string,
+  ): Generator<
+    {
+      letters: Generator<MappedGlyphInfo, void, unknown> | null;
+      width: number;
+      isLineBreak?: boolean;
+      hasNextWord: boolean;
+    },
+    void
+  >;
 }

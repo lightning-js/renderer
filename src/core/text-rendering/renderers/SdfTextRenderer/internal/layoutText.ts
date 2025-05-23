@@ -17,6 +17,11 @@
  * limitations under the License.
  */
 
+/**
+ * Outer generator yields a generator for each word.
+ * Inner generator yields each letter in the word.
+ */
+
 import { assertTruthy } from '../../../../../utils.js';
 import type { Bound } from '../../../../lib/utils.js';
 import type {
@@ -29,6 +34,228 @@ import type { SdfTextRendererState } from '../SdfTextRenderer.js';
 import { PeekableIterator } from './PeekableGenerator.js';
 import { getUnicodeCodepoints } from './getUnicodeCodepoints.js';
 import { measureText } from './measureText.js';
+import { getOrderedText } from './getOrderedText.js';
+
+class LayoutState {
+  // public nextWordFits: boolean = true;
+  public previousIsSpace: boolean = false;
+  public bufferOffset: number = 0;
+  public currentWord: number = 0;
+  public cluster: number = 0;
+  maxX: number = 0;
+  maxY: number = 0;
+  public curLineBufferStart: number = -1;
+  private _curX: number;
+  private previousX: number;
+  public curY: number;
+  private _curLineIndex: number;
+  private _trFontFace: SdfTextRendererState['trFontFace'];
+  private _rwSdf: Bound;
+  public bufferLineInfos: {
+    bufferStart: number;
+    bufferEnd: number;
+  }[] = [];
+  private maxLines: number;
+  private contain: string;
+  private scrollable: boolean;
+  private vertexLineHeight: number;
+  private vertexTruncateHeight: number;
+
+  constructor(
+    curX: number,
+    curY: number,
+    curLineIndex: number,
+    trFontFace: SdfTextRendererState['trFontFace'],
+    rwSdf: Bound,
+    maxLines: number,
+    contain: TrProps['contain'],
+    scrollable: TrProps['scrollable'],
+    vertexLineHeight: number,
+    vertexTruncateHeight: number,
+  ) {
+    this._curX = curX;
+    this.previousX = curX;
+    this.curY = curY;
+    this._curLineIndex = curLineIndex;
+    this._trFontFace = trFontFace as SdfTextRendererState['trFontFace'];
+    this._rwSdf = rwSdf;
+    this.maxLines = maxLines;
+    this.contain = contain;
+    this.scrollable = scrollable;
+    this.vertexLineHeight = vertexLineHeight;
+    this.vertexTruncateHeight = vertexTruncateHeight;
+    if (this._trFontFace === undefined) {
+      throw new Error('trFontFace is undefined');
+    }
+  }
+
+  get nextLineWillFit() {
+    return (
+      (this.maxLines === 0 || this.curLineIndex + 1 < this.maxLines) &&
+      (this.contain !== 'both' ||
+        this.scrollable ||
+        this.curY + this.vertexLineHeight + this._trFontFace!.maxCharHeight <=
+          this.vertexTruncateHeight)
+    );
+  }
+
+  get curX() {
+    return this._curX;
+  }
+
+  set curX(value: number) {
+    this.previousX = this._curX;
+    this._curX = value;
+  }
+
+  get nextWordFits() {
+    return false;
+  }
+
+  get curLineIndex() {
+    return this._curLineIndex;
+  }
+
+  set curLineIndex(value: number) {
+    this._curLineIndex = value;
+  }
+
+  // Getter for lineIsBelowWindowTop
+  get lineIsBelowWindowTop(): boolean {
+    return this.curY + this._trFontFace!.maxCharHeight >= this._rwSdf.y1;
+  }
+
+  // Getter for lineIsAboveWindowBottom
+  get lineIsAboveWindowBottom(): boolean {
+    return this.curY <= this._rwSdf.y2;
+  }
+
+  // Getter for lineIsWithinWindow
+  get lineIsWithinWindow(): boolean {
+    return this.lineIsBelowWindowTop && this.lineIsAboveWindowBottom;
+  }
+
+  moveToNextLine(
+    vertexLineHeight: number,
+    workingOnWord: boolean = false,
+  ): void {
+    this.addLineToBuffer();
+
+    this.curX = 0;
+    this.curY += vertexLineHeight;
+    this.curLineIndex++;
+    this.currentWord = workingOnWord ? 1 : 0;
+    this.previousIsSpace = false;
+  }
+
+  addSpace(width: number = 0, hasNextWord): void {
+    if (this.currentWord !== 0) {
+      this.previousIsSpace = true;
+      this.previousX = this.curX;
+      this.curX += width;
+      if (hasNextWord === false) this.maxX = Math.max(this.maxX, this.curX);
+    }
+  }
+
+  addLineToBuffer(): void {
+    if (this.curLineBufferStart !== -1) {
+      this.bufferLineInfos.push({
+        bufferStart: this.curLineBufferStart,
+        bufferEnd: this.bufferOffset,
+      });
+      this.curLineBufferStart = -1;
+    }
+  }
+
+  addSuffixToBuffer(
+    words: Generator<
+      {
+        letters:
+          | Generator<MappedGlyphInfo, void, unknown>
+          | UnmappedCharacterInfo
+          | null;
+        width: number;
+        isLineBreak?: boolean;
+      },
+      void,
+      unknown
+    >,
+    vertexBuffer: NonNullable<SdfTextRendererState['vertexBuffer']>,
+    revertSpace: boolean = false,
+  ): void {
+    let glyphResult:
+      | IteratorResult<MappedGlyphInfo | UnmappedCharacterInfo, void>
+      | undefined;
+    const letters = words.next();
+    if (!revertSpace && this.previousIsSpace) this.curX = this.previousX;
+
+    if (letters && letters.done === false) {
+      const glyphs = letters.value.letters;
+      if (glyphs && 'next' in glyphs && typeof glyphs.next === 'function') {
+        while ((glyphResult = glyphs.next()) && !glyphResult.done) {
+          const glyph = glyphResult.value;
+          if (glyph.mapped) {
+            this.addGlyphToBuffer(glyph, vertexBuffer);
+          }
+        }
+      }
+    }
+    this.addLineToBuffer();
+  }
+
+  addGlyphToBuffer(
+    glyph: MappedGlyphInfo,
+    vertexBuffer: NonNullable<SdfTextRendererState['vertexBuffer']>,
+  ): void {
+    const quadX = this.curX + glyph.xOffset;
+    const quadY = this.curY + glyph.yOffset;
+
+    if (
+      this.lineIsWithinWindow &&
+      this._trFontFace !== undefined &&
+      this._trFontFace.data !== undefined
+    ) {
+      if (this.curLineBufferStart === -1) {
+        this.curLineBufferStart = this.bufferOffset;
+      }
+      this.cluster = glyph.cluster;
+      const atlasEntry = this._trFontFace.getAtlasEntry(glyph.glyphId);
+
+      const u = atlasEntry.x / this._trFontFace.data.common.scaleW;
+      const v = atlasEntry.y / this._trFontFace.data.common.scaleH;
+      const uvWidth = atlasEntry.width / this._trFontFace.data.common.scaleW;
+      const uvHeight = atlasEntry.height / this._trFontFace.data.common.scaleH;
+
+      // Top-left
+      vertexBuffer[this.bufferOffset++] = quadX;
+      vertexBuffer[this.bufferOffset++] = quadY;
+      vertexBuffer[this.bufferOffset++] = u;
+      vertexBuffer[this.bufferOffset++] = v;
+
+      // Top-right
+      vertexBuffer[this.bufferOffset++] = quadX + glyph.width;
+      vertexBuffer[this.bufferOffset++] = quadY;
+      vertexBuffer[this.bufferOffset++] = u + uvWidth;
+      vertexBuffer[this.bufferOffset++] = v;
+
+      // Bottom-left
+      vertexBuffer[this.bufferOffset++] = quadX;
+      vertexBuffer[this.bufferOffset++] = quadY + glyph.height;
+      vertexBuffer[this.bufferOffset++] = u;
+      vertexBuffer[this.bufferOffset++] = v + uvHeight;
+
+      // Bottom-right
+      vertexBuffer[this.bufferOffset++] = quadX + glyph.width;
+      vertexBuffer[this.bufferOffset++] = quadY + glyph.height;
+      vertexBuffer[this.bufferOffset++] = u + uvWidth;
+      vertexBuffer[this.bufferOffset++] = v + uvHeight;
+    }
+
+    this.maxY = Math.max(this.maxY, quadY + glyph.height);
+    this.maxX = Math.max(this.maxX, quadX + glyph.width);
+    this.curX += glyph.xAdvance;
+  }
+}
 
 export function layoutText(
   curLineIndex: number,
@@ -57,6 +284,7 @@ export function layoutText(
   overflowSuffix: TrProps['overflowSuffix'],
   wordBreak: TrProps['wordBreak'],
   maxLines: TrProps['maxLines'],
+  isRTL: TrProps['rtl'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;
@@ -89,10 +317,13 @@ export function layoutText(
    * `lineHeight` in vertex coordinates
    */
   const vertexLineHeight = lineHeight / fontSizeRatio;
+  const vertexTruncateHeight = height / fontSizeRatio;
+
   /**
    * `w` in vertex coordinates
    */
   const vertexW = width / fontSizeRatio;
+
   /**
    * `letterSpacing` in vertex coordinates
    */
@@ -100,398 +331,200 @@ export function layoutText(
 
   const startingLineCacheEntry = lineCache[curLineIndex];
   const startingCodepointIndex = startingLineCacheEntry?.codepointIndex || 0;
-  const startingMaxX = startingLineCacheEntry?.maxX || 0;
-  const startingMaxY = startingLineCacheEntry?.maxY || 0;
-
-  let maxX = startingMaxX;
-  let maxY = startingMaxY;
-  let curX = startX;
-  let curY = startY;
-
-  let bufferOffset = 0;
-  /**
-   * Buffer offset to last word boundry. This is -1 when we aren't in a word boundry.
-   */
-  const lastWord: {
-    codepointIndex: number;
-    bufferOffset: number;
-    xStart: number;
-  } = {
-    codepointIndex: -1,
-    bufferOffset: -1,
-    xStart: -1,
-  };
-
-  let previousWord: {
-    bufferOffset: number;
-    xStart: number;
-  } = {
-    bufferOffset: -1,
-    xStart: -1,
-  };
-
   const shaper = trFontFace.shaper;
-
   const shaperProps: FontShaperProps = {
     letterSpacing: vertexLSpacing,
   };
 
-  // HACK: The space is used as a word boundary. When a text ends with a space, we need to
-  // add an extra space to ensure the space is included in the line width calculation.
-  if (text.endsWith(' ')) {
-    text += ' ';
-  }
+  // text = getOrderedText(isRTL, true, text);
 
-  // Get glyphs
-  let glyphs = shaper.shapeText(
-    shaperProps,
-    new PeekableIterator(
-      getUnicodeCodepoints(text, startingCodepointIndex),
-      startingCodepointIndex,
-    ),
-  );
+  // if (isRTL === true) {
+  // textAlign = 'right';
+  // }
 
-  let glyphResult:
-    | IteratorResult<MappedGlyphInfo | UnmappedCharacterInfo, void>
-    | undefined;
+  let doneProcessing = false;
 
-  let curLineBufferStart = -1;
-
-  const bufferLineInfos: {
-    bufferStart: number;
-    bufferEnd: number;
-  }[] = [];
-
-  const vertexTruncateHeight = height / fontSizeRatio;
   const overflowSuffVertexWidth = measureText(
     overflowSuffix,
     shaperProps,
     shaper,
   );
 
-  // Line-by-line layout
-  let moreLines = true;
-  while (moreLines) {
-    const nextLineWillFit =
-      (maxLines === 0 || curLineIndex + 1 < maxLines) &&
-      (contain !== 'both' ||
-        scrollable ||
-        curY + vertexLineHeight + trFontFace.maxCharHeight <=
-          vertexTruncateHeight);
-    /**
-     * Vertex X position to the beginning of the last word boundary. This becomes -1 when we start traversing a word.
-     */
-    let xStartLastWordBoundary = 0;
+  const layoutState = new LayoutState(
+    startX,
+    startY,
+    curLineIndex,
+    trFontFace,
+    rwSdf,
+    maxLines,
+    contain,
+    scrollable,
+    vertexLineHeight,
+    vertexTruncateHeight,
+  );
 
-    const lineIsBelowWindowTop = curY + trFontFace.maxCharHeight >= rwSdf.y1;
-    const lineIsAboveWindowBottom = curY <= rwSdf.y2;
-    const lineIsWithinWindow = lineIsBelowWindowTop && lineIsAboveWindowBottom;
-    // Layout glyphs in this line
-    // Any break statements in this while loop will trigger a line break
-    while ((glyphResult = glyphs.next()) && !glyphResult.done) {
-      const glyph = glyphResult.value;
+  const suffix = shaper.shapeTextWithWords(shaperProps, overflowSuffix);
+  const words = shaper.shapeTextWithWords(shaperProps, text);
 
-      if (curLineIndex === lineCache.length) {
-        lineCache.push({
-          codepointIndex: glyph.cluster,
-          maxY,
-          maxX,
-        });
-      } else if (curLineIndex > lineCache.length) {
-        throw new Error('Unexpected lineCache length');
-      }
+  for (const { letters, width, isLineBreak, hasNextWord } of words) {
+    const wordEndX: number = layoutState.curX + width;
 
-      // If we encounter a word boundary (white space or newline) we invalidate
-      // the lastWord and set the xStartLastWordBoundary if we haven't already.
-      if (
-        glyph.codepoint === 32 ||
-        glyph.codepoint === 10 ||
-        glyph.codepoint === 8203
-      ) {
-        if (lastWord.codepointIndex !== -1) {
-          lastWord.codepointIndex = -1;
-          xStartLastWordBoundary = curX;
-          previousWord.bufferOffset = lastWord.bufferOffset;
-          previousWord.xStart = lastWord.xStart;
-        }
-      } else if (lastWord.codepointIndex === -1) {
-        lastWord.codepointIndex = glyph.cluster;
-        lastWord.bufferOffset = bufferOffset;
-        lastWord.xStart = xStartLastWordBoundary;
-      }
-
-      if (glyph.mapped) {
-        // Mapped glyph
-        const charEndX = curX + glyph.xOffset + glyph.width;
-
-        if (
-          wordBreak === 'break-all' &&
-          charEndX >= vertexW &&
-          nextLineWillFit
-        ) {
-          // wordBreak: break-all - the current letter is about to go of the edge
-          // of the container width and the next line will fit, so we break to the next line
-          glyphs = shaper.shapeText(
-            shaperProps,
-            new PeekableIterator(
-              getUnicodeCodepoints(text, glyph.cluster),
-              glyph.cluster,
-            ),
-          );
-          break;
-        } else if (
-          contain !== 'none' &&
-          wordBreak === 'break-all' &&
-          charEndX + overflowSuffVertexWidth >= vertexW &&
-          nextLineWillFit === false
-        ) {
-          // wordBreak: break-all - the current letter is about to go of the edge
-          // of the container width and the next line will not fit, so we add the overflow suffix
-          glyphs = shaper.shapeText(
-            shaperProps,
-            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
-          );
-          contain = 'none';
-        } else if (
-          // Word wrap check
-          // We are containing the text
-          contain !== 'none' &&
-          // The current glyph reaches outside the contained width
-          charEndX >= vertexW &&
-          // There is a last word that we can break to the next line
-          lastWord.codepointIndex !== -1 &&
-          // Prevents infinite loop when a single word is longer than the width
-          lastWord.xStart > 0
-        ) {
-          // The current word is about to go off the edge of the container width
-          // Reinitialize the iterator starting at the last word
-          // and proceeding to the next line
-          if (nextLineWillFit) {
-            glyphs = shaper.shapeText(
-              shaperProps,
-              new PeekableIterator(
-                getUnicodeCodepoints(text, lastWord.codepointIndex),
-                lastWord.codepointIndex,
-              ),
-            );
-            bufferOffset = lastWord.bufferOffset;
-            break;
-          } else {
-            glyphs = shaper.shapeText(
-              shaperProps,
-              new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
-            );
-            if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
-              curX = lastWord.xStart;
-              bufferOffset = lastWord.bufferOffset;
-            } else if (
-              previousWord.xStart + overflowSuffVertexWidth <
-              vertexW
-            ) {
-              curX = previousWord.xStart;
-              bufferOffset = previousWord.bufferOffset;
-            }
-
-            // HACK: For the rest of the line when inserting the overflow suffix,
-            // set contain = 'none' to prevent an infinite loop.
-            contain = 'none';
-          }
-        } else if (
-          wordBreak === 'break-word' &&
-          charEndX >= vertexW &&
-          lastWord.xStart === 0 &&
-          nextLineWillFit
-        ) {
-          // The current word which starts the line is wider than the line width
-          // proceed to next line
-          glyphs = shaper.shapeText(
-            shaperProps,
-            new PeekableIterator(
-              getUnicodeCodepoints(text, glyph.cluster),
-              glyph.cluster,
-            ),
-          );
-          break;
-        } else if (
-          contain !== 'none' &&
-          wordBreak === 'break-word' &&
-          lastWord.xStart === 0 &&
-          charEndX + overflowSuffVertexWidth >= vertexW &&
-          nextLineWillFit === false
-        ) {
-          // wordBreak: break-word - the current letter is about to go of the edge
-          // and the next line will not fit, so we add the overflow suffix
-          glyphs = shaper.shapeText(
-            shaperProps,
-            new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
-          );
-          contain = 'none';
-        } else {
-          // This glyph fits, so we can add it to the buffer
-          const quadX = curX + glyph.xOffset;
-          const quadY = curY + glyph.yOffset;
-
-          // Only add to buffer for rendering if the line is within the render window
-          if (lineIsWithinWindow) {
-            if (curLineBufferStart === -1) {
-              curLineBufferStart = bufferOffset;
-            }
-
-            const atlasEntry = trFontFace.getAtlasEntry(glyph.glyphId);
-
-            // Add texture coordinates
-            const u = atlasEntry.x / trFontFace.data.common.scaleW;
-            const v = atlasEntry.y / trFontFace.data.common.scaleH;
-            const uvWidth = atlasEntry.width / trFontFace.data.common.scaleW;
-            const uvHeight = atlasEntry.height / trFontFace.data.common.scaleH;
-
-            // TODO: (Performance) We can optimize this by using ELEMENT_ARRAY_BUFFER
-            // eliminating the need to duplicate vertices
-
-            // Top-left
-            vertexBuffer[bufferOffset++] = quadX;
-            vertexBuffer[bufferOffset++] = quadY;
-            vertexBuffer[bufferOffset++] = u;
-            vertexBuffer[bufferOffset++] = v;
-
-            // Top-right
-            vertexBuffer[bufferOffset++] = quadX + glyph.width;
-            vertexBuffer[bufferOffset++] = quadY;
-            vertexBuffer[bufferOffset++] = u + uvWidth;
-            vertexBuffer[bufferOffset++] = v;
-
-            // Bottom-left
-            vertexBuffer[bufferOffset++] = quadX;
-            vertexBuffer[bufferOffset++] = quadY + glyph.height;
-            vertexBuffer[bufferOffset++] = u;
-            vertexBuffer[bufferOffset++] = v + uvHeight;
-
-            // Bottom-right
-            vertexBuffer[bufferOffset++] = quadX + glyph.width;
-            vertexBuffer[bufferOffset++] = quadY + glyph.height;
-            vertexBuffer[bufferOffset++] = u + uvWidth;
-            vertexBuffer[bufferOffset++] = v + uvHeight;
-          }
-
-          maxY = Math.max(maxY, quadY + glyph.height);
-          maxX = Math.max(maxX, quadX + glyph.width);
-          curX += glyph.xAdvance;
-        }
+    // Word wrap when current word reaches outside the contained width
+    if (
+      contain !== 'none' &&
+      wordEndX >= vertexW &&
+      wordBreak !== 'break-all'
+    ) {
+      if (layoutState.nextLineWillFit === true) {
+        layoutState.moveToNextLine(vertexLineHeight);
       } else {
-        // Unmapped character
+        layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+        doneProcessing = true;
+        break;
+      }
+    } else if (
+      contain !== 'none' &&
+      wordEndX + overflowSuffVertexWidth >= vertexW &&
+      wordBreak !== 'break-all' &&
+      layoutState.nextLineWillFit === false &&
+      hasNextWord === true
+    ) {
+      layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+      doneProcessing = true;
+      break;
+    }
 
-        // Handle newlines
-        if (glyph.codepoint === 10) {
-          if (nextLineWillFit) {
-            // The whole line fit, so we can break to the next line
+    if (isLineBreak) {
+      if (layoutState.nextLineWillFit) {
+        layoutState.moveToNextLine(vertexLineHeight);
+        continue;
+      } else {
+        layoutState.addSuffixToBuffer(suffix, vertexBuffer, true);
+        doneProcessing = true;
+        break;
+      }
+    } else if (letters === null) {
+      // Handle space
+      layoutState.addSpace(width, hasNextWord);
+      if (hasNextWord === false) doneProcessing = true;
+      continue;
+    }
+
+    if (letters) {
+      for (const glyph of letters) {
+        let addGlyphToBuffer = true;
+
+        if (layoutState.curLineIndex === lineCache.length) {
+          lineCache.push({
+            codepointIndex: glyph.cluster,
+            maxY: layoutState.maxY,
+            maxX: layoutState.maxX,
+          });
+        } else if (curLineIndex > lineCache.length) {
+          throw new Error('Unexpected lineCache length');
+        }
+
+        if (glyph.mapped) {
+          // Mapped glyph
+          const charEndX = layoutState.curX + glyph.xOffset + glyph.width;
+
+          if (
+            wordBreak === 'break-all' &&
+            charEndX >= vertexW &&
+            layoutState.nextLineWillFit
+          ) {
+            layoutState.moveToNextLine(vertexLineHeight, true);
+          } else if (
+            contain !== 'none' &&
+            wordBreak === 'break-all' &&
+            charEndX + overflowSuffVertexWidth >= vertexW &&
+            layoutState.nextLineWillFit === false
+          ) {
+            layoutState.addSuffixToBuffer(suffix, vertexBuffer, true);
+            doneProcessing = true;
             break;
-          } else {
-            // Check if the overflow suffix will fit
-            if (curX + overflowSuffVertexWidth >= vertexW) {
-              if (lastWord.xStart + overflowSuffVertexWidth < vertexW) {
-                curX = lastWord.xStart;
-                bufferOffset = lastWord.bufferOffset;
-              } else if (
-                previousWord.xStart + overflowSuffVertexWidth <
-                vertexW
-              ) {
-                curX = previousWord.xStart;
-                bufferOffset = previousWord.bufferOffset;
-              }
-            }
-            // The whole line won't fit, so we need to add the overflow suffix
-            glyphs = shaper.shapeText(
-              shaperProps,
-              new PeekableIterator(getUnicodeCodepoints(overflowSuffix, 0), 0),
-            );
-            // HACK: For the rest of the line when inserting the overflow suffix,
-            // set contain = 'none' to prevent an infinite loop.
-            contain = 'none';
+          } else if (
+            // Word wrap check
+            // We are containing the text
+            contain !== 'none' &&
+            // The current glyph reaches outside the contained width
+            charEndX >= vertexW &&
+            layoutState.currentWord !== 0 &&
+            layoutState.nextLineWillFit === true
+          ) {
+            layoutState.moveToNextLine(vertexLineHeight, true);
+          } else if (
+            wordBreak === 'break-word' &&
+            charEndX >= vertexW &&
+            layoutState.currentWord === 0 &&
+            layoutState.nextLineWillFit
+          ) {
+            // The current word which starts the line is wider than the line width proceed to next line
+            layoutState.moveToNextLine(vertexLineHeight);
+          } else if (
+            contain !== 'none' &&
+            wordBreak === 'break-word' &&
+            charEndX + overflowSuffVertexWidth >= vertexW &&
+            layoutState.nextLineWillFit === false
+          ) {
+            // wordBreak: break-word - the current letter is about to go of the edge
+            // and the next line will not fit, so we add the overflow suffix
+            layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+            doneProcessing = true;
+            break;
           }
+
+          // Add the current glyph to the buffer
+          if (addGlyphToBuffer) {
+            layoutState.addGlyphToBuffer(glyph, vertexBuffer);
+          }
+        } else {
+          // Unmapped character
+          console.log('Unmapped character', glyph.codepoint);
         }
       }
+      if (letters !== null) layoutState.currentWord++;
     }
 
-    // Prepare for the next line...
-    if (curLineBufferStart !== -1) {
-      bufferLineInfos.push({
-        bufferStart: curLineBufferStart,
-        bufferEnd: bufferOffset,
-      });
-      curLineBufferStart = -1;
-    }
-    curX = 0;
-    curY += vertexLineHeight;
-    curLineIndex++;
-    lastWord.codepointIndex = -1;
-    xStartLastWordBoundary = 0;
-
-    // Figure out if there are any more lines to render...
-    if (!forceFullLayoutCalc && contain === 'both' && curY > rwSdf.y2) {
-      // Stop layout calculation early (for performance purposes) if:
-      // - We're not forcing a full layout calculation (for width/height calculation)
-      // - ...and we're containing the text vertically+horizontally (contain === 'both')
-      // - ...and we have a render window
-      // - ...and the next line is below the bottom of the render window
-      moreLines = false;
-    } else if (glyphResult && glyphResult.done) {
-      // If we've reached the end of the text, we know we're done
-      moreLines = false;
-    } else if (!nextLineWillFit) {
-      // If we're contained vertically+horizontally (contain === 'both')
-      // but not scrollable and the next line won't fit, we're done.
-      moreLines = false;
-    }
+    if (hasNextWord === false) doneProcessing = true;
   }
 
-  // Use textAlign to determine if we need to adjust the x position of the text
-  // in the buffer line by line
-  if (textAlign === 'center') {
-    const vertexTextW = contain === 'none' ? maxX : vertexW;
+  // Adds the last line to Buffer
+  layoutState.addLineToBuffer();
 
-    for (let i = 0; i < bufferLineInfos.length; i++) {
-      const line = bufferLineInfos[i]!;
-      // - 4 = the x position of a rightmost vertex
-      const lineWidth =
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        vertexBuffer[line.bufferEnd - 4]! - vertexBuffer[line.bufferStart]!;
+  if (textAlign === 'center' || textAlign === 'right') {
+    const vertexTextW = contain === 'none' ? layoutState.maxX : vertexW;
+    for (const line of layoutState.bufferLineInfos) {
+      if (!line) continue;
 
-      const xOffset = (vertexTextW - lineWidth) / 2;
-      for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        vertexBuffer[j]! += xOffset;
-      }
-    }
-  } else if (textAlign === 'right') {
-    const vertexTextW = contain === 'none' ? maxX : vertexW;
-
-    for (let i = 0; i < bufferLineInfos.length; i++) {
-      const line = bufferLineInfos[i]!;
       const lineWidth =
         line.bufferEnd === line.bufferStart
           ? 0
-          : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            vertexBuffer[line.bufferEnd - 4]! - vertexBuffer[line.bufferStart]!;
+          : (vertexBuffer[line.bufferEnd - 4] ?? 0) -
+            (vertexBuffer[line.bufferStart] ?? 0);
 
-      const xOffset = vertexTextW - lineWidth;
+      const xOffset =
+        textAlign === 'center'
+          ? (vertexTextW - lineWidth) / 2
+          : vertexTextW - lineWidth;
+
       for (let j = line.bufferStart; j < line.bufferEnd; j += 4) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        vertexBuffer[j]! += xOffset;
+        if (vertexBuffer[j] !== undefined) {
+          vertexBuffer[j] = (vertexBuffer[j] ?? 0) + xOffset;
+        }
       }
     }
   }
 
-  assertTruthy(glyphResult);
-
   return {
-    bufferNumFloats: bufferOffset,
-    bufferNumQuads: bufferOffset / 16,
-    layoutNumCharacters: glyphResult.done
+    bufferNumFloats: layoutState.bufferOffset,
+    bufferNumQuads: layoutState.bufferOffset / 16,
+    layoutNumCharacters: doneProcessing
       ? text.length - startingCodepointIndex
-      : glyphResult.value.cluster - startingCodepointIndex + 1,
-    fullyProcessed: !!glyphResult.done,
-    maxX,
-    maxY,
+      : layoutState.cluster - startingCodepointIndex + 1,
+    fullyProcessed: doneProcessing,
+    maxX: layoutState.maxX,
+    maxY: layoutState.maxY,
     numLines: lineCache.length,
   };
 }

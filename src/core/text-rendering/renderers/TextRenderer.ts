@@ -318,6 +318,7 @@ export interface TrProps extends TrFontProps {
    */
   overflowSuffix: string;
 
+  rtl: boolean;
   /**
    * Word Break for text
    *
@@ -410,6 +411,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   overflowSuffix: (state, value) => {
     state.props.overflowSuffix = value;
+  },
+  rtl: (state, value) => {
+    state.props.rtl = value;
   },
   wordBreak: (state, value) => {
     state.props.wordBreak = value;

@@ -108,6 +108,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       verticalAlign: props.verticalAlign,
       overflowSuffix: props.overflowSuffix,
       wordBreak: props.wordBreak,
+      rtl: props.rtl,
     });
 
     this.trState = textRendererState;

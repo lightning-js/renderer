@@ -57,6 +57,107 @@ export class SdfFontShaper extends FontShaper {
     this.kernings = kernings;
   }
 
+  *shapeTextWithWords(
+    props: FontShaperProps,
+    text: string,
+  ): Generator<
+    {
+      letters: Generator<MappedGlyphInfo, void, unknown> | null;
+      width: number;
+      isLineBreak?: boolean;
+      hasNextWord: boolean;
+      tabSize?: number;
+    },
+    void,
+    unknown
+  > {
+    const words = text
+      .split(/([ \t]+|\n|\u200B)/)
+      .filter((word) => word !== '');
+
+    let lastGlyphId: number | undefined = undefined;
+    let clusterCounter = 0;
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      if (word === undefined || word === '') continue;
+
+      const isSpace = /^[ \t]+$/.test(word); // Match spaces or tabs
+      const isLineBreak = word === '\n'; // Match newlines
+      const hasNextWord = i < words.length - 1;
+
+      if (isSpace) {
+        // Handle spaces
+        lastGlyphId = undefined;
+
+        const spaceWidth = word.split('').reduce((width, char) => {
+          const glyph = this.glyphMap.get(char.codePointAt(0)!);
+          return glyph ? width + glyph.xadvance + props.letterSpacing : width;
+        }, 0);
+
+        yield {
+          letters: null,
+          width: spaceWidth,
+          isLineBreak: false,
+          hasNextWord,
+        };
+      } else if (isLineBreak) {
+        // Handle line breaks
+        lastGlyphId = undefined;
+        yield { letters: null, width: 0, isLineBreak: true, hasNextWord };
+      } else {
+        // Process word
+        const currentWord: Array<MappedGlyphInfo> = [];
+        let currentWordWidth = 0;
+
+        for (const char of word) {
+          const codepoint = char.codePointAt(0)!;
+          const glyph = this.glyphMap.get(codepoint);
+
+          if (glyph) {
+            const kerning =
+              lastGlyphId !== undefined
+                ? (this.kernings[glyph.id]?.[lastGlyphId] || 0) +
+                  props.letterSpacing
+                : 0;
+
+            lastGlyphId = glyph.id;
+
+            const mappedGlyph: MappedGlyphInfo = {
+              mapped: true,
+              glyphId: glyph.id,
+              codepoint,
+              cluster: clusterCounter++, // Adjust if needed
+              xAdvance: glyph.xadvance + kerning,
+              yAdvance: 0,
+              xOffset: glyph.xoffset + kerning,
+              yOffset: glyph.yoffset,
+              xBearing: 0,
+              yBearing: 0,
+              width: glyph.width,
+              height: glyph.height,
+            };
+
+            currentWord.push(mappedGlyph);
+            if (mappedGlyph.codepoint !== 8203)
+              currentWordWidth += mappedGlyph.xAdvance;
+          }
+        }
+
+        if (currentWord.length > 0) {
+          yield {
+            letters: (function* () {
+              for (const glyph of currentWord) {
+                yield glyph;
+              }
+            })(),
+            width: currentWordWidth,
+            hasNextWord,
+          };
+        }
+      }
+    }
+  }
+
   *shapeText(
     props: FontShaperProps,
     codepoints: PeekableIterator<number>,
