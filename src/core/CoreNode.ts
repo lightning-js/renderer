@@ -908,7 +908,7 @@ export class CoreNode extends EventEmitter {
     }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
-    if (this.props.textureOptions?.resizeMode?.type === 'contain') {
+    if (this.props.textureOptions.resizeMode?.type === 'contain') {
       this.setUpdateType(UpdateType.Matrix);
     }
   };
@@ -993,7 +993,7 @@ export class CoreNode extends EventEmitter {
     if (
       texture !== null &&
       texture.dimensions !== null &&
-      p.textureOptions?.resizeMode?.type === 'contain'
+      p.textureOptions.resizeMode?.type === 'contain'
     ) {
       const { height, width } = p;
       const { width: tw, height: th } = texture.dimensions;
@@ -1015,7 +1015,7 @@ export class CoreNode extends EventEmitter {
         // Scale the node horizontally to maintain original aspect ratio
         const scaledW = tw * (height / th);
         extraX = (width - scaledW) / 2;
-        scaleY = scaledW / width;
+        scaleX = scaledW / width;
       }
 
       localTransform.translate(extraX, extraY).scale(scaleX, scaleY);
