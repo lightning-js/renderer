@@ -1121,8 +1121,8 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
-      updateType |= UpdateType.Global;
       updateParent = hasParent;
+      updateType |= UpdateType.Global;
     }
 
     if (updateType & UpdateType.Global) {
@@ -1151,7 +1151,7 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.RenderState) {
       renderState = this.checkRenderBounds();
-      this.setUpdateType(UpdateType.IsRenderable);
+      updateType |= UpdateType.IsRenderable;
 
       // if we're not going out of bounds, update the render state
       // this is done so the update loop can finish before we mark a node
