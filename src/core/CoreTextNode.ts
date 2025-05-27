@@ -135,7 +135,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.props.height = calcHeight;
     }
 
-    this.setUpdateType(UpdateType.Matrix);
+    this.setUpdateType(UpdateType.Local);
 
     // Incase the RAF loop has been stopped already before text was loaded,
     // we request a render so it can be drawn.
@@ -167,7 +167,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // If not containing, we must update the local transform to account for the
     // new width
     if (this.contain === 'none') {
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -182,7 +182,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // If not containing in the horizontal direction, we must update the local
     // transform to account for the new height
     if (this.contain !== 'both') {
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 

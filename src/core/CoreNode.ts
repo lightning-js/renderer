@@ -77,17 +77,24 @@ export enum UpdateType {
   Children = 1,
 
   /**
-   * Scale/Rotate transform update
+   * localTransform
    *
    * @remarks
    * CoreNode Properties Updated:
-   * - `scaleRotateTransform`
    * - `localTransform`
+   */
+  Local = 2,
+
+  /**
+   * globalTransform
+   *
+   * * @remarks
+   * CoreNode Properties Updated:
    * - `globalTransform`
    * - `renderBounds`
    * - `renderCoords`
    */
-  Matrix = 2,
+  Global = 4,
 
   /**
    * Clipping rect update
@@ -96,7 +103,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `clippingRect`
    */
-  Clipping = 4,
+  Clipping = 8,
 
   /**
    * Calculated ZIndex update
@@ -105,7 +112,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `calcZIndex`
    */
-  CalculatedZIndex = 8,
+  CalculatedZIndex = 16,
 
   /**
    * Z-Index Sorted Children update
@@ -114,7 +121,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `children` (sorts children by their `calcZIndex`)
    */
-  ZIndexSortedChildren = 16,
+  ZIndexSortedChildren = 32,
 
   /**
    * Premultiplied Colors update
@@ -126,7 +133,7 @@ export enum UpdateType {
    * - `premultipliedColorBl`
    * - `premultipliedColorBr`
    */
-  PremultipliedColors = 32,
+  PremultipliedColors = 64,
 
   /**
    * World Alpha update
@@ -135,7 +142,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `worldAlpha` = `parent.worldAlpha` * `alpha`
    */
-  WorldAlpha = 64,
+  WorldAlpha = 128,
 
   /**
    * Render State update
@@ -144,7 +151,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `renderState`
    */
-  RenderState = 128,
+  RenderState = 256,
 
   /**
    * Is Renderable update
@@ -153,27 +160,27 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `isRenderable`
    */
-  IsRenderable = 256,
+  IsRenderable = 512,
 
   /**
    * Render Texture update
    */
-  RenderTexture = 512,
+  RenderTexture = 1024,
 
   /**
    * Track if parent has render texture
    */
-  ParentRenderTexture = 1024,
+  ParentRenderTexture = 2048,
 
   /**
    * Render Bounds update
    */
-  RenderBounds = 2048,
+  RenderBounds = 4096,
 
   /**
    * RecalcUniforms
    */
-  RecalcUniforms = 4048,
+  RecalcUniforms = 8192,
 
   /**
    * None
@@ -183,7 +190,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 8191,
+  All = 16383,
 }
 
 /**
@@ -814,7 +821,7 @@ export class CoreNode extends EventEmitter {
     this.interactive = props.interactive;
 
     this.setUpdateType(
-      UpdateType.Matrix | UpdateType.RenderBounds | UpdateType.RenderState,
+      UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
     );
 
     // if the default texture isn't loaded yet, wait for it to load
@@ -909,7 +916,7 @@ export class CoreNode extends EventEmitter {
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
     if (this.props.textureOptions.resizeMode?.type === 'contain') {
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   };
 
@@ -953,12 +960,9 @@ export class CoreNode extends EventEmitter {
     this.updateType |= type;
 
     const parent = this.props.parent;
-    if (!parent) return;
+    if (parent === null) return;
 
-    if ((parent.updateType & UpdateType.Children) === 0) {
-      // Inform the parent if it doesn’t already have a child update
-      parent.setUpdateType(UpdateType.Children);
-    }
+    parent.setUpdateType(UpdateType.Children);
   }
 
   sortChildren() {
@@ -985,9 +989,9 @@ export class CoreNode extends EventEmitter {
       .translate(-px, -py));
   }
 
-  updateNodeMatrix() {
-    const p = this.props;
+  updateLocalMatrix() {
     const localTransform = this.updateLocalTransform();
+    const p = this.props;
     const texture = p.texture;
     // Handle 'contain' resize mode
     if (
@@ -1020,13 +1024,18 @@ export class CoreNode extends EventEmitter {
 
       localTransform.translate(extraX, extraY).scale(scaleX, scaleY);
     }
+  }
 
+  updateGlobalMatrix() {
+    const p = this.props;
+    const localTransform = this.localTransform!;
     const parent = p.parent;
+    let globalTransform: Matrix3d;
 
     if (this.parentHasRenderTexture === true && parent!.rtt === true) {
       // we are at the start of the RTT chain, so we need to reset the globalTransform
       // for correct RTT rendering
-      this.globalTransform = Matrix3d.identity();
+      globalTransform = this.globalTransform = Matrix3d.identity();
 
       // Maintain a full scene global transform for bounds detection
       this.sceneGlobalTransform = Matrix3d.copy(
@@ -1040,20 +1049,51 @@ export class CoreNode extends EventEmitter {
         parent!.sceneGlobalTransform || localTransform,
       ).multiply(localTransform);
 
-      this.globalTransform = Matrix3d.copy(
+      globalTransform = this.globalTransform = Matrix3d.copy(
         parent!.globalTransform || localTransform,
         this.globalTransform,
       );
     } else {
-      this.globalTransform = Matrix3d.copy(
+      globalTransform = this.globalTransform = Matrix3d.copy(
         parent?.globalTransform || localTransform,
         this.globalTransform,
       );
     }
 
     if (parent !== null) {
-      this.globalTransform.multiply(localTransform);
+      globalTransform.multiply(localTransform);
     }
+
+    const renderCoords = this.calculateRenderCoords();
+    const transform = this.sceneGlobalTransform || globalTransform;
+
+    if (transform.tb === 0 || transform.tc === 0) {
+      this.renderBound = createBound(
+        renderCoords.x1,
+        renderCoords.y1,
+        renderCoords.x3,
+        renderCoords.y3,
+        this.renderBound,
+      );
+      return;
+    }
+
+    const x1 = renderCoords.x1,
+      y1 = renderCoords.y1,
+      x2 = renderCoords.x2,
+      y2 = renderCoords.y2,
+      x3 = renderCoords.x3,
+      y3 = renderCoords.y3,
+      x4 = renderCoords.x4,
+      y4 = renderCoords.y4;
+
+    this.renderBound = createBound(
+      Math.min(x1, x2, x3, x4),
+      Math.min(y1, y2, y3, y4),
+      Math.max(x1, x2, x3, x4),
+      Math.max(y1, y2, y3, y4),
+      this.renderBound,
+    );
   }
 
   /**
@@ -1065,42 +1105,51 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
+    let updateType = this.updateType;
+    let childUpdateType = this.childUpdateType;
+
     const props = this.props;
     const parent = props.parent;
+    const hasParent = parent !== null;
+    let updateParent = false;
     let renderState: CoreNodeRenderState | null = null;
 
     // Handle specific RTT updates at this node level
-    if (this.updateType & UpdateType.RenderTexture && this.rtt === true) {
+    if (updateType & UpdateType.RenderTexture && this.rtt === true) {
       this.hasRTTupdates = true;
     }
 
-    if (this.updateType & UpdateType.Matrix) {
-      this.updateNodeMatrix();
-      this.calculateRenderCoords();
-      this.updateBoundingRect();
+    if (updateType & UpdateType.Local) {
+      this.updateLocalTransform();
+      updateType |= UpdateType.Global;
+      updateParent = hasParent;
+    }
 
-      this.setUpdateType(
+    if (updateType & UpdateType.Global) {
+      this.updateGlobalMatrix();
+
+      updateType |=
         UpdateType.RenderState |
-          UpdateType.Children |
-          UpdateType.RecalcUniforms,
-      );
-      this.childUpdateType |= UpdateType.Matrix;
+        UpdateType.Children |
+        UpdateType.RecalcUniforms;
+      childUpdateType |= UpdateType.Global;
+      updateParent = hasParent;
 
       if (this.clipping === true) {
-        this.setUpdateType(UpdateType.Clipping | UpdateType.RenderBounds);
-        this.childUpdateType |= UpdateType.RenderBounds;
+        updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
+        childUpdateType |= UpdateType.RenderBounds;
       }
     }
 
-    if (this.updateType & UpdateType.RenderBounds) {
+    if (updateType & UpdateType.RenderBounds) {
       this.createRenderBounds();
-      this.setUpdateType(UpdateType.RenderState);
-      this.setUpdateType(UpdateType.Children);
 
-      this.childUpdateType |= UpdateType.RenderBounds;
+      updateType |= UpdateType.RenderState | UpdateType.Children;
+      childUpdateType |= UpdateType.RenderBounds;
+      updateParent = hasParent;
     }
 
-    if (this.updateType & UpdateType.RenderState) {
+    if (updateType & UpdateType.RenderState) {
       renderState = this.checkRenderBounds();
       this.setUpdateType(UpdateType.IsRenderable);
 
@@ -1112,29 +1161,28 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    if (this.updateType & UpdateType.WorldAlpha) {
+    if (updateType & UpdateType.WorldAlpha) {
       this.worldAlpha = ((parent && parent.worldAlpha) || 1) * props.alpha;
-      this.setUpdateType(
+      updateParent = hasParent;
+      updateType |=
         UpdateType.Children |
-          UpdateType.PremultipliedColors |
-          UpdateType.IsRenderable,
-      );
-      this.childUpdateType |= UpdateType.WorldAlpha;
+        UpdateType.PremultipliedColors |
+        UpdateType.IsRenderable;
+      childUpdateType |= UpdateType.WorldAlpha;
     }
 
-    if (this.updateType & UpdateType.IsRenderable) {
+    if (updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
     }
 
-    if (this.updateType & UpdateType.Clipping) {
+    if (updateType & UpdateType.Clipping) {
       this.calculateClippingRect(parentClippingRect);
-      this.setUpdateType(UpdateType.Children);
-
-      this.childUpdateType |= UpdateType.Clipping;
-      this.childUpdateType |= UpdateType.RenderBounds;
+      updateParent = hasParent;
+      updateType |= UpdateType.Children;
+      childUpdateType |= UpdateType.Clipping | UpdateType.RenderBounds;
     }
 
-    if (this.updateType & UpdateType.PremultipliedColors) {
+    if (updateType & UpdateType.PremultipliedColors) {
       const alpha = this.worldAlpha;
 
       const tl = props.colorTl;
@@ -1173,8 +1221,12 @@ export class CoreNode extends EventEmitter {
       }
     }
 
+    if (updateParent === true) {
+      parent!.setUpdateType(UpdateType.Children);
+    }
+
     // No need to update zIndex if there is no parent
-    if (this.updateType & UpdateType.CalculatedZIndex && parent !== null) {
+    if (updateType & UpdateType.CalculatedZIndex && hasParent) {
       this.calculateZIndex();
       // Tell parent to re-sort children
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
@@ -1184,23 +1236,23 @@ export class CoreNode extends EventEmitter {
       props.strictBounds === true &&
       this.renderState === CoreNodeRenderState.OutOfBounds
     ) {
-      this.updateType &= ~UpdateType.RenderBounds; // remove render bounds update
+      updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
     if (
-      this.updateType & UpdateType.RecalcUniforms &&
+      updateType & UpdateType.RecalcUniforms &&
       this.hasShaderUpdater === true
     ) {
       //this exists because the boolean hasShaderUpdater === true
       this.shader!.update!();
     }
 
-    if (this.updateType & UpdateType.Children && this.children.length > 0) {
+    if (updateType & UpdateType.Children && this.children.length > 0) {
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
-        child.setUpdateType(this.childUpdateType);
+        child.setUpdateType(childUpdateType);
 
         if (child.updateType === 0) {
           continue;
@@ -1230,7 +1282,7 @@ export class CoreNode extends EventEmitter {
 
     // Sorting children MUST happen after children have been updated so
     // that they have the oppotunity to update their calculated zIndex.
-    if (this.updateType & UpdateType.ZIndexSortedChildren) {
+    if (updateType & UpdateType.ZIndexSortedChildren) {
       // reorder z-index
       this.sortChildren();
     }
@@ -1486,21 +1538,23 @@ export class CoreNode extends EventEmitter {
   }
 
   calculateRenderCoords() {
-    const { width, height } = this;
-
-    const g = this.globalTransform!;
-    const tx = g.tx,
+    const width = this.width,
+      height = this.height,
+      g = this.globalTransform as Matrix3d,
+      tx = g.tx,
       ty = g.ty,
       ta = g.ta,
       tb = g.tb,
       tc = g.tc,
       td = g.td;
+
+    let renderCoords: RenderCoords;
     if (tb === 0 && tc === 0) {
       const minX = tx;
       const maxX = tx + width * ta;
       const minY = ty;
       const maxY = ty + height * td;
-      this.renderCoords = RenderCoords.translate(
+      renderCoords = this.renderCoords = RenderCoords.translate(
         //top-left
         minX,
         minY,
@@ -1516,7 +1570,7 @@ export class CoreNode extends EventEmitter {
         this.renderCoords,
       );
     } else {
-      this.renderCoords = RenderCoords.translate(
+      renderCoords = this.renderCoords = RenderCoords.translate(
         //top-left
         tx,
         ty,
@@ -1533,23 +1587,23 @@ export class CoreNode extends EventEmitter {
       );
     }
     if (this.sceneGlobalTransform === undefined) {
-      return;
+      return renderCoords;
     }
 
-    const {
-      tx: stx,
-      ty: sty,
-      ta: sta,
-      tb: stb,
-      tc: stc,
-      td: std,
-    } = this.sceneGlobalTransform;
+    const sgt = this.sceneGlobalTransform,
+      stx = sgt.tx,
+      sty = sgt.ty,
+      sta = sgt.ta,
+      stb = sgt.tb,
+      stc = sgt.tc,
+      std = sgt.td;
+
     if (stb === 0 && stc === 0) {
       const minX = stx;
       const maxX = stx + width * sta;
       const minY = sty;
       const maxY = sty + height * std;
-      this.sceneRenderCoords = RenderCoords.translate(
+      return (this.sceneRenderCoords = RenderCoords.translate(
         //top-left
         minX,
         minY,
@@ -1563,24 +1617,23 @@ export class CoreNode extends EventEmitter {
         minX,
         maxY,
         this.sceneRenderCoords,
-      );
-    } else {
-      this.sceneRenderCoords = RenderCoords.translate(
-        //top-left
-        stx,
-        sty,
-        //top-right
-        stx + width * sta,
-        sty + width * stc,
-        //bottom-right
-        stx + width * sta + height * stb,
-        sty + width * stc + height * std,
-        //bottom-left
-        stx + height * stb,
-        sty + height * std,
-        this.sceneRenderCoords,
-      );
+      ));
     }
+    return (this.sceneRenderCoords = RenderCoords.translate(
+      //top-left
+      stx,
+      sty,
+      //top-right
+      stx + width * sta,
+      sty + width * stc,
+      //bottom-right
+      stx + width * sta + height * stb,
+      sty + width * stc + height * std,
+      //bottom-left
+      stx + height * stb,
+      sty + height * std,
+      this.sceneRenderCoords,
+    ));
   }
 
   /**
@@ -1592,15 +1645,16 @@ export class CoreNode extends EventEmitter {
    * Finally, the node's parentClippingRect and clippingRect properties are updated.
    */
   calculateClippingRect(parentClippingRect: RectWithValid) {
-    const { clippingRect, props, globalTransform: gt } = this;
-    const { clipping } = props;
-    const isRotated = gt!.tb !== 0 || gt!.tc !== 0;
+    const clippingRect = this.clippingRect;
+    const gt = this.globalTransform as Matrix3d;
+    const p = this.props;
+    const clipping = p.clipping;
 
-    if (clipping === true && isRotated === false) {
-      clippingRect.x = gt!.tx;
-      clippingRect.y = gt!.ty;
-      clippingRect.width = this.width * gt!.ta;
-      clippingRect.height = this.height * gt!.td;
+    if (clipping === true && (gt.tb !== 0 || gt.tc !== 0) === true) {
+      clippingRect.x = gt.tx;
+      clippingRect.y = gt.ty;
+      clippingRect.width = this.width * gt.ta;
+      clippingRect.height = this.height * gt.td;
       clippingRect.valid = true;
     } else {
       clippingRect.valid = false;
@@ -1666,7 +1720,7 @@ export class CoreNode extends EventEmitter {
     }
 
     const p = this.props;
-    const t = this.globalTransform!;
+    const t = this.globalTransform as Matrix3d;
     const coords = this.renderCoords;
     const texture = p.texture || this.stage.defaultTexture;
 
@@ -1680,7 +1734,7 @@ export class CoreNode extends EventEmitter {
       texture,
       textureOptions: p.textureOptions,
       textureCoords: this.textureCoords,
-      shader: p.shader as CoreShaderNode<any>,
+      shader: p.shader as CoreShaderNode,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
       tx: t.tx,
@@ -1719,7 +1773,7 @@ export class CoreNode extends EventEmitter {
   set x(value: number) {
     if (this.props.x !== value) {
       this.props.x = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1746,7 +1800,7 @@ export class CoreNode extends EventEmitter {
   set y(value: number) {
     if (this.props.y !== value) {
       this.props.y = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1758,7 +1812,7 @@ export class CoreNode extends EventEmitter {
     if (this.props.width !== value) {
       this.textureCoords = undefined;
       this.props.width = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt === true) {
         this.framebufferDimensions!.width = value;
@@ -1780,7 +1834,7 @@ export class CoreNode extends EventEmitter {
     if (this.props.height !== value) {
       this.textureCoords = undefined;
       this.props.height = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt === true) {
         this.framebufferDimensions!.height = value;
@@ -1814,7 +1868,7 @@ export class CoreNode extends EventEmitter {
   set scaleX(value: number) {
     if (this.props.scaleX !== value) {
       this.props.scaleX = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1825,7 +1879,7 @@ export class CoreNode extends EventEmitter {
   set scaleY(value: number) {
     if (this.props.scaleY !== value) {
       this.props.scaleY = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1838,7 +1892,7 @@ export class CoreNode extends EventEmitter {
       this.props.mountX = value;
       this.props.mountY = value;
       this.props.mount = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1849,7 +1903,7 @@ export class CoreNode extends EventEmitter {
   set mountX(value: number) {
     if (this.props.mountX !== value) {
       this.props.mountX = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1860,7 +1914,7 @@ export class CoreNode extends EventEmitter {
   set mountY(value: number) {
     if (this.props.mountY !== value) {
       this.props.mountY = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1873,7 +1927,7 @@ export class CoreNode extends EventEmitter {
       this.props.pivotX = value;
       this.props.pivotY = value;
       this.props.pivot = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1884,7 +1938,7 @@ export class CoreNode extends EventEmitter {
   set pivotX(value: number) {
     if (this.props.pivotX !== value) {
       this.props.pivotX = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1895,7 +1949,7 @@ export class CoreNode extends EventEmitter {
   set pivotY(value: number) {
     if (this.props.pivotY !== value) {
       this.props.pivotY = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1906,7 +1960,7 @@ export class CoreNode extends EventEmitter {
   set rotation(value: number) {
     if (this.props.rotation !== value) {
       this.props.rotation = value;
-      this.setUpdateType(UpdateType.Matrix);
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -1976,7 +2030,7 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
-    this.childUpdateType |= UpdateType.Matrix | UpdateType.Clipping;
+    this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
   }
 
   get color(): number {
