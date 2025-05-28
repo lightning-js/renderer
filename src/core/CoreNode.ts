@@ -1647,10 +1647,8 @@ export class CoreNode extends EventEmitter {
   calculateClippingRect(parentClippingRect: RectWithValid) {
     const clippingRect = this.clippingRect;
     const gt = this.globalTransform as Matrix3d;
-    const p = this.props;
-    const clipping = p.clipping;
 
-    if (clipping === true && (gt.tb !== 0 || gt.tc !== 0) === true) {
+    if ((gt.tb !== 0 || gt.tc !== 0) === false) {
       clippingRect.x = gt.tx;
       clippingRect.y = gt.ty;
       clippingRect.width = this.width * gt.ta;
