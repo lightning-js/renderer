@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -52,6 +51,7 @@ export class CoreAnimationController
     this.onAnimating = this.onAnimating.bind(this);
     this.onFinished = this.onFinished.bind(this);
     this.onTick = this.onTick.bind(this);
+    this.onDestroy = this.onDestroy.bind(this);
   }
 
   start(): IAnimationController {
@@ -107,6 +107,7 @@ export class CoreAnimationController
     this.animation.off('finished', this.onFinished);
     this.animation.off('animating', this.onAnimating);
     this.animation.off('tick', this.onTick);
+    this.animation.off('destroy', this.onDestroy);
   }
 
   private makeStoppedPromise(): void {
@@ -115,6 +116,11 @@ export class CoreAnimationController
         this.stoppedResolve = resolve;
       });
     }
+  }
+
+  private onDestroy(this: CoreAnimationController): void {
+    this.unregisterAnimation();
+    this.state = 'stopped';
   }
 
   private onFinished(this: CoreAnimationController): void {
