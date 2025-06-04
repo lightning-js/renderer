@@ -96,6 +96,7 @@ export class CoreAnimationController
     this.animation.once('finished', this.onFinished);
     this.animation.on('animating', this.onAnimating);
     this.animation.on('tick', this.onTick);
+    this.animation.on('destroyed', this.onDestroy);
     // Then register the animation
     this.manager.registerAnimation(this.animation);
   }
@@ -119,6 +120,7 @@ export class CoreAnimationController
   }
 
   private onDestroy(this: CoreAnimationController): void {
+    console.log('on destroy');
     this.unregisterAnimation();
     this.state = 'stopped';
   }
