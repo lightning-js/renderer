@@ -39,8 +39,6 @@
 
 export * from '../src/main-api/INode.js';
 export * from '../src/main-api/Renderer.js';
-export * from '../src/main-api/ShaderController.js';
-export * from '../src/main-api/DynamicShaderController.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 
@@ -51,28 +49,22 @@ export {
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
-export type {
-  EffectProps,
-  FadeOutEffectProps,
-  LinearGradientEffectProps,
-  RadialGradientEffectProps,
-  GrayscaleEffectProps,
-  GlitchEffectProps,
-  RadialProgressEffectProps,
-  HolePunchEffectProps,
-} from '../src/core/CoreShaderManager.js';
-export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRenderer.js';
-export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
 
+export * from '../src/core/renderers/CoreShaderNode.js';
+export * from '../src/core/shaders/templates/BorderTemplate.js';
+export * from '../src/core/shaders/templates/HolePunchTemplate.js';
+export * from '../src/core/shaders/templates/RoundedTemplate.js';
+export * from '../src/core/shaders/templates/ShadowTemplate.js';
+export * from '../src/core/shaders/templates/LinearGradientTemplate.js';
+export * from '../src/core/shaders/templates/RadialGradientTemplate.js';
+
 // Shaders
-export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
-export * from '../src/core/renderers/webgl/shaders/effects/ShaderEffect.js';
+export * from '../src/core/renderers/webgl/WebGlShaderProgram.js';
 export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/ShaderUtils.js';
 
 // Textures
@@ -87,3 +79,12 @@ export * from '../src/core/text-rendering/font-face-types/SdfTrFontFace/SdfTrFon
 
 // Stage (type only for Core Extensions)
 export type * from '../src/core/Stage.js';
+
+/**
+ * @deprecated Use `import { WebGlRenderer } @lightningjs/renderer/webgl` instead
+ */
+export type { WebGlRenderer as WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlRenderer.js';
+/**
+ * @deprecated Use `import { WebGlCtxTexture } @lightningjs/renderer/webgl` instead
+ */
+export type { WebGlCtxTexture as WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCtxTexture.js';

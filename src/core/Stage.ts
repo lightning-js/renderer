@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { startLoop, getTimeStamp } from './platform.js';
+
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
 import { AnimationManager } from './animations/AnimationManager.js';
 import {
@@ -27,7 +27,7 @@ import {
 } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { TrFontManager } from './text-rendering/TrFontManager.js';
-import { CoreShaderManager, type ShaderMap } from './CoreShaderManager.js';
+import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   TextRenderer,
   type TextRendererMap,
@@ -45,41 +45,31 @@ import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
-import type { CoreRendererOptions } from './renderers/CoreRenderer.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { WebGlCoreRenderer } from './renderers/webgl/WebGlCoreRenderer.js';
-import type { CanvasCoreRenderer } from './renderers/canvas/CanvasCoreRenderer.js';
-import type { BaseShaderController } from '../main-api/ShaderController.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
+import { pointInBound } from './lib/utils.js';
+import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
+import type { Platform } from './platforms/Platform.js';
+import type { WebPlatform } from './platforms/web/WebPlatform.js';
+import type { RendererMainSettings } from '../main-api/Renderer.js';
 
-export interface StageOptions {
-  appWidth: number;
-  appHeight: number;
+export type StageOptions = Omit<
+  RendererMainSettings,
+  'inspector' | 'platform'
+> & {
   textureMemory: TextureMemoryManagerSettings;
-  boundsMargin: number | [number, number, number, number];
-  deviceLogicalPixelRatio: number;
-  devicePhysicalPixelRatio: number;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  clearColor: number;
   fpsUpdateInterval: number;
-  enableContextSpy: boolean;
-  forceWebGL2: boolean;
-  numImageWorkers: number;
-  renderEngine: typeof WebGlCoreRenderer | typeof CanvasCoreRenderer;
   eventBus: EventEmitter;
-  quadBufferSize: number;
-  fontEngines: (typeof CanvasTextRenderer | typeof SdfTextRenderer)[];
+  platform: Platform | WebPlatform;
   inspector: boolean;
-  strictBounds: boolean;
-  textureProcessingTimeLimit: number;
-  createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
-}
+};
 
 export type StageFpsUpdateHandler = (
   stage: Stage,
@@ -91,7 +81,11 @@ export type StageFrameTickHandler = (
   frameTickData: FrameTickPayload,
 ) => void;
 
-const bufferMemory = 2e6;
+export interface Point {
+  x: number;
+  y: number;
+}
+
 const autoStart = true;
 
 export class Stage {
@@ -104,12 +98,17 @@ export class Stage {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
+  public readonly interactiveNodes: Set<CoreNode> = new Set();
   public boundsMargin: [number, number, number, number];
-  public readonly defShaderCtr: BaseShaderController;
-  public readonly strictBound: Bound;
-  public readonly preloadBound: Bound;
+  public readonly defShaderNode: CoreShaderNode | null = null;
+  public strictBound: Bound;
+  public preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
+  public pixelRatio: number;
+  public readonly bufferMemory: number = 2e6;
+  public readonly platform: Platform | WebPlatform;
+  public readonly calculateTextureCoord: boolean;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -125,6 +124,7 @@ export class Stage {
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
   private numQuadsRendered = 0;
@@ -139,7 +139,7 @@ export class Stage {
   /**
    * Stage constructor
    */
-  constructor(readonly options: StageOptions) {
+  constructor(public options: StageOptions) {
     const {
       canvas,
       clearColor,
@@ -153,7 +153,15 @@ export class Stage {
       renderEngine,
       fontEngines,
       createImageBitmapSupport,
+      platform,
     } = options;
+
+    assertTruthy(
+      platform !== null,
+      'A CorePlatform is not provided in the options',
+    );
+
+    this.platform = platform;
 
     this.eventBus = options.eventBus;
     this.txManager = new CoreTextureManager(this, {
@@ -168,7 +176,7 @@ export class Stage {
     });
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
-    this.shManager = new CoreShaderManager();
+
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
     this.strictBounds = options.strictBounds;
@@ -185,25 +193,26 @@ export class Stage {
     this.strictBound = createBound(0, 0, appWidth, appHeight);
     this.preloadBound = createPreloadBounds(this.strictBound, bm);
 
-    const rendererOptions: CoreRendererOptions = {
+    this.clrColor = clearColor;
+
+    this.pixelRatio =
+      options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
+
+    this.renderer = new renderEngine({
       stage: this,
       canvas,
-      pixelRatio:
-        options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio,
-      clearColor: clearColor ?? 0xff000000,
-      bufferMemory,
-      txManager: this.txManager,
-      txMemManager: this.txMemManager,
-      shManager: this.shManager,
       contextSpy: this.contextSpy,
       forceWebGL2,
-    };
+    });
 
-    this.renderer = new renderEngine(rendererOptions);
+    this.shManager = new CoreShaderManager(this);
+
+    this.defShaderNode = this.renderer.getDefaultShaderNode();
+    this.calculateTextureCoord = this.renderer.getTextureCoords !== undefined;
+
     const renderMode = this.renderer.mode || 'webgl';
 
     this.createDefaultTexture();
-    this.defShaderCtr = this.renderer.getDefShaderCtr();
     setPremultiplyMode(renderMode);
 
     // Must do this after renderer is created
@@ -271,29 +280,29 @@ export class Stage {
       parent: null,
       texture: null,
       textureOptions: {},
-      shader: this.defShaderCtr,
+      shader: this.defShaderNode,
       rtt: false,
       src: null,
       scale: 1,
-      preventCleanup: false,
       strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
 
     // execute platform start loop
-    if (autoStart) {
-      startLoop(this);
+    if (autoStart === true) {
+      this.platform.startLoop(this);
     }
   }
 
   setClearColor(color: number) {
+    this.clearColor = color;
     this.renderer.updateClearColor(color);
     this.renderRequested = true;
   }
 
   updateFrameTime() {
-    const newFrameTime = getTimeStamp();
+    const newFrameTime = this.platform!.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.deltaTime = !this.lastFrameTime
@@ -314,7 +323,6 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
-    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
@@ -364,12 +372,12 @@ export class Stage {
    * Start a new frame draw
    */
   drawFrame() {
-    const { renderer, renderRequested } = this;
-    assertTruthy(renderer);
+    const { renderer, renderRequested, root } = this;
+    const txMemManager = this.txMemManager;
 
     // Update tree if needed
-    if (this.root.updateType !== 0) {
-      this.root.update(this.deltaTime, this.root.clippingRect);
+    if (root.updateType !== 0) {
+      root.update(this.deltaTime, root.clippingRect);
     }
 
     // Process some textures
@@ -379,12 +387,12 @@ export class Stage {
     renderer.reset();
 
     // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested === true) {
-      this.txMemManager.cleanup(false);
+    if (txMemManager.criticalCleanupRequested === true) {
+      txMemManager.cleanup(false);
 
-      if (this.txMemManager.criticalCleanupRequested === true) {
+      if (txMemManager.criticalCleanupRequested === true) {
         // If we still need to cleanup, request another but aggressive cleanup
-        this.txMemManager.cleanup(true);
+        txMemManager.cleanup(true);
       }
     }
 
@@ -398,13 +406,13 @@ export class Stage {
     this.addQuads(this.root);
 
     // Perform render pass
-    renderer?.render();
+    renderer.render();
 
     this.calculateFps();
     this.calculateQuads();
 
     // Reset renderRequested flag if it was set
-    if (renderRequested) {
+    if (renderRequested === true) {
       this.renderRequested = false;
     }
   }
@@ -589,20 +597,6 @@ export class Stage {
     return resolvedTextRenderer as unknown as TextRenderer;
   }
 
-  /**
-   * Create a shader controller instance
-   *
-   * @param type
-   * @param props
-   * @returns
-   */
-  createShaderCtr(
-    type: keyof ShaderMap,
-    props: Record<string, unknown>,
-  ): BaseShaderController {
-    return this.shManager.loadShader(type, props);
-  }
-
   createNode(props: Partial<CoreNodeProps>) {
     const resolvedProps = this.resolveNodeDefaults(props);
     return new CoreNode(this, resolvedProps);
@@ -610,8 +604,7 @@ export class Stage {
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
-    const resolvedProps = {
-      ...this.resolveNodeDefaults(props),
+    const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -630,9 +623,9 @@ export class Stage {
       textBaseline: props.textBaseline ?? 'alphabetic',
       verticalAlign: props.verticalAlign ?? 'middle',
       overflowSuffix: props.overflowSuffix ?? '...',
+      wordBreak: props.wordBreak ?? 'normal',
       debug: props.debug ?? {},
-      shaderProps: null,
-    };
+    });
 
     const resolvedTextRenderer = this.resolveTextRenderer(
       resolvedProps,
@@ -657,6 +650,57 @@ export class Stage {
   }
 
   /**
+   * Update the viewport bounds
+   */
+  updateViewportBounds() {
+    const { appWidth, appHeight } = this.options;
+    this.strictBound = createBound(0, 0, appWidth, appHeight);
+    this.preloadBound = createPreloadBounds(
+      this.strictBound,
+      this.boundsMargin,
+    );
+    this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.root.childUpdateType |= UpdateType.RenderBounds;
+  }
+
+  /** Find all nodes at a given point
+   * @param data
+   */
+  findNodesAtPoint(data: Point): CoreNode[] {
+    const x = data.x / this.options.deviceLogicalPixelRatio;
+    const y = data.y / this.options.deviceLogicalPixelRatio;
+    const nodes: CoreNode[] = [];
+    for (const node of this.interactiveNodes) {
+      if (node.isRenderable === false) {
+        continue;
+      }
+      if (pointInBound(x, y, node.renderBound!) === true) {
+        nodes.push(node);
+      }
+    }
+    return nodes;
+  }
+
+  /**
+   * Find the top node at a given point
+   * @param data
+   * @returns
+   */
+  getNodeFromPosition(data: Point): CoreNode | null {
+    const nodes: CoreNode[] = this.findNodesAtPoint(data);
+    if (nodes.length === 0) {
+      return null;
+    }
+    let topNode = nodes[0] as CoreNode;
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i]!.zIndex > topNode.zIndex) {
+        topNode = nodes[i]!;
+      }
+    }
+    return topNode || null;
+  }
+
+  /**
    * Resolves the default property values for a Node
    *
    * @remarks
@@ -669,18 +713,23 @@ export class Stage {
    */
   protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const color = props.color ?? 0xffffffff;
-    const colorTl = props.colorTl ?? props.colorTop ?? props.colorLeft ?? color;
-    const colorTr =
-      props.colorTr ?? props.colorTop ?? props.colorRight ?? color;
-    const colorBl =
-      props.colorBl ?? props.colorBottom ?? props.colorLeft ?? color;
-    const colorBr =
-      props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
+    const colorTop = props.colorTop ?? color;
+    const colorBottom = props.colorBottom ?? color;
+    const colorLeft = props.colorLeft ?? color;
+    const colorRight = props.colorRight ?? color;
 
-    let data = {};
-    if (this.options.inspector === true) {
-      data = santizeCustomDataMap(props.data ?? {});
-    }
+    const colorTl = props.colorTl ?? colorTop ?? colorLeft ?? color;
+    const colorTr = props.colorTr ?? colorTop ?? colorRight ?? color;
+    const colorBl = props.colorBl ?? colorBottom ?? colorLeft ?? color;
+    const colorBr = props.colorBr ?? colorBottom ?? colorRight ?? color;
+
+    const scale = props.scale ?? null;
+    const mount = props.mount ?? 0;
+    const pivot = props.pivot ?? 0.5;
+
+    const data = this.options.inspector
+      ? santizeCustomDataMap(props.data ?? {})
+      : {};
 
     return {
       x: props.x ?? 0,
@@ -692,41 +741,39 @@ export class Stage {
       boundsMargin: props.boundsMargin ?? null,
       clipping: props.clipping ?? false,
       color,
-      colorTop: props.colorTop ?? color,
-      colorBottom: props.colorBottom ?? color,
-      colorLeft: props.colorLeft ?? color,
-      colorRight: props.colorRight ?? color,
-      colorBl,
-      colorBr,
+      colorTop,
+      colorBottom,
+      colorLeft,
+      colorRight,
       colorTl,
       colorTr,
+      colorBl,
+      colorBr,
       zIndex: props.zIndex ?? 0,
       zIndexLocked: props.zIndexLocked ?? 0,
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? this.defShaderCtr,
-      // Since setting the `src` will trigger a texture load, we need to set it after
-      // we set the texture. Otherwise, problems happen.
+      shader: props.shader ?? this.defShaderNode,
       src: props.src ?? null,
       srcHeight: props.srcHeight,
       srcWidth: props.srcWidth,
       srcX: props.srcX,
       srcY: props.srcY,
-      scale: props.scale ?? null,
-      scaleX: props.scaleX ?? props.scale ?? 1,
-      scaleY: props.scaleY ?? props.scale ?? 1,
-      mount: props.mount ?? 0,
-      mountX: props.mountX ?? props.mount ?? 0,
-      mountY: props.mountY ?? props.mount ?? 0,
-      pivot: props.pivot ?? 0.5,
-      pivotX: props.pivotX ?? props.pivot ?? 0.5,
-      pivotY: props.pivotY ?? props.pivot ?? 0.5,
+      scale,
+      scaleX: props.scaleX ?? scale ?? 1,
+      scaleY: props.scaleY ?? scale ?? 1,
+      mount,
+      mountX: props.mountX ?? mount,
+      mountY: props.mountY ?? mount,
+      pivot,
+      pivotX: props.pivotX ?? pivot,
+      pivotY: props.pivotY ?? pivot,
       rotation: props.rotation ?? 0,
       rtt: props.rtt ?? false,
-      data: data,
-      preventCleanup: props.preventCleanup ?? false,
+      data,
       imageType: props.imageType,
+      interactive: props.interactive ?? false,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
@@ -739,5 +786,15 @@ export class Stage {
    */
   cleanup(aggressive: boolean) {
     this.txMemManager.cleanup(aggressive);
+  }
+
+  set clearColor(value: number) {
+    this.renderer.updateClearColor(value);
+    this.renderRequested = true;
+    this.clrColor = value;
+  }
+
+  get clearColor() {
+    return this.clrColor;
   }
 }

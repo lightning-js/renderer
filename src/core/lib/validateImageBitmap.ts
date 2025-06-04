@@ -1,10 +1,14 @@
+import type { Platform } from '../platforms/Platform.js';
+
 export interface CreateImageBitmapSupport {
   basic: boolean; // Supports createImageBitmap(image)
   options: boolean; // Supports createImageBitmap(image, options)
   full: boolean; // Supports createImageBitmap(image, sx, sy, sw, sh, options)
 }
 
-export async function validateCreateImageBitmap(): Promise<CreateImageBitmapSupport> {
+export async function validateCreateImageBitmap(
+  platform: Platform,
+): Promise<CreateImageBitmapSupport> {
   // Test if createImageBitmap is supported using a simple 1x1 PNG image
   // prettier-ignore
   const pngBinaryData = new Uint8Array([
@@ -47,14 +51,14 @@ export async function validateCreateImageBitmap(): Promise<CreateImageBitmapSupp
 
   // Test basic createImageBitmap support
   const blob = new Blob([pngBinaryData], { type: 'image/png' });
-  const bitmap = await createImageBitmap(blob);
+  const bitmap = await platform.createImageBitmap(blob);
   bitmap.close?.();
   support.basic = true;
 
   // Test createImageBitmap with options support
   try {
     const options = { premultiplyAlpha: 'none' as const };
-    const bitmapWithOptions = await createImageBitmap(blob, options);
+    const bitmapWithOptions = await platform.createImageBitmap(blob, options);
     bitmapWithOptions.close?.();
     support.options = true;
   } catch (e) {
@@ -63,9 +67,16 @@ export async function validateCreateImageBitmap(): Promise<CreateImageBitmapSupp
 
   // Test createImageBitmap with full options support
   try {
-    const bitmapWithFullOptions = await createImageBitmap(blob, 0, 0, 1, 1, {
-      premultiplyAlpha: 'none',
-    });
+    const bitmapWithFullOptions = await platform.createImageBitmap(
+      blob,
+      0,
+      0,
+      1,
+      1,
+      {
+        premultiplyAlpha: 'none',
+      },
+    );
     bitmapWithFullOptions.close?.();
     support.full = true;
   } catch (e) {

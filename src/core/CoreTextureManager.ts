@@ -26,12 +26,12 @@ import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
 import { TextureType, type Texture } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
 import {
   validateCreateImageBitmap,
   type CreateImageBitmapSupport,
 } from './lib/validateImageBitmap.js';
+import type { Platform } from './platforms/Platform.js';
 
 /**
  * Augmentable map of texture class types
@@ -185,8 +185,10 @@ export class CoreTextureManager extends EventEmitter {
   private stage: Stage;
   private numImageWorkers: number;
 
+  public platform: Platform;
+
   imageWorkerManager: ImageWorkerManager | null = null;
-  hasCreateImageBitmap = !!self.createImageBitmap;
+  hasCreateImageBitmap = false;
   imageBitmapSupported = {
     basic: false,
     options: false,
@@ -219,10 +221,11 @@ export class CoreTextureManager extends EventEmitter {
 
     const { numImageWorkers, createImageBitmapSupport } = settings;
     this.stage = stage;
+    this.platform = stage.platform;
     this.numImageWorkers = numImageWorkers;
 
     if (createImageBitmapSupport === 'auto') {
-      validateCreateImageBitmap()
+      validateCreateImageBitmap(this.platform)
         .then((result) => {
           this.initialize(result);
         })
@@ -262,15 +265,15 @@ export class CoreTextureManager extends EventEmitter {
       support.basic || support.options || support.full;
     this.imageBitmapSupported = support;
 
-    if (!this.hasCreateImageBitmap) {
+    if (this.hasCreateImageBitmap === false) {
       console.warn(
         '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
       );
     }
 
     if (
-      this.hasCreateImageBitmap &&
-      this.hasWorker &&
+      this.hasCreateImageBitmap === true &&
+      this.hasWorker === true &&
       this.numImageWorkers > 0
     ) {
       this.imageWorkerManager = new ImageWorkerManager(
@@ -485,12 +488,13 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    const startTime = getTimeStamp();
+    const platform = this.platform;
+    const startTime = platform.getTimeStamp();
 
     // Process priority queue
     while (
       this.priorityQueue.length > 0 &&
-      getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.pop()!;
@@ -502,7 +506,7 @@ export class CoreTextureManager extends EventEmitter {
     // Process uploads
     while (
       this.uploadTextureQueue.length > 0 &&
-      getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.uploadTexture(this.uploadTextureQueue.pop()!);
@@ -511,7 +515,7 @@ export class CoreTextureManager extends EventEmitter {
     // Process downloads
     while (
       this.downloadTextureSourceQueue.length > 0 &&
-      getTimeStamp() - startTime < maxProcessingTime
+      platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.downloadTextureSourceQueue.shift()!;

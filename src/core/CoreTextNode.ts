@@ -25,7 +25,12 @@ import type {
   TrFailedEventHandler,
   TrLoadedEventHandler,
 } from './text-rendering/renderers/TextRenderer.js';
-import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
+import {
+  CoreNode,
+  CoreNodeRenderState,
+  UpdateType,
+  type CoreNodeProps,
+} from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
@@ -33,8 +38,6 @@ import type {
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
-import { assertTruthy } from '../utils.js';
-import { Matrix3d } from './lib/Matrix3d.js';
 
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
@@ -108,6 +111,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       textBaseline: props.textBaseline,
       verticalAlign: props.verticalAlign,
       overflowSuffix: props.overflowSuffix,
+      wordBreak: props.wordBreak,
     });
 
     this.trState = textRendererState;
@@ -130,7 +134,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.props.width = calcWidth;
       this.props.height = calcHeight;
     }
-    this.updateLocalTransform();
+    this.setUpdateType(UpdateType.Local);
 
     // Incase the RAF loop has been stopped already before text was loaded,
     // we request a render so it can be drawn.
@@ -187,6 +191,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override set color(value: number) {
     this.textRenderer.set.color(this.trState, value);
+    this.setUpdateType(UpdateType.RenderTexture);
   }
 
   get text(): string {
@@ -210,7 +215,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._textRendererOverride,
     );
 
-    if (!textRenderer) {
+    if (textRenderer === null) {
       console.warn(
         'Text Renderer not found for font',
         this.trState.props.fontFamily,
@@ -350,6 +355,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer.set.overflowSuffix(this.trState, value);
   }
 
+  get wordBreak(): CoreTextNodeProps['wordBreak'] {
+    return this.trState.props.wordBreak;
+  }
+
+  set wordBreak(value: CoreTextNodeProps['wordBreak']) {
+    this.textRenderer.set.wordBreak(this.trState, value);
+  }
+
   get debug(): CoreTextNodeProps['debug'] {
     return this.trState.props.debug;
   }
@@ -361,23 +374,24 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   override update(delta: number, parentClippingRect: RectWithValid) {
     super.update(delta, parentClippingRect);
 
-    assertTruthy(this.globalTransform);
-
     // globalTransform is updated in super.update(delta)
-    this.textRenderer.set.x(this.trState, this.globalTransform.tx);
-    this.textRenderer.set.y(this.trState, this.globalTransform.ty);
+    this.textRenderer.set.x(this.trState, this.globalTransform!.tx);
+    this.textRenderer.set.y(this.trState, this.globalTransform!.ty);
   }
 
-  override checkBasicRenderability() {
-    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
-      return false;
+  override updateIsRenderable() {
+    // If the node is out of bounds or has an alpha of 0, it is not renderable
+    if (
+      this.worldAlpha === 0 ||
+      this.renderState <= CoreNodeRenderState.OutOfBounds
+    ) {
+      this.setRenderable(false);
+      return;
     }
 
-    if (this.trState && this.trState.props.text !== '') {
-      return true;
+    if (this.trState !== undefined && this.trState.props.text !== '') {
+      this.setRenderable(true);
     }
-
-    return false;
   }
 
   override setRenderable(isRenderable: boolean) {
@@ -386,11 +400,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override renderQuads(renderer: CoreRenderer) {
-    assertTruthy(this.globalTransform);
-
     // If the text renderer does not support rendering quads, fallback to the
     // default renderQuads method
-    if (!this.textRenderer.renderQuads) {
+    if (this.textRenderer.renderQuads === undefined) {
       super.renderQuads(renderer);
       return;
     }
@@ -399,8 +411,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Prevent quad rendering if parent has a render texture
     // and this node is not the render texture
-    if (this.parentHasRenderTexture) {
-      if (!renderer.renderToTextureActive) {
+    if (this.parentHasRenderTexture === true) {
+      if (renderer.renderToTextureActive === false) {
         return;
       }
       // Prevent quad rendering if parent render texture is not the active render texture
@@ -409,23 +421,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
-    if (this.parentHasRenderTexture && this.props.parent?.rtt) {
-      this.globalTransform = Matrix3d.identity();
-      if (this.localTransform) {
-        this.globalTransform.multiply(this.localTransform);
-      }
-    }
-
-    assertTruthy(this.globalTransform);
-
-    this.textRenderer.renderQuads(
-      this.trState,
-      this.globalTransform,
-      this.clippingRect,
-      this.worldAlpha,
-      this.parentHasRenderTexture,
-      this.framebufferDimensions,
-    );
+    this.textRenderer.renderQuads(this);
   }
 
   /**

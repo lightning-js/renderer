@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "2.13.3",
+  "version": "3.0.0-beta7",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -8,11 +8,12 @@
     ".": "./dist/exports/index.js",
     "./utils": "./dist/exports/utils.js",
     "./canvas": "./dist/exports/canvas.js",
+    "./canvas/shaders": "./dist/exports/canvas-shaders.js",
     "./webgl": "./dist/exports/webgl.js",
+    "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js"
   },
   "scripts": {
-    "preinstall": "node scripts/please-use-pnpm.js",
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
     "build": "tsc --build",
@@ -86,6 +87,6 @@
   "engines": {
     "npm": ">= 10.0.0",
     "pnpm": ">= 8.9.2",
-    "node": ">= 20.9.0"
+    "node": ">= 18.0.0"
   }
 }

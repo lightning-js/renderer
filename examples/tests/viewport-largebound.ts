@@ -62,7 +62,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       'Container bound: ' + JSON.stringify(containerNode.renderState) + '\n';
 
     for (const node of containerNode.children) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       status += `${
         (node.children[0] as CoreTextNode)?.text
       } bound: ${JSON.stringify(node.renderState)} \n`;

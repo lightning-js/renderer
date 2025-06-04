@@ -5,7 +5,6 @@ import {
 } from '@lightningjs/renderer/webgl';
 import { CanvasTextRenderer } from '@lightningjs/renderer/canvas';
 import { Inspector } from '@lightningjs/renderer/inspector';
-import { MyCustomEffect } from './MyCustomEffect.js';
 import { MyCustomShader } from './MyCustomShader.js';
 import { MyCustomTexture } from './MyCustomTexture.js';
 import robotImg from './assets/robot.png';
@@ -27,7 +26,6 @@ import robotImg from './assets/robot.png';
   );
 
   renderer.stage.shManager.registerShaderType('MyCustomShader', MyCustomShader);
-  renderer.stage.shManager.registerEffectType('MyCustomEffect', MyCustomEffect);
   renderer.stage.txManager.registerTextureType(
     'MyCustomTexture',
     MyCustomTexture,
@@ -45,23 +43,6 @@ import robotImg from './assets/robot.png';
       bottomRight: { x: 1, y: 1 },
       bottomLeft: { x: 0, y: 1 },
     }),
-  });
-
-  const greyRobot = renderer.createNode({
-    x: 300,
-    width: 300,
-    height: 300,
-    parent: renderer.root,
-    shader: renderer.createDynamicShader([
-      renderer.createEffect(
-        'MyCustomEffect',
-        {
-          amount: 1.0,
-        },
-        'custom',
-      ),
-    ]),
-    src: robotImg,
   });
 
   const pacman = renderer.createNode({

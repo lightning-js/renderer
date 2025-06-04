@@ -22,6 +22,7 @@ import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
+import type { Bound } from '../lib/utils.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -100,6 +101,10 @@ export interface TextureData {
    */
   premultiplyAlpha?: boolean | null;
 }
+/**
+ * TextureCoords generally numbers between 0 - 1
+ */
+export type TextureCoords = Bound;
 
 export type TextureState =
   | 'initial' // Before anything is loaded
@@ -347,7 +352,7 @@ export abstract class Texture extends EventEmitter {
   static resolveDefaults(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     props: unknown,
-  ): Record<string, unknown> {
+  ): Record<string, any> {
     return {};
   }
 }

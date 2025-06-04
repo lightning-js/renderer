@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { Vec4 } from '../renderers/webgl/internal/ShaderUtils.js';
+
 export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
 
 export type RGBA = [r: number, g: number, b: number, a: number];
@@ -253,6 +255,10 @@ export function boundLargeThanBound(bound1: Bound, bound2: Bound) {
   );
 }
 
+export function pointInBound(x: number, y: number, bound: Bound) {
+  return !(x < bound.x1 || x > bound.x2 || y < bound.y1 || y > bound.y2);
+}
+
 export function isBoundPositive(bound: Bound): boolean {
   return bound.x1 < bound.x2 && bound.y1 < bound.y2;
 }
@@ -328,7 +334,7 @@ export function valuesAreEqual(values: number[]) {
 }
 
 export function calcFactoredRadiusArray(
-  radius: [number, number, number, number],
+  radius: Vec4,
   width: number,
   height: number,
 ): [number, number, number, number] {
