@@ -120,7 +120,6 @@ export class CoreAnimationController
   }
 
   private onDestroy(this: CoreAnimationController): void {
-    console.log('on destroy');
     this.unregisterAnimation();
     this.state = 'stopped';
   }
