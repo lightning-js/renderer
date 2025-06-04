@@ -214,6 +214,14 @@ export type CustomDataMap = {
  */
 export interface CoreNodeProps {
   /**
+   * Whether this node is a "holder" node that only manages transforms and children.
+   * Holder nodes are never renderable, have no textures, and skip unnecessary updates.
+   *
+   * @default false
+   */
+  holder?: boolean;
+
+  /**
    * The x coordinate of the Node's Mount Point.
    *
    * @remarks
@@ -770,7 +778,24 @@ export class CoreNode extends EventEmitter {
       rtt: false,
     };
 
-    // Assign props to instance
+    if (this.props.holder === true) {
+      console.log(
+        'CoreNode: Creating a holder node, skipping texture and renderable setup',
+      );
+      // Only set parent for holder nodes
+      this.parent = props.parent;
+      this.isRenderable = false;
+
+      // Only need transform-related updates
+      this.setUpdateType(
+        UpdateType.ScaleRotate | UpdateType.Local | UpdateType.Global,
+      );
+
+      this.setRenderable(false);
+
+      return;
+    }
+
     this.parent = props.parent;
     this.texture = props.texture;
     this.src = props.src;
@@ -1045,6 +1070,63 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.props.parent;
+
+    // For holder nodes, only handle basic transforms and children
+    if (this.props.holder === true) {
+      console.log('Beep boop holder node update', this._id);
+      // Update the local transform if it exists
+      if (this.updateType & UpdateType.Global && this.localTransform) {
+        this.globalTransform = Matrix3d.copy(
+          parent?.globalTransform || this.localTransform,
+          this.globalTransform,
+        );
+
+        if (parent !== null) {
+          this.globalTransform.multiply(this.localTransform);
+        }
+
+        this.calculateRenderCoords();
+        this.updateBoundingRect();
+        this.childUpdateType |= UpdateType.Global;
+      }
+
+      // this.createRenderBounds();
+      // this.childUpdateType |= UpdateType.RenderBounds;
+
+      if (this.updateType & UpdateType.RenderBounds) {
+        this.createRenderBounds();
+        this.setUpdateType(UpdateType.Children);
+
+        this.updateRenderState(this.checkRenderBounds());
+
+        this.childUpdateType |= UpdateType.RenderBounds;
+      }
+      // this.setUpdateType(UpdateType.RenderState);
+
+      this.childUpdateType |= UpdateType.RenderBounds;
+      if (this.updateType & UpdateType.WorldAlpha) {
+        if (parent) {
+          this.worldAlpha = parent.worldAlpha * this.props.alpha;
+        }
+
+        this.childUpdateType |= UpdateType.WorldAlpha;
+      }
+
+      // Handle child updates
+      if (this.updateType & UpdateType.Children && this.children.length > 0) {
+        for (const child of this.children) {
+          child.setUpdateType(this.childUpdateType);
+          if (child.updateType === 0) continue;
+          child.update(delta, parentClippingRect);
+        }
+      }
+
+      this.updateType = 0;
+      this.childUpdateType = 0;
+      return;
+    }
+
+    // Regular node update logic
     let renderState = null;
 
     // Handle specific RTT updates at this node level
@@ -1671,7 +1753,7 @@ export class CoreNode extends EventEmitter {
   /**
    * Destroy the node and cleanup all resources
    */
-  destroy(): void {
+  destroy(skipChildren: boolean = false): void {
     if (this.destroyed === true) {
       return;
     }
@@ -1693,7 +1775,7 @@ export class CoreNode extends EventEmitter {
     this.props.texture = null;
     this.props.shader = this.stage.defShaderCtr;
 
-    while (this.children.length > 0) {
+    while (skipChildren === false && this.children.length > 0) {
       this.children[0]?.destroy();
     }
 
@@ -2438,6 +2520,15 @@ export class CoreNode extends EventEmitter {
     this.props.strictBounds = v;
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
     this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
+  }
+
+  get holder(): boolean {
+    return this.props.holder || false;
+  }
+
+  set holder(value: boolean) {
+    console.log('Set holder to', value, 'on', this.id, 'node');
+    this.props.holder = value;
   }
 
   animate(

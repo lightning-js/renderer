@@ -728,6 +728,7 @@ export class Stage {
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
       strictBounds: props.strictBounds ?? this.strictBounds,
+      holder: props.holder || false,
     };
   }
 
