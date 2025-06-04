@@ -1671,7 +1671,7 @@ export class CoreNode extends EventEmitter {
   /**
    * Destroy the node and cleanup all resources
    */
-  destroy(): void {
+  destroy(skipChildren: boolean = false): void {
     if (this.destroyed === true) {
       return;
     }
@@ -1693,7 +1693,7 @@ export class CoreNode extends EventEmitter {
     this.props.texture = null;
     this.props.shader = this.stage.defShaderCtr;
 
-    while (this.children.length > 0) {
+    while (skipChildren === false && this.children.length > 0) {
       this.children[0]?.destroy();
     }
 
