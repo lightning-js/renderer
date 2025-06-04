@@ -256,6 +256,13 @@ export class CoreAnimation extends EventEmitter {
   update(dt: number) {
     const { duration, loop, easing, stopMethod } = this.settings;
     const { delayFor } = this;
+
+    if (this.node.destroyed) {
+      // cleanup
+      this.emit('destroyed', {});
+      return;
+    }
+
     if (duration === 0 && delayFor === 0) {
       this.emit('finished', {});
       return;
