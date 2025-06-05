@@ -75,6 +75,9 @@ export class CanvasCoreRenderer extends CoreRenderer {
       getResolvedProps: () => () => {
         return {};
       },
+      destroy: () => {
+        // noop
+      },
     };
   }
 

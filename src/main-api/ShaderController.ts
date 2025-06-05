@@ -34,6 +34,10 @@ export interface BaseShaderController {
   shader: CoreShader;
   props: Record<string, any>;
   getResolvedProps: () => Record<string, any>;
+  /**
+   * Destroys the shader controller and cleans up resources
+   */
+  destroy: () => void;
 }
 
 /**
@@ -76,5 +80,28 @@ export class ShaderController<S extends keyof ShaderMap>
 
   getResolvedProps() {
     return this.resolvedProps;
+  }
+
+  /**
+   * Destroys the shader controller and cleans up resources
+   *
+   * @remarks
+   * This method cleans up all retained values on the shader controller instance,
+   * helping to prevent memory leaks when a shader is no longer needed.
+   *
+   * It clears the content of the props objects while maintaining the object
+   * structure to avoid type errors.
+   */
+  destroy(): void {
+    // Clear out the properties in the resolved props object
+    if (this.resolvedProps) {
+      Object.keys(this.resolvedProps).forEach((key) => {
+        // Use type assertion to work around TypeScript's strict property access
+        (this.resolvedProps as Record<string, unknown>)[key] = undefined;
+      });
+    }
+
+    // We don't null out the props or shader reference since they are readonly
+    // or required by the interface, but we've cleared the content
   }
 }

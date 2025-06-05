@@ -616,14 +616,10 @@ export class RendererMain extends EventEmitter {
    * @param shaderOrCacheKey - The shader controller or cache key to remove
    * @returns boolean - True if the shader was found and removed, false otherwise
    */
-  removeShader(
-    shaderOrCacheKey: string | ShaderController<keyof ShaderMap>,
-  ): boolean {
-    return this.stage.shManager.removeShader(
-      typeof shaderOrCacheKey === 'string'
-        ? shaderOrCacheKey
-        : shaderOrCacheKey.shader,
-    );
+  removeShader(shader: ShaderController<keyof ShaderMap>): boolean {
+    const resp = this.stage.shManager.removeShader(shader.shader);
+    resp && shader.destroy();
+    return resp;
   }
 
   /**
