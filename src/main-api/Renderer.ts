@@ -601,6 +601,28 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
+   * Removes a shader from the shader cache.
+   *
+   * @remarks
+   * This method removes a shader from the shader cache. If the shader is currently
+   * in use by any node, those nodes will continue to work, but any new nodes created
+   * with the same shader type and properties will create a new shader instance.
+   *
+   * This is useful for:
+   * - Reclaiming memory when certain shaders are no longer needed
+   * - Forcing reload of shaders after app state changes
+   * - Managing complex shader transitions
+   *
+   * @param shaderOrCacheKey - The shader instance or cache key to remove
+   * @returns boolean - True if the shader was found and removed, false otherwise
+   */
+  removeShader(
+    shaderOrCacheKey: string | InstanceType<ShaderMap[keyof ShaderMap]>,
+  ): boolean {
+    return this.stage.shManager.removeShader(shaderOrCacheKey);
+  }
+
+  /**
    * Create a new Dynamic Shader controller
    *
    * @remarks

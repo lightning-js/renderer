@@ -72,6 +72,10 @@ export class EventEmitter implements IEventEmitter {
   }
 
   removeAllListeners() {
+    for (const event in this.eventListeners) {
+      delete this.eventListeners[event];
+    }
+
     this.eventListeners = {};
   }
 }

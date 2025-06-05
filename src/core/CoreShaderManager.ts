@@ -261,6 +261,56 @@ export class CoreShaderManager {
     return this._createDynShaderCtr(shader, resolvedProps);
   }
 
+  /**
+   * Removes a shader from the shader cache.
+   *
+   * If the shader is currently attached, it will be detached.
+   *
+   * @param shaderOrCacheKey - The shader instance or cache key to remove
+   * @returns boolean - True if the shader was found and removed, false otherwise.
+   */
+  removeShader(
+    shaderOrCacheKey: string | InstanceType<ShaderMap[keyof ShaderMap]>,
+  ): boolean {
+    // Handle case where shader instance is provided
+    if (typeof shaderOrCacheKey !== 'string') {
+      // Find the cache key for this shader instance
+      for (const [key, shader] of this.shCache.entries()) {
+        if (shader === shaderOrCacheKey) {
+          // If this shader is currently attached, detach it
+          if (this.attachedShader === shader) {
+            this.attachedShader.detach();
+            this.attachedShader = null;
+          }
+
+          // Remove the shader from the cache
+          this.shCache.delete(key);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Handle case where cache key is provided
+    const cacheKey = shaderOrCacheKey;
+    if (!this.shCache.has(cacheKey)) {
+      return false;
+    }
+
+    const shader = this.shCache.get(cacheKey);
+
+    // If this shader is currently attached, detach it
+    if (this.attachedShader === shader) {
+      this.attachedShader.detach();
+      this.attachedShader = null;
+    }
+
+    // Remove the shader from the cache
+    this.shCache.delete(cacheKey);
+
+    return true;
+  }
+
   private _createShaderCtr<Type extends keyof ShaderMap>(
     type: Type,
     shader: InstanceType<ShaderMap[Type]>,
