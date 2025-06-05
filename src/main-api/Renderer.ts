@@ -613,13 +613,17 @@ export class RendererMain extends EventEmitter {
    * - Forcing reload of shaders after app state changes
    * - Managing complex shader transitions
    *
-   * @param shaderOrCacheKey - The shader instance or cache key to remove
+   * @param shaderOrCacheKey - The shader controller or cache key to remove
    * @returns boolean - True if the shader was found and removed, false otherwise
    */
   removeShader(
-    shaderOrCacheKey: string | InstanceType<ShaderMap[keyof ShaderMap]>,
+    shaderOrCacheKey: string | ShaderController<keyof ShaderMap>,
   ): boolean {
-    return this.stage.shManager.removeShader(shaderOrCacheKey);
+    return this.stage.shManager.removeShader(
+      typeof shaderOrCacheKey === 'string'
+        ? shaderOrCacheKey
+        : shaderOrCacheKey.shader,
+    );
   }
 
   /**
