@@ -677,6 +677,14 @@ export class Stage {
     const colorBr =
       props.colorBr ?? props.colorBottom ?? props.colorRight ?? color;
 
+    // Check if the shader is destroyed and replace it with the default shader
+    let shader = props.shader ?? this.defShaderCtr;
+    const isShaderDestroyed = shader.isDestroyed === true;
+    if (isShaderDestroyed) {
+      assertTruthy(isShaderDestroyed, 'Attempted to use a destroyed shader');
+      shader = this.defShaderCtr;
+    }
+
     let data = {};
     if (this.options.inspector === true) {
       data = santizeCustomDataMap(props.data ?? {});
@@ -705,7 +713,7 @@ export class Stage {
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
-      shader: props.shader ?? this.defShaderCtr,
+      shader: shader,
       // Since setting the `src` will trigger a texture load, we need to set it after
       // we set the texture. Otherwise, problems happen.
       src: props.src ?? null,

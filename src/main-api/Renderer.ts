@@ -617,9 +617,7 @@ export class RendererMain extends EventEmitter {
    * @returns boolean - True if the shader was found and removed, false otherwise
    */
   removeShader(shader: ShaderController<keyof ShaderMap>): boolean {
-    const resp = this.stage.shManager.removeShader(shader.shader);
-    resp && shader.destroy();
-    return resp;
+    return this.stage.shManager.removeShader(shader);
   }
 
   /**

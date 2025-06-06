@@ -31,6 +31,10 @@ export class DynamicShaderController<
   private resolvedProps: ExtractProps<ShaderMap['DynamicShader']>;
   props: MapEffectProps<Effects>;
   type: 'DynamicShader';
+  /**
+   * Whether the shader controller has been destroyed
+   */
+  isDestroyed = false;
 
   constructor(
     readonly shader: InstanceType<ShaderMap['DynamicShader']>,
@@ -135,6 +139,12 @@ export class DynamicShaderController<
         }
       });
     }
+
+    // Destroy the underlying WebGL shader resources
+    this.shader.destroy();
+
+    // Mark this shader controller as destroyed
+    this.isDestroyed = true;
 
     // We don't null out the props or shader reference since they are readonly
     // or required by the interface, but we've cleared the content

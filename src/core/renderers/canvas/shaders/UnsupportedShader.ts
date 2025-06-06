@@ -45,4 +45,8 @@ export class UnsupportedShader extends CoreShader {
   detach(): void {
     // noop
   }
+
+  destroy(): void {
+    // No resources to clean up for UnsupportedShader
+  }
 }

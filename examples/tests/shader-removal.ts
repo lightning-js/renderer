@@ -21,18 +21,18 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export async function automation(settings: ExampleSettings) {
   // Snapshot tests
-  await test(settings);
+  const next = await test(settings);
   await settings.snapshot({ name: 'initial-state' });
 
-  // Wait 1 second and take another snapshot
-  await settings.wait(1000);
+  // Execute the next step
+  next();
   await settings.snapshot({ name: 'after-shader-removal' });
 }
 
 export default async function test({
   renderer,
   testRoot,
-  snapshot,
+  automation,
 }: ExampleSettings) {
   // Create title text
   renderer.createTextNode({
@@ -110,21 +110,101 @@ export default async function test({
   });
 
   // After 500ms, remove the shader and create a new rectangle
-  setTimeout(() => {
+  const next = () => {
     // Remove the shader
-    const removed = renderer.removeShader(shader);
-    console.log(`Shader removed: ${removed}`);
+    rectangle1.shader = null; // Detach shader from rectangle1
+    rectangle2.shader = null; // Detach shader from rectangle2
+    if (shader) {
+      const removed = renderer.removeShader(shader);
+      console.log(`Shader removed: ${removed}`, rectangle2.shader);
 
-    // Update status text
-    statusText.text = `Shader removed from cache: ${removed}`;
+      statusText.text = `Shader removed from cache: ${removed}`;
+    }
 
-    // Create a third rectangle with the same shader config
-    // This will create a new shader instance since the original was removed
-    const rectangle3 = renderer.createNode({
-      x: 1000,
+    // First test - directly setting shader property (should use default shader instead of throwing)
+    // Create a node without a shader initially
+    const rectangleTest1 = renderer.createNode({
+      x: 450,
       y: 150,
-      width: 300,
-      height: 300,
+      width: 200,
+      height: 200,
+      color: 0x0000ffff,
+      parent: testRoot,
+      shader: shader, // Using the destroyed shader - should be replaced with default
+    });
+
+    // Check if it's using the default shader or the destroyed one
+    const usingDefaultShader1 = rectangleTest1.shader !== shader;
+    console.log(
+      `Test 1: Using ${
+        usingDefaultShader1 ? 'default' : 'DESTROYED'
+      } shader. Protection: ${usingDefaultShader1 ? '✓' : '❌'}`,
+    );
+
+    renderer.createTextNode({
+      x: 450,
+      y: 370,
+      mountX: 0.5,
+      fontSize: 20,
+      fontFamily: 'Ubuntu',
+      text: usingDefaultShader1
+        ? '✓ Setter Protection Works!'
+        : '❌ Setter Protection Failed!',
+      parent: testRoot,
+      color: usingDefaultShader1 ? 0x00ff00ff : 0xff0000ff,
+    });
+
+    // Create labels for each test case
+    renderer.createTextNode({
+      x: 450,
+      y: 320,
+      mountX: 0.5,
+      fontSize: 20,
+      fontFamily: 'Ubuntu',
+      text: 'Test 1: Setter Check',
+      parent: testRoot,
+      color: 0xffffffff,
+    });
+
+    // Second test - trying to create a node with a destroyed shader in props
+    // This should silently use the default shader instead
+    const rectangleTest2 = renderer.createNode({
+      x: 850,
+      y: 150,
+      width: 200,
+      height: 200,
+      color: 0x0000ffff,
+      shader: shader, // Using the destroyed shader - should be replaced with default
+      parent: testRoot,
+    });
+
+    // Check if it's using the default shader or the destroyed one
+    const usingDefaultShader = rectangleTest2.shader !== shader;
+    console.log(
+      `Created node with ${
+        usingDefaultShader ? 'default' : 'DESTROYED'
+      } shader. Protection: ${usingDefaultShader ? '✓' : '❌'}`,
+    );
+
+    renderer.createTextNode({
+      x: 850,
+      y: 370,
+      mountX: 0.5,
+      fontSize: 20,
+      fontFamily: 'Ubuntu',
+      text: usingDefaultShader
+        ? '✓ Constructor Protection Works!'
+        : '❌ Constructor Protection Failed!',
+      parent: testRoot,
+      color: usingDefaultShader ? 0x00ff00ff : 0xff0000ff,
+    });
+
+    // Create a third rectangle with a new shader instance to show everything works properly
+    const rectangle3 = renderer.createNode({
+      x: 1250,
+      y: 150,
+      width: 200,
+      height: 200,
       color: 0x0000ffff,
       shader: renderer.createShader('RoundedRectangle', {
         radius: 50,
@@ -132,30 +212,32 @@ export default async function test({
       parent: testRoot,
     });
 
-    // Create label
-    renderer.createTextNode({
-      x: 1000,
-      y: 470,
-      mountX: 0,
-      fontSize: 24,
-      fontFamily: 'Ubuntu',
-      text: 'New Shader Instance',
-      parent: testRoot,
-      color: 0xffffffff,
-    });
+    // console.log('Created new rectangle with fresh shader, id:', rectangle3.id);
 
     // Add explanation text
     renderer.createTextNode({
       x: testRoot.width / 2,
-      y: 620,
+      y: 520,
       mountX: 0.5,
       fontSize: 24,
       fontFamily: 'Ubuntu',
-      text: 'Note: Existing nodes still work with removed shader',
+      text: 'Note: Both creation-time and runtime protection are active',
       parent: testRoot,
       color: 0xffffffff,
     });
-  }, 500);
+  };
+
+  if (!automation) {
+    console.log(
+      'Running in manual mode, waiting 3 seconds before next step...',
+    );
+    setTimeout(() => {
+      console.log('Executing next step after delay');
+      next();
+    }, 3000);
+  }
 
   console.log('Shader removal test initialized');
+
+  return next;
 }

@@ -46,7 +46,7 @@ import type { BaseShaderController } from './ShaderController.js';
  */
 export interface INode<SC extends BaseShaderController = BaseShaderController>
   extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
-  shader: SC;
+  shader: SC | null;
   animate(
     props: Partial<INodeAnimateProps<SC>>,
     settings: Partial<AnimationSettings>,
@@ -69,7 +69,7 @@ export interface INodeAnimateProps<
 export interface INodeProps<
   SC extends BaseShaderController = BaseShaderController,
 > extends Omit<CoreNodeProps, 'shader' | 'parent'> {
-  shader: SC;
+  shader: SC | null;
   parent: INode | null;
 }
 

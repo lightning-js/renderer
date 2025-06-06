@@ -38,6 +38,10 @@ export interface BaseShaderController {
    * Destroys the shader controller and cleans up resources
    */
   destroy: () => void;
+  /**
+   * Whether the shader controller has been destroyed
+   */
+  isDestroyed: boolean;
 }
 
 /**
@@ -52,6 +56,11 @@ export class ShaderController<S extends keyof ShaderMap>
 {
   private resolvedProps: ExtractProps<ShaderMap[S]>;
   props: ExtractProps<ShaderMap[S]>;
+  /**
+   * Whether the shader controller has been destroyed
+   */
+  isDestroyed = false;
+
   constructor(
     readonly type: S,
     readonly shader: InstanceType<ShaderMap[S]>,
@@ -100,6 +109,12 @@ export class ShaderController<S extends keyof ShaderMap>
         (this.resolvedProps as Record<string, unknown>)[key] = undefined;
       });
     }
+
+    // Destroy the underlying WebGL shader resources
+    this.shader.destroy();
+
+    // Mark this shader controller as destroyed
+    this.isDestroyed = true;
 
     // We don't null out the props or shader reference since they are readonly
     // or required by the interface, but we've cleared the content
