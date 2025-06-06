@@ -20,6 +20,11 @@
 import type { CoreRenderOp } from './CoreRenderOp.js';
 
 export abstract class CoreShader {
+  /**
+   * Flag indicating if this shader has been destroyed
+   */
+  isDestroyed = false;
+
   // abstract draw(): void;
   static makeCacheKey(props: Record<string, unknown>): string | false {
     return false;
@@ -38,4 +43,13 @@ export abstract class CoreShader {
   protected abstract bindProps(props: Record<string, unknown>): void;
   abstract attach(): void;
   abstract detach(): void;
+
+  /**
+   * Destroys the shader and cleans up resources
+   *
+   * @remarks
+   * This method must be called when the shader is no longer needed
+   * to prevent memory leaks.
+   */
+  abstract destroy(): void;
 }

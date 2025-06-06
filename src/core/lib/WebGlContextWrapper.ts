@@ -1277,6 +1277,40 @@ export class WebGlContextWrapper {
     const { gl } = this;
     gl.deleteShader(shader);
   }
+
+  /**
+   * ```
+   * gl.deleteBuffer(buffer);
+   * ```
+   *
+   * @param buffer - The buffer to delete
+   */
+  deleteBuffer(buffer: WebGLBuffer) {
+    const { gl } = this;
+    gl.deleteBuffer(buffer);
+
+    // Reset bound buffers if they match the deleted buffer
+    if (this.boundArrayBuffer === buffer) {
+      this.boundArrayBuffer = null;
+    }
+    if (this.boundElementArrayBuffer === buffer) {
+      this.boundElementArrayBuffer = null;
+    }
+  }
+
+  /**
+   * ```
+   * gl.deleteVertexArray(vertexArray);
+   * ```
+   *
+   * @param vertexArray - The vertex array object to delete
+   */
+  deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
+    const { gl } = this;
+    if (this.isWebGl2()) {
+      (gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
+    }
+  }
 }
 
 // prettier-ignore

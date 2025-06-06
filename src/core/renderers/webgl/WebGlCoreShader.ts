@@ -358,5 +358,52 @@ export abstract class WebGlCoreShader extends CoreShader {
     this.disableAttributes();
   }
 
+  /**
+   * Destroys this shader and cleans up all WebGL resources.
+   *
+   * @remarks
+   * This method will delete the WebGL program, all attribute buffers, and the VAO if one exists.
+   * It must be called when the shader is no longer needed to prevent memory leaks.
+   */
+  destroy(): void {
+    const { glw } = this;
+
+    // Detach first to disable all attributes
+    this.detach();
+
+    // Delete all attribute buffers
+    for (const attributeName in this.attributeBuffers) {
+      const buffer = this.attributeBuffers[attributeName];
+      if (buffer) {
+        glw.deleteBuffer(buffer);
+      }
+    }
+
+    // Delete VAO if it exists (WebGL2 only)
+    if (this.vao !== undefined && glw.isWebGl2() === true) {
+      glw.deleteVertexArray(this.vao);
+      this.vao = undefined;
+    }
+
+    // Delete the program
+    if (this.program) {
+      glw.deleteProgram(this.program);
+    }
+
+    this.program = null as unknown as WebGLProgram;
+
+    // Clear references
+    this.attributeBuffers = {} as Record<string, WebGLBuffer>;
+    this.attributeLocations = {} as Record<string, number>;
+    this.uniformLocations = {} as Record<string, WebGLUniformLocation>;
+    this.uniformTypes = {} as Record<string, keyof UniformMethodMap>;
+    this.boundBufferCollection = null;
+    this.glw = null as unknown as WebGlContextWrapper;
+    this.renderer = null as unknown as WebGlCoreRenderer;
+
+    // Mark the shader as destroyed
+    this.isDestroyed = true;
+  }
+
   protected static shaderSources?: ShaderProgramSources;
 }
