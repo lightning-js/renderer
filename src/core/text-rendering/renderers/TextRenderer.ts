@@ -17,77 +17,16 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from '../../../common/CommonTypes.js';
-import type { EventEmitter } from '../../../common/EventEmitter.js';
-import type { CoreTextNode } from '../../CoreTextNode.js';
 import type { Stage } from '../../Stage.js';
-import type { Matrix3d } from '../../lib/Matrix3d.js';
-import type { Rect, RectWithValid } from '../../lib/utils.js';
 import type {
   TrFontFace,
   TrFontFaceDescriptors,
 } from '../font-face-types/TrFontFace.js';
+import type { FontFamilyMap } from '../TrFontManager.js';
 import type {
   TextBaseline,
   TextVerticalAlign,
 } from './LightningTextTextureRenderer.js';
-
-/**
- * Augmentable map of text renderer type IDs to text renderer types.
- *
- * @example
- * ```ts
- * declare module './TextRenderer' {
- *   interface TextRendererMap {
- *     canvas: CanvasTextRenderer;
- *   }
- * }
- * ```
- */
-
-export interface TextRendererMap {}
-
-export interface TextRendererState {
-  props: TrProps;
-  /**
-   * Whether or not the text renderer state is scheduled to be updated
-   * via queueMicrotask.
-   */
-  updateScheduled: boolean;
-  status: 'initialState' | 'loading' | 'loaded' | 'failed' | 'destroyed';
-  /**
-   * Event emitter for the text renderer
-   */
-  emitter: EventEmitter;
-
-  /**
-   * Force a full layout pass for the calculation of the
-   * total dimensions of the text
-   */
-  forceFullLayoutCalc: boolean;
-  textW: number | undefined;
-  textH: number | undefined;
-
-  isRenderable: boolean;
-
-  debugData: {
-    updateCount: number;
-    layoutCount: number;
-    drawCount: number;
-    lastLayoutNumCharacters: number;
-    layoutSum: number;
-    drawSum: number;
-    bufferSize: number;
-  };
-}
-
-export interface TextRendererDebugProps {
-  showRenderWindow: boolean;
-  showVisibleRect: boolean;
-  showElementRect: boolean;
-  disableScissor: boolean;
-  printLayoutTime: boolean;
-}
 
 /**
  * Text renderer properties that are used in resolving appropriate font faces
@@ -224,32 +163,10 @@ export interface TrProps extends TrFontProps {
   width: number;
   height: number;
   /**
-   * Whether or not the text is scrollable
-   *
-   * @remarks
-   * If `scrollable` is `true`, the text can be scrolled vertically within the
-   * bounds of the Text Node. You can set the scroll position using the
-   * {@link scrollY} property.
-   *
-   * @default false
-   */
-  scrollable: boolean;
-  /**
-   * Vertical scroll position for text
-   *
-   * @remarks
-   * The vertical scroll position of the text. This property is only used if
-   * {@link scrollable} is `true`.
-   *
-   * @default 0
-   */
-  scrollY: number;
-  /**
    * Vertical offset for text
    *
    * @remarks
-   * The vertical offset of the text. This property is only used if
-   * {@link scrollable} is `true`.
+   * The vertical offset of the text.
    *
    * @default 0
    */
@@ -333,235 +250,31 @@ export interface TrProps extends TrFontProps {
   wordBreak: 'normal' | 'break-all' | 'break-word';
 
   zIndex: number;
-
-  debug: Partial<TextRendererDebugProps>;
 }
 
-export type TrPropSetters<StateT = TextRendererState> = {
-  [key in keyof TrProps]: (state: StateT, value: TrProps[key]) => void;
-};
+export interface FontHandler {
+  init: () => void;
+  type: 'canvas' | 'sdf';
+  addFontFace: (fontFace: TrFontFace) => void;
+  isFontLoaded: (cssString: string) => boolean;
+  loadFont: (cssString: string) => Promise<void>;
+  getFontFamilies: () => FontFamilyMap;
+  getFontFamilyArray: () => FontFamilyMap[];
+  canRenderFont: (trProps: TrProps) => boolean;
+}
 
-const trPropSetterDefaults: TrPropSetters = {
-  x: (state, value) => {
-    state.props.x = value;
-  },
-  y: (state, value) => {
-    state.props.y = value;
-  },
-  width: (state, value) => {
-    state.props.width = value;
-  },
-  height: (state, value) => {
-    state.props.height = value;
-  },
-  color: (state, value) => {
-    state.props.color = value;
-  },
-  zIndex: (state, value) => {
-    state.props.zIndex = value;
-  },
-  fontFamily: (state, value) => {
-    state.props.fontFamily = value;
-  },
-  fontWeight: (state, value) => {
-    state.props.fontWeight = value;
-  },
-  fontStyle: (state, value) => {
-    state.props.fontStyle = value;
-  },
-  fontStretch: (state, value) => {
-    state.props.fontStretch = value;
-  },
-  fontSize: (state, value) => {
-    state.props.fontSize = value;
-  },
-  text: (state, value) => {
-    state.props.text = value;
-  },
-  textAlign: (state, value) => {
-    state.props.textAlign = value;
-  },
-  contain: (state, value) => {
-    state.props.contain = value;
-  },
-  offsetY: (state, value) => {
-    state.props.offsetY = value;
-  },
-  scrollable: (state, value) => {
-    state.props.scrollable = value;
-  },
-  scrollY: (state, value) => {
-    state.props.scrollY = value;
-  },
-  letterSpacing: (state, value) => {
-    state.props.letterSpacing = value;
-  },
-  lineHeight: (state, value) => {
-    state.props.lineHeight = value;
-  },
-  maxLines: (state, value) => {
-    state.props.maxLines = value;
-  },
-  textBaseline: (state, value) => {
-    state.props.textBaseline = value;
-  },
-  verticalAlign: (state, value) => {
-    state.props.verticalAlign = value;
-  },
-  overflowSuffix: (state, value) => {
-    state.props.overflowSuffix = value;
-  },
-  wordBreak: (state, value) => {
-    state.props.wordBreak = value;
-  },
-  debug: (state, value) => {
-    state.props.debug = value;
-  },
-};
-
-/**
- * Event handler for when text is loaded
- *
- * @remarks
- * Emitted by state.emitter
- */
-export type TrLoadedEventHandler = (target: any) => void;
-
-/**
- * Event handler for when text failed to load
- *
- * @remarks
- * Emitted by state.emitter
- */
-export type TrFailedEventHandler = (target: any, error: Error) => void;
-
-export abstract class TextRenderer<
-  StateT extends TextRendererState = TextRendererState,
-> {
-  readonly set: Readonly<TrPropSetters<StateT>>;
-  abstract type: 'canvas' | 'sdf';
-
-  constructor(protected stage: Stage) {
-    const propSetters = {
-      ...trPropSetterDefaults,
-      ...this.getPropertySetters(),
-    };
-    // For each prop setter add a wrapper method that checks if the prop is
-    // different before calling the setter
-    const propSet = {};
-    Object.keys(propSetters).forEach((key) => {
-      Object.defineProperty(propSet, key, {
-        value: (state: StateT, value: TrProps[keyof TrProps]) => {
-          // Check if the current prop value is different before calling the setter
-          if (state.props[key as keyof TrProps] !== value) {
-            propSetters[key as keyof TrPropSetters](state, value as never);
-
-            // Assume any prop change will require a render
-            // This ensures that renders are triggered appropriately even with RAF paused
-            this.stage.requestRender();
-          }
-        },
-        writable: false, // Prevents property from being changed
-        configurable: false, // Prevents property from being deleted
-      });
-    });
-    this.set = propSet as Readonly<TrPropSetters<StateT>>;
-  }
-
-  setStatus(state: StateT, status: StateT['status'], error?: Error) {
-    // Don't emit the same status twice
-    if (state.status === status) {
-      return;
-    }
-    state.status = status;
-    state.emitter.emit(status, error);
-  }
-
-  /**
-   * Allows the CoreTextNode to communicate changes to the isRenderable state of
-   * the itself.
-   *
-   * @param state
-   * @param renderable
-   */
-  setIsRenderable(state: StateT, renderable: boolean) {
-    state.isRenderable = renderable;
-  }
-
-  /**
-   * Called by constructor to get a map of property setter functions for this renderer.
-   */
-  abstract getPropertySetters(): Partial<TrPropSetters<StateT>>;
-
-  /**
-   * Given text renderer properties (particularly the specific properties related to font selection)
-   * returns whether or not the renderer can render it.
-   *
-   * @param props
-   */
-  abstract canRenderFont(props: TrFontProps): boolean;
-
-  /**
-   * Called by the TrFontManager to find out if a newly added font face is supported
-   * by this renderer.
-   *
-   * @param fontFace
-   */
-  abstract isFontFaceSupported(fontFace: TrFontFace): boolean;
-
-  /**
-   * Called by the TrFontManager to add a font face to the renderer's font registry.
-   *
-   * @remarks
-   * This method MUST ONLY be called for a fontFace that previously passed the
-   * {@link isFontFaceSupported} check.
-   *
-   * @param fontFace
-   */
-  abstract addFontFace(fontFace: TrFontFace): void;
-
-  abstract createState(props: TrProps, node: CoreTextNode): StateT;
-
-  /**
-   * Destroy/Clean up the state object
-   *
-   * @remarks
-   * Opposite of createState(). Frees any event listeners / resources held by
-   * the state that may not reliably get garbage collected.
-   *
-   * @param state
-   */
-  destroyState(state: StateT) {
-    this.setStatus(state, 'destroyed');
-    state.emitter.removeAllListeners();
-  }
-
-  /**
-   * Schedule a state update via queueMicrotask
-   *
-   * @remarks
-   * This method is used to schedule a state update via queueMicrotask. This
-   * method should be called whenever a state update is needed, and it will
-   * ensure that the state is only updated once per microtask.
-   * @param state
-   * @returns
-   */
-  scheduleUpdateState(state: StateT): void {
-    if (state.updateScheduled) {
-      return;
-    }
-    state.updateScheduled = true;
-    queueMicrotask(() => {
-      // If the state has been destroyed, don't update it
-      if (state.status === 'destroyed') {
-        return;
-      }
-      state.updateScheduled = false;
-      this.updateState(state);
-    });
-  }
-
-  abstract updateState(state: StateT): void;
-
-  renderQuads?(node: CoreTextNode): void;
+export interface TextRenderer {
+  type: 'canvas' | 'sdf';
+  fontHandler: FontHandler;
+  renderText: (
+    stage: Stage,
+    props: TrProps,
+  ) => Promise<{
+    imageData: ImageData | null;
+    width: number;
+    height: number;
+  }>;
+  // Fixme implement this for MSDF renderer
+  // and update the properties to match
+  addQuads: (any: any) => void;
 }

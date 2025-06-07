@@ -261,3 +261,20 @@ export function wrapText(
 
   return { l: allLines, n: realNewlines };
 }
+
+/**
+ * Calculate the default line height given normalized font metrics
+ *
+ * @remarks
+ * This method may be used for both the WebTrFontFace and SdfTrFontFace font types.
+ *
+ * @param metrics
+ * @param fontSize
+ * @returns
+ */
+export function calcDefaultLineHeight(
+  metrics: NormalizedFontMetrics,
+  fontSize: number,
+): number {
+  return fontSize * (metrics.ascender - metrics.descender + metrics.lineGap);
+}

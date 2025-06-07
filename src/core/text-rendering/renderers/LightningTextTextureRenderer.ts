@@ -21,11 +21,8 @@
 
 import { assertTruthy } from '../../../utils.js';
 import { getRgbaString, type RGBA } from '../../lib/utils.js';
-import { calcDefaultLineHeight } from '../TextRenderingUtils.js';
-import {
-  getWebFontMetrics,
-  isZeroWidthSpace,
-} from '../TextTextureRendererUtils.js';
+import { calcDefaultLineHeight } from '../Utils.js';
+import { getWebFontMetrics, isZeroWidthSpace } from '../Utils.js';
 import type { NormalizedFontMetrics } from '../font-face-types/TrFontFace.js';
 import type { WebTrFontFace } from '../font-face-types/WebTrFontFace.js';
 
