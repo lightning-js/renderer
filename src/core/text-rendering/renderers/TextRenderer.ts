@@ -268,17 +268,19 @@ export interface TrProps extends TrFontProps {
 export interface FontHandler {
   init: () => void;
   type: 'canvas' | 'sdf';
-  addFontFace: (fontFace: FontFace) => void;
-  isFontLoaded: (cssString: string) => boolean;
-  loadFont: (cssString: string) => Promise<void>;
+  isFontLoaded: (fontFamily: string) => boolean;
+  loadFont: (options: {
+    fontFamily: string;
+    fontUrl: string;
+    metrics?: FontMetrics;
+  }) => Promise<void>;
   getFontFamilies: () => FontFamilyMap;
-  getFontFamilyArray: () => FontFamilyMap[];
   canRenderFont: (trProps: TrProps) => boolean;
 }
 
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
-  fontHandler: FontHandler;
+  font: FontHandler;
   renderText: (
     stage: Stage,
     props: TrProps,

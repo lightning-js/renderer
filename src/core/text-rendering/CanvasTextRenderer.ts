@@ -21,10 +21,8 @@ import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
 import { getNormalizedRgbaComponents } from '../lib/utils.js';
 import type { FontHandler, TrProps } from './renderers/TextRenderer.js';
-import { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
 import { LightningTextTextureRenderer } from './renderers/LightningTextTextureRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
-import { getFontFamilyArray } from './CanvasFontHandler.js';
 
 export const type = 'canvas';
 
@@ -74,9 +72,7 @@ export const init = (): void => {
   /** nothing to init at this stage for Canvas */
 };
 
-export const getFontHandler = (): FontHandler => {
-  return CanvasFontHandler;
-};
+export const font: FontHandler = CanvasFontHandler;
 
 /**
  * Canvas text renderer

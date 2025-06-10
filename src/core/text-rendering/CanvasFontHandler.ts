@@ -109,13 +109,6 @@ export const getFontFamilies = (): FontFamilyMap => {
 };
 
 /**
- * Get font families array for font resolution
- */
-export const getFontFamilyArray = (): FontFamilyMap[] => {
-  return [fontState.fontFamilies];
-};
-
-/**
  * Initialize the global font handler
  */
 export const init = (): void => {
@@ -136,26 +129,6 @@ export const init = (): void => {
 };
 
 export const type = 'canvas';
-
-/**
- * Add a font face to be used by the global font handler
- */
-export const addFontFace = (fontFace: FontFace): void => {
-  const fontFamily = fontFace.family;
-
-  // Load the font face
-  fontFace
-    .load()
-    .then(() => {
-      console.log(`Font loaded: ${fontFamily}`);
-    })
-    .catch((error) => {
-      console.error(`Failed to load font: ${fontFamily}`, error);
-    });
-
-  // Directly map the font family to the FontFace
-  fontState.fontFamilies[fontFamily] = fontFace;
-};
 
 /**
  * Check if a font is already loaded by font family
