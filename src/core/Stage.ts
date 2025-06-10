@@ -617,23 +617,23 @@ export class Stage {
   }
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
-    const fontSize = props.fontSize ?? 16;
+    const fontSize = props.fontSize || 16;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
-      text: props.text ?? '',
-      textRendererOverride: props.textRendererOverride ?? null,
+      text: props.text || '',
+      textRendererOverride: props.textRendererOverride || null,
       fontSize,
-      fontFamily: props.fontFamily ?? 'sans-serif',
-      fontStyle: props.fontStyle ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
-      contain: props.contain ?? 'none',
-      offsetY: props.offsetY ?? 0,
-      letterSpacing: props.letterSpacing ?? 0,
+      fontFamily: props.fontFamily || 'sans-serif',
+      fontStyle: props.fontStyle || 'normal',
+      textAlign: props.textAlign || 'left',
+      contain: props.contain || 'none',
+      offsetY: props.offsetY || 0,
+      letterSpacing: props.letterSpacing || 0,
       lineHeight: props.lineHeight, // `undefined` is a valid value
-      maxLines: props.maxLines ?? 0,
-      textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
-      overflowSuffix: props.overflowSuffix ?? '...',
-      wordBreak: props.wordBreak ?? 'normal',
+      maxLines: props.maxLines || 0,
+      textBaseline: props.textBaseline || 'alphabetic',
+      verticalAlign: props.verticalAlign || 'middle',
+      overflowSuffix: props.overflowSuffix || '...',
+      wordBreak: props.wordBreak || 'normal',
     });
 
     const resolvedTextRenderer = this.resolveTextRenderer(resolvedProps);

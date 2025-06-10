@@ -53,20 +53,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _pendingTextUpdate: TextUpdateReason = TextUpdateReason.Both;
 
   // Text renderer properties - stored directly on the node
-  private _text: string = '';
-  private _fontFamily: string = 'sans-serif';
-  private _fontSize: number = 16;
-  private _fontStyle: TrProps['fontStyle'] = 'normal';
-  private _textAlign: TrProps['textAlign'] = 'left';
-  private _contain: TrProps['contain'] = 'none';
-  private _letterSpacing: number = 0;
-  private _lineHeight: number | undefined = undefined;
-  private _maxLines: number = 0;
-  private _textBaseline: TrProps['textBaseline'] = 'alphabetic';
-  private _verticalAlign: TrProps['verticalAlign'] = 'middle';
-  private _overflowSuffix: string = '...';
-  private _wordBreak: TrProps['wordBreak'] = 'normal';
-  private _offsetY: number = 0;
+  // All defaults are handled by Stage.createTextNode
+  private _text!: string;
+  private _fontFamily!: string;
+  private _fontSize!: number;
+  private _fontStyle!: TrProps['fontStyle'];
+  private _textAlign!: TrProps['textAlign'];
+  private _contain!: TrProps['contain'];
+  private _letterSpacing!: number;
+  private _lineHeight: number | undefined;
+  private _maxLines!: number;
+  private _textBaseline!: TrProps['textBaseline'];
+  private _verticalAlign!: TrProps['verticalAlign'];
+  private _overflowSuffix!: string;
+  private _wordBreak!: TrProps['wordBreak'];
+  private _offsetY!: number;
 
   // Font loading state
   private _fontLoadStatus: 'unloaded' | 'loading' | 'loaded' | 'failed' =
@@ -83,19 +84,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.fontHandler = textRenderer.fontHandler;
 
     // Initialize text properties from props
-    this._text = props.text || '';
-    this._fontFamily = props.fontFamily || 'sans-serif';
-    this._fontSize = props.fontSize || 16;
-    this._fontStyle = props.fontStyle || 'normal';
-    this._textAlign = props.textAlign || 'left';
-    this._contain = props.contain || 'none';
-    this._letterSpacing = props.letterSpacing || 0;
+    // Props are guaranteed to have all defaults resolved by Stage.createTextNode
+    this._text = props.text;
+    this._fontFamily = props.fontFamily;
+    this._fontSize = props.fontSize;
+    this._fontStyle = props.fontStyle;
+    this._textAlign = props.textAlign;
+    this._contain = props.contain;
+    this._letterSpacing = props.letterSpacing;
     this._lineHeight = props.lineHeight;
-    this._maxLines = props.maxLines || 0;
-    this._textBaseline = props.textBaseline || 'alphabetic';
-    this._overflowSuffix = props.overflowSuffix || '...';
-    this._wordBreak = props.wordBreak || 'normal';
-    this._offsetY = props.offsetY || 0;
+    this._maxLines = props.maxLines;
+    this._textBaseline = props.textBaseline;
+    this._verticalAlign = props.verticalAlign;
+    this._overflowSuffix = props.overflowSuffix;
+    this._wordBreak = props.wordBreak;
+    this._offsetY = props.offsetY;
 
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
