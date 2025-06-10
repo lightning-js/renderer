@@ -22,11 +22,18 @@ import type {
   TrFontFace,
   TrFontFaceDescriptors,
 } from '../font-face-types/TrFontFace.js';
-import type { FontFamilyMap } from '../TrFontManager.js';
+
 import type {
   TextBaseline,
   TextVerticalAlign,
 } from './LightningTextTextureRenderer.js';
+
+/**
+ * Structure mapping font family names to a set of font faces.
+ */
+export interface FontFamilyMap {
+  [familyName: string]: Set<TrFontFace>;
+}
 
 /**
  * Text renderer properties that are used in resolving appropriate font faces
@@ -277,4 +284,5 @@ export interface TextRenderer {
   // Fixme implement this for MSDF renderer
   // and update the properties to match
   addQuads: (any: any) => void;
+  init: () => void;
 }
