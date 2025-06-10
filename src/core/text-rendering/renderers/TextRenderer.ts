@@ -18,7 +18,6 @@
  */
 
 import type { Stage } from '../../Stage.js';
-import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 
 import type {
   TextBaseline,
@@ -29,7 +28,47 @@ import type {
  * Structure mapping font family names to a set of font faces.
  */
 export interface FontFamilyMap {
-  [familyName: string]: Set<TrFontFace>;
+  [familyName: string]: FontFace;
+}
+
+/**
+ * Font metrics used for layout and default line height calculations.
+ */
+export interface FontMetrics {
+  /**
+   * The distance, in font units, from the baseline to the highest point of the font.
+   */
+  ascender: number;
+  /**
+   * The distance, in font units, from the baseline to the lowest point of the font.
+   */
+  descender: number;
+  /**
+   * The additional space used in the calculation of the default line height in font units.
+   */
+  lineGap: number;
+  /**
+   * The number of font units per 1 EM.
+   */
+  unitsPerEm: number;
+}
+
+/**
+ * Normalized font metrics where values are expressed as a fraction of 1 EM.
+ */
+export interface NormalizedFontMetrics {
+  /**
+   * The distance, as a fraction of 1 EM, from the baseline to the highest point of the font.
+   */
+  ascender: number;
+  /**
+   * The distance, as a fraction of 1 EM, from the baseline to the lowest point of the font.
+   */
+  descender: number;
+  /**
+   * The additional space used in the calculation of the default line height as a fraction of 1 EM
+   */
+  lineGap: number;
 }
 
 /**
@@ -229,7 +268,7 @@ export interface TrProps extends TrFontProps {
 export interface FontHandler {
   init: () => void;
   type: 'canvas' | 'sdf';
-  addFontFace: (fontFace: TrFontFace) => void;
+  addFontFace: (fontFace: FontFace) => void;
   isFontLoaded: (cssString: string) => boolean;
   loadFont: (cssString: string) => Promise<void>;
   getFontFamilies: () => FontFamilyMap;
@@ -250,6 +289,6 @@ export interface TextRenderer {
   }>;
   // Fixme implement this for MSDF renderer
   // and update the properties to match
-  addQuads: (any: any) => void;
+  addQuads: (quads: unknown) => void;
   init: () => void;
 }

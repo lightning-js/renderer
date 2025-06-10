@@ -17,98 +17,60 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../../utils.js';
-import type { TrFontFace } from './font-face-types/TrFontFace.js';
-import { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
-import type { TrProps } from './renderers/TextRenderer.js';
-
-const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
+import type {
+  FontFamilyMap,
+  FontMetrics,
+  NormalizedFontMetrics,
+} from './renderers/TextRenderer.js';
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
  */
-const globalFontSet: FontFaceSet = (resolvedGlobal.document?.fonts ||
-  (resolvedGlobal as unknown as { fonts: FontFaceSet }).fonts) as FontFaceSet;
+// const globalFontSet: FontFaceSet = (resolvedGlobal.document?.fonts ||
+//   (resolvedGlobal as unknown as { fonts: FontFaceSet }).fonts) as FontFaceSet;
 
 // Global state for the font handler
 const fontState = {
-  fontFamilies: {} as FontFamilyMap,
+  fontFamilies: {} as Record<string, FontFace>,
   loadedFonts: new Set<string>(),
   fontLoadPromises: new Map<string, Promise<void>>(),
+  normalized: new Map<string, NormalizedFontMetrics>(),
   initialized: false,
 };
 
 /**
- * Initialize the global font handler
+ * Normalize font metrics to be in the range of 0 to 1
  */
-export const init = (): void => {
-  if (fontState.initialized) {
-    return;
-  }
-
-  // Install the default 'sans-serif' font face
-  addFontFace(
-    new WebTrFontFace({
-      fontFamily: 'sans-serif',
-      descriptors: {},
-      fontUrl: '',
-    }),
-  );
-
-  fontState.initialized = true;
-};
-
-export const type = 'canvas';
+function normalizeMetrics(metrics: FontMetrics): NormalizedFontMetrics {
+  return {
+    ascender: metrics.ascender / metrics.unitsPerEm,
+    descender: metrics.descender / metrics.unitsPerEm,
+    lineGap: metrics.lineGap / metrics.unitsPerEm,
+  };
+}
 
 /**
- * Add a font face to be used by the global font handler
+ * Check if a font can be rendered
  */
-export const addFontFace = (fontFace: TrFontFace): void => {
-  assertTruthy(fontFace instanceof WebTrFontFace);
-
-  const fontFamily = fontFace.fontFamily;
-
-  // Add the font face to the document (except for sans-serif which is built-in)
-  if (fontFamily !== 'sans-serif') {
-    // @ts-expect-error `add()` method should be available from a FontFaceSet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    globalFontSet.add(fontFace.fontFace);
-  }
-
-  let faceSet = fontState.fontFamilies[fontFamily];
-  if (!faceSet) {
-    faceSet = new Set();
-    fontState.fontFamilies[fontFamily] = faceSet;
-  }
-  faceSet.add(fontFace);
-};
-
-export const canRenderFont = (trProps: TrProps): boolean => {
-  // Canvas can always render any font family (assumin the browser supports it)
+export const canRenderFont = (): boolean => {
+  // Canvas can always render any font family (assuming the browser supports it)
   return true;
 };
 
 /**
- * Check if a font is already loaded by CSS string
+ * Load a font by providing fontFamily, fontUrl, and optional metrics
  */
-export const isFontLoaded = (cssString: string): boolean => {
-  // Extract font family from CSS string for simple check
-  const match = cssString.match(/(?:\d+px\s+)(.+)$/);
-  const fontFamily = match?.[1] || cssString;
-
-  return fontState.loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
-};
-
-/**
- * Load a font by CSS string
- */
-export const loadFont = async (cssString: string): Promise<void> => {
-  // Extract font family from CSS string for tracking
-  const match = cssString.match(/(?:\d+px\s+)(.+)$/);
-  const fontFamily = match?.[1] || cssString;
-
+export const loadFont = async ({
+  fontFamily,
+  fontUrl,
+  metrics,
+}: {
+  fontFamily: string;
+  fontUrl: string;
+  metrics?: FontMetrics;
+}): Promise<void> => {
   // If already loaded, return immediately
-  if (isFontLoaded(cssString)) {
+  if (fontState.loadedFonts.has(fontFamily)) {
     return;
   }
 
@@ -118,11 +80,16 @@ export const loadFont = async (cssString: string): Promise<void> => {
   }
 
   // Create and store the loading promise
-  const loadPromise = globalFontSet
-    .load(cssString)
-    .then(() => {
+  const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
+    .load()
+    .then((fontFace) => {
       fontState.loadedFonts.add(fontFamily);
       fontState.fontLoadPromises.delete(fontFamily);
+
+      // Store normalized metrics if provided
+      if (metrics) {
+        fontState.normalized.set(fontFamily, normalizeMetrics(metrics));
+      }
     })
     .catch((error) => {
       fontState.fontLoadPromises.delete(fontFamily);
@@ -146,4 +113,53 @@ export const getFontFamilies = (): FontFamilyMap => {
  */
 export const getFontFamilyArray = (): FontFamilyMap[] => {
   return [fontState.fontFamilies];
+};
+
+/**
+ * Initialize the global font handler
+ */
+export const init = (): void => {
+  if (fontState.initialized) {
+    return;
+  }
+
+  // Register the default 'sans-serif' font face
+  const defaultMetrics: NormalizedFontMetrics = {
+    ascender: 0.8,
+    descender: -0.2,
+    lineGap: 0.2,
+  };
+
+  fontState.normalized.set('sans-serif', defaultMetrics);
+  fontState.loadedFonts.add('sans-serif');
+  fontState.initialized = true;
+};
+
+export const type = 'canvas';
+
+/**
+ * Add a font face to be used by the global font handler
+ */
+export const addFontFace = (fontFace: FontFace): void => {
+  const fontFamily = fontFace.family;
+
+  // Load the font face
+  fontFace
+    .load()
+    .then(() => {
+      console.log(`Font loaded: ${fontFamily}`);
+    })
+    .catch((error) => {
+      console.error(`Failed to load font: ${fontFamily}`, error);
+    });
+
+  // Directly map the font family to the FontFace
+  fontState.fontFamilies[fontFamily] = fontFace;
+};
+
+/**
+ * Check if a font is already loaded by font family
+ */
+export const isFontLoaded = (fontFamily: string): boolean => {
+  return fontState.loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
 };
