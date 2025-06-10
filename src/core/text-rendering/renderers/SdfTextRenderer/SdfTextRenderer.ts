@@ -44,7 +44,7 @@ import {
   type SdfRenderWindow,
 } from './internal/setRenderWindow.js';
 import type { TrFontFace } from '../../font-face-types/TrFontFace.js';
-import { type FontFamilyMap } from '../../TrFontManager.js';
+
 import { assertTruthy, mergeColorAlpha } from '../../../../utils.js';
 import type { Stage } from '../../../Stage.js';
 import { WebGlRenderOp } from '../../../renderers/webgl/WebGlRenderOp.js';
@@ -166,18 +166,8 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },
-      fontWeight: (state, value) => {
-        state.props.fontWeight = value;
-        this.releaseFontFace(state);
-        this.invalidateLayoutCache(state);
-      },
       fontStyle: (state, value) => {
         state.props.fontStyle = value;
-        this.releaseFontFace(state);
-        this.invalidateLayoutCache(state);
-      },
-      fontStretch: (state, value) => {
-        state.props.fontStretch = value;
         this.releaseFontFace(state);
         this.invalidateLayoutCache(state);
       },

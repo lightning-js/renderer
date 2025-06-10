@@ -56,9 +56,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _text: string = '';
   private _fontFamily: string = 'sans-serif';
   private _fontSize: number = 16;
-  private _fontWeight: TrProps['fontWeight'] = 'normal';
   private _fontStyle: TrProps['fontStyle'] = 'normal';
-  private _fontStretch: TrProps['fontStretch'] = 'normal';
   private _textAlign: TrProps['textAlign'] = 'left';
   private _contain: TrProps['contain'] = 'none';
   private _letterSpacing: number = 0;
@@ -88,9 +86,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._text = props.text || '';
     this._fontFamily = props.fontFamily || 'sans-serif';
     this._fontSize = props.fontSize || 16;
-    this._fontWeight = props.fontWeight || 'normal';
     this._fontStyle = props.fontStyle || 'normal';
-    this._fontStretch = props.fontStretch || 'normal';
     this._textAlign = props.textAlign || 'left';
     this._contain = props.contain || 'none';
     this._letterSpacing = props.letterSpacing || 0;
@@ -175,9 +171,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
           text: this._text,
           fontFamily: this._fontFamily,
           fontSize: this._fontSize,
-          fontWeight: this._fontWeight,
           fontStyle: this._fontStyle,
-          fontStretch: this._fontStretch,
           textAlign: this._textAlign,
           contain: this._contain,
           letterSpacing: this._letterSpacing,
@@ -313,19 +307,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  get fontWeight(): TrProps['fontWeight'] {
-    return this._fontWeight;
-  }
-
-  set fontWeight(value: TrProps['fontWeight']) {
-    if (this._fontWeight !== value) {
-      this._fontWeight = value;
-      this._textRenderNeeded = true;
-      this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
   get fontStyle(): TrProps['fontStyle'] {
     return this._fontStyle;
   }
@@ -333,19 +314,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontStyle(value: TrProps['fontStyle']) {
     if (this._fontStyle !== value) {
       this._fontStyle = value;
-      this._textRenderNeeded = true;
-      this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
-  get fontStretch(): TrProps['fontStretch'] {
-    return this._fontStretch;
-  }
-
-  set fontStretch(value: TrProps['fontStretch']) {
-    if (this._fontStretch !== value) {
-      this._fontStretch = value;
       this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.Both;
       this.setUpdateType(UpdateType.Local);

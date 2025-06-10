@@ -21,7 +21,6 @@ import { assertTruthy } from '../../utils.js';
 import type { TrFontFace } from './font-face-types/TrFontFace.js';
 import { WebTrFontFace } from './font-face-types/WebTrFontFace.js';
 import type { TrProps } from './renderers/TextRenderer.js';
-import type { FontFamilyMap } from './TrFontManager.js';
 
 const resolvedGlobal = typeof self === 'undefined' ? globalThis : self;
 

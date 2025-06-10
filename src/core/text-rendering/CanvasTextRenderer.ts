@@ -32,10 +32,8 @@ export const type = 'canvas';
  * Get CSS font string from props
  */
 const getFontCssString = (props: TrProps): string => {
-  const { fontFamily, fontStyle, fontWeight, fontStretch, fontSize } = props;
-  return [fontStyle, fontWeight, fontStretch, `${fontSize}px`, fontFamily].join(
-    ' ',
-  );
+  const { fontFamily, fontStyle, fontSize } = props;
+  return [fontStyle, `${fontSize}px`, fontFamily].join(' ');
 };
 
 /**
@@ -52,7 +50,7 @@ const configureLightningRenderer = (
     fontFamily: props.fontFamily,
     trFontFace: trFontFace,
     fontSize: props.fontSize,
-    fontStyle: [props.fontStretch, props.fontStyle, props.fontWeight].join(' '),
+    fontStyle: props.fontStyle,
     textColor: getNormalizedRgbaComponents(props.color || 0xffffffff),
     offsetY: props.offsetY || 0,
     wordWrap: props.contain !== 'none',
@@ -70,6 +68,10 @@ const configureLightningRenderer = (
     wordBreak: props.wordBreak,
     w: props.contain !== 'none' ? props.width || 0 : undefined,
   };
+};
+
+export const init = (): void => {
+  /** nothing to init at this stage for Canvas */
 };
 
 export const getFontHandler = (): FontHandler => {

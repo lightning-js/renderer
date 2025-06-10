@@ -624,8 +624,6 @@ export class Stage {
       fontSize,
       fontFamily: props.fontFamily ?? 'sans-serif',
       fontStyle: props.fontStyle ?? 'normal',
-      fontWeight: props.fontWeight ?? 'normal',
-      fontStretch: props.fontStretch ?? 'normal',
       textAlign: props.textAlign ?? 'left',
       contain: props.contain ?? 'none',
       offsetY: props.offsetY ?? 0,

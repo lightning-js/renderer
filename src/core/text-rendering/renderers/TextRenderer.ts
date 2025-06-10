@@ -18,10 +18,7 @@
  */
 
 import type { Stage } from '../../Stage.js';
-import type {
-  TrFontFace,
-  TrFontFaceDescriptors,
-} from '../font-face-types/TrFontFace.js';
+import type { TrFontFace } from '../font-face-types/TrFontFace.js';
 
 import type {
   TextBaseline,
@@ -53,17 +50,6 @@ export interface TrFontProps {
    */
   fontFamily: string;
   /**
-   * Font Weight
-   *
-   * @remarks
-   * The font weight to use when looking up the font face. This can be a numeric
-   * value between 1 and 1000, or one of the following strings:
-   * - `'normal'` - same as 400
-   * - `'bold'` - same as 700
-   * - `'bolder'` - (Not yet properly supported)
-   */
-  fontWeight: TrFontFaceDescriptors['weight'] | 'bolder' | 'lighter';
-  /**
    * Font Style
    *
    * @remarks
@@ -73,26 +59,7 @@ export interface TrFontProps {
    * - `'italic'`
    * - `'oblique'`
    */
-  fontStyle: TrFontFaceDescriptors['style'];
-  /**
-   * Font Stretch
-   *
-   * @remarks
-   * The font stretch to use when looking up the font face. This can be one of the
-   * following strings:
-   * - `'normal'`
-   * - `'ultra-condensed'`
-   * - `'extra-condensed'`
-   * - `'condensed'`
-   * - `'semi-condensed'`
-   * - `'semi-expanded'`
-   * - `'expanded'`
-   * - `'extra-expanded'`
-   * - `'ultra-expanded'`
-   *
-   * @default 'normal'
-   */
-  fontStretch: TrFontFaceDescriptors['stretch'];
+  fontStyle: 'normal' | 'italic' | 'oblique';
   /**
    * Font Size
    *
