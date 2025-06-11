@@ -24,7 +24,7 @@ import type {
   MappedGlyphInfo,
   UnmappedCharacterInfo,
 } from '../../../font-face-types/SdfTrFontFace/internal/FontShaper.js';
-import type { TrProps, TextRendererState } from '../../TextRenderer.js';
+import type { TrProps, TextRendererState } from '../../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
 import { PeekableIterator } from './PeekableGenerator.js';
 import { getUnicodeCodepoints } from './getUnicodeCodepoints.js';

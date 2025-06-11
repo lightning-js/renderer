@@ -49,7 +49,7 @@ export {
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
+export type { TextRendererMap } from '../src/core/text-rendering/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
