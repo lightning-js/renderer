@@ -20,7 +20,7 @@
 import { assertTruthy } from '../../../../../utils.js';
 import type { Bound } from '../../../../lib/utils.js';
 import type { SdfTrFontFace } from '../../../font-face-types/SdfTrFontFace/SdfTrFontFace.js';
-import type { TrProps, TextRendererState } from '../../TextRenderer.js';
+import type { TrProps, TextRendererState } from '../../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
 import type { SdfRenderWindow } from './setRenderWindow.js';
 

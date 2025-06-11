@@ -21,7 +21,7 @@ import type {
   FontFamilyMap,
   FontMetrics,
   NormalizedFontMetrics,
-} from './renderers/TextRenderer.js';
+} from './TextRenderer.js';
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
@@ -88,7 +88,7 @@ export const loadFont = async ({
 
       // Store normalized metrics if provided
       if (metrics) {
-        fontState.normalized.set(fontFamily, normalizeMetrics(metrics));
+        setFontMetrics(fontFamily, normalizeMetrics(metrics));
       }
     })
     .catch((error) => {
@@ -123,7 +123,7 @@ export const init = (): void => {
     lineGap: 0.2,
   };
 
-  fontState.normalized.set('sans-serif', defaultMetrics);
+  setFontMetrics('sans-serif', defaultMetrics);
   fontState.loadedFonts.add('sans-serif');
   fontState.initialized = true;
 };
@@ -135,4 +135,17 @@ export const type = 'canvas';
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
   return fontState.loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
+};
+
+export const getFontMetrics = (
+  fontFamily: string,
+): NormalizedFontMetrics | null => {
+  return fontState.normalized.get(fontFamily) || null;
+};
+
+export const setFontMetrics = (
+  fontFamily: string,
+  metrics: NormalizedFontMetrics,
+): void => {
+  fontState.normalized.set(fontFamily, metrics);
 };

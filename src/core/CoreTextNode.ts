@@ -21,7 +21,7 @@ import type {
   FontHandler,
   TextRenderer,
   TrProps,
-} from './text-rendering/renderers/TextRenderer.js';
+} from './text-rendering/TextRenderer.js';
 import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type {

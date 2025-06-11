@@ -20,7 +20,7 @@
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
 import { getNormalizedRgbaComponents } from '../lib/utils.js';
-import type { FontHandler, TrProps } from './renderers/TextRenderer.js';
+import type { FontHandler, TrProps } from './TextRenderer.js';
 import { LightningTextTextureRenderer } from './renderers/LightningTextTextureRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 

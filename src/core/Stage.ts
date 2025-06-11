@@ -32,7 +32,7 @@ import {
   type TextRenderer,
   type TextRendererMap,
   type TrProps,
-} from './text-rendering/renderers/TextRenderer.js';
+} from './text-rendering/TextRenderer.js';
 
 import { EventEmitter } from '../common/EventEmitter.js';
 import { ContextSpy } from './lib/ContextSpy.js';

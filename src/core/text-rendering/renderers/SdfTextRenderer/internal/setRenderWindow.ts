@@ -18,7 +18,7 @@
  */
 
 import { isBoundPositive, type Bound } from '../../../../lib/utils.js';
-import type { TrProps } from '../../TextRenderer.js';
+import type { TrProps } from '../../../TextRenderer.js';
 import { roundDownToMultiple, roundUpToMultiple } from './util.js';
 
 export interface SdfRenderWindow {
