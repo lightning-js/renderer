@@ -34,7 +34,7 @@ import {
   type TextRendererState,
   type TrFontProps,
   type TrPropSetters,
-} from '../TextRenderer.js';
+} from '../../TextRenderer.js';
 import { SdfTrFontFace } from '../../font-face-types/SdfTrFontFace/SdfTrFontFace.js';
 import { FLOATS_PER_GLYPH } from './internal/constants.js';
 import { getStartConditions } from './internal/getStartConditions.js';

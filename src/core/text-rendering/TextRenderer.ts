@@ -17,12 +17,7 @@
  * limitations under the License.
  */
 
-import type { Stage } from '../../Stage.js';
-
-import type {
-  TextBaseline,
-  TextVerticalAlign,
-} from './LightningTextTextureRenderer.js';
+import type { Stage } from '../Stage.js';
 
 /**
  * Structure mapping font family names to a set of font faces.
@@ -276,6 +271,11 @@ export interface FontHandler {
   }) => Promise<void>;
   getFontFamilies: () => FontFamilyMap;
   canRenderFont: (trProps: TrProps) => boolean;
+  getFontMetrics: (
+    fontFamily: string,
+    trProps: TrProps,
+  ) => NormalizedFontMetrics | null;
+  setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
 }
 
 export interface TextRenderer {

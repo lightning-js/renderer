@@ -19,55 +19,15 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import { getNormalizedRgbaComponents } from '../lib/utils.js';
-import type { FontHandler, TrProps } from './renderers/TextRenderer.js';
-import { LightningTextTextureRenderer } from './renderers/LightningTextTextureRenderer.js';
+import type { FontHandler, TrProps } from './TextRenderer.js';
+import type { Settings } from './canvas/Settings.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
+import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
+import { draw } from './canvas/draw.js';
 
 export const type = 'canvas';
 
-/**
- * Get CSS font string from props
- */
-const getFontCssString = (props: TrProps): string => {
-  const { fontFamily, fontStyle, fontSize } = props;
-  return [fontStyle, `${fontSize}px`, fontFamily].join(' ');
-};
-
-/**
- * Configure Lightning text renderer settings
- */
-const configureLightningRenderer = (
-  lightningRenderer: LightningTextTextureRenderer,
-  props: TrProps,
-  trFontFace: WebTrFontFace,
-): void => {
-  lightningRenderer.settings = {
-    text: props.text,
-    textAlign: props.textAlign,
-    fontFamily: props.fontFamily,
-    trFontFace: trFontFace,
-    fontSize: props.fontSize,
-    fontStyle: props.fontStyle,
-    textColor: getNormalizedRgbaComponents(props.color || 0xffffffff),
-    offsetY: props.offsetY || 0,
-    wordWrap: props.contain !== 'none',
-    wordWrapWidth: props.contain === 'none' ? undefined : props.width || 0,
-    letterSpacing: props.letterSpacing || 0,
-    lineHeight: props.lineHeight ?? null,
-    maxLines: props.maxLines || 0,
-    maxHeight:
-      props.contain === 'both'
-        ? (props.height || 0) - (props.offsetY || 0)
-        : null,
-    textBaseline: props.textBaseline,
-    verticalAlign: props.verticalAlign,
-    overflowSuffix: props.overflowSuffix,
-    wordBreak: props.wordBreak,
-    w: props.contain !== 'none' ? props.width || 0 : undefined,
-  };
-};
-
+// Font handling
 export const init = (): void => {
   /** nothing to init at this stage for Canvas */
 };
@@ -89,34 +49,73 @@ export const renderText = async (
   width: number;
   height: number;
 }> => {
-  const fontFamilyArray = getFontFamilyArray();
-  const trFontFace = stage.fontManager.resolveFontFace(
-    fontFamilyArray,
-    props,
-    'canvas',
-  ) as WebTrFontFace | undefined;
-
-  if (!trFontFace) {
-    throw new Error(
-      `Could not resolve font face for ${getFontCssString(props)}`,
-    );
-  }
-
   const canvas = stage.platform.createCanvas();
   const context = canvas.getContext('2d');
 
   assertTruthy(context, 'Canvas context is not available');
 
-  const lightningTextRenderer = new LightningTextTextureRenderer(
+  const settings = Object.create(null) as Settings;
+
+  // Props to settings mapping
+  settings.text = props.text;
+  settings.fontFamily = props.fontFamily;
+  settings.fontSize = props.fontSize;
+  settings.fontStyle = props.fontStyle;
+  settings.textAlign = props.textAlign || 'left';
+  settings.letterSpacing =
+    typeof props.letterSpacing === 'number' ? props.letterSpacing : 0;
+  settings.lineHeight =
+    typeof props.lineHeight === 'number' ? props.lineHeight : null;
+  settings.maxLines = typeof props.maxLines === 'number' ? props.maxLines : 0;
+  settings.textBaseline = props.textBaseline || 'alphabetic';
+  settings.verticalAlign = props.verticalAlign || 'top';
+  settings.overflowSuffix = props.overflowSuffix || '';
+  settings.wordBreak = props.wordBreak || 'normal';
+  settings.offsetY = props.offsetY || 0;
+
+  // Computed properties
+  settings.wordWrap = props.contain !== 'none';
+  settings.wordWrapWidth = props.contain === 'none' ? 0 : props.width || 0;
+  settings.w = props.contain !== 'none' ? props.width || 0 : 0;
+  settings.h = props.height || 0;
+  settings.maxHeight =
+    props.contain === 'both'
+      ? (props.height || 0) - (props.offsetY || 0)
+      : null;
+  settings.textOverflow = props.overflowSuffix ? 'ellipsis' : null;
+
+  // Set defaults
+  settings.precision = 1;
+  settings.fontBaselineRatio = 1.0;
+  settings.textColor = [1, 1, 1, 1];
+  settings.paddingLeft = 0;
+  settings.paddingRight = 0;
+  settings.shadow = false;
+  settings.shadowColor = [0, 0, 0, 1];
+  settings.shadowOffsetX = 0;
+  settings.shadowOffsetY = 0;
+  settings.shadowBlur = 0;
+  settings.highlight = false;
+  settings.highlightHeight = 0;
+  settings.highlightColor = [1, 1, 0, 0.5];
+  settings.highlightOffset = 0;
+  settings.highlightPaddingLeft = 0;
+  settings.highlightPaddingRight = 0;
+  settings.textIndent = 0;
+  settings.cutSx = 0;
+  settings.cutSy = 0;
+  settings.cutEx = 0;
+  settings.cutEy = 0;
+  settings.advancedRenderer = false;
+  settings.textRenderIssueMargin = 0;
+
+  const renderInfo = calculateRenderInfo({ context, settings });
+
+  draw({
     canvas,
     context,
-  );
-  configureLightningRenderer(lightningTextRenderer, props, trFontFace);
-
-  const renderInfo = lightningTextRenderer.calculateRenderInfo();
-  lightningTextRenderer.draw(renderInfo, {
-    lines: renderInfo.lines,
-    lineWidths: renderInfo.lineWidths,
+    renderInfo,
+    settings,
   });
 
   let imageData: ImageData | null = null;

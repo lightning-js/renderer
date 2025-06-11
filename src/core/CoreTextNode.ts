@@ -21,7 +21,7 @@ import type {
   FontHandler,
   TextRenderer,
   TrProps,
-} from './text-rendering/renderers/TextRenderer.js';
+} from './text-rendering/TextRenderer.js';
 import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type {
@@ -69,9 +69,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _wordBreak!: TrProps['wordBreak'];
   private _offsetY!: number;
 
-  // Font loading state
-  private _fontLoadStatus: 'unloaded' | 'loading' | 'loaded' | 'failed' =
-    'unloaded';
   private _textRenderNeeded: boolean = true;
 
   constructor(
@@ -81,7 +78,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   ) {
     super(stage, props);
     this.textRenderer = textRenderer;
-    this.fontHandler = textRenderer.fontHandler;
+    this.fontHandler = textRenderer.font;
 
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
@@ -125,8 +122,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Check if font update is needed
     if (textUpdateReason & TextUpdateReason.FontChange) {
       fontUpdateNeeded = true;
-      // Reset font load status when font changes
-      this._fontLoadStatus = 'unloaded';
     }
 
     // Check if text render update is needed
@@ -134,38 +129,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       textRenderNeeded = true;
     }
 
-    // Step 1: Handle font loading if needed
-    if (fontUpdateNeeded || this._fontLoadStatus === 'unloaded') {
-      const isFontLoaded = this.fontHandler.isFontLoaded(this._fontFamily);
-
-      if (!isFontLoaded && this._fontLoadStatus === 'unloaded') {
-        this._fontLoadStatus = 'loading';
-        // Start font loading asynchronously but don't block the update
-        this.fontHandler
-          .loadFont(this._fontFamily)
-          .then(() => {
-            this._fontLoadStatus = 'loaded';
-            // Mark for re-render when font loads
-            this._textRenderNeeded = true;
-            this._pendingTextUpdate |= TextUpdateReason.TextChange;
-            this.setUpdateType(UpdateType.Local);
-          })
-          .catch((error) => {
-            this._fontLoadStatus = 'failed';
-            this.emit('failed', {
-              type: 'text',
-              error: error as Error,
-            } satisfies NodeTextFailedPayload);
-          });
-        return; // Exit early, will re-render when font loads
-      }
+    // Step 1: Check if the font is loaded
+    if (
+      fontUpdateNeeded &&
+      this.fontHandler.isFontLoaded(this._fontFamily) === false
+    ) {
+      return; // Exit early, will re-render when font is loaded
     }
 
-    // Step 2: Render text if font is loaded and rendering is needed
-    if (
-      this._fontLoadStatus === 'loaded' &&
-      (textRenderNeeded || this._textRenderNeeded)
-    ) {
+    // Step 2: Render text if rendering is needed
+    if (textRenderNeeded || this._textRenderNeeded) {
       this.textRenderer
         .renderText(this.stage, {
           x: this.props.x,
@@ -303,7 +276,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontFamily(value: string) {
     if (this._fontFamily !== value) {
       this._fontFamily = value;
-      this._fontLoadStatus = 'unloaded'; // Reset font load status
       this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.Both;
       this.setUpdateType(UpdateType.Local);
