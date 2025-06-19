@@ -447,7 +447,7 @@ export interface CoreNodeProps {
    * Note: If this is a Text Node, the Shader will be managed by the Node's
    * {@link TextRenderer} and should not be set explicitly.
    */
-  shader: BaseShaderController;
+  shader: BaseShaderController | null;
   /**
    * Image URL
    *
@@ -1720,6 +1720,10 @@ export class CoreNode extends EventEmitter {
       }
     }
 
+    assertTruthy(
+      this.props.shader && this.props.shader.isDestroyed === false,
+      'Shader is destroyed',
+    );
     assertTruthy(this.globalTransform);
     assertTruthy(this.renderCoords);
 
@@ -2282,15 +2286,30 @@ export class CoreNode extends EventEmitter {
   }
 
   get shader(): BaseShaderController {
-    return this.props.shader;
+    return (
+      (this.props.shader &&
+        this.props.shader.isDestroyed === false &&
+        this.props.shader) ||
+      this.stage.defShaderCtr
+    );
   }
 
-  set shader(value: BaseShaderController) {
+  set shader(value: BaseShaderController | null) {
     if (this.props.shader === value) {
       return;
     }
 
-    this.props.shader = value;
+    // When setting shader to null, simply replace it with the default shader
+    if (value === null) {
+      this.props.shader = this.stage.defShaderCtr;
+    } else {
+      assertTruthy(
+        value.isDestroyed === false,
+        'CoreNode.shader: Attempted to set a destroyed shader, using default shader instead.',
+      );
+
+      this.props.shader = value;
+    }
 
     this.setUpdateType(UpdateType.IsRenderable);
   }

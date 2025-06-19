@@ -261,12 +261,61 @@ export class CoreShaderManager {
     return this._createDynShaderCtr(shader, resolvedProps);
   }
 
+  /**
+   * Removes a shader from the shader cache.
+   *
+   * If the shader is currently attached, it will be detached.
+   *
+   * @param shaderOrCacheKey - The shader instance or cache key to remove
+   * @returns boolean - True if the shader was found and removed, false otherwise.
+   */
+  removeShader(shaderController: ShaderController<keyof ShaderMap>): boolean {
+    if (!shaderController.shader || shaderController.isDestroyed === true) {
+      return false;
+    }
+
+    const shaderInstance = shaderController.shader as CoreShader;
+    // Find the cache key for this shader instance
+    for (const [key, shader] of this.shCache.entries()) {
+      if (shader === shaderInstance) {
+        // If this shader is currently attached, detach it
+        if (this.attachedShader === shader) {
+          this.attachedShader.detach();
+          this.attachedShader = null;
+        }
+
+        shaderController.destroy();
+
+        // Remove the shader from the cache
+        this.shCache.delete(key);
+        return true;
+      }
+    }
+    return false;
+  }
+
   private _createShaderCtr<Type extends keyof ShaderMap>(
     type: Type,
     shader: InstanceType<ShaderMap[Type]>,
     props: ExtractProps<ShaderMap[Type]>,
   ): ShaderController<Type> {
-    return new ShaderController(type, shader, props, this.renderer.stage);
+    const controller = new ShaderController(
+      type,
+      shader,
+      props,
+      this.renderer.stage,
+    );
+
+    // Special handling for DefaultShader to make it indestructible
+    if (type === 'DefaultShader') {
+      controller.destroy = function () {
+        console.debug(
+          'Attempted to destroy DefaultShader - operation ignored as this is a system shader',
+        );
+      };
+    }
+
+    return controller;
   }
 
   private _createDynShaderCtr<
