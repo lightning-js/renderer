@@ -246,6 +246,20 @@ export abstract class Texture extends EventEmitter {
   }
 
   /**
+   * Destroy the texture.
+   *
+   * @remarks
+   * This method is called when the texture is no longer needed and should be
+   * cleaned up.
+   */
+  destroy(): void {
+    this.removeAllListeners();
+    this.free();
+    this.freeTextureData();
+    this.renderableOwners.clear();
+  }
+
+  /**
    * Free the source texture data for this Texture.
    *
    * @remarks
