@@ -79,8 +79,6 @@ const stylePropertyMap: {
   zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
   fontStyle: () => 'font-style',
-  fontWeight: () => 'font-weight',
-  fontStretch: () => 'font-stretch',
   letterSpacing: () => 'letter-spacing',
   textAlign: () => 'text-align',
   overflowSuffix: () => 'overflow-suffix',

@@ -26,13 +26,13 @@ import {
   type CoreNodeProps,
 } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
-import { TrFontManager } from './text-rendering/TrFontManager.js';
 import { CoreShaderManager } from './CoreShaderManager.js';
 import {
-  TextRenderer,
-  type TextRendererMap,
+  type FontHandler,
+  type TextRenderer,
+  type TextRenderers,
   type TrProps,
-} from './text-rendering/renderers/TextRenderer.js';
+} from './text-rendering/TextRenderer.js';
 
 import { EventEmitter } from '../common/EventEmitter.js';
 import { ContextSpy } from './lib/ContextSpy.js';
@@ -48,8 +48,6 @@ import {
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
-import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
-import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
 import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
@@ -93,8 +91,8 @@ export class Stage {
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
   public readonly txMemManager: TextureMemoryManager;
-  public readonly fontManager: TrFontManager;
-  public readonly textRenderers: Partial<TextRendererMap>;
+  public readonly textRenderers: Record<string, TextRenderer> = {};
+  public readonly fontHandlers: Record<string, FontHandler> = {};
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
@@ -130,10 +128,15 @@ export class Stage {
   private numQuadsRendered = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
-  private fontResolveMap: Record<string, CanvasTextRenderer | SdfTextRenderer> =
-    {};
 
-  /// Debug data
+  // Font resolve optimisation flags
+  private hasOnlyOneFontEngine: boolean;
+  private hasOnlyCanvasFontEngine: boolean;
+  private hasCanvasEngine: boolean;
+  private singleFontEngine: TextRenderer | null = null;
+  private singleFontHandler: FontHandler | null = null;
+
+  // Debug data
   contextSpy: ContextSpy | null = null;
 
   /**
@@ -219,33 +222,65 @@ export class Stage {
     this.txManager.renderer = this.renderer;
 
     // Create text renderers
-    this.textRenderers = {};
-    fontEngines.forEach((fontEngineConstructor) => {
-      const fontEngineInstance = new fontEngineConstructor(this);
-      const className = fontEngineInstance.type;
+    this.hasOnlyOneFontEngine = fontEngines.length === 1;
+    this.hasOnlyCanvasFontEngine =
+      fontEngines.length === 1 && fontEngines[0].type === 'canvas';
+    this.hasCanvasEngine = false;
+    this.singleFontEngine = this.hasOnlyOneFontEngine
+      ? (fontEngines[0] as TextRenderer)
+      : null;
+    this.singleFontHandler = this.hasOnlyOneFontEngine
+      ? (fontEngines[0].fontHandler as FontHandler)
+      : null;
 
-      if (className === 'sdf' && renderMode === 'canvas') {
-        console.warn(
-          'SdfTextRenderer is not compatible with Canvas renderer. Skipping...',
-        );
-        return;
-      }
+    if (this.singleFontEngine === null) {
+      // Filter out incompatible engines first
+      const compatibleEngines = fontEngines.filter(
+        (fontEngine: TextRenderer) => {
+          const type = fontEngine.type;
 
-      if (fontEngineInstance instanceof TextRenderer) {
-        if (className === 'canvas') {
-          this.textRenderers['canvas'] =
-            fontEngineInstance as CanvasTextRenderer;
-        } else if (className === 'sdf') {
-          this.textRenderers['sdf'] = fontEngineInstance as SdfTextRenderer;
-        }
-      }
-    });
+          if (type === 'msdf' && renderMode === 'canvas') {
+            console.warn(
+              'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
+            );
+            return false;
+          }
+
+          if (type === 'canvas') {
+            this.hasCanvasEngine = true;
+          }
+
+          return true;
+        },
+      );
+
+      // Sort engines: SDF first, Canvas last, others in between
+      const sortedEngines = compatibleEngines.sort(
+        (a: TextRenderer, b: TextRenderer) => {
+          if (a.type === 'msdf') return -1;
+          if (b.type === 'msdf') return 1;
+          if (a.type === 'canvas') return 1;
+          if (b.type === 'canvas') return -1;
+          return 0;
+        },
+      );
+
+      // Initialize engines in sorted order
+      sortedEngines.forEach((fontEngine: TextRenderer) => {
+        const type = fontEngine.type;
+
+        // Add to map for type-based access
+        this.textRenderers[type] = fontEngine;
+        this.textRenderers[type].init();
+
+        this.fontHandlers[type] = fontEngine.font;
+        this.fontHandlers[type].init();
+      });
+    }
 
     if (Object.keys(this.textRenderers).length === 0) {
       console.warn('No text renderers available. Your text will not render.');
     }
-
-    this.fontManager = new TrFontManager(this.textRenderers);
 
     // create root node
     const rootNode = new CoreNode(this, {
@@ -529,72 +564,52 @@ export class Stage {
    */
   resolveTextRenderer(
     trProps: TrProps,
-    textRendererOverride: keyof TextRendererMap | null = null,
+    textRendererOverride: keyof TextRenderers | null = null,
   ): TextRenderer | null {
-    const fontCacheString = `${trProps.fontFamily}${trProps.fontStyle}${
-      trProps.fontWeight
-    }${trProps.fontStretch}${textRendererOverride ? textRendererOverride : ''}`;
-
-    // check our resolve cache first
-    if (this.fontResolveMap[fontCacheString] !== undefined) {
-      return this.fontResolveMap[fontCacheString] as unknown as TextRenderer;
-    }
-
-    // Resolve the text renderer
-    let rendererId = textRendererOverride;
-    let overrideFallback = false;
-
-    // Check if the override is valid (if one is provided)
-    if (rendererId) {
-      const possibleRenderer = this.textRenderers[rendererId];
-      if (!possibleRenderer) {
-        console.warn(`Text renderer override '${rendererId}' not found.`);
-        rendererId = null;
-        overrideFallback = true;
-      } else if (!possibleRenderer.canRenderFont(trProps)) {
-        console.warn(
-          `Cannot use override text renderer '${rendererId}' for font`,
-          trProps,
-        );
-        rendererId = null;
-        overrideFallback = true;
+    // If we have an overide, return it
+    if (textRendererOverride !== null) {
+      const overrideKey = String(textRendererOverride);
+      if (this.textRenderers[overrideKey] === undefined) {
+        console.warn(`Text renderer override '${overrideKey}' not found.`);
+        return null;
       }
+
+      return this.textRenderers[overrideKey];
     }
 
-    if (!rendererId) {
-      // Iterate through the text renderers and find the first one that can render the font
-      for (const [trId, tr] of Object.entries(this.textRenderers)) {
-        if (tr.canRenderFont(trProps)) {
-          rendererId = trId as keyof TextRendererMap;
-          break;
-        }
+    // If we have only one font engine early return it
+    if (this.singleFontEngine !== null) {
+      // If we have only one font engine and its the canvas engine, we can just return it
+      if (this.hasOnlyCanvasFontEngine === true) {
+        return this.singleFontEngine;
       }
-      if (!rendererId && this.textRenderers.canvas !== undefined) {
-        // If no renderer can be found, use the canvas renderer
-        rendererId = 'canvas';
+
+      // If we have only one font engine and it can render the font, return it
+      if (this.singleFontHandler?.canRenderFont(trProps) === true) {
+        return this.singleFontEngine;
       }
-    }
 
-    if (overrideFallback) {
-      console.warn(`Falling back to text renderer ${String(rendererId)}`);
-    }
+      // If we have only one font engine and it cannot render the font, return null
+      console.warn(`Text renderer cannot render font`, trProps);
 
-    if (!rendererId) {
-      // silently fail if no renderer can be found, the error is already created
-      // at the constructor level
       return null;
     }
 
-    // By now we are guaranteed to have a valid rendererId (at least Canvas);
-    const resolvedTextRenderer = this.textRenderers[rendererId];
-    assertTruthy(resolvedTextRenderer, 'resolvedTextRenderer undefined');
+    // Multi font handling  - If we have multiple font engines, we need to resolve the best one
 
-    // cache the resolved renderer for future use with these trProps
-    this.fontResolveMap[fontCacheString] = resolvedTextRenderer;
+    // First check SDF
+    if (this.fontHandlers['msdf']?.canRenderFont(trProps) === true) {
+      return this.textRenderers.msdf || null;
+    }
 
-    // Need to explicitly cast to TextRenderer because TS doesn't like
-    // the covariant state argument in the setter method map
-    return resolvedTextRenderer as unknown as TextRenderer;
+    // If we have a canvas engine, we can return it (it can render all fonts)
+    if (this.hasCanvasEngine === true) {
+      return this.textRenderers.canvas || null;
+    }
+
+    // If we have no font engines, return null
+    console.warn('No text renderers available. Your text will not render.');
+    return null;
   }
 
   createNode(props: Partial<CoreNodeProps>) {
@@ -603,34 +618,26 @@ export class Stage {
   }
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
-    const fontSize = props.fontSize ?? 16;
+    const fontSize = props.fontSize || 16;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
-      text: props.text ?? '',
-      textRendererOverride: props.textRendererOverride ?? null,
+      text: props.text || '',
+      textRendererOverride: props.textRendererOverride || null,
       fontSize,
-      fontFamily: props.fontFamily ?? 'sans-serif',
-      fontStyle: props.fontStyle ?? 'normal',
-      fontWeight: props.fontWeight ?? 'normal',
-      fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
-      contain: props.contain ?? 'none',
-      scrollable: props.scrollable ?? false,
-      scrollY: props.scrollY ?? 0,
-      offsetY: props.offsetY ?? 0,
-      letterSpacing: props.letterSpacing ?? 0,
+      fontFamily: props.fontFamily || 'sans-serif',
+      fontStyle: props.fontStyle || 'normal',
+      textAlign: props.textAlign || 'left',
+      contain: props.contain || 'none',
+      offsetY: props.offsetY || 0,
+      letterSpacing: props.letterSpacing || 0,
       lineHeight: props.lineHeight, // `undefined` is a valid value
-      maxLines: props.maxLines ?? 0,
-      textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
-      overflowSuffix: props.overflowSuffix ?? '...',
-      wordBreak: props.wordBreak ?? 'normal',
-      debug: props.debug ?? {},
+      maxLines: props.maxLines || 0,
+      textBaseline: props.textBaseline || 'alphabetic',
+      verticalAlign: props.verticalAlign || 'middle',
+      overflowSuffix: props.overflowSuffix || '...',
+      wordBreak: props.wordBreak || 'normal',
     });
 
-    const resolvedTextRenderer = this.resolveTextRenderer(
-      resolvedProps,
-      props.textRendererOverride,
-    );
+    const resolvedTextRenderer = this.resolveTextRenderer(resolvedProps);
 
     if (!resolvedTextRenderer) {
       throw new Error(
