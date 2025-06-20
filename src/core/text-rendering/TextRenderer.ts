@@ -19,6 +19,16 @@
 
 import type { Stage } from '../Stage.js';
 
+// Text baseline and vertical align types
+export type TextBaseline =
+  | 'alphabetic'
+  | 'top'
+  | 'hanging'
+  | 'middle'
+  | 'ideographic'
+  | 'bottom';
+export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
+export type TextRenderers = 'canvas' | 'sdf';
 /**
  * Structure mapping font family names to a set of font faces.
  */
@@ -279,7 +289,7 @@ export interface FontHandler {
 }
 
 export interface TextRenderer {
-  type: 'canvas' | 'sdf';
+  type: 'canvas' | 'msdf';
   font: FontHandler;
   renderText: (
     stage: Stage,

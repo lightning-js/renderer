@@ -30,7 +30,7 @@ import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   type FontHandler,
   type TextRenderer,
-  type TextRendererMap,
+  type TextRenderers,
   type TrProps,
 } from './text-rendering/TextRenderer.js';
 
@@ -239,9 +239,9 @@ export class Stage {
         (fontEngine: TextRenderer) => {
           const type = fontEngine.type;
 
-          if (type === 'sdf' && renderMode === 'canvas') {
+          if (type === 'msdf' && renderMode === 'canvas') {
             console.warn(
-              'SdfTextRenderer is not compatible with Canvas renderer. Skipping...',
+              'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
             );
             return false;
           }
@@ -255,13 +255,15 @@ export class Stage {
       );
 
       // Sort engines: SDF first, Canvas last, others in between
-      const sortedEngines = compatibleEngines.sort((a, b) => {
-        if (a.type === 'sdf') return -1;
-        if (b.type === 'sdf') return 1;
-        if (a.type === 'canvas') return 1;
-        if (b.type === 'canvas') return -1;
-        return 0;
-      });
+      const sortedEngines = compatibleEngines.sort(
+        (a: TextRenderer, b: TextRenderer) => {
+          if (a.type === 'msdf') return -1;
+          if (b.type === 'msdf') return 1;
+          if (a.type === 'canvas') return 1;
+          if (b.type === 'canvas') return -1;
+          return 0;
+        },
+      );
 
       // Initialize engines in sorted order
       sortedEngines.forEach((fontEngine: TextRenderer) => {
@@ -271,7 +273,7 @@ export class Stage {
         this.textRenderers[type] = fontEngine;
         this.textRenderers[type].init();
 
-        this.fontHandlers[type] = fontEngine.fontHandler;
+        this.fontHandlers[type] = fontEngine.font;
         this.fontHandlers[type].init();
       });
     }
@@ -562,18 +564,17 @@ export class Stage {
    */
   resolveTextRenderer(
     trProps: TrProps,
-    textRendererOverride: keyof TextRendererMap | null = null,
+    textRendererOverride: keyof TextRenderers | null = null,
   ): TextRenderer | null {
     // If we have an overide, return it
     if (textRendererOverride !== null) {
-      if (this.textRenderers[textRendererOverride] === undefined) {
-        console.warn(
-          `Text renderer override '${textRendererOverride}' not found.`,
-        );
+      const overrideKey = String(textRendererOverride);
+      if (this.textRenderers[overrideKey] === undefined) {
+        console.warn(`Text renderer override '${overrideKey}' not found.`);
         return null;
       }
 
-      return this.textRenderers[textRendererOverride];
+      return this.textRenderers[overrideKey];
     }
 
     // If we have only one font engine early return it
@@ -597,8 +598,8 @@ export class Stage {
     // Multi font handling  - If we have multiple font engines, we need to resolve the best one
 
     // First check SDF
-    if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
-      return this.textRenderers.sdf || null;
+    if (this.fontHandlers['msdf']?.canRenderFont(trProps) === true) {
+      return this.textRenderers.msdf || null;
     }
 
     // If we have a canvas engine, we can return it (it can render all fonts)
