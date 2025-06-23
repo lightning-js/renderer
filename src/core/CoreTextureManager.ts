@@ -417,7 +417,7 @@ export class CoreTextureManager extends EventEmitter {
       texture
         .getTextureData()
         .then(() => {
-          this.enqueueUploadTexture(texture);
+          this.uploadTexture(texture);
         })
         .catch((err) => {
           console.error(err);
