@@ -413,20 +413,20 @@ export class CoreTextureManager extends EventEmitter {
       texture.freeTextureData();
     }
 
-    // these types of textures don't need to be downloaded
-    // Technically the noise texture shouldn't either, but it's a special case
-    // and not really used in production so who cares ¯\_(ツ)_/¯
-    if (
-      (texture.type === TextureType.color ||
-        texture.type === TextureType.renderToTexture) &&
-      texture.state !== 'initial'
-    ) {
-      texture.setState('fetched');
-      this.enqueueUploadTexture(texture);
+    texture.setState('loading');
+
+    // Only image textures can be downloaded, so we check the type
+    if (texture.type !== TextureType.image) {
+      texture
+        .getTextureData()
+        .then(() => {
+          this.enqueueUploadTexture(texture);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
       return;
     }
-
-    texture.setState('loading');
 
     // prioritize the texture for immediate loading
     if (priority === true) {
