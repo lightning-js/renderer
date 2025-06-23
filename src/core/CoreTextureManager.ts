@@ -396,7 +396,10 @@ export class CoreTextureManager extends EventEmitter {
     texture
       .getTextureData()
       .then(() => {
-        texture.setState('fetched');
+        if (texture.state !== 'fetched') {
+          texture.setState('failed');
+          return;
+        }
 
         // For non-image textures, upload immediately
         if (texture.type !== TextureType.image) {
