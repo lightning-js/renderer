@@ -50,6 +50,7 @@ export class WebGlContextWrapper {
   private boundArrayBuffer: WebGLBuffer | null;
   private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
+  private curUniformLocations: Record<string, WebGLUniformLocation> = {};
   //#endregion Cached WebGL State
 
   //#region Canvas
@@ -689,16 +690,21 @@ export class WebGlContextWrapper {
    * @param program
    * @returns object with numbers
    */
-  getUniformLocations(program: WebGLProgram): Record<string, number> {
+  getUniformLocations(
+    program: WebGLProgram,
+  ): Record<string, WebGLUniformLocation> {
     const gl = this.gl;
     const length = gl.getProgramParameter(
       program,
       gl.ACTIVE_UNIFORMS,
     ) as number;
-    const result = {} as Record<string, number>;
+    const result = {} as Record<string, WebGLUniformLocation>;
     for (let i = 0; i < length; i++) {
       const { name } = gl.getActiveUniform(program, i) as WebGLActiveInfo;
-      result[name] = i;
+      result[name] = gl.getUniformLocation(
+        program,
+        name,
+      ) as WebGLUniformLocation;
     }
     return result;
   }
@@ -730,12 +736,16 @@ export class WebGlContextWrapper {
    * @param program
    * @returns
    */
-  useProgram(program: WebGLProgram | null) {
+  useProgram(
+    program: WebGLProgram | null,
+    uniformLocations: Record<string, WebGLUniformLocation>,
+  ) {
     if (this.curProgram === program) {
       return;
     }
     this.gl.useProgram(program);
     this.curProgram = program;
+    this.curUniformLocations = uniformLocations;
   }
 
   /**
@@ -745,10 +755,7 @@ export class WebGlContextWrapper {
    * @param v0 - The value to set.
    */
   uniform1f(location: string, v0: number) {
-    this.gl.uniform1f(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-    );
+    this.gl.uniform1f(this.curUniformLocations[location] || null, v0);
   }
 
   /**
@@ -758,10 +765,7 @@ export class WebGlContextWrapper {
    * @param value - The array of values to set.
    */
   uniform1fv(location: string, value: Float32Array) {
-    this.gl.uniform1fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform1fv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -771,10 +775,7 @@ export class WebGlContextWrapper {
    * @param v0 - The value to set.
    */
   uniform1i(location: string, v0: number) {
-    this.gl.uniform1i(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-    );
+    this.gl.uniform1i(this.curUniformLocations[location] || null, v0);
   }
 
   /**
@@ -784,10 +785,7 @@ export class WebGlContextWrapper {
    * @param value - The array of values to set.
    */
   uniform1iv(location: string, value: Int32Array) {
-    this.gl.uniform1iv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform1iv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -798,11 +796,7 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    */
   uniform2f(location: string, v0: number, v1: number) {
-    this.gl.uniform2f(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-      v1,
-    );
+    this.gl.uniform2f(this.curUniformLocations[location] || null, v0, v1);
   }
 
   /**
@@ -813,7 +807,7 @@ export class WebGlContextWrapper {
    */
   uniform2fa(location: string, value: Vec2) {
     this.gl.uniform2f(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       value[0],
       value[1],
     );
@@ -826,10 +820,7 @@ export class WebGlContextWrapper {
    * @param value - The array of vec2 values to set.
    */
   uniform2fv(location: string, value: Float32Array) {
-    this.gl.uniform2fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform2fv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -840,11 +831,7 @@ export class WebGlContextWrapper {
    * @param v1 - The second component of the vector.
    */
   uniform2i(location: string, v0: number, v1: number) {
-    this.gl.uniform2i(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-      v1,
-    );
+    this.gl.uniform2i(this.curUniformLocations[location] || null, v0, v1);
   }
 
   /**
@@ -854,10 +841,7 @@ export class WebGlContextWrapper {
    * @param value - The array of ivec2 values to set.
    */
   uniform2iv(location: string, value: Int32Array) {
-    this.gl.uniform2iv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform2iv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -869,12 +853,7 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    */
   uniform3f(location: string, v0: number, v1: number, v2: number) {
-    this.gl.uniform3f(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-      v1,
-      v2,
-    );
+    this.gl.uniform3f(this.curUniformLocations[location] || null, v0, v1, v2);
   }
 
   /**
@@ -885,7 +864,7 @@ export class WebGlContextWrapper {
    */
   uniform3fa(location: string, value: Vec3) {
     this.gl.uniform3f(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       value[0],
       value[1],
       value[2],
@@ -899,10 +878,7 @@ export class WebGlContextWrapper {
    * @param value - The array of vec3 values to set.
    */
   uniform3fv(location: string, value: Float32Array) {
-    this.gl.uniform3fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform3fv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -914,12 +890,7 @@ export class WebGlContextWrapper {
    * @param v2 - The third component of the vector.
    */
   uniform3i(location: string, v0: number, v1: number, v2: number) {
-    this.gl.uniform3i(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      v0,
-      v1,
-      v2,
-    );
+    this.gl.uniform3i(this.curUniformLocations[location] || null, v0, v1, v2);
   }
 
   /**
@@ -929,10 +900,7 @@ export class WebGlContextWrapper {
    * @param value - The array of ivec3 values to set.
    */
   uniform3iv(location: string, value: Int32Array) {
-    this.gl.uniform3iv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform3iv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -946,7 +914,7 @@ export class WebGlContextWrapper {
    */
   uniform4f(location: string, v0: number, v1: number, v2: number, v3: number) {
     this.gl.uniform4f(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       v0,
       v1,
       v2,
@@ -962,7 +930,7 @@ export class WebGlContextWrapper {
    */
   uniform4fa(location: string, value: Vec4) {
     this.gl.uniform4f(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       value[0],
       value[1],
       value[2],
@@ -977,10 +945,7 @@ export class WebGlContextWrapper {
    * @param value - The array of vec4 values to set.
    */
   uniform4fv(location: string, value: Float32Array) {
-    this.gl.uniform4fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform4fv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -994,7 +959,7 @@ export class WebGlContextWrapper {
    */
   uniform4i(location: string, v0: number, v1: number, v2: number, v3: number) {
     this.gl.uniform4i(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       v0,
       v1,
       v2,
@@ -1009,10 +974,7 @@ export class WebGlContextWrapper {
    * @param value - The array of ivec4 values to set.
    */
   uniform4iv(location: string, value: Int32Array) {
-    this.gl.uniform4iv(
-      this.gl.getUniformLocation(this.curProgram!, location),
-      value,
-    );
+    this.gl.uniform4iv(this.curUniformLocations[location] || null, value);
   }
 
   /**
@@ -1024,7 +986,7 @@ export class WebGlContextWrapper {
    */
   uniformMatrix2fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix2fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       false,
       value,
     );
@@ -1037,7 +999,7 @@ export class WebGlContextWrapper {
    */
   uniformMatrix3fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix3fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       false,
       value,
     );
@@ -1050,7 +1012,7 @@ export class WebGlContextWrapper {
    */
   uniformMatrix4fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix4fv(
-      this.gl.getUniformLocation(this.curProgram!, location),
+      this.curUniformLocations[location] || null,
       false,
       value,
     );
@@ -1318,6 +1280,36 @@ export class WebGlContextWrapper {
    */
   deleteShader(shader: WebGLShader) {
     this.gl.deleteShader(shader);
+  }
+
+  /**
+   * ```
+   * gl.deleteBuffer(buffer);
+   * ```
+   *
+   * @param buffer - The buffer to delete
+   */
+  deleteBuffer(buffer: WebGLBuffer) {
+    const { gl } = this;
+    gl.deleteBuffer(buffer);
+
+    // Reset bound buffers if they match the deleted buffer
+    if (this.boundArrayBuffer === buffer) {
+      this.boundArrayBuffer = null;
+    }
+  }
+
+  /**
+   * ```
+   * gl.deleteVertexArray(vertexArray);
+   * ```
+   *
+   * @param vertexArray - The vertex array object to delete
+   */
+  deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
+    if (this.isWebGl2()) {
+      (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
+    }
   }
 }
 

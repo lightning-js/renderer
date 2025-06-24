@@ -35,8 +35,7 @@ import {
 } from './internal/ShaderUtils.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
-  protected boundBufferCollection: BufferCollection | null = null;
-  protected program: WebGLProgram;
+  protected program: WebGLProgram | null;
   /**
    * Vertex Array Object
    *
@@ -47,9 +46,11 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected renderer: WebGlRenderer;
   protected glw: WebGlContextWrapper;
   protected attributeLocations: Record<string, number>;
+  protected uniformLocations: Record<string, WebGLUniformLocation> | null;
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
+  private isDestroyed = false;
   supportsIndexedTextures = false;
 
   constructor(
@@ -117,10 +118,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.program = program;
     this.attributeLocations = glw.getAttributeLocations(program);
 
-    this.useSystemAlpha =
-      this.glw.getUniformLocation(program, 'u_alpha') !== null;
-    this.useSystemDimensions =
-      this.glw.getUniformLocation(program, 'u_dimensions') !== null;
+    const uniLocs = (this.uniformLocations = glw.getUniformLocations(program));
+
+    this.useSystemAlpha = uniLocs['u_alpha'] !== undefined;
+    this.useSystemDimensions = uniLocs['u_dimensions'] !== undefined;
 
     this.lifecycle = {
       update: config.update,
@@ -133,7 +134,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   disableAttributes() {
-    const { glw } = this;
+    const glw = this.glw;
     const attribs = Object.keys(this.attributeLocations);
     const attribLen = attribs.length;
     for (let i = 0; i < attribLen; i++) {
@@ -221,13 +222,13 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       );
     }
 
-    // if (this.useSystemAlpha) {
-    this.glw.uniform1f('u_alpha', renderOp.alpha);
-    // }
+    if (this.useSystemAlpha === true) {
+      this.glw.uniform1f('u_alpha', renderOp.alpha);
+    }
 
-    // if (this.useSystemDimensions) {
-    this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
-    // }
+    if (this.useSystemDimensions === true) {
+      this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
+    }
 
     /**temporary fix to make sdf texts work */
     if (renderOp.sdfShaderProps !== undefined) {
@@ -306,7 +307,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   attach(): void {
-    this.glw.useProgram(this.program);
+    if (this.isDestroyed === true) {
+      return;
+    }
+    this.glw.useProgram(this.program, this.uniformLocations!);
     if (this.glw.isWebGl2() && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
@@ -314,5 +318,24 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   detach(): void {
     this.disableAttributes();
+  }
+
+  destroy() {
+    if (this.isDestroyed === true) {
+      return;
+    }
+    const glw = this.glw;
+
+    this.detach();
+
+    glw.deleteProgram(this.program!);
+    this.program = null;
+    this.uniformLocations = null;
+
+    const attribs = Object.keys(this.attributeLocations);
+    const attribLen = attribs.length;
+    for (let i = 0; i < attribLen; i++) {
+      this.glw.deleteBuffer(attribs[i]!);
+    }
   }
 }
