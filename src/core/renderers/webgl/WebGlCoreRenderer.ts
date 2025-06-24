@@ -336,8 +336,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
       [texCoordY1, texCoordY2] = [texCoordY2, texCoordY1];
     }
 
-    const ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    assertTruthy(ctxTexture instanceof WebGlCoreCtxTexture);
+    let ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
+    if (ctxTexture === undefined) {
+      ctxTexture = this.stage.defaultTexture?.ctxTexture as WebGlCoreCtxTexture;
+      console.warn(
+        'WebGL Renderer: Texture does not have a ctxTexture, using default texture instead',
+      );
+    }
+
     const textureIdx = this.addTexture(ctxTexture, bufferIdx);
 
     assertTruthy(this.curRenderOp !== null);
