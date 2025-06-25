@@ -18,11 +18,9 @@
  */
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
-import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
-import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 
@@ -57,7 +55,6 @@ export class WebGlCtxTexture extends CoreContextTexture {
       this.load();
       return null;
     }
-    assertTruthy(this._nativeCtxTexture);
     return this._nativeCtxTexture;
   }
 

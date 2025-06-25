@@ -157,6 +157,16 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
     this.node = node;
   }
 
+  createValueKey() {
+    let valueKey = '';
+    for (const key in this.resolvedProps) {
+      valueKey += `${key}:${this.resolvedProps[key]!};`;
+    }
+    valueKey += `node-width:${this.node!.width}`;
+    valueKey += `node-height:${this.node!.height}`;
+    return valueKey;
+  }
+
   get props(): Props | undefined {
     return this.definedProps;
   }

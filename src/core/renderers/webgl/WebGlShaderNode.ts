@@ -90,11 +90,9 @@ export class WebGlShaderNode<
           this.updater!(this.node as CoreNode, this.props);
           return;
         }
+
         const prevKey = this.valueKey;
-        this.valueKey = '';
-        for (const key in this.resolvedProps) {
-          this.valueKey += `${key}:${this.resolvedProps[key]!};`;
-        }
+        this.valueKey = this.createValueKey();
 
         if (prevKey === this.valueKey) {
           return;

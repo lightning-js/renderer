@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { assertTruthy, createWebGLContext } from '../../../utils.js';
+import { createWebGLContext } from '../../../utils.js';
 import {
   CoreRenderer,
   type BufferInfo,
@@ -52,9 +52,6 @@ import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
-
-const WORDS_PER_QUAD = 32;
-// const BYTES_PER_QUAD = WORDS_PER_QUAD * 4;
 
 export type WebGlRendererOptions = CoreRendererOptions;
 
@@ -136,11 +133,10 @@ export class WebGlRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     const quadBuffer = glw.createBuffer();
-    assertTruthy(quadBuffer);
     const stride = 8 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
       {
-        buffer: quadBuffer,
+        buffer: quadBuffer!,
         attributes: {
           a_position: {
             name: 'a_position',
@@ -257,71 +253,74 @@ export class WebGlRenderer extends CoreRenderer {
    * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
   addQuad(params: QuadOptions) {
-    const { fQuadBuffer, uiQuadBuffer } = this;
-    let texture = params.texture;
+    const f = this.fQuadBuffer;
+    const u = this.uiQuadBuffer;
+    let i = this.curBufferIdx;
 
-    assertTruthy(texture !== null, 'Texture is required');
-
-    let { curBufferIdx: bufferIdx } = this;
-
-    if (this.reuseRenderOp(params) === false) {
-      this.newRenderOp(params, bufferIdx);
+    let ro = this.curRenderOp!;
+    const reuse = this.reuseRenderOp(params) === false;
+    if (reuse) {
+      this.newRenderOp(params, i);
+      ro = this.curRenderOp!;
     }
 
-    if (texture.type === TextureType.subTexture) {
-      texture = (texture as SubTexture).parentTexture;
+    let tx = params.texture!;
+    if (tx.type === TextureType.subTexture) {
+      tx = (tx as SubTexture).parentTexture;
     }
 
-    assertTruthy(texture.ctxTexture instanceof WebGlCtxTexture);
-    const textureIdx = this.addTexture(texture.ctxTexture, bufferIdx);
+    const tidx = this.addTexture(tx.ctxTexture as WebGlCtxTexture, i);
 
-    assertTruthy(this.curRenderOp !== null);
-    assertTruthy(params.renderCoords);
-    assertTruthy(params.textureCoords);
+    const rc = params.renderCoords!;
+    const tc = params.textureCoords!;
+
+    const cTl = params.colorTl;
+    const cTr = params.colorTr;
+    const cBl = params.colorBl;
+    const cBr = params.colorBr;
 
     // Upper-Left
-    fQuadBuffer[bufferIdx++] = params.renderCoords.x1; // vertexX
-    fQuadBuffer[bufferIdx++] = params.renderCoords.y1; // vertexY
-    fQuadBuffer[bufferIdx++] = params.textureCoords.x1; // texCoordX
-    fQuadBuffer[bufferIdx++] = params.textureCoords.y1; // texCoordY
-    uiQuadBuffer[bufferIdx++] = params.colorTl; // color
-    fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
-    fQuadBuffer[bufferIdx++] = 0; //node X coord
-    fQuadBuffer[bufferIdx++] = 0; //node y coord
+    f[i] = rc.x1;
+    f[i + 1] = rc.y1;
+    f[i + 2] = tc.x1;
+    f[i + 3] = tc.y1;
+    u[i + 4] = cTl;
+    f[i + 5] = tidx;
+    f[i + 6] = 0;
+    f[i + 7] = 0;
 
     // Upper-Right
-    fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
-    fQuadBuffer[bufferIdx++] = params.renderCoords.y2;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.y1;
-    uiQuadBuffer[bufferIdx++] = params.colorTr;
-    fQuadBuffer[bufferIdx++] = textureIdx;
-    fQuadBuffer[bufferIdx++] = 1; //node X coord
-    fQuadBuffer[bufferIdx++] = 0; //node y coord
+    f[i + 8] = rc.x2;
+    f[i + 9] = rc.y2;
+    f[i + 10] = tc.x2;
+    f[i + 11] = tc.y1;
+    u[i + 12] = cTr;
+    f[i + 13] = tidx;
+    f[i + 14] = 1;
+    f[i + 15] = 0;
 
     // Lower-Left
-    fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
-    fQuadBuffer[bufferIdx++] = params.renderCoords.y4;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.x1;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
-    uiQuadBuffer[bufferIdx++] = params.colorBl;
-    fQuadBuffer[bufferIdx++] = textureIdx;
-    fQuadBuffer[bufferIdx++] = 0; //node X coord
-    fQuadBuffer[bufferIdx++] = 1; //node y coord
+    f[i + 16] = rc.x4;
+    f[i + 17] = rc.y4;
+    f[i + 18] = tc.x1;
+    f[i + 19] = tc.y2;
+    u[i + 20] = cBl;
+    f[i + 21] = tidx;
+    f[i + 22] = 0;
+    f[i + 23] = 1;
 
     // Lower-Right
-    fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
-    fQuadBuffer[bufferIdx++] = params.renderCoords.y3;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.x2;
-    fQuadBuffer[bufferIdx++] = params.textureCoords.y2;
-    uiQuadBuffer[bufferIdx++] = params.colorBr;
-    fQuadBuffer[bufferIdx++] = textureIdx;
-    fQuadBuffer[bufferIdx++] = 1; //node X coord
-    fQuadBuffer[bufferIdx++] = 1; //node y coord
+    f[i + 24] = rc.x3;
+    f[i + 25] = rc.y3;
+    f[i + 26] = tc.x2;
+    f[i + 27] = tc.y2;
+    u[i + 28] = cBr;
+    f[i + 29] = tidx;
+    f[i + 30] = 1;
+    f[i + 31] = 1;
 
-    // Update the length of the current render op
-    this.curRenderOp.numQuads++;
-    this.curBufferIdx = bufferIdx;
+    ro.numQuads++;
+    this.curBufferIdx = i + 32;
   }
 
   /**
@@ -354,14 +353,13 @@ export class WebGlRenderer extends CoreRenderer {
     bufferIdx: number,
     recursive?: boolean,
   ): number {
-    assertTruthy(this.curRenderOp);
-    const textureIdx = this.curRenderOp.addTexture(texture);
+    const textureIdx = this.curRenderOp!.addTexture(texture);
     // TODO: Refactor to be more DRY
     if (textureIdx === 0xffffffff) {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(this.curRenderOp, bufferIdx);
+      this.newRenderOp(this.curRenderOp!, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
@@ -570,10 +568,7 @@ export class WebGlRenderer extends CoreRenderer {
       // Set the active RTT node to the current node
       // So we can prevent rendering children of nested RTT nodes
       this.activeRttNode = node;
-
-      assertTruthy(node.texture !== null, 'RTT node missing texture');
-      const ctxTexture = node.texture.ctxTexture;
-      assertTruthy(ctxTexture instanceof WebGlCtxRenderTexture);
+      const ctxTexture = node.texture.ctxTexture as WebGlCtxRenderTexture;
       this.renderToTextureActive = true;
 
       // Bind the the texture's framebuffer

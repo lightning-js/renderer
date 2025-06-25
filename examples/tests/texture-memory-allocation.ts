@@ -103,8 +103,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const gap = 10; // Define the gap between items
 
   const spawnRow = function (rowIndex = 0, amount = 20) {
-    const items = [];
-
     let totalWidth = 0; // Track the total width used in the current row
     const y = rowIndex * (nodeHeight + gap);
 
@@ -115,6 +113,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       height: nodeHeight,
       parent: containerNode,
       color: 0x000000ff,
+      clipping: true,
     });
 
     for (let i = 0; i < amount; i++) {
@@ -153,17 +152,47 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         autosize: true,
         parent: childNode,
         text: `Card ${id}`,
+        fontFamily: 'Ubuntu',
         fontSize: 20,
         color: 0xffffffff,
       });
 
-      items.push(childNode);
+      // items.push(childNode);
     }
 
-    return items;
+    return rowNode;
   };
 
-  const nodes: INode[][] = [];
+  const destroyAll = () => {
+    // Destroy all nodes
+    while (nodes.length > 0) {
+      const node = nodes.pop();
+      if (node) {
+        node.destroy();
+      }
+    }
+  };
+
+  const runRoutine = (count = 150) => {
+    count--;
+
+    if (count < 0) {
+      return;
+    }
+
+    // Destroy all nodes
+    destroyAll();
+
+    setTimeout(async () => {
+      await spawnRows(20);
+
+      setTimeout(() => {
+        runRoutine(count);
+      }, 300);
+    }, 300);
+  };
+
+  const nodes: INode[] = [];
   const spawnRows = async (amountOfRows: number) => {
     for (let rowIndex = 0; rowIndex < amountOfRows; rowIndex++) {
       console.log(`Spawning row ${rowIndex + 1}`);
@@ -194,6 +223,19 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       containerNode.y -= 50;
     }
 
+    if (e.key === 'c') {
+      spawnRows(20);
+    }
+
+    if (e.key === 'd') {
+      // destroy all nodes
+      destroyAll();
+    }
+
+    if (e.key === 'r') {
+      runRoutine(150);
+    }
+
     // space switches mode
     if (e.key === ' ' || e.key === 'Enter') {
       testMode = testMode === 'normal' ? 'rtt' : 'normal';
@@ -201,9 +243,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       currentModeText.text = `Current mode: ${testMode}`;
 
       nodes.forEach((row) => {
-        row.forEach((node) => {
-          node.destroy();
-        });
+        row.destroy();
       });
 
       spawnRows(20);

@@ -149,24 +149,25 @@ export class ImageTexture extends Texture {
       img.crossOrigin = 'anonymous';
     }
 
-    return new Promise<{ data: HTMLImageElement; premultiplyAlpha: boolean }>(
-      (resolve) => {
-        img.onload = () => {
-          resolve({ data: img, premultiplyAlpha: hasAlpha });
-        };
+    return new Promise<{
+      data: HTMLImageElement | null;
+      premultiplyAlpha: boolean;
+    }>((resolve) => {
+      img.onload = () => {
+        resolve({ data: img, premultiplyAlpha: hasAlpha });
+      };
 
-        img.onerror = () => {
-          console.warn('Image loading failed, returning fallback object.');
-          resolve({ data: img, premultiplyAlpha: hasAlpha });
-        };
+      img.onerror = () => {
+        console.warn('Image loading failed, returning fallback object.');
+        resolve({ data: null, premultiplyAlpha: hasAlpha });
+      };
 
-        if (src instanceof Blob) {
-          img.src = URL.createObjectURL(src);
-        } else {
-          img.src = src;
-        }
-      },
-    );
+      if (src instanceof Blob) {
+        img.src = URL.createObjectURL(src);
+      } else {
+        img.src = src;
+      }
+    });
   }
 
   async createImageBitmap(
