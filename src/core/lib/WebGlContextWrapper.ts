@@ -700,7 +700,9 @@ export class WebGlContextWrapper {
     ) as number;
     const result = {} as Record<string, WebGLUniformLocation>;
     for (let i = 0; i < length; i++) {
-      const { name } = gl.getActiveUniform(program, i) as WebGLActiveInfo;
+      const info = gl.getActiveUniform(program, i) as WebGLActiveInfo;
+      //remove bracket + value from uniform name;
+      let name = info.name.replace(/\[.*?\]/g, '');
       result[name] = gl.getUniformLocation(
         program,
         name,
