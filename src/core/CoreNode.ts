@@ -758,6 +758,8 @@ export class CoreNode extends EventEmitter {
    */
   public framebufferDimensions: Dimensions | null = null;
 
+  public destroyed = false;
+
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
 
@@ -1663,7 +1665,13 @@ export class CoreNode extends EventEmitter {
    * Destroy the node and cleanup all resources
    */
   destroy(): void {
+    if (this.destroyed === true) {
+      return;
+    }
+
     this.removeAllListeners();
+
+    this.destroyed = true;
     this.unloadTexture();
     this.isRenderable = false;
 

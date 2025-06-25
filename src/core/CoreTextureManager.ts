@@ -178,7 +178,6 @@ export class CoreTextureManager extends EventEmitter {
    */
   txConstructors: Partial<TextureMap> = {};
 
-  private downloadTextureSourceQueue: Array<Texture> = [];
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
@@ -229,7 +228,7 @@ export class CoreTextureManager extends EventEmitter {
         .then((result) => {
           this.initialize(result);
         })
-        .catch((e) => {
+        .catch(() => {
           console.warn(
             '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
           );
@@ -288,15 +287,6 @@ export class CoreTextureManager extends EventEmitter {
 
     this.initialized = true;
     this.emit('initialized');
-  }
-
-  /**
-   * Enqueue a texture for downloading its source image.
-   */
-  enqueueDownloadTextureSource(texture: Texture): void {
-    if (!this.downloadTextureSourceQueue.includes(texture)) {
-      this.downloadTextureSourceQueue.push(texture);
-    }
   }
 
   /**
@@ -378,10 +368,7 @@ export class CoreTextureManager extends EventEmitter {
     }
 
     // if the texture is already being processed, don't load it again
-    if (
-      this.downloadTextureSourceQueue.includes(texture) === true ||
-      this.uploadTextureQueue.includes(texture) === true
-    ) {
+    if (this.uploadTextureQueue.includes(texture) === true) {
       return;
     }
 
@@ -391,13 +378,6 @@ export class CoreTextureManager extends EventEmitter {
       texture.ctxTexture !== undefined &&
       texture.ctxTexture.state === 'loading'
     ) {
-      // if the texture has texture data, queue it for upload
-      if (texture.textureData !== null) {
-        this.enqueueUploadTexture(texture);
-        return;
-      }
-
-      // else we will have to re-download the texture
       texture.free();
     }
 
@@ -413,35 +393,34 @@ export class CoreTextureManager extends EventEmitter {
       texture.freeTextureData();
     }
 
-    // these types of textures don't need to be downloaded
-    // Technically the noise texture shouldn't either, but it's a special case
-    // and not really used in production so who cares ¯\_(ツ)_/¯
-    if (
-      (texture.type === TextureType.color ||
-        texture.type === TextureType.renderToTexture) &&
-      texture.state !== 'initial'
-    ) {
-      texture.setState('fetched');
-      this.enqueueUploadTexture(texture);
-      return;
-    }
-
     texture.setState('loading');
 
-    // prioritize the texture for immediate loading
-    if (priority === true) {
-      texture
-        .getTextureData()
-        .then(() => {
-          this.uploadTexture(texture);
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-    }
+    // Get the texture data
+    texture
+      .getTextureData()
+      .then(() => {
+        if (texture.state !== 'fetched') {
+          texture.setState('failed');
+          return;
+        }
 
-    // enqueue the texture for download and upload
-    this.enqueueDownloadTextureSource(texture);
+        // For non-image textures, upload immediately
+        if (texture.type !== TextureType.image) {
+          this.uploadTexture(texture);
+        } else {
+          // For image textures, queue for throttled upload
+          // If it's a priority texture, upload it immediately
+          if (priority === true) {
+            this.uploadTexture(texture);
+          } else {
+            this.enqueueUploadTexture(texture);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        texture.setState('failed');
+      });
   }
 
   /**
@@ -472,16 +451,13 @@ export class CoreTextureManager extends EventEmitter {
    * Check if a texture is being processed
    */
   isProcessingTexture(texture: Texture): boolean {
-    return (
-      this.downloadTextureSourceQueue.includes(texture) === true ||
-      this.uploadTextureQueue.includes(texture) === true
-    );
+    return this.uploadTextureQueue.includes(texture) === true;
   }
 
   /**
-   * Process a limited number of downloads and uploads.
+   * Process a limited number of uploads.
    *
-   * @param maxItems - The maximum number of items to process
+   * @param maxProcessingTime - The maximum processing time in milliseconds
    */
   processSome(maxProcessingTime: number): void {
     if (this.initialized === false) {
@@ -509,29 +485,12 @@ export class CoreTextureManager extends EventEmitter {
       platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.uploadTexture(this.uploadTextureQueue.pop()!);
-    }
-
-    // Process downloads
-    while (
-      this.downloadTextureSourceQueue.length > 0 &&
-      platform.getTimeStamp() - startTime < maxProcessingTime
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.downloadTextureSourceQueue.shift()!;
-      texture.getTextureData().then(() => {
-        if (texture.state === 'fetched') {
-          this.enqueueUploadTexture(texture);
-        }
-      });
+      this.uploadTexture(this.uploadTextureQueue.shift()!);
     }
   }
 
   public hasUpdates(): boolean {
-    return (
-      this.downloadTextureSourceQueue.length > 0 ||
-      this.uploadTextureQueue.length > 0
-    );
+    return this.uploadTextureQueue.length > 0;
   }
 
   /**
@@ -572,16 +531,11 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
-   * Remove texture from the queue's
+   * Remove texture from the upload queue
    *
    * @param texture - The texture to remove
    */
   removeTextureFromQueue(texture: Texture): void {
-    const downloadIndex = this.downloadTextureSourceQueue.indexOf(texture);
-    if (downloadIndex !== -1) {
-      this.downloadTextureSourceQueue.splice(downloadIndex, 1);
-    }
-
     const uploadIndex = this.uploadTextureQueue.indexOf(texture);
     if (uploadIndex !== -1) {
       this.uploadTextureQueue.splice(uploadIndex, 1);
