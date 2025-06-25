@@ -125,7 +125,6 @@ export class CoreAnimationController
   }
 
   private onFinished(this: CoreAnimationController): void {
-    assertTruthy(this.stoppedResolve);
     // If the animation is looping, then we need to restart it.
     const { loop, stopMethod } = this.animation.settings;
 
@@ -143,8 +142,11 @@ export class CoreAnimationController
     this.unregisterAnimation();
 
     // resolve promise
-    this.stoppedResolve();
-    this.stoppedResolve = null;
+    if (this.stoppedResolve !== null) {
+      this.stoppedResolve();
+      this.stoppedResolve = null;
+    }
+
     this.emit('stopped', this);
     this.state = 'stopped';
   }
