@@ -255,7 +255,10 @@ export abstract class WebGlCoreShader extends CoreShader {
     props: Record<string, unknown> | null,
   ) {
     this.bindBufferCollection(renderOp.buffers);
-    if (renderOp.textures.length > 0) {
+
+    // Since we're not using batched rendering yet we can safely test
+    // for first texture only
+    if (renderOp.textures.length > 0 && renderOp.textures[0]?.ctxTexture) {
       this.bindTextures(renderOp.textures);
     }
 
