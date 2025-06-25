@@ -50,7 +50,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
-  private isDestroyed = false;
+  public isDestroyed = false;
   supportsIndexedTextures = false;
 
   constructor(
