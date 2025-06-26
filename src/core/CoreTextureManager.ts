@@ -355,6 +355,11 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
+    // If the texture is already loading, we don't need to do anything
+    if (texture.state === 'loading') {
+      return;
+    }
+
     // if the texture is already loaded, don't load it again
     if (
       texture.ctxTexture !== undefined &&
