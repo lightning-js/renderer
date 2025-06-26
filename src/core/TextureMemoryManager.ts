@@ -19,11 +19,7 @@
 import { isProductionEnvironment } from '../utils.js';
 import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
-import {
-  TextureType,
-  type Texture,
-  type TextureState,
-} from './textures/Texture.js';
+import { Texture, TextureType, type TextureState } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
 
 export interface TextureMemoryManagerSettings {
@@ -119,12 +115,6 @@ export interface MemoryInfo {
  * scene is idle for a certain amount of time (`cleanupInterval`).
  */
 export class TextureMemoryManager {
-  /**
-   * Texture states that are considered transitional and should be skipped during cleanup
-   */
-  private static readonly TRANSITIONAL_TEXTURE_STATES: readonly TextureState[] =
-    ['initial', 'fetching', 'fetched', 'loading'];
-
   private memUsed = 0;
   private loadedTextures: Map<Texture, number> = new Map();
   private orphanedTextures: Texture[] = [];
@@ -280,9 +270,7 @@ export class TextureMemoryManager {
 
       // Skip textures that are in transitional states - we only want to clean up
       // textures that are in a stable state (loaded, failed, or freed)
-      if (
-        TextureMemoryManager.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
-      ) {
+      if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
         continue;
       }
 
@@ -353,9 +341,7 @@ export class TextureMemoryManager {
 
       // Skip textures that are in transitional states - we only want to clean up
       // textures that are in a stable state (loaded, failed, or freed)
-      if (
-        TextureMemoryManager.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
-      ) {
+      if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
         break;
       }
 

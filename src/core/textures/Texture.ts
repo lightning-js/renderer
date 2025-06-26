@@ -139,6 +139,12 @@ export abstract class Texture extends EventEmitter {
   private _dimensions: Dimensions | null = null;
   private _error: Error | null = null;
 
+  /**
+   * Texture states that are considered transitional and should be skipped during cleanup
+   */
+  public static readonly TRANSITIONAL_TEXTURE_STATES: readonly TextureState[] =
+    ['fetching', 'fetched', 'loading'];
+
   // aggregate state
   public state: TextureState = 'initial';
 
