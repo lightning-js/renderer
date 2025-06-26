@@ -258,10 +258,13 @@ export abstract class Texture extends EventEmitter {
    * cleaned up.
    */
   destroy(): void {
-    this.removeAllListeners();
-    this.free();
+    // Only free GPU resources if we're in a state where they exist
+    if (this.state === 'loaded') {
+      this.free();
+    }
+
+    // Always free texture data regardless of state
     this.freeTextureData();
-    this.renderableOwners.clear();
   }
 
   /**

@@ -1,4 +1,4 @@
-import type { RendererMainSettings } from '@lightningjs/renderer';
+import type { INode, RendererMainSettings } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export function customSettings(): Partial<RendererMainSettings> {
@@ -61,7 +61,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         childNode.color = 0xffff00ff; // Change color to yellow on error
       });
 
-      const textNode = renderer.createTextNode({
+      renderer.createTextNode({
         x: 0,
         y: 0,
         autosize: true,
@@ -101,6 +101,29 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         holder1.alpha = 1;
         holder2.alpha = 0;
       }
+    } else if (e.key === 'r' || e.key === 'R') {
+      // Reset all squares in holder1 to white
+      const resetSquares = (node: INode) => {
+        // If this node has children, process each child
+        if (node.children && node.children.length > 0) {
+          for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            if (child) {
+              // Set the color to white
+              if (!child.src) {
+                // Only change color of non-image nodes
+                child.color = 0xffffffff; // White with full alpha
+              }
+              // Recursively process this child's children
+              resetSquares(child);
+            }
+          }
+        }
+      };
+
+      // Process all rows in holder1
+      resetSquares(holder1 as INode);
+      console.log('Reset all squares in holder1 to white');
     }
   });
 }
