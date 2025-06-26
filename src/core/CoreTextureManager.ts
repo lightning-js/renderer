@@ -24,7 +24,7 @@ import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
-import { TextureType, type Texture } from './textures/Texture.js';
+import { Texture, TextureType } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
@@ -355,27 +355,13 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    // if the texture is already loaded, don't load it again
-    if (
-      texture.ctxTexture !== undefined &&
-      texture.ctxTexture.state === 'loaded'
-    ) {
-      texture.setState('loaded');
+    if (texture.state === 'loaded') {
+      // if the texture is already loaded, just return
       return;
     }
 
-    // if the texture is already being processed, don't load it again
-    if (this.uploadTextureQueue.includes(texture) === true) {
+    if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
       return;
-    }
-
-    // if the texture is already loading, free it, this can happen if the texture is
-    // orphaned and then reloaded
-    if (
-      texture.ctxTexture !== undefined &&
-      texture.ctxTexture.state === 'loading'
-    ) {
-      texture.free();
     }
 
     // if we're not initialized, just queue the texture into the priority queue
