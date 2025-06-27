@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-import type { PeekableIterator } from './sdf/PeekableGenerator.js';
-import * as SdfFontHandler from './SdfFontHandler.js';
+import type { PeekableIterator } from './PeekableGenerator.js';
+import * as SdfFontHandler from '../SdfFontHandler.js';
 
 /**
  * Minimal glyph info for performance-focused text shaping
