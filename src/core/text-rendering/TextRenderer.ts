@@ -17,12 +17,12 @@
  * limitations under the License.
  */
 
+import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
   | 'alphabetic'
-  | 'top'
   | 'hanging'
   | 'middle'
   | 'ideographic'
@@ -270,6 +270,81 @@ export interface TrProps extends TrFontProps {
   zIndex: number;
 }
 
+/**
+ * Glyph layout information for WebGL rendering
+ */
+export interface GlyphLayout {
+  /**
+   * Unicode codepoint
+   */
+  codepoint: number;
+  /**
+   * Glyph ID in the font atlas
+   */
+  glyphId: number;
+  /**
+   * X position relative to text origin
+   */
+  x: number;
+  /**
+   * Y position relative to text origin
+   */
+  y: number;
+  /**
+   * Width of glyph in font units
+   */
+  width: number;
+  /**
+   * Height of glyph in font units
+   */
+  height: number;
+  /**
+   * X offset for glyph positioning
+   */
+  xOffset: number;
+  /**
+   * Y offset for glyph positioning
+   */
+  yOffset: number;
+  /**
+   * Atlas texture coordinates (normalized 0-1)
+   */
+  atlasX: number;
+  atlasY: number;
+  atlasWidth: number;
+  atlasHeight: number;
+}
+
+/**
+ * Complete text layout information for caching
+ */
+export interface TextLayout {
+  /**
+   * Individual glyph layouts
+   */
+  glyphs: GlyphLayout[];
+  /**
+   * Total text width
+   */
+  width: number;
+  /**
+   * Total text height
+   */
+  height: number;
+  /**
+   * Font scale factor
+   */
+  fontScale: number;
+  /**
+   * Line height
+   */
+  lineHeight: number;
+  /**
+   * Font family used
+   */
+  fontFamily: string;
+}
+
 export interface FontHandler {
   init: () => void;
   type: 'canvas' | 'sdf';
@@ -289,7 +364,7 @@ export interface FontHandler {
 }
 
 export interface TextRenderer {
-  type: 'canvas' | 'msdf';
+  type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (
     stage: Stage,
@@ -298,9 +373,28 @@ export interface TextRenderer {
     imageData: ImageData | null;
     width: number;
     height: number;
+    layout?: unknown; // Layout data for SDF renderer caching
   }>;
-  // Fixme implement this for MSDF renderer
-  // and update the properties to match
-  addQuads: (quads: unknown) => void;
+  // Updated to accept layout data and return vertex buffer for performance
+  addQuads: (layout?: unknown) => Float32Array | null;
+  renderQuads: (
+    renderer: CoreRenderer,
+    layout: TextLayout,
+    vertexBuffer: Float32Array,
+    renderProps: {
+      fontFamily: string;
+      fontSize: number;
+      color: number;
+      offsetY: number;
+      worldAlpha: number;
+      globalTransform: Float32Array;
+      clippingRect: unknown;
+      width: number;
+      height: number;
+      parentHasRenderTexture: boolean;
+      framebufferDimensions: unknown;
+      stage: Stage;
+    },
+  ) => void;
   init: () => void;
 }

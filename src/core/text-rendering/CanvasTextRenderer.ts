@@ -25,7 +25,7 @@ import * as CanvasFontHandler from './CanvasFontHandler.js';
 import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
 import { draw } from './canvas/draw.js';
 
-export const type = 'canvas';
+export const type = 'canvas' as const;
 
 // Font handling
 export const init = (): void => {
@@ -48,6 +48,7 @@ export const renderText = async (
   imageData: ImageData | null;
   width: number;
   height: number;
+  layout?: unknown;
 }> => {
   const canvas = stage.platform.createCanvas();
   const context = canvas.getContext('2d');
@@ -128,4 +129,13 @@ export const renderText = async (
     width: renderInfo.width,
     height: renderInfo.lineHeight * renderInfo.lines.length,
   };
+};
+
+/**
+ * Add quads for rendering (Canvas doesn't use quads)
+ */
+export const addQuads = (): Float32Array | null => {
+  // Canvas renderer doesn't use quad-based rendering
+  // Return null for interface compatibility
+  return null;
 };

@@ -21,6 +21,7 @@ import type {
   FontFamilyMap,
   FontMetrics,
   NormalizedFontMetrics,
+  TrProps,
 } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
 
@@ -271,10 +272,12 @@ const processFontData = (
 };
 
 /**
- * Check if a font can be rendered
+ * Check if the SDF font handler can render a font
+ * @param {TrProps} trProps - Text rendering properties
+ * @returns {boolean} True if the font can be rendered
  */
-export const canRenderFont = (): boolean => {
-  return true;
+export const canRenderFont = (trProps: TrProps): boolean => {
+  return isFontLoaded(trProps.fontFamily);
 };
 
 /**
@@ -384,6 +387,8 @@ export const isFontLoaded = (fontFamily: string): boolean => {
  */
 export const getFontMetrics = (
   fontFamily: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _trProps: TrProps,
 ): NormalizedFontMetrics | null => {
   const cache = fontState.fontCache[fontFamily];
   return cache ? cache.metrics : null;

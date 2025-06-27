@@ -21,6 +21,7 @@ import type {
   FontHandler,
   TextRenderer,
   TrProps,
+  TextLayout,
 } from './text-rendering/TextRenderer.js';
 import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
 import type { Stage } from './Stage.js';
@@ -29,6 +30,7 @@ import type {
   NodeTextLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
+import type { CoreRenderer } from './renderers/CoreRenderer.js';
 
 // Internal text update tracking
 enum TextUpdateReason {
@@ -48,6 +50,10 @@ export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
+
+  // SDF layout caching for performance
+  private _cachedLayout: unknown | null = null;
+  private _lastVertexBuffer: Float32Array | null = null;
 
   // Internal text update tracking
   private _pendingTextUpdate: TextUpdateReason = TextUpdateReason.Both;
@@ -115,6 +121,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return; // No updates needed
     }
 
+    // Clear cached layout data when any text update is pending
+    this.clearCachedLayout();
+
     const textUpdateReason = this._pendingTextUpdate;
     let fontUpdateNeeded = false;
     let textRenderNeeded = false;
@@ -181,52 +190,75 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   /**
-   * Handle the result of text rendering
+   * Handle the result of text rendering for both Canvas and SDF renderers
    */
   private handleRenderResult(result: {
     imageData: ImageData | null;
     width: number;
     height: number;
+    layout?: unknown;
   }): void {
-    if (!result.imageData) {
-      // If rendering failed, emit failure event
-      this.emit('failed', {
-        type: 'text',
-        error: new Error('Text rendering failed, no image data returned'),
-      } satisfies NodeTextFailedPayload);
-      return;
+    // Host paths on top
+    const textRendererType = this.textRenderer.type;
+    const setWidth = this.props.width;
+    const setHeight = this.props.height;
+    const resultWidth = result.width;
+    const resultHeight = result.height;
+    const contain = this._contain;
+
+    // Handle Canvas renderer (uses ImageData)
+    if (textRendererType === 'canvas') {
+      if (!result.imageData) {
+        this.emit('failed', {
+          type: 'text',
+          error: new Error(
+            'Canvas text rendering failed, no image data returned',
+          ),
+        } satisfies NodeTextFailedPayload);
+        return;
+      }
+
+      // Create texture from image data for Canvas renderer
+      this.texture = this.stage.txManager.createTexture('ImageTexture', {
+        premultiplyAlpha: true,
+        src: result.imageData,
+      });
+
+      // Clear SDF-specific cached data
+      this._cachedLayout = null;
+      this._lastVertexBuffer = null;
     }
 
-    // Create a texture from the image data
-    this.texture = this.stage.txManager.createTexture('ImageTexture', {
-      premultiplyAlpha: true,
-      src: result.imageData,
-    });
+    // Handle SDF renderer (uses layout caching)
+    if (textRendererType === 'sdf') {
+      // Cache layout data for addQuads performance
+      this._cachedLayout = result.layout || null;
 
-    // Get the alpha from the color property
+      // Generate vertex buffer for WebGL rendering
+      if (this._cachedLayout) {
+        this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
+      }
+
+      // SDF renderer doesn't use texture from ImageData
+      // WebGL quads will be rendered in renderQuads override
+      this.texture = null;
+    }
+
+    // Get alpha from color property
     this.alpha = this.props.color
       ? ((this.props.color >>> 24) & 0xff) / 255
       : 1;
 
-    // Update dimensions based on contain mode
-    const { contain } = this;
-    const setWidth = this.props.width;
-    const setHeight = this.props.height;
-    const height = result.height;
-    const width = result.width;
-
+    // Update dimensions based on contain mode (same for both renderers)
     if (contain === 'both') {
-      // Keep original dimensions
       this.props.width = setWidth;
       this.props.height = setHeight;
     } else if (contain === 'width') {
-      // Keep width, update height
       this.props.width = setWidth;
-      this.props.height = height;
+      this.props.height = resultHeight;
     } else if (contain === 'none') {
-      // Update both dimensions
-      this.props.width = width;
-      this.props.height = height;
+      this.props.width = resultWidth;
+      this.props.height = resultHeight;
     }
 
     this._textRenderNeeded = false;
@@ -236,10 +268,72 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: result.width,
-        height: result.height,
+        width: resultWidth,
+        height: resultHeight,
       },
     } satisfies NodeTextLoadedPayload);
+  }
+
+  /**
+   * Override renderQuads to handle SDF vs Canvas rendering
+   */
+  override renderQuads(renderer: CoreRenderer): void {
+    // Host paths on top
+    const textRendererType = this.textRenderer.type;
+
+    // Canvas renderer: use standard texture rendering via CoreNode
+    if (textRendererType === 'canvas') {
+      super.renderQuads(renderer);
+      return;
+    }
+
+    // SDF renderer: use WebGL quad-based rendering
+    if (textRendererType === 'sdf') {
+      this.renderSdfQuads(renderer);
+      return;
+    }
+  }
+
+  /**
+   * Handle SDF-specific WebGL quad rendering
+   */
+  private renderSdfQuads(renderer: CoreRenderer): void {
+    // Early return if no cached data
+    if (!this._cachedLayout || !this._lastVertexBuffer) {
+      return;
+    }
+
+    const sdfRenderer = this.textRenderer;
+    if (this._cachedLayout && this._lastVertexBuffer) {
+      sdfRenderer.renderQuads(
+        renderer,
+        this._cachedLayout as TextLayout,
+        this._lastVertexBuffer,
+        {
+          fontFamily: this._fontFamily,
+          fontSize: this._fontSize,
+          color: this.props.color || 0xffffffff,
+          offsetY: this._offsetY,
+          worldAlpha: this.worldAlpha,
+          globalTransform:
+            this.globalTransform?.getFloatArr() || new Float32Array(16),
+          clippingRect: this.clippingRect,
+          width: this.props.width,
+          height: this.props.height,
+          parentHasRenderTexture: this.parentHasRenderTexture,
+          framebufferDimensions: this.parentFramebufferDimensions,
+          stage: this.stage,
+        },
+      );
+    }
+  }
+
+  /**
+   * Clear cached layout data when text properties change
+   */
+  private clearCachedLayout(): void {
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
   }
 
   // Property getters and setters

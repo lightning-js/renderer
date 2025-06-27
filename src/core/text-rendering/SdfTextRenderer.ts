@@ -1,0 +1,430 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2025 Comcast Cable Communications Management, LLC.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import type { Stage } from '../Stage.js';
+import type { FontHandler, TrProps } from './TextRenderer.js';
+import * as SdfFontHandler from './SdfFontHandler.js';
+import type { CoreRenderer } from '../renderers/CoreRenderer.js';
+import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
+import { WebGlRenderOp } from '../renderers/webgl/WebGlRenderOp.js';
+import type { SdfShaderProps } from '../shaders/webgl/SdfShader.js';
+import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.js';
+import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
+import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
+import { mergeColorAlpha } from '../../utils.js';
+import type { TextLayout, GlyphLayout } from './TextRenderer.js';
+
+// Type definition to match interface
+export const type = 'sdf' as const;
+
+// Font handling
+export const init = (): void => {
+  SdfFontHandler.init();
+};
+
+export const font: FontHandler = SdfFontHandler;
+
+/**
+ * SDF text renderer using MSDF/SDF fonts with WebGL
+ *
+ * @param stage - Stage instance for font resolution
+ * @param props - Text rendering properties
+ * @returns Object containing ImageData and dimensions
+ */
+export const renderText = async (
+  stage: Stage,
+  props: TrProps,
+): Promise<{
+  imageData: ImageData | null;
+  width: number;
+  height: number;
+  layout?: TextLayout;
+}> => {
+  // Early return if no text
+  if (!props.text) {
+    return {
+      imageData: null,
+      width: 0,
+      height: 0,
+    };
+  }
+
+  // Get font cache for this font family
+  const fontData = SdfFontHandler.getFontData(props.fontFamily);
+  if (!fontData) {
+    // Font not loaded, return empty result
+    return {
+      imageData: null,
+      width: 0,
+      height: 0,
+    };
+  }
+
+  // Calculate text layout and generate glyph data for caching
+  const layout = generateTextLayout(props, fontData);
+
+  // For SDF renderer, ImageData is null since we render via WebGL
+  return {
+    imageData: null,
+    width: layout.width,
+    height: layout.height,
+    layout, // Cache layout for addQuads
+  };
+};
+
+/**
+ * Add quads for rendering using cached layout data
+ */
+export const addQuads = (layout?: TextLayout): Float32Array | null => {
+  if (!layout) {
+    return null; // No layout data available
+  }
+
+  // Host paths on top
+  const glyphs = layout.glyphs;
+  const glyphsLength = glyphs.length;
+
+  if (glyphsLength === 0) {
+    return null;
+  }
+
+  // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
+  const FLOATS_PER_VERTEX = 4;
+  const VERTICES_PER_GLYPH = 6;
+  const vertexBuffer = new Float32Array(
+    glyphsLength * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
+  );
+
+  let bufferIndex = 0;
+  let glyphIndex = 0;
+
+  while (glyphIndex < glyphsLength) {
+    const glyph = glyphs[glyphIndex];
+    if (!glyph) {
+      glyphIndex++;
+      continue;
+    }
+
+    // Host paths for glyph data
+    const x1 = glyph.x;
+    const y1 = glyph.y;
+    const x2 = x1 + glyph.width;
+    const y2 = y1 + glyph.height;
+
+    const u1 = glyph.atlasX;
+    const v1 = glyph.atlasY;
+    const u2 = u1 + glyph.atlasWidth;
+    const v2 = v1 + glyph.atlasHeight;
+
+    // Triangle 1: Top-left, top-right, bottom-left
+    // Vertex 1: Top-left
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 2: Top-right
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 3: Bottom-left
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v2;
+
+    // Triangle 2: Top-right, bottom-right, bottom-left
+    // Vertex 4: Top-right (duplicate)
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 5: Bottom-right
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v2;
+
+    // Vertex 6: Bottom-left (duplicate)
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v2;
+
+    glyphIndex++;
+  }
+
+  return vertexBuffer;
+};
+
+/**
+ * Create and submit WebGL render operations for SDF text
+ * This is called from CoreTextNode during rendering to add SDF text to the render pipeline
+ */
+export const renderQuads = (
+  renderer: CoreRenderer,
+  layout: TextLayout,
+  vertexBuffer: Float32Array,
+  renderProps: {
+    fontFamily: string;
+    fontSize: number;
+    color: number;
+    offsetY: number;
+    worldAlpha: number;
+    globalTransform: Float32Array;
+    clippingRect: unknown;
+    width: number;
+    height: number;
+    parentHasRenderTexture: boolean;
+    framebufferDimensions: unknown;
+    stage: Stage;
+  },
+): void => {
+  if (!(renderer instanceof WebGlRenderer)) {
+    console.warn('SDF text rendering requires WebGL renderer');
+    return;
+  }
+
+  const fontFamily = renderProps.fontFamily;
+  const fontSize = renderProps.fontSize;
+  const color = renderProps.color;
+  const offsetY = renderProps.offsetY;
+  const worldAlpha = renderProps.worldAlpha;
+  const globalTransform = renderProps.globalTransform;
+  const stage = renderProps.stage;
+
+  const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
+  if (!atlasTexture) {
+    console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
+    return;
+  }
+
+  const fontData = SdfFontHandler.getFontData(fontFamily);
+  if (!fontData) {
+    console.warn(`SDF font data not found for font: ${fontFamily}`);
+    return;
+  }
+
+  const glw = renderer.glw;
+  const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
+  const webGlBuffer = glw.createBuffer();
+
+  if (!webGlBuffer) {
+    console.warn('Failed to create WebGL buffer for SDF text');
+    return;
+  }
+
+  const webGlBuffers = new BufferCollection([
+    {
+      buffer: webGlBuffer,
+      attributes: {
+        a_position: {
+          name: 'a_position',
+          size: 2,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 0,
+        },
+        a_textureCoords: {
+          name: 'a_textureCoords',
+          size: 2,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+        },
+      },
+    },
+  ]);
+
+  const buffer = webGlBuffers.getBuffer('a_position');
+  if (buffer) {
+    glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
+  }
+
+  const sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
+  const renderOp = new WebGlRenderOp(
+    renderer,
+    {
+      sdfShaderProps: {
+        transform: globalTransform,
+        color: mergeColorAlpha(color || 0xffffffff, worldAlpha),
+        size: fontSize / (fontData.info?.size || 1),
+        scrollY: offsetY || 0,
+        distanceRange: fontData.distanceField?.distanceRange || 1.0,
+        debug: false,
+      } satisfies SdfShaderProps,
+      sdfBuffers: webGlBuffers,
+      shader: sdfShader,
+      alpha: worldAlpha,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+      clippingRect: renderProps.clippingRect as any,
+      height: layout.height,
+      width: layout.width,
+      rtt: false,
+      parentHasRenderTexture: renderProps.parentHasRenderTexture,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+      framebufferDimensions: renderProps.framebufferDimensions as any,
+    },
+    0,
+  );
+
+  // Add atlas texture and set quad count
+  renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
+  renderOp.numQuads = layout.glyphs.length;
+
+  // Add to render pipeline
+  renderer.addRenderOp(renderOp);
+};
+
+/**
+ * Generate complete text layout with glyph positioning for caching
+ */
+const generateTextLayout = (
+  props: TrProps,
+  fontData: SdfFontHandler.SdfFontData,
+): TextLayout => {
+  const text = props.text;
+  const fontSize = props.fontSize;
+  const letterSpacing = props.letterSpacing || 0;
+  const fontFamily = props.fontFamily;
+
+  const fontScale = fontSize / fontData.common.lineHeight;
+  const lineHeight = props.lineHeight || fontData.common.lineHeight * fontScale;
+  const atlasWidth = fontData.common.scaleW;
+  const atlasHeight = fontData.common.scaleH;
+
+  // Split text into lines
+  const lines = text.split('\n');
+  const glyphs: GlyphLayout[] = [];
+  let maxWidth = 0;
+  let currentY = 0;
+
+  let lineIndex = 0;
+  const linesLength = lines.length;
+
+  while (lineIndex < linesLength) {
+    const line = lines[lineIndex];
+    if (!line) {
+      lineIndex++;
+      currentY += lineHeight;
+      continue;
+    }
+
+    let currentX = 0;
+    let charIndex = 0;
+    const lineLength = line.length;
+    let prevCodepoint = 0;
+
+    while (charIndex < lineLength) {
+      const char = line.charAt(charIndex);
+      const codepoint = char.codePointAt(0);
+
+      if (!codepoint) {
+        charIndex++;
+        continue;
+      }
+
+      // Get glyph data from font handler
+      const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+      if (!glyph) {
+        charIndex++;
+        continue;
+      }
+
+      // Calculate advance with kerning
+      let advance = glyph.xadvance * fontScale;
+
+      // Add kerning if there's a previous character
+      if (prevCodepoint !== 0) {
+        const kerning = SdfFontHandler.getKerning(
+          fontFamily,
+          prevCodepoint,
+          codepoint,
+        );
+        advance += kerning * fontScale;
+      }
+
+      // Calculate glyph position and atlas coordinates
+      const glyphLayout: GlyphLayout = {
+        codepoint,
+        glyphId: glyph.id,
+        x: currentX + glyph.xoffset * fontScale,
+        y: currentY + glyph.yoffset * fontScale,
+        width: glyph.width * fontScale,
+        height: glyph.height * fontScale,
+        xOffset: glyph.xoffset * fontScale,
+        yOffset: glyph.yoffset * fontScale,
+        atlasX: glyph.x / atlasWidth,
+        atlasY: glyph.y / atlasHeight,
+        atlasWidth: glyph.width / atlasWidth,
+        atlasHeight: glyph.height / atlasHeight,
+      };
+
+      glyphs.push(glyphLayout);
+
+      // Advance position with letter spacing
+      currentX += advance + letterSpacing;
+      prevCodepoint = codepoint;
+      charIndex++;
+    }
+
+    if (currentX > maxWidth) {
+      maxWidth = currentX;
+    }
+
+    lineIndex++;
+    currentY += lineHeight;
+  }
+
+  return {
+    glyphs,
+    width: Math.ceil(maxWidth),
+    height: Math.ceil(lineHeight * lines.length),
+    fontScale,
+    lineHeight,
+    fontFamily,
+  };
+};
+
+/**
+ * Create render data for SDF text rendering
+ * This provides all necessary data for WebGL rendering integration
+ */
+export const createRenderData = (
+  layout: TextLayout,
+  vertexBuffer: Float32Array,
+): {
+  vertexBuffer: Float32Array;
+  numQuads: number;
+  layout: TextLayout;
+} => {
+  // Host paths on top
+  const numQuads = layout.glyphs.length;
+
+  return {
+    vertexBuffer,
+    numQuads,
+    layout,
+  };
+};
