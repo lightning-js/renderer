@@ -91,13 +91,30 @@ export class CanvasCoreTexture extends CoreContextTexture {
       return this.tintCache.image;
     }
 
-    const tintedImage = this.tintTexture(image, key);
-    this.tintCache = {
-      key,
-      image: tintedImage,
-    };
+    let resultImage = null;
+
+    if (!image) {
+      // Generate 1x1 canvas as fallback
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = key;
+        ctx.fillRect(0, 0, 1, 1);
+      }
+
+      resultImage = canvas;
+    } else {
+      resultImage = this.tintTexture(image, key);
+    }
+
+    // Cache and update memory size
+    this.tintCache = { key, image: resultImage };
     this.updateMemSize();
-    return tintedImage;
+
+    return resultImage;
   }
 
   protected tintTexture(
