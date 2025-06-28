@@ -29,7 +29,7 @@ import {
   isBase64Image,
 } from '../lib/utils.js';
 import { isSvgImage, loadSvg } from '../lib/textureSvg.js';
-import { fetchJson } from '../text-rendering/font-face-types/utils.js';
+import { fetchJson } from '../lib/utils.js';
 import type { Platform } from '../platforms/Platform.js';
 import { isProductionEnvironment } from '../../utils.js';
 

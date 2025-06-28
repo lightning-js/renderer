@@ -25,8 +25,7 @@ import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { INode, INodeProps, ITextNode, ITextNodeProps } from './INode.js';
 import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.js';
-import type { CanvasTextRenderer } from '../core/text-rendering/renderers/CanvasTextRenderer.js';
-import type { SdfTextRenderer } from '../core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+import type { TextRenderer } from '../core/text-rendering/TextRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
 import type { Inspector } from './Inspector.js';
@@ -222,7 +221,7 @@ export type RendererMainSettings = RendererRuntimeSettings & {
    *
    *
    */
-  fontEngines: (typeof SdfTextRenderer | typeof CanvasTextRenderer)[];
+  fontEngines: TextRenderer[];
 
   /**
    * Force WebGL2

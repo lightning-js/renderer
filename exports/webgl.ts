@@ -35,7 +35,7 @@
  * @packageDocumentation
  */
 
-export { SdfTextRenderer } from '../src/core/text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
+export * from '../src/core/text-rendering/SdfTextRenderer.js';
 export { WebGlRenderer } from '../src/core/renderers/webgl/WebGlRenderer.js';
 export { WebGlCtxTexture } from '../src/core/renderers/webgl/WebGlCtxTexture.js';
 

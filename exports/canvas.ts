@@ -35,7 +35,7 @@
  * @packageDocumentation
  */
 
-export { CanvasTextRenderer } from '../src/core/text-rendering/renderers/CanvasTextRenderer.js';
+export * from '../src/core/text-rendering/CanvasTextRenderer.js';
 export { CanvasRenderer } from '../src/core/renderers/canvas/CanvasRenderer.js';
 export { CanvasTexture } from '../src/core/renderers/canvas/CanvasTexture.js';
 export * from '../src/core/renderers/canvas/CanvasShaderNode.js';
