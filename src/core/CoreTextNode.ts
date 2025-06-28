@@ -171,10 +171,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
           overflowSuffix: this._overflowSuffix,
           wordBreak: this._wordBreak,
         })
-        .then((result) => {
-          // Handle the result of text rendering
-          this.handleRenderResult(result);
-        })
+        .then(this.handleRenderResult.bind(this))
         .catch((error) => {
           // Emit failure if rendering fails
           this.emit('failed', {
@@ -218,30 +215,19 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         return;
       }
 
-      // Create texture from image data for Canvas renderer
       this.texture = this.stage.txManager.createTexture('ImageTexture', {
         premultiplyAlpha: true,
         src: result.imageData,
       });
-
-      // Clear SDF-specific cached data
-      this._cachedLayout = null;
-      this._lastVertexBuffer = null;
     }
 
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
-      // Cache layout data for addQuads performance
       this._cachedLayout = result.layout || null;
 
-      // Generate vertex buffer for WebGL rendering
       if (this._cachedLayout) {
         this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
       }
-
-      // SDF renderer doesn't use texture from ImageData
-      // WebGL quads will be rendered in renderQuads override
-      this.texture = null;
     }
 
     // Get alpha from color property
@@ -278,7 +264,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
-    // Host paths on top
     const textRendererType = this.textRenderer.type;
 
     // Canvas renderer: use standard texture rendering via CoreNode
@@ -288,10 +273,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // SDF renderer: use WebGL quad-based rendering
-    if (textRendererType === 'sdf') {
-      this.renderSdfQuads(renderer);
-      return;
-    }
+    this.renderSdfQuads(renderer);
   }
 
   /**
@@ -303,29 +285,26 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    const sdfRenderer = this.textRenderer;
-    if (this._cachedLayout && this._lastVertexBuffer) {
-      sdfRenderer.renderQuads(
-        renderer,
-        this._cachedLayout as TextLayout,
-        this._lastVertexBuffer,
-        {
-          fontFamily: this._fontFamily,
-          fontSize: this._fontSize,
-          color: this.props.color || 0xffffffff,
-          offsetY: this._offsetY,
-          worldAlpha: this.worldAlpha,
-          globalTransform:
-            this.globalTransform?.getFloatArr() || new Float32Array(16),
-          clippingRect: this.clippingRect,
-          width: this.props.width,
-          height: this.props.height,
-          parentHasRenderTexture: this.parentHasRenderTexture,
-          framebufferDimensions: this.parentFramebufferDimensions,
-          stage: this.stage,
-        },
-      );
-    }
+    this.textRenderer.renderQuads(
+      renderer,
+      this._cachedLayout as TextLayout,
+      this._lastVertexBuffer,
+      {
+        fontFamily: this._fontFamily,
+        fontSize: this._fontSize,
+        color: this.props.color || 0xffffffff,
+        offsetY: this._offsetY,
+        worldAlpha: this.worldAlpha,
+        globalTransform:
+          this.globalTransform?.getFloatArr() || new Float32Array(16),
+        clippingRect: this.clippingRect,
+        width: this.props.width,
+        height: this.props.height,
+        parentHasRenderTexture: this.parentHasRenderTexture,
+        framebufferDimensions: this.parentFramebufferDimensions,
+        stage: this.stage,
+      },
+    );
   }
 
   /**

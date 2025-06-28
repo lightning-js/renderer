@@ -30,6 +30,10 @@ import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
 
+// Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
+const FLOATS_PER_VERTEX = 4;
+const VERTICES_PER_GLYPH = 6;
+
 // Type definition to match interface
 export const type = 'sdf' as const;
 
@@ -104,9 +108,6 @@ export const addQuads = (layout?: TextLayout): Float32Array | null => {
     return null;
   }
 
-  // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
-  const FLOATS_PER_VERTEX = 4;
-  const VERTICES_PER_GLYPH = 6;
   const vertexBuffer = new Float32Array(
     glyphsLength * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
   );
@@ -199,11 +200,6 @@ export const renderQuads = (
     stage: Stage;
   },
 ): void => {
-  if (!(renderer instanceof WebGlRenderer)) {
-    console.warn('SDF text rendering requires WebGL renderer');
-    return;
-  }
-
   const fontFamily = renderProps.fontFamily;
   const fontSize = renderProps.fontSize;
   const color = renderProps.color;
@@ -213,18 +209,19 @@ export const renderQuads = (
   const stage = renderProps.stage;
 
   const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
-  if (!atlasTexture) {
+  if (atlasTexture === null) {
     console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
     return;
   }
 
   const fontData = SdfFontHandler.getFontData(fontFamily);
-  if (!fontData) {
+  if (fontData === null) {
     console.warn(`SDF font data not found for font: ${fontFamily}`);
     return;
   }
 
-  const glw = renderer.glw;
+  // We can safely assume this is a WebGL renderer else this wouldn't be called
+  const glw = (renderer as WebGlRenderer).glw;
   const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
   const webGlBuffer = glw.createBuffer();
 
@@ -264,7 +261,7 @@ export const renderQuads = (
 
   const sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
   const renderOp = new WebGlRenderOp(
-    renderer,
+    renderer as WebGlRenderer,
     {
       sdfShaderProps: {
         transform: globalTransform,
@@ -293,8 +290,7 @@ export const renderQuads = (
   renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
   renderOp.numQuads = layout.glyphs.length;
 
-  // Add to render pipeline
-  renderer.addRenderOp(renderOp);
+  (renderer as WebGlRenderer).addRenderOp(renderOp);
 };
 
 /**
@@ -404,27 +400,5 @@ const generateTextLayout = (
     fontScale,
     lineHeight,
     fontFamily,
-  };
-};
-
-/**
- * Create render data for SDF text rendering
- * This provides all necessary data for WebGL rendering integration
- */
-export const createRenderData = (
-  layout: TextLayout,
-  vertexBuffer: Float32Array,
-): {
-  vertexBuffer: Float32Array;
-  numQuads: number;
-  layout: TextLayout;
-} => {
-  // Host paths on top
-  const numQuads = layout.glyphs.length;
-
-  return {
-    vertexBuffer,
-    numQuads,
-    layout,
   };
 };
