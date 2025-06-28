@@ -345,15 +345,21 @@ export interface TextLayout {
   fontFamily: string;
 }
 
+export interface FontLoadOptions {
+  fontFamily: string;
+  metrics?: FontMetrics;
+  // For Canvas/traditional font loading
+  fontUrl?: string;
+  // For SDF/atlas-based font loading
+  atlasUrl?: string;
+  atlasDataUrl?: string;
+}
+
 export interface FontHandler {
   init: () => void;
   type: 'canvas' | 'sdf';
   isFontLoaded: (fontFamily: string) => boolean;
-  loadFont: (options: {
-    fontFamily: string;
-    fontUrl: string;
-    metrics?: FontMetrics;
-  }) => Promise<void>;
+  loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
   getFontFamilies: () => FontFamilyMap;
   canRenderFont: (trProps: TrProps) => boolean;
   getFontMetrics: (

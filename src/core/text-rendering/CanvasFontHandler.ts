@@ -19,9 +19,11 @@
 
 import type {
   FontFamilyMap,
+  FontLoadOptions,
   FontMetrics,
   NormalizedFontMetrics,
 } from './TextRenderer.js';
+import type { Stage } from '../Stage.js';
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
@@ -60,15 +62,12 @@ export const canRenderFont = (): boolean => {
 /**
  * Load a font by providing fontFamily, fontUrl, and optional metrics
  */
-export const loadFont = async ({
-  fontFamily,
-  fontUrl,
-  metrics,
-}: {
-  fontFamily: string;
-  fontUrl: string;
-  metrics?: FontMetrics;
-}): Promise<void> => {
+export const loadFont = async (
+  stage: Stage,
+  options: FontLoadOptions,
+): Promise<void> => {
+  const { fontFamily, fontUrl, metrics } = options;
+
   // If already loaded, return immediately
   if (fontState.loadedFonts.has(fontFamily)) {
     return;

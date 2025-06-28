@@ -29,6 +29,8 @@ import { CoreTextureManager } from './CoreTextureManager.js';
 import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   type FontHandler,
+  type FontLoadOptions,
+  type FontMetrics,
   type TextRenderer,
   type TextRenderers,
   type TrProps,
@@ -224,13 +226,13 @@ export class Stage {
     // Create text renderers
     this.hasOnlyOneFontEngine = fontEngines.length === 1;
     this.hasOnlyCanvasFontEngine =
-      fontEngines.length === 1 && fontEngines[0].type === 'canvas';
+      fontEngines.length === 1 && fontEngines[0]!.type === 'canvas';
     this.hasCanvasEngine = false;
     this.singleFontEngine = this.hasOnlyOneFontEngine
       ? (fontEngines[0] as TextRenderer)
       : null;
     this.singleFontHandler = this.hasOnlyOneFontEngine
-      ? (fontEngines[0].fontHandler as FontHandler)
+      ? (fontEngines[0]?.font as FontHandler)
       : null;
 
     if (this.singleFontEngine === null) {
@@ -239,7 +241,7 @@ export class Stage {
         (fontEngine: TextRenderer) => {
           const type = fontEngine.type;
 
-          if (type === 'msdf' && renderMode === 'canvas') {
+          if (type === 'sdf' && renderMode === 'canvas') {
             console.warn(
               'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
             );
@@ -257,8 +259,8 @@ export class Stage {
       // Sort engines: SDF first, Canvas last, others in between
       const sortedEngines = compatibleEngines.sort(
         (a: TextRenderer, b: TextRenderer) => {
-          if (a.type === 'msdf') return -1;
-          if (b.type === 'msdf') return 1;
+          if (a.type === 'sdf') return -1;
+          if (b.type === 'sdf') return 1;
           if (a.type === 'canvas') return 1;
           if (b.type === 'canvas') return -1;
           return 0;
@@ -803,5 +805,87 @@ export class Stage {
 
   get clearColor() {
     return this.clrColor;
+  }
+
+  /**
+   * Load a font using a specific text renderer type
+   *
+   * @remarks
+   * This method allows consumers to explicitly load fonts for a specific
+   * text renderer type (e.g., 'canvas', 'sdf', 'msdf'). This is useful when
+   * you want to ensure a font is available for a specific rendering pipeline
+   * before creating text nodes.
+   *
+   * For Canvas fonts, provide fontUrl (e.g., .ttf, .woff, .woff2)
+   * For SDF fonts, provide atlasUrl (image) and atlasDataUrl (JSON glyph data)
+   *
+   * @param rendererType - The type of text renderer ('canvas', 'sdf', 'msdf', etc.)
+   * @param options - Font loading options specific to the renderer type
+   * @returns Promise that resolves when the font is loaded
+   */
+  async loadFontByRenderer(
+    rendererType: TextRenderers,
+    options: FontLoadOptions,
+  ): Promise<void> {
+    const rendererTypeKey = String(rendererType);
+    const fontHandler = this.fontHandlers[rendererTypeKey];
+
+    if (!fontHandler) {
+      throw new Error(
+        `Font handler for renderer type '${rendererTypeKey}' not found. Available types: ${Object.keys(
+          this.fontHandlers,
+        ).join(', ')}`,
+      );
+    }
+
+    return fontHandler.loadFont(this, options);
+  }
+
+  /**
+   * Load a font using the best available text renderer
+   *
+   * @remarks
+   * This method automatically selects the best available text renderer
+   * for loading the font. It prioritizes SDF renderers over Canvas renderers
+   * for better performance when possible.
+   *
+   * For Canvas fonts, provide fontUrl (e.g., .ttf, .woff, .woff2)
+   * For SDF fonts, provide atlasUrl (image) and atlasDataUrl (JSON glyph data)
+   *
+   * @param options - Font loading options
+   * @returns Promise that resolves when the font is loaded
+   */
+  async loadFont(options: FontLoadOptions): Promise<void> {
+    // If we have only one font engine, use it
+    if (this.singleFontHandler) {
+      return this.singleFontHandler.loadFont(this, options);
+    }
+
+    // Try SDF first (best performance), then canvas (fallback)
+    const preferredOrder = ['sdf', 'canvas'];
+
+    for (const rendererType of preferredOrder) {
+      const fontHandler = this.fontHandlers[rendererType];
+      if (!fontHandler) {
+        continue; // Skip if handler not found
+      }
+
+      return fontHandler.loadFont(this, options);
+    }
+
+    // If no suitable font handler found, try any available handler
+    const availableHandlers = Object.entries(this.fontHandlers);
+    if (availableHandlers.length > 0) {
+      const firstHandler = availableHandlers[0]?.[1];
+      if (firstHandler && typeof firstHandler.loadFont === 'function') {
+        return firstHandler.loadFont(this, options);
+      }
+    }
+
+    console.error(
+      `No font handlers support font loading with the provided parameters. Available handlers: ${Object.keys(
+        this.fontHandlers,
+      ).join(', ')}`,
+    );
   }
 }

@@ -22,8 +22,10 @@ import type {
   FontMetrics,
   NormalizedFontMetrics,
   TrProps,
+  FontLoadOptions,
 } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
+import type { Stage } from '../Stage.js';
 
 /**
  * SDF Font Data structure matching msdf-bmfont-xml output
@@ -287,19 +289,13 @@ export const canRenderFont = (trProps: TrProps): boolean => {
  * @param {string} options.fontUrl - JSON font data URL (atlasDataUrl)
  * @param {string} options.atlasUrl - PNG atlas texture URL
  * @param {FontMetrics} options.metrics - Optional font metrics
- * @param {ImageTexture} options.atlasTexture - Atlas texture instance
  */
-export const loadFont = async ({
-  fontFamily,
-  fontUrl,
-  metrics,
-  atlasTexture,
-}: {
-  fontFamily: string;
-  fontUrl: string;
-  metrics?: FontMetrics;
-  atlasTexture?: ImageTexture;
-}): Promise<void> => {
+export const loadFont = async (
+  stage: Stage,
+  options: FontLoadOptions,
+): Promise<void> => {
+  const { fontFamily, atlasUrl, atlasDataUrl, metrics } = options;
+
   // Early return if already loaded
   if (fontState.loadedFonts.has(fontFamily)) {
     return;
@@ -311,40 +307,55 @@ export const loadFont = async ({
     return existingPromise;
   }
 
+  if (!atlasDataUrl) {
+    throw new Error(
+      `Atlas data URL must be provided for SDF font: ${fontFamily}`,
+    );
+  }
+
   // Create loading promise
   const loadPromise = (async (): Promise<void> => {
-    try {
-      // Load font JSON data
-      const response = await fetch(fontUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to load font data: ${response.statusText}`);
-      }
+    // Load font JSON data
+    const response = await fetch(atlasDataUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to load font data: ${response.statusText}`);
+    }
 
-      const fontData = (await response.json()) as SdfFontData;
-      if (!fontData || !fontData.chars) {
-        throw new Error('Invalid SDF font data format');
-      }
+    const fontData = (await response.json()) as SdfFontData;
+    if (!fontData || !fontData.chars) {
+      throw new Error('Invalid SDF font data format');
+    }
 
-      // Atlas texture should be provided externally
-      if (!atlasTexture) {
-        throw new Error('Atlas texture must be provided for SDF fonts');
-      }
+    // Atlas texture should be provided externally
+    if (!atlasUrl) {
+      throw new Error('Atlas texture must be provided for SDF fonts');
+    }
 
+    // create new atlas texture using ImageTexture
+    const atlasTexture = stage.txManager.createTexture('ImageTexture', {
+      src: atlasUrl,
+    });
+
+    atlasTexture.preventCleanup = true; // Prevent automatic cleanup
+    atlasTexture.load();
+
+    atlasTexture.on('load', () => {
       // Process and cache font data
       processFontData(fontFamily, fontData, atlasTexture, metrics);
 
       // Mark as loaded
       fontState.loadedFonts.add(fontFamily);
       fontState.fontLoadPromises.delete(fontFamily);
-    } catch (error) {
+    });
+
+    atlasTexture.on('error', (error: Error) => {
       // Cleanup on error
       fontState.fontLoadPromises.delete(fontFamily);
       if (fontState.fontCache[fontFamily]) {
         delete fontState.fontCache[fontFamily];
       }
       console.error(`Failed to load SDF font: ${fontFamily}`, error);
-      throw error;
-    }
+    });
   })();
 
   fontState.fontLoadPromises.set(fontFamily, loadPromise);

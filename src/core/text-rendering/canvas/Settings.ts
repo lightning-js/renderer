@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { RGBA } from '../../lib/utils';
+import type { RGBA } from '../../lib/utils.js';
 
 /**
  * Text Overflow Values
@@ -59,7 +59,6 @@ export interface Settings {
   fontSize: number;
   fontBaselineRatio: number;
   fontFamily: string | null;
-  trFontFace: WebTrFontFace | null;
   wordWrap: boolean;
   wordWrapWidth: number;
   wordBreak: 'normal' | 'break-all' | 'break-word';

@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-import type { NormalizedFontMetrics } from '../TextRenderer';
-import { isZeroWidthSpace } from '../Utils';
-import type { TextBaseline } from './Settings';
+import type { NormalizedFontMetrics } from '../TextRenderer.js';
+import { isZeroWidthSpace } from '../Utils.js';
+import type { TextBaseline } from './Settings.js';
 
 export const measureText = (
   context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,

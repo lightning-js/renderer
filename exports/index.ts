@@ -49,8 +49,6 @@ export {
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type { TextRendererMap } from '../src/core/text-rendering/TextRenderer.js';
-export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
@@ -70,12 +68,6 @@ export type { ShaderProgramSources } from '../src/core/renderers/webgl/internal/
 // Textures
 export * from '../src/core/textures/Texture.js';
 export { ImageTexture } from '../src/core/textures/ImageTexture.js';
-
-// Text Rendering & Fonts
-// export * from '../src/core/text-rendering/renderers/TextRenderer.js';
-export * from '../src/core/text-rendering/font-face-types/TrFontFace.js';
-export * from '../src/core/text-rendering/font-face-types/WebTrFontFace.js';
-export * from '../src/core/text-rendering/font-face-types/SdfTrFontFace/SdfTrFontFace.js';
 
 // Stage (type only for Core Extensions)
 export type * from '../src/core/Stage.js';
