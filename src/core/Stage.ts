@@ -605,6 +605,7 @@ export class Stage {
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
+      bidi: props.bidi ?? false,
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -612,7 +613,7 @@ export class Stage {
       fontStyle: props.fontStyle ?? 'normal',
       fontWeight: props.fontWeight ?? 'normal',
       fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
+      textAlign: props.textAlign ?? 'start',
       contain: props.contain ?? 'none',
       scrollable: props.scrollable ?? false,
       scrollY: props.scrollY ?? 0,
