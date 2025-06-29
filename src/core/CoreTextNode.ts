@@ -108,7 +108,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       verticalAlign: props.verticalAlign,
       overflowSuffix: props.overflowSuffix,
       wordBreak: props.wordBreak,
-      rtl: props.rtl,
+      bidi: props.bidi,
     });
 
     this.trState = textRendererState;
@@ -366,6 +366,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set debug(value: CoreTextNodeProps['debug']) {
     this.textRenderer.set.debug(this.trState, value);
+  }
+
+  get bidi(): CoreTextNodeProps['bidi'] {
+    return this.trState.props.bidi;
+  }
+
+  set bidi(value: CoreTextNodeProps['bidi']) {
+    this.textRenderer.set.bidi(this.trState, value);
   }
 
   override update(delta: number, parentClippingRect: RectWithValid) {

@@ -281,7 +281,6 @@ export class Stage {
       texture: null,
       textureOptions: {},
       shader: this.defShaderNode,
-      rtl: false,
       rtt: false,
       src: null,
       scale: 1,
@@ -606,6 +605,7 @@ export class Stage {
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize ?? 16;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
+      bidi: props.bidi ?? false,
       text: props.text ?? '',
       textRendererOverride: props.textRendererOverride ?? null,
       fontSize,
@@ -613,7 +613,7 @@ export class Stage {
       fontStyle: props.fontStyle ?? 'normal',
       fontWeight: props.fontWeight ?? 'normal',
       fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
+      textAlign: props.textAlign ?? 'start',
       contain: props.contain ?? 'none',
       scrollable: props.scrollable ?? false,
       scrollY: props.scrollY ?? 0,
@@ -768,7 +768,6 @@ export class Stage {
       pivotX: props.pivotX ?? props.pivot ?? 0.5,
       pivotY: props.pivotY ?? props.pivot ?? 0.5,
       rotation: props.rotation ?? 0,
-      rtl: props.rtl ?? false,
       rtt: props.rtt ?? false,
       data: data,
       imageType: props.imageType,

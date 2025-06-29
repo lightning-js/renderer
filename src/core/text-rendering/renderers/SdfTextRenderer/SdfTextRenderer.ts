@@ -269,6 +269,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         state.props.maxLines = value;
         this.invalidateLayoutCache(state);
       },
+      bidi: (state, value) => {
+        state.props.bidi = value;
+        this.invalidateLayoutCache(state);
+      },
       textBaseline: (state, value) => {
         state.props.textBaseline = value;
         this.invalidateLayoutCache(state);
@@ -441,7 +445,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       overflowSuffix,
       wordBreak,
       maxLines,
-      rtl,
+      bidi,
     } = state.props;
 
     // scrollY only has an effect when contain === 'both' and scrollable === true
@@ -581,7 +585,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       overflowSuffix,
       wordBreak,
       maxLines,
-      rtl,
+      bidi,
     );
 
     state.bufferUploaded = false;
@@ -595,7 +599,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // If we didn't exit early, we know we have completely computed w/h
     if (out2.fullyProcessed) {
       state.textW = out2.maxX * fontSizeRatio;
-      state.textH = out2.numLines * sdfLineHeight * fontSizeRatio;
+      state.textH = out2.maxY * fontSizeRatio;
     }
 
     // if (state.props.debug.printLayoutTime) {

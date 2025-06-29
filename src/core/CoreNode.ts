@@ -681,11 +681,6 @@ export interface CoreNodeProps {
    */
   interactive?: boolean;
   /**
-   * Right to left rendering mode
-   * @default false
-   */
-  rtl: boolean;
-  /**
    * By enabling Strict bounds the renderer will not process & render child nodes of a node that is out of the visible area
    *
    * @remarks
@@ -782,7 +777,6 @@ export class CoreNode extends EventEmitter {
       shader: null,
       src: null,
       rtt: false,
-      rtl: false,
     };
 
     // Assign props to instances
@@ -2236,18 +2230,6 @@ export class CoreNode extends EventEmitter {
     if (this.parentHasRenderTexture === true) {
       this.notifyParentRTTOfUpdate();
     }
-  }
-
-  get rtl(): boolean {
-    return this.props.rtl;
-  }
-
-  set rtl(value: boolean) {
-    if (this.props.rtl === value) {
-      return;
-    }
-    this.props.rtl = value;
-    this.setUpdateType(UpdateType.Local);
   }
 
   private initRenderTexture() {

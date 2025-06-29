@@ -90,7 +90,9 @@ export class SdfFontShaper extends FontShaper {
         lastGlyphId = undefined;
 
         const spaceWidth = word.split('').reduce((width, char) => {
-          const glyph = this.glyphMap.get(char.codePointAt(0)!);
+          const codepoint = char.codePointAt(0);
+          if (codepoint === undefined) return width;
+          const glyph = this.glyphMap.get(codepoint);
           return glyph ? width + glyph.xadvance + props.letterSpacing : width;
         }, 0);
 
@@ -110,13 +112,14 @@ export class SdfFontShaper extends FontShaper {
         let currentWordWidth = 0;
 
         for (const char of word) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const codepoint = char.codePointAt(0)!;
           const glyph = this.glyphMap.get(codepoint);
 
           if (glyph) {
             const kerning =
               lastGlyphId !== undefined
-                ? (this.kernings[glyph.id]?.[lastGlyphId] || 0) +
+                ? ((this.kernings[glyph.id] || {})[lastGlyphId] || 0) +
                   props.letterSpacing
                 : 0;
 

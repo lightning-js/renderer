@@ -31,19 +31,18 @@ import type {
 } from '../../../font-face-types/SdfTrFontFace/internal/FontShaper.js';
 import type { TrProps, TextRendererState } from '../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
-import { PeekableIterator } from './PeekableGenerator.js';
-import { getUnicodeCodepoints } from './getUnicodeCodepoints.js';
 import { measureText } from './measureText.js';
 import { getOrderedText } from './getOrderedText.js';
 
 class LayoutState {
-  // public nextWordFits: boolean = true;
   public previousIsSpace: boolean = false;
   public bufferOffset: number = 0;
   public currentWord: number = 0;
   public cluster: number = 0;
   maxX: number = 0;
   maxY: number = 0;
+  minX: number = Infinity;
+  minY: number = Infinity;
   public curLineBufferStart: number = -1;
   private _curX: number;
   private previousX: number;
@@ -60,6 +59,15 @@ class LayoutState {
   private scrollable: boolean;
   private vertexLineHeight: number;
   private vertexTruncateHeight: number;
+
+  public suffixWord?: {
+    letters:
+      | Generator<MappedGlyphInfo, void, unknown>
+      | UnmappedCharacterInfo
+      | null;
+    width: number;
+    isLineBreak?: boolean;
+  };
 
   constructor(
     curX: number,
@@ -84,6 +92,7 @@ class LayoutState {
     this.scrollable = scrollable;
     this.vertexLineHeight = vertexLineHeight;
     this.vertexTruncateHeight = vertexTruncateHeight;
+
     if (this._trFontFace === undefined) {
       throw new Error('trFontFace is undefined');
     }
@@ -94,6 +103,7 @@ class LayoutState {
       (this.maxLines === 0 || this.curLineIndex + 1 < this.maxLines) &&
       (this.contain !== 'both' ||
         this.scrollable ||
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         this.curY + this.vertexLineHeight + this._trFontFace!.maxCharHeight <=
           this.vertexTruncateHeight)
     );
@@ -108,10 +118,6 @@ class LayoutState {
     this._curX = value;
   }
 
-  get nextWordFits() {
-    return false;
-  }
-
   get curLineIndex() {
     return this._curLineIndex;
   }
@@ -120,19 +126,12 @@ class LayoutState {
     this._curLineIndex = value;
   }
 
-  // Getter for lineIsBelowWindowTop
-  get lineIsBelowWindowTop(): boolean {
-    return this.curY + this._trFontFace!.maxCharHeight >= this._rwSdf.y1;
-  }
-
-  // Getter for lineIsAboveWindowBottom
-  get lineIsAboveWindowBottom(): boolean {
-    return this.curY <= this._rwSdf.y2;
-  }
-
-  // Getter for lineIsWithinWindow
   get lineIsWithinWindow(): boolean {
-    return this.lineIsBelowWindowTop && this.lineIsAboveWindowBottom;
+     
+    const lineIsBelowWindowTop =
+      this.curY + this._trFontFace!.maxCharHeight >= this._rwSdf.y1;
+    const lineIsAboveWindowBottom = this.curY <= this._rwSdf.y2;
+    return lineIsBelowWindowTop && lineIsAboveWindowBottom;
   }
 
   moveToNextLine(
@@ -168,29 +167,18 @@ class LayoutState {
   }
 
   addSuffixToBuffer(
-    words: Generator<
-      {
-        letters:
-          | Generator<MappedGlyphInfo, void, unknown>
-          | UnmappedCharacterInfo
-          | null;
-        width: number;
-        isLineBreak?: boolean;
-      },
-      void,
-      unknown
-    >,
     vertexBuffer: NonNullable<SdfTextRendererState['vertexBuffer']>,
     revertSpace: boolean = false,
   ): void {
     let glyphResult:
       | IteratorResult<MappedGlyphInfo | UnmappedCharacterInfo, void>
       | undefined;
-    const letters = words.next();
+
     if (!revertSpace && this.previousIsSpace) this.curX = this.previousX;
 
-    if (letters && letters.done === false) {
-      const glyphs = letters.value.letters;
+    const word = this.suffixWord;
+    if (word && word.letters) {
+      const glyphs = word.letters;
       if (glyphs && 'next' in glyphs && typeof glyphs.next === 'function') {
         while ((glyphResult = glyphs.next()) && !glyphResult.done) {
           const glyph = glyphResult.value;
@@ -251,8 +239,10 @@ class LayoutState {
       vertexBuffer[this.bufferOffset++] = v + uvHeight;
     }
 
-    this.maxY = Math.max(this.maxY, quadY + glyph.height);
     this.maxX = Math.max(this.maxX, quadX + glyph.width);
+    this.maxY = Math.max(this.maxY, quadY + glyph.height);
+    this.minX = Math.min(this.minX, quadX);
+    this.minY = Math.min(this.minY, quadY);
     this.curX += glyph.xAdvance;
   }
 }
@@ -284,7 +274,7 @@ export function layoutText(
   overflowSuffix: TrProps['overflowSuffix'],
   wordBreak: TrProps['wordBreak'],
   maxLines: TrProps['maxLines'],
-  isRTL: TrProps['rtl'],
+  isRTL: TrProps['bidi'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;
@@ -307,10 +297,6 @@ export function layoutText(
   //  - screen space: the screen pixel space
   // Input properties such as x, y, w, fontSize, letterSpacing, etc. are all expressed in screen space.
   // We convert these to the vertex space by dividing them the `fontSizeRatio` factor.
-
-  /**
-   * See above
-   */
   const fontSizeRatio = fontSize / trFontFace.data.info.size;
 
   /**
@@ -331,24 +317,28 @@ export function layoutText(
 
   const startingLineCacheEntry = lineCache[curLineIndex];
   const startingCodepointIndex = startingLineCacheEntry?.codepointIndex || 0;
+
   const shaper = trFontFace.shaper;
   const shaperProps: FontShaperProps = {
     letterSpacing: vertexLSpacing,
   };
 
-  // text = getOrderedText(isRTL, true, text);
+  // Normalize 'start' and 'end' textAlign values to 'left' or 'right' based on text direction.
+  if (textAlign === 'start' || textAlign === 'end') {
+    if (isRTL === true) {
+      textAlign = textAlign === 'start' ? 'right' : 'left';
+    } else {
+      textAlign = textAlign === 'start' ? 'left' : 'right';
+    }
+  }
 
-  // if (isRTL === true) {
-  // textAlign = 'right';
-  // }
+  // If the text is configured to be right-to-left (bidi),
+  // we need to reorder the text so that it is displayed correctly.
+  if (isRTL === true) {
+    text = getOrderedText(isRTL, true, text);
+  }
 
   let doneProcessing = false;
-
-  const overflowSuffVertexWidth = measureText(
-    overflowSuffix,
-    shaperProps,
-    shaper,
-  );
 
   const layoutState = new LayoutState(
     startX,
@@ -363,8 +353,11 @@ export function layoutText(
     vertexTruncateHeight,
   );
 
-  const suffix = shaper.shapeTextWithWords(shaperProps, overflowSuffix);
   const words = shaper.shapeTextWithWords(shaperProps, text);
+  const suffix = shaper.shapeTextWithWords(shaperProps, overflowSuffix);
+  const suffixWord = suffix.next();
+  layoutState.suffixWord = suffixWord.done ? undefined : suffixWord.value;
+  const overflowSuffVertexWidth = layoutState.suffixWord?.width ?? 0;
 
   for (const { letters, width, isLineBreak, hasNextWord } of words) {
     const wordEndX: number = layoutState.curX + width;
@@ -378,7 +371,7 @@ export function layoutText(
       if (layoutState.nextLineWillFit === true) {
         layoutState.moveToNextLine(vertexLineHeight);
       } else {
-        layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+        layoutState.addSuffixToBuffer(vertexBuffer);
         doneProcessing = true;
         break;
       }
@@ -389,7 +382,7 @@ export function layoutText(
       layoutState.nextLineWillFit === false &&
       hasNextWord === true
     ) {
-      layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+      layoutState.addSuffixToBuffer(vertexBuffer);
       doneProcessing = true;
       break;
     }
@@ -399,7 +392,7 @@ export function layoutText(
         layoutState.moveToNextLine(vertexLineHeight);
         continue;
       } else {
-        layoutState.addSuffixToBuffer(suffix, vertexBuffer, true);
+        layoutState.addSuffixToBuffer(vertexBuffer, true);
         doneProcessing = true;
         break;
       }
@@ -440,7 +433,7 @@ export function layoutText(
             charEndX + overflowSuffVertexWidth >= vertexW &&
             layoutState.nextLineWillFit === false
           ) {
-            layoutState.addSuffixToBuffer(suffix, vertexBuffer, true);
+            layoutState.addSuffixToBuffer(vertexBuffer, true);
             doneProcessing = true;
             break;
           } else if (
@@ -469,7 +462,7 @@ export function layoutText(
           ) {
             // wordBreak: break-word - the current letter is about to go of the edge
             // and the next line will not fit, so we add the overflow suffix
-            layoutState.addSuffixToBuffer(suffix, vertexBuffer);
+            layoutState.addSuffixToBuffer(vertexBuffer);
             doneProcessing = true;
             break;
           }
@@ -491,6 +484,28 @@ export function layoutText(
 
   // Adds the last line to Buffer
   layoutState.addLineToBuffer();
+
+  // Shift all glyphs so the top of the text is at Y=0 and left at X=0
+  // Some fonts may have negative X or Y offsets
+  const shiftX =
+    layoutState.minY !== Infinity &&
+    layoutState.minY !== 0 &&
+    layoutState.minX !== Infinity &&
+    layoutState.minX !== 0;
+  const shiftY = layoutState.minY !== Infinity && layoutState.minY !== 0;
+  if (shiftX || shiftY) {
+    for (let i = 0; i < layoutState.bufferOffset; i += 4) {
+      if (shiftX) vertexBuffer[i] = (vertexBuffer[i] ?? 0) - layoutState.minX;
+      if (shiftY)
+        vertexBuffer[i + 1] = (vertexBuffer[i + 1] ?? 0) - layoutState.minY;
+    }
+    if (shiftX) {
+      layoutState.maxX -= layoutState.minX; // Adjust maxX to account for the shift
+    }
+    if (shiftY) {
+      layoutState.maxY -= layoutState.minY; // Adjust maxY to account for the shift
+    }
+  }
 
   if (textAlign === 'center' || textAlign === 'right') {
     const vertexTextW = contain === 'none' ? layoutState.maxX : vertexW;

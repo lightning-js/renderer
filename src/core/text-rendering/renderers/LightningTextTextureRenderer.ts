@@ -42,7 +42,7 @@ export type TextOverflow =
 /***
  * Text Horizontal Align Values
  */
-export type TextAlign = 'left' | 'center' | 'right';
+export type TextAlign = 'left' | 'center' | 'right' | 'start' | 'end';
 
 /***
  * Text Baseline Values
