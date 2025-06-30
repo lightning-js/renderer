@@ -90,6 +90,7 @@ const defaultPhysicalPixelRatio = 1;
   const forceWebGL2 = urlParams.get('webgl2') === 'true';
   const textureProcessingLimit =
     Number(urlParams.get('textureProcessingLimit')) || 0;
+  const globalTargetFPS = Number(urlParams.get('targetFPS')) || undefined;
 
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
@@ -115,6 +116,7 @@ const defaultPhysicalPixelRatio = 1;
       enableInspector,
       forceWebGL2,
       textureProcessingLimit,
+      globalTargetFPS,
     );
     return;
   }
@@ -138,6 +140,7 @@ async function runTest(
   enableInspector: boolean,
   forceWebGL2: boolean,
   textureProcessingLimit: number,
+  globalTargetFPS?: number,
 ) {
   const testModule = testModules[getTestPath(test)];
   if (!testModule) {
@@ -146,10 +149,12 @@ async function runTest(
 
   const module = await testModule();
 
-  const customSettings: Partial<RendererMainSettings> =
-    typeof module.customSettings === 'function'
+  const customSettings: Partial<RendererMainSettings> = {
+    ...(typeof module.customSettings === 'function'
       ? module.customSettings(urlParams)
-      : {};
+      : {}),
+    ...(globalTargetFPS !== undefined && { targetFPS: globalTargetFPS }),
+  };
 
   const { renderer, appElement } = await initRenderer(
     renderMode,
