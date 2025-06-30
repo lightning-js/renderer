@@ -41,6 +41,11 @@ export class WebGlCoreCtxRenderTexture extends WebGlCoreCtxTexture {
     const { glw } = this;
     const nativeTexture = (this._nativeCtxTexture =
       this.createNativeCtxTexture());
+
+    if (!nativeTexture) {
+      throw new Error('Failed to create native texture for RenderTexture');
+    }
+
     const { width, height } = this.textureSource;
 
     // Create Framebuffer object

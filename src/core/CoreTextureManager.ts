@@ -389,12 +389,18 @@ export class CoreTextureManager extends EventEmitter {
 
         // For non-image textures, upload immediately
         if (texture.type !== TextureType.image) {
-          this.uploadTexture(texture);
+          this.uploadTexture(texture).catch((err) => {
+            console.error('Failed to upload non-image texture:', err);
+            texture.setState('failed');
+          });
         } else {
           // For image textures, queue for throttled upload
           // If it's a priority texture, upload it immediately
           if (priority === true) {
-            this.uploadTexture(texture);
+            this.uploadTexture(texture).catch((err) => {
+              console.error('Failed to upload priority texture:', err);
+              texture.setState('failed');
+            });
           } else {
             this.enqueueUploadTexture(texture);
           }
@@ -410,8 +416,9 @@ export class CoreTextureManager extends EventEmitter {
    * Upload a texture to the GPU
    *
    * @param texture Texture to upload
+   * @returns Promise that resolves when the texture is fully loaded
    */
-  uploadTexture(texture: Texture): void {
+  async uploadTexture(texture: Texture): Promise<void> {
     if (
       this.stage.txMemManager.doNotExceedCriticalThreshold === true &&
       this.stage.txMemManager.criticalCleanupRequested === true
@@ -427,7 +434,7 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    coreContext.load();
+    await coreContext.load();
   }
 
   /**
@@ -442,7 +449,7 @@ export class CoreTextureManager extends EventEmitter {
    *
    * @param maxProcessingTime - The maximum processing time in milliseconds
    */
-  processSome(maxProcessingTime: number): void {
+  async processSome(maxProcessingTime: number): Promise<void> {
     if (this.initialized === false) {
       return;
     }
@@ -456,18 +463,28 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const texture = this.priorityQueue.pop()!;
-      texture.getTextureData().then(() => {
-        this.uploadTexture(texture);
-      });
+      try {
+        await texture.getTextureData();
+        await this.uploadTexture(texture);
+      } catch (error) {
+        console.error('Failed to process priority texture:', error);
+        // Continue with next texture instead of stopping entire queue
+      }
     }
 
-    // Process uploads
+    // Process uploads - await each upload to prevent GPU overload
     while (
       this.uploadTextureQueue.length > 0 &&
       getTimeStamp() - startTime < maxProcessingTime
     ) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.uploadTexture(this.uploadTextureQueue.shift()!);
+      const texture = this.uploadTextureQueue.shift()!;
+      try {
+        await this.uploadTexture(texture);
+      } catch (error) {
+        console.error('Failed to upload texture:', error);
+        // Continue with next texture instead of stopping entire queue
+      }
     }
   }
 
