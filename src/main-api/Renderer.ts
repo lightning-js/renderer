@@ -385,7 +385,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
       strictBounds: settings.strictBounds ?? true,
-      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
