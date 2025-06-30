@@ -281,6 +281,23 @@ export interface RendererMainSettings {
   textureProcessingTimeLimit?: number;
 
   /**
+   * Default target FPS for animations
+   *
+   * @remarks
+   * Controls the target frame rate that animations will be throttled to if no
+   * per-animation targetFps is specified. This helps manage performance
+   * on lower-end devices by reducing animation update frequency.
+   * Set to 0 or undefined to disable global FPS throttling (animations
+   * will run at display refresh rate unless individually throttled).
+   *
+   * This setting can also be changed at runtime using the `renderer.targetFPS`
+   * getter/setter property.
+   *
+   * @defaultValue `undefined` (no global throttling)
+   */
+  targetFPS?: number;
+
+  /**
    * Canvas object to use for rendering
    *
    * @remarks
@@ -332,12 +349,29 @@ export interface RendererMainSettings {
  * const renderer = new RendererMain(
  *   {
  *     appWidth: 1920,
- *     appHeight: 1080
+ *     appHeight: 1080,
+ *     targetFPS: 30, // Global target FPS for animations
  *   },
  *   'app',
  *   new MainCoreDriver(),
  * );
+ *
+ * // Control animation performance at runtime
+ * renderer.targetFPS = 24; // Set global target to 24fps
+ *
+ * // Create animations that inherit the global target
+ * node.animate({ x: 100 }, { duration: 1000 }); // Uses global 24fps
+ *
+ * // Override with specific FPS
+ * node.animate({ x: 200 }, { duration: 1000, targetFps: 60 }); // Uses 60fps
  * ```
+ *
+ * ## Animation Performance Control
+ * The renderer provides global control over animation frame rates for performance management:
+ * - Use `targetFPS` setting to set initial global target FPS
+ * - Use `renderer.targetFPS` getter/setter to change at runtime
+ * - Individual animations can override with their own `targetFps` setting
+ * - Set to `undefined` or `0` for no throttling (display refresh rate)
  *
  * ## Events
  * - `fpsUpdate`
@@ -412,7 +446,8 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines,
       strictBounds: settings.strictBounds ?? true,
-      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
+      targetFPS: settings.targetFPS ?? 0,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
     };
@@ -459,6 +494,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
       createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      defaultAnimationTargetFps: this.settings.targetFPS,
     });
 
     // Extract the root node
@@ -747,5 +783,52 @@ export class RendererMain extends EventEmitter {
    */
   setClearColor(color: number) {
     this.stage.setClearColor(color);
+  }
+
+  /**
+   * Gets the target FPS for animations
+   *
+   * @returns The current target animation FPS, or undefined if not set
+   *
+   * @remarks
+   * This is the global target FPS that animations will use if they don't
+   * specify their own targetFps. When undefined or 0, animations run at
+   * display refresh rate unless individually throttled.
+   */
+  get targetFPS(): number | undefined {
+    return this.stage.options.defaultAnimationTargetFps;
+  }
+
+  /**
+   * Sets the target FPS for animations
+   *
+   * @param fps - The target FPS to set as default for all animations.
+   *              Set to undefined, 0, or a negative value to disable global throttling.
+   *
+   * @remarks
+   * This setting affects all new animations created after this call.
+   * Existing animations will continue to use their original settings.
+   * Individual animations can still override this global default by
+   * specifying their own targetFps.
+   *
+   * @example
+   * ```typescript
+   * // Set global target to 30fps for better performance on low-end devices
+   * renderer.targetFPS = 30;
+   *
+   * // This animation will use the 30fps default
+   * node.animate({ x: 100 }, { duration: 1000 });
+   *
+   * // This animation overrides to 60fps
+   * node.animate({ x: 200 }, { duration: 1000, targetFps: 60 });
+   *
+   * // Disable global throttling
+   * renderer.targetFPS = undefined;
+   * ```
+   */
+  set targetFPS(fps: number | undefined) {
+    // Update the stage options directly
+    this.stage.options.defaultAnimationTargetFps =
+      fps && fps > 0 ? fps : undefined;
   }
 }

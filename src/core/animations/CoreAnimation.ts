@@ -30,6 +30,15 @@ export interface AnimationSettings {
   repeat: number;
   repeatDelay: number;
   stopMethod: 'reverse' | 'reset' | false;
+  /**
+   * Target FPS for this animation (optional)
+   * When set, animation updates will be throttled to this frame rate.
+   * If not set, falls back to the global defaultAnimationTargetFps from renderer settings.
+   * If both are undefined/0, no throttling occurs (uses display refresh rate).
+   * @example 24 for 24fps animations on low-end devices
+   * @default undefined (uses global default or no throttling)
+   */
+  targetFps?: number;
 }
 
 type PropValues = {
@@ -44,6 +53,10 @@ export class CoreAnimation extends EventEmitter {
   private delayFor = 0;
   private delay = 0;
   private timingFunction: (t: number) => number | undefined;
+
+  // Frame throttling properties
+  private accumulatedDt = 0;
+  private readonly targetFrameTime: number | undefined;
 
   propValuesMap: PropValuesMap = {};
   dynPropValuesMap: PropValuesMap | undefined = undefined;
@@ -107,15 +120,25 @@ export class CoreAnimation extends EventEmitter {
       repeat: settings.repeat ?? 0,
       repeatDelay: settings.repeatDelay ?? 0,
       stopMethod: settings.stopMethod ?? false,
+      targetFps: settings.targetFps,
     };
     this.timingFunction = getTimingFunction(easing);
     this.delayFor = delay;
     this.delay = delay;
+
+    // Initialize frame throttling
+    // Use per-animation targetFps if set, otherwise fall back to global default
+    const effectiveTargetFps =
+      settings.targetFps ?? node.stage.options.defaultAnimationTargetFps;
+    if (effectiveTargetFps && effectiveTargetFps > 0) {
+      this.targetFrameTime = 1000 / effectiveTargetFps; // Convert FPS to milliseconds
+    }
   }
 
   reset() {
     this.progress = 0;
     this.delayFor = this.settings.delay || 0;
+    this.accumulatedDt = 0; // Reset frame throttling accumulator
     this.update(0);
   }
 
@@ -257,8 +280,8 @@ export class CoreAnimation extends EventEmitter {
     const { duration, loop, easing, stopMethod } = this.settings;
     const { delayFor } = this;
 
+    // Early exit checks
     if (this.node.destroyed) {
-      // cleanup
       this.emit('destroyed', {});
       return;
     }
@@ -268,27 +291,39 @@ export class CoreAnimation extends EventEmitter {
       return;
     }
 
+    // Frame throttling for performance optimization
+    if (this.targetFrameTime !== undefined) {
+      this.accumulatedDt += dt;
+
+      // Skip update if we haven't accumulated enough time for the target frame rate
+      if (this.accumulatedDt < this.targetFrameTime) {
+        return; // Skip this frame
+      }
+
+      // Use accumulated time but cap it to prevent huge jumps (max 2 frames worth)
+      dt = Math.min(this.accumulatedDt, this.targetFrameTime * 2);
+      this.accumulatedDt = 0; // Reset accumulator
+    }
+
+    // Handle delay phase
     if (this.delayFor > 0) {
       this.delayFor -= dt;
       if (this.delayFor >= 0) {
-        // Either no or more delay left. Exit.
-        return;
+        return; // Still in delay phase
       } else {
-        // We went beyond the delay time, add it back to dt so we can continue
-        // with the animation.
+        // Delay finished, use remaining time for animation
         dt = -this.delayFor;
         this.delayFor = 0;
       }
     }
 
     if (duration === 0) {
-      // No duration, we are done.
       this.emit('finished', {});
       return;
     }
 
+    // Emit animating event on first update after delay
     if (this.progress === 0) {
-      // Progress is 0, we are starting the post-delay part of the animation.
       this.emit('animating', {});
     }
 

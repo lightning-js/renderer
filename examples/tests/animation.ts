@@ -28,6 +28,8 @@ interface AnimationExampleSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
+const fpsBrackets = [0, 5, 12, 24, 30, 60];
+
 export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
@@ -62,7 +64,18 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 90,
     fontFamily: 'Ubuntu',
     fontSize: 20,
-    text: 'press left or right arrow key to change easing',
+    text:
+      'press left or right arrow key to change easing\n' +
+      'press up or down arrow key to change global target FPS',
+  });
+
+  const fpsLabel = renderer.createTextNode({
+    parent: node,
+    x: 40,
+    y: 135,
+    fontFamily: 'Ubuntu',
+    fontSize: 20,
+    text: `target FPS: ${renderer.targetFPS}`,
   });
 
   /**
@@ -140,12 +153,35 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     currentAnimation.start();
   };
 
+  let currentFpsIndex = 0;
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') {
       animationIndex++;
     }
     if (e.key === 'ArrowLeft') {
       animationIndex--;
+    }
+
+    if (e.key === 'ArrowUp') {
+      //increase global target FPS
+      currentFpsIndex = (currentFpsIndex + 1) % fpsBrackets.length;
+      const newFps = fpsBrackets[currentFpsIndex];
+      renderer.targetFPS = newFps;
+      console.log(`Global target FPS set to: ${newFps}`);
+
+      fpsLabel.text = `target FPS: ${newFps}`;
+    }
+
+    if (e.key === 'ArrowDown') {
+      //decrease global target FPS
+      currentFpsIndex =
+        (currentFpsIndex - 1 + fpsBrackets.length) % fpsBrackets.length;
+      const newFps = fpsBrackets[currentFpsIndex];
+      renderer.targetFPS = newFps;
+      console.log(`Global target FPS set to: ${newFps}`);
+
+      fpsLabel.text = `target FPS: ${newFps}`;
     }
 
     // wrap around

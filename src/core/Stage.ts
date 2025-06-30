@@ -79,6 +79,7 @@ export interface StageOptions {
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  defaultAnimationTargetFps?: number;
 }
 
 export type StageFpsUpdateHandler = (
