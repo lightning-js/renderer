@@ -232,15 +232,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   // FPS options mapping
   const fpsOptions = [
     0, // 0 = unlimited
-    10, // 1
-    15, // 2
-    20, // 3
-    24, // 4
-    25, // 5
+    5, // 1
+    10, // 2
+    15, // 3
+    20, // 4
+    24, // 5
     30, // 6
-    45, // 7
-    60, // 8
-    120, // 9
+    40, // 7
+    45, // 8
+    60, // 9
   ];
 
   // Function to set FPS limit
