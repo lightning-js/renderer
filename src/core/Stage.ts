@@ -68,6 +68,7 @@ export interface StageOptions {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   clearColor: number;
   fpsUpdateInterval: number;
+  targetFPS: number;
   enableContextSpy: boolean;
   forceWebGL2: boolean;
   numImageWorkers: number;
@@ -110,6 +111,16 @@ export class Stage {
   public readonly preloadBound: Bound;
   public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
+
+  /**
+   * Target frame time in milliseconds (calculated from targetFPS)
+   *
+   * @remarks
+   * This is pre-calculated to avoid recalculating on every frame.
+   * - 0 means no throttling (use display refresh rate)
+   * - >0 means throttle to this frame time (1000 / targetFPS)
+   */
+  public targetFrameTime: number = 0;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -156,6 +167,10 @@ export class Stage {
     } = options;
 
     this.eventBus = options.eventBus;
+
+    // Calculate target frame time from targetFPS option
+    this.targetFrameTime = options.targetFPS > 0 ? 1000 / options.targetFPS : 0;
+
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
@@ -290,6 +305,20 @@ export class Stage {
   setClearColor(color: number) {
     this.renderer.updateClearColor(color);
     this.renderRequested = true;
+  }
+
+  /**
+   * Update the target frame time based on the current targetFPS setting
+   *
+   * @remarks
+   * This should be called whenever the targetFPS option is changed
+   * to ensure targetFrameTime stays in sync.
+   * targetFPS of 0 means no throttling (targetFrameTime = 0)
+   * targetFPS > 0 means throttle to 1000/targetFPS milliseconds
+   */
+  updateTargetFrameTime() {
+    this.targetFrameTime =
+      this.options.targetFPS > 0 ? 1000 / this.options.targetFPS : 0;
   }
 
   updateFrameTime() {
