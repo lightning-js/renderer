@@ -292,17 +292,21 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // Frame throttling for performance optimization
+    // Key insight: We separate animation timing from visual updates
+    // - Animation progress always advances based on actual elapsed time
+    // - Visual property updates are throttled to the target FPS
+    // This ensures animations complete in the correct time duration
+    let shouldRender = true;
     if (this.targetFrameTime !== undefined) {
       this.accumulatedDt += dt;
 
-      // Skip update if we haven't accumulated enough time for the target frame rate
+      // Check if we should skip rendering this frame
       if (this.accumulatedDt < this.targetFrameTime) {
-        return; // Skip this frame
+        shouldRender = false; // Skip rendering but continue with animation progress
+      } else {
+        // Reset accumulator when we do render
+        this.accumulatedDt = 0;
       }
-
-      // Use accumulated time but cap it to prevent huge jumps (max 2 frames worth)
-      dt = Math.min(this.accumulatedDt, this.targetFrameTime * 2);
-      this.accumulatedDt = 0; // Reset accumulator
     }
 
     // Handle delay phase
@@ -341,32 +345,36 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (this.propValuesMap['props'] !== undefined) {
-      this.updateValues(
-        this.node as unknown as Record<string, number>,
-        this.propValuesMap['props'],
-        easing,
-      );
-    }
-    if (this.propValuesMap['shaderProps'] !== undefined) {
-      this.updateValues(
-        this.node.shader.props as Record<string, number>,
-        this.propValuesMap['shaderProps'],
-        easing,
-      );
-    }
+    // Only update visual properties if we should render this frame
+    // This allows animation timing to stay correct while throttling visual updates
+    if (shouldRender) {
+      if (this.propValuesMap['props'] !== undefined) {
+        this.updateValues(
+          this.node as unknown as Record<string, number>,
+          this.propValuesMap['props'],
+          easing,
+        );
+      }
+      if (this.propValuesMap['shaderProps'] !== undefined) {
+        this.updateValues(
+          this.node.shader.props as Record<string, number>,
+          this.propValuesMap['shaderProps'],
+          easing,
+        );
+      }
 
-    if (this.dynPropValuesMap !== undefined) {
-      const dynEntries = Object.keys(this.dynPropValuesMap);
-      const dynEntriesL = dynEntries.length;
-      if (dynEntriesL > 0) {
-        for (let i = 0; i < dynEntriesL; i++) {
-          const key = dynEntries[i]!;
-          this.updateValues(
-            this.node.shader.props[key],
-            this.dynPropValuesMap[key]!,
-            easing,
-          );
+      if (this.dynPropValuesMap !== undefined) {
+        const dynEntries = Object.keys(this.dynPropValuesMap);
+        const dynEntriesL = dynEntries.length;
+        if (dynEntriesL > 0) {
+          for (let i = 0; i < dynEntriesL; i++) {
+            const key = dynEntries[i]!;
+            this.updateValues(
+              this.node.shader.props[key],
+              this.dynPropValuesMap[key]!,
+              easing,
+            );
+          }
         }
       }
     }
