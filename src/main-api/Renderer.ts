@@ -154,7 +154,7 @@ export interface RendererRuntimeSettings {
    *
    * @defaultValue `0` (no throttling, use display refresh rate)
    */
-  targetFPS?: number;
+  targetFPS: number;
 }
 
 /**
@@ -459,7 +459,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
       strictBounds: settings.strictBounds!,
-      targetFPS: this.settings.targetFPS!,
+      targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
