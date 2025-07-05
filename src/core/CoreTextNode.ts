@@ -87,8 +87,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._textRendererOverride = props.textRendererOverride;
     this.textRenderer = textRenderer;
     const textRendererState = this.createState({
-      x: this.absX,
-      y: this.absY,
+      x: 0,
+      y: 0,
       width: props.width,
       height: props.height,
       textAlign: props.textAlign,
