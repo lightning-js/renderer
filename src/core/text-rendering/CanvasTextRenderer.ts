@@ -19,7 +19,7 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { FontHandler, TrProps } from './TextRenderer.js';
+import type { FontHandler, TextLayout, TrProps } from './TextRenderer.js';
 import type { Settings } from './canvas/Settings.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
@@ -48,7 +48,7 @@ const renderText = async (
   imageData: ImageData | null;
   width: number;
   height: number;
-  layout?: unknown;
+  layout?: TextLayout;
 }> => {
   const canvas = stage.platform.createCanvas();
   const context = canvas.getContext('2d');

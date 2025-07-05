@@ -379,10 +379,10 @@ export interface TextRenderer {
     imageData: ImageData | null;
     width: number;
     height: number;
-    layout?: unknown; // Layout data for SDF renderer caching
+    layout?: TextLayout; // Layout data for SDF renderer caching
   }>;
   // Updated to accept layout data and return vertex buffer for performance
-  addQuads: (layout?: unknown) => Float32Array | null;
+  addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
     renderer: CoreRenderer,
     layout: TextLayout,

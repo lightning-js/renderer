@@ -52,7 +52,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private fontHandler: FontHandler;
 
   // SDF layout caching for performance
-  private _cachedLayout: unknown | null = null;
+  private _cachedLayout: TextLayout | null = null;
   private _lastVertexBuffer: Float32Array | null = null;
 
   // Internal text update tracking
@@ -193,7 +193,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     imageData: ImageData | null;
     width: number;
     height: number;
-    layout?: unknown;
+    layout?: TextLayout;
   }): void {
     // Host paths on top
     const textRendererType = this.textRenderer.type;
