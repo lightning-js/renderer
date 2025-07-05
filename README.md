@@ -117,16 +117,16 @@ const renderer = new RendererMain(
   'app', // id of div to insert Canvas.
 );
 
-// Load fonts using the generic methods with auto-detection
-await stage.loadFont({
+// Load fonts by explicitly specifying the renderer type
+await stage.loadFont('canvas', {
   fontFamily: 'myWebFont',
-  fontUrl: '/fonts/my-font.ttf', // Will use Canvas renderer
+  fontUrl: '/fonts/my-font.ttf',
 });
 
-await stage.loadFont({
+await stage.loadFont('sdf', {
   fontFamily: 'mySdfFont',
   atlasUrl: '/fonts/my-font-atlas.png',
-  atlasDataUrl: '/fonts/my-font-data.json', // Will use SDF renderer
+  atlasDataUrl: '/fonts/my-font-data.json',
 });
 ```
 

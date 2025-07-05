@@ -5,48 +5,57 @@ This document demonstrates how to use the new font loading API on the Stage.
 ## Basic Usage
 
 ```typescript
-// Load fonts using the generic methods with auto-detection
-await stage.loadFont({
+// Load Canvas fonts by explicitly specifying the renderer type
+await stage.loadFont('canvas', {
   fontFamily: 'myCoolFont',
-  fontUrl: '/fonts/my-font.ttf'  // Will use Canvas renderer
+  fontUrl: '/fonts/my-font.ttf',
 });
 
-await stage.loadFont({
+// Load SDF fonts by explicitly specifying the renderer type
+await stage.loadFont('sdf', {
   fontFamily: 'myCoolFont',
   atlasUrl: '/fonts/my-font-atlas.png',
-  atlasDataUrl: '/fonts/my-font-data.json'  // Will use SDF renderer
-});
-
-// Load fonts with explicit renderer selection
-await stage.loadFontByRenderer('canvas', {
-  fontFamily: 'myCoolFont',
-  fontUrl: '/fonts/my-font.ttf'
-});
-
-await stage.loadFontByRenderer('sdf', {
-  fontFamily: 'myCoolFont',
-  atlasUrl: '/fonts/my-sdf-font-atlas.png',
-  atlasDataUrl: '/fonts/my-sdf-font-data.json'
+  atlasDataUrl: '/fonts/my-font-data.json',
 });
 
 // Load fonts with custom metrics
-await stage.loadFont({
-  fontFamily: 'MyFontWithMetrics'
+await stage.loadFont('canvas', {
+  fontFamily: 'MyFontWithMetrics',
   fontUrl: '/fonts/my-font.ttf',
-  ascender: 800,
-  descender: -200,
-  lineHeight: 1200,
+  metrics: {
+    ascender: 800,
+    descender: -200,
+    lineGap: 0,
+    unitsPerEm: 1000,
+  },
 });
 ```
 
+## API Requirements
+
+The `loadFont` method requires explicit renderer type specification:
+
+- **`rendererType`** (required): 'canvas' or 'sdf'
+- **`options`** (required): Font loading options specific to the renderer type
+
+### Canvas Font Options
+
+- `fontFamily`: Name of the font family
+- `fontUrl`: URL to the font file (.ttf, .woff, .woff2, etc.)
+- `metrics`: Optional font metrics for layout calculations
+
+### SDF Font Options
+
+- `fontFamily`: Name of the font family
+- `atlasUrl`: URL to the SDF atlas image (.png)
+- `atlasDataUrl`: URL to the SDF glyph data (.json)
+- `metrics`: Optional font metrics for layout calculations
+
 ## Performance Considerations
 
-The `loadFont` method (without renderer specification) will automatically choose the best renderer:
+**SDF Fonts**: Better performance for scaled text and effects, but require pre-generated atlas files.
 
-1. **SDF first**: Better performance for scaled text and effects
-2. **Canvas fallback**: Universal compatibility
-
-If you know which renderer you want to use, `loadFontByRenderer` gives you explicit control.
+**Canvas Fonts**: Universal compatibility with any web font format, but may have lower performance for complex scaling.
 
 Please note that the WebGL renderer supports both SDF Fonts and Web Fonts, however the
 Canvas renderer only supports Web Fonts:
