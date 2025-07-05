@@ -23,7 +23,7 @@ import {
   type RendererMainSettings,
   type FpsUpdatePayload,
 } from '@lightningjs/renderer';
-import { WebGlRenderer, SdfTextRenderer } from '@lightningjs/renderer/webgl';
+import { WebGlRenderer } from '@lightningjs/renderer/webgl';
 import {
   CanvasRenderer,
   CanvasTextRenderer,
@@ -252,7 +252,7 @@ async function initRenderer(
       forceWebGL2,
       inspector,
       renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
-      fontEngines: [SdfTextRenderer, CanvasTextRenderer],
+      fontEngines: [CanvasTextRenderer],
       textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
     },
