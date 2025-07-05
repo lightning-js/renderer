@@ -235,6 +235,7 @@ export class Stage {
       : null;
 
     if (this.singleFontEngine === null) {
+      // Multiple font engines case
       // Filter out incompatible engines first
       const compatibleEngines = fontEngines.filter(
         (fontEngine: TextRenderer) => {
@@ -277,6 +278,28 @@ export class Stage {
         this.fontHandlers[type] = fontEngine.font;
         this.fontHandlers[type].init();
       });
+    } else {
+      // Single font engine case - initialize it directly
+      const fontEngine = this.singleFontEngine;
+      const type = fontEngine.type;
+
+      // Check compatibility
+      if (type === 'sdf' && renderMode === 'canvas') {
+        console.warn(
+          'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
+        );
+      } else {
+        if (type === 'canvas') {
+          this.hasCanvasEngine = true;
+        }
+
+        // Add to map for type-based access
+        this.textRenderers[type] = fontEngine;
+        this.textRenderers[type].init();
+
+        this.fontHandlers[type] = fontEngine.font;
+        this.fontHandlers[type].init();
+      }
     }
 
     if (Object.keys(this.textRenderers).length === 0) {
