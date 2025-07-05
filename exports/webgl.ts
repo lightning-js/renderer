@@ -48,3 +48,5 @@ export { WebGlRenderer as WebGlCoreRenderer } from '../src/core/renderers/webgl/
 export { WebGlRenderer as WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlRenderer.js';
 
 export * as shaders from './webgl-shaders.js';
+
+export { default as SdfTextRenderer } from '../src/core/text-rendering/SdfTextRenderer.js';

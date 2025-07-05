@@ -35,14 +35,14 @@ const FLOATS_PER_VERTEX = 4;
 const VERTICES_PER_GLYPH = 6;
 
 // Type definition to match interface
-export const type = 'sdf' as const;
+const type = 'sdf' as const;
 
 // Font handling
-export const init = (): void => {
+const init = (): void => {
   SdfFontHandler.init();
 };
 
-export const font: FontHandler = SdfFontHandler;
+const font: FontHandler = SdfFontHandler;
 
 /**
  * SDF text renderer using MSDF/SDF fonts with WebGL
@@ -51,7 +51,7 @@ export const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-export const renderText = async (
+const renderText = async (
   stage: Stage,
   props: TrProps,
 ): Promise<{
@@ -95,7 +95,7 @@ export const renderText = async (
 /**
  * Add quads for rendering using cached layout data
  */
-export const addQuads = (layout?: TextLayout): Float32Array | null => {
+const addQuads = (layout?: TextLayout): Float32Array | null => {
   if (!layout) {
     return null; // No layout data available
   }
@@ -181,7 +181,7 @@ export const addQuads = (layout?: TextLayout): Float32Array | null => {
  * Create and submit WebGL render operations for SDF text
  * This is called from CoreTextNode during rendering to add SDF text to the render pipeline
  */
-export const renderQuads = (
+const renderQuads = (
   renderer: CoreRenderer,
   layout: TextLayout,
   vertexBuffer: Float32Array,
@@ -402,3 +402,17 @@ const generateTextLayout = (
     fontFamily,
   };
 };
+
+/**
+ * SDF Text Renderer - implements TextRenderer interface
+ */
+const SdfTextRenderer = {
+  type,
+  font,
+  renderText,
+  addQuads,
+  renderQuads,
+  init,
+};
+
+export default SdfTextRenderer;

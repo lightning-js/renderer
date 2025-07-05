@@ -25,14 +25,14 @@ import * as CanvasFontHandler from './CanvasFontHandler.js';
 import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
 import { draw } from './canvas/draw.js';
 
-export const type = 'canvas' as const;
+const type = 'canvas' as const;
 
 // Font handling
-export const init = (): void => {
+const init = (): void => {
   /** nothing to init at this stage for Canvas */
 };
 
-export const font: FontHandler = CanvasFontHandler;
+const font: FontHandler = CanvasFontHandler;
 
 /**
  * Canvas text renderer
@@ -41,7 +41,7 @@ export const font: FontHandler = CanvasFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-export const renderText = async (
+const renderText = async (
   stage: Stage,
   props: TrProps,
 ): Promise<{
@@ -134,8 +134,30 @@ export const renderText = async (
 /**
  * Add quads for rendering (Canvas doesn't use quads)
  */
-export const addQuads = (): Float32Array | null => {
+const addQuads = (): Float32Array | null => {
   // Canvas renderer doesn't use quad-based rendering
   // Return null for interface compatibility
   return null;
 };
+
+/**
+ * Render quads for Canvas renderer (Canvas doesn't use quad-based rendering)
+ */
+const renderQuads = (): void => {
+  // Canvas renderer doesn't use quad-based rendering
+  // This method is for interface compatibility only
+};
+
+/**
+ * Canvas Text Renderer - implements TextRenderer interface
+ */
+const CanvasTextRenderer = {
+  type,
+  font,
+  renderText,
+  addQuads,
+  renderQuads,
+  init,
+};
+
+export default CanvasTextRenderer;
