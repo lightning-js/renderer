@@ -75,6 +75,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _wordBreak!: TrProps['wordBreak'];
   private _offsetY!: number;
 
+  private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
+
   private _textRenderNeeded: boolean = true;
 
   constructor(
@@ -85,6 +87,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     super(stage, props);
     this.textRenderer = textRenderer;
     this.fontHandler = textRenderer.font;
+    this._type = textRenderer.type;
 
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
@@ -187,6 +190,22 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   /**
+   * Override is renderable check for SDF text nodes
+   */
+  override updateIsRenderable(): void {
+    // SDF text nodes are always renderable if they have a valid layout
+    if (this._type === 'canvas') {
+      super.updateIsRenderable();
+      return;
+    }
+
+    // For SDF, check if we have a cached layout
+    this.setRenderable(
+      this._cachedLayout !== null && this._lastVertexBuffer !== null,
+    );
+  }
+
+  /**
    * Handle the result of text rendering for both Canvas and SDF renderers
    */
   private handleRenderResult(result: {
@@ -196,7 +215,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     layout?: TextLayout;
   }): void {
     // Host paths on top
-    const textRendererType = this.textRenderer.type;
+    const textRendererType = this._type;
     const setWidth = this.props.width;
     const setHeight = this.props.height;
     const resultWidth = result.width;
@@ -230,11 +249,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
-    // Get alpha from color property
-    this.alpha = this.props.color
-      ? ((this.props.color >>> 24) & 0xff) / 255
-      : 1;
-
     // Update dimensions based on contain mode (same for both renderers)
     if (contain === 'both') {
       this.props.width = setWidth;
@@ -248,8 +262,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     this._textRenderNeeded = false;
-    this.setUpdateType(UpdateType.Local);
-    this.stage.requestRender();
+    this.setUpdateType(UpdateType.Local | UpdateType.IsRenderable);
 
     this.emit('loaded', {
       type: 'text',
@@ -264,10 +277,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
-    const textRendererType = this.textRenderer.type;
-
     // Canvas renderer: use standard texture rendering via CoreNode
-    if (textRendererType === 'canvas') {
+    if (this._type === 'canvas') {
       super.renderQuads(renderer);
       return;
     }
@@ -301,7 +312,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         width: this.props.width,
         height: this.props.height,
         parentHasRenderTexture: this.parentHasRenderTexture,
-        framebufferDimensions: this.parentFramebufferDimensions,
+        framebufferDimensions:
+          this.rtt === true ? this.parentFramebufferDimensions : null,
         stage: this.stage,
       },
     );

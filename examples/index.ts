@@ -259,7 +259,7 @@ async function initRenderer(
     'app',
   );
   await installShaders(renderer.stage, renderMode);
-  installFonts(renderer.stage);
+  await installFonts(renderer.stage);
 
   /**
    * Sample data captured

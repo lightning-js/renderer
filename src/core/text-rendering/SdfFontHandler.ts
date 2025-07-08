@@ -337,9 +337,8 @@ export const loadFont = async (
     });
 
     atlasTexture.preventCleanup = true; // Prevent automatic cleanup
-    atlasTexture.load();
 
-    atlasTexture.on('load', () => {
+    atlasTexture.on('loaded', () => {
       // Process and cache font data
       processFontData(fontFamily, fontData, atlasTexture, metrics);
 
@@ -348,7 +347,7 @@ export const loadFont = async (
       fontState.fontLoadPromises.delete(fontFamily);
     });
 
-    atlasTexture.on('error', (error: Error) => {
+    atlasTexture.on('failed', (error: Error) => {
       // Cleanup on error
       fontState.fontLoadPromises.delete(fontFamily);
       if (fontState.fontCache[fontFamily]) {
@@ -356,6 +355,8 @@ export const loadFont = async (
       }
       console.error(`Failed to load SDF font: ${fontFamily}`, error);
     });
+
+    atlasTexture.setRenderableOwner(this, true);
   })();
 
   fontState.fontLoadPromises.set(fontFamily, loadPromise);
