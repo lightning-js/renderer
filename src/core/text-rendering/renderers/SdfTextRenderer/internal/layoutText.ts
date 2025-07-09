@@ -103,8 +103,9 @@ class LayoutState {
       (this.maxLines === 0 || this.curLineIndex + 1 < this.maxLines) &&
       (this.contain !== 'both' ||
         this.scrollable ||
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.curY + this.vertexLineHeight + this._trFontFace!.maxCharHeight <=
+        this.curY +
+          this.vertexLineHeight +
+          (this._trFontFace?.maxCharHeight || 0) <=
           this.vertexTruncateHeight)
     );
   }
@@ -127,9 +128,8 @@ class LayoutState {
   }
 
   get lineIsWithinWindow(): boolean {
-     
     const lineIsBelowWindowTop =
-      this.curY + this._trFontFace!.maxCharHeight >= this._rwSdf.y1;
+      this.curY + (this._trFontFace?.maxCharHeight || 0) >= this._rwSdf.y1;
     const lineIsAboveWindowBottom = this.curY <= this._rwSdf.y2;
     return lineIsBelowWindowTop && lineIsAboveWindowBottom;
   }
@@ -485,25 +485,19 @@ export function layoutText(
   // Adds the last line to Buffer
   layoutState.addLineToBuffer();
 
-  // Shift all glyphs so the top of the text is at Y=0 and left at X=0
-  // Some fonts may have negative X or Y offsets
+  // Shift all glyphs to the correct X position
+  // Some fonts may have negative offsets
   const shiftX =
     layoutState.minY !== Infinity &&
     layoutState.minY !== 0 &&
     layoutState.minX !== Infinity &&
     layoutState.minX !== 0;
-  const shiftY = layoutState.minY !== Infinity && layoutState.minY !== 0;
-  if (shiftX || shiftY) {
+  if (shiftX) {
     for (let i = 0; i < layoutState.bufferOffset; i += 4) {
       if (shiftX) vertexBuffer[i] = (vertexBuffer[i] ?? 0) - layoutState.minX;
-      if (shiftY)
-        vertexBuffer[i + 1] = (vertexBuffer[i + 1] ?? 0) - layoutState.minY;
     }
     if (shiftX) {
       layoutState.maxX -= layoutState.minX; // Adjust maxX to account for the shift
-    }
-    if (shiftY) {
-      layoutState.maxY -= layoutState.minY; // Adjust maxY to account for the shift
     }
   }
 

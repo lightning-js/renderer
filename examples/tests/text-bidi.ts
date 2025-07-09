@@ -18,6 +18,7 @@
  */
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { waitForLoadedDimensions } from '../common/utils.js';
 
 export async function automation(settings: ExampleSettings) {
   await test(settings);
@@ -87,7 +88,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     yPos += 20;
     props.text = 'Text (with: !أسباب لمشاهدة)';
 
-    renderer.createTextNode({
+    const text = renderer.createTextNode({
       ...props,
       y: yPos,
       width: testRoot.width,
@@ -97,8 +98,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       color: 0x0000ff77,
       parent: testRoot,
     });
+    const dimensions = await waitForLoadedDimensions(text);
 
-    yPos += 32;
+    yPos += dimensions.height;
 
     renderer.createNode({
       x: 0,

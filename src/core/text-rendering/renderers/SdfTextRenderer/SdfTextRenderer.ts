@@ -599,7 +599,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     // If we didn't exit early, we know we have completely computed w/h
     if (out2.fullyProcessed) {
       state.textW = out2.maxX * fontSizeRatio;
-      state.textH = out2.maxY * fontSizeRatio;
+      state.textH = out2.numLines * sdfLineHeight * fontSizeRatio;
     }
 
     // if (state.props.debug.printLayoutTime) {
