@@ -179,9 +179,9 @@ export interface TrProps extends TrFontProps {
    * use {@link contain} mode `'width'` or `'both'` and a set an explicit
    * {@link width} for the text to be aligned within.
    *
-   * @default 'left'
+   * @default 'start'
    */
-  textAlign: 'left' | 'center' | 'right';
+  textAlign: 'left' | 'center' | 'right' | 'start' | 'end';
   /**
    * Color of text
    *
@@ -318,6 +318,7 @@ export interface TrProps extends TrFontProps {
    */
   overflowSuffix: string;
 
+  bidi: boolean;
   /**
    * Word Break for text
    *
@@ -410,6 +411,9 @@ const trPropSetterDefaults: TrPropSetters = {
   },
   overflowSuffix: (state, value) => {
     state.props.overflowSuffix = value;
+  },
+  bidi: (state, value) => {
+    state.props.bidi = value;
   },
   wordBreak: (state, value) => {
     state.props.wordBreak = value;

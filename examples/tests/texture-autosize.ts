@@ -67,5 +67,6 @@ export default async function test(settings: ExampleSettings) {
     fontSize: 50,
     fontFamily: 'Ubuntu',
     parent: testRoot,
+    clipping: true,
   });
 }

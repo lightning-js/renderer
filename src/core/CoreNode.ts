@@ -2226,6 +2226,7 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
   }
+
   private initRenderTexture() {
     this.framebufferDimensions = {
       width: this.width,
