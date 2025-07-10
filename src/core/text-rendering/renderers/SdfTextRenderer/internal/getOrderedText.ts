@@ -37,14 +37,12 @@
  */
 
 export function isRtlCodePoint(codePoint: number): boolean {
+  if (codePoint < 0x0590 || codePoint > 0xfeff) return false;
   return (
     (codePoint >= 0x0590 && codePoint <= 0x05ff) || // Hebrew
     (codePoint >= 0x0600 && codePoint <= 0x06ff) || // Arabic
-    (codePoint >= 0x0750 && codePoint <= 0x077f) || // Arabic Supplement
+    (codePoint >= 0x0700 && codePoint <= 0x07ff) || // Syriac, Arabic Supplement, Thaana, N'Ko
     (codePoint >= 0x08a0 && codePoint <= 0x08ff) || // Arabic Extended-A
-    (codePoint >= 0x0700 && codePoint <= 0x074f) || // Syriac
-    (codePoint >= 0x0780 && codePoint <= 0x07bf) || // Thaana
-    (codePoint >= 0x07c0 && codePoint <= 0x07ff) || // N'Ko
     (codePoint >= 0xfb50 && codePoint <= 0xfdff) || // Arabic Presentation Forms-A
     (codePoint >= 0xfe70 && codePoint <= 0xfeff) // Arabic Presentation Forms-B
   );
@@ -62,9 +60,8 @@ export function getOrderedText(
     let currentGroup: Array<string> = []; // Group of characters with the same direction
     let currentDirection: boolean | null = null; // `true` for RTL, `false` for LTR, `null` for uninitialized
 
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const codepoint = char?.codePointAt(0);
+    for (const char of text) {
+      const codepoint = char.codePointAt(0);
       const isCharRTL =
         codepoint !== undefined ? isRtlCodePoint(codepoint) : false;
 
@@ -79,19 +76,17 @@ export function getOrderedText(
         }
       } else {
         // Flush the current group
-        if (currentDirection && rtl) {
+        if (currentDirection === true && rtl === true) {
           currentGroup.reverse();
         }
         reorderedText.push(...currentGroup);
         currentGroup = [];
         currentDirection = isCharRTL;
       }
-      if (char !== undefined) {
-        currentGroup.push(char);
-      }
+      currentGroup.push(char);
     }
     // Flush the last group
-    if (currentDirection && rtl) {
+    if (currentDirection === true && rtl === true) {
       currentGroup.reverse();
     }
     reorderedText.push(...currentGroup);

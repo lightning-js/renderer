@@ -85,7 +85,7 @@ export class SdfFontShaper extends FontShaper {
       const isLineBreak = word === '\n'; // Match newlines
       const hasNextWord = i < words.length - 1;
 
-      if (isSpace) {
+      if (isSpace === true) {
         // Handle spaces
         lastGlyphId = undefined;
 
@@ -93,7 +93,9 @@ export class SdfFontShaper extends FontShaper {
           const codepoint = char.codePointAt(0);
           if (codepoint === undefined) return width;
           const glyph = this.glyphMap.get(codepoint);
-          return glyph ? width + glyph.xadvance + props.letterSpacing : width;
+          return glyph !== undefined
+            ? width + glyph.xadvance + props.letterSpacing
+            : width;
         }, 0);
 
         yield {
@@ -102,7 +104,7 @@ export class SdfFontShaper extends FontShaper {
           isLineBreak: false,
           hasNextWord,
         };
-      } else if (isLineBreak) {
+      } else if (isLineBreak === true) {
         // Handle line breaks
         lastGlyphId = undefined;
         yield { letters: null, width: 0, isLineBreak: true, hasNextWord };
@@ -119,7 +121,7 @@ export class SdfFontShaper extends FontShaper {
           if (glyph) {
             const kerning =
               lastGlyphId !== undefined
-                ? ((this.kernings[glyph.id] || {})[lastGlyphId] || 0) +
+                ? (this.kernings[glyph.id]?.[lastGlyphId] ?? 0) +
                   props.letterSpacing
                 : 0;
 
