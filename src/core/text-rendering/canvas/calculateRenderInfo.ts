@@ -86,7 +86,7 @@ export function calculateRenderInfo({
 
   let metrics = getFontMetrics(fontFamily);
 
-  if (!metrics) {
+  if (metrics === null) {
     metrics = calculateFontMetrics(context, fontFamily, fontSize);
     setFontMetrics(fontFamily, metrics);
   }
@@ -111,6 +111,9 @@ export function calculateRenderInfo({
       ? Math.min(containedMaxLines, setMaxLines)
       : Math.max(containedMaxLines, setMaxLines);
 
+  const textOverflow = settings.textOverflow;
+  const wordWrap = settings.wordWrap;
+
   // Total width
   let width = w || 2048 / precision;
   // Inner width
@@ -119,15 +122,15 @@ export function calculateRenderInfo({
     width += 10 - innerWidth;
     innerWidth = 10;
   }
-  if (!wordWrapWidth) {
+  if (wordWrapWidth === 0) {
     wordWrapWidth = innerWidth;
   }
 
   // Text overflow
   let text: string = settings.text;
-  if (settings.textOverflow && !settings.wordWrap) {
+  if (textOverflow !== null && wordWrap === false) {
     let suffix: string;
-    switch (settings.textOverflow) {
+    switch (textOverflow) {
       case 'clip':
         suffix = '';
         break;
@@ -135,7 +138,7 @@ export function calculateRenderInfo({
         suffix = settings.overflowSuffix;
         break;
       default:
-        suffix = String(settings.textOverflow);
+        suffix = String(textOverflow);
     }
     text = wrapWord(
       context,
@@ -148,7 +151,7 @@ export function calculateRenderInfo({
 
   // Word wrap
   let linesInfo: { n: number[]; l: string[] };
-  if (settings.wordWrap) {
+  if (wordWrap) {
     linesInfo = wrapText(
       context,
       text,
@@ -167,13 +170,13 @@ export function calculateRenderInfo({
 
   let remainingText = '';
   let moreTextLines = false;
-  if (calcMaxLines && lines.length > calcMaxLines) {
+  if (calcMaxLines > 0 && lines.length > calcMaxLines) {
     const usedLines = lines.slice(0, calcMaxLines);
     let otherLines: string[] = [];
-    if (settings.overflowSuffix) {
-      const w = settings.overflowSuffix
-        ? measureText(context, settings.overflowSuffix, letterSpacing)
-        : 0;
+    const overflowSuffix = settings.overflowSuffix;
+
+    if (overflowSuffix.length > 0) {
+      const w = measureText(context, overflowSuffix, letterSpacing);
       const al = wrapText(
         context,
         usedLines[usedLines.length - 1]!,
@@ -181,7 +184,7 @@ export function calculateRenderInfo({
         letterSpacing,
         textIndent,
       );
-      usedLines[usedLines.length - 1] = `${al.l[0]!}${settings.overflowSuffix}`;
+      usedLines[usedLines.length - 1] = `${al.l[0]!}${overflowSuffix}`;
       otherLines = [al.l.length > 1 ? al.l[1]! : ''];
     } else {
       otherLines = [''];
@@ -213,12 +216,12 @@ export function calculateRenderInfo({
     maxLineWidth = Math.max(maxLineWidth, lineWidth);
   }
 
-  if (!w) {
+  if (w === 0) {
     width = maxLineWidth + paddingLeft + paddingRight;
     innerWidth = maxLineWidth;
   }
   if (
-    settings.wordWrap &&
+    wordWrap === true &&
     w > maxLineWidth &&
     settings.textAlign === 'left' &&
     lines.length === 1
@@ -227,7 +230,7 @@ export function calculateRenderInfo({
   }
 
   let height: number;
-  if (h) {
+  if (h > 0) {
     height = h;
   } else {
     height = calcHeight(

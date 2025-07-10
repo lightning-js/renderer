@@ -25,7 +25,7 @@ export class PeekableIterator<T = unknown, TReturn = any, TNext = unknown>
   implements Iterator<T, TReturn, TNext>
 {
   private peekBuffer: IteratorResult<T, TReturn>[] = [];
-  private _lastIndex;
+  private _lastIndex = -1;
 
   constructor(private iterator: Iterator<T, TReturn, TNext>, indexBase = 0) {
     this.iterator = iterator;
@@ -40,7 +40,7 @@ export class PeekableIterator<T = unknown, TReturn = any, TNext = unknown>
           this.peekBuffer.pop()!
         : this.iterator.next();
 
-    if (nextResult.done) {
+    if (nextResult.done === true) {
       this._lastIndex = -1;
     } else {
       this._lastIndex++;

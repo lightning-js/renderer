@@ -38,18 +38,21 @@ export const draw = ({
   settings: Settings;
   linesOverride?: { lines: string[]; lineWidths: number[] };
 }) => {
+  const fontSize = renderInfo.fontSize;
+  const lineHeight = renderInfo.lineHeight;
   const precision = settings.precision;
   const lines = linesOverride?.lines || renderInfo.lines;
   const lineWidths = linesOverride?.lineWidths || renderInfo.lineWidths;
-  const height = linesOverride
-    ? calcHeight(
-        settings.textBaseline,
-        renderInfo.fontSize,
-        renderInfo.lineHeight,
-        linesOverride.lines.length,
-        settings.offsetY === null ? null : settings.offsetY * precision,
-      )
-    : renderInfo.height;
+  const height =
+    linesOverride !== undefined
+      ? calcHeight(
+          settings.textBaseline,
+          fontSize,
+          lineHeight,
+          linesOverride.lines.length,
+          settings.offsetY === null ? null : settings.offsetY * precision,
+        )
+      : renderInfo.height;
 
   // Add extra margin to prevent issue with clipped text when scaling.
   canvas.width = Math.min(
@@ -59,10 +62,10 @@ export const draw = ({
   canvas.height = Math.min(Math.ceil(height), MAX_TEXTURE_DIMENSION);
 
   // Canvas context has been reset.
-  context.font = `${settings.fontStyle} ${renderInfo.fontSize}px ${settings.fontFamily}`;
+  context.font = `${settings.fontStyle} ${fontSize}px ${settings.fontFamily}`;
   context.textBaseline = settings.textBaseline;
 
-  if (renderInfo.fontSize >= 128) {
+  if (fontSize >= 128) {
     context.globalAlpha = 0.01;
     context.fillRect(0, 0, 0.01, 0.01);
     context.globalAlpha = 1.0;
@@ -76,20 +79,18 @@ export const draw = ({
   let linePositionY: number;
   const drawLines: LineType[] = [];
   const metrics = renderInfo.metrics;
-  const ascenderPx = metrics
-    ? metrics.ascender * renderInfo.fontSize
-    : renderInfo.fontSize;
+  const ascenderPx = metrics ? metrics.ascender * fontSize : fontSize;
   const bareLineHeightPx = metrics
-    ? (metrics.ascender - metrics.descender) * renderInfo.fontSize
-    : renderInfo.fontSize;
+    ? (metrics.ascender - metrics.descender) * fontSize
+    : fontSize;
 
   for (let i = 0, n = lines.length; i < n; i++) {
     linePositionX = i === 0 ? renderInfo.textIndent : 0;
-    linePositionY = i * renderInfo.lineHeight + ascenderPx;
+    linePositionY = i * lineHeight + ascenderPx;
     if (settings.verticalAlign == 'middle') {
-      linePositionY += (renderInfo.lineHeight - bareLineHeightPx) / 2;
+      linePositionY += (lineHeight - bareLineHeightPx) / 2;
     } else if (settings.verticalAlign == 'bottom') {
-      linePositionY += renderInfo.lineHeight - bareLineHeightPx;
+      linePositionY += lineHeight - bareLineHeightPx;
     }
     if (settings.textAlign === 'right') {
       linePositionX += renderInfo.innerWidth - lineWidths[i]!;
@@ -108,8 +109,7 @@ export const draw = ({
   // Highlight
   if (settings.highlight) {
     const color = settings.highlightColor;
-    const hlHeight =
-      settings.highlightHeight * precision || renderInfo.fontSize * 1.5;
+    const hlHeight = settings.highlightHeight * precision || fontSize * 1.5;
     const offset = settings.highlightOffset * precision;
     const hlPaddingLeft =
       settings.highlightPaddingLeft !== null

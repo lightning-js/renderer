@@ -31,14 +31,12 @@ import type { Stage } from '../Stage.js';
 // const globalFontSet: FontFaceSet = (resolvedGlobal.document?.fonts ||
 //   (resolvedGlobal as unknown as { fonts: FontFaceSet }).fonts) as FontFaceSet;
 
-// Global state for the font handler
-const fontState = {
-  fontFamilies: {} as Record<string, FontFace>,
-  loadedFonts: new Set<string>(),
-  fontLoadPromises: new Map<string, Promise<void>>(),
-  normalized: new Map<string, NormalizedFontMetrics>(),
-  initialized: false,
-};
+// Global state variables for fontHandler
+const fontFamilies: Record<string, FontFace> = {};
+const loadedFonts = new Set<string>();
+const fontLoadPromises = new Map<string, Promise<void>>();
+const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
+let initialized = false;
 
 /**
  * Normalize font metrics to be in the range of 0 to 1
@@ -69,21 +67,22 @@ export const loadFont = async (
   const { fontFamily, fontUrl, metrics } = options;
 
   // If already loaded, return immediately
-  if (fontState.loadedFonts.has(fontFamily)) {
+  if (loadedFonts.has(fontFamily) === true) {
     return;
   }
 
+  const existingPromise = fontLoadPromises.get(fontFamily);
   // If already loading, return the existing promise
-  if (fontState.fontLoadPromises.has(fontFamily)) {
-    return fontState.fontLoadPromises.get(fontFamily);
+  if (existingPromise !== undefined) {
+    return existingPromise;
   }
 
   // Create and store the loading promise
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
     .then(() => {
-      fontState.loadedFonts.add(fontFamily);
-      fontState.fontLoadPromises.delete(fontFamily);
+      loadedFonts.add(fontFamily);
+      fontLoadPromises.delete(fontFamily);
 
       // Store normalized metrics if provided
       if (metrics) {
@@ -91,12 +90,12 @@ export const loadFont = async (
       }
     })
     .catch((error) => {
-      fontState.fontLoadPromises.delete(fontFamily);
+      fontLoadPromises.delete(fontFamily);
       console.error(`Failed to load font: ${fontFamily}`, error);
       throw error;
     });
 
-  fontState.fontLoadPromises.set(fontFamily, loadPromise);
+  fontLoadPromises.set(fontFamily, loadPromise);
   return loadPromise;
 };
 
@@ -104,14 +103,14 @@ export const loadFont = async (
  * Get the font families map for resolving fonts
  */
 export const getFontFamilies = (): FontFamilyMap => {
-  return fontState.fontFamilies;
+  return fontFamilies;
 };
 
 /**
  * Initialize the global font handler
  */
 export const init = (): void => {
-  if (fontState.initialized) {
+  if (initialized === true) {
     return;
   }
 
@@ -123,8 +122,8 @@ export const init = (): void => {
   };
 
   setFontMetrics('sans-serif', defaultMetrics);
-  fontState.loadedFonts.add('sans-serif');
-  fontState.initialized = true;
+  loadedFonts.add('sans-serif');
+  initialized = true;
 };
 
 export const type = 'canvas';
@@ -133,18 +132,18 @@ export const type = 'canvas';
  * Check if a font is already loaded by font family
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
-  return fontState.loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
+  return loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
 };
 
 export const getFontMetrics = (
   fontFamily: string,
 ): NormalizedFontMetrics | null => {
-  return fontState.normalized.get(fontFamily) || null;
+  return normalizedMetrics.get(fontFamily) || null;
 };
 
 export const setFontMetrics = (
   fontFamily: string,
   metrics: NormalizedFontMetrics,
 ): void => {
-  fontState.normalized.set(fontFamily, metrics);
+  normalizedMetrics.set(fontFamily, metrics);
 };

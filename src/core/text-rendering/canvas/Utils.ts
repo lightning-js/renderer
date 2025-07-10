@@ -26,11 +26,11 @@ export const measureText = (
   word: string,
   space = 0,
 ) => {
-  if (!space) {
+  if (space === 0) {
     return context.measureText(word).width;
   }
   return word.split('').reduce((acc, char) => {
-    if (isZeroWidthSpace(char)) {
+    if (isZeroWidthSpace(char) === true) {
       return acc;
     }
     return acc + context.measureText(char).width + space;

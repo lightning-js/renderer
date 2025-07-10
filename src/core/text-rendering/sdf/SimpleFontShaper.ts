@@ -80,7 +80,7 @@ export const createSdfFontShaper = (): FontShaper => ({
     const letterSpacing = props.letterSpacing;
 
     const fontData = SdfFontHandler.getFontData(fontFamily);
-    if (!fontData) return;
+    if (fontData === null) return;
 
     const fontScale = fontSize / fontData.common.lineHeight;
     let prevCodepoint = 0;
@@ -94,7 +94,7 @@ export const createSdfFontShaper = (): FontShaper => ({
 
       // Get glyph data
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
-      if (!glyph) {
+      if (glyph === null) {
         yield {
           mapped: false,
           codepoint,
