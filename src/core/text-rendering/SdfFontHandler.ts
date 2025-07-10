@@ -122,13 +122,11 @@ interface SdfFontCache {
   maxCharHeight: number;
 }
 
-// Host paths on top
-const fontState = {
-  fontCache: Object.create(null) as Record<string, SdfFontCache>,
-  loadedFonts: new Set<string>(),
-  fontLoadPromises: new Map<string, Promise<void>>(),
-  initialized: false,
-};
+//global state variables for SdfFontHandler
+const fontCache: Record<string, SdfFontCache> = Object.create(null);
+const loadedFonts = new Set<string>();
+const fontLoadPromises = new Map<string, Promise<void>>();
+let initialized = false;
 
 /**
  * Normalize font metrics to be in the range of 0 to 1
@@ -152,11 +150,10 @@ const buildKerningTable = (kernings: SdfFontData['kernings']): KerningTable => {
 
   while (i < length) {
     const kerning = kernings[i];
-    if (!kerning) {
-      i++;
+    i++;
+    if (kerning === undefined) {
       continue;
     }
-
     const second = kerning.second;
 
     let firsts = kerningTable[second];
@@ -164,9 +161,7 @@ const buildKerningTable = (kernings: SdfFontData['kernings']): KerningTable => {
       firsts = {};
       kerningTable[second] = firsts;
     }
-
     firsts[kerning.first] = kerning.amount;
-    i++;
   }
 
   return kerningTable;
@@ -188,8 +183,9 @@ const buildGlyphMap = (
 
   while (i < length) {
     const glyph = chars[i];
-    if (!glyph) {
-      i++;
+
+    i++;
+    if (glyph === undefined) {
       continue;
     }
 
@@ -199,8 +195,6 @@ const buildGlyphMap = (
     if (charHeight > maxCharHeight) {
       maxCharHeight = charHeight;
     }
-
-    i++;
   }
 
   return glyphMap;
@@ -230,7 +224,7 @@ const processFontData = (
 
   while (i < length) {
     const glyph = fontData.chars[i];
-    if (glyph) {
+    if (glyph !== undefined) {
       const charHeight = glyph.yoffset + glyph.height;
       if (charHeight > maxCharHeight) {
         maxCharHeight = charHeight;
@@ -242,12 +236,10 @@ const processFontData = (
   // Determine metrics
   let normalizedMetrics: NormalizedFontMetrics;
 
-  if (metrics) {
+  if (metrics !== undefined) {
     normalizedMetrics = normalizeMetrics(metrics);
-  } else if (fontData.lightningMetrics) {
-    normalizedMetrics = normalizeMetrics(
-      fontData.lightningMetrics as FontMetrics,
-    );
+  } else if (fontData.lightningMetrics !== undefined) {
+    normalizedMetrics = normalizeMetrics(fontData.lightningMetrics);
   } else {
     console.warn(
       `Font metrics not found for SDF font ${fontFamily}. ` +
@@ -263,7 +255,7 @@ const processFontData = (
   }
 
   // Cache processed data
-  fontState.fontCache[fontFamily] = {
+  fontCache[fontFamily] = {
     data: fontData,
     glyphMap,
     kernings,
@@ -297,17 +289,17 @@ export const loadFont = async (
   const { fontFamily, atlasUrl, atlasDataUrl, metrics } = options;
 
   // Early return if already loaded
-  if (fontState.loadedFonts.has(fontFamily)) {
+  if (loadedFonts.has(fontFamily) === true) {
     return;
   }
 
   // Early return if already loading
-  const existingPromise = fontState.fontLoadPromises.get(fontFamily);
-  if (existingPromise) {
+  const existingPromise = fontLoadPromises.get(fontFamily);
+  if (existingPromise !== undefined) {
     return existingPromise;
   }
 
-  if (!atlasDataUrl) {
+  if (atlasDataUrl === undefined) {
     throw new Error(
       `Atlas data URL must be provided for SDF font: ${fontFamily}`,
     );
@@ -343,15 +335,15 @@ export const loadFont = async (
       processFontData(fontFamily, fontData, atlasTexture, metrics);
 
       // Mark as loaded
-      fontState.loadedFonts.add(fontFamily);
-      fontState.fontLoadPromises.delete(fontFamily);
+      loadedFonts.add(fontFamily);
+      fontLoadPromises.delete(fontFamily);
     });
 
     atlasTexture.on('failed', (error: Error) => {
       // Cleanup on error
-      fontState.fontLoadPromises.delete(fontFamily);
-      if (fontState.fontCache[fontFamily]) {
-        delete fontState.fontCache[fontFamily];
+      fontLoadPromises.delete(fontFamily);
+      if (fontCache[fontFamily]) {
+        delete fontCache[fontFamily];
       }
       console.error(`Failed to load SDF font: ${fontFamily}`, error);
     });
@@ -359,7 +351,7 @@ export const loadFont = async (
     atlasTexture.setRenderableOwner(this, true);
   })();
 
-  fontState.fontLoadPromises.set(fontFamily, loadPromise);
+  fontLoadPromises.set(fontFamily, loadPromise);
   return loadPromise;
 };
 
@@ -378,11 +370,11 @@ export const getFontFamilies = (): FontFamilyMap => {
  * Initialize the SDF font handler
  */
 export const init = (): void => {
-  if (fontState.initialized) {
+  if (initialized === true) {
     return;
   }
 
-  fontState.initialized = true;
+  initialized = true;
 };
 
 export const type = 'sdf';
@@ -391,7 +383,7 @@ export const type = 'sdf';
  * Check if a font is already loaded by font family
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
-  return fontState.loadedFonts.has(fontFamily);
+  return loadedFonts.has(fontFamily);
 };
 
 /**
@@ -402,7 +394,7 @@ export const getFontMetrics = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _trProps: TrProps,
 ): NormalizedFontMetrics | null => {
-  const cache = fontState.fontCache[fontFamily];
+  const cache = fontCache[fontFamily];
   return cache ? cache.metrics : null;
 };
 
@@ -413,8 +405,8 @@ export const setFontMetrics = (
   fontFamily: string,
   metrics: NormalizedFontMetrics,
 ): void => {
-  const cache = fontState.fontCache[fontFamily];
-  if (cache) {
+  const cache = fontCache[fontFamily];
+  if (cache !== undefined) {
     cache.metrics = metrics;
   }
 };
@@ -429,8 +421,8 @@ export const getGlyph = (
   fontFamily: string,
   codepoint: number,
 ): SdfFontData['chars'][0] | null => {
-  const cache = fontState.fontCache[fontFamily];
-  if (!cache) return null;
+  const cache = fontCache[fontFamily];
+  if (cache === undefined) return null;
 
   return cache.glyphMap.get(codepoint) || cache.glyphMap.get(63) || null; // 63 = '?'
 };
@@ -447,8 +439,8 @@ export const getKerning = (
   firstGlyph: number,
   secondGlyph: number,
 ): number => {
-  const cache = fontState.fontCache[fontFamily];
-  if (!cache) return 0;
+  const cache = fontCache[fontFamily];
+  if (cache === undefined) return 0;
 
   const seconds = cache.kernings[secondGlyph];
   return seconds ? seconds[firstGlyph] || 0 : 0;
@@ -460,8 +452,8 @@ export const getKerning = (
  * @returns {ImageTexture|null} Atlas texture or null
  */
 export const getAtlas = (fontFamily: string): ImageTexture | null => {
-  const cache = fontState.fontCache[fontFamily];
-  return cache ? cache.atlasTexture : null;
+  const cache = fontCache[fontFamily];
+  return cache !== undefined ? cache.atlasTexture : null;
 };
 
 /**
@@ -470,8 +462,8 @@ export const getAtlas = (fontFamily: string): ImageTexture | null => {
  * @returns {SdfFontData|null} Font data or null
  */
 export const getFontData = (fontFamily: string): SdfFontData | null => {
-  const cache = fontState.fontCache[fontFamily];
-  return cache ? cache.data : null;
+  const cache = fontCache[fontFamily];
+  return cache !== undefined ? cache.data : null;
 };
 
 /**
@@ -480,8 +472,8 @@ export const getFontData = (fontFamily: string): SdfFontData | null => {
  * @returns {number} Max character height or 0
  */
 export const getMaxCharHeight = (fontFamily: string): number => {
-  const cache = fontState.fontCache[fontFamily];
-  return cache ? cache.maxCharHeight : 0;
+  const cache = fontCache[fontFamily];
+  return cache !== undefined ? cache.maxCharHeight : 0;
 };
 
 /**
@@ -489,7 +481,7 @@ export const getMaxCharHeight = (fontFamily: string): number => {
  * @returns {string[]} Array of font family names
  */
 export const getLoadedFonts = (): string[] => {
-  return Array.from(fontState.loadedFonts);
+  return Array.from(loadedFonts);
 };
 
 /**
@@ -497,14 +489,14 @@ export const getLoadedFonts = (): string[] => {
  * @param {string} fontFamily - Font family name
  */
 export const unloadFont = (fontFamily: string): void => {
-  const cache = fontState.fontCache[fontFamily];
-  if (cache) {
+  const cache = fontCache[fontFamily];
+  if (cache !== undefined) {
     // Free texture if needed
-    if (cache.atlasTexture && typeof cache.atlasTexture.free === 'function') {
+    if (typeof cache.atlasTexture.free === 'function') {
       cache.atlasTexture.free();
     }
 
-    delete fontState.fontCache[fontFamily];
-    fontState.loadedFonts.delete(fontFamily);
+    delete fontCache[fontFamily];
+    loadedFonts.delete(fontFamily);
   }
 };

@@ -25,7 +25,7 @@ import * as CanvasFontHandler from './CanvasFontHandler.js';
 import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
 import { draw } from './canvas/draw.js';
 
-const type = 'canvas' as const;
+const type = 'canvas';
 
 // Font handling
 const init = (): void => {

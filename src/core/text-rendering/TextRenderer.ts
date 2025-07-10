@@ -369,6 +369,21 @@ export interface FontHandler {
   setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
 }
 
+export interface TextRenderProps {
+  fontFamily: string;
+  fontSize: number;
+  color: number;
+  offsetY: number;
+  worldAlpha: number;
+  globalTransform: Float32Array;
+  clippingRect: unknown;
+  width: number;
+  height: number;
+  parentHasRenderTexture: boolean;
+  framebufferDimensions: unknown;
+  stage: Stage;
+}
+
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
@@ -387,20 +402,7 @@ export interface TextRenderer {
     renderer: CoreRenderer,
     layout: TextLayout,
     vertexBuffer: Float32Array,
-    renderProps: {
-      fontFamily: string;
-      fontSize: number;
-      color: number;
-      offsetY: number;
-      worldAlpha: number;
-      globalTransform: Float32Array;
-      clippingRect: unknown;
-      width: number;
-      height: number;
-      parentHasRenderTexture: boolean;
-      framebufferDimensions: unknown;
-      stage: Stage;
-    },
+    renderProps: TextRenderProps,
   ) => void;
   init: () => void;
 }

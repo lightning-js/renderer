@@ -18,7 +18,7 @@
  */
 
 import type { Stage } from '../Stage.js';
-import type { FontHandler, TrProps } from './TextRenderer.js';
+import type { FontHandler, TextRenderProps, TrProps } from './TextRenderer.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -35,7 +35,7 @@ const FLOATS_PER_VERTEX = 4;
 const VERTICES_PER_GLYPH = 6;
 
 // Type definition to match interface
-const type = 'sdf' as const;
+const type = 'sdf';
 
 // Font handling
 const init = (): void => {
@@ -61,7 +61,7 @@ const renderText = async (
   layout?: TextLayout;
 }> => {
   // Early return if no text
-  if (!props.text) {
+  if (props.text.length === 0) {
     return {
       imageData: null,
       width: 0,
@@ -71,7 +71,7 @@ const renderText = async (
 
   // Get font cache for this font family
   const fontData = SdfFontHandler.getFontData(props.fontFamily);
-  if (!fontData) {
+  if (fontData === null) {
     // Font not loaded, return empty result
     return {
       imageData: null,
@@ -96,7 +96,7 @@ const renderText = async (
  * Add quads for rendering using cached layout data
  */
 const addQuads = (layout?: TextLayout): Float32Array | null => {
-  if (!layout) {
+  if (layout === undefined) {
     return null; // No layout data available
   }
 
@@ -117,8 +117,8 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
 
   while (glyphIndex < glyphsLength) {
     const glyph = glyphs[glyphIndex];
-    if (!glyph) {
-      glyphIndex++;
+    glyphIndex++;
+    if (glyph === undefined) {
       continue;
     }
 
@@ -170,8 +170,6 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
     vertexBuffer[bufferIndex++] = y2;
     vertexBuffer[bufferIndex++] = u1;
     vertexBuffer[bufferIndex++] = v2;
-
-    glyphIndex++;
   }
 
   return vertexBuffer;
@@ -185,20 +183,7 @@ const renderQuads = (
   renderer: CoreRenderer,
   layout: TextLayout,
   vertexBuffer: Float32Array,
-  renderProps: {
-    fontFamily: string;
-    fontSize: number;
-    color: number;
-    offsetY: number;
-    worldAlpha: number;
-    globalTransform: Float32Array;
-    clippingRect: unknown;
-    width: number;
-    height: number;
-    parentHasRenderTexture: boolean;
-    framebufferDimensions: unknown;
-    stage: Stage;
-  },
+  renderProps: TextRenderProps,
 ): void => {
   const fontFamily = renderProps.fontFamily;
   const fontSize = renderProps.fontSize;
@@ -255,7 +240,7 @@ const renderQuads = (
   ]);
 
   const buffer = webGlBuffers.getBuffer('a_position');
-  if (buffer) {
+  if (buffer !== undefined) {
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
 
@@ -321,8 +306,8 @@ const generateTextLayout = (
 
   while (lineIndex < linesLength) {
     const line = lines[lineIndex];
-    if (!line) {
-      lineIndex++;
+    lineIndex++;
+    if (line === undefined) {
       currentY += lineHeight;
       continue;
     }
@@ -335,16 +320,15 @@ const generateTextLayout = (
     while (charIndex < lineLength) {
       const char = line.charAt(charIndex);
       const codepoint = char.codePointAt(0);
+      charIndex++;
 
-      if (!codepoint) {
-        charIndex++;
+      if (codepoint === undefined) {
         continue;
       }
 
       // Get glyph data from font handler
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
-      if (!glyph) {
-        charIndex++;
+      if (glyph === null) {
         continue;
       }
 
@@ -382,14 +366,11 @@ const generateTextLayout = (
       // Advance position with letter spacing
       currentX += advance + letterSpacing;
       prevCodepoint = codepoint;
-      charIndex++;
     }
 
     if (currentX > maxWidth) {
       maxWidth = currentX;
     }
-
-    lineIndex++;
     currentY += lineHeight;
   }
 
