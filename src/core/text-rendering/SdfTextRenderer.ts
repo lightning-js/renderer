@@ -23,7 +23,7 @@ import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
 import { WebGlRenderOp } from '../renderers/webgl/WebGlRenderOp.js';
-import type { SdfShaderProps } from '../shaders/webgl/SdfShader.js';
+import { Sdf, type SdfShaderProps } from '../shaders/webgl/SdfShader.js';
 import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
@@ -37,9 +37,15 @@ const VERTICES_PER_GLYPH = 6;
 // Type definition to match interface
 const type = 'sdf';
 
-// Font handling
-const init = (): void => {
+let sdfShader: WebGlShaderNode | null = null;
+
+// Initialize the SDF text renderer
+const init = (stage: Stage): void => {
   SdfFontHandler.init();
+
+  // Register SDF shader with the shader manager
+  stage.shManager.registerShaderType('Sdf', Sdf);
+  sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
 };
 
 const font: FontHandler = SdfFontHandler;
@@ -191,7 +197,6 @@ const renderQuads = (
   const offsetY = renderProps.offsetY;
   const worldAlpha = renderProps.worldAlpha;
   const globalTransform = renderProps.globalTransform;
-  const stage = renderProps.stage;
 
   const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
   if (atlasTexture === null) {
@@ -244,7 +249,6 @@ const renderQuads = (
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
 
-  const sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
   const renderOp = new WebGlRenderOp(
     renderer as WebGlRenderer,
     {

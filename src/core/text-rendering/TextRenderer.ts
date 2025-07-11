@@ -404,5 +404,5 @@ export interface TextRenderer {
     vertexBuffer: Float32Array,
     renderProps: TextRenderProps,
   ) => void;
-  init: () => void;
+  init: (stage: Stage) => void;
 }

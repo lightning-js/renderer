@@ -26,13 +26,12 @@ import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
 import { draw } from './canvas/draw.js';
 
 const type = 'canvas';
-
-// Font handling
-const init = (): void => {
-  /** nothing to init at this stage for Canvas */
-};
-
 const font: FontHandler = CanvasFontHandler;
+
+// Initialize the Text Renderer
+const init = (stage): void => {
+  font.init();
+};
 
 /**
  * Canvas text renderer

@@ -273,10 +273,9 @@ export class Stage {
 
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
-        this.textRenderers[type].init();
+        this.textRenderers[type].init(this);
 
         this.fontHandlers[type] = fontEngine.font;
-        this.fontHandlers[type].init();
       });
     } else {
       // Single font engine case - initialize it directly
@@ -295,10 +294,8 @@ export class Stage {
 
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
-        this.textRenderers[type].init();
-
         this.fontHandlers[type] = fontEngine.font;
-        this.fontHandlers[type].init();
+        this.textRenderers[type].init(this);
       }
     }
 
