@@ -622,8 +622,8 @@ export class Stage {
     // Multi font handling  - If we have multiple font engines, we need to resolve the best one
 
     // First check SDF
-    if (this.fontHandlers['msdf']?.canRenderFont(trProps) === true) {
-      return this.textRenderers.msdf || null;
+    if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
+      return this.textRenderers.sdf || null;
     }
 
     // If we have a canvas engine, we can return it (it can render all fonts)

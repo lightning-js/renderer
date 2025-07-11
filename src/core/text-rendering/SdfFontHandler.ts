@@ -323,32 +323,45 @@ export const loadFont = async (
       throw new Error('Atlas texture must be provided for SDF fonts');
     }
 
-    // create new atlas texture using ImageTexture
-    const atlasTexture = stage.txManager.createTexture('ImageTexture', {
-      src: atlasUrl,
-    });
+    // Wait for atlas texture to load
+    return new Promise<void>((resolve, reject) => {
+      // create new atlas texture using ImageTexture
+      const atlasTexture = stage.txManager.createTexture('ImageTexture', {
+        src: atlasUrl,
+      });
 
-    atlasTexture.preventCleanup = true; // Prevent automatic cleanup
+      atlasTexture.preventCleanup = true; // Prevent automatic cleanup
 
-    atlasTexture.on('loaded', () => {
-      // Process and cache font data
-      processFontData(fontFamily, fontData, atlasTexture, metrics);
-
-      // Mark as loaded
-      loadedFonts.add(fontFamily);
-      fontLoadPromises.delete(fontFamily);
-    });
-
-    atlasTexture.on('failed', (error: Error) => {
-      // Cleanup on error
-      fontLoadPromises.delete(fontFamily);
-      if (fontCache[fontFamily]) {
-        delete fontCache[fontFamily];
+      if (atlasTexture.state === 'loaded') {
+        // If already loaded, process immediately
+        processFontData(fontFamily, fontData, atlasTexture, metrics);
+        loadedFonts.add(fontFamily);
+        fontLoadPromises.delete(fontFamily);
+        return resolve();
       }
-      console.error(`Failed to load SDF font: ${fontFamily}`, error);
-    });
 
-    atlasTexture.setRenderableOwner(this, true);
+      atlasTexture.on('loaded', () => {
+        // Process and cache font data
+        processFontData(fontFamily, fontData, atlasTexture, metrics);
+
+        // Mark as loaded
+        loadedFonts.add(fontFamily);
+        fontLoadPromises.delete(fontFamily);
+        resolve();
+      });
+
+      atlasTexture.on('failed', (error: Error) => {
+        // Cleanup on error
+        fontLoadPromises.delete(fontFamily);
+        if (fontCache[fontFamily]) {
+          delete fontCache[fontFamily];
+        }
+        console.error(`Failed to load SDF font: ${fontFamily}`, error);
+        reject(error);
+      });
+
+      atlasTexture.setRenderableOwner(stage, true);
+    });
   })();
 
   fontLoadPromises.set(fontFamily, loadPromise);
