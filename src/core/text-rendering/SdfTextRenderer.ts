@@ -256,7 +256,7 @@ const renderQuads = (
         size: fontSize / (fontData.info?.size || fontData.common.lineHeight), // Use proper font scaling in shader
         scrollY: offsetY || 0,
         distanceRange: fontData.distanceField?.distanceRange || 1.0,
-        debug: false,
+        debug: false, // Disable debug mode
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
       shader: sdfShader,
@@ -338,8 +338,8 @@ const generateTextLayout = (
         continue;
       }
 
-      // Calculate advance with kerning
-      let advance = glyph.xadvance * fontScale;
+      // Calculate advance with kerning (in design units)
+      let advance = glyph.xadvance;
 
       // Add kerning if there's a previous character
       if (prevCodepoint !== 0) {
@@ -351,7 +351,7 @@ const generateTextLayout = (
         advance += kerning;
       }
 
-      // Calculate glyph position and atlas coordinates
+      // Calculate glyph position and atlas coordinates (in design units)
       const glyphLayout: GlyphLayout = {
         codepoint,
         glyphId: glyph.id,
