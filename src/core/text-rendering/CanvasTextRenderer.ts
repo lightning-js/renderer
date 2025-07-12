@@ -28,8 +28,19 @@ import { draw } from './canvas/draw.js';
 const type = 'canvas';
 const font: FontHandler = CanvasFontHandler;
 
+let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+let context:
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D
+  | null = null;
+
 // Initialize the Text Renderer
-const init = (stage): void => {
+const init = (stage: Stage): void => {
+  canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
+  context = canvas.getContext('2d') as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D;
+
   font.init();
 };
 
@@ -40,17 +51,20 @@ const init = (stage): void => {
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = async (
+const renderText = (
   stage: Stage,
   props: TrProps,
-): Promise<{
+): {
   imageData: ImageData | null;
   width: number;
   height: number;
   layout?: TextLayout;
-}> => {
-  const canvas = stage.platform.createCanvas();
-  const context = canvas.getContext('2d');
+} => {
+  assertTruthy(canvas, 'Canvas is not initialized');
+
+  // reset canvas
+  canvas.width = props.width || 0;
+  canvas.height = props.height || 0;
 
   assertTruthy(context, 'Canvas context is not available');
 

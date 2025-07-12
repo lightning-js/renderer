@@ -390,12 +390,12 @@ export interface TextRenderer {
   renderText: (
     stage: Stage,
     props: TrProps,
-  ) => Promise<{
+  ) => {
     imageData: ImageData | null;
     width: number;
     height: number;
     layout?: TextLayout; // Layout data for SDF renderer caching
-  }>;
+  };
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (

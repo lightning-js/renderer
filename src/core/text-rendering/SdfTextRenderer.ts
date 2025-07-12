@@ -57,15 +57,15 @@ const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = async (
+const renderText = (
   stage: Stage,
   props: TrProps,
-): Promise<{
+): {
   imageData: ImageData | null;
   width: number;
   height: number;
   layout?: TextLayout;
-}> => {
+} => {
   // Early return if no text
   if (props.text.length === 0) {
     return {

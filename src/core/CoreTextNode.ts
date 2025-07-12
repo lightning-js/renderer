@@ -77,8 +77,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
-  private _textRenderNeeded: boolean = true;
-
   constructor(
     stage: Stage,
     props: CoreTextNodeProps,
@@ -108,7 +106,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
-    this.setUpdateType(UpdateType.Local);
+    this.setUpdateType(UpdateType.Text);
   }
 
   /**
@@ -123,9 +121,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (this._pendingTextUpdate === TextUpdateReason.None) {
       return; // No updates needed
     }
-
-    // Clear cached layout data when any text update is pending
-    this.clearCachedLayout();
 
     const textUpdateReason = this._pendingTextUpdate;
     let fontUpdateNeeded = false;
@@ -143,50 +138,41 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Step 1: Check if the font is loaded
     if (
-      fontUpdateNeeded &&
+      fontUpdateNeeded === true &&
       this.fontHandler.isFontLoaded(this._fontFamily) === false
     ) {
       return; // Exit early, will re-render when font is loaded
     }
 
     // Step 2: Render text if rendering is needed
-    if (textRenderNeeded || this._textRenderNeeded) {
-      this.textRenderer
-        .renderText(this.stage, {
-          x: this.props.x,
-          y: this.props.y,
-          zIndex: this.props.zIndex,
-          text: this._text,
-          fontFamily: this._fontFamily,
-          fontSize: this._fontSize,
-          fontStyle: this._fontStyle,
-          textAlign: this._textAlign,
-          contain: this._contain,
-          letterSpacing: this._letterSpacing,
-          lineHeight: this._lineHeight,
-          maxLines: this._maxLines,
-          textBaseline: this._textBaseline,
-          verticalAlign: this._verticalAlign,
-          color: this.props.color,
-          offsetY: this._offsetY,
-          width: this.props.width,
-          height: this.props.height,
-          overflowSuffix: this._overflowSuffix,
-          wordBreak: this._wordBreak,
-        })
-        .then(this.handleRenderResult.bind(this))
-        .catch((error) => {
-          // Emit failure if rendering fails
-          this.emit('failed', {
-            type: 'text',
-            error: error as Error,
-          } satisfies NodeTextFailedPayload);
-        });
+    if (textRenderNeeded === true) {
+      const resp = this.textRenderer.renderText(this.stage, {
+        x: this.props.x,
+        y: this.props.y,
+        zIndex: this.props.zIndex,
+        text: this._text,
+        fontFamily: this._fontFamily,
+        fontSize: this._fontSize,
+        fontStyle: this._fontStyle,
+        textAlign: this._textAlign,
+        contain: this._contain,
+        letterSpacing: this._letterSpacing,
+        lineHeight: this._lineHeight,
+        maxLines: this._maxLines,
+        textBaseline: this._textBaseline,
+        verticalAlign: this._verticalAlign,
+        color: this.props.color,
+        offsetY: this._offsetY,
+        width: this.props.width,
+        height: this.props.height,
+        overflowSuffix: this._overflowSuffix,
+        wordBreak: this._wordBreak,
+      });
+      this.handleRenderResult(resp);
     }
 
     // Reset pending updates after processing
     this._pendingTextUpdate = TextUpdateReason.None;
-    this._textRenderNeeded = false; // Reset render needed flag
   }
 
   /**
@@ -200,9 +186,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // For SDF, check if we have a cached layout
-    this.setRenderable(
-      this._cachedLayout !== null && this._lastVertexBuffer !== null,
-    );
+    this.setRenderable(this._cachedLayout !== null);
   }
 
   /**
@@ -238,15 +222,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         premultiplyAlpha: true,
         src: result.imageData,
       });
+
+      queueMicrotask(() => {
+        this.setUpdateType(UpdateType.IsRenderable);
+      });
     }
 
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
-
-      if (this._cachedLayout) {
-        this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
-      }
+      this.setRenderable(true);
     }
 
     // Update dimensions based on contain mode (same for both renderers)
@@ -260,9 +245,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.props.width = resultWidth;
       this.props.height = resultHeight;
     }
-
-    this._textRenderNeeded = false;
-    this.setUpdateType(UpdateType.Local | UpdateType.IsRenderable);
 
     this.emit('loaded', {
       type: 'text',
@@ -283,15 +265,19 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    // SDF renderer: render using the cached layout and vertex buffer
-    if (!this._cachedLayout || !this._lastVertexBuffer) {
+    // Early return if no cached data
+    if (!this._cachedLayout) {
       return;
+    }
+
+    if (!this._lastVertexBuffer) {
+      this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
     }
 
     this.textRenderer.renderQuads(
       renderer,
       this._cachedLayout as TextLayout,
-      this._lastVertexBuffer,
+      this._lastVertexBuffer!,
       {
         fontFamily: this._fontFamily,
         fontSize: this._fontSize,
@@ -311,14 +297,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     );
   }
 
-  /**
-   * Clear cached layout data when text properties change
-   */
-  private clearCachedLayout(): void {
-    this._cachedLayout = null;
-    this._lastVertexBuffer = null;
-  }
-
   // Property getters and setters
   get text(): string {
     return this._text;
@@ -327,9 +305,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set text(value: string) {
     if (this._text !== value) {
       this._text = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -340,9 +317,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontSize(value: number) {
     if (this._fontSize !== value) {
       this._fontSize = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -353,9 +329,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontFamily(value: string) {
     if (this._fontFamily !== value) {
       this._fontFamily = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -366,9 +341,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontStyle(value: TrProps['fontStyle']) {
     if (this._fontStyle !== value) {
       this._fontStyle = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -379,9 +353,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set textAlign(value: TrProps['textAlign']) {
     if (this._textAlign !== value) {
       this._textAlign = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -392,9 +365,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set contain(value: TrProps['contain']) {
     if (this._contain !== value) {
       this._contain = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -405,9 +377,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set letterSpacing(value: number) {
     if (this._letterSpacing !== value) {
       this._letterSpacing = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -418,9 +389,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set lineHeight(value: number | undefined) {
     if (this._lineHeight !== value) {
       this._lineHeight = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -431,9 +401,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxLines(value: number) {
     if (this._maxLines !== value) {
       this._maxLines = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -444,9 +413,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set textBaseline(value: TrProps['textBaseline']) {
     if (this._textBaseline !== value) {
       this._textBaseline = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -457,9 +425,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set verticalAlign(value: TrProps['verticalAlign']) {
     if (this._verticalAlign !== value) {
       this._verticalAlign = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -470,9 +437,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set overflowSuffix(value: string) {
     if (this._overflowSuffix !== value) {
       this._overflowSuffix = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -483,9 +449,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set wordBreak(value: TrProps['wordBreak']) {
     if (this._wordBreak !== value) {
       this._wordBreak = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 
@@ -496,9 +461,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set offsetY(value: number) {
     if (this._offsetY !== value) {
       this._offsetY = value;
-      this._textRenderNeeded = true;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Text);
     }
   }
 }
