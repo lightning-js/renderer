@@ -106,7 +106,6 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
     return null; // No layout data available
   }
 
-  // Host paths on top
   const glyphs = layout.glyphs;
   const glyphsLength = glyphs.length;
 
@@ -128,7 +127,6 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
       continue;
     }
 
-    // Host paths for glyph data
     const x1 = glyph.x;
     const y1 = glyph.y;
     const x2 = x1 + glyph.width;
@@ -255,7 +253,7 @@ const renderQuads = (
       sdfShaderProps: {
         transform: globalTransform,
         color: mergeColorAlpha(color || 0xffffffff, worldAlpha),
-        size: fontSize / (fontData.info?.size || 1),
+        size: fontSize / (fontData.info?.size || fontData.common.lineHeight), // Use proper font scaling in shader
         scrollY: offsetY || 0,
         distanceRange: fontData.distanceField?.distanceRange || 1.0,
         debug: false,
@@ -294,8 +292,12 @@ const generateTextLayout = (
   const letterSpacing = props.letterSpacing || 0;
   const fontFamily = props.fontFamily;
 
-  const fontScale = fontSize / fontData.common.lineHeight;
-  const lineHeight = props.lineHeight || fontData.common.lineHeight * fontScale;
+  // Use the font's design size for proper scaling
+  const designLineHeight = fontData.common.lineHeight;
+  const lineHeight =
+    props.lineHeight ||
+    (designLineHeight * fontSize) /
+      (fontData.info?.size || fontData.common.lineHeight);
   const atlasWidth = fontData.common.scaleW;
   const atlasHeight = fontData.common.scaleH;
 
@@ -346,19 +348,19 @@ const generateTextLayout = (
           prevCodepoint,
           codepoint,
         );
-        advance += kerning * fontScale;
+        advance += kerning;
       }
 
       // Calculate glyph position and atlas coordinates
       const glyphLayout: GlyphLayout = {
         codepoint,
         glyphId: glyph.id,
-        x: currentX + glyph.xoffset * fontScale,
-        y: currentY + glyph.yoffset * fontScale,
-        width: glyph.width * fontScale,
-        height: glyph.height * fontScale,
-        xOffset: glyph.xoffset * fontScale,
-        yOffset: glyph.yoffset * fontScale,
+        x: currentX + glyph.xoffset,
+        y: currentY + glyph.yoffset,
+        width: glyph.width,
+        height: glyph.height,
+        xOffset: glyph.xoffset,
+        yOffset: glyph.yoffset,
         atlasX: glyph.x / atlasWidth,
         atlasY: glyph.y / atlasHeight,
         atlasWidth: glyph.width / atlasWidth,
@@ -367,22 +369,28 @@ const generateTextLayout = (
 
       glyphs.push(glyphLayout);
 
-      // Advance position with letter spacing
-      currentX += advance + letterSpacing;
+      // Advance position with letter spacing (in design units)
+      const designLetterSpacing =
+        (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
+        fontSize;
+      currentX += advance + designLetterSpacing;
       prevCodepoint = codepoint;
     }
 
     if (currentX > maxWidth) {
       maxWidth = currentX;
     }
-    currentY += lineHeight;
+    currentY += designLineHeight;
   }
 
+  // Convert final dimensions to pixel space for the layout
+  const finalScale =
+    fontSize / (fontData.info?.size || fontData.common.lineHeight);
   return {
     glyphs,
-    width: Math.ceil(maxWidth),
-    height: Math.ceil(lineHeight * lines.length),
-    fontScale,
+    width: Math.ceil(maxWidth * finalScale),
+    height: Math.ceil(designLineHeight * lines.length * finalScale), // Include baseline in height
+    fontScale: finalScale,
     lineHeight,
     fontFamily,
   };

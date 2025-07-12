@@ -283,15 +283,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    // SDF renderer: use WebGL quad-based rendering
-    this.renderSdfQuads(renderer);
-  }
-
-  /**
-   * Handle SDF-specific WebGL quad rendering
-   */
-  private renderSdfQuads(renderer: CoreRenderer): void {
-    // Early return if no cached data
+    // SDF renderer: render using the cached layout and vertex buffer
     if (!this._cachedLayout || !this._lastVertexBuffer) {
       return;
     }
