@@ -23,7 +23,12 @@ import type {
   TrProps,
   TextLayout,
 } from './text-rendering/TextRenderer.js';
-import { CoreNode, UpdateType, type CoreNodeProps } from './CoreNode.js';
+import {
+  CoreNode,
+  CoreNodeRenderState,
+  UpdateType,
+  type CoreNodeProps,
+} from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import type {
   NodeTextFailedPayload,
@@ -223,9 +228,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         src: result.imageData,
       });
 
-      queueMicrotask(() => {
-        this.setUpdateType(UpdateType.IsRenderable);
-      });
+      // It isn't renderable until the texture is loaded we have to set it to false here to avoid it
+      // being detected as a renderable default color node in the next frame
+      // it will be corrected once the texture is loaded
+      this.setRenderable(false);
+
+      if (this.renderState < CoreNodeRenderState.OutOfBounds) {
+        // We do want the texture to load immediately
+        this.texture.setRenderableOwner(this, true);
+      }
     }
 
     // Handle SDF renderer (uses layout caching)
@@ -236,14 +247,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Update dimensions based on contain mode (same for both renderers)
     if (contain === 'both') {
-      this.props.width = setWidth;
-      this.props.height = setHeight;
+      this.width = setWidth;
+      this.height = setHeight;
     } else if (contain === 'width') {
-      this.props.width = setWidth;
-      this.props.height = resultHeight;
+      this.width = setWidth;
+      this.height = resultHeight;
     } else if (contain === 'none') {
-      this.props.width = resultWidth;
-      this.props.height = resultHeight;
+      this.width = resultWidth;
+      this.height = resultHeight;
     }
 
     this.emit('loaded', {

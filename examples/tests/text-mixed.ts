@@ -37,15 +37,15 @@ export default async function test(settings: ExampleSettings) {
 
   const drawText = (x = 0) => {
     // Set a smaller snapshot area
-    // ssdf = renderer.createTextNode({
-    //   x,
-    //   text: 'SSDF',
-    //   color: 0x00ff00ff,
-    //   fontFamily: 'Ubuntu-ssdf',
-    //   parent: testRoot,
-    //   fontSize: 80,
-    //   lineHeight: 80 * 1.2,
-    // });
+    ssdf = renderer.createTextNode({
+      x,
+      text: 'SSDF',
+      color: 0x00ff00ff,
+      fontFamily: 'Ubuntu-ssdf',
+      parent: testRoot,
+      fontSize: 80,
+      lineHeight: 80 * 1.2,
+    });
 
     canvas = renderer.createTextNode({
       x,
@@ -56,16 +56,16 @@ export default async function test(settings: ExampleSettings) {
       fontSize: 50,
     });
 
-    // factory = renderer.createNode({
-    //   x,
-    //   y: 150,
-    //   width: 300,
-    //   height: 200,
-    //   parent: testRoot,
-    //   texture: renderer.createTexture('ImageTexture', {
-    //     src: textFactory,
-    //   }),
-    // });
+    factory = renderer.createNode({
+      x,
+      y: 150,
+      width: 300,
+      height: 200,
+      parent: testRoot,
+      texture: renderer.createTexture('ImageTexture', {
+        src: textFactory,
+      }),
+    });
   };
 
   let offset = 0;

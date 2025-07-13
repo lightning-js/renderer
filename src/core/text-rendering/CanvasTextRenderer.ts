@@ -61,11 +61,6 @@ const renderText = (
   layout?: TextLayout;
 } => {
   assertTruthy(canvas, 'Canvas is not initialized');
-
-  // reset canvas
-  canvas.width = props.width || 0;
-  canvas.height = props.height || 0;
-
   assertTruthy(context, 'Canvas context is not available');
 
   const settings = Object.create(null) as Settings;
