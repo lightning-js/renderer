@@ -692,6 +692,12 @@ export interface CoreNodeProps {
    * @default false
    */
   strictBounds: boolean;
+  /**
+   * Mark the node as interactive so we can perform hit tests on it
+   * when pointer events are registered.
+   * @default false
+   */
+  interactive?: boolean;
 }
 
 /**
@@ -775,6 +781,7 @@ export class CoreNode extends EventEmitter {
     this.texture = props.texture;
     this.src = props.src;
     this.rtt = props.rtt;
+    this.interactive = props.interactive;
 
     if (props.boundsMargin) {
       this.boundsMargin = Array.isArray(props.boundsMargin)
@@ -2444,6 +2451,18 @@ export class CoreNode extends EventEmitter {
     this.props.strictBounds = v;
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
     this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
+  }
+
+  set interactive(value: boolean | undefined) {
+    this.props.interactive = value;
+    // Update Stage's interactive Set
+    if (value === true) {
+      this.stage.interactiveNodes.add(this);
+    }
+  }
+
+  get interactive(): boolean | undefined {
+    return this.props.interactive;
   }
 
   animate(

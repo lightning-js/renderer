@@ -54,7 +54,12 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import type { SdfTextRenderer } from './text-rendering/renderers/SdfTextRenderer/SdfTextRenderer.js';
 import type { CanvasTextRenderer } from './text-rendering/renderers/CanvasTextRenderer.js';
-import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
+import {
+  createBound,
+  createPreloadBounds,
+  pointInBound,
+  type Bound,
+} from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 
@@ -91,6 +96,10 @@ export type StageFrameTickHandler = (
   stage: Stage,
   frameTickData: FrameTickPayload,
 ) => void;
+export interface Point {
+  x: number;
+  y: number;
+}
 
 const bufferMemory = 2e6;
 const autoStart = true;
@@ -105,6 +114,7 @@ export class Stage {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
+  public readonly interactiveNodes: Set<CoreNode> = new Set();
   public boundsMargin: [number, number, number, number];
   public readonly defShaderCtr: BaseShaderController;
   public readonly strictBound: Bound;
@@ -544,6 +554,44 @@ export class Stage {
   }
 
   /**
+   * Find all nodes at a given point
+   * @param data
+   */
+  findNodesAtPoint(data: Point): CoreNode[] {
+    const x = data.x / this.options.deviceLogicalPixelRatio;
+    const y = data.y / this.options.deviceLogicalPixelRatio;
+    const nodes: CoreNode[] = [];
+    for (const node of this.interactiveNodes) {
+      if (node.isRenderable === false) {
+        continue;
+      }
+      if (pointInBound(x, y, node.renderBound!) === true) {
+        nodes.push(node);
+      }
+    }
+    return nodes;
+  }
+
+  /**
+   * Find the top node at a given point
+   * @param data
+   * @returns
+   */
+  getNodeFromPosition(data: Point): CoreNode | null {
+    const nodes: CoreNode[] = this.findNodesAtPoint(data);
+    if (nodes.length === 0) {
+      return null;
+    }
+    let topNode = nodes[0] as CoreNode;
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i]!.zIndex > topNode.zIndex) {
+        topNode = nodes[i]!;
+      }
+    }
+    return topNode || null;
+  }
+
+  /**
    * Given a font name, and possible renderer override, return the best compatible text renderer.
    *
    * @remarks
@@ -761,6 +809,7 @@ export class Stage {
       data: data,
       preventCleanup: props.preventCleanup ?? false,
       imageType: props.imageType,
+      interactive: props.interactive ?? false,
       strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
