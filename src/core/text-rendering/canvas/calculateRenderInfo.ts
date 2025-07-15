@@ -114,7 +114,7 @@ export function calculateRenderInfo(
   context.font = `${renderInfo.fontStyle} ${fontSize}px ${fontFamily}`;
   context.textBaseline = renderInfo.textBaseline;
 
-  let metrics = getFontMetrics(fontFamily);
+  let metrics = getFontMetrics(fontFamily, fontSize);
 
   if (metrics === null) {
     metrics = calculateFontMetrics(context, fontFamily, fontSize);
@@ -268,7 +268,7 @@ export function calculateRenderInfo(
       fontSize,
       lineHeight,
       lines.length,
-      offsetY,
+      offsetY as number,
     );
   }
   if (offsetY === null) {

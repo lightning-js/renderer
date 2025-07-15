@@ -161,13 +161,13 @@ export const calcHeight = (
   fontSize: number,
   lineHeight: number,
   numLines: number,
-  offsetY: number | null,
+  offsetY: number,
 ) => {
   const baselineOffset = textBaseline !== 'bottom' ? 0.5 * fontSize : 0;
   return (
     lineHeight * (numLines - 1) +
     baselineOffset +
     Math.max(lineHeight, fontSize) +
-    (offsetY || 0)
+    offsetY
   );
 };

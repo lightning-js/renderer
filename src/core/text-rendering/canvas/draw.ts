@@ -41,7 +41,7 @@ export const draw = (
           fontSize,
           lineHeight,
           linesOverride.lines.length,
-          renderInfo.offsetY === null ? null : renderInfo.offsetY * precision,
+          0,
         )
       : renderInfo.height;
 

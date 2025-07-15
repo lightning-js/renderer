@@ -24,6 +24,7 @@ import type {
   NormalizedFontMetrics,
 } from './TextRenderer.js';
 import type { Stage } from '../Stage.js';
+import { calculateFontMetrics } from './Utils.js';
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
@@ -37,6 +38,7 @@ const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
 const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
 let initialized = false;
+let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 /**
  * Normalize font metrics to be in the range of 0 to 1
@@ -109,10 +111,13 @@ export const getFontFamilies = (): FontFamilyMap => {
 /**
  * Initialize the global font handler
  */
-export const init = (): void => {
+export const init = (
+  c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+): void => {
   if (initialized === true) {
     return;
   }
+  context = c;
 
   // Register the default 'sans-serif' font face
   const defaultMetrics: NormalizedFontMetrics = {
@@ -137,8 +142,15 @@ export const isFontLoaded = (fontFamily: string): boolean => {
 
 export const getFontMetrics = (
   fontFamily: string,
-): NormalizedFontMetrics | null => {
-  return normalizedMetrics.get(fontFamily) || null;
+  fontSize: number,
+): NormalizedFontMetrics => {
+  let out = normalizedMetrics.get(fontFamily + fontSize);
+  if (out !== undefined) {
+    return out;
+  }
+  out = calculateFontMetrics(context, fontFamily, fontSize);
+  normalizedMetrics.set(fontFamily + fontSize, out);
+  return out;
 };
 
 export const setFontMetrics = (
