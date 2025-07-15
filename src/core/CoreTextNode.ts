@@ -233,7 +233,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // it will be corrected once the texture is loaded
       this.setRenderable(false);
 
-      if (this.renderState < CoreNodeRenderState.OutOfBounds) {
+      if (this.renderState > CoreNodeRenderState.OutOfBounds) {
         // We do want the texture to load immediately
         this.texture.setRenderableOwner(this, true);
       }
