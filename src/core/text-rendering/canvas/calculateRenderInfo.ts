@@ -20,12 +20,14 @@
 import { calculateFontMetrics } from '../Utils.js';
 import { wrapText, wrapWord, measureText, calcHeight } from './Utils.js';
 import { getFontMetrics, setFontMetrics } from '../CanvasFontHandler.js';
-import type { NormalizedFontMetrics } from '../TextRenderer.js';
-import type { Settings } from './Settings.js';
+import type {
+  NormalizedFontMetrics,
+  TextBaseline,
+  TextVerticalAlign,
+} from '../TextRenderer.js';
+import type { TextAlign, TextOverflow } from './Settings.js';
 
 export interface RenderInfo {
-  w: number;
-  h: number;
   lines: string[];
   precision: number;
   remainingText: string;
@@ -38,7 +40,7 @@ export interface RenderInfo {
   cutSy: number;
   cutEx: number;
   cutEy: number;
-  lineHeight: number;
+  lineHeight: number | null;
   defLineHeight: number;
   lineWidths: number[];
   offsetY: number;
@@ -47,6 +49,36 @@ export interface RenderInfo {
   letterSpacing: number;
   textIndent: number;
   metrics: NormalizedFontMetrics;
+  text: string;
+  fontStyle: string;
+  fontBaselineRatio: number;
+  fontFamily: string | null;
+  wordWrap: boolean;
+  wordWrapWidth: number;
+  wordBreak: 'normal' | 'break-all' | 'break-word';
+  textOverflow: TextOverflow | null;
+  textBaseline: TextBaseline;
+  textAlign: TextAlign;
+  verticalAlign: TextVerticalAlign;
+  maxLines: number;
+  maxHeight: number | null;
+  overflowSuffix: string;
+  textColor: number;
+  shadow: boolean;
+  shadowColor: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
+  highlight: boolean;
+  highlightHeight: number;
+  highlightColor: number;
+  highlightOffset: number;
+  highlightPaddingLeft: number;
+  highlightPaddingRight: number;
+  advancedRenderer: boolean;
+
+  // Normally stage options
+  textRenderIssueMargin: number;
 }
 
 export interface LineType {
@@ -56,33 +88,31 @@ export interface LineType {
   w: number;
 }
 
-export function calculateRenderInfo({
-  context,
-  settings,
-}: {
-  context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
-  settings: Settings;
-}): RenderInfo {
-  const precision = settings.precision;
-  const paddingLeft = settings.paddingLeft * precision;
-  const paddingRight = settings.paddingRight * precision;
-  const fontSize = settings.fontSize * precision;
-  let offsetY = settings.offsetY === null ? null : settings.offsetY * precision;
-  const w = settings.w * precision;
-  const h = settings.h * precision;
-  let wordWrapWidth = settings.wordWrapWidth * precision;
-  const cutSx = settings.cutSx * precision;
-  const cutEx = settings.cutEx * precision;
-  const cutSy = settings.cutSy * precision;
-  const cutEy = settings.cutEy * precision;
-  const letterSpacing = (settings.letterSpacing || 0) * precision;
-  const textIndent = settings.textIndent * precision;
+export function calculateRenderInfo(
+  context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
+  renderInfo: RenderInfo,
+) {
+  const precision = renderInfo.precision;
+  const paddingLeft = renderInfo.paddingLeft * precision;
+  const paddingRight = renderInfo.paddingRight * precision;
+  const fontSize = renderInfo.fontSize * precision;
+  let offsetY =
+    renderInfo.offsetY === null ? null : renderInfo.offsetY * precision;
+  const w = renderInfo.width * precision;
+  const h = renderInfo.height * precision;
+  let wordWrapWidth = renderInfo.wordWrapWidth * precision;
+  const cutSx = renderInfo.cutSx * precision;
+  const cutEx = renderInfo.cutEx * precision;
+  const cutSy = renderInfo.cutSy * precision;
+  const cutEy = renderInfo.cutEy * precision;
+  const letterSpacing = (renderInfo.letterSpacing || 0) * precision;
+  const textIndent = renderInfo.textIndent * precision;
 
-  const fontFamily = settings.fontFamily!;
+  const fontFamily = renderInfo.fontFamily!;
 
   // Set font properties
-  context.font = `${settings.fontStyle} ${fontSize}px ${fontFamily}`;
-  context.textBaseline = settings.textBaseline;
+  context.font = `${renderInfo.fontStyle} ${fontSize}px ${fontFamily}`;
+  context.textBaseline = renderInfo.textBaseline;
 
   let metrics = getFontMetrics(fontFamily);
 
@@ -96,23 +126,23 @@ export function calculateRenderInfo({
     (metrics.ascender - metrics.descender + metrics.lineGap) *
     precision;
   const lineHeight =
-    settings.lineHeight !== null
-      ? settings.lineHeight * precision
+    renderInfo.lineHeight !== null
+      ? renderInfo.lineHeight * precision
       : defLineHeight;
 
-  const maxHeight = settings.maxHeight;
+  const maxHeight = renderInfo.maxHeight;
   const containedMaxLines =
     maxHeight !== null && lineHeight > 0
       ? Math.floor(maxHeight / lineHeight)
       : 0;
-  const setMaxLines = settings.maxLines;
+  const setMaxLines = renderInfo.maxLines;
   const calcMaxLines =
     containedMaxLines > 0 && setMaxLines > 0
       ? Math.min(containedMaxLines, setMaxLines)
       : Math.max(containedMaxLines, setMaxLines);
 
-  const textOverflow = settings.textOverflow;
-  const wordWrap = settings.wordWrap;
+  const textOverflow = renderInfo.textOverflow;
+  const wordWrap = renderInfo.wordWrap;
 
   // Total width
   let width = w || 2048 / precision;
@@ -127,7 +157,7 @@ export function calculateRenderInfo({
   }
 
   // Text overflow
-  let text: string = settings.text;
+  let text: string = renderInfo.text;
   if (textOverflow !== null && wordWrap === false) {
     let suffix: string;
     switch (textOverflow) {
@@ -135,7 +165,7 @@ export function calculateRenderInfo({
         suffix = '';
         break;
       case 'ellipsis':
-        suffix = settings.overflowSuffix;
+        suffix = renderInfo.overflowSuffix;
         break;
       default:
         suffix = String(textOverflow);
@@ -173,7 +203,7 @@ export function calculateRenderInfo({
   if (calcMaxLines > 0 && lines.length > calcMaxLines) {
     const usedLines = lines.slice(0, calcMaxLines);
     let otherLines: string[] = [];
-    const overflowSuffix = settings.overflowSuffix;
+    const overflowSuffix = renderInfo.overflowSuffix;
 
     if (overflowSuffix.length > 0) {
       const w = measureText(context, overflowSuffix, letterSpacing);
@@ -223,7 +253,7 @@ export function calculateRenderInfo({
   if (
     wordWrap === true &&
     w > maxLineWidth &&
-    settings.textAlign === 'left' &&
+    renderInfo.textAlign === 'left' &&
     lines.length === 1
   ) {
     width = maxLineWidth + paddingLeft + paddingRight;
@@ -234,7 +264,7 @@ export function calculateRenderInfo({
     height = h;
   } else {
     height = calcHeight(
-      settings.textBaseline,
+      renderInfo.textBaseline,
       fontSize,
       lineHeight,
       lines.length,
@@ -245,29 +275,25 @@ export function calculateRenderInfo({
     offsetY = fontSize;
   }
 
-  return {
-    w: width,
-    h: height,
-    lines,
-    precision,
-    remainingText,
-    moreTextLines,
-    width,
-    innerWidth,
-    height,
-    fontSize,
-    cutSx,
-    cutSy,
-    cutEx,
-    cutEy,
-    lineHeight,
-    defLineHeight,
-    lineWidths,
-    offsetY: offsetY as number,
-    paddingLeft,
-    paddingRight,
-    letterSpacing,
-    textIndent,
-    metrics,
-  };
+  renderInfo.width = width;
+  renderInfo.height = height;
+  renderInfo.lines = lines;
+  renderInfo.precision = precision;
+  renderInfo.remainingText = remainingText;
+  renderInfo.moreTextLines = moreTextLines;
+  renderInfo.innerWidth = innerWidth;
+  renderInfo.fontSize = fontSize;
+  renderInfo.cutSx = cutSx;
+  renderInfo.cutSy = cutSy;
+  renderInfo.cutEx = cutEx;
+  renderInfo.cutEy = cutEy;
+  renderInfo.lineHeight = lineHeight;
+  renderInfo.defLineHeight = defLineHeight;
+  renderInfo.lineWidths = lineWidths;
+  renderInfo.offsetY = offsetY;
+  renderInfo.paddingLeft = paddingLeft;
+  renderInfo.paddingRight = paddingRight;
+  renderInfo.letterSpacing = letterSpacing;
+  renderInfo.textIndent = textIndent;
+  renderInfo.metrics = metrics;
 }

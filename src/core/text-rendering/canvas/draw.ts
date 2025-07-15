@@ -16,54 +16,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { getRgbaString } from '../../lib/utils.js';
 import { calcHeight, measureText } from './Utils.js';
 import type { RenderInfo } from './calculateRenderInfo.js';
-import type { Settings } from './Settings.js';
 import type { LineType } from './calculateRenderInfo.js';
+import { normalizeCanvasColor } from '../../lib/colorCache.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
-export const draw = ({
-  canvas,
-  context,
-  renderInfo,
-  settings,
-  linesOverride,
-}: {
-  canvas: OffscreenCanvas | HTMLCanvasElement;
-  context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
-  renderInfo: RenderInfo;
-  settings: Settings;
-  linesOverride?: { lines: string[]; lineWidths: number[] };
-}) => {
+export const draw = (
+  canvas: OffscreenCanvas | HTMLCanvasElement,
+  context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
+  renderInfo: RenderInfo,
+  linesOverride?: { lines: string[]; lineWidths: number[] },
+) => {
   const fontSize = renderInfo.fontSize;
-  const lineHeight = renderInfo.lineHeight;
-  const precision = settings.precision;
+  const lineHeight = renderInfo.lineHeight as number;
+  const precision = renderInfo.precision;
   const lines = linesOverride?.lines || renderInfo.lines;
   const lineWidths = linesOverride?.lineWidths || renderInfo.lineWidths;
   const height =
     linesOverride !== undefined
       ? calcHeight(
-          settings.textBaseline,
+          renderInfo.textBaseline,
           fontSize,
           lineHeight,
           linesOverride.lines.length,
-          settings.offsetY === null ? null : settings.offsetY * precision,
+          renderInfo.offsetY === null ? null : renderInfo.offsetY * precision,
         )
       : renderInfo.height;
 
   // Add extra margin to prevent issue with clipped text when scaling.
   canvas.width = Math.min(
-    Math.ceil(renderInfo.width + settings.textRenderIssueMargin),
+    Math.ceil(renderInfo.width + renderInfo.textRenderIssueMargin),
     MAX_TEXTURE_DIMENSION,
   );
   canvas.height = Math.min(Math.ceil(height), MAX_TEXTURE_DIMENSION);
 
   // Canvas context has been reset.
-  context.font = `${settings.fontStyle} ${fontSize}px ${settings.fontFamily}`;
-  context.textBaseline = settings.textBaseline;
+  context.font = `${renderInfo.fontStyle} ${fontSize}px ${renderInfo.fontFamily}`;
+  context.textBaseline = renderInfo.textBaseline;
 
   if (fontSize >= 128) {
     context.globalAlpha = 0.01;
@@ -87,14 +78,14 @@ export const draw = ({
   for (let i = 0, n = lines.length; i < n; i++) {
     linePositionX = i === 0 ? renderInfo.textIndent : 0;
     linePositionY = i * lineHeight + ascenderPx;
-    if (settings.verticalAlign == 'middle') {
+    if (renderInfo.verticalAlign == 'middle') {
       linePositionY += (lineHeight - bareLineHeightPx) / 2;
-    } else if (settings.verticalAlign == 'bottom') {
+    } else if (renderInfo.verticalAlign == 'bottom') {
       linePositionY += lineHeight - bareLineHeightPx;
     }
-    if (settings.textAlign === 'right') {
+    if (renderInfo.textAlign === 'right') {
       linePositionX += renderInfo.innerWidth - lineWidths[i]!;
-    } else if (settings.textAlign === 'center') {
+    } else if (renderInfo.textAlign === 'center') {
       linePositionX += (renderInfo.innerWidth - lineWidths[i]!) / 2;
     }
     linePositionX += renderInfo.paddingLeft;
@@ -107,19 +98,19 @@ export const draw = ({
   }
 
   // Highlight
-  if (settings.highlight) {
-    const color = settings.highlightColor;
-    const hlHeight = settings.highlightHeight * precision || fontSize * 1.5;
-    const offset = settings.highlightOffset * precision;
+  if (renderInfo.highlight) {
+    const color = renderInfo.highlightColor;
+    const hlHeight = renderInfo.highlightHeight * precision || fontSize * 1.5;
+    const offset = renderInfo.highlightOffset * precision;
     const hlPaddingLeft =
-      settings.highlightPaddingLeft !== null
-        ? settings.highlightPaddingLeft * precision
+      renderInfo.highlightPaddingLeft !== null
+        ? renderInfo.highlightPaddingLeft * precision
         : renderInfo.paddingLeft;
     const hlPaddingRight =
-      settings.highlightPaddingRight !== null
-        ? settings.highlightPaddingRight * precision
+      renderInfo.highlightPaddingRight !== null
+        ? renderInfo.highlightPaddingRight * precision
         : renderInfo.paddingRight;
-    context.fillStyle = getRgbaString(color);
+    context.fillStyle = normalizeCanvasColor(color);
     for (let i = 0; i < drawLines.length; i++) {
       const drawLine = drawLines[i]!;
       context.fillRect(
@@ -133,20 +124,20 @@ export const draw = ({
 
   // Text shadow
   let prevShadowSettings: null | [string, number, number, number] = null;
-  if (settings.shadow) {
+  if (renderInfo.shadow) {
     prevShadowSettings = [
       context.shadowColor,
       context.shadowOffsetX,
       context.shadowOffsetY,
       context.shadowBlur,
     ];
-    context.shadowColor = getRgbaString(settings.shadowColor);
-    context.shadowOffsetX = settings.shadowOffsetX * precision;
-    context.shadowOffsetY = settings.shadowOffsetY * precision;
-    context.shadowBlur = settings.shadowBlur * precision;
+    context.shadowColor = normalizeCanvasColor(renderInfo.shadowColor);
+    context.shadowOffsetX = renderInfo.shadowOffsetX * precision;
+    context.shadowOffsetY = renderInfo.shadowOffsetY * precision;
+    context.shadowBlur = renderInfo.shadowBlur * precision;
   }
 
-  context.fillStyle = getRgbaString(settings.textColor);
+  context.fillStyle = normalizeCanvasColor(renderInfo.textColor);
   for (let i = 0, n = drawLines.length; i < n; i++) {
     const drawLine = drawLines[i]!;
     if (renderInfo.letterSpacing === 0) {

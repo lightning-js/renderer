@@ -20,9 +20,11 @@
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
 import type { FontHandler, TextLayout, TrProps } from './TextRenderer.js';
-import type { Settings } from './canvas/Settings.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
-import { calculateRenderInfo } from './canvas/calculateRenderInfo.js';
+import {
+  calculateRenderInfo,
+  type RenderInfo,
+} from './canvas/calculateRenderInfo.js';
 import { draw } from './canvas/draw.js';
 
 const type = 'canvas';
@@ -63,69 +65,64 @@ const renderText = (
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
 
-  const settings = Object.create(null) as Settings;
+  const renderInfo = Object.create(null) as RenderInfo;
 
   // Props to settings mapping
-  settings.text = props.text;
-  settings.fontFamily = props.fontFamily;
-  settings.fontSize = props.fontSize;
-  settings.fontStyle = props.fontStyle;
-  settings.textAlign = props.textAlign || 'left';
-  settings.letterSpacing =
+  renderInfo.text = props.text;
+  renderInfo.fontFamily = props.fontFamily;
+  renderInfo.fontSize = props.fontSize;
+  renderInfo.fontStyle = props.fontStyle;
+  renderInfo.textAlign = props.textAlign || 'left';
+  renderInfo.letterSpacing =
     typeof props.letterSpacing === 'number' ? props.letterSpacing : 0;
-  settings.lineHeight =
+  renderInfo.lineHeight =
     typeof props.lineHeight === 'number' ? props.lineHeight : null;
-  settings.maxLines = typeof props.maxLines === 'number' ? props.maxLines : 0;
-  settings.textBaseline = props.textBaseline || 'alphabetic';
-  settings.verticalAlign = props.verticalAlign || 'top';
-  settings.overflowSuffix = props.overflowSuffix || '';
-  settings.wordBreak = props.wordBreak || 'normal';
-  settings.offsetY = props.offsetY || 0;
+  renderInfo.maxLines = typeof props.maxLines === 'number' ? props.maxLines : 0;
+  renderInfo.textBaseline = props.textBaseline || 'alphabetic';
+  renderInfo.verticalAlign = props.verticalAlign || 'top';
+  renderInfo.overflowSuffix = props.overflowSuffix || '';
+  renderInfo.wordBreak = props.wordBreak || 'normal';
+  renderInfo.offsetY = props.offsetY || 0;
 
   // Computed properties
-  settings.wordWrap = props.contain !== 'none';
-  settings.wordWrapWidth = props.contain === 'none' ? 0 : props.width || 0;
-  settings.w = props.contain !== 'none' ? props.width || 0 : 0;
-  settings.h = props.height || 0;
-  settings.maxHeight =
+  renderInfo.wordWrap = props.contain !== 'none';
+  renderInfo.wordWrapWidth = props.contain === 'none' ? 0 : props.width || 0;
+  renderInfo.width = props.contain !== 'none' ? props.width || 0 : 0;
+  renderInfo.height = props.height || 0;
+  renderInfo.maxHeight =
     props.contain === 'both'
       ? (props.height || 0) - (props.offsetY || 0)
       : null;
-  settings.textOverflow = props.overflowSuffix ? 'ellipsis' : null;
+  renderInfo.textOverflow = props.overflowSuffix ? 'ellipsis' : null;
 
   // Set defaults
-  settings.precision = 1;
-  settings.fontBaselineRatio = 1.0;
-  settings.textColor = [1, 1, 1, 1];
-  settings.paddingLeft = 0;
-  settings.paddingRight = 0;
-  settings.shadow = false;
-  settings.shadowColor = [0, 0, 0, 1];
-  settings.shadowOffsetX = 0;
-  settings.shadowOffsetY = 0;
-  settings.shadowBlur = 0;
-  settings.highlight = false;
-  settings.highlightHeight = 0;
-  settings.highlightColor = [1, 1, 0, 0.5];
-  settings.highlightOffset = 0;
-  settings.highlightPaddingLeft = 0;
-  settings.highlightPaddingRight = 0;
-  settings.textIndent = 0;
-  settings.cutSx = 0;
-  settings.cutSy = 0;
-  settings.cutEx = 0;
-  settings.cutEy = 0;
-  settings.advancedRenderer = false;
-  settings.textRenderIssueMargin = 0;
+  renderInfo.precision = 1;
+  renderInfo.fontBaselineRatio = 1.0;
+  renderInfo.textColor = 0xffffffff;
+  renderInfo.paddingLeft = 0;
+  renderInfo.paddingRight = 0;
+  renderInfo.shadow = false;
+  renderInfo.shadowColor = 0xff000000;
+  renderInfo.shadowOffsetX = 0;
+  renderInfo.shadowOffsetY = 0;
+  renderInfo.shadowBlur = 0;
+  renderInfo.highlight = false;
+  renderInfo.highlightHeight = 0;
+  renderInfo.highlightColor = 0x80ffff00;
+  renderInfo.highlightOffset = 0;
+  renderInfo.highlightPaddingLeft = 0;
+  renderInfo.highlightPaddingRight = 0;
+  renderInfo.textIndent = 0;
+  renderInfo.cutSx = 0;
+  renderInfo.cutSy = 0;
+  renderInfo.cutEx = 0;
+  renderInfo.cutEy = 0;
+  renderInfo.advancedRenderer = false;
+  renderInfo.textRenderIssueMargin = 0;
 
-  const renderInfo = calculateRenderInfo({ context, settings });
+  calculateRenderInfo(context, renderInfo);
 
-  draw({
-    canvas,
-    context,
-    renderInfo,
-    settings,
-  });
+  draw(canvas, context, renderInfo);
 
   let imageData: ImageData | null = null;
   if (canvas.width > 0 && canvas.height > 0) {
@@ -135,7 +132,7 @@ const renderText = (
   return {
     imageData,
     width: renderInfo.width,
-    height: renderInfo.lineHeight * renderInfo.lines.length,
+    height: renderInfo.lineHeight! * renderInfo.lines.length,
   };
 };
 
