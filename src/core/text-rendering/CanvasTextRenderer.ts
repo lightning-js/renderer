@@ -45,7 +45,7 @@ let context:
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
   canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
-  context = canvas.getContext('2d', { willReadFrequently: true }) as
+  context = canvas.getContext('2d') as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
 
