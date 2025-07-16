@@ -548,6 +548,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       sdfLineHeight,
       trFontFace,
       verticalAlign,
+      state.props.textBaseline,
       offsetY,
       fontSizeRatio,
       renderWindow,
