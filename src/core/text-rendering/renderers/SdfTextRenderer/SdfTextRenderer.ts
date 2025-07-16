@@ -142,6 +142,23 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   private sdfShader: WebGlShaderNode;
   private rendererBounds: Bound;
 
+  /**
+   * Cache for vertex buffer results to avoid expensive layout recalculations
+   */
+  private vertexBufferCache = new Map<
+    string,
+    {
+      buffer: Float32Array;
+      bufferNumFloats: number;
+      bufferNumQuads: number;
+      maxX: number;
+      maxY: number;
+      numLines: number;
+      fullyProcessed: boolean;
+    }
+  >();
+  private static readonly MAX_CACHE_SIZE = 100; // Limit cache size
+
   public type: 'canvas' | 'sdf' = 'sdf';
 
   constructor(stage: Stage) {
@@ -559,6 +576,58 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
 
     const { letterSpacing } = state.props;
 
+    // Generate cache key for vertex buffer caching
+    const cacheKey = this.generateCacheKey(
+      text,
+      overflowSuffix,
+      fontSize,
+      width,
+      height,
+      textAlign,
+      contain,
+      letterSpacing,
+      resLineHeight,
+      wordBreak,
+      maxLines,
+      trFontFace.fontFamily, // Use just fontFamily for now
+      verticalAlign,
+    );
+
+    console.log(`Checking cache for key: ${cacheKey}`);
+
+    const cachedResult = this.vertexBufferCache.get(cacheKey);
+    if (cachedResult && !forceFullLayoutCalc) {
+      console.log('Using cached vertex buffer', cachedResult);
+
+      // Use cached buffer directly
+      if (!vertexBuffer || vertexBuffer.length < cachedResult.bufferNumFloats) {
+        vertexBuffer = new Float32Array(cachedResult.bufferNumFloats);
+      }
+
+      // copy of only the used portion
+      vertexBuffer.set(
+        cachedResult.buffer.subarray(0, cachedResult.bufferNumFloats),
+      );
+
+      // Set state from cached results
+      state.bufferUploaded = false;
+      state.bufferNumFloats = cachedResult.bufferNumFloats;
+      state.bufferNumQuads = cachedResult.bufferNumQuads;
+      state.vertexBuffer = vertexBuffer;
+      state.renderWindow = renderWindow;
+      debugData.lastLayoutNumCharacters = text.length;
+      debugData.bufferSize = vertexBuffer.byteLength;
+
+      if (cachedResult.fullyProcessed) {
+        state.textW = cachedResult.maxX * fontSizeRatio;
+        state.textH = cachedResult.numLines * sdfLineHeight * fontSizeRatio;
+      }
+
+      this.setStatus(state, 'loaded');
+      return;
+    }
+    // If we didn't find a cached result, we need to layout the text
+
     const out2 = layoutText(
       start.lineIndex,
       start.sdfX,
@@ -589,6 +658,27 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     state.renderWindow = renderWindow;
     debugData.lastLayoutNumCharacters = out2.layoutNumCharacters;
     debugData.bufferSize = vertexBuffer.byteLength;
+
+    // Cache the results for future use
+    this.pruneCache(); // Manage cache size
+
+    // Create a copy of the vertex buffer for caching
+    const cachedBuffer = new Float32Array(out2.bufferNumFloats);
+    cachedBuffer.set(vertexBuffer.subarray(0, out2.bufferNumFloats));
+
+    this.vertexBufferCache.set(cacheKey, {
+      buffer: cachedBuffer,
+      bufferNumFloats: out2.bufferNumFloats,
+      bufferNumQuads: out2.bufferNumQuads,
+      maxX: out2.maxX,
+      maxY: out2.maxY,
+      numLines: out2.numLines,
+      fullyProcessed: out2.fullyProcessed,
+    });
+
+    console.log(
+      `Cached vertex buffer result. Cache size: ${this.vertexBufferCache.size}`,
+    );
 
     // If we didn't exit early, we know we have completely computed w/h
     if (out2.fullyProcessed) {
@@ -789,5 +879,63 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     const { elementBounds } = state;
     elementBounds.y1 = y;
     elementBounds.y2 = contain === 'both' ? y + height : Infinity;
+  }
+
+  /**
+   * Generate a cache key for vertex buffer results
+   */
+  private generateCacheKey(
+    text: string,
+    overflowSuffix: string,
+    fontSize: number,
+    width: number,
+    height: number,
+    textAlign: string,
+    contain: string,
+    letterSpacing: number,
+    lineHeight: number,
+    wordBreak: string,
+    maxLines: number,
+    fontFaceId: string,
+    verticalAlign: string,
+  ): string {
+    // Hash both text and overflowSuffix for the key
+    const textHash = this.hashString(text);
+    const paramsHash = this.hashString(
+      `${fontSize}-${width}-${height}-${textAlign}-${verticalAlign}-${contain}-${letterSpacing}-${lineHeight}-${wordBreak}-${maxLines}-${fontFaceId}-${
+        overflowSuffix || ''
+      }`,
+    );
+    return `${textHash}-${paramsHash}`;
+  }
+
+  /**
+   * Simple string hash function
+   */
+  private hashString(str: string): string {
+    let hash = 0;
+    if (str.length === 0) return '0';
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+
+    return Math.abs(hash).toString(36); // Convert to base36 for shorter string
+  }
+
+  /**
+   * Manage cache size to
+   */
+  private pruneCache(): void {
+    if (this.vertexBufferCache.size >= SdfTextRenderer.MAX_CACHE_SIZE) {
+      // Remove oldest entries (FIFO)
+      const keysToDelete = Array.from(this.vertexBufferCache.keys()).slice(
+        0,
+        20,
+      );
+      keysToDelete.forEach((key) => this.vertexBufferCache.delete(key));
+    }
   }
 }
