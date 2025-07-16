@@ -552,7 +552,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         elementBounds,
         fontSizeRatio,
       );
-      // console.log('newRenderWindow', renderWindow);
     }
 
     const start = getStartConditions(
@@ -593,11 +592,9 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       verticalAlign,
     );
 
-    console.log(`Checking cache for key: ${cacheKey}`);
-
     const cachedResult = this.vertexBufferCache.get(cacheKey);
     if (cachedResult && !forceFullLayoutCalc) {
-      console.log('Using cached vertex buffer', cachedResult);
+      console.log('Using cached vertex buffer');
 
       // Use cached buffer directly
       if (!vertexBuffer || vertexBuffer.length < cachedResult.bufferNumFloats) {
@@ -677,7 +674,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     });
 
     console.log(
-      `Cached vertex buffer result. Cache size: ${this.vertexBufferCache.size}`,
+      `Caching vertex buffer. Cache size: ${this.vertexBufferCache.size}`,
     );
 
     // If we didn't exit early, we know we have completely computed w/h
