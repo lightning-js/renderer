@@ -45,7 +45,7 @@ let context:
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
   canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
-  context = canvas.getContext('2d') as
+  context = canvas.getContext('2d', { willReadFrequently: true }) as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
 
@@ -85,6 +85,7 @@ const renderText = (
     wordWrap = props.contain !== 'none',
     wordWrapWidth = props.contain === 'none' ? 0 : props.width || 0,
     width = props.contain !== 'none' ? props.width : 0,
+    w = width,
     height = props.height,
     maxHeight =
       props.contain === 'both'
@@ -116,6 +117,9 @@ const renderText = (
     advancedRenderer = false,
     textRenderIssueMargin = 0;
 
+  context.font = `${fontStyle} ${fontSize}px ${fontFamily}`;
+  context.textBaseline = textBaseline;
+
   const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
 
   if (lineHeight === 0) {
@@ -137,7 +141,7 @@ const renderText = (
       containedMaxLines > maxLines ? containedMaxLines : maxLines;
   }
 
-  width = width || 2048 / 1;
+  width = w || 2048 / precision;
   let innerWidth = width - paddingLeft;
   if (innerWidth < 10) {
     width += 10 - innerWidth;
@@ -167,7 +171,7 @@ const renderText = (
 
   // Word wrap
   let linesInfo: { n: number[]; l: string[] };
-  if (wordWrap) {
+  if (wordWrap === true) {
     linesInfo = wrapText(
       context,
       text,
@@ -230,7 +234,7 @@ const renderText = (
     maxLineWidth = Math.max(maxLineWidth, lineWidth);
   }
 
-  if (width === 0) {
+  if (w === 0) {
     width = maxLineWidth + paddingLeft + paddingRight;
     innerWidth = maxLineWidth;
   }
