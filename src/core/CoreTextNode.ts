@@ -80,6 +80,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _wordBreak!: TrProps['wordBreak'];
   private _offsetY!: number;
 
+  private _originalWidth: number = 0; // Original width from props
+  private _originalHeight: number = 0; // Original height from props
+
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
   constructor(
@@ -108,6 +111,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._overflowSuffix = props.overflowSuffix;
     this._wordBreak = props.wordBreak;
     this._offsetY = props.offsetY;
+
+    // Store original width and height from props
+    this._originalWidth = props.width || 0;
+    this._originalHeight = props.height || 0;
 
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
@@ -139,6 +146,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Check if text render update is needed
     if (textUpdateReason & TextUpdateReason.TextChange) {
       textRenderNeeded = true;
+      this._cachedLayout = null; // Invalidate cached layout
+      this._lastVertexBuffer = null; // Invalidate last vertex buffer
+
+      // Reset dimensions
+      if (this.props.width !== this._originalWidth)
+        this.width = this._originalHeight || 0;
+      if (this.props.height !== this._originalHeight)
+        this.height = this._originalWidth || 0;
     }
 
     // Step 1: Check if the font is loaded
