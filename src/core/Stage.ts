@@ -48,6 +48,8 @@ import {
 } from './TextureMemoryManager.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
+import { WebGlFramebufferPool } from './renderers/webgl/WebGlFramebufferPool.js';
+import { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
@@ -108,6 +110,7 @@ export class Stage {
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
+  public readonly framebufferPool: WebGlFramebufferPool | null;
 
   /**
    * Renderer Event Bus for the Stage to emit events onto
@@ -301,6 +304,14 @@ export class Stage {
 
     if (Object.keys(this.textRenderers).length === 0) {
       console.warn('No text renderers available. Your text will not render.');
+    }
+
+    // Initialize framebuffer pool for WebGL renderer
+    if (renderMode === 'webgl') {
+      this.framebufferPool = new WebGlFramebufferPool(this);
+    } else {
+      // For canvas renderer, framebuffer pool is not needed
+      this.framebufferPool = null;
     }
 
     // create root node

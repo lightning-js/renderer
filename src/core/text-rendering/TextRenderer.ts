@@ -19,6 +19,7 @@
 
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
+import type { FramebufferRegion } from '../renderers/webgl/WebGlFramebufferPool.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
@@ -382,6 +383,7 @@ export interface TextRenderProps {
   parentHasRenderTexture: boolean;
   framebufferDimensions: unknown;
   stage: Stage;
+  framebufferRegion?: FramebufferRegion; // Optional pooled framebuffer region for SDF rendering
 }
 
 export interface TextRenderer {
@@ -403,6 +405,7 @@ export interface TextRenderer {
     layout: TextLayout,
     vertexBuffer: Float32Array,
     renderProps: TextRenderProps,
-  ) => void;
+    cachedBufferCollection?: unknown, // BufferCollection from webgl renderer
+  ) => unknown; // Returns BufferCollection | null for SDF, void for Canvas
   init: (stage: Stage) => void;
 }

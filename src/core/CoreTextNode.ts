@@ -36,6 +36,8 @@ import type {
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
+import type { FramebufferRegion } from './renderers/webgl/WebGlFramebufferPool.js';
 
 // Internal text update tracking
 enum TextUpdateReason {
@@ -59,6 +61,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
   private _lastVertexBuffer: Float32Array | null = null;
+  private _cachedBufferCollection: BufferCollection | null = null;
+  private _framebufferRegion: FramebufferRegion | null = null;
 
   // Internal text update tracking
   private _pendingTextUpdate: TextUpdateReason = TextUpdateReason.Both;
@@ -242,6 +246,49 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
+
+      if (this._cachedLayout && this.stage.framebufferPool) {
+        // Free existing region if we have one
+        if (this._framebufferRegion) {
+          console.log('CoreTextNode: Freeing existing framebuffer region');
+          this.stage.framebufferPool.freeRegion(this._framebufferRegion);
+          this._framebufferRegion = null;
+        }
+
+        // Allocate new region based on text dimensions
+        console.log(
+          `CoreTextNode: Attempting to allocate framebuffer region ${Math.ceil(
+            resultWidth,
+          )}x${Math.ceil(resultHeight)}`,
+        );
+        this._framebufferRegion = this.stage.framebufferPool.allocateRegion(
+          Math.ceil(resultWidth),
+          Math.ceil(resultHeight),
+        );
+
+        if (this._framebufferRegion) {
+          console.log(
+            `CoreTextNode: Successfully allocated framebuffer region:`,
+            {
+              x: this._framebufferRegion.x,
+              y: this._framebufferRegion.y,
+              width: this._framebufferRegion.width,
+              height: this._framebufferRegion.height,
+              allocatedWidth: this._framebufferRegion.allocatedWidth,
+              allocatedHeight: this._framebufferRegion.allocatedHeight,
+            },
+          );
+        } else {
+          console.warn(
+            'CoreTextNode: Failed to allocate framebuffer region, falling back to direct rendering',
+          );
+        }
+      } else {
+        console.log(
+          'CoreTextNode: No cached layout or framebuffer pool, using direct rendering',
+        );
+      }
+
       this.setRenderable(true);
     }
 
@@ -267,6 +314,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   /**
+   * Clear cached SDF buffers when text content or properties change
+   */
+  private clearSdfCache(): void {
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
+    this._cachedBufferCollection = null;
+
+    // Free framebuffer region if allocated
+    if (this._framebufferRegion) {
+      this.stage.framebufferPool?.freeRegion(this._framebufferRegion);
+      this._framebufferRegion = null;
+    }
+  }
+
+  /**
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
@@ -278,34 +340,86 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Early return if no cached data
     if (!this._cachedLayout) {
+      console.log(
+        'CoreTextNode.renderQuads: No cached layout, skipping render',
+      );
       return;
     }
 
+    console.log('CoreTextNode.renderQuads: Starting SDF render', {
+      hasFramebufferRegion: !!this._framebufferRegion,
+      layoutGlyphCount: this._cachedLayout.glyphs.length,
+      layoutWidth: this._cachedLayout.width,
+      layoutHeight: this._cachedLayout.height,
+    });
+
+    // Generate vertex buffer if not cached
     if (!this._lastVertexBuffer) {
+      console.log('CoreTextNode.renderQuads: Generating vertex buffer');
       this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
     }
 
-    this.textRenderer.renderQuads(
-      renderer,
-      this._cachedLayout as TextLayout,
-      this._lastVertexBuffer!,
-      {
-        fontFamily: this._fontFamily,
-        fontSize: this._fontSize,
-        color: this.props.color || 0xffffffff,
-        offsetY: this._offsetY,
-        worldAlpha: this.worldAlpha,
-        globalTransform:
-          this.globalTransform?.getFloatArr() || new Float32Array(16),
-        clippingRect: this.clippingRect,
-        width: this.props.width,
-        height: this.props.height,
-        parentHasRenderTexture: this.parentHasRenderTexture,
-        framebufferDimensions:
-          this.rtt === true ? this.parentFramebufferDimensions : null,
-        stage: this.stage,
-      },
+    // Safety check - if addQuads returned null, we can't render
+    if (!this._lastVertexBuffer) {
+      console.warn(
+        'CoreTextNode.renderQuads: addQuads returned null, cannot render',
+      );
+      return;
+    }
+
+    console.log(
+      'CoreTextNode.renderQuads: Vertex buffer ready, vertices:',
+      this._lastVertexBuffer.length,
     );
+
+    // Use cached buffer collection or get a new one (SDF only)
+    if (this._type === 'sdf') {
+      const bufferCollection = this.textRenderer.renderQuads(
+        renderer,
+        this._cachedLayout as TextLayout,
+        this._lastVertexBuffer,
+        {
+          fontFamily: this._fontFamily,
+          fontSize: this._fontSize,
+          color: this.props.color || 0xffffffff,
+          offsetY: this._offsetY,
+          worldAlpha: this.worldAlpha,
+          globalTransform:
+            this.globalTransform?.getFloatArr() || new Float32Array(16),
+          clippingRect: this.clippingRect,
+          width: this.props.width,
+          height: this.props.height,
+          parentHasRenderTexture: this.parentHasRenderTexture,
+          framebufferDimensions:
+            this.rtt === true ? this.parentFramebufferDimensions : null,
+          stage: this.stage,
+          framebufferRegion: this._framebufferRegion || undefined,
+        },
+        this._cachedBufferCollection || undefined,
+      ) as BufferCollection | null;
+
+      console.log(
+        'CoreTextNode.renderQuads: textRenderer.renderQuads completed',
+        {
+          bufferCollectionReturned: !!bufferCollection,
+          usingFramebufferRegion: !!this._framebufferRegion,
+        },
+      );
+
+      // Cache the buffer collection for future use
+      if (bufferCollection && !this._cachedBufferCollection) {
+        this._cachedBufferCollection = bufferCollection;
+        console.log('CoreTextNode.renderQuads: Cached buffer collection');
+      }
+    }
+  }
+
+  /**
+   * Override CoreNode's destroy method to clean up framebuffer resources
+   */
+  override destroy(): void {
+    this.clearSdfCache();
+    super.destroy();
   }
 
   // Property getters and setters
@@ -318,6 +432,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._text = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
+      this.clearSdfCache();
     }
   }
 
@@ -330,6 +445,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._fontSize = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
+      this.clearSdfCache();
     }
   }
 
@@ -342,6 +458,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._fontFamily = value;
       this._pendingTextUpdate |= TextUpdateReason.Both;
       this.setUpdateType(UpdateType.Text);
+      this.clearSdfCache();
     }
   }
 

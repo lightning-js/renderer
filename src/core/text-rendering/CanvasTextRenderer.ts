@@ -598,7 +598,8 @@ const addQuads = (): Float32Array | null => {
 /**
  * Render quads for Canvas renderer (Canvas doesn't use quad-based rendering)
  */
-const renderQuads = (): void => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const renderQuads = (..._args: unknown[]): void => {
   // Canvas renderer doesn't use quad-based rendering
   // This method is for interface compatibility only
 };

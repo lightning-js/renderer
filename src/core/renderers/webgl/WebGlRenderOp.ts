@@ -23,6 +23,7 @@ import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { QuadOptions } from '../CoreRenderer.js';
+import type { FramebufferRegion } from './WebGlFramebufferPool.js';
 import type { CoreTextNode } from '../../CoreTextNode.js';
 import type { RectWithValid } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
@@ -39,6 +40,7 @@ type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
   Partial<Omit<QuadOptions, ReqQuad>> & {
     sdfShaderProps?: Record<string, unknown>;
     sdfBuffers?: BufferCollection;
+    framebufferRegion?: FramebufferRegion; // Pooled framebuffer region for SDF rendering
   };
 
 /**
@@ -65,6 +67,7 @@ export class WebGlRenderOp extends CoreRenderOp {
   readonly framebufferDimensions?: Dimensions | null;
   readonly alpha: number;
   readonly pixelRatio: number;
+  readonly framebufferRegion?: FramebufferRegion; // Pooled framebuffer region for SDF rendering
 
   constructor(
     readonly renderer: WebGlRenderer,
@@ -83,6 +86,7 @@ export class WebGlRenderOp extends CoreRenderOp {
     this.alpha = quad.alpha;
     this.pixelRatio =
       this.parentHasRenderTexture === true ? 1 : renderer.stage.pixelRatio;
+    this.framebufferRegion = quad.framebufferRegion;
 
     /**
      * related to line 51
@@ -122,6 +126,33 @@ export class WebGlRenderOp extends CoreRenderOp {
   draw() {
     const { glw, options, stage } = this.renderer;
 
+    // Handle framebuffer region rendering for SDF text (when pooling is used)
+    if (this.framebufferRegion) {
+      console.log('WebGlRenderOp.draw: Using framebuffer region', {
+        x: this.framebufferRegion.x,
+        y: this.framebufferRegion.y,
+        allocatedWidth: this.framebufferRegion.allocatedWidth,
+        allocatedHeight: this.framebufferRegion.allocatedHeight,
+        framebuffer: this.framebufferRegion.framebuffer,
+        texture: this.framebufferRegion.texture,
+      });
+
+      // Bind the pooled framebuffer
+      glw.bindFramebuffer(this.framebufferRegion.framebuffer);
+
+      // Set viewport to the specific region within the framebuffer
+      glw.viewport(
+        this.framebufferRegion.x,
+        this.framebufferRegion.y,
+        this.framebufferRegion.allocatedWidth,
+        this.framebufferRegion.allocatedHeight,
+      );
+
+      // Clear the region (transparent for SDF text)
+      glw.clearColor(0, 0, 0, 0);
+      glw.clear();
+    }
+
     stage.shManager.useShader(this.shader.program);
     this.shader.program.bindRenderOp(this);
 
@@ -147,10 +178,13 @@ export class WebGlRenderOp extends CoreRenderOp {
       glw.scissor(clipX, clipY, clipWidth, clipHeight);
     } else {
       glw.setScissorTest(false);
-    }
-
-    // Check if this is SDF rendering (has sdfBuffers)
+    } // Check if this is SDF rendering (has sdfBuffers)
     if (this.sdfShaderProps !== undefined) {
+      console.log('WebGlRenderOp.draw: Rendering SDF text with drawArrays', {
+        numQuads: this.numQuads,
+        vertices: 6 * this.numQuads,
+        hasFramebufferRegion: !!this.framebufferRegion,
+      });
       // SDF rendering uses drawArrays with explicit triangle vertices (6 vertices per quad)
       glw.drawArrays(glw.TRIANGLES, 0, 6 * this.numQuads);
     } else {
@@ -162,6 +196,16 @@ export class WebGlRenderOp extends CoreRenderOp {
         glw.UNSIGNED_SHORT,
         quadIdx,
       );
+    }
+
+    // Restore framebuffer and viewport if we were rendering to a region
+    if (this.framebufferRegion) {
+      console.log('WebGlRenderOp.draw: Restoring framebuffer and viewport');
+      // Restore default framebuffer
+      glw.bindFramebuffer(null);
+
+      // Restore viewport to canvas size
+      glw.viewport(0, 0, options.canvas.width, options.canvas.height);
     }
   }
 }

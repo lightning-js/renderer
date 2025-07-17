@@ -188,7 +188,18 @@ const renderQuads = (
   layout: TextLayout,
   vertexBuffer: Float32Array,
   renderProps: TextRenderProps,
-): void => {
+  cachedBufferCollection?: BufferCollection,
+): BufferCollection | null => {
+  console.log('SdfTextRenderer.renderQuads: Starting render', {
+    glyphCount: layout.glyphs.length,
+    layoutWidth: layout.width,
+    layoutHeight: layout.height,
+    vertexCount: vertexBuffer.length,
+    hasFramebufferRegion: !!renderProps.framebufferRegion,
+    fontFamily: renderProps.fontFamily,
+    fontSize: renderProps.fontSize,
+  });
+
   const fontFamily = renderProps.fontFamily;
   const fontSize = renderProps.fontSize;
   const color = renderProps.color;
@@ -199,52 +210,66 @@ const renderQuads = (
   const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
   if (atlasTexture === null) {
     console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
-    return;
+    return null;
   }
 
   const fontData = SdfFontHandler.getFontData(fontFamily);
   if (fontData === null) {
     console.warn(`SDF font data not found for font: ${fontFamily}`);
-    return;
+    return null;
   }
 
   // We can safely assume this is a WebGL renderer else this wouldn't be called
   const glw = (renderer as WebGlRenderer).glw;
   const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-  const webGlBuffer = glw.createBuffer();
 
-  if (!webGlBuffer) {
-    console.warn('Failed to create WebGL buffer for SDF text');
-    return;
-  }
+  let webGlBuffers: BufferCollection;
 
-  const webGlBuffers = new BufferCollection([
-    {
-      buffer: webGlBuffer,
-      attributes: {
-        a_position: {
-          name: 'a_position',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 0,
-        },
-        a_textureCoords: {
-          name: 'a_textureCoords',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+  // Use cached buffer collection if available, otherwise create new one
+  if (cachedBufferCollection) {
+    webGlBuffers = cachedBufferCollection;
+
+    // Update the existing buffer with new vertex data
+    const buffer = webGlBuffers.getBuffer('a_position');
+    if (buffer !== undefined) {
+      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
+    }
+  } else {
+    // Create new buffer collection
+    const webGlBuffer = glw.createBuffer();
+    if (!webGlBuffer) {
+      console.warn('Failed to create WebGL buffer for SDF text');
+      return null;
+    }
+
+    webGlBuffers = new BufferCollection([
+      {
+        buffer: webGlBuffer,
+        attributes: {
+          a_position: {
+            name: 'a_position',
+            size: 2,
+            type: glw.FLOAT as number,
+            normalized: false,
+            stride,
+            offset: 0,
+          },
+          a_textureCoords: {
+            name: 'a_textureCoords',
+            size: 2,
+            type: glw.FLOAT as number,
+            normalized: false,
+            stride,
+            offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+          },
         },
       },
-    },
-  ]);
+    ]);
 
-  const buffer = webGlBuffers.getBuffer('a_position');
-  if (buffer !== undefined) {
-    glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
+    const buffer = webGlBuffers.getBuffer('a_position');
+    if (buffer !== undefined) {
+      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
+    }
   }
 
   const renderOp = new WebGlRenderOp(
@@ -265,10 +290,11 @@ const renderQuads = (
       clippingRect: renderProps.clippingRect as any,
       height: layout.height,
       width: layout.width,
-      rtt: false,
+      rtt: renderProps.framebufferRegion !== undefined, // Use RTT when framebuffer region is provided
       parentHasRenderTexture: renderProps.parentHasRenderTexture,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       framebufferDimensions: renderProps.framebufferDimensions as any,
+      framebufferRegion: renderProps.framebufferRegion, // Pass the pooled framebuffer region
     },
     0,
   );
@@ -278,6 +304,9 @@ const renderQuads = (
   renderOp.numQuads = layout.glyphs.length;
 
   (renderer as WebGlRenderer).addRenderOp(renderOp);
+
+  // Return the buffer collection for caching
+  return webGlBuffers;
 };
 
 /**
