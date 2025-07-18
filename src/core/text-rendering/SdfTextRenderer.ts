@@ -22,8 +22,9 @@ import type {
   FontHandler,
   TextRenderInfo,
   TextRenderProps,
-  TrProps,
 } from './TextRenderer.js';
+import type { CoreTextNodeProps } from '../CoreTextNode.js';
+import { isZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -62,7 +63,7 @@ const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (stage: Stage, props: TrProps): TextRenderInfo => {
+const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
   // Early return if no text
   if (props.text.length === 0) {
     return {
@@ -278,13 +279,23 @@ const renderQuads = (
  * Generate complete text layout with glyph positioning for caching
  */
 const generateTextLayout = (
-  props: TrProps,
+  props: CoreTextNodeProps,
   fontData: SdfFontHandler.SdfFontData,
 ): TextLayout => {
   const text = props.text;
   const fontSize = props.fontSize;
   const letterSpacing = props.letterSpacing || 0;
   const fontFamily = props.fontFamily;
+  const contain = props.contain || 'none';
+  const textAlign = props.textAlign || 'left';
+  const maxWidth = Number(props.maxWidth) || 0;
+  const maxHeight = Number(props.maxHeight) || 0;
+  const maxLines = Number(props.maxLines) || 0;
+  const overflowSuffix = props.overflowSuffix || '';
+
+  // Use width as maxWidth when contain is set but maxWidth is 0
+  const effectiveMaxWidth =
+    maxWidth > 0 ? maxWidth : contain !== 'none' ? Number(props.width) || 0 : 0;
 
   // Use the font's design size for proper scaling
   const designLineHeight = fontData.common.lineHeight;
@@ -295,24 +306,105 @@ const generateTextLayout = (
   const atlasWidth = fontData.common.scaleW;
   const atlasHeight = fontData.common.scaleH;
 
-  // Split text into lines
-  const lines = text.split('\n');
+  // Calculate the pixel scale from design units to pixels
+  const finalScale =
+    fontSize / (fontData.info?.size || fontData.common.lineHeight);
+
+  // Calculate design letter spacing
+  const designLetterSpacing =
+    (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
+    fontSize;
+
+  // Determine text wrapping behavior based on contain mode
+  const shouldWrapText = contain === 'width' || contain === 'both';
+  const wrapWidth = shouldWrapText ? effectiveMaxWidth : 0;
+  const heightConstraint = contain === 'both' ? maxHeight : 0;
+
+  // Calculate maximum lines constraint from height if needed
+  let effectiveMaxLines = maxLines;
+  if (heightConstraint > 0) {
+    const maxLinesFromHeight = Math.floor(
+      heightConstraint / (lineHeight * finalScale),
+    );
+    if (effectiveMaxLines === 0 || maxLinesFromHeight < effectiveMaxLines) {
+      effectiveMaxLines = maxLinesFromHeight;
+    }
+  }
+
+  // Split text into lines based on wrapping constraints
+  const lines = shouldWrapText
+    ? wrapTextForSdf(
+        text,
+        fontFamily,
+        fontData,
+        fontSize,
+        finalScale,
+        wrapWidth,
+        letterSpacing,
+        overflowSuffix,
+        effectiveMaxLines,
+      )
+    : text.split('\n');
+
+  // Apply maxLines constraint if wrapping wasn't done
+  const finalLines =
+    effectiveMaxLines > 0 && lines.length > effectiveMaxLines
+      ? lines.slice(0, effectiveMaxLines)
+      : lines;
+
   const glyphs: GlyphLayout[] = [];
-  let maxWidth = 0;
+  let maxWidthFound = 0;
   let currentY = 0;
 
-  let lineIndex = 0;
-  const linesLength = lines.length;
-
-  while (lineIndex < linesLength) {
-    const line = lines[lineIndex];
-    lineIndex++;
-    if (line === undefined) {
-      currentY += lineHeight;
+  // First pass: Calculate line widths for text alignment
+  const lineWidths: number[] = [];
+  for (let i = 0; i < finalLines.length; i++) {
+    const line = finalLines[i];
+    if (!line) {
+      lineWidths.push(0);
       continue;
     }
 
-    let currentX = 0;
+    const lineWidth = measureTextWidthSdf(
+      line,
+      fontFamily,
+      fontData,
+      designLetterSpacing,
+    );
+    lineWidths.push(lineWidth);
+    if (lineWidth > maxWidthFound) {
+      maxWidthFound = lineWidth;
+    }
+  }
+
+  // Second pass: Generate glyph layouts with proper alignment
+  let lineIndex = 0;
+  const linesLength = finalLines.length;
+
+  while (lineIndex < linesLength) {
+    const line = finalLines[lineIndex];
+    const lineWidth = lineWidths[lineIndex] || 0;
+    lineIndex++;
+    if (line === undefined) {
+      currentY += designLineHeight;
+      continue;
+    }
+
+    // Calculate line X offset based on text alignment
+    let lineXOffset = 0;
+    if (textAlign === 'center') {
+      const availableWidth = shouldWrapText
+        ? wrapWidth / finalScale
+        : maxWidthFound;
+      lineXOffset = (availableWidth - lineWidth) / 2;
+    } else if (textAlign === 'right') {
+      const availableWidth = shouldWrapText
+        ? wrapWidth / finalScale
+        : maxWidthFound;
+      lineXOffset = availableWidth - lineWidth;
+    }
+
+    let currentX = lineXOffset;
     let charIndex = 0;
     const lineLength = line.length;
     let prevCodepoint = 0;
@@ -323,6 +415,11 @@ const generateTextLayout = (
       charIndex++;
 
       if (codepoint === undefined) {
+        continue;
+      }
+
+      // Skip zero-width spaces for rendering but keep them in the text flow
+      if (isZeroWidthSpace(char)) {
         continue;
       }
 
@@ -364,30 +461,348 @@ const generateTextLayout = (
       glyphs.push(glyphLayout);
 
       // Advance position with letter spacing (in design units)
-      const designLetterSpacing =
-        (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
-        fontSize;
       currentX += advance + designLetterSpacing;
       prevCodepoint = codepoint;
     }
 
-    if (currentX > maxWidth) {
-      maxWidth = currentX;
-    }
     currentY += designLineHeight;
   }
 
   // Convert final dimensions to pixel space for the layout
-  const finalScale =
-    fontSize / (fontData.info?.size || fontData.common.lineHeight);
   return {
     glyphs,
-    width: Math.ceil(maxWidth * finalScale),
-    height: Math.ceil(designLineHeight * lines.length * finalScale), // Include baseline in height
+    width: Math.ceil(maxWidthFound * finalScale),
+    height: Math.ceil(designLineHeight * finalLines.length * finalScale),
     fontScale: finalScale,
     lineHeight,
     fontFamily,
   };
+};
+
+/**
+ * Wrap text for SDF rendering with proper width constraints
+ */
+const wrapTextForSdf = (
+  text: string,
+  fontFamily: string,
+  fontData: SdfFontHandler.SdfFontData,
+  fontSize: number,
+  fontScale: number,
+  maxWidth: number,
+  letterSpacing: number,
+  overflowSuffix: string,
+  maxLines: number,
+): string[] => {
+  const lines = text.split('\n');
+  const wrappedLines: string[] = [];
+
+  const designLetterSpacing =
+    (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
+    fontSize;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) {
+      wrappedLines.push('');
+      continue;
+    }
+
+    // If we've hit the max lines limit, stop processing
+    if (maxLines > 0 && wrappedLines.length >= maxLines) {
+      break;
+    }
+
+    const lineWrapped = wrapLineForSdf(
+      line,
+      fontFamily,
+      fontData,
+      fontScale,
+      maxWidth,
+      designLetterSpacing,
+      overflowSuffix,
+      maxLines > 0 ? maxLines - wrappedLines.length : 0,
+    );
+
+    wrappedLines.push(...lineWrapped);
+  }
+
+  return wrappedLines;
+};
+
+/**
+ * Wrap a single line of text for SDF rendering
+ */
+const wrapLineForSdf = (
+  line: string,
+  fontFamily: string,
+  fontData: SdfFontHandler.SdfFontData,
+  fontScale: number,
+  maxWidth: number,
+  designLetterSpacing: number,
+  overflowSuffix: string,
+  remainingLines: number,
+): string[] => {
+  // Use the same space regex as Canvas renderer to handle ZWSP
+  const spaceRegex = / |\u200B/g;
+  const words = line.split(spaceRegex);
+  const spaces = line.match(spaceRegex) || [];
+  const wrappedLines: string[] = [];
+  let currentLine = '';
+  let currentLineWidth = 0;
+  const maxWidthInDesignUnits = maxWidth / fontScale;
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    if (!word) continue;
+
+    const space = spaces[i - 1] || '';
+    const wordWidth = measureTextWidthSdf(
+      word,
+      fontFamily,
+      fontData,
+      designLetterSpacing,
+    );
+    const spaceWidth =
+      i > 0
+        ? measureTextWidthSdf(space, fontFamily, fontData, designLetterSpacing)
+        : 0;
+    const totalWidth = currentLineWidth + spaceWidth + wordWidth;
+
+    // Check if we need to wrap or if this is the last line and we need to truncate
+    const isLastAllowedLine =
+      remainingLines > 0 && wrappedLines.length >= remainingLines - 1;
+
+    if (totalWidth <= maxWidthInDesignUnits) {
+      // Word fits on current line
+      if (currentLine.length > 0) {
+        currentLine += space;
+        currentLineWidth += spaceWidth;
+      }
+      currentLine += word;
+      currentLineWidth += wordWidth;
+    } else {
+      // Word doesn't fit, need to wrap or truncate
+      if (currentLine.length > 0) {
+        // Finish current line
+        if (isLastAllowedLine && overflowSuffix) {
+          // Need to truncate this line to fit the overflow suffix
+          currentLine = truncateLineWithSuffix(
+            currentLine,
+            fontFamily,
+            fontData,
+            fontScale,
+            maxWidth,
+            designLetterSpacing,
+            overflowSuffix,
+          );
+        }
+        wrappedLines.push(currentLine);
+        currentLine = '';
+        currentLineWidth = 0;
+      }
+
+      // Check if we've reached the line limit
+      if (remainingLines > 0 && wrappedLines.length >= remainingLines) {
+        break;
+      }
+
+      // Start new line with the word
+      if (wordWidth <= maxWidthInDesignUnits) {
+        currentLine = word;
+        currentLineWidth = wordWidth;
+      } else {
+        // Word is too long for a single line, break it
+        const brokenWord = breakLongWord(
+          word,
+          fontFamily,
+          fontData,
+          fontScale,
+          maxWidth,
+          designLetterSpacing,
+          overflowSuffix,
+          remainingLines > 0 ? remainingLines - wrappedLines.length : 0,
+        );
+        wrappedLines.push(...brokenWord.slice(0, -1));
+        currentLine = brokenWord[brokenWord.length - 1] || '';
+        currentLineWidth = measureTextWidthSdf(
+          currentLine,
+          fontFamily,
+          fontData,
+          designLetterSpacing,
+        );
+      }
+    }
+  }
+
+  // Add the last line if it has content
+  if (currentLine.length > 0) {
+    const isLastAllowedLine =
+      remainingLines > 0 && wrappedLines.length >= remainingLines - 1;
+    if (isLastAllowedLine && overflowSuffix) {
+      currentLine = truncateLineWithSuffix(
+        currentLine,
+        fontFamily,
+        fontData,
+        fontScale,
+        maxWidth,
+        designLetterSpacing,
+        overflowSuffix,
+      );
+    }
+    wrappedLines.push(currentLine);
+  }
+
+  return wrappedLines;
+};
+
+/**
+ * Measure the width of text in SDF design units
+ */
+const measureTextWidthSdf = (
+  text: string,
+  fontFamily: string,
+  fontData: SdfFontHandler.SdfFontData,
+  designLetterSpacing: number,
+): number => {
+  let width = 0;
+  let prevCodepoint = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charAt(i);
+    const codepoint = text.codePointAt(i);
+    if (codepoint === undefined) continue;
+
+    // Skip zero-width spaces in width calculations
+    if (isZeroWidthSpace(char)) {
+      continue;
+    }
+
+    const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+    if (glyph === null) continue;
+
+    let advance = glyph.xadvance;
+
+    // Add kerning if there's a previous character
+    if (prevCodepoint !== 0) {
+      const kerning = SdfFontHandler.getKerning(
+        fontFamily,
+        prevCodepoint,
+        codepoint,
+      );
+      advance += kerning;
+    }
+
+    width += advance + designLetterSpacing;
+    prevCodepoint = codepoint;
+  }
+
+  return width;
+};
+
+/**
+ * Truncate a line with overflow suffix to fit within width
+ */
+const truncateLineWithSuffix = (
+  line: string,
+  fontFamily: string,
+  fontData: SdfFontHandler.SdfFontData,
+  fontScale: number,
+  maxWidth: number,
+  designLetterSpacing: number,
+  overflowSuffix: string,
+): string => {
+  const maxWidthInDesignUnits = maxWidth / fontScale;
+  const suffixWidth = measureTextWidthSdf(
+    overflowSuffix,
+    fontFamily,
+    fontData,
+    designLetterSpacing,
+  );
+
+  if (suffixWidth >= maxWidthInDesignUnits) {
+    return overflowSuffix.substring(0, Math.max(1, overflowSuffix.length - 1));
+  }
+
+  let truncatedLine = line;
+  while (truncatedLine.length > 0) {
+    const lineWidth = measureTextWidthSdf(
+      truncatedLine,
+      fontFamily,
+      fontData,
+      designLetterSpacing,
+    );
+    if (lineWidth + suffixWidth <= maxWidthInDesignUnits) {
+      return truncatedLine + overflowSuffix;
+    }
+    truncatedLine = truncatedLine.substring(0, truncatedLine.length - 1);
+  }
+
+  return overflowSuffix;
+};
+
+/**
+ * Break a long word that doesn't fit on a single line
+ */
+const breakLongWord = (
+  word: string,
+  fontFamily: string,
+  fontData: SdfFontHandler.SdfFontData,
+  fontScale: number,
+  maxWidth: number,
+  designLetterSpacing: number,
+  overflowSuffix: string,
+  remainingLines: number,
+): string[] => {
+  const maxWidthInDesignUnits = maxWidth / fontScale;
+  const lines: string[] = [];
+  let currentPart = '';
+  let currentWidth = 0;
+
+  for (let i = 0; i < word.length; i++) {
+    const char = word.charAt(i);
+    const codepoint = char.codePointAt(0);
+    if (codepoint === undefined) continue;
+
+    const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+    if (glyph === null) continue;
+
+    const charWidth = glyph.xadvance + designLetterSpacing;
+
+    if (
+      currentWidth + charWidth > maxWidthInDesignUnits &&
+      currentPart.length > 0
+    ) {
+      // Check if this is the last allowed line
+      const isLastAllowedLine =
+        remainingLines > 0 && lines.length >= remainingLines - 1;
+      if (isLastAllowedLine && overflowSuffix) {
+        // Truncate and add suffix
+        currentPart = truncateLineWithSuffix(
+          currentPart,
+          fontFamily,
+          fontData,
+          fontScale,
+          maxWidth,
+          designLetterSpacing,
+          overflowSuffix,
+        );
+        lines.push(currentPart);
+        return lines;
+      }
+
+      lines.push(currentPart);
+      currentPart = char;
+      currentWidth = charWidth;
+    } else {
+      currentPart += char;
+      currentWidth += charWidth;
+    }
+  }
+
+  if (currentPart.length > 0) {
+    lines.push(currentPart);
+  }
+
+  return lines;
 };
 
 /**

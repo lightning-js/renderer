@@ -255,7 +255,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(true);
     }
 
-    // // Update dimensions based on contain mode (same for both renderers)
+    // Recalculate width constraints based on current contain mode
+    if (this._contain === 'width' || this._contain === 'both') {
+      this._maxWidth = this.props.width || 0;
+      if (this._contain === 'both') {
+        this._maxHeight = this.props.height || 0;
+      }
+    }
+
+    // Update dimensions based on contain mode (same for both renderers)
     if (contain === 'both') {
       this.width = this._maxWidth;
       this.height = this._maxHeight;
@@ -266,6 +274,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.width = resultWidth;
       this.height = resultHeight;
     }
+
     this._renderInfo = result;
     this.emit('loaded', {
       type: 'text',
@@ -511,7 +520,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  get renderInfo() {
+  get renderInfo(): TextRenderInfo {
     return this._renderInfo;
   }
 }
