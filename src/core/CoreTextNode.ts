@@ -22,6 +22,7 @@ import type {
   TextRenderer,
   TrProps,
   TextLayout,
+  TextRenderInfo,
 } from './text-rendering/TextRenderer.js';
 import {
   CoreNode,
@@ -79,9 +80,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _overflowSuffix!: string;
   private _wordBreak!: TrProps['wordBreak'];
   private _offsetY!: number;
+  private _maxHeight: number;
+  private _maxWidth: number;
 
-  private _originalWidth: number = 0; // Original width from props
-  private _originalHeight: number = 0; // Original height from props
+  private _renderInfo: TextRenderInfo = {
+    width: 0,
+    height: 0,
+  };
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
@@ -111,10 +116,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._overflowSuffix = props.overflowSuffix;
     this._wordBreak = props.wordBreak;
     this._offsetY = props.offsetY;
+    this._maxWidth = props.maxWidth;
+    this._maxHeight = props.maxHeight;
 
-    // Store original width and height from props
-    this._originalWidth = props.width || 0;
-    this._originalHeight = props.height || 0;
+    //this setter might alter maxWidth / maxHeight
+    this.contain = props.contain;
 
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
@@ -148,12 +154,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       textRenderNeeded = true;
       this._cachedLayout = null; // Invalidate cached layout
       this._lastVertexBuffer = null; // Invalidate last vertex buffer
-
-      // Reset dimensions
-      if (this.props.width !== this._originalWidth)
-        this.width = this._originalHeight || 0;
-      if (this.props.height !== this._originalHeight)
-        this.height = this._originalWidth || 0;
     }
 
     // Step 1: Check if the font is loaded
@@ -184,7 +184,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         color: this.props.color,
         offsetY: this._offsetY,
         width: this.props.width,
+        maxWidth: this._maxWidth,
         height: this.props.height,
+        maxHeight: this._maxHeight,
         overflowSuffix: this._overflowSuffix,
         wordBreak: this._wordBreak,
       });
@@ -212,16 +214,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   /**
    * Handle the result of text rendering for both Canvas and SDF renderers
    */
-  private handleRenderResult(result: {
-    imageData: ImageData | null;
-    width: number;
-    height: number;
-    layout?: TextLayout;
-  }): void {
+  private handleRenderResult(result: TextRenderInfo): void {
     // Host paths on top
     const textRendererType = this._type;
-    const setWidth = this.props.width;
-    const setHeight = this.props.height;
     const resultWidth = result.width;
     const resultHeight = result.height;
     const contain = this._contain;
@@ -260,18 +255,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(true);
     }
 
-    // Update dimensions based on contain mode (same for both renderers)
+    // // Update dimensions based on contain mode (same for both renderers)
     if (contain === 'both') {
-      this.width = setWidth;
-      this.height = setHeight;
+      this.width = this._maxWidth;
+      this.height = this._maxHeight;
     } else if (contain === 'width') {
-      this.width = setWidth;
+      this.width = this._maxWidth;
       this.height = resultHeight;
     } else if (contain === 'none') {
       this.width = resultWidth;
       this.height = resultHeight;
     }
-
+    this._renderInfo = result;
     this.emit('loaded', {
       type: 'text',
       dimensions: {
@@ -323,7 +318,31 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     );
   }
 
+  get maxWidth() {
+    return this._maxWidth;
+  }
+
+  set maxWidth(value: number) {
+    if (this._maxWidth !== value) {
+      this._maxWidth = value;
+      this._pendingTextUpdate |= TextUpdateReason.TextChange;
+      this.setUpdateType(UpdateType.Text);
+    }
+  }
+
   // Property getters and setters
+  get maxHeight() {
+    return this._maxHeight;
+  }
+
+  set maxHeight(value: number) {
+    if (this._maxHeight !== value) {
+      this._maxHeight = value;
+      this._pendingTextUpdate |= TextUpdateReason.TextChange;
+      this.setUpdateType(UpdateType.Text);
+    }
+  }
+
   get text(): string {
     return this._text;
   }
@@ -490,5 +509,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
+  }
+
+  get renderInfo() {
+    return this._renderInfo;
   }
 }

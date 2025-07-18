@@ -21,7 +21,6 @@ import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
 import type {
   TextLayout,
-  TrProps,
   NormalizedFontMetrics,
   TextBaseline,
 } from './TextRenderer.js';
@@ -29,6 +28,7 @@ import * as CanvasFontHandler from './CanvasFontHandler.js';
 import { type LineType } from './canvas/calculateRenderInfo.js';
 import { calcHeight, measureText, wrapText, wrapWord } from './canvas/Utils.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
+import type { CoreTextNodeProps } from '../CoreTextNode.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
@@ -91,7 +91,7 @@ const init = (stage: Stage): void => {
  */
 const renderText = (
   stage: Stage,
-  props: TrProps,
+  props: CoreTextNodeProps,
 ): {
   imageData: ImageData | null;
   width: number;
@@ -114,8 +114,7 @@ const renderText = (
     verticalAlign = 'top',
     overflowSuffix = '',
     contain = 'none',
-    width: propWidth = 0,
-    height: propHeight = 0,
+    maxWidth = 0,
     offsetY = 0,
     letterSpacing = 0,
   } = props;
@@ -129,9 +128,9 @@ const renderText = (
   const textColor = 0xffffffff;
 
   // Determine word wrap behavior
-  const wordWrap = contain !== 'none';
-  const wordWrapWidth = contain === 'none' ? 0 : propWidth || 0;
-  const maxHeight = contain === 'both' ? (propHeight || 0) - offsetY : null;
+  const wordWrap = maxWidth > 0;
+  const wordWrapWidth = contain === 'none' ? 0 : maxWidth || 0;
+  const maxHeight = contain === 'both' ? props.maxHeight + offsetY : 0;
   const textOverflow = overflowSuffix ? 'ellipsis' : null;
 
   // Calculate scaled values
@@ -157,7 +156,7 @@ const renderText = (
   const computedMaxLines = calculateMaxLines(containedMaxLines, maxLines);
 
   // Calculate initial width and inner width
-  let width = propWidth || 2048 / precision;
+  let width = maxWidth || 2048 / precision;
   let innerWidth = width - paddingLeft;
   if (innerWidth < 10) {
     width += 10 - innerWidth;
@@ -189,8 +188,8 @@ const renderText = (
     scaledFontSize,
     lineHeight,
     scaledOffsetY,
-    propWidth,
-    propHeight,
+    maxWidth,
+    maxHeight,
     wordWrap,
     textAlign,
   );

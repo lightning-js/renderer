@@ -656,6 +656,8 @@ export class Stage {
       verticalAlign: props.verticalAlign || 'middle',
       overflowSuffix: props.overflowSuffix || '...',
       wordBreak: props.wordBreak || 'normal',
+      maxWidth: props.maxWidth || 0,
+      maxHeight: props.maxHeight || 0,
     });
 
     const resolvedTextRenderer = this.resolveTextRenderer(resolvedProps);

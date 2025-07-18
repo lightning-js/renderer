@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
 
@@ -178,8 +179,8 @@ export interface TrProps extends TrFontProps {
    * @default 'none'
    */
   contain: 'none' | 'width' | 'both';
-  width: number;
-  height: number;
+  maxWidth: number;
+  maxHeight: number;
   /**
    * Vertical offset for text
    *
@@ -384,18 +385,20 @@ export interface TextRenderProps {
   stage: Stage;
 }
 
+export interface TextRenderInfo {
+  width: number;
+  height: number;
+  imageData?: ImageData; // Image data for Canvas Text Renderer
+  layout?: TextLayout; // Layout data for SDF renderer caching
+}
+
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (
     stage: Stage,
-    props: TrProps,
-  ) => {
-    imageData: ImageData | null;
-    width: number;
-    height: number;
-    layout?: TextLayout; // Layout data for SDF renderer caching
-  };
+    props: Partial<CoreTextNodeProps>,
+  ) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (

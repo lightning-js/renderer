@@ -18,7 +18,12 @@
  */
 
 import type { Stage } from '../Stage.js';
-import type { FontHandler, TextRenderProps, TrProps } from './TextRenderer.js';
+import type {
+  FontHandler,
+  TextRenderInfo,
+  TextRenderProps,
+  TrProps,
+} from './TextRenderer.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -57,19 +62,10 @@ const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (
-  stage: Stage,
-  props: TrProps,
-): {
-  imageData: ImageData | null;
-  width: number;
-  height: number;
-  layout?: TextLayout;
-} => {
+const renderText = (stage: Stage, props: TrProps): TextRenderInfo => {
   // Early return if no text
   if (props.text.length === 0) {
     return {
-      imageData: null,
       width: 0,
       height: 0,
     };
@@ -80,7 +76,6 @@ const renderText = (
   if (fontData === null) {
     // Font not loaded, return empty result
     return {
-      imageData: null,
       width: 0,
       height: 0,
     };
@@ -91,7 +86,6 @@ const renderText = (
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
-    imageData: null,
     width: layout.width,
     height: layout.height,
     layout, // Cache layout for addQuads
