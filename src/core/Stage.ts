@@ -660,7 +660,10 @@ export class Stage {
       maxHeight: props.maxHeight || 0,
     });
 
-    const resolvedTextRenderer = this.resolveTextRenderer(resolvedProps);
+    const resolvedTextRenderer = this.resolveTextRenderer(
+      resolvedProps,
+      resolvedProps.textRendererOverride as keyof TextRenderers | null,
+    );
 
     if (!resolvedTextRenderer) {
       throw new Error(
