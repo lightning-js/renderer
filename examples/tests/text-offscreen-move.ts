@@ -41,6 +41,18 @@ export async function automation(settings: ExampleSettings) {
  */
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
+
+  // const controlbox = renderer.createNode({
+  //   x: renderer.settings.appWidth / 2,
+  //   y: renderer.settings.appHeight / 2,
+  //   mount: 0.5,
+  //   width: 400,
+  //   height: 400,
+  //   color: 0xffffffff,
+  //   alpha: 0.2,
+  //   parent: settings.testRoot
+  // });
+
   const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,

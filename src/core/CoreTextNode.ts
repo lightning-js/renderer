@@ -217,13 +217,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private handleRenderResult(result: TextRenderInfo): void {
     // Host paths on top
     const textRendererType = this._type;
-    const resultWidth = result.width;
-    const resultHeight = result.height;
+    let resultWidth = result.width;
+    let resultHeight = result.height;
     const contain = this._contain;
 
     // Handle Canvas renderer (uses ImageData)
     if (textRendererType === 'canvas') {
-      if (!result.imageData) {
+      if (result.imageData === undefined) {
         this.emit('failed', {
           type: 'text',
           error: new Error(

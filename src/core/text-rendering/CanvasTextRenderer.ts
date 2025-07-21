@@ -237,16 +237,18 @@ const renderText = (
     fontFamily,
   );
 
+  width = dimensions.width;
+  const height = lineHeight * layout.lines.length;
   // Extract image data
   let imageData: ImageData | null = null;
   if (canvas.width > 0 && canvas.height > 0) {
-    imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    imageData = context.getImageData(0, 0, width, height);
   }
 
   return {
     imageData,
-    width: dimensions.width,
-    height: lineHeight * layout.lines.length,
+    width,
+    height,
   };
 };
 
