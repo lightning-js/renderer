@@ -302,9 +302,8 @@ export interface TrProps extends TrFontProps {
    *
    * @remarks
    * This property sets the vertical align of the text.
-   * Not yet implemented in the SDF renderer.
    *
-   * @default middle
+   * @default top
    */
   verticalAlign: TextVerticalAlign;
   /**

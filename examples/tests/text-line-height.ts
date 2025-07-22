@@ -52,6 +52,7 @@ const NODE_PROPS = {
   text: 'abcd\ntxyz',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
+  verticalAlign: 'middle',
   fontSize: 50,
 } satisfies Partial<ITextNodeProps>;
 
@@ -59,9 +60,42 @@ function generateLineHeightTest(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
 ): TestRow[] {
+  function createTextWithBox(props: Partial<ITextNodeProps>) {
+    // Create a container for the text and its background box
+    const container = renderer.createNode({
+      x: 0,
+      y: 0,
+      width: 180,
+      height: 180,
+    });
+
+    // Create the text node
+    const textNode = renderer.createTextNode({
+      ...props,
+      parent: container,
+    });
+
+    // Wait for text to load and then add a background box showing its actual dimensions
+    textNode.on('loaded', () => {
+      // Background box showing text node boundaries
+      renderer.createNode({
+        x: textNode.x,
+        y: textNode.y,
+        mount: textNode.mount,
+        width: textNode.width,
+        height: textNode.height,
+        color: 0x0066cc40,
+        parent: container,
+        zIndex: -1,
+      });
+    });
+
+    return container;
+  }
+
   return [
     {
-      title: `Text Node ('lineHeight', ${textRenderer}, fontSize=50)${
+      title: `Text Node ('lineHeight', ${textRenderer}, fontSize=50) - with boundary boxes${
         textRenderer === 'canvas' ? ', "BROKEN!"' : ''
       }`,
       content: async (rowNode) => {
@@ -70,45 +104,33 @@ function generateLineHeightTest(
           textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeProps>;
 
-        const baselineNode = renderer.createTextNode({
-          ...nodeProps,
-        });
-        // const dimensions = await waitForTextDimensions(baselineNode);
-
-        // // Get the position for the center of the container based on mount = 0
-        // const position = {
-        //   y: 100 - dimensions.height / 2,
-        // };
-
-        // baselineNode.y = position.y;
-
         return await constructTestRow(
           { renderer, rowNode, containerSize: 180 },
           [
             'lineHeight: (default)\n->',
-            baselineNode,
+            createTextWithBox(nodeProps),
             '60 ->',
-            renderer.createTextNode({
+            createTextWithBox({
               ...nodeProps,
               lineHeight: 60,
             }),
             '70 ->',
-            renderer.createTextNode({
+            createTextWithBox({
               ...nodeProps,
               lineHeight: 70,
             }),
             '25 ->',
-            renderer.createTextNode({
+            createTextWithBox({
               ...nodeProps,
               lineHeight: 25,
             }),
             '10 ->',
-            renderer.createTextNode({
+            createTextWithBox({
               ...nodeProps,
               lineHeight: 10,
             }),
             '1 ->',
-            renderer.createTextNode({
+            createTextWithBox({
               ...nodeProps,
               lineHeight: 1,
             }),

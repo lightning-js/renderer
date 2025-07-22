@@ -31,7 +31,6 @@ import type {
 } from '../../../font-face-types/SdfTrFontFace/internal/FontShaper.js';
 import type { TrProps, TextRendererState } from '../../TextRenderer.js';
 import type { SdfTextRendererState } from '../SdfTextRenderer.js';
-import { measureText } from './measureText.js';
 import { getOrderedText } from './getOrderedText.js';
 
 class LayoutState {
@@ -209,10 +208,11 @@ class LayoutState {
       this.cluster = glyph.cluster;
       const atlasEntry = this._trFontFace.getAtlasEntry(glyph.glyphId);
 
-      const u = atlasEntry.x / this._trFontFace.data.common.scaleW;
-      const v = atlasEntry.y / this._trFontFace.data.common.scaleH;
-      const uvWidth = atlasEntry.width / this._trFontFace.data.common.scaleW;
-      const uvHeight = atlasEntry.height / this._trFontFace.data.common.scaleH;
+      const fontData = this._trFontFace.data.common;
+      const u = atlasEntry.x / fontData.scaleW;
+      const v = atlasEntry.y / fontData.scaleH;
+      const uvWidth = atlasEntry.width / fontData.scaleW;
+      const uvHeight = atlasEntry.height / fontData.scaleH;
 
       // Top-left
       vertexBuffer[this.bufferOffset++] = quadX;
@@ -239,10 +239,12 @@ class LayoutState {
       vertexBuffer[this.bufferOffset++] = v + uvHeight;
     }
 
-    this.maxX = Math.max(this.maxX, quadX + glyph.width);
-    this.maxY = Math.max(this.maxY, quadY + glyph.height);
-    this.minX = Math.min(this.minX, quadX);
-    this.minY = Math.min(this.minY, quadY);
+    const maxX = quadX + glyph.width;
+    const maxY = quadY + glyph.height;
+    if (maxX > this.maxX) this.maxX = maxX;
+    if (maxY > this.maxY) this.maxY = maxY;
+    if (quadX < this.minX) this.minX = quadX;
+    if (quadY < this.minY) this.minY = quadY;
     this.curX += glyph.xAdvance;
   }
 }
@@ -275,6 +277,7 @@ export function layoutText(
   wordBreak: TrProps['wordBreak'],
   maxLines: TrProps['maxLines'],
   isRTL: TrProps['bidi'],
+  verticalAlign: TrProps['verticalAlign'],
 ): {
   bufferNumFloats: number;
   bufferNumQuads: number;
@@ -485,20 +488,54 @@ export function layoutText(
   // Adds the last line to Buffer
   layoutState.addLineToBuffer();
 
-  // Shift all glyphs to the correct X position
-  // Some fonts may have negative offsets
   const shiftX =
     layoutState.minY !== Infinity &&
     layoutState.minY !== 0 &&
     layoutState.minX !== Infinity &&
     layoutState.minX !== 0;
-  if (shiftX) {
+
+  let verticalAlignOffset = 0;
+  if (verticalAlign !== 'top') {
+    const totalTextHeight = lineCache.length * vertexLineHeight;
+
+    if (contain === 'both') {
+      // When contained, align within the container
+      if (verticalAlign === 'middle') {
+        verticalAlignOffset = (vertexTruncateHeight - totalTextHeight) / 2;
+      } else if (verticalAlign === 'bottom') {
+        verticalAlignOffset = vertexTruncateHeight - totalTextHeight;
+      }
+    } else {
+      // When not contained, align relative to actual text bounds
+      if (verticalAlign === 'middle') {
+        verticalAlignOffset = (totalTextHeight - layoutState.maxY) / 2;
+      } else if (verticalAlign === 'bottom') {
+        verticalAlignOffset = totalTextHeight - layoutState.maxY;
+      }
+    }
+  }
+
+  if (shiftX === true || verticalAlignOffset !== 0) {
     for (let i = 0; i < layoutState.bufferOffset; i += 4) {
-      if (shiftX) vertexBuffer[i] = (vertexBuffer[i] ?? 0) - layoutState.minX;
+      // Apply X-axis shift if needed
+      if (shiftX === true && vertexBuffer[i] !== undefined) {
+        vertexBuffer[i] = (vertexBuffer[i] ?? 0) - layoutState.minX;
+      }
+
+      // Apply vertical alignment if needed (Y coordinates are at i+1)
+      if (verticalAlignOffset !== 0 && vertexBuffer[i + 1] !== undefined) {
+        vertexBuffer[i + 1] = (vertexBuffer[i + 1] ?? 0) + verticalAlignOffset;
+      }
     }
-    if (shiftX) {
-      layoutState.maxX -= layoutState.minX; // Adjust maxX to account for the shift
-    }
+  }
+
+  // Update layout state bounds
+  if (shiftX) {
+    layoutState.maxX -= layoutState.minX;
+  }
+  if (verticalAlignOffset !== 0) {
+    layoutState.maxY += verticalAlignOffset;
+    layoutState.minY += verticalAlignOffset;
   }
 
   if (textAlign === 'center' || textAlign === 'right') {

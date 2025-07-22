@@ -622,7 +622,7 @@ export class Stage {
       lineHeight: props.lineHeight, // `undefined` is a valid value
       maxLines: props.maxLines ?? 0,
       textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
+      verticalAlign: props.verticalAlign ?? 'top',
       overflowSuffix: props.overflowSuffix ?? '...',
       wordBreak: props.wordBreak ?? 'normal',
       debug: props.debug ?? {},

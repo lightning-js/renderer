@@ -547,7 +547,6 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       sdfFontSize,
       sdfLineHeight,
       trFontFace,
-      verticalAlign,
       state.props.textBaseline,
       offsetY,
       fontSizeRatio,
@@ -587,6 +586,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
       wordBreak,
       maxLines,
       bidi,
+      verticalAlign,
     );
 
     state.bufferUploaded = false;
