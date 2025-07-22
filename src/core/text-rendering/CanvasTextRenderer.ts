@@ -101,22 +101,22 @@ const renderText = (
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
 
-  // Extract and normalize properties
+  // Extract already normalized properties
   const {
-    text = '',
-    fontFamily = 'Arial',
-    fontStyle = 'normal',
-    fontSize = 16,
-    textAlign = 'left',
-    lineHeight: propLineHeight = 0,
-    maxLines = 0,
-    textBaseline = 'alphabetic',
-    verticalAlign = 'top',
-    overflowSuffix = '',
-    contain = 'none',
-    maxWidth = 0,
-    offsetY = 0,
-    letterSpacing = 0,
+    text,
+    fontFamily,
+    fontStyle,
+    fontSize,
+    textAlign,
+    lineHeight: propLineHeight,
+    maxLines,
+    textBaseline,
+    verticalAlign,
+    overflowSuffix,
+    maxWidth,
+    maxHeight,
+    offsetY,
+    letterSpacing,
   } = props;
 
   // Performance optimization constants
@@ -129,15 +129,12 @@ const renderText = (
 
   // Determine word wrap behavior
   const wordWrap = maxWidth > 0;
-  const wordWrapWidth = contain === 'none' ? 0 : maxWidth || 0;
-  const maxHeight = contain === 'both' ? props.maxHeight + offsetY : 0;
   const textOverflow = overflowSuffix ? 'ellipsis' : null;
 
   // Calculate scaled values
   const scaledFontSize = fontSize * precision;
   const scaledOffsetY = offsetY * precision;
   const scaledLetterSpacing = letterSpacing * precision;
-
   // Get font metrics and calculate line height
   context.font = `${fontStyle} ${scaledFontSize}px ${fontFamily}`;
   context.textBaseline = textBaseline;
@@ -162,7 +159,7 @@ const renderText = (
     width += 10 - innerWidth;
     innerWidth = 10;
   }
-  const finalWordWrapWidth = wordWrapWidth === 0 ? innerWidth : wordWrapWidth;
+  const finalWordWrapWidth = maxWidth === 0 ? innerWidth : maxWidth;
 
   // Calculate text layout using cached helper function
   const layout = calculateTextLayout(
@@ -184,7 +181,7 @@ const renderText = (
     layout,
     paddingLeft,
     paddingRight,
-    textBaseline as TextBaseline,
+    textBaseline,
     scaledFontSize,
     lineHeight,
     scaledOffsetY,

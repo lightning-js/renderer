@@ -52,6 +52,13 @@ function normalizeMetrics(metrics: FontMetrics): NormalizedFontMetrics {
 }
 
 /**
+ * make fontface add not show errors
+ */
+interface FontFaceSetWithAdd extends FontFaceSet {
+  add(font: FontFace): void;
+}
+
+/**
  * Check if a font can be rendered
  */
 export const canRenderFont = (): boolean => {
@@ -78,14 +85,13 @@ export const loadFont = async (
   if (existingPromise !== undefined) {
     return existingPromise;
   }
-
   // Create and store the loading promise
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
-    .then(() => {
+    .then((loadedFont) => {
+      (document.fonts as FontFaceSetWithAdd).add(loadedFont);
       loadedFonts.add(fontFamily);
       fontLoadPromises.delete(fontFamily);
-
       // Store normalized metrics if provided
       if (metrics) {
         setFontMetrics(fontFamily, normalizeMetrics(metrics));
@@ -144,7 +150,9 @@ export const getFontMetrics = (
   fontFamily: string,
   fontSize: number,
 ): NormalizedFontMetrics => {
-  let out = normalizedMetrics.get(fontFamily + fontSize);
+  let out =
+    normalizedMetrics.get(fontFamily) ||
+    normalizedMetrics.get(fontFamily + fontSize);
   if (out !== undefined) {
     return out;
   }

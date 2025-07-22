@@ -153,32 +153,7 @@ export interface TrProps extends TrFontProps {
   color: number;
   x: number;
   y: number;
-  /**
-   * Contain mode for text
-   *
-   * @remarks
-   * The contain mode determines how the text is contained within the bounds
-   * of the Text Node. The default value is `'none'`, which means that the
-   * Text Renderer will not constrain the text in any way. `'width'` mode will
-   * constrain the text to the set width wrapping lines as necessary, and
-   * `'both'` mode will constrain the text to both the set width and height
-   * wrapping lines and truncating text as necessary.
-   *
-   * ## Text Auto-size Behavior
-   * Depending on the set contain mode, after the text 'loaded' event is emitted,
-   * the text node may have either its {@link width} and {@link height} updated
-   * to match the rendered size of the text.
-   *
-   * When contain mode is 'none', both the {@link width} and {@link height}
-   * properties are updated.
-   *
-   * When contain mode is 'width', only the {@link height} property is updated.
-   *
-   * When contain mode is 'both', neither property is updated.
-   *
-   * @default 'none'
-   */
-  contain: 'none' | 'width' | 'both';
+
   maxWidth: number;
   maxHeight: number;
   /**
@@ -212,7 +187,7 @@ export interface TrProps extends TrFontProps {
    *
    * @default `undefined`
    */
-  lineHeight: number | undefined;
+  lineHeight: number;
   /**
    * Max lines for text
    *

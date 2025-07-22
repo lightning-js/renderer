@@ -34,9 +34,11 @@ import type { Stage } from './Stage.js';
 import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
+  NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { TextureLoadedEventHandler } from './textures/Texture.js';
 
 // Internal text update tracking
 enum TextUpdateReason {
@@ -71,9 +73,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _fontSize!: number;
   private _fontStyle!: TrProps['fontStyle'];
   private _textAlign!: TrProps['textAlign'];
-  private _contain!: TrProps['contain'];
   private _letterSpacing!: number;
-  private _lineHeight: number | undefined;
+  private _lineHeight: number;
   private _maxLines!: number;
   private _textBaseline!: TrProps['textBaseline'];
   private _verticalAlign!: TrProps['verticalAlign'];
@@ -107,7 +108,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._fontSize = props.fontSize;
     this._fontStyle = props.fontStyle;
     this._textAlign = props.textAlign;
-    this._contain = props.contain;
     this._letterSpacing = props.letterSpacing;
     this._lineHeight = props.lineHeight;
     this._maxLines = props.maxLines;
@@ -119,82 +119,100 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._maxWidth = props.maxWidth;
     this._maxHeight = props.maxHeight;
 
-    //this setter might alter maxWidth / maxHeight
-    this.contain = props.contain;
-
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
     this.setUpdateType(UpdateType.Text);
   }
 
+  protected override onTextureLoaded: TextureLoadedEventHandler = (
+    _,
+    dimensions,
+  ) => {
+    // If parent has a render texture, flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+    }
+
+    // ignore 1x1 pixel textures
+    if (dimensions.width > 1 && dimensions.height > 1) {
+      this.emit('loaded', {
+        type: 'texture',
+        dimensions,
+      } satisfies NodeTextureLoadedPayload);
+    }
+
+    this.setUpdateType(UpdateType.Local | UpdateType.IsRenderable);
+
+    // Texture was loaded. In case the RAF loop has already stopped, we request
+    // a render to ensure the texture is rendered.
+    this.stage.requestRender();
+  };
+
   /**
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    // First run the standard CoreNode update
-    super.update(delta, parentClippingRect);
-
     // Handle text-specific updates if we have pending updates
     // Process synchronously in the same tick to maintain frame consistency
-    if (this._pendingTextUpdate === TextUpdateReason.None) {
-      return; // No updates needed
+    if (this._pendingTextUpdate !== TextUpdateReason.None) {
+      const textUpdateReason = this._pendingTextUpdate;
+      let fontUpdateNeeded = false;
+      let textRenderNeeded = false;
+
+      // Check if font update is needed
+      if (textUpdateReason & TextUpdateReason.FontChange) {
+        fontUpdateNeeded = true;
+      }
+
+      // Check if text render update is needed
+      if (textUpdateReason & TextUpdateReason.TextChange) {
+        textRenderNeeded = true;
+        this._cachedLayout = null; // Invalidate cached layout
+        this._lastVertexBuffer = null; // Invalidate last vertex buffer
+      }
+
+      // Step 1: Check if the font is loaded
+      if (
+        fontUpdateNeeded === true &&
+        this.fontHandler.isFontLoaded(this._fontFamily) === false
+      ) {
+        return; // Exit early, will re-render when font is loaded
+      }
+
+      // Step 2: Render text if rendering is needed
+      if (textRenderNeeded === true) {
+        const resp = this.textRenderer.renderText(this.stage, {
+          x: this.props.x,
+          y: this.props.y,
+          zIndex: this.props.zIndex,
+          text: this._text,
+          fontFamily: this._fontFamily,
+          fontSize: this._fontSize,
+          fontStyle: this._fontStyle,
+          textAlign: this._textAlign,
+          letterSpacing: this._letterSpacing,
+          lineHeight: this._lineHeight,
+          maxLines: this._maxLines,
+          textBaseline: this._textBaseline,
+          verticalAlign: this._verticalAlign,
+          color: this.props.color,
+          offsetY: this._offsetY,
+          width: this.props.width,
+          maxWidth: this._maxWidth,
+          height: this.props.height,
+          maxHeight: this._maxHeight,
+          overflowSuffix: this._overflowSuffix,
+          wordBreak: this._wordBreak,
+        });
+        this.handleRenderResult(resp);
+      }
+
+      // Reset pending updates after processing
+      this._pendingTextUpdate = TextUpdateReason.None;
     }
 
-    const textUpdateReason = this._pendingTextUpdate;
-    let fontUpdateNeeded = false;
-    let textRenderNeeded = false;
-
-    // Check if font update is needed
-    if (textUpdateReason & TextUpdateReason.FontChange) {
-      fontUpdateNeeded = true;
-    }
-
-    // Check if text render update is needed
-    if (textUpdateReason & TextUpdateReason.TextChange) {
-      textRenderNeeded = true;
-      this._cachedLayout = null; // Invalidate cached layout
-      this._lastVertexBuffer = null; // Invalidate last vertex buffer
-    }
-
-    // Step 1: Check if the font is loaded
-    if (
-      fontUpdateNeeded === true &&
-      this.fontHandler.isFontLoaded(this._fontFamily) === false
-    ) {
-      return; // Exit early, will re-render when font is loaded
-    }
-
-    // Step 2: Render text if rendering is needed
-    if (textRenderNeeded === true) {
-      const resp = this.textRenderer.renderText(this.stage, {
-        x: this.props.x,
-        y: this.props.y,
-        zIndex: this.props.zIndex,
-        text: this._text,
-        fontFamily: this._fontFamily,
-        fontSize: this._fontSize,
-        fontStyle: this._fontStyle,
-        textAlign: this._textAlign,
-        contain: this._contain,
-        letterSpacing: this._letterSpacing,
-        lineHeight: this._lineHeight,
-        maxLines: this._maxLines,
-        textBaseline: this._textBaseline,
-        verticalAlign: this._verticalAlign,
-        color: this.props.color,
-        offsetY: this._offsetY,
-        width: this.props.width,
-        maxWidth: this._maxWidth,
-        height: this.props.height,
-        maxHeight: this._maxHeight,
-        overflowSuffix: this._overflowSuffix,
-        wordBreak: this._wordBreak,
-      });
-      this.handleRenderResult(resp);
-    }
-
-    // Reset pending updates after processing
-    this._pendingTextUpdate = TextUpdateReason.None;
+    // First run the standard CoreNode update
+    super.update(delta, parentClippingRect);
   }
 
   /**
@@ -217,9 +235,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private handleRenderResult(result: TextRenderInfo): void {
     // Host paths on top
     const textRendererType = this._type;
-    let resultWidth = result.width;
-    let resultHeight = result.height;
-    const contain = this._contain;
+    let width = result.width;
+    let height = result.height;
 
     // Handle Canvas renderer (uses ImageData)
     if (textRendererType === 'canvas') {
@@ -255,32 +272,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(true);
     }
 
-    // Recalculate width constraints based on current contain mode
-    if (this._contain === 'width' || this._contain === 'both') {
-      this._maxWidth = this.props.width || 0;
-      if (this._contain === 'both') {
-        this._maxHeight = this.props.height || 0;
-      }
-    }
-
-    // Update dimensions based on contain mode (same for both renderers)
-    if (contain === 'both') {
-      this.width = this._maxWidth;
-      this.height = this._maxHeight;
-    } else if (contain === 'width') {
-      this.width = this._maxWidth;
-      this.height = resultHeight;
-    } else if (contain === 'none') {
-      this.width = resultWidth;
-      this.height = resultHeight;
-    }
+    this.props.width = width;
+    this.props.height = height;
+    this.setUpdateType(UpdateType.Local);
 
     this._renderInfo = result;
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: resultWidth,
-        height: resultHeight,
+        width: width,
+        height: height,
       },
     } satisfies NodeTextLoadedPayload);
   }
@@ -412,18 +413,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  get contain(): TrProps['contain'] {
-    return this._contain;
-  }
-
-  set contain(value: TrProps['contain']) {
-    if (this._contain !== value) {
-      this._contain = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
-    }
-  }
-
   get letterSpacing(): number {
     return this._letterSpacing;
   }
@@ -436,11 +425,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  get lineHeight(): number | undefined {
+  get lineHeight(): number {
     return this._lineHeight;
   }
 
-  set lineHeight(value: number | undefined) {
+  set lineHeight(value: number) {
     if (this._lineHeight !== value) {
       this._lineHeight = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;

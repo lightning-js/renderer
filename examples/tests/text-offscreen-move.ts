@@ -42,29 +42,18 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
 
-  // const controlbox = renderer.createNode({
-  //   x: renderer.settings.appWidth / 2,
-  //   y: renderer.settings.appHeight / 2,
-  //   mount: 0.5,
-  //   width: 400,
-  //   height: 400,
-  //   color: 0xffffffff,
-  //   alpha: 0.2,
-  //   parent: settings.testRoot
-  // });
-
   const pageContainer = new PageContainer(settings, {
     width: renderer.settings.appWidth,
     height: renderer.settings.appHeight,
     title: 'Text Offscreen Move Tests',
   });
 
-  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'none'));
-  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'width'));
-  pageContainer.pushPage(createTestCase(renderer, 'sdf', 'both'));
-  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'none'));
-  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'width'));
-  pageContainer.pushPage(createTestCase(renderer, 'canvas', 'both'));
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 0, 0));
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 400, 0));
+  pageContainer.pushPage(createTestCase(renderer, 'sdf', 400, 400));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 0, 0));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 400, 0));
+  pageContainer.pushPage(createTestCase(renderer, 'canvas', 400, 400));
 
   await delay(200);
   pageContainer.finalizePages();
@@ -73,9 +62,6 @@ export default async function test(settings: ExampleSettings) {
 
 const commonTextProps = {
   mount: 0.5,
-  width: 400,
-  height: 400,
-  contain: 'none',
   text: 'Test passes if this text appears only as green',
   fontFamily: 'Ubuntu',
   textRendererOverride: 'canvas',
@@ -85,7 +71,8 @@ const commonTextProps = {
 function createTestCase(
   renderer: RendererMain,
   textRenderer: 'canvas' | 'sdf',
-  contain: ITextNodeProps['contain'],
+  maxWidth: number,
+  maxHeight: number,
 ) {
   return async function (page: INode) {
     const subheader = renderer.createTextNode({
@@ -98,14 +85,15 @@ function createTestCase(
       parent: page,
     });
 
-    subheader.text = `textRenderer = ${textRenderer}\ncontain = ${contain}`;
+    subheader.text = `textRenderer = ${textRenderer}\nmaxWidth = ${maxWidth}\nmaxHeight = ${maxHeight}`;
     renderer.createTextNode({
       ...commonTextProps,
       color: 0xff0000ff,
       x: renderer.settings.appWidth / 2,
       y: renderer.settings.appHeight / 2,
       textRendererOverride: textRenderer,
-      contain,
+      maxHeight,
+      maxWidth,
       parent: page,
     });
 
@@ -115,7 +103,8 @@ function createTestCase(
       x: -1000,
       y: -1000,
       textRendererOverride: textRenderer,
-      contain,
+      maxHeight,
+      maxWidth,
       parent: page,
     });
 

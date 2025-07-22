@@ -131,54 +131,46 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // SDF, contain none
       text1.textRendererOverride = 'sdf';
-      text1.contain = 'none';
-      text1.width = 0;
-      text1.height = 0;
+      text1.maxWidth = 0;
+      text1.maxHeight = 0;
     },
     () => {
       // SDF, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text1.maxWidth = 200;
     },
     () => {
       // SDF, contain width (smaller)
-      text1.width = 195;
+      text1.maxWidth = 195;
     },
     () => {
       // SDF, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text1.maxHeight = 203;
     },
     () => {
       // SDF, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text1.maxHeight = 204;
     },
     () => {
       // Canvas, contain none
       text1.textRendererOverride = 'canvas';
-      text1.contain = 'none';
-      text1.width = 0;
-      text1.height = 0;
+      text1.maxWidth = 0;
+      text1.maxHeight = 0;
     },
     () => {
       // Canvas, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text1.maxWidth = 200;
     },
     () => {
       // Canvas, contain width (smaller)
-      text1.contain = 'width';
-      text1.width = 195;
-      text1.height = 5;
+      text1.maxWidth = 195;
     },
     () => {
       // Canvas, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text1.maxHeight = 203;
     },
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text1.maxHeight = 204;
     },
   ];
   /**
@@ -196,7 +188,7 @@ Vivamus consectetur ex magna, non mollis.`,
     }
     i = idx;
     mutations[i]?.();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     header.text = makeHeader(
       text1.textRendererOverride!,
       text1.contain,
