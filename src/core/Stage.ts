@@ -647,10 +647,9 @@ export class Stage {
       fontFamily: props.fontFamily || 'sans-serif',
       fontStyle: props.fontStyle || 'normal',
       textAlign: props.textAlign || 'left',
-      contain: props.contain || 'none',
       offsetY: props.offsetY || 0,
       letterSpacing: props.letterSpacing || 0,
-      lineHeight: props.lineHeight, // `undefined` is a valid value
+      lineHeight: props.lineHeight || 0,
       maxLines: props.maxLines || 0,
       textBaseline: props.textBaseline || 'alphabetic',
       verticalAlign: props.verticalAlign || 'middle',

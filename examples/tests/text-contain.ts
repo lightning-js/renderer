@@ -65,8 +65,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -78,8 +76,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 20,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x00ff00ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -91,8 +87,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 40,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0xff0000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -104,8 +98,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 60,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x0000ffff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -117,8 +109,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 80,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -131,54 +121,47 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // SDF, contain none
       text1.textRendererOverride = 'sdf';
-      text1.contain = 'none';
-      text1.width = 0;
-      text1.height = 0;
+      text1.maxWidth = 0;
+      text1.maxHeight = 0;
     },
     () => {
       // SDF, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text1.maxWidth = 200;
     },
     () => {
       // SDF, contain width (smaller)
-      text1.width = 195;
+      text1.maxWidth = 195;
     },
     () => {
       // SDF, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text1.maxHeight = 203;
     },
     () => {
       // SDF, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text1.maxHeight = 204;
     },
     () => {
       // Canvas, contain none
       text1.textRendererOverride = 'canvas';
-      text1.contain = 'none';
-      text1.width = 0;
+      text1.maxWidth = 0;
       text1.height = 0;
     },
     () => {
       // Canvas, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text1.maxWidth = 200;
     },
     () => {
       // Canvas, contain width (smaller)
-      text1.contain = 'width';
-      text1.width = 195;
-      text1.height = 5;
+      text1.maxWidth = 195;
+      text1.maxHeight = 5;
     },
     () => {
       // Canvas, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text1.maxHeight = 203;
     },
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text1.maxHeight = 204;
     },
   ];
   /**
@@ -196,10 +179,9 @@ Vivamus consectetur ex magna, non mollis.`,
     }
     i = idx;
     mutations[i]?.();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     header.text = makeHeader(
       text1.textRendererOverride!,
-      text1.contain,
       text1.width,
       text1.height,
     );
@@ -232,11 +214,6 @@ Vivamus consectetur ex magna, non mollis.`,
   return next;
 }
 
-function makeHeader(
-  renderer: string,
-  contain: string,
-  width: number,
-  height: number,
-) {
-  return `${renderer}, contain = ${contain}`;
+function makeHeader(renderer: string, maxWidth: number, maxHeight: number) {
+  return `${renderer}, maxWidth = ${maxWidth}, maxHeight = ${maxHeight}`;
 }

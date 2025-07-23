@@ -90,10 +90,9 @@ export default async function ({
   const initialProps: Partial<ITextNodeProps> = {
     ...(savedState?.mutableProps || initialMutableProps),
     fontFamily: FONT_FAMILY,
-    contain: 'both',
-    scrollable: true,
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    // scrollable: true,
+    maxWidth: renderer.settings.appWidth,
+    maxHeight: renderer.settings.appHeight,
     text,
   };
 
@@ -102,21 +101,21 @@ export default async function ({
     ...getFontProps('msdf'),
     zIndex: 1,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const ssdfTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('ssdf'),
     zIndex: 2,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const canvasTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('web'),
     zIndex: 3,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const statusNode = renderer.createTextNode({
     text: '',

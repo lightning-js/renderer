@@ -905,7 +905,7 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
+  protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
     this.setUpdateType(UpdateType.IsRenderable);
 
@@ -1322,7 +1322,7 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private notifyParentRTTOfUpdate() {
+  protected notifyParentRTTOfUpdate() {
     if (this.parent === null) {
       return;
     }
@@ -1368,8 +1368,10 @@ export class CoreNode extends EventEmitter {
   }
 
   updateBoundingRect() {
-    const transform = (this.sceneGlobalTransform || this.globalTransform)!;
-    const renderCoords = (this.sceneRenderCoords || this.renderCoords)!;
+    const transform = (this.sceneGlobalTransform ||
+      this.globalTransform) as Matrix3d;
+    const renderCoords = (this.sceneRenderCoords ||
+      this.renderCoords) as RenderCoords;
 
     if (transform.tb === 0 || transform.tc === 0) {
       this.renderBound = createBound(

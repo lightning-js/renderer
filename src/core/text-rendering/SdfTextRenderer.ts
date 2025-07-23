@@ -242,7 +242,6 @@ const renderQuads = (
   if (buffer !== undefined) {
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
-
   const renderOp = new WebGlRenderOp(
     renderer as WebGlRenderer,
     {
@@ -251,7 +250,7 @@ const renderQuads = (
         color: mergeColorAlpha(color || 0xffffffff, worldAlpha),
         size: fontSize / (fontData.info?.size || fontData.common.lineHeight), // Use proper font scaling in shader
         scrollY: offsetY || 0,
-        distanceRange: fontData.distanceField?.distanceRange || 1.0,
+        distanceRange: layout.distanceRange,
         debug: false, // Disable debug mode
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
@@ -283,49 +282,42 @@ const generateTextLayout = (
   props: CoreTextNodeProps,
   fontData: SdfFontHandler.SdfFontData,
 ): TextLayout => {
+  const commonFontData = fontData.common;
   const text = props.text;
   const fontSize = props.fontSize;
-  const letterSpacing = props.letterSpacing || 0;
+  const letterSpacing = props.letterSpacing;
   const fontFamily = props.fontFamily;
-  const contain = props.contain || 'none';
-  const textAlign = props.textAlign || 'left';
-  const maxWidth = Number(props.maxWidth) || 0;
-  const maxHeight = Number(props.maxHeight) || 0;
-  const maxLines = Number(props.maxLines) || 0;
-  const overflowSuffix = props.overflowSuffix || '';
-
-  // Use width as maxWidth when contain is set but maxWidth is 0
-  const effectiveMaxWidth =
-    maxWidth > 0 ? maxWidth : contain !== 'none' ? Number(props.width) || 0 : 0;
+  const textAlign = props.textAlign;
+  const maxWidth = props.maxWidth;
+  const maxHeight = props.maxHeight;
+  const maxLines = props.maxLines;
+  const overflowSuffix = props.overflowSuffix;
 
   // Use the font's design size for proper scaling
-  const designLineHeight = fontData.common.lineHeight;
+  const designLineHeight = commonFontData.lineHeight;
+
+  const designFontSize = fontData.info.size;
+
   const lineHeight =
-    props.lineHeight ||
-    (designLineHeight * fontSize) /
-      (fontData.info?.size || fontData.common.lineHeight);
-  const atlasWidth = fontData.common.scaleW;
-  const atlasHeight = fontData.common.scaleH;
+    props.lineHeight || (designLineHeight * fontSize) / designFontSize;
+  const atlasWidth = commonFontData.scaleW;
+  const atlasHeight = commonFontData.scaleH;
 
   // Calculate the pixel scale from design units to pixels
-  const finalScale =
-    fontSize / (fontData.info?.size || fontData.common.lineHeight);
+  const finalScale = fontSize / designFontSize;
 
   // Calculate design letter spacing
-  const designLetterSpacing =
-    (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
-    fontSize;
+  const designLetterSpacing = (letterSpacing * designFontSize) / fontSize;
 
   // Determine text wrapping behavior based on contain mode
-  const shouldWrapText = contain === 'width' || contain === 'both';
-  const wrapWidth = shouldWrapText ? effectiveMaxWidth : 0;
-  const heightConstraint = contain === 'both' ? maxHeight : 0;
+  const shouldWrapText = maxWidth > 0;
+  const heightConstraint = maxHeight > 0;
 
   // Calculate maximum lines constraint from height if needed
   let effectiveMaxLines = maxLines;
-  if (heightConstraint > 0) {
+  if (heightConstraint === true) {
     const maxLinesFromHeight = Math.floor(
-      heightConstraint / (lineHeight * finalScale),
+      maxHeight / (lineHeight * finalScale),
     );
     if (effectiveMaxLines === 0 || maxLinesFromHeight < effectiveMaxLines) {
       effectiveMaxLines = maxLinesFromHeight;
@@ -340,7 +332,7 @@ const generateTextLayout = (
         fontData,
         fontSize,
         finalScale,
-        wrapWidth,
+        maxWidth,
         letterSpacing,
         overflowSuffix,
         effectiveMaxLines,
@@ -395,12 +387,12 @@ const generateTextLayout = (
     let lineXOffset = 0;
     if (textAlign === 'center') {
       const availableWidth = shouldWrapText
-        ? wrapWidth / finalScale
+        ? maxWidth / finalScale
         : maxWidthFound;
       lineXOffset = (availableWidth - lineWidth) / 2;
     } else if (textAlign === 'right') {
       const availableWidth = shouldWrapText
-        ? wrapWidth / finalScale
+        ? maxWidth / finalScale
         : maxWidthFound;
       lineXOffset = availableWidth - lineWidth;
     }
@@ -472,6 +464,7 @@ const generateTextLayout = (
   // Convert final dimensions to pixel space for the layout
   return {
     glyphs,
+    distanceRange: finalScale * fontData.distanceField.distanceRange,
     width: Math.ceil(maxWidthFound * finalScale),
     height: Math.ceil(designLineHeight * finalLines.length * finalScale),
     fontScale: finalScale,
