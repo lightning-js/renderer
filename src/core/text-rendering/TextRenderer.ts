@@ -336,7 +336,9 @@ export interface FontLoadOptions {
 }
 
 export interface FontHandler {
-  init: () => void;
+  init: (
+    c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ) => void;
   type: 'canvas' | 'sdf';
   isFontLoaded: (fontFamily: string) => boolean;
   loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
@@ -344,8 +346,8 @@ export interface FontHandler {
   canRenderFont: (trProps: TrProps) => boolean;
   getFontMetrics: (
     fontFamily: string,
-    trProps: TrProps,
-  ) => NormalizedFontMetrics | null;
+    fontSize: number,
+  ) => NormalizedFontMetrics;
   setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
 }
 
@@ -367,17 +369,14 @@ export interface TextRenderProps {
 export interface TextRenderInfo {
   width: number;
   height: number;
-  imageData?: ImageData; // Image data for Canvas Text Renderer
+  imageData?: ImageData | null; // Image data for Canvas Text Renderer
   layout?: TextLayout; // Layout data for SDF renderer caching
 }
 
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
-  renderText: (
-    stage: Stage,
-    props: Partial<CoreTextNodeProps>,
-  ) => TextRenderInfo;
+  renderText: (stage: Stage, props: CoreTextNodeProps) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (

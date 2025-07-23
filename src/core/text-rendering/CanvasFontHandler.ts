@@ -118,11 +118,18 @@ export const getFontFamilies = (): FontFamilyMap => {
  * Initialize the global font handler
  */
 export const init = (
-  c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): void => {
   if (initialized === true) {
     return;
   }
+
+  if (c === undefined) {
+    throw new Error(
+      'Canvas context is not provided for font handler initialization',
+    );
+  }
+
   context = c;
 
   // Register the default 'sans-serif' font face

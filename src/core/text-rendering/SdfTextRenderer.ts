@@ -42,7 +42,7 @@ const FLOATS_PER_VERTEX = 4;
 const VERTICES_PER_GLYPH = 6;
 
 // Type definition to match interface
-const type = 'sdf';
+const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
 

@@ -382,7 +382,9 @@ export const getFontFamilies = (): FontFamilyMap => {
 /**
  * Initialize the SDF font handler
  */
-export const init = (): void => {
+export const init = (
+  c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+): void => {
   if (initialized === true) {
     return;
   }
@@ -405,10 +407,10 @@ export const isFontLoaded = (fontFamily: string): boolean => {
 export const getFontMetrics = (
   fontFamily: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _trProps: TrProps,
-): NormalizedFontMetrics | null => {
+  fontSize: number,
+): NormalizedFontMetrics => {
   const cache = fontCache[fontFamily];
-  return cache ? cache.metrics : null;
+  return cache ? cache.metrics : { ascender: 0, descender: 0, lineGap: 0 };
 };
 
 /**

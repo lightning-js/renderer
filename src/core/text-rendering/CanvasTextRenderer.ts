@@ -32,7 +32,7 @@ import type { CoreTextNodeProps } from '../CoreTextNode.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
-const type = 'canvas';
+const type = 'canvas' as const;
 
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let context:
