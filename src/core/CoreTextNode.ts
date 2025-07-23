@@ -67,22 +67,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _pendingTextUpdate: TextUpdateReason = TextUpdateReason.Both;
 
   // Text renderer properties - stored directly on the node
-  // All defaults are handled by Stage.createTextNode
-  private _text!: string;
-  private _fontFamily!: string;
-  private _fontSize!: number;
-  private _fontStyle!: TrProps['fontStyle'];
-  private _textAlign!: TrProps['textAlign'];
-  private _letterSpacing!: number;
-  private _lineHeight: number;
-  private _maxLines!: number;
-  private _textBaseline!: TrProps['textBaseline'];
-  private _verticalAlign!: TrProps['verticalAlign'];
-  private _overflowSuffix!: string;
-  private _wordBreak!: TrProps['wordBreak'];
-  private _offsetY!: number;
-  private _maxHeight: number;
-  private _maxWidth: number;
+  private textProps: CoreTextNodeProps;
 
   private _renderInfo: TextRenderInfo = {
     width: 0,
@@ -103,21 +88,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
-    this._text = props.text;
-    this._fontFamily = props.fontFamily;
-    this._fontSize = props.fontSize;
-    this._fontStyle = props.fontStyle;
-    this._textAlign = props.textAlign;
-    this._letterSpacing = props.letterSpacing;
-    this._lineHeight = props.lineHeight;
-    this._maxLines = props.maxLines;
-    this._textBaseline = props.textBaseline;
-    this._verticalAlign = props.verticalAlign;
-    this._overflowSuffix = props.overflowSuffix;
-    this._wordBreak = props.wordBreak;
-    this._offsetY = props.offsetY;
-    this._maxWidth = props.maxWidth;
-    this._maxHeight = props.maxHeight;
+    this.textProps = props;
 
     // Mark text as needing update - this will trigger the text rendering process
     this._pendingTextUpdate = TextUpdateReason.Both;
@@ -175,36 +146,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // Step 1: Check if the font is loaded
       if (
         fontUpdateNeeded === true &&
-        this.fontHandler.isFontLoaded(this._fontFamily) === false
+        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === false
       ) {
         return; // Exit early, will re-render when font is loaded
       }
 
       // Step 2: Render text if rendering is needed
       if (textRenderNeeded === true) {
-        const resp = this.textRenderer.renderText(this.stage, {
-          x: this.props.x,
-          y: this.props.y,
-          zIndex: this.props.zIndex,
-          text: this._text,
-          fontFamily: this._fontFamily,
-          fontSize: this._fontSize,
-          fontStyle: this._fontStyle,
-          textAlign: this._textAlign,
-          letterSpacing: this._letterSpacing,
-          lineHeight: this._lineHeight,
-          maxLines: this._maxLines,
-          textBaseline: this._textBaseline,
-          verticalAlign: this._verticalAlign,
-          color: this.props.color,
-          offsetY: this._offsetY,
-          width: this.props.width,
-          maxWidth: this._maxWidth,
-          height: this.props.height,
-          maxHeight: this._maxHeight,
-          overflowSuffix: this._overflowSuffix,
-          wordBreak: this._wordBreak,
-        });
+        const resp = this.textRenderer.renderText(this.stage, this.textProps);
         this.handleRenderResult(resp);
       }
 
@@ -303,15 +252,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (!this._lastVertexBuffer) {
       this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
     }
+
+    const props = this.textProps;
+
     this.textRenderer.renderQuads(
       renderer,
       this._cachedLayout as TextLayout,
       this._lastVertexBuffer!,
       {
-        fontFamily: this._fontFamily,
-        fontSize: this._fontSize,
+        fontFamily: this.textProps.fontFamily,
+        fontSize: props.fontSize,
         color: this.props.color || 0xffffffff,
-        offsetY: this._offsetY,
+        offsetY: props.offsetY,
         worldAlpha: this.worldAlpha,
         globalTransform:
           this.globalTransform?.getFloatArr() || new Float32Array(16),
@@ -329,12 +281,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   get maxWidth() {
-    return this._maxWidth;
+    return this.textProps.maxWidth;
   }
 
   set maxWidth(value: number) {
-    if (this._maxWidth !== value) {
-      this._maxWidth = value;
+    if (this.textProps.maxWidth !== value) {
+      this.textProps.maxWidth = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
@@ -342,168 +294,168 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   // Property getters and setters
   get maxHeight() {
-    return this._maxHeight;
+    return this.textProps.maxHeight;
   }
 
   set maxHeight(value: number) {
-    if (this._maxHeight !== value) {
-      this._maxHeight = value;
+    if (this.textProps.maxHeight !== value) {
+      this.textProps.maxHeight = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get text(): string {
-    return this._text;
+    return this.textProps.text;
   }
 
   set text(value: string) {
-    if (this._text !== value) {
-      this._text = value;
+    if (this.textProps.text !== value) {
+      this.textProps.text = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get fontSize(): number {
-    return this._fontSize;
+    return this.textProps.fontSize;
   }
 
   set fontSize(value: number) {
-    if (this._fontSize !== value) {
-      this._fontSize = value;
+    if (this.textProps.fontSize !== value) {
+      this.textProps.fontSize = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get fontFamily(): string {
-    return this._fontFamily;
+    return this.textProps.fontFamily;
   }
 
   set fontFamily(value: string) {
-    if (this._fontFamily !== value) {
-      this._fontFamily = value;
+    if (this.textProps.fontFamily !== value) {
+      this.textProps.fontFamily = value;
       this._pendingTextUpdate |= TextUpdateReason.Both;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get fontStyle(): TrProps['fontStyle'] {
-    return this._fontStyle;
+    return this.textProps.fontStyle;
   }
 
   set fontStyle(value: TrProps['fontStyle']) {
-    if (this._fontStyle !== value) {
-      this._fontStyle = value;
+    if (this.textProps.fontStyle !== value) {
+      this.textProps.fontStyle = value;
       this._pendingTextUpdate |= TextUpdateReason.Both;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get textAlign(): TrProps['textAlign'] {
-    return this._textAlign;
+    return this.textProps.textAlign;
   }
 
   set textAlign(value: TrProps['textAlign']) {
-    if (this._textAlign !== value) {
-      this._textAlign = value;
+    if (this.textProps.textAlign !== value) {
+      this.textProps.textAlign = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get letterSpacing(): number {
-    return this._letterSpacing;
+    return this.textProps.letterSpacing;
   }
 
   set letterSpacing(value: number) {
-    if (this._letterSpacing !== value) {
-      this._letterSpacing = value;
+    if (this.textProps.letterSpacing !== value) {
+      this.textProps.letterSpacing = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get lineHeight(): number {
-    return this._lineHeight;
+    return this.textProps.lineHeight;
   }
 
   set lineHeight(value: number) {
-    if (this._lineHeight !== value) {
-      this._lineHeight = value;
+    if (this.textProps.lineHeight !== value) {
+      this.textProps.lineHeight = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get maxLines(): number {
-    return this._maxLines;
+    return this.textProps.maxLines;
   }
 
   set maxLines(value: number) {
-    if (this._maxLines !== value) {
-      this._maxLines = value;
+    if (this.textProps.maxLines !== value) {
+      this.textProps.maxLines = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get textBaseline(): TrProps['textBaseline'] {
-    return this._textBaseline;
+    return this.textProps.textBaseline;
   }
 
   set textBaseline(value: TrProps['textBaseline']) {
-    if (this._textBaseline !== value) {
-      this._textBaseline = value;
+    if (this.textProps.textBaseline !== value) {
+      this.textProps.textBaseline = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get verticalAlign(): TrProps['verticalAlign'] {
-    return this._verticalAlign;
+    return this.textProps.verticalAlign;
   }
 
   set verticalAlign(value: TrProps['verticalAlign']) {
-    if (this._verticalAlign !== value) {
-      this._verticalAlign = value;
+    if (this.textProps.verticalAlign !== value) {
+      this.textProps.verticalAlign = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get overflowSuffix(): string {
-    return this._overflowSuffix;
+    return this.textProps.overflowSuffix;
   }
 
   set overflowSuffix(value: string) {
-    if (this._overflowSuffix !== value) {
-      this._overflowSuffix = value;
+    if (this.textProps.overflowSuffix !== value) {
+      this.textProps.overflowSuffix = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get wordBreak(): TrProps['wordBreak'] {
-    return this._wordBreak;
+    return this.textProps.wordBreak;
   }
 
   set wordBreak(value: TrProps['wordBreak']) {
-    if (this._wordBreak !== value) {
-      this._wordBreak = value;
+    if (this.textProps.wordBreak !== value) {
+      this.textProps.wordBreak = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
   }
 
   get offsetY(): number {
-    return this._offsetY;
+    return this.textProps.offsetY;
   }
 
   set offsetY(value: number) {
-    if (this._offsetY !== value) {
-      this._offsetY = value;
+    if (this.textProps.offsetY !== value) {
+      this.textProps.offsetY = value;
       this._pendingTextUpdate |= TextUpdateReason.TextChange;
       this.setUpdateType(UpdateType.Text);
     }
