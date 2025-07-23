@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, RendererMain } from '@lightningjs/renderer';
+import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
 import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;
@@ -35,7 +35,7 @@ export interface TestRowOptions {
 
 export async function constructTestRow(
   options: TestRowOptions,
-  testNodes: (INode | string)[],
+  testNodes: (INode | ITextNode | string)[],
 ): Promise<number> {
   const {
     renderer,

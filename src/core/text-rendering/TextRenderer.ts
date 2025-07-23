@@ -319,6 +319,10 @@ export interface TextLayout {
    * Font family used
    */
   fontFamily: string;
+  /**
+   * distanceRange used
+   */
+  distanceRange: number;
 }
 
 export interface FontLoadOptions {

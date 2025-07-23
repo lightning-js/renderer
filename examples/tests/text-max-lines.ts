@@ -49,13 +49,12 @@ export default async function test(settings: ExampleSettings) {
 const BASE_NODE_PROPS = {
   x: 100,
   y: 100,
-  width: 200,
+  maxWidth: 200,
   color: 0x000000ff,
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
   lineHeight: 28,
-  contain: 'width',
 } satisfies Partial<ITextNodeProps>;
 
 function generateMaxLinesTest(

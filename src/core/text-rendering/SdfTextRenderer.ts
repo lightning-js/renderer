@@ -242,7 +242,6 @@ const renderQuads = (
   if (buffer !== undefined) {
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
-
   const renderOp = new WebGlRenderOp(
     renderer as WebGlRenderer,
     {
@@ -251,7 +250,7 @@ const renderQuads = (
         color: mergeColorAlpha(color || 0xffffffff, worldAlpha),
         size: fontSize / (fontData.info?.size || fontData.common.lineHeight), // Use proper font scaling in shader
         scrollY: offsetY || 0,
-        distanceRange: fontData.distanceField?.distanceRange || 1.0,
+        distanceRange: layout.distanceRange,
         debug: false, // Disable debug mode
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
@@ -283,6 +282,7 @@ const generateTextLayout = (
   props: CoreTextNodeProps,
   fontData: SdfFontHandler.SdfFontData,
 ): TextLayout => {
+  const commonFontData = fontData.common;
   const text = props.text;
   const fontSize = props.fontSize;
   const letterSpacing = props.letterSpacing;
@@ -294,22 +294,20 @@ const generateTextLayout = (
   const overflowSuffix = props.overflowSuffix;
 
   // Use the font's design size for proper scaling
-  const designLineHeight = fontData.common.lineHeight;
+  const designLineHeight = commonFontData.lineHeight;
+
+  const designFontSize = fontData.info.size;
+
   const lineHeight =
-    props.lineHeight ||
-    (designLineHeight * fontSize) /
-      (fontData.info?.size || fontData.common.lineHeight);
-  const atlasWidth = fontData.common.scaleW;
-  const atlasHeight = fontData.common.scaleH;
+    props.lineHeight || (designLineHeight * fontSize) / designFontSize;
+  const atlasWidth = commonFontData.scaleW;
+  const atlasHeight = commonFontData.scaleH;
 
   // Calculate the pixel scale from design units to pixels
-  const finalScale =
-    fontSize / (fontData.info?.size || fontData.common.lineHeight);
+  const finalScale = fontSize / designFontSize;
 
   // Calculate design letter spacing
-  const designLetterSpacing =
-    (letterSpacing * (fontData.info?.size || fontData.common.lineHeight)) /
-    fontSize;
+  const designLetterSpacing = (letterSpacing * designFontSize) / fontSize;
 
   // Determine text wrapping behavior based on contain mode
   const shouldWrapText = maxWidth > 0;
@@ -466,6 +464,7 @@ const generateTextLayout = (
   // Convert final dimensions to pixel space for the layout
   return {
     glyphs,
+    distanceRange: finalScale * fontData.distanceField.distanceRange,
     width: Math.ceil(maxWidthFound * finalScale),
     height: Math.ceil(designLineHeight * finalLines.length * finalScale),
     fontScale: finalScale,

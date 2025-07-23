@@ -58,22 +58,20 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   const canvasText = renderer.createTextNode({
     y: yPos,
-    width: testRoot.width,
+    maxWidth: testRoot.width,
     text,
     fontSize,
     fontFamily,
-    contain: 'width',
     color: 0xff0000ff,
     textRendererOverride: 'canvas',
     parent: testRoot,
   });
   const sdfText = renderer.createTextNode({
     y: yPos,
-    width: testRoot.width,
+    maxWidth: testRoot.width,
     text,
     fontSize,
     fontFamily,
-    contain: 'width',
     color: 0x0000ff77,
     parent: testRoot,
     zIndex: 3,

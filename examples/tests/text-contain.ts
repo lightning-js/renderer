@@ -65,8 +65,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -78,8 +76,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 20,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x00ff00ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -91,8 +87,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 40,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0xff0000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -104,8 +98,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 60,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x0000ffff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -117,8 +109,6 @@ Vivamus consectetur ex magna, non mollis.`,
     x: testRoot.width,
     y: testRoot.height - 80,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -154,7 +144,7 @@ Vivamus consectetur ex magna, non mollis.`,
       // Canvas, contain none
       text1.textRendererOverride = 'canvas';
       text1.maxWidth = 0;
-      text1.maxHeight = 0;
+      text1.height = 0;
     },
     () => {
       // Canvas, contain width
@@ -163,6 +153,7 @@ Vivamus consectetur ex magna, non mollis.`,
     () => {
       // Canvas, contain width (smaller)
       text1.maxWidth = 195;
+      text1.maxHeight = 5;
     },
     () => {
       // Canvas, contain both
@@ -191,7 +182,6 @@ Vivamus consectetur ex magna, non mollis.`,
 
     header.text = makeHeader(
       text1.textRendererOverride!,
-      text1.contain,
       text1.width,
       text1.height,
     );
@@ -224,11 +214,6 @@ Vivamus consectetur ex magna, non mollis.`,
   return next;
 }
 
-function makeHeader(
-  renderer: string,
-  contain: string,
-  width: number,
-  height: number,
-) {
-  return `${renderer}, contain = ${contain}`;
+function makeHeader(renderer: string, maxWidth: number, maxHeight: number) {
+  return `${renderer}, maxWidth = ${maxWidth}, maxHeight = ${maxHeight}`;
 }

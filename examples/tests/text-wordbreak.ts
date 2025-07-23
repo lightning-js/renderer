@@ -38,9 +38,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
-  contain: 'width',
-  width: containerSize,
-  height: containerHeight,
+  maxWidth: containerSize,
   wordBreak: 'normal',
 } satisfies Partial<ITextNodeProps>;
 
