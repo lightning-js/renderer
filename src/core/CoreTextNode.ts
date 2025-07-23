@@ -141,7 +141,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       } satisfies NodeTextureLoadedPayload);
     }
 
-    this.setUpdateType(UpdateType.Local | UpdateType.IsRenderable);
+    this.width = this._renderInfo.width;
+    this.height = this._renderInfo.height;
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -270,11 +271,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
       this.setRenderable(true);
+      this.width = width;
+      this.height = height;
     }
-
-    this.props.width = width;
-    this.props.height = height;
-    this.setUpdateType(UpdateType.Local);
 
     this._renderInfo = result;
     this.emit('loaded', {
@@ -304,7 +303,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (!this._lastVertexBuffer) {
       this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
     }
-
     this.textRenderer.renderQuads(
       renderer,
       this._cachedLayout as TextLayout,
@@ -322,7 +320,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         height: this.props.height,
         parentHasRenderTexture: this.parentHasRenderTexture,
         framebufferDimensions:
-          this.rtt === true ? this.parentFramebufferDimensions : null,
+          this.parentHasRenderTexture === true
+            ? this.parentFramebufferDimensions
+            : null,
         stage: this.stage,
       },
     );
