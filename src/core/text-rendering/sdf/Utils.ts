@@ -121,10 +121,10 @@ export const wrapLine = (
     const isLastAllowedLine =
       remainingLines > 0 && wrappedLines.length >= remainingLines - 1;
 
-    // ZWSP should always force a line break (except for the first word)
-    const shouldBreakForZwsp = space === '\u200B' && currentLine.length > 0;
-
-    if (!shouldBreakForZwsp && totalWidth <= maxWidthInDesignUnits) {
+    if (
+      (i === 0 && wordWidth <= maxWidthInDesignUnits) ||
+      (i > 0 && totalWidth <= maxWidthInDesignUnits)
+    ) {
       // Word fits on current line
       if (currentLine.length > 0) {
         // Add space - for ZWSP, don't add anything to output (it's invisible)

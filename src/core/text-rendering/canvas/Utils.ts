@@ -118,7 +118,12 @@ export const wrapText = (
         spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
       } else {
         spaceLeft -= wordWidthWithSpace;
-        result += space + word;
+        // Don't add ZWSP to the output since it's invisible
+        if (space !== '\u200B') {
+          result += space + word;
+        } else {
+          result += word;
+        }
       }
     }
     resultLines.push(result);

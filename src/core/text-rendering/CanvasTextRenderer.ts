@@ -29,6 +29,7 @@ import { type LineType } from './canvas/calculateRenderInfo.js';
 import { calcHeight, measureText, wrapText, wrapWord } from './canvas/Utils.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
+import { isZeroWidthSpace } from './Utils.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
@@ -567,6 +568,10 @@ function renderTextToCanvas(
         for (let j = 0, k = textSplit.length; j < k; j++) {
           const char = textSplit[j];
           if (char) {
+            // Skip zero-width spaces for rendering but keep them in the text flow
+            if (isZeroWidthSpace(char)) {
+              continue;
+            }
             context.fillText(char, x, drawLine.y);
             // Use the dedicated measuring context for letter spacing calculations
             x += measureText(measureContext, char, letterSpacing);
