@@ -186,7 +186,6 @@ const renderQuads = (
   renderProps: TextRenderProps,
 ): void => {
   const fontFamily = renderProps.fontFamily;
-  const fontSize = renderProps.fontSize;
   const color = renderProps.color;
   const offsetY = renderProps.offsetY;
   const worldAlpha = renderProps.worldAlpha;
@@ -195,12 +194,6 @@ const renderQuads = (
   const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
   if (atlasTexture === null) {
     console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
-    return;
-  }
-
-  const fontData = SdfFontHandler.getFontData(fontFamily);
-  if (fontData === null) {
-    console.warn(`SDF font data not found for font: ${fontFamily}`);
     return;
   }
 
@@ -242,13 +235,14 @@ const renderQuads = (
   if (buffer !== undefined) {
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
+
   const renderOp = new WebGlRenderOp(
     renderer as WebGlRenderer,
     {
       sdfShaderProps: {
         transform: globalTransform,
-        color: mergeColorAlpha(color || 0xffffffff, worldAlpha),
-        size: fontSize / (fontData.info?.size || fontData.common.lineHeight), // Use proper font scaling in shader
+        color: mergeColorAlpha(color, worldAlpha),
+        size: layout.fontScale, // Use proper font scaling in shader
         scrollY: offsetY || 0,
         distanceRange: layout.distanceRange,
         debug: false, // Disable debug mode

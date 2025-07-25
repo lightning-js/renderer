@@ -157,7 +157,7 @@ const buildKerningTable = (kernings: SdfFontData['kernings']): KerningTable => {
     const second = kerning.second;
 
     let firsts = kerningTable[second];
-    if (!firsts) {
+    if (firsts === undefined) {
       firsts = {};
       kerningTable[second] = firsts;
     }
@@ -253,7 +253,6 @@ const processFontData = (
       lineGap: 0.2,
     };
   }
-
   // Cache processed data
   fontCache[fontFamily] = {
     data: fontData,
@@ -328,6 +327,7 @@ export const loadFont = async (
       // create new atlas texture using ImageTexture
       const atlasTexture = stage.txManager.createTexture('ImageTexture', {
         src: atlasUrl,
+        premultiplyAlpha: false,
       });
 
       atlasTexture.preventCleanup = true; // Prevent automatic cleanup

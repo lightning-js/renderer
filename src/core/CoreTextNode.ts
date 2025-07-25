@@ -202,7 +202,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
       this.texture = this.stage.txManager.createTexture('ImageTexture', {
         premultiplyAlpha: true,
-        src: result.imageData,
+        src: result.imageData as ImageData,
       });
 
       // It isn't renderable until the texture is loaded we have to set it to false here to avoid it
@@ -220,8 +220,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.width = width;
-      this.height = height;
+      this.props.width = width;
+      this.props.height = height;
+      this.setUpdateType(UpdateType.Local);
     }
 
     this._renderInfo = result;
@@ -249,12 +250,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    if (!this._lastVertexBuffer) {
+    if (this._lastVertexBuffer === null) {
       this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
     }
 
     const props = this.textProps;
-
     this.textRenderer.renderQuads(
       renderer,
       this._cachedLayout as TextLayout,
@@ -265,8 +265,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         color: this.props.color || 0xffffffff,
         offsetY: props.offsetY,
         worldAlpha: this.worldAlpha,
-        globalTransform:
-          this.globalTransform?.getFloatArr() || new Float32Array(16),
+        globalTransform: this.globalTransform!.getFloatArr(),
         clippingRect: this.clippingRect,
         width: this.props.width,
         height: this.props.height,
