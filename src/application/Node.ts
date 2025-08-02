@@ -124,6 +124,54 @@ export class Node extends CoreNode {
   }
 
   /**
+   * Handle up key press - override for custom up behavior
+   * @returns true if handled, false to bubble
+   */
+  onUp(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle down key press - override for custom down behavior
+   * @returns true if handled, false to bubble
+   */
+  onDown(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle left key press - override for custom left behavior
+   * @returns true if handled, false to bubble
+   */
+  onLeft(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle right key press - override for custom right behavior
+   * @returns true if handled, false to bubble
+   */
+  onRight(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle enter key press - override for custom enter behavior
+   * @returns true if handled, false to bubble
+   */
+  onEnter(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle back key press - override for custom back behavior
+   * @returns true if handled, false to bubble
+   */
+  onBack(): boolean {
+    return false;
+  }
+
+  /**
    * Sets focus to this node
    * This will trigger onFocus() and onBlur() events as appropriate
    */
@@ -144,38 +192,6 @@ export class Node extends CoreNode {
       this._hasFocus = false;
       this.onBlur();
     }
-  }
-
-  /**
-   * Handles key events and routing
-   * This method is called by the focus manager (to be implemented in Phase 3)
-   *
-   * @param key - The key that was pressed
-   * @returns true if handled, false to continue propagation
-   */
-  handleKeyEvent(key: string): boolean {
-    // Early return if no focus
-    if (!this._hasFocus) {
-      return false;
-    }
-
-    // Call the onKeyPress handler
-    const handled = this.onKeyPress(key);
-    if (handled) {
-      return true;
-    }
-
-    // Try focused child
-    const focusedChild = this.findFocusedChild();
-    if (focusedChild && typeof focusedChild['handleKeyEvent'] === 'function') {
-      try {
-        return focusedChild['handleKeyEvent'](key);
-      } catch {
-        return false;
-      }
-    }
-
-    return false;
   }
 
   /**

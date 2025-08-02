@@ -24,6 +24,7 @@ import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { Component } from './Component.js';
 import type { ITemplate } from './template/types.js';
 import { Router, type IRoute, type IRouteMatch } from './router/index.js';
+import { Focus } from './focus/index.js';
 
 /**
  * Application configuration options
@@ -66,6 +67,11 @@ export class Application extends Component {
   readonly router: Router;
 
   /**
+   * Focus system instance (Phase 3)
+   */
+  readonly focusSystem: Focus;
+
+  /**
    * Current active route match
    */
   private _currentMatch: IRouteMatch | null = null;
@@ -104,6 +110,9 @@ export class Application extends Component {
     // Initialize router (Phase 2)
     this.router = new Router();
 
+    // Initialize focus system (Phase 3)
+    this.focusSystem = new Focus();
+
     // Set up application
     this.setupApplication(config.routes, config.initialRoute);
   }
@@ -129,6 +138,9 @@ export class Application extends Component {
     // Initialize router with routes (Phase 2)
     this.router.initialize(routes);
 
+    // Initialize focus system with this application as root (Phase 3)
+    this.focusSystem.initialize(this);
+
     // Set up router event handlers
     this.setupRouterEvents();
 
@@ -136,9 +148,6 @@ export class Application extends Component {
     if (initialRoute) {
       this.router.navigate(initialRoute);
     }
-
-    // Set initial focus to application root
-    this.focus();
   }
 
   /**
@@ -199,10 +208,8 @@ export class Application extends Component {
     // Store tag reference for Lightning 2 compatibility
     (routeComponent as unknown as { tag: string }).tag = '_route';
 
-    // Focus the route component if it has focus method
-    if (routeComponent.focus) {
-      routeComponent.focus();
-    }
+    // Automatically set focus to the new route component (Phase 3)
+    this.focusSystem.setFocus(routeComponent as any);
   }
 
   /**
@@ -231,42 +238,15 @@ export class Application extends Component {
    * Stop the application and cleanup
    */
   stop(): void {
+    // Shutdown focus system (Phase 3)
+    this.focusSystem.shutdown();
+
     // Unmount current route
     if (this._currentMatch) {
       this.unmountCurrentRoute();
     }
 
     console.log('NAF Application stopped');
-  }
-
-  /**
-   * Override onKeyPress to handle application-level keys (Phase 2 Enhanced)
-   *
-   * @remarks
-   * For most navigation, developers should use this.router directly.
-   * This method only handles system-level keys like Back/Home.
-   */
-  override onKeyPress(key: string): boolean {
-    // Handle application-level keys (back, home, etc.)
-    switch (key) {
-      case 'Escape':
-      case 'Back':
-        // Use router's go back functionality
-        if (this.router.canGoBack) {
-          this.router.goBack();
-          return true;
-        }
-        break;
-
-      case 'Home':
-        // Navigate to home route - use navigateByName for home
-        if (!this.router.navigateByName('home')) {
-          this.router.navigate('/');
-        }
-        return true;
-    }
-
-    return false;
   }
 
   /**

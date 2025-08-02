@@ -55,6 +55,15 @@ export {
   type RouterEventHandler,
 } from './router/index.js';
 
+// Focus System exports (Phase 3)
+export {
+  Focus,
+  type FocusableElement,
+  type IKeyEventResult,
+  type FocusManagerEvent,
+  type IFocusManagerEventData,
+} from './focus/index.js';
+
 // Template types for component development
 export type {
   ITemplate,

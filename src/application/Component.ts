@@ -182,6 +182,54 @@ export abstract class Component
   }
 
   /**
+   * Handle up key press - override for custom up behavior
+   * @returns true if handled, false to bubble
+   */
+  onUp(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle down key press - override for custom down behavior
+   * @returns true if handled, false to bubble
+   */
+  onDown(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle left key press - override for custom left behavior
+   * @returns true if handled, false to bubble
+   */
+  onLeft(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle right key press - override for custom right behavior
+   * @returns true if handled, false to bubble
+   */
+  onRight(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle enter key press - override for custom enter behavior
+   * @returns true if handled, false to bubble
+   */
+  onEnter(): boolean {
+    return false;
+  }
+
+  /**
+   * Handle back key press - override for custom back behavior
+   * @returns true if handled, false to bubble
+   */
+  onBack(): boolean {
+    return false;
+  }
+
+  /**
    * Lightning 2 familiar syntax for finding children by tag/name
    * Searches through children to find a node with matching key
    *

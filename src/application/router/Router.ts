@@ -18,6 +18,7 @@
  */
 
 import type { ComponentClass } from '../template/types.js';
+import { EventEmitter } from '../../common/EventEmitter.js';
 
 /**
  * Route configuration interface
@@ -103,12 +104,11 @@ export type RouterEventHandler = (event: {
  * - Component lifecycle integration
  * - Navigation history management
  */
-export class Router {
+export class Router extends EventEmitter {
   private _routes: IRoute[] = [];
   private _currentMatch: IRouteMatch | null = null;
   private _history: string[] = [];
   private _historyIndex = -1;
-  private _eventHandlers = new Map<RouterEvent, RouterEventHandler[]>();
   private _isNavigating = false;
 
   /**
@@ -204,7 +204,7 @@ export class Router {
       // Find matching route
       const match = this.matchRoute(path);
       if (!match) {
-        this.emitEvent('navigationError', {
+        this.emit('navigationError', {
           error: new Error(`No route found for path: ${path}`),
           to: null,
         });
@@ -213,7 +213,7 @@ export class Router {
 
       // Check route guards
       if (!options.skipGuards && !this.checkRouteGuards(match.route)) {
-        this.emitEvent('navigationError', {
+        this.emit('navigationError', {
           error: new Error(`Route guard failed for: ${path}`),
           to: match,
         });
@@ -221,7 +221,7 @@ export class Router {
       }
 
       // Emit before navigate event
-      this.emitEvent('beforeNavigate', {
+      this.emit('beforeNavigate', {
         from: this._currentMatch,
         to: match,
         data: options.data,
@@ -244,21 +244,21 @@ export class Router {
       this._currentMatch = match;
 
       // Emit after navigate event
-      this.emitEvent('afterNavigate', {
+      this.emit('afterNavigate', {
         from: previousMatch,
         to: match,
         data: options.data,
       });
 
       // Emit route changed event
-      this.emitEvent('routeChanged', {
+      this.emit('routeChanged', {
         from: previousMatch,
         to: match,
       });
 
       return true;
     } catch (error) {
-      this.emitEvent('navigationError', {
+      this.emit('navigationError', {
         error: error as Error,
         to: null,
       });
@@ -315,26 +315,6 @@ export class Router {
       return this.navigate(path, { replace: true });
     }
     return false;
-  }
-
-  /**
-   * Add event listener
-   */
-  on(event: RouterEvent, handler: RouterEventHandler): void {
-    const handlers = this._eventHandlers.get(event) || [];
-    handlers.push(handler);
-    this._eventHandlers.set(event, handlers);
-  }
-
-  /**
-   * Remove event listener
-   */
-  off(event: RouterEvent, handler: RouterEventHandler): void {
-    const handlers = this._eventHandlers.get(event) || [];
-    const index = handlers.indexOf(handler);
-    if (index >= 0) {
-      handlers.splice(index, 1);
-    }
   }
 
   /**
@@ -527,28 +507,6 @@ export class Router {
           this.navigate(path, { replace: true });
         }
       });
-    }
-  }
-
-  /**
-   * Emit router event
-   */
-  private emitEvent(event: RouterEvent, data: Record<string, unknown>): void {
-    const handlers = this._eventHandlers.get(event);
-    if (!handlers) {
-      return;
-    }
-
-    const handlerCount = handlers.length;
-    for (let i = 0; i < handlerCount; i++) {
-      const handler = handlers[i];
-      if (handler) {
-        try {
-          handler({ type: event, ...data });
-        } catch (error) {
-          console.error(`Router event handler error for ${event}:`, error);
-        }
-      }
     }
   }
 }
