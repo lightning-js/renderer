@@ -42,6 +42,19 @@ export * from '../src/main-api/Renderer.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 
+// Application Framework (NAF Integration)
+// Enhanced Node classes with focus management and key event handling
+export { Node, TextNode, Component } from '../src/application/index.js';
+export type {
+  ITemplate,
+  INodeProps,
+  ITextNodeProps,
+  ComponentClass,
+  ComponentWithProps,
+  TemplateValue,
+  IComponent,
+} from '../src/application/index.js';
+
 // Selected types exported from the Core Renderer that can be used in the
 // context of the main API.
 export {
