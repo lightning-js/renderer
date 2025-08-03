@@ -237,7 +237,7 @@ export abstract class Component
    * @returns The found node or null if not found
    */
   tag(name: string): Node | CoreNode | TextNode | Component | null {
-    // Host paths on top
+    // Hot paths on top
     const tagCache = this._tagCache;
     const children = this.children;
 
@@ -304,7 +304,7 @@ export abstract class Component
       return;
     }
 
-    // Host paths on top
+    // Hot paths on top
     const children = this.children;
     const templateEntries = Object.entries(template);
     const entryCount = templateEntries.length;
@@ -336,7 +336,7 @@ export abstract class Component
     key: string,
     value: TemplateValue,
   ): CoreNode | null {
-    // Host paths on top
+    // Hot paths on top
     const stage = this.stage;
 
     // Check if it's a Component class (Capital case key)

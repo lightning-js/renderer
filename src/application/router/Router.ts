@@ -41,6 +41,9 @@ export interface IRoute {
 
   /** Route guards (functions that return boolean for access) */
   guards?: Array<() => boolean>;
+
+  /** Keep component in memory when navigating away (performance optimization) */
+  keepInMemory?: boolean;
 }
 
 /**

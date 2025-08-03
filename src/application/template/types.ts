@@ -31,10 +31,19 @@ export interface IComponent extends CoreNodeProps {
   onDestroy?(): void;
   onFocus?(): void;
   onBlur?(): void;
-  onKeyPress?(key: string): boolean;
   focus?(): void;
   blur?(): void;
-  handleKeyEvent?(key: string): boolean;
+
+  // Key event handling
+  onKeyPress?(key: string): boolean;
+
+  // Key utility methods
+  onUp?(): boolean;
+  onDown?(): boolean;
+  onLeft?(): boolean;
+  onRight?(): boolean;
+  onEnter?(): boolean;
+  onBack?(): boolean;
 }
 
 /**

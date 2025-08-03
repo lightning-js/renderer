@@ -77,6 +77,11 @@ export class Application extends Component {
   private _currentMatch: IRouteMatch | null = null;
 
   /**
+   * Cache for keepInMemory route components
+   */
+  private _routeComponentCache = new Map<string, Component>();
+
+  /**
    * Application template - can be overridden in subclasses
    */
   template: ITemplate = {
@@ -99,6 +104,7 @@ export class Application extends Component {
       y: 0,
       width: renderer.settings.appWidth,
       height: renderer.settings.appHeight,
+      parent: renderer.root, // Set parent to renderer root
     } as CoreNodeProps;
 
     super(renderer.stage, rootProps);
@@ -154,12 +160,17 @@ export class Application extends Component {
    * Set up router event handlers (Phase 2)
    */
   private setupRouterEvents(): void {
-    this.router.on('routeChanged', (event) => {
-      this.handleRouteChange(event.from || null, event.to || null);
+    this.router.on('routeChanged', (target, data) => {
+      const routeData = data as {
+        from?: IRouteMatch | null;
+        to?: IRouteMatch | null;
+      };
+      this.handleRouteChange(routeData.from || null, routeData.to || null);
     });
 
-    this.router.on('navigationError', (event) => {
-      console.error('Navigation error:', event.error);
+    this.router.on('navigationError', (target, data) => {
+      const errorData = data as { error?: Error };
+      console.error('Navigation error:', errorData.error);
     });
   }
 
@@ -192,36 +203,55 @@ export class Application extends Component {
       return;
     }
 
-    const RouteComponent = this._currentMatch.route.component;
+    const route = this._currentMatch.route;
+    const routePath = route.path;
 
-    // Create route component as child
-    const routeComponent = new RouteComponent(this.stage, {
-      x: 0,
-      y: 0,
-      width: this.renderer.settings.appWidth,
-      height: this.renderer.settings.appHeight,
-    } as CoreNodeProps);
+    // Check if component is cached
+    let routeComponent = this._routeComponentCache.get(routePath);
 
-    // Add route component as child
-    this.children.push(routeComponent as unknown as CoreNode);
+    if (!routeComponent) {
+      // Create new route component
+      const RouteComponent = route.component;
+      routeComponent = new RouteComponent(this.stage, {
+        x: 0,
+        y: 0,
+        width: this.renderer.settings.appWidth,
+        height: this.renderer.settings.appHeight,
+      } as CoreNodeProps) as Component;
 
-    // Store tag reference for Lightning 2 compatibility
-    (routeComponent as unknown as { tag: string }).tag = '_route';
+      // Store tag reference for Lightning 2 compatibility
+      (routeComponent as unknown as { tag: string }).tag = '_route';
+
+      // Cache component if keepInMemory is enabled
+      if (route.keepInMemory === true) {
+        this._routeComponentCache.set(routePath, routeComponent);
+      }
+    }
+
+    // Add route component to the application root
+    routeComponent.parent = this;
 
     // Automatically set focus to the new route component (Phase 3)
-    this.focusSystem.setFocus(routeComponent as any);
+    this.focusSystem.setFocus(routeComponent);
   }
 
   /**
    * Unmount the current route component (Phase 2)
    */
   private unmountCurrentRoute(): void {
-    const routeComponent = this.tag('_route');
-    if (
-      routeComponent &&
-      'destroy' in routeComponent &&
-      typeof routeComponent.destroy === 'function'
-    ) {
+    const routeComponent = this.tag('_route') as Component | null;
+    if (!routeComponent) {
+      return;
+    }
+
+    // Check if current route should be kept in memory
+    const currentRoute = this._currentMatch?.route;
+    const shouldKeepInMemory = currentRoute?.keepInMemory === true;
+
+    if (shouldKeepInMemory) {
+      // Just remove from render tree, don't destroy
+      routeComponent.parent = null;
+    } else {
       routeComponent.destroy();
     }
   }
@@ -231,7 +261,7 @@ export class Application extends Component {
    */
   start(): void {
     // Application is already ready when constructed
-    console.log('NAF Application started');
+    console.log('Application started');
   }
 
   /**
@@ -241,12 +271,18 @@ export class Application extends Component {
     // Shutdown focus system (Phase 3)
     this.focusSystem.shutdown();
 
-    // Unmount current route
-    if (this._currentMatch) {
-      this.unmountCurrentRoute();
-    }
+    // Destroy all nodes in the render tree
+    this.root.destroy();
 
-    console.log('NAF Application stopped');
+    // Destroy all cached route components
+    for (const [, component] of this._routeComponentCache) {
+      if ('destroy' in component && typeof component.destroy === 'function') {
+        component.destroy();
+      }
+    }
+    this._routeComponentCache.clear();
+
+    console.log('Application stopped');
   }
 
   /**
