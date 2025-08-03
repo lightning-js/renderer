@@ -636,30 +636,7 @@ export class Stage {
   }
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
-    const fontSize = props.fontSize ?? 16;
-    const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
-      text: props.text ?? '',
-      textRendererOverride: props.textRendererOverride ?? null,
-      fontSize,
-      fontFamily: props.fontFamily ?? 'sans-serif',
-      fontStyle: props.fontStyle ?? 'normal',
-      fontWeight: props.fontWeight ?? 'normal',
-      fontStretch: props.fontStretch ?? 'normal',
-      textAlign: props.textAlign ?? 'left',
-      contain: props.contain ?? 'none',
-      scrollable: props.scrollable ?? false,
-      scrollY: props.scrollY ?? 0,
-      offsetY: props.offsetY ?? 0,
-      letterSpacing: props.letterSpacing ?? 0,
-      lineHeight: props.lineHeight, // `undefined` is a valid value
-      maxLines: props.maxLines ?? 0,
-      textBaseline: props.textBaseline ?? 'alphabetic',
-      verticalAlign: props.verticalAlign ?? 'middle',
-      overflowSuffix: props.overflowSuffix ?? '...',
-      wordBreak: props.wordBreak ?? 'normal',
-      debug: props.debug ?? {},
-    });
-
+    const resolvedProps = this.resolveTextNodeDefaults(props);
     const resolvedTextRenderer = this.resolveTextRenderer(
       resolvedProps,
       props.textRendererOverride,
@@ -734,6 +711,39 @@ export class Stage {
   }
 
   /**
+   * Resolve the default property values for a TextNode
+   */
+  resolveTextNodeDefaults(
+    props: Partial<CoreTextNodeProps>,
+  ): CoreTextNodeProps {
+    const fontSize = props.fontSize ?? 16;
+    const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
+      text: props.text ?? '',
+      textRendererOverride: props.textRendererOverride ?? null,
+      fontSize,
+      fontFamily: props.fontFamily ?? 'sans-serif',
+      fontStyle: props.fontStyle ?? 'normal',
+      fontWeight: props.fontWeight ?? 'normal',
+      fontStretch: props.fontStretch ?? 'normal',
+      textAlign: props.textAlign ?? 'left',
+      contain: props.contain ?? 'none',
+      scrollable: props.scrollable ?? false,
+      scrollY: props.scrollY ?? 0,
+      offsetY: props.offsetY ?? 0,
+      letterSpacing: props.letterSpacing ?? 0,
+      lineHeight: props.lineHeight, // `undefined` is a valid value
+      maxLines: props.maxLines ?? 0,
+      textBaseline: props.textBaseline ?? 'alphabetic',
+      verticalAlign: props.verticalAlign ?? 'middle',
+      overflowSuffix: props.overflowSuffix ?? '...',
+      wordBreak: props.wordBreak ?? 'normal',
+      debug: props.debug ?? {},
+    });
+
+    return resolvedProps;
+  }
+
+  /**
    * Resolves the default property values for a Node
    *
    * @remarks
@@ -744,7 +754,7 @@ export class Stage {
    * @param props
    * @returns
    */
-  protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
+  resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const color = props.color ?? 0xffffffff;
     const colorTop = props.colorTop ?? color;
     const colorBottom = props.colorBottom ?? color;

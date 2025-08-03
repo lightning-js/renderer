@@ -49,10 +49,11 @@ export interface IComponent extends CoreNodeProps {
 /**
  * Properties for creating a regular Node or TextNode
  */
-export interface INodeProps extends Partial<CoreNodeProps> {
+export interface INodeProps extends Partial<CoreTextNodeProps> {
   // Node can have any CoreNodeProps
   // If it has a 'text' property, it will be created as a TextNode
   text?: string;
+  children?: ITemplate; // NEW: Support for nested children
 }
 
 /**
@@ -60,6 +61,7 @@ export interface INodeProps extends Partial<CoreNodeProps> {
  */
 export interface ITextNodeProps extends Partial<CoreTextNodeProps> {
   text: string; // Required for text nodes
+  children?: ITemplate; // NEW: Support for nested children
 }
 
 /**
@@ -74,6 +76,14 @@ export type ComponentClass = new (...args: any[]) => IComponent;
 export interface ComponentWithProps {
   type: ComponentClass;
   props?: Partial<CoreNodeProps>;
+  children?: ITemplate; // NEW: Support for nested children
+}
+
+/**
+ * Node/Element with properties and optional nested children
+ */
+export interface NodeWithChildren extends INodeProps {
+  children: ITemplate; // Required nested children
 }
 
 /**
@@ -85,13 +95,55 @@ export interface ComponentWithProps {
  * - Lower case keys (e.g., bg, title) = CoreNode/CoreTextNode properties
  * - Automatic text node detection based on 'text' property presence
  * - All Lightning 3 properties transparently passed through
+ * - Components and Nodes can have nested children via 'children' property
+ *
+ * Template Examples:
+ * ```typescript
+ * template = {
+ *   // Simple node
+ *   bg: { width: 100, height: 50, color: 0xff0000 },
+ *
+ *   // Text node
+ *   title: { text: 'Hello', fontSize: 24 },
+ *
+ *   // Component without props
+ *   SimpleButton: ButtonComponent,
+ *
+ *   // Component with props
+ *   ConfiguredButton: {
+ *     type: ButtonComponent,
+ *     props: { x: 100, y: 50 }
+ *   },
+ *
+ *   // Component with props AND children
+ *   ComplexMenu: {
+ *     type: MenuComponent,
+ *     props: { width: 400, height: 300 },
+ *     children: {
+ *       header: { width: 400, height: 50, color: 0x666666 },
+ *       title: { text: 'Menu Title', fontSize: 24 }
+ *     }
+ *   },
+ *
+ *   // Node with children (creates container node)
+ *   container: {
+ *     width: 200,
+ *     height: 100,
+ *     children: {
+ *       item1: { width: 50, height: 50, color: 0x00ff00 },
+ *       item2: { width: 50, height: 50, color: 0x0000ff }
+ *     }
+ *   }
+ * }
+ * ```
  */
 export interface ITemplate {
   [key: string]:
-    | INodeProps // lowercase = Node/TextNode properties
+    | INodeProps // lowercase = Node/TextNode properties (may include children)
     | ComponentClass // Capital case = Component (no props)
-    | ComponentWithProps // Component with properties
-    | ITemplate; // Nested template
+    | ComponentWithProps // Component with properties (may include children)
+    | NodeWithChildren // Node/Element with required children
+    | ITemplate; // Pure nested template (backward compatibility)
 }
 
 /**
@@ -101,6 +153,7 @@ export type TemplateValue =
   | INodeProps
   | ComponentClass
   | ComponentWithProps
+  | NodeWithChildren
   | ITemplate;
 
 /**
@@ -110,7 +163,9 @@ export interface TemplateTypeGuards {
   isComponentClass(value: unknown): value is ComponentClass;
   isComponentWithProps(value: unknown): value is ComponentWithProps;
   isNodeProps(value: unknown): value is INodeProps;
+  isNodeWithChildren(value: unknown): value is NodeWithChildren;
   isNestedTemplate(value: unknown): value is ITemplate;
   hasTextProperty(props: unknown): props is ITextNodeProps;
+  hasChildrenProperty(props: unknown): boolean;
   isCapitalCase(str: string): boolean;
 }

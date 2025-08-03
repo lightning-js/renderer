@@ -19,7 +19,9 @@
 
 import { CoreNode } from '../core/CoreNode.js';
 import type { CoreNodeProps } from '../core/CoreNode.js';
+import type { CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Stage } from '../core/Stage.js';
+import type { TrProps } from '../core/text-rendering/renderers/TextRenderer.js';
 import { Node } from './Node.js';
 import { TextNode } from './TextNode.js';
 import { handleKeyEvent, type IFocusContainer } from './lib/keyEventHandler.js';
@@ -251,13 +253,25 @@ export abstract class Component
       tagCache.delete(name);
     }
 
-    // Search through children for matching tag
-    const child = this.findChildByTag(name);
+    // Search through children for matching tag - inlined for performance
+    const childCount = children.length;
+    let foundChild: Node | CoreNode | TextNode | Component | null = null;
+
+    for (let i = 0; i < childCount; i++) {
+      const child = children[i];
+      if (!child) continue;
+
+      // Check if this child has a matching tag property
+      if (child['tag'] === name) {
+        foundChild = child as Node | CoreNode | TextNode | Component;
+        break;
+      }
+    }
 
     // Cache the result (including null results to avoid repeated searches)
-    tagCache.set(name, child);
+    tagCache.set(name, foundChild);
 
-    return child;
+    return foundChild;
   }
 
   /**
@@ -339,44 +353,113 @@ export abstract class Component
     // Hot paths on top
     const stage = this.stage;
 
-    // Check if it's a Component class (Capital case key)
+    // Handle Component class directly (without props)
     if (typeof value === 'function' && this.isCapitalCase(key)) {
       const ComponentClass = value as ComponentClass;
-      const coreNode = stage.createNode({});
-      return new ComponentClass(stage, coreNode.props) as unknown as CoreNode;
+      const defaultProps = stage.resolveNodeDefaults({});
+      const componentInstance = new ComponentClass(
+        stage,
+        defaultProps,
+      ) as unknown as CoreNode;
+
+      // Add directly to children array for performance
+      this.children.push(componentInstance);
+
+      return componentInstance;
     }
 
-    // Check if it's a Component with props
+    // Handle Component with props and optional children
     if (this.isComponentWithProps(value) && this.isCapitalCase(key)) {
       const type = value.type;
-      const props = value.props || {};
-      const coreNode = stage.createNode(props);
-      return new type(stage, coreNode.props) as unknown as CoreNode;
-    }
+      const props = stage.resolveNodeDefaults(value.props || {});
+      const children = value.children;
 
-    // Check if it's node properties
-    if (this.isNodeProps(value)) {
-      // Check for text property (TextNode)
-      if (this.hasTextProperty(value)) {
-        // TextNode creation not yet implemented - requires text renderer integration
-        return null;
+      // Create the component instance directly
+      const componentInstance = new type(stage, props) as Component;
+
+      // Add directly to children array for performance
+      this.children.push(componentInstance);
+
+      // If component has nested children, process them
+      if (children && typeof children === 'object') {
+        this.processNestedChildren(componentInstance, children);
       }
 
-      // Create regular Node
-      const coreNode = stage.createNode(value);
-      return new Node(stage, coreNode.props);
+      return componentInstance as unknown as CoreNode;
     }
 
-    // Check if it's a nested template
-    if (this.isNestedTemplate(value)) {
-      const NestedComponent = class extends Component {
-        template = value as ITemplate;
-      };
-      const coreNode = stage.createNode({});
-      return new NestedComponent(stage, coreNode.props);
+    // Check if it's node properties (with or without children)
+    if (this.isNodeProps(value)) {
+      const children = value.children;
+      let createdNode: CoreNode;
+
+      // Check for text property (TextNode)
+      if (this.hasTextProperty(value)) {
+        const resolvedTextProperties = stage.resolveTextNodeDefaults(
+          value as TrProps,
+        );
+        const resolvedTextRenderer = stage.resolveTextRenderer(
+          resolvedTextProperties,
+        );
+
+        if (!resolvedTextRenderer) {
+          throw new Error(
+            `No compatible text renderer found for ${resolvedTextProperties.fontFamily}`,
+          );
+        }
+
+        createdNode = new TextNode(
+          stage,
+          resolvedTextProperties as CoreTextNodeProps,
+          resolvedTextRenderer,
+        );
+      } else {
+        // Create regular Node
+        const resolvedDefaults = stage.resolveNodeDefaults(
+          value as CoreNodeProps,
+        );
+        createdNode = new Node(stage, resolvedDefaults);
+      }
+
+      // Add directly to children array for performance
+      this.children.push(createdNode);
+
+      // Process nested children if they exist
+      if (children && typeof children === 'object') {
+        this.processNestedChildren(createdNode, children);
+      }
+
+      return createdNode;
     }
 
     return null;
+  }
+
+  /**
+   * Process nested children for a parent node (Component or Node)
+   */
+  private processNestedChildren(
+    parentNode: CoreNode,
+    nestedTemplate: ITemplate,
+  ): void {
+    const templateEntries = Object.entries(nestedTemplate);
+    const entryCount = templateEntries.length;
+
+    for (let i = 0; i < entryCount; i++) {
+      const entry = templateEntries[i];
+      if (!entry) continue;
+
+      const childKey = entry[0];
+      const childValue = entry[1] as TemplateValue;
+      const childNode = this.createChildFromTemplate(childKey, childValue);
+
+      if (childNode) {
+        // Store tag reference for Lightning 2 compatibility
+        childNode['tag'] = childKey;
+        // Add directly to parent's children array for performance
+        parentNode.children.push(childNode);
+      }
+    }
   }
 
   /**
@@ -390,7 +473,7 @@ export abstract class Component
       this.processTemplate();
     }
 
-    // Listen for mount/unmount events from CoreNode
+    // Listen for mount event from CoreNode (when added to render tree)
     this.on('loaded', () => {
       if (!this._mounted) {
         this._mounted = true;
@@ -398,14 +481,16 @@ export abstract class Component
       }
     });
 
-    this.on('unloaded', () => {
-      if (this._mounted) {
+    // Listen for parent changes to detect unmount (using new CoreNode events)
+    this.on('parentChanged', ({ oldParent, newParent }) => {
+      // Trigger unmount when removed from render tree (parent becomes null)
+      if (oldParent !== null && newParent === null && this._mounted) {
         this._mounted = false;
         this.onUnmount();
       }
     });
 
-    // Clear tag cache when children change
+    // Clear tag cache when children change (using new CoreNode events)
     this.on('childAdded', () => this.clearTagCache());
     this.on('childRemoved', () => this.clearTagCache());
   }
@@ -415,31 +500,6 @@ export abstract class Component
    */
   private clearTagCache(): void {
     this._tagCache.clear();
-  }
-
-  /**
-   * Searches for a child node by tag name
-   *
-   * @param name - The tag name to search for
-   * @returns The found node or null
-   */
-  private findChildByTag(
-    name: string,
-  ): Node | CoreNode | TextNode | Component | null {
-    const children = this.children;
-    const childCount = children.length;
-
-    for (let i = 0; i < childCount; i++) {
-      const child = children[i];
-      if (!child) continue;
-
-      // Check if this child has a matching tag property
-      if (child['tag'] === name) {
-        return child as Node | CoreNode | TextNode | Component;
-      }
-    }
-
-    return null;
   }
 
   /**
@@ -500,18 +560,6 @@ export abstract class Component
    */
   private hasTextProperty(props: unknown): boolean {
     return props !== null && typeof props === 'object' && 'text' in props;
-  }
-
-  /**
-   * Type guard for nested template
-   */
-  private isNestedTemplate(value: unknown): value is ITemplate {
-    return (
-      value !== null &&
-      typeof value === 'object' &&
-      !this.isNodeProps(value) &&
-      !this.isComponentWithProps(value)
-    );
   }
 
   /**

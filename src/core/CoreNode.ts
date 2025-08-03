@@ -2183,6 +2183,8 @@ export class CoreNode extends EventEmitter {
       oldParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
+      // Emit childRemoved event on old parent
+      oldParent.emit('childRemoved', { child: this });
     }
     if (newParent) {
       newParent.children.push(this);
@@ -2197,7 +2199,12 @@ export class CoreNode extends EventEmitter {
       if (newParent.rtt || newParent.parentHasRenderTexture) {
         this.applyRTTInheritance(newParent);
       }
+      // Emit childAdded event on new parent
+      newParent.emit('childAdded', { child: this });
     }
+
+    // Emit parentChanged event on this node
+    this.emit('parentChanged', { oldParent, newParent });
 
     // fetch render bounds from parent
     this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);

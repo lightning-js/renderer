@@ -104,10 +104,7 @@ The template system provides Lightning 2 familiar syntax with Lightning 3 perfor
 
 ```typescript
 template = {
-  // Component without props
-  Header: HeaderComponent,
-
-  // Component with props
+  // Component
   Menu: {
     type: MenuComponent,
     props: { x: 100, y: 200, visible: true },
@@ -211,26 +208,7 @@ if (node.hasFocus) {
 
 ## Key Event Handling
 
-### Key Event Propagation
-
-```typescript
-class KeyHandler extends Component {
-  onKeyPress(key: string): boolean {
-    switch (key) {
-      case 'ArrowUp':
-        this.navigateUp();
-        return true; // Stop propagation
-
-      case 'Enter':
-        this.activate();
-        return true; // Stop propagation
-
-      default:
-        return false; // Continue propagation to parent
-    }
-  }
-}
-```
+TBD
 
 ### Event Flow
 
@@ -264,9 +242,8 @@ This is Phase 1 of the NAF integration. Current status:
 - ✅ TextNode class with focus capabilities
 - ✅ Component class with template processing
 - ✅ Lightning 2 compatible tag() syntax
-- 🔄 Focus Manager (Phase 3)
-- 🔄 Key Event System (Phase 3)
-- 🔄 Text Renderer Integration (Phase 2)
+- ✅ Focus Manager
+- ✅ Key Event System
 
 ## Next Steps
 
