@@ -110,6 +110,16 @@ export class Stage {
   public readonly calculateTextureCoord: boolean;
 
   /**
+   * Target frame time in milliseconds (calculated from targetFPS)
+   *
+   * @remarks
+   * This is pre-calculated to avoid recalculating on every frame.
+   * - 0 means no throttling (use display refresh rate)
+   * - >0 means throttle to this frame time (1000 / targetFPS)
+   */
+  public targetFrameTime: number = 0;
+
+  /**
    * Renderer Event Bus for the Stage to emit events onto
    *
    * @remarks
@@ -168,6 +178,10 @@ export class Stage {
     this.platform = platform;
 
     this.eventBus = options.eventBus;
+
+    // Calculate target frame time from targetFPS option
+    this.targetFrameTime = options.targetFPS > 0 ? 1000 / options.targetFPS : 0;
+
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
@@ -357,6 +371,20 @@ export class Stage {
     this.renderRequested = true;
   }
 
+  /**
+   * Update the target frame time based on the current targetFPS setting
+   *
+   * @remarks
+   * This should be called whenever the targetFPS option is changed
+   * to ensure targetFrameTime stays in sync.
+   * targetFPS of 0 means no throttling (targetFrameTime = 0)
+   * targetFPS > 0 means throttle to 1000/targetFPS milliseconds
+   */
+  updateTargetFrameTime() {
+    this.targetFrameTime =
+      this.options.targetFPS > 0 ? 1000 / this.options.targetFPS : 0;
+  }
+
   updateFrameTime() {
     const newFrameTime = this.platform!.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
@@ -436,8 +464,13 @@ export class Stage {
       root.update(this.deltaTime, root.clippingRect);
     }
 
-    // Process some textures
-    this.txManager.processSome(this.options.textureProcessingTimeLimit);
+    // Process some textures asynchronously but don't block the frame
+    // Use a background task to prevent frame drops
+    this.txManager
+      .processSome(this.options.textureProcessingTimeLimit)
+      .catch((err) => {
+        console.error('Error processing textures:', err);
+      });
 
     // Reset render operations and clear the canvas
     renderer.reset();

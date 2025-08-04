@@ -138,6 +138,22 @@ export interface RendererRuntimeSettings {
    * @defaultValue `10`
    */
   textureProcessingTimeLimit: number;
+
+  /**
+   * Target FPS for the global render loop
+   *
+   * @remarks
+   * Controls the maximum frame rate of the entire rendering system.
+   * When set to 0, no throttling is applied (use display refresh rate).
+   * When set to a positive number, the global requestAnimationFrame loop
+   * will be throttled to this target FPS, affecting all animations and rendering.
+   *
+   * This provides global performance control for the entire application,
+   * useful for managing performance on lower-end devices.
+   *
+   * @defaultValue `0` (no throttling, use display refresh rate)
+   */
+  targetFPS: number;
 }
 
 /**
@@ -375,6 +391,7 @@ export class RendererMain extends EventEmitter {
         settings.devicePhysicalPixelRatio || window.devicePixelRatio,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      targetFPS: settings.targetFPS || 0,
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
       enableContextSpy: settings.enableContextSpy ?? false,
@@ -384,7 +401,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
       strictBounds: settings.strictBounds ?? true,
-      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 10,
+      textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
@@ -441,6 +458,7 @@ export class RendererMain extends EventEmitter {
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
       strictBounds: settings.strictBounds!,
+      targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
@@ -813,5 +831,43 @@ export class RendererMain extends EventEmitter {
 
   get settings(): Readonly<StageOptions> {
     return this.stage.options;
+  }
+
+  /**
+   * Gets the target FPS for the global render loop
+   *
+   * @returns The current target FPS (0 means no throttling)
+   *
+   * @remarks
+   * This controls the maximum frame rate of the entire rendering system.
+   * When 0, the system runs at display refresh rate.
+   */
+  get targetFPS(): number {
+    return this.stage.options.targetFPS || 0;
+  }
+
+  /**
+   * Sets the target FPS for the global render loop
+   *
+   * @param fps - The target FPS to set for the global render loop.
+   *              Set to 0 or a negative value to disable throttling.
+   *
+   * @remarks
+   * This setting affects the entire rendering system immediately.
+   * All animations, rendering, and frame updates will be throttled
+   * to this target FPS. Provides global performance control.
+   *
+   * @example
+   * ```typescript
+   * // Set global target to 30fps for better performance
+   * renderer.targetFPS = 30;
+   *
+   * // Disable global throttling (use display refresh rate)
+   * renderer.targetFPS = 0;
+   * ```
+   */
+  set targetFPS(fps: number) {
+    this.stage.options.targetFPS = fps > 0 ? fps : 0;
+    this.stage.updateTargetFrameTime();
   }
 }

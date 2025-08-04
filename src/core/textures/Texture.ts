@@ -144,6 +144,12 @@ export abstract class Texture extends EventEmitter {
   private _dimensions: Dimensions | null = null;
   private _error: Error | null = null;
 
+  /**
+   * Texture states that are considered transitional and should be skipped during cleanup
+   */
+  public static readonly TRANSITIONAL_TEXTURE_STATES: readonly TextureState[] =
+    ['fetching', 'fetched', 'loading'];
+
   // aggregate state
   public state: TextureState = 'initial';
 
@@ -248,6 +254,23 @@ export abstract class Texture extends EventEmitter {
    */
   free(): void {
     this.ctxTexture?.free();
+  }
+
+  /**
+   * Destroy the texture.
+   *
+   * @remarks
+   * This method is called when the texture is no longer needed and should be
+   * cleaned up.
+   */
+  destroy(): void {
+    // Only free GPU resources if we're in a state where they exist
+    if (this.state === 'loaded') {
+      this.free();
+    }
+
+    // Always free texture data regardless of state
+    this.freeTextureData();
   }
 
   /**
