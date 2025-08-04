@@ -104,7 +104,10 @@ The template system provides Lightning 2 familiar syntax with Lightning 3 perfor
 
 ```typescript
 template = {
-  // Component
+  // Component without props
+  Header: HeaderComponent,
+
+  // Component with props
   Menu: {
     type: MenuComponent,
     props: { x: 100, y: 200, visible: true },

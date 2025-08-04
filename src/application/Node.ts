@@ -40,7 +40,6 @@ import type { Stage } from '../core/Stage.js';
 export class Node extends CoreNode {
   /**
    * Indicates whether this node currently has focus
-   * Note: Lightning 3 has no built-in focus system, so we implement our own
    */
   private _hasFocus = false;
 
@@ -98,7 +97,6 @@ export class Node extends CoreNode {
    */
   onFocus(): void {
     // Default implementation - can be overridden by subclasses
-    this._hasFocus = true;
   }
 
   /**
@@ -107,7 +105,6 @@ export class Node extends CoreNode {
    */
   onBlur(): void {
     // Default implementation - can be overridden by subclasses
-    this._hasFocus = false;
   }
 
   /**
@@ -245,27 +242,6 @@ export class Node extends CoreNode {
       const found = this.findChildByTag(name, child);
       if (found) {
         return found;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Finds the first child that has focus
-   *
-   * @returns The focused child node or null
-   */
-  private findFocusedChild(): Node | null {
-    const children = this.children;
-    const childCount = children.length;
-
-    for (let i = 0; i < childCount; i++) {
-      const child = children[i];
-      if (!child) continue;
-
-      if (child instanceof Node && child.hasFocus) {
-        return child;
       }
     }
 
