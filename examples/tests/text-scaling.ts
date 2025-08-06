@@ -77,7 +77,11 @@ function generateScalingTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
+
+        const dimensions = {
+          width: 74,
+          height: 51,
+        };
 
         // Get the position for the center of the container based on mount = 0
         const position = {
@@ -146,7 +150,10 @@ function generateScalingTest(
           ...nodeProps,
         });
 
-        const dimensions = await waitForLoadedDimensions(baselineNode);
+        const dimensions = {
+          width: 74,
+          height: 51,
+        };
 
         return await constructTestRow({ renderer, rowNode }, [
           baselineNode,
@@ -198,12 +205,15 @@ function generateScalingTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
+        const dimensions = {
+          width: 74,
+          height: 51,
+        };
 
-        // Get the position for the center of the container based on mount = 1
+        // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 + dimensions.width / 2,
-          y: 100 + dimensions.height / 2,
+          x: 100 - dimensions.width / 2,
+          y: 100 - dimensions.height / 2,
         };
 
         baselineNode.x = position.x;

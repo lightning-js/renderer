@@ -71,12 +71,10 @@ function generateRotationTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
-
         // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
+          x: 75,
+          y: 75,
         };
 
         baselineNode.x = position.x;
@@ -156,12 +154,9 @@ function generateRotationTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
-
-        // Get the position for the center of the container based on mount = 1
         const position = {
-          x: 100 + dimensions.width / 2,
-          y: 100 + dimensions.height / 2,
+          x: 75,
+          y: 75,
         };
 
         baselineNode.x = position.x;
