@@ -745,16 +745,23 @@ export class Stage {
    * @returns
    */
   protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
-    const color = props.color ?? 0xffffffff;
-    const colorTop = props.colorTop ?? color;
-    const colorBottom = props.colorBottom ?? color;
-    const colorLeft = props.colorLeft ?? color;
-    const colorRight = props.colorRight ?? color;
+    const {
+      colorTop: top,
+      colorBottom: bottom,
+      colorLeft: left,
+      colorRight: right,
+    } = props;
 
-    const colorTl = props.colorTl ?? colorTop ?? colorLeft ?? color;
-    const colorTr = props.colorTr ?? colorTop ?? colorRight ?? color;
-    const colorBl = props.colorBl ?? colorBottom ?? colorLeft ?? color;
-    const colorBr = props.colorBr ?? colorBottom ?? colorRight ?? color;
+    const color = props.color ?? 0xffffffff;
+    const colorTop = top ?? color;
+    const colorBottom = bottom ?? color;
+    const colorLeft = left ?? color;
+    const colorRight = right ?? color;
+
+    const colorTl = props.colorTl ?? top ?? left ?? color;
+    const colorTr = props.colorTr ?? top ?? right ?? color;
+    const colorBl = props.colorBl ?? bottom ?? left ?? color;
+    const colorBr = props.colorBr ?? bottom ?? right ?? color;
 
     const scale = props.scale ?? null;
     const mount = props.mount ?? 0;
