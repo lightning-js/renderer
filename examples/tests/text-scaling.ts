@@ -21,7 +21,6 @@ import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForLoadedDimensions } from '../common/utils.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 
 export async function automation(settings: ExampleSettings) {

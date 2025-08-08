@@ -51,6 +51,7 @@ export default async function test(settings: ExampleSettings) {
     width: 0,
     height: 0,
     color: 0x000000ff,
+    forceLoad: true,
     fontFamily: 'Ubuntu',
     textRendererOverride: 'sdf',
     fontSize: 20,
@@ -59,6 +60,24 @@ Consectetur adipiscing elit. Vivamus id.
 Suspendisse sollicitudin posuere felis.
 Vivamus consectetur ex magna, non mollis.`,
     parent: testRoot,
+  });
+
+  const text2 = renderer.createTextNode({
+    x: textSizeAfterLoadingBg.x,
+    y: textSizeAfterLoadingBg.y,
+    width: 0,
+    height: 0,
+    color: 0x000000ff,
+    forceLoad: true,
+    fontFamily: 'Ubuntu',
+    textRendererOverride: 'canvas',
+    fontSize: 20,
+    text: `Lorem ipsum dolor sit e
+Consectetur adipiscing elit. Vivamus id.
+Suspendisse sollicitudin posuere felis.
+Vivamus consectetur ex magna, non mollis.`,
+    parent: testRoot,
+    alpha: 0,
   });
 
   const indexInfo = renderer.createTextNode({
@@ -119,8 +138,8 @@ Vivamus consectetur ex magna, non mollis.`,
   let i = 0;
   const mutations = [
     () => {
-      // SDF, contain none
-      text1.textRendererOverride = 'sdf';
+      text1.alpha = 1;
+      text2.alpha = 0;
       text1.maxWidth = 0;
       text1.maxHeight = 0;
     },
@@ -142,26 +161,27 @@ Vivamus consectetur ex magna, non mollis.`,
     },
     () => {
       // Canvas, contain none
-      text1.textRendererOverride = 'canvas';
-      text1.maxWidth = 0;
-      text1.height = 0;
+      text1.alpha = 0;
+      text2.alpha = 1;
+      text2.maxWidth = 0;
+      text2.height = 0;
     },
     () => {
       // Canvas, contain width
-      text1.maxWidth = 200;
+      text2.maxWidth = 200;
     },
     () => {
       // Canvas, contain width (smaller)
-      text1.maxWidth = 195;
-      text1.maxHeight = 5;
+      text2.maxWidth = 195;
+      text2.maxHeight = 5;
     },
     () => {
       // Canvas, contain both
-      text1.maxHeight = 203;
+      text2.maxHeight = 203;
     },
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
-      text1.maxHeight = 204;
+      text2.maxHeight = 204;
     },
   ];
   /**
@@ -179,19 +199,20 @@ Vivamus consectetur ex magna, non mollis.`,
     }
     i = idx;
     mutations[i]?.();
+    const targetText = i > 4 ? text2 : text1;
 
     header.text = makeHeader(
-      text1.textRendererOverride!,
-      text1.width,
-      text1.height,
+      targetText.textRendererOverride!,
+      targetText.width,
+      targetText.height,
     );
     indexInfo.text = (i + 1).toString();
-    textSetDimsInfo.text = `Set size: ${Math.round(text1.width)}x${Math.round(
-      text1.height,
-    )}`;
-    const dimensions = await waitForLoadedDimensions(text1);
-    textSizeAfterLoadingBg.width = text1.width;
-    textSizeAfterLoadingBg.height = text1.height;
+    textSetDimsInfo.text = `Set size: ${Math.round(
+      targetText.width,
+    )}x${Math.round(targetText.height)}`;
+    const dimensions = await waitForLoadedDimensions(targetText);
+    textSizeAfterLoadingBg.width = targetText.width;
+    textSizeAfterLoadingBg.height = targetText.height;
     textSizeAfterLoadInfo.text = `After 'loading' size: ${Math.round(
       textSizeAfterLoadingBg.width,
     )}x${Math.round(textSizeAfterLoadingBg.height)}`;
