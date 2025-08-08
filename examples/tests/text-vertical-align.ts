@@ -55,6 +55,7 @@ const NODE_PROPS = {
   textRendererOverride: 'sdf',
   fontSize: 50,
   lineHeight: 70,
+  verticalAlign: 'middle',
 } satisfies Partial<ITextNodeProps>;
 
 const CONTAINER_SIZE = 200;

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast Cable Communications Management, LLC.
+ * Copyright 2025 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -17,103 +17,172 @@
  * limitations under the License.
  */
 
-import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
-import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
-import { PageContainer } from '../common/PageContainer.js';
-import { waitForLoadedDimensions } from '../common/utils.js';
-import { constructTestRow } from '../common/constructTestRow.js';
 
 export async function automation(settings: ExampleSettings) {
-  // Snapshot all the pages
-  await (await test(settings)).snapshotPages();
+  await test(settings);
+  await settings.snapshot();
 }
 
-export default async function test(settings: ExampleSettings) {
-  const { renderer } = settings;
-  const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
-    title: 'Text Baseline',
+/**
+ * Side-by-side comparison of textBaseline vs Canvas textBaseline
+ *
+ * This test compares SDF textBaseline implementation with Canvas implementation
+ * to ensure consistency between the two renderers.
+ */
+export default async function test({ renderer, testRoot }: ExampleSettings) {
+  const fontSize = 36;
+  const fontFamily = 'Ubuntu';
+  const testText = 'Aygjp';
+
+  // Common Y position for alignment comparison
+  const alignmentY = 50; // Position within each text node
+  const textNodeHeight = 80; // Height of each text node container
+
+  const view = renderer.createNode({
+    x: 0,
+    y: 0,
+    width: 1250,
+    height: 600,
+    color: 0xf8f8f8ff,
+    parent: testRoot,
   });
 
-  await paginateTestRows(pageContainer, [
-    ...generateBaselineTest(renderer, 'sdf'),
-    ...generateBaselineTest(renderer, 'canvas'),
-  ]);
+  // Create a main reference line across the screen
+  renderer.createNode({
+    x: 0,
+    y: 170 + alignmentY / 2 + 1, // Global position where text Y coordinate should be
+    width: view.width,
+    height: 2,
+    color: 0xff0000ff,
+    parent: view,
+  });
 
-  return pageContainer;
-}
+  // Title
+  renderer.createTextNode({
+    text: 'textBaseline: SDF vs Canvas Comparison',
+    x: 20,
+    y: 50,
+    fontSize: 24,
+    fontFamily,
+    color: 0x000000ff,
+    parent: view,
+  });
 
-const NODE_PROPS = {
-  x: 100,
-  y: 100,
-  color: 0x000000ff,
-  text: 'txyz',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
-  fontSize: 50,
-  lineHeight: 70,
-} satisfies Partial<ITextNodeProps>;
+  renderer.createTextNode({
+    text: 'SDF Renderer',
+    x: 20,
+    y: 100,
+    fontSize: 20,
+    fontFamily,
+    color: 0x0066ccff,
+    parent: view,
+  });
 
-function generateBaselineTest(
-  renderer: RendererMain,
-  textRenderer: 'canvas' | 'sdf',
-): TestRow[] {
-  return [
-    {
-      title: `Text Node ('textBaseline', ${textRenderer}, lineHeight = 70)${
-        textRenderer === 'sdf' ? ', "BROKEN!"' : ''
-      }`,
-      content: async (rowNode) => {
-        const nodeProps = {
-          ...NODE_PROPS,
-          textRendererOverride: textRenderer,
-        } satisfies Partial<ITextNodeProps>;
+  renderer.createTextNode({
+    text: 'Canvas Renderer',
+    x: 630,
+    y: 100,
+    fontSize: 20,
+    fontFamily,
+    color: 0xcc6600ff,
+    parent: view,
+  });
 
-        const baselineNode = renderer.createTextNode({
-          ...nodeProps,
-          parent: renderer.root,
-        });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
+  // Test different baselines
+  const baselines: Array<
+    'alphabetic' | 'top' | 'middle' | 'bottom' | 'hanging' | 'ideographic'
+  > = ['alphabetic', 'top', 'middle', 'bottom', 'hanging', 'ideographic'];
 
-        // Get the position for the center of the container based on mount = 0
-        const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
-        };
+  baselines.forEach(async (baseline, index) => {
+    const xOffset = index * 100;
+    const rowY = 170; // Y position of the text node containers
 
-        baselineNode.x = position.x;
-        baselineNode.y = position.y;
+    // Create container nodes for each text to show the bounds
+    const sdfContainer = renderer.createNode({
+      x: 30 + xOffset,
+      y: rowY,
+      width: 95,
+      height: textNodeHeight,
+      color: 0x0066cc20, // Semi-transparent blue
+      parent: view,
+    });
 
-        return await constructTestRow({ renderer, rowNode }, [
-          baselineNode,
-          'textBaseline (alphabetic) ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            textBaseline: 'alphabetic',
-          }),
-          'textBaseline: top ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            textBaseline: 'top',
-          }),
-          'textBaseline: middle ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            textBaseline: 'middle',
-          }),
-          'textBaseline: bottom ->',
-          renderer.createTextNode({
-            ...nodeProps,
-            ...position,
-            textBaseline: 'bottom',
-          }),
-        ]);
-      },
-    },
-  ] satisfies TestRow[];
+    const canvasContainer = renderer.createNode({
+      x: 630 + xOffset,
+      y: rowY,
+      width: 95,
+      height: textNodeHeight,
+      color: 0xcc660020, // Semi-transparent orange
+      parent: view,
+    });
+
+    // SDF version (positioned within its container)
+    renderer.createTextNode({
+      text: testText,
+      height: textNodeHeight,
+      fontSize,
+      fontFamily,
+      textBaseline: baseline,
+      color: 0x0066ccff,
+      parent: sdfContainer,
+    });
+
+    // Canvas version (positioned within its container)
+    renderer.createTextNode({
+      text: testText,
+      height: textNodeHeight,
+      fontSize,
+      fontFamily,
+      textBaseline: baseline,
+      textRendererOverride: 'canvas',
+      color: 0xcc6600ff,
+      parent: canvasContainer,
+    });
+
+    // Baseline label for SDF column
+    renderer.createTextNode({
+      text: baseline,
+      x: 30 + xOffset,
+      y: 150,
+      fontSize: 12,
+      fontFamily,
+      textBaseline: 'alphabetic',
+      color: 0x666666ff,
+      parent: view,
+    });
+
+    // Baseline label for Canvas column
+    renderer.createTextNode({
+      text: baseline,
+      x: 630 + xOffset,
+      y: 150,
+      fontSize: 12,
+      fontFamily,
+      textBaseline: 'alphabetic',
+      color: 0x666666ff,
+      parent: view,
+    });
+  });
+
+  // Description of the test
+  renderer.createTextNode({
+    text: 'Blue: SDF Renderer, Orange: Canvas Renderer',
+    x: 50,
+    y: 350,
+    fontSize: 16,
+    fontFamily,
+    color: 0x333333ff,
+    parent: view,
+  });
+
+  renderer.createTextNode({
+    text: 'Text should align relative red line based on textBaseline.',
+    x: 50,
+    y: 380,
+    fontSize: 16,
+    fontFamily,
+    color: 0x333333ff,
+    parent: view,
+  });
 }
