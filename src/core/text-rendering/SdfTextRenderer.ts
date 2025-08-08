@@ -35,7 +35,7 @@ import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
-import { wrapText, measureText } from './sdf/index.js';
+import { wrapText, measureLines } from './sdf/index.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
 const FLOATS_PER_VERTEX = 4;
@@ -286,6 +286,7 @@ const generateTextLayout = (
   const maxHeight = props.maxHeight;
   const maxLines = props.maxLines;
   const overflowSuffix = props.overflowSuffix;
+  const wordBreak = props.wordBreak;
 
   // Use the font's design size for proper scaling
   const designLineHeight = commonFontData.lineHeight;
@@ -318,64 +319,47 @@ const generateTextLayout = (
     }
   }
 
+  const hasMaxLines = effectiveMaxLines > 0;
+
   // Split text into lines based on wrapping constraints
-  const lines = shouldWrapText
+  const [lines, remainingLines, remainingText] = shouldWrapText
     ? wrapText(
         text,
         fontFamily,
-        fontData,
-        fontSize,
         finalScale,
         maxWidth,
         letterSpacing,
         overflowSuffix,
+        wordBreak,
         effectiveMaxLines,
+        hasMaxLines,
       )
-    : text.split('\n');
-
-  // Apply maxLines constraint if wrapping wasn't done
-  const finalLines =
-    effectiveMaxLines > 0 && lines.length > effectiveMaxLines
-      ? lines.slice(0, effectiveMaxLines)
-      : lines;
+    : measureLines(
+        text.split('\n'),
+        fontFamily,
+        letterSpacing,
+        finalScale,
+        effectiveMaxLines,
+        hasMaxLines,
+      );
 
   const glyphs: GlyphLayout[] = [];
   let maxWidthFound = 0;
   let currentY = 0;
 
-  // First pass: Calculate line widths for text alignment
-  const lineWidths: number[] = [];
-  for (let i = 0; i < finalLines.length; i++) {
-    const line = finalLines[i];
-    if (!line) {
-      lineWidths.push(0);
-      continue;
-    }
-
-    const lineWidth = measureText(
-      line,
-      fontFamily,
-      fontData,
-      designLetterSpacing,
-    );
-    lineWidths.push(lineWidth);
-    if (lineWidth > maxWidthFound) {
-      maxWidthFound = lineWidth;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]![1] > maxWidthFound) {
+      maxWidthFound = lines[i]![1];
     }
   }
 
   // Second pass: Generate glyph layouts with proper alignment
   let lineIndex = 0;
-  const linesLength = finalLines.length;
+  const linesLength = lines.length;
 
   while (lineIndex < linesLength) {
-    const line = finalLines[lineIndex];
-    const lineWidth = lineWidths[lineIndex] || 0;
+    const [line, lineWidth] = lines[lineIndex]!;
     lineIndex++;
-    if (line === undefined) {
-      currentY += designLineHeight;
-      continue;
-    }
 
     // Calculate line X offset based on text alignment
     let lineXOffset = 0;
@@ -460,7 +444,7 @@ const generateTextLayout = (
     glyphs,
     distanceRange: finalScale * fontData.distanceField.distanceRange,
     width: Math.ceil(maxWidthFound * finalScale),
-    height: Math.ceil(designLineHeight * finalLines.length * finalScale),
+    height: Math.ceil(designLineHeight * lines.length * finalScale),
     fontScale: finalScale,
     lineHeight,
     fontFamily,

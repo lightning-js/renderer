@@ -387,3 +387,18 @@ export interface TextRenderer {
   ) => void;
   init: (stage: Stage) => void;
 }
+
+/**
+ * Text line struct for text mapping
+ * 0 - text
+ * 1 - width
+ */
+export type TextLineStruct = [string, number];
+
+/**
+ * Wrapped lines struct for text mapping
+ * 0 - line structs
+ * 1 - remaining lines
+ * 2 - remaining text
+ */
+export type WrappedLinesStruct = [TextLineStruct[], number, boolean];

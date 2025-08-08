@@ -23,7 +23,7 @@ import {
   wrapLine,
   measureText,
   truncateLineWithSuffix,
-  breakLongWord,
+  breakWord,
 } from './Utils.js';
 import * as SdfFontHandler from '../SdfFontHandler.js';
 
@@ -96,22 +96,22 @@ describe('SDF Text Utils', () => {
 
   describe('measureText', () => {
     it('should measure text width correctly', () => {
-      const width = measureText('hello', 'Arial', mockFontData, 0);
+      const width = measureText('hello', 'Arial', 0);
       expect(width).toBe(50); // 5 characters * 10 units each
     });
 
     it('should handle empty text', () => {
-      const width = measureText('', 'Arial', mockFontData, 0);
+      const width = measureText('', 'Arial', 0);
       expect(width).toBe(0);
     });
 
     it('should account for letter spacing', () => {
-      const width = measureText('hello', 'Arial', mockFontData, 2);
+      const width = measureText('hello', 'Arial', 2);
       expect(width).toBe(60); // 5 characters * 10 units + 5 * 2 letter spacing
     });
 
     it('should skip zero-width spaces', () => {
-      const width = measureText('hel\u200Blo', 'Arial', mockFontData, 0);
+      const width = measureText('hel\u200Blo', 'Arial', 0);
       expect(width).toBe(50); // ZWSP should not contribute to width
     });
   });
@@ -121,13 +121,13 @@ describe('SDF Text Utils', () => {
       const result = wrapLine(
         'hello world test',
         'Arial',
-        mockFontData,
-        1.0, // fontScale
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
       expect(result).toEqual(['hello', 'world test']);
     });
@@ -136,13 +136,13 @@ describe('SDF Text Utils', () => {
       const result = wrapLine(
         'hello',
         'Arial',
-        mockFontData,
-        1.0,
         100,
         0,
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
       expect(result).toEqual(['hello']);
     });
@@ -151,19 +151,19 @@ describe('SDF Text Utils', () => {
       const result = wrapLine(
         'verylongwordthatdoesnotfit',
         'Arial',
-        mockFontData,
-        1.0,
         100, // Only 10 characters fit (each char = 10 units)
         0,
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
       expect(result.length).toBeGreaterThan(1);
       // The first line should exist and be appropriately sized
       expect(result[0]).toBeDefined();
-      if (result[0]) {
-        expect(result[0].length).toBeLessThanOrEqual(10);
+      if (result[0][0]) {
+        expect(result[0][0].length).toBeLessThanOrEqual(10);
       }
     });
 
@@ -172,27 +172,33 @@ describe('SDF Text Utils', () => {
       const result1 = wrapLine(
         'hello\u200Bworld test',
         'Arial',
-        mockFontData,
-        1.0,
         100, // 10 characters max - 'helloworld' = 100 units (fits), ' test' = 50 units (exceeds)
         0,
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
-      expect(result1).toEqual(['helloworld', 'test']); // Break at space, not ZWSP
+
+      const [lines] = result1;
+      const [line1] = lines![0]!;
+      const [line2] = lines![1]!;
+
+      expect(line1).toEqual('helloworld'); // Break at space, not ZWSP
+      expect(line2).toEqual('test');
 
       // Test 2: ZWSP should NOT break when text fits on one line
       const result2 = wrapLine(
         'hi\u200Bthere',
         'Arial',
-        mockFontData,
-        1.0,
         200, // Wide enough for all text (7 characters = 70 units)
         0,
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
       expect(result2).toEqual(['hithere']); // ZWSP is invisible, no space added
 
@@ -200,32 +206,32 @@ describe('SDF Text Utils', () => {
       const result3 = wrapLine(
         'verylongword\u200Bmore',
         'Arial',
-        mockFontData,
-        1.0,
         100, // 10 characters max - forces break at ZWSP
         0,
         10, // spaceWidth
         '',
+        'normal',
         0,
+        false,
       );
       expect(result3.length).toBeGreaterThan(1); // Should break at ZWSP position
-      expect(result3[0]).toBe('verylongwo'); // First 10 chars
+      expect(result3[0][0]).toBe('verylongwo'); // First 10 chars
     });
 
     it('should truncate with suffix when max lines reached', () => {
       const result = wrapLine(
         'hello world test more',
         'Arial',
-        mockFontData,
-        1.0,
         100,
         0,
         10, // spaceWidth
         '...',
+        'normal',
         1, // remainingLines = 1
+        false,
       );
       expect(result).toHaveLength(1);
-      expect(result[0]).toContain('...');
+      expect(result[0][0]).toContain('...');
     });
   });
 
@@ -234,13 +240,13 @@ describe('SDF Text Utils', () => {
       const result = wrapText(
         'line one\nline two that is longer',
         'Arial',
-        mockFontData,
-        16,
         1.0,
         100,
         0,
         '',
+        'normal',
         0,
+        false,
       );
       expect(result.length).toBeGreaterThan(2);
       expect(result[0]).toBe('line one');
@@ -250,13 +256,13 @@ describe('SDF Text Utils', () => {
       const result = wrapText(
         'line one\n\nline three',
         'Arial',
-        mockFontData,
-        16,
         1.0,
         100,
         0,
         '',
+        'normal',
         0,
+        false,
       );
       expect(result[1]).toBe('');
     });
@@ -265,15 +271,16 @@ describe('SDF Text Utils', () => {
       const result = wrapText(
         'line one\\nline two\\nline three\\nline four',
         'Arial',
-        mockFontData,
-        16,
         1.0,
         100,
         0,
         '',
+        'normal',
         2, // maxLines = 2
+        true,
       );
-      expect(result).toHaveLength(2);
+      const [lines] = result;
+      expect(lines).toHaveLength(2);
     });
   });
 
@@ -282,8 +289,6 @@ describe('SDF Text Utils', () => {
       const result = truncateLineWithSuffix(
         'this is a very long line',
         'Arial',
-        mockFontData,
-        1.0,
         100, // Max width for 10 characters
         0,
         '...',
@@ -296,8 +301,6 @@ describe('SDF Text Utils', () => {
       const result = truncateLineWithSuffix(
         'hello',
         'Arial',
-        mockFontData,
-        1.0,
         30, // Only 3 characters fit
         0,
         'verylongsuffix',
@@ -309,75 +312,44 @@ describe('SDF Text Utils', () => {
       // Note: The current implementation always adds the suffix, even if the line fits.
       // This is the expected behavior when used in overflow contexts where the suffix
       // indicates that content was truncated at the line limit.
-      const result = truncateLineWithSuffix(
-        'short',
-        'Arial',
-        mockFontData,
-        1.0,
-        100,
-        0,
-        '...',
-      );
+      const result = truncateLineWithSuffix('short', 'Arial', 100, 0, '...');
       expect(result).toBe('short...');
     });
   });
 
   describe('breakLongWord', () => {
     it('should break word into multiple lines', () => {
-      const result = breakLongWord(
+      const result = breakWord(
         'verylongword',
         'Arial',
-        mockFontData,
-        1.0,
         50, // 5 characters max per line
         0,
-        '',
         0,
+        false,
       );
       expect(result.length).toBeGreaterThan(1);
       expect(result[0]).toHaveLength(5);
     });
 
     it('should handle single character word', () => {
-      const result = breakLongWord(
-        'a',
-        'Arial',
-        mockFontData,
-        1.0,
-        50,
-        0,
-        '',
-        0,
-      );
+      const result = breakWord('a', 'Arial', 50, 0, 0, false);
       expect(result).toEqual(['a']);
     });
 
     it('should truncate with suffix when max lines reached', () => {
-      const result = breakLongWord(
+      const result = breakWord(
         'verylongword',
         'Arial',
-        mockFontData,
-        1.0,
         50,
         0,
-        '...',
         1, // remainingLines = 1
+        true,
       );
       expect(result).toHaveLength(1);
-      expect(result[0]).toContain('...');
     });
 
     it('should handle empty word', () => {
-      const result = breakLongWord(
-        '',
-        'Arial',
-        mockFontData,
-        1.0,
-        50,
-        0,
-        '',
-        0,
-      );
+      const result = breakWord('', 'Arial', 50, 0, 0, true);
       expect(result).toEqual([]);
     });
   });
@@ -389,17 +361,18 @@ describe('SDF Text Utils', () => {
       const result = wrapText(
         text,
         'Arial',
-        mockFontData,
-        16,
         1.0,
         200, // 20 characters max per line
         0,
         '...',
+        'normal',
         0,
+        false,
       );
       expect(result.length).toBeGreaterThan(1);
+      const [lines] = result;
       // Should split at ZWSP and regular spaces
-      expect(result.some((line) => line.includes('zero-width'))).toBe(true);
+      expect(lines.some((line) => line[0].includes('zero-width'))).toBe(true);
     });
 
     it('should handle mixed content with long words and ZWSP', () => {
@@ -407,13 +380,13 @@ describe('SDF Text Utils', () => {
       const result = wrapText(
         text,
         'Arial',
-        mockFontData,
-        16,
         1.0,
         100, // 10 characters max per line
         0,
         '',
+        'normal',
         0,
+        false,
       );
       expect(result.length).toBeGreaterThan(2);
       expect(result[0]).toBe('Short');
