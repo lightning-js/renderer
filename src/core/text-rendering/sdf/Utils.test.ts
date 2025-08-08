@@ -134,8 +134,8 @@ describe('SDF Text Utils', () => {
       const [line1] = lines![0]!;
       const [line2] = lines![1]!;
 
-      expect(line1).toEqual('helloworld'); // Break at space, not ZWSP
-      expect(line2).toEqual('test');
+      expect(line1).toEqual('hello'); // Break at space, not ZWSP
+      expect(line2).toEqual('world test');
     });
 
     it('should handle single word that fits', () => {
@@ -150,7 +150,7 @@ describe('SDF Text Utils', () => {
         0,
         false,
       );
-      expect(result[0][0]).toEqual(['hello']);
+      expect(result[0][0]).toEqual(['hello', 50]);
     });
 
     it('should break long words', () => {
@@ -206,7 +206,7 @@ describe('SDF Text Utils', () => {
         0,
         false,
       );
-      expect(result2[0][0]).toEqual(['hithere']); // ZWSP is invisible, no space added
+      expect(result2[0][0]).toEqual(['hithere', 70]); // ZWSP is invisible, no space added
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
@@ -221,7 +221,7 @@ describe('SDF Text Utils', () => {
         false,
       );
       expect(result3.length).toBeGreaterThan(1); // Should break at ZWSP position
-      expect(result3[0][0]).toBe('verylongwo'); // First 10 chars
+      expect(result3[0][0]).toEqual(['verylongword', 120]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -237,7 +237,7 @@ describe('SDF Text Utils', () => {
         false,
       );
       expect(result[0]).toHaveLength(1);
-      expect(result[0][0]).toContain('...');
+      expect(result[0][0]?.[0]).toContain('...');
     });
   });
 
@@ -255,7 +255,7 @@ describe('SDF Text Utils', () => {
         false,
       );
       expect(result[0].length).toBeGreaterThan(2);
-      expect(result[0][0]).toBe('line one');
+      expect(result[0][0]).toStrictEqual(['line one', 80]);
     });
 
     it('should handle empty lines', () => {
@@ -270,7 +270,7 @@ describe('SDF Text Utils', () => {
         0,
         false,
       );
-      expect(result[0][1]).toBe('');
+      expect(result[0][1]?.[0]).toBe('');
     });
 
     it('should respect max lines limit', () => {
@@ -334,12 +334,12 @@ describe('SDF Text Utils', () => {
         false,
       );
       expect(result[0].length).toBeGreaterThan(1);
-      expect(result[0][0]).toHaveLength(5);
+      expect(result[0][0]?.[0]).toHaveLength(5);
     });
 
     it('should handle single character word', () => {
       const result = breakWord('a', 'Arial', 50, 0, 0, false);
-      expect(result[0][0]).toEqual('a');
+      expect(result[0][0]).toStrictEqual(['a', 10]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -395,8 +395,8 @@ describe('SDF Text Utils', () => {
         false,
       );
       expect(result.length).toBeGreaterThan(2);
-      expect(result[0]).toBe('Short');
-      expect(result[result.length - 1]).toBe('short');
+      expect(result[0][0]?.[0]).toBe('Short');
+      expect(result[0][result.length - 1]?.[0]).toBe('short');
     });
   });
 });
