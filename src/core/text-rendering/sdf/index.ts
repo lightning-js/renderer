@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast Cable Communications Management, LLC.
+ * Copyright 2025 Comcast Cable Communications Management, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,4 @@
  * limitations under the License.
  */
 
-/**
- * Round up to the nearest multiple of the given number.
- *
- * @param value
- * @param multiple
- * @returns
- */
-export function roundUpToMultiple(value: number, multiple: number) {
-  return Math.ceil(value / multiple) * multiple;
-}
-
-/**
- * Round down to the nearest multiple of the given number.
- *
- * @param value
- * @param multiple
- * @returns
- */
-export function roundDownToMultiple(value: number, multiple: number) {
-  return Math.floor(value / multiple) * multiple;
-}
+export * from './Utils.js';

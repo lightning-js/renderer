@@ -1051,6 +1051,19 @@ export class WebGlContextWrapper {
    * gl.drawArrays(mode, first, count);
    * ```
    *
+   * @param mode
+   * @param first
+   * @param count
+   */
+  drawArrays(mode: GLenum, first: GLint, count: GLsizei) {
+    this.gl.drawArrays(mode, first, count);
+  }
+
+  /**
+   * ```
+   * gl.drawArrays(mode, first, count);
+   * ```
+   *
    * @param name
    * @returns
    */

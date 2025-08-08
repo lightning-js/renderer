@@ -98,11 +98,7 @@ and SDF fonts (SdfTrFontFace). Install that fonts that your applications needs
 at start up so they are ready when your application is rendered.
 
 ```ts
-import {
-  RendererMain,
-  WebTrFontFace,
-  SdfTrFontFace,
-} from '@lightningjs/renderer';
+import { RendererMain } from '@lightningjs/renderer';
 
 import {
   WebGlCoreRenderer,
@@ -121,27 +117,17 @@ const renderer = new RendererMain(
   'app', // id of div to insert Canvas.
 );
 
-// Load fonts into renderer
-renderer.stage.fontManager.addFontFace(
-  new WebTrFontFace('Ubuntu', {}, '/fonts/Ubuntu-Regular.ttf'),
-);
+// Load fonts by explicitly specifying the renderer type
+await stage.loadFont('canvas', {
+  fontFamily: 'myWebFont',
+  fontUrl: '/fonts/my-font.ttf',
+});
 
-renderer.stage.fontManager.addFontFace(
-  new SdfTrFontFace(
-    'Ubuntu',
-    {},
-    'msdf',
-    stage,
-    '/fonts/Ubuntu-Regular.msdf.png',
-    '/fonts/Ubuntu-Regular.msdf.json',
-  ),
-);
+await stage.loadFont('sdf', {
+  fontFamily: 'mySdfFont',
+  atlasUrl: '/fonts/my-font-atlas.png',
+  atlasDataUrl: '/fonts/my-font-data.json',
+});
 ```
 
-Please note that the WebGL renderer supports both SDF Fonts and Web Fonts, however the
-Canvas renderer only supports Web Fonts:
-
-| Font Type Renderer | SDF Font | Web Font |
-| ------------------ | -------- | -------- |
-| WebGL              | Y        | Y        |
-| Canvas             | N        | Y        |
+For more information see [Font Loading](./docs/fontLoading.md)

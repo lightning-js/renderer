@@ -533,6 +533,7 @@ export default async function test(settings: ExampleSettings) {
             mountY: 0.5,
             x: curX,
             y: SQUARE_SIZE / 2,
+            forceLoad: true,
             text: 'scale 2 >',
             parent: rowNode,
           }),
@@ -558,16 +559,6 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        const dim2 = await waitForLoadedDimensions(
-          renderer.createTextNode({
-            mountY: 0.5,
-            x: curX,
-            y: SQUARE_SIZE / 2,
-            text: 'pivot 0 >',
-            parent: rowNode,
-          }),
-        );
-
         curX += dim.width + PADDING;
 
         const container3 = renderer.createNode({
@@ -588,16 +579,6 @@ export default async function test(settings: ExampleSettings) {
         });
 
         curX += SQUARE_SIZE + PADDING;
-
-        const dim3 = await waitForLoadedDimensions(
-          renderer.createTextNode({
-            mountY: 0.5,
-            x: curX,
-            y: SQUARE_SIZE / 2,
-            text: 'pivot 1 >',
-            parent: rowNode,
-          }),
-        );
 
         curX += dim.width + PADDING;
 
@@ -670,6 +651,7 @@ export default async function test(settings: ExampleSettings) {
         const dimensions = await waitForLoadedDimensions(
           renderer.createTextNode({
             mountY: 0.5,
+            forceLoad: true,
             x: curX,
             y: SQUARE_SIZE / 2,
             text: 'rotate 45 degrees >',

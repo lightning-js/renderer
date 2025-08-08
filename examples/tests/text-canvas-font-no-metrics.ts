@@ -56,11 +56,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   const canvasText = renderer.createTextNode({
     y: yPos,
-    width: testRoot.width,
+    maxWidth: testRoot.width,
     text,
     fontSize,
     fontFamily,
-    contain: 'width',
     color: 0xff0000ff,
     textRendererOverride: 'canvas',
     parent: testRoot,
@@ -69,8 +68,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: testRoot.width,
     y: testRoot.height,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,

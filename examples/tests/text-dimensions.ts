@@ -61,6 +61,7 @@ export default async function test(settings: ExampleSettings) {
     width: 0,
     height: 0,
     color: 0x000000ff,
+    forceLoad: true,
     fontFamily: 'Ubuntu',
     textRendererOverride: 'sdf',
     fontSize: 50,

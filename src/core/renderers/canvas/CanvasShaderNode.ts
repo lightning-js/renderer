@@ -16,10 +16,10 @@
  */
 
 import type { CoreNode } from '../../CoreNode.js';
+import { normalizeCanvasColor } from '../../lib/colorCache.js';
 import type { Stage } from '../../Stage.js';
 import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
-import type { CanvasRenderer } from './CanvasRenderer.js';
 
 export type CanvasShaderType<
   T extends object = Record<string, unknown>,
@@ -91,6 +91,6 @@ export class CanvasShaderNode<
   }
 
   toColorString(rgba: number) {
-    return (this.stage.renderer as CanvasRenderer).getParsedColor(rgba, true);
+    return normalizeCanvasColor(rgba, true);
   }
 }

@@ -83,6 +83,7 @@ export async function paginateTestRows(
         const rowHeaderNode = renderer.createTextNode({
           fontFamily: 'Ubuntu',
           fontSize: HEADER_FONT_SIZE,
+          forceLoad: true,
           y: PADDING,
           parent: rowContainer,
         });

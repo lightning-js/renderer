@@ -21,7 +21,6 @@ import type { ITextNodeProps, RendererMain } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import { paginateTestRows, type TestRow } from '../common/paginateTestRows.js';
 import { PageContainer } from '../common/PageContainer.js';
-import { waitForLoadedDimensions } from '../common/utils.js';
 import { constructTestRow } from '../common/constructTestRow.js';
 
 export async function automation(settings: ExampleSettings) {
@@ -71,12 +70,10 @@ function generateRotationTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
-
         // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
+          x: 75,
+          y: 75,
         };
 
         baselineNode.x = position.x;
@@ -156,12 +153,9 @@ function generateRotationTest(
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
         });
-        const dimensions = await waitForLoadedDimensions(baselineNode);
-
-        // Get the position for the center of the container based on mount = 1
         const position = {
-          x: 100 + dimensions.width / 2,
-          y: 100 + dimensions.height / 2,
+          x: 75,
+          y: 75,
         };
 
         baselineNode.x = position.x;

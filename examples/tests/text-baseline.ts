@@ -73,6 +73,7 @@ function generateBaselineTest(
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
+          forceLoad: true,
           parent: renderer.root,
         });
         const dimensions = await waitForLoadedDimensions(baselineNode);
