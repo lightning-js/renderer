@@ -255,6 +255,8 @@ export const wrapLine = (
 
   if (currentLine.length > 0) {
     wrappedLines.push([currentLine, currentLineWidth]);
+  } else {
+    wrappedLines.push(['', 0]);
   }
   return [wrappedLines, remainingLines, hasRemainingText];
 };
