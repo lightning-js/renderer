@@ -79,6 +79,18 @@ export function installFonts(stage: Stage) {
 
   if (stage.renderer.mode === 'webgl') {
     stage.fontManager.addFontFace(
+      new SdfTrFontFace('msdf', {
+        fontFamily: 'ArialArabic',
+        descriptors: {},
+        atlasUrl: './fonts/ArialArabic.msdf.png',
+        atlasDataUrl: './fonts/ArialArabic.msdf.json',
+        stage,
+        // Instead of suppling `metrics` this font will rely on the ones
+        // encoded in the json file under `lightningMetrics`.
+      }),
+    );
+
+    stage.fontManager.addFontFace(
       new SdfTrFontFace('ssdf', {
         fontFamily: 'NotoSans',
         descriptors: {},
