@@ -39,32 +39,23 @@ import type {
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
-
-// Internal text update tracking
-enum TextUpdateReason {
-  None = 0,
-  FontChange = 1,
-  TextChange = 2,
-  Both = 3, // FontChange | TextChange
-}
-
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
    */
   textRendererOverride?: string | null;
+  forceLoad: boolean;
 }
 
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
+  private _layoutGenerated = false;
+
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
   private _lastVertexBuffer: Float32Array | null = null;
-
-  // Internal text update tracking
-  private _pendingTextUpdate: TextUpdateReason = TextUpdateReason.Both;
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -90,9 +81,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
     this.textProps = props;
 
-    // Mark text as needing update - this will trigger the text rendering process
-    this._pendingTextUpdate = TextUpdateReason.Both;
-    this.setUpdateType(UpdateType.Text);
+    this.setUpdateType(UpdateType.All);
   }
 
   protected override onTextureLoaded: TextureLoadedEventHandler = (
@@ -124,41 +113,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    // Handle text-specific updates if we have pending updates
-    // Process synchronously in the same tick to maintain frame consistency
-    if (this._pendingTextUpdate !== TextUpdateReason.None) {
-      const textUpdateReason = this._pendingTextUpdate;
-      let fontUpdateNeeded = false;
-      let textRenderNeeded = false;
-
-      // Check if font update is needed
-      if (textUpdateReason & TextUpdateReason.FontChange) {
-        fontUpdateNeeded = true;
-      }
-
-      // Check if text render update is needed
-      if (textUpdateReason & TextUpdateReason.TextChange) {
-        textRenderNeeded = true;
-        this._cachedLayout = null; // Invalidate cached layout
-        this._lastVertexBuffer = null; // Invalidate last vertex buffer
-      }
-
-      // Step 1: Check if the font is loaded
-      if (
-        fontUpdateNeeded === true &&
-        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === false
-      ) {
-        return; // Exit early, will re-render when font is loaded
-      }
-
-      // Step 2: Render text if rendering is needed
-      if (textRenderNeeded === true) {
-        const resp = this.textRenderer.renderText(this.stage, this.textProps);
-        this.handleRenderResult(resp);
-      }
-
-      // Reset pending updates after processing
-      this._pendingTextUpdate = TextUpdateReason.None;
+    if (
+      (this.props.parent?.isRenderable === true &&
+        this._layoutGenerated === false) ||
+      (this.textProps.forceLoad === true &&
+        this._layoutGenerated === false &&
+        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
+    ) {
+      this._cachedLayout = null; // Invalidate cached layout
+      this._lastVertexBuffer = null; // Invalidate last vertex buffer
+      const resp = this.textRenderer.renderText(this.stage, this.textProps);
+      this.handleRenderResult(resp);
+      this._layoutGenerated = true;
     }
 
     // First run the standard CoreNode update
@@ -286,8 +252,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxWidth(value: number) {
     if (this.textProps.maxWidth !== value) {
       this.textProps.maxWidth = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -299,8 +265,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxHeight(value: number) {
     if (this.textProps.maxHeight !== value) {
       this.textProps.maxHeight = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -311,8 +277,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set text(value: string) {
     if (this.textProps.text !== value) {
       this.textProps.text = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -323,8 +289,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontSize(value: number) {
     if (this.textProps.fontSize !== value) {
       this.textProps.fontSize = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -335,8 +301,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontFamily(value: string) {
     if (this.textProps.fontFamily !== value) {
       this.textProps.fontFamily = value;
-      this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = true;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -347,8 +313,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontStyle(value: TrProps['fontStyle']) {
     if (this.textProps.fontStyle !== value) {
       this.textProps.fontStyle = value;
-      this._pendingTextUpdate |= TextUpdateReason.Both;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = true;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -359,8 +325,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set textAlign(value: TrProps['textAlign']) {
     if (this.textProps.textAlign !== value) {
       this.textProps.textAlign = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -371,8 +337,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set letterSpacing(value: number) {
     if (this.textProps.letterSpacing !== value) {
       this.textProps.letterSpacing = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -383,8 +349,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set lineHeight(value: number) {
     if (this.textProps.lineHeight !== value) {
       this.textProps.lineHeight = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -395,8 +361,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxLines(value: number) {
     if (this.textProps.maxLines !== value) {
       this.textProps.maxLines = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -407,8 +373,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set textBaseline(value: TrProps['textBaseline']) {
     if (this.textProps.textBaseline !== value) {
       this.textProps.textBaseline = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -419,8 +385,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set verticalAlign(value: TrProps['verticalAlign']) {
     if (this.textProps.verticalAlign !== value) {
       this.textProps.verticalAlign = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -431,8 +397,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set overflowSuffix(value: string) {
     if (this.textProps.overflowSuffix !== value) {
       this.textProps.overflowSuffix = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -443,8 +409,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set wordBreak(value: TrProps['wordBreak']) {
     if (this.textProps.wordBreak !== value) {
       this.textProps.wordBreak = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 
@@ -455,8 +421,19 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set offsetY(value: number) {
     if (this.textProps.offsetY !== value) {
       this.textProps.offsetY = value;
-      this._pendingTextUpdate |= TextUpdateReason.TextChange;
-      this.setUpdateType(UpdateType.Text);
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get forceLoad() {
+    return this.textProps.forceLoad;
+  }
+
+  set forceLoad(value: boolean) {
+    if (this.textProps.forceLoad !== value) {
+      this.textProps.forceLoad = value;
+      this.setUpdateType(UpdateType.Local);
     }
   }
 

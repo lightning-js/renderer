@@ -690,6 +690,7 @@ export class Stage {
       wordBreak: props.wordBreak || 'normal',
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
+      forceLoad: props.forceLoad || false,
     });
 
     const resolvedTextRenderer = this.resolveTextRenderer(

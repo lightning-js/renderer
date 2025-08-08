@@ -61,6 +61,7 @@ export async function constructTestRow(
           x: curX,
           y: textPos,
           text: testNode,
+          forceLoad: true,
           parent: rowNode,
         }),
       );

@@ -183,16 +183,6 @@ export enum UpdateType {
   RecalcUniforms = 8192,
 
   /**
-   * Text update
-   *
-   * @remarks
-   * CoreTextNode Properties Updated:
-   * - Text layout and rendering specific updates
-   * - Does not trigger local transform or other non-text updates
-   */
-  Text = 16384,
-
-  /**
    * None
    */
   None = 0,
@@ -200,7 +190,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 32767,
+  All = 14335,
 }
 
 /**
