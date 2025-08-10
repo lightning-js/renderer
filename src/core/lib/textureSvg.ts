@@ -39,8 +39,8 @@ export function isSvgImage(url: string): boolean {
  */
 export const loadSvg = (
   url: string,
-  width: number | null,
-  height: number | null,
+  w: number | null,
+  h: number | null,
   sx: number | null,
   sy: number | null,
   sw: number | null,
@@ -56,15 +56,15 @@ export const loadSvg = (
     img.onload = () => {
       const x = sx ?? 0;
       const y = sy ?? 0;
-      const w = width || img.width;
-      const h = height || img.height;
+      const width = w || img.width;
+      const height = h || img.height;
 
-      canvas.width = w;
-      canvas.height = h;
-      ctx.drawImage(img, 0, 0, w, h);
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
 
       resolve({
-        data: ctx.getImageData(x, y, sw ?? w, sh ?? h),
+        data: ctx.getImageData(x, y, sw ?? width, sh ?? height),
         premultiplyAlpha: false,
       });
     };

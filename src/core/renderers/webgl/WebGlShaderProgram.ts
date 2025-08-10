@@ -158,8 +158,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     if (this.useSystemDimensions === true) {
       if (
-        incomingQuad.width !== currentRenderOp.width ||
-        incomingQuad.height !== currentRenderOp.height
+        incomingQuad.w !== currentRenderOp.w ||
+        incomingQuad.h !== currentRenderOp.h
       ) {
         return false;
       }
@@ -206,20 +206,16 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
     if (parentHasRenderTexture === true) {
-      const { width, height } = renderOp.framebufferDimensions!;
+      const { w, h } = renderOp.framebufferDimensions!;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);
 
       // Set resolution to the framebuffer dimensions
-      this.glw.uniform2f('u_resolution', width, height);
+      this.glw.uniform2f('u_resolution', w, h);
     } else {
       this.glw.uniform1f('u_pixelRatio', renderOp.renderer.stage.pixelRatio);
-      this.glw.uniform2f(
-        'u_resolution',
-        this.glw.canvas.width,
-        this.glw.canvas.height,
-      );
+      this.glw.uniform2f('u_resolution', this.glw.canvas.w, this.glw.canvas.h);
     }
 
     if (this.useSystemAlpha === true) {
@@ -227,7 +223,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     if (this.useSystemDimensions === true) {
-      this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
+      this.glw.uniform2f('u_dimensions', renderOp.w, renderOp.h);
     }
 
     /**temporary fix to make sdf texts work */

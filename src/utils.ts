@@ -235,8 +235,8 @@ export function deg2Rad(degrees: number): number {
  * @param height
  * @returns
  */
-export function getImageAspectRatio(width: number, height: number): number {
-  return width / height;
+export function getImageAspectRatio(w: number, h: number): number {
+  return w / h;
 }
 
 /**

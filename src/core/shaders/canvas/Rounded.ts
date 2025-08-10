@@ -34,20 +34,13 @@ export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
   update(node) {
     this.computed.radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
   },
   render(ctx, quad, renderContext) {
     const path = new Path2D();
-    roundRect(
-      path,
-      quad.tx,
-      quad.ty,
-      quad.width,
-      quad.height,
-      this.computed.radius!,
-    );
+    roundRect(path, quad.tx, quad.ty, quad.w, quad.h, this.computed.radius!);
     ctx.clip(path);
 
     renderContext();

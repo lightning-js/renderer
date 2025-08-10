@@ -10,8 +10,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -19,8 +19,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rootRenderToTextureNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 540,
+    w: 1920,
+    h: 540,
     parent: node,
     rtt: true,
     zIndex: 5,
@@ -30,8 +30,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const reflectionNode = renderer.createNode({
     x: 0,
     y: 540,
-    width: 1920,
-    height: 540,
+    w: 1920,
+    h: 540,
     colorTop: 0xc0ffee00,
     colorBottom: 0x97abffff,
     parent: node,
@@ -46,8 +46,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       parent: rootRenderToTextureNode,
       x: (i % 15) * 120 + 50,
       y: Math.floor(i / 15) * 140 + 1920,
-      width: 120,
-      height: 120,
+      w: 120,
+      h: 120,
       scale: 0.5,
       src: `https://picsum.photos/id/${i + 30}/120/120`,
     });

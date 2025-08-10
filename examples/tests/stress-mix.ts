@@ -40,8 +40,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const gridNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: screenWidth,
-    height: screenHeight,
+    w: screenWidth,
+    h: screenHeight,
     parent: testRoot,
   });
 
@@ -63,8 +63,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       parent: gridNode,
       x,
       y,
-      width: imageSize,
-      height: imageSize,
+      w: imageSize,
+      h: imageSize,
     } as Partial<INode> | Partial<ITextNode>;
 
     if (texture === 'Image') {

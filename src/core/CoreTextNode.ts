@@ -61,8 +61,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textProps: CoreTextNodeProps;
 
   private _renderInfo: TextRenderInfo = {
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
   };
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
@@ -94,15 +94,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // ignore 1x1 pixel textures
-    if (dimensions.width > 1 && dimensions.height > 1) {
+    if (dimensions.w > 1 && dimensions.h > 1) {
       this.emit('loaded', {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
     }
 
-    this.width = this._renderInfo.width;
-    this.height = this._renderInfo.height;
+    this.w = this._renderInfo.w;
+    this.h = this._renderInfo.h;
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -151,8 +151,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private handleRenderResult(result: TextRenderInfo): void {
     // Host paths on top
     const textRendererType = this._type;
-    let width = result.width;
-    let height = result.height;
+    let width = result.w;
+    let height = result.h;
 
     // Handle Canvas renderer (uses ImageData)
     if (textRendererType === 'canvas') {
@@ -186,8 +186,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.props.width = width;
-      this.props.height = height;
+      this.props.w = width;
+      this.props.h = height;
       this.setUpdateType(UpdateType.Local);
     }
 
@@ -195,8 +195,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: width,
-        height: height,
+        w: width,
+        h: height,
       },
     } satisfies NodeTextLoadedPayload);
   }
@@ -233,8 +233,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         worldAlpha: this.worldAlpha,
         globalTransform: this.globalTransform!.getFloatArr(),
         clippingRect: this.clippingRect,
-        width: this.props.width,
-        height: this.props.height,
+        w: this.props.w,
+        h: this.props.h,
         parentHasRenderTexture: this.parentHasRenderTexture,
         framebufferDimensions:
           this.parentHasRenderTexture === true

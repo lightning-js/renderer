@@ -88,13 +88,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const node = renderer.createNode({
       x,
       y,
-      width: nodeSize,
-      height: nodeSize,
+      w: nodeSize,
+      h: nodeSize,
       parent: testRoot,
       color: randomColor(),
       texture: renderer.createTexture('NoiseTexture', {
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         cacheId: i,
       }),
     });
@@ -212,14 +212,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     'Noise Texture': () =>
       renderer.createNode({
         texture: renderer.createTexture('NoiseTexture', {
-          width: nodeSize,
-          height: nodeSize,
+          w: nodeSize,
+          h: nodeSize,
           cacheId: Math.random(),
         }),
         x: nodeSpawnX,
         y: nodeSpawnY,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         parent: testRoot,
       }),
     // No need to test color textures, they all sample from the same 1x1 pixel texture
@@ -228,8 +228,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     //   color: 0xff00ff, // Magenta
     //   x: nodeSpawnX,
     //   y: nodeSpawnY,
-    //   width: nodeSize,
-    //   height: nodeSize,
+    //   w: nodeSize,
+    //   h: nodeSize,
     //   parent: testRoot,
     // }),
     SubTexture: () =>
@@ -238,21 +238,21 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           texture: image,
           x: 30,
           y: 0,
-          width: 50,
-          height: 50,
+          w: 50,
+          h: 50,
         }),
         x: nodeSpawnX,
         y: nodeSpawnY,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         parent: testRoot,
       }),
     'Image Texture': () =>
       renderer.createNode({
         x: nodeSpawnX,
         y: nodeSpawnY,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         src: rockoPng,
         parent: testRoot,
       }),
@@ -261,16 +261,16 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         rtt: true,
         x: nodeSpawnX,
         y: nodeSpawnY,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         parent: testRoot,
       });
 
       const child = renderer.createNode({
         x: 0,
         y: 0,
-        width: 100,
-        height: 100,
+        w: 100,
+        h: 100,
         color: 0xff0000ff,
         parent: rtt,
       });
@@ -278,8 +278,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const child2 = renderer.createNode({
         x: 0,
         y: 20,
-        width: 100,
-        height: 100,
+        w: 100,
+        h: 100,
         src: rockoPng,
         parent: rtt,
       });
@@ -312,8 +312,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
     testNodeInstance.x = 500;
     testNodeInstance.y = lastStatusOffSet + 128;
-    testNodeInstance.width = 128;
-    testNodeInstance.height = 128;
+    testNodeInstance.w = 128;
+    testNodeInstance.h = 128;
 
     renderer.createTextNode({
       fontFamily: 'Ubuntu',

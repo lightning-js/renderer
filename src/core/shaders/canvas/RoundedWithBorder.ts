@@ -38,8 +38,8 @@ export const RoundedWithBorder: CanvasShaderType<
     const props = this.props!;
     const radius = calcFactoredRadiusArray(
       props.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
     this.computed.radius = radius;
     this.computed.borderColor = this.toColorString(props['border-color']);
@@ -61,8 +61,8 @@ export const RoundedWithBorder: CanvasShaderType<
       ctx,
       quad.tx,
       quad.ty,
-      quad.width,
-      quad.height,
+      quad.w,
+      quad.h,
       computed.radius,
       this.props!['border-width'] as Vec4,
       computed.borderRadius,

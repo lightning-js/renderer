@@ -15,8 +15,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -25,8 +25,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rttNode = renderer.createNode({
     x: 100,
     y: 200,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: node,
     rtt: true,
     clipping: true,
@@ -38,8 +38,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode,
     color: 0xff0000ff,
   });
@@ -57,8 +57,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 50,
     y: 100,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode,
     src: rocko,
   });
@@ -67,8 +67,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rttNode2 = renderer.createNode({
     x: 500,
     y: 200,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: node,
     rtt: true,
     colorTop: 0xfff00fff,
@@ -78,8 +78,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode2,
     color: 0xc0ff33ff,
   });
@@ -97,8 +97,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 50,
     y: 100,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode2,
     src: rocko,
   });
@@ -107,8 +107,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rttNode3 = renderer.createNode({
     x: 900,
     y: 200,
-    width: 800,
-    height: 300,
+    w: 800,
+    h: 300,
     parent: node,
     rtt: true,
     colorTop: 0x67378dff,
@@ -118,8 +118,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode3,
     color: 0xc0ff33ff,
   });
@@ -137,8 +137,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 50,
     y: 100,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode3,
     src: rocko,
   });
@@ -146,8 +146,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const nestedRTTNode1 = renderer.createNode({
     x: 400,
     y: 0,
-    width: 150,
-    height: 150,
+    w: 150,
+    h: 150,
     parent: rttNode3,
     rtt: true,
     colorTop: 0x26f1e0ff,
@@ -157,8 +157,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 150,
-    height: 150,
+    w: 150,
+    h: 150,
     parent: nestedRTTNode1,
     color: 0xc0ff33ff,
   });
@@ -176,8 +176,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rocko4 = renderer.createNode({
     x: -120,
     y: 50,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: nestedRTTNode1,
     src: rocko,
   });
@@ -188,8 +188,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       parent: node,
       x: (i % 15) * 120 + 100,
       y: Math.floor(i / 15) * 120 + 600,
-      width: 100,
-      height: 100,
+      w: 100,
+      h: 100,
       texture: nestedRTTNode1.texture,
       // Flip every other one of them
       textureOptions: {
@@ -254,8 +254,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       animation.start();
     }
     if (e.key === 'w') {
-      rttNode.width = rttNode.width === 200 ? 300 : 200;
-      rttNode.height = rttNode.height === 200 ? 300 : 200;
+      rttNode.w = rttNode.w === 200 ? 300 : 200;
+      rttNode.h = rttNode.h === 200 ? 300 : 200;
     }
 
     if (e.key === 'ArrowRight') {

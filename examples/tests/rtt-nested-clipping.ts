@@ -5,8 +5,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -15,8 +15,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rttNode = renderer.createNode({
     x: 100,
     y: 200,
-    width: 400,
-    height: 400,
+    w: 400,
+    h: 400,
     parent: node,
     rtt: true,
     zIndex: 5,
@@ -27,8 +27,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rect = renderer.createNode({
     x: 0,
     y: 0,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode,
     clipping: true,
     color: 0xff0000ff,
@@ -47,8 +47,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 50,
     y: 100,
-    width: 600,
-    height: 600,
+    w: 600,
+    h: 600,
     parent: rttNode,
     src: rocko,
   });

@@ -57,8 +57,8 @@ function createImageWorker() {
     premultiplyAlpha: boolean | null,
     x: number | null,
     y: number | null,
-    width: number | null,
-    height: number | null,
+    w: number | null,
+    h: number | null,
     options: {
       supportsOptionsCreateImageBitmap: boolean;
       supportsFullCreateImageBitmap: boolean;
@@ -93,10 +93,10 @@ function createImageWorker() {
         // createImageBitmap with crop and options
         if (
           supportsFullCreateImageBitmap === true &&
-          width !== null &&
-          height !== null
+          w !== null &&
+          h !== null
         ) {
-          createImageBitmap(blob, x || 0, y || 0, width, height, {
+          createImageBitmap(blob, x || 0, y || 0, w, h, {
             premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
             colorSpaceConversion: 'none',
             imageOrientation: 'none',

@@ -46,25 +46,16 @@ export class WebGlCtxRenderTexture extends WebGlCtxTexture {
       throw new Error('Failed to create native texture for RenderTexture');
     }
 
-    const { width, height } = this.textureSource;
+    const { w, h } = this.textureSource;
 
     // Create Framebuffer object
     this.framebuffer = glw.createFramebuffer();
 
     // Set the dimensions of the render texture
-    glw.texImage2D(
-      0,
-      glw.RGBA,
-      width,
-      height,
-      0,
-      glw.RGBA,
-      glw.UNSIGNED_BYTE,
-      null,
-    );
+    glw.texImage2D(0, glw.RGBA, w, h, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
 
     // Update the texture memory manager
-    this.setTextureMemUse(width * height * 4);
+    this.setTextureMemUse(w * h * 4);
 
     // Bind the framebuffer
     glw.bindFramebuffer(this.framebuffer);
@@ -76,8 +67,8 @@ export class WebGlCtxRenderTexture extends WebGlCtxTexture {
     glw.bindFramebuffer(null);
 
     return {
-      width,
-      height,
+      w,
+      h,
     };
   }
 

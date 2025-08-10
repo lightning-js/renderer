@@ -293,8 +293,8 @@ export class WebGlContextWrapper {
   texImage2D(
     level: GLint,
     internalformat: GLint,
-    width: GLsizei,
-    height: GLsizei,
+    w: GLsizei,
+    h: GLsizei,
     border: GLint,
     format: GLenum,
     type: GLenum,
@@ -352,8 +352,8 @@ export class WebGlContextWrapper {
   compressedTexImage2D(
     level: GLint,
     internalformat: GLenum,
-    width: GLsizei,
-    height: GLsizei,
+    w: GLsizei,
+    h: GLsizei,
     border: GLint,
     data?: ArrayBufferView,
   ): void {
@@ -361,8 +361,8 @@ export class WebGlContextWrapper {
       this.gl.TEXTURE_2D,
       level,
       internalformat,
-      width,
-      height,
+      w,
+      h,
       border,
       data as ArrayBufferView,
     );
@@ -431,8 +431,8 @@ export class WebGlContextWrapper {
    * gl.viewport(x, y, width, height);
    * ```
    */
-  viewport(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
-    this.gl.viewport(x, y, width, height);
+  viewport(x: GLint, y: GLint, w: GLsizei, h: GLsizei) {
+    this.gl.viewport(x, y, w, h);
   }
 
   /**
@@ -477,18 +477,18 @@ export class WebGlContextWrapper {
    * @param width
    * @param height
    */
-  scissor(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
+  scissor(x: GLint, y: GLint, w: GLsizei, h: GLsizei) {
     if (
       x !== this.scissorX ||
       y !== this.scissorY ||
-      width !== this.scissorWidth ||
-      height !== this.scissorHeight
+      w !== this.scissorWidth ||
+      h !== this.scissorHeight
     ) {
-      this.gl.scissor(x, y, width, height);
+      this.gl.scissor(x, y, w, h);
       this.scissorX = x;
       this.scissorY = y;
-      this.scissorWidth = width;
-      this.scissorHeight = height;
+      this.scissorWidth = w;
+      this.scissorHeight = h;
     }
   }
 

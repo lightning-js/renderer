@@ -38,14 +38,14 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  testRoot.width = 200;
-  testRoot.height = 250;
+  testRoot.w = 200;
+  testRoot.h = 250;
   testRoot.color = 0xffffffff;
 
   const image = renderer.createNode({
     mount: 0.5,
-    x: testRoot.width / 2,
-    y: testRoot.height / 4,
+    x: testRoot.w / 2,
+    y: testRoot.h / 4,
     autosize: true,
     src: robotImg,
     parent: testRoot,
@@ -53,14 +53,13 @@ export default async function test(settings: ExampleSettings) {
 
   const dimensions = await waitForLoadedDimensions(image);
 
-  const dimensionsMatch =
-    dimensions.width === image.width && dimensions.height === image.height;
+  const dimensionsMatch = dimensions.w === image.w && dimensions.h === image.h;
 
   renderer.createTextNode({
     mountX: 0.5,
     mountY: 1,
-    x: testRoot.width / 2,
-    y: testRoot.height,
+    x: testRoot.w / 2,
+    y: testRoot.h,
     textAlign: 'center',
     text: dimensionsMatch ? 'Autosize\nSuccess' : 'Autosize\nFailure',
     color: dimensionsMatch ? 0x00ff00ff : 0xff0000ff,

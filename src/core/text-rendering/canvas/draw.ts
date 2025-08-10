@@ -43,11 +43,11 @@ export const draw = (
           linesOverride.lines.length,
           0,
         )
-      : renderInfo.height;
+      : renderInfo.h;
 
   // Add extra margin to prevent issue with clipped text when scaling.
   canvas.width = Math.min(
-    Math.ceil(renderInfo.width + renderInfo.textRenderIssueMargin),
+    Math.ceil(renderInfo.w + renderInfo.textRenderIssueMargin),
     MAX_TEXTURE_DIMENSION,
   );
   canvas.height = Math.min(Math.ceil(height), MAX_TEXTURE_DIMENSION);

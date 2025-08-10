@@ -269,11 +269,11 @@ export interface GlyphLayout {
   /**
    * Width of glyph in font units
    */
-  width: number;
+  w: number;
   /**
    * Height of glyph in font units
    */
-  height: number;
+  h: number;
   /**
    * X offset for glyph positioning
    */
@@ -302,11 +302,11 @@ export interface TextLayout {
   /**
    * Total text width
    */
-  width: number;
+  w: number;
   /**
    * Total text height
    */
-  height: number;
+  h: number;
   /**
    * Font scale factor
    */
@@ -359,16 +359,16 @@ export interface TextRenderProps {
   worldAlpha: number;
   globalTransform: Float32Array;
   clippingRect: unknown;
-  width: number;
-  height: number;
+  w: number;
+  h: number;
   parentHasRenderTexture: boolean;
   framebufferDimensions: unknown;
   stage: Stage;
 }
 
 export interface TextRenderInfo {
-  width: number;
-  height: number;
+  w: number;
+  h: number;
   imageData?: ImageData | null; // Image data for Canvas Text Renderer
   layout?: TextLayout; // Layout data for SDF renderer caching
 }

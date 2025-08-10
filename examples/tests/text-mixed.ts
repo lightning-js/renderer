@@ -25,8 +25,8 @@ export default async function test(settings: ExampleSettings) {
 
   const textFactory = () => {
     const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 200;
+    canvas.w = 300;
+    canvas.h = 200;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Unable to create canvas 2d context');
     ctx.fillStyle = 'red';
@@ -59,8 +59,8 @@ export default async function test(settings: ExampleSettings) {
     factory = renderer.createNode({
       x,
       y: 150,
-      width: 300,
-      height: 200,
+      w: 300,
+      h: 200,
       parent: testRoot,
       texture: renderer.createTexture('ImageTexture', {
         src: textFactory,

@@ -33,8 +33,8 @@ type ReqQuad =
   | 'parentHasRenderTexture'
   | 'rtt'
   | 'clippingRect'
-  | 'height'
-  | 'width';
+  | 'h'
+  | 'w';
 type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
   Partial<Omit<QuadOptions, ReqQuad>> & {
     sdfShaderProps?: Record<string, unknown>;
@@ -57,8 +57,8 @@ export class WebGlRenderOp extends CoreRenderOp {
   readonly maxTextures: number;
   readonly buffers: BufferCollection;
   readonly shader: WebGlShaderNode;
-  readonly width: number;
-  readonly height: number;
+  readonly w: number;
+  readonly h: number;
   readonly clippingRect: RectWithValid;
   readonly rtt: boolean;
   readonly parentHasRenderTexture: boolean;
@@ -74,8 +74,8 @@ export class WebGlRenderOp extends CoreRenderOp {
     super();
     this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
     this.shader = quad.shader as WebGlShaderNode;
-    this.width = quad.width;
-    this.height = quad.height;
+    this.w = quad.w;
+    this.h = quad.h;
     this.clippingRect = quad.clippingRect;
     this.parentHasRenderTexture = quad.parentHasRenderTexture;
     this.framebufferDimensions = quad.framebufferDimensions;
@@ -128,8 +128,8 @@ export class WebGlRenderOp extends CoreRenderOp {
     // Clipping
     if (this.clippingRect.valid === true) {
       const clipX = Math.round(this.clippingRect.x * this.pixelRatio);
-      const clipWidth = Math.round(this.clippingRect.width * this.pixelRatio);
-      const clipHeight = Math.round(this.clippingRect.height * this.pixelRatio);
+      const clipWidth = Math.round(this.clippingRect.w * this.pixelRatio);
+      const clipHeight = Math.round(this.clippingRect.h * this.pixelRatio);
       let clipY = Math.round(
         options.canvas.height -
           clipHeight -
@@ -139,7 +139,7 @@ export class WebGlRenderOp extends CoreRenderOp {
       // to be relative to the parent's framebuffer
       if (this.parentHasRenderTexture) {
         clipY = this.framebufferDimensions
-          ? this.framebufferDimensions.height - this.height
+          ? this.framebufferDimensions.h - this.h
           : 0;
       }
 

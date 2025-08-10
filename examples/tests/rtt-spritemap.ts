@@ -47,8 +47,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rttNode = renderer.createNode({
     x: 200,
     y: 200,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: testRoot,
     rtt: true,
     clipping: true,
@@ -60,8 +60,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: rttNode,
     color: 0xff0000ff,
   });
@@ -85,15 +85,15 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       texture: spriteMapTexture,
       x: sourceX,
       y: 0,
-      width: 100,
-      height: 150,
+      w: 100,
+      h: 150,
     });
 
     renderer.createNode({
       x: positionX,
       y: 80,
-      width: 100,
-      height: 150,
+      w: 100,
+      h: 150,
       texture: character,
       parent: rttNode,
     });

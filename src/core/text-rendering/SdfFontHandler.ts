@@ -37,8 +37,8 @@ export interface SdfFontData {
     char: string;
     x: number;
     y: number;
-    width: number;
-    height: number;
+    w: number;
+    h: number;
     xoffset: number;
     yoffset: number;
     xadvance: number;
@@ -191,7 +191,7 @@ const buildGlyphMap = (
 
     glyphMap.set(glyph.id, glyph);
 
-    const charHeight = glyph.yoffset + glyph.height;
+    const charHeight = glyph.yoffset + glyph.h;
     if (charHeight > maxCharHeight) {
       maxCharHeight = charHeight;
     }
@@ -225,7 +225,7 @@ const processFontData = (
   while (i < length) {
     const glyph = fontData.chars[i];
     if (glyph !== undefined) {
-      const charHeight = glyph.yoffset + glyph.height;
+      const charHeight = glyph.yoffset + glyph.h;
       if (charHeight > maxCharHeight) {
         maxCharHeight = charHeight;
       }

@@ -30,8 +30,8 @@ import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
 
 export interface QuadOptions {
-  width: number;
-  height: number;
+  w: number;
+  h: number;
   colorTl: number;
   colorTr: number;
   colorBl: number;

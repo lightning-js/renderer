@@ -16,8 +16,8 @@ export interface SnapshotOptions {
   clip?: {
     x: number;
     y: number;
-    width: number;
-    height: number;
+    w: number;
+    h: number;
   };
 }
 
@@ -93,8 +93,8 @@ export async function compareSnapshot(
   }
 
   const expectedPng = await fs.promises.readFile(snapshotPath);
-  const width = options.clip?.width || (1080 as number);
-  const height = options.clip?.height || (1920 as number);
+  const width = options.clip?.w || (1080 as number);
+  const height = options.clip?.h || (1920 as number);
   const result = compareBuffers(actualPng, expectedPng, width, height);
 
   if (result.doesMatch) {
@@ -168,17 +168,14 @@ export async function saveFailedSnapshot(
 export function compareBuffers(
   actualImageBuffer: Buffer,
   expectedImageBuffer: Buffer,
-  width: number,
-  height: number,
+  w: number,
+  h: number,
 ): CompareResult {
-  const diff = new PNG({ width: width as number, height: height as number });
+  const diff = new PNG({ w: width as number, h: height as number });
   const actualImage = PNG.sync.read(actualImageBuffer);
   const expectedImage = PNG.sync.read(expectedImageBuffer);
 
-  if (
-    actualImage.width !== expectedImage.width ||
-    actualImage.height !== expectedImage.height
-  ) {
+  if (actualImage.w !== expectedImage.w || actualImage.h !== expectedImage.h) {
     return {
       doesMatch: false,
       diffImageBuffer: undefined,

@@ -32,9 +32,9 @@ export interface RenderInfo {
   precision: number;
   remainingText: string;
   moreTextLines: boolean;
-  width: number;
+  w: number;
   innerWidth: number;
-  height: number;
+  h: number;
   fontSize: number;
   cutSx: number;
   cutSy: number;
@@ -98,8 +98,8 @@ export function calculateRenderInfo(
   const fontSize = renderInfo.fontSize * precision;
   let offsetY =
     renderInfo.offsetY === null ? null : renderInfo.offsetY * precision;
-  const w = renderInfo.width * precision;
-  const h = renderInfo.height * precision;
+  const w = renderInfo.w * precision;
+  const h = renderInfo.h * precision;
   let wordWrapWidth = renderInfo.wordWrapWidth * precision;
   const cutSx = renderInfo.cutSx * precision;
   const cutEx = renderInfo.cutEx * precision;
@@ -275,8 +275,8 @@ export function calculateRenderInfo(
     offsetY = fontSize;
   }
 
-  renderInfo.width = width;
-  renderInfo.height = height;
+  renderInfo.w = width;
+  renderInfo.h = height;
   renderInfo.lines = lines;
   renderInfo.precision = precision;
   renderInfo.remainingText = remainingText;

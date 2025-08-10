@@ -99,7 +99,7 @@ export class CanvasRenderer extends CoreRenderer {
     }
 
     const hasTransform = ta !== 1;
-    const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
+    const hasClipping = clippingRect.w !== 0 && clippingRect.h !== 0;
     const hasShader = quad.shader !== null;
 
     let saveAndRestore = hasTransform === true || hasClipping === true;
@@ -114,8 +114,8 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasClipping === true) {
       const path = new Path2D();
-      const { x, y, width, height } = clippingRect;
-      path.rect(x, y, width, height);
+      const { x, y, w, h } = clippingRect;
+      path.rect(x, y, w, h);
       ctx.clip(path);
     }
 
@@ -168,22 +168,16 @@ export class CanvasRenderer extends CoreRenderer {
           image,
           (quad.texture as SubTexture).props.x,
           (quad.texture as SubTexture).props.y,
-          (quad.texture as SubTexture).props.width,
-          (quad.texture as SubTexture).props.height,
+          (quad.texture as SubTexture).props.w,
+          (quad.texture as SubTexture).props.h,
           quad.tx,
           quad.ty,
-          quad.width,
-          quad.height,
+          quad.w,
+          quad.h,
         );
       } else {
         try {
-          this.context.drawImage(
-            image,
-            quad.tx,
-            quad.ty,
-            quad.width,
-            quad.height,
-          );
+          this.context.drawImage(image, quad.tx, quad.ty, quad.w, quad.h);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
           // noop
@@ -201,11 +195,11 @@ export class CanvasRenderer extends CoreRenderer {
       if (quad.colorTl === quad.colorTr) {
         // vertical
         endX = quad.tx;
-        endY = quad.ty + quad.height;
+        endY = quad.ty + quad.h;
         endColor = quad.colorBr;
       } else {
         // horizontal
-        endX = quad.tx + quad.width;
+        endX = quad.tx + quad.w;
         endY = quad.ty;
         endColor = quad.colorTr;
       }
@@ -218,10 +212,10 @@ export class CanvasRenderer extends CoreRenderer {
       gradient.addColorStop(0, normalizeCanvasColor(color));
       gradient.addColorStop(1, normalizeCanvasColor(endColor));
       this.context.fillStyle = gradient;
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(quad.tx, quad.ty, quad.w, quad.h);
     } else if (textureType === TextureType.color) {
       this.context.fillStyle = normalizeCanvasColor(color);
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(quad.tx, quad.ty, quad.w, quad.h);
     }
   }
 

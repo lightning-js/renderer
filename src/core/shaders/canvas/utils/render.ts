@@ -21,22 +21,22 @@ export function roundRect(
   ctx: CanvasRenderingContext2D | Path2D,
   x: number,
   y: number,
-  width: number,
-  height: number,
+  w: number,
+  h: number,
   radius: Vec4,
 ) {
   if (ctx.roundRect !== undefined) {
-    ctx.roundRect(x, y, width, height, radius);
+    ctx.roundRect(x, y, w, h, radius);
     return;
   }
   const { 0: tl, 1: tr, 2: br, 3: bl } = radius;
   ctx.moveTo(x + tl, y);
-  ctx.lineTo(x + width - tr, y);
-  ctx.ellipse(x + width - tr, y + tr, tr, tr, 0, 1.5 * Math.PI, 2 * Math.PI);
-  ctx.lineTo(x + width, y - height - br);
-  ctx.ellipse(x + width - br, y + height - br, br, br, 0, 0, 0.5 * Math.PI);
-  ctx.lineTo(x + bl, y + height);
-  ctx.ellipse(x + bl, y + height - bl, bl, bl, 0, 0.5 * Math.PI, Math.PI);
+  ctx.lineTo(x + w - tr, y);
+  ctx.ellipse(x + w - tr, y + tr, tr, tr, 0, 1.5 * Math.PI, 2 * Math.PI);
+  ctx.lineTo(x + w, y - h - br);
+  ctx.ellipse(x + w - br, y + h - br, br, br, 0, 0, 0.5 * Math.PI);
+  ctx.lineTo(x + bl, y + h);
+  ctx.ellipse(x + bl, y + h - bl, bl, bl, 0, 0.5 * Math.PI, Math.PI);
   ctx.lineTo(x, y + tl);
   ctx.ellipse(x + tl, y + tl, tl, tl, 0, Math.PI, 1.5 * Math.PI);
 }
@@ -45,56 +45,42 @@ export function roundedRectWithBorder(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  width: number,
-  height: number,
+  w: number,
+  h: number,
   radius: Vec4,
-  borderWidth: Vec4,
+  borderw: Vec4,
   borderRadius: Vec4,
   borderColor: string,
   borderAsym: boolean,
   renderContext: () => void,
 ) {
   if (borderAsym === false) {
-    const bWidth = borderWidth[0];
-    const bHalfWidth = bWidth * 0.5;
+    const bw = borderw[0];
+    const bHalfw = bw * 0.5;
     const path = new Path2D();
-    roundRect(path, x, y, width, height, radius);
+    roundRect(path, x, y, w, h, radius);
     ctx.clip(path);
 
     renderContext();
 
-    if (bWidth > 0) {
+    if (bw > 0) {
       ctx.beginPath();
-      ctx.lineWidth = bWidth;
+      ctx.lineWidth = bw;
       ctx.strokeStyle = borderColor;
-      roundRect(
-        ctx,
-        x + bHalfWidth,
-        y + bHalfWidth,
-        width - bWidth,
-        height - bWidth,
-        borderRadius,
-      );
+      roundRect(ctx, x + bHalfw, y + bHalfw, w - bw, h - bw, borderRadius);
       ctx.stroke();
     }
     return;
   }
 
   ctx.beginPath();
-  roundRect(ctx, x, y, width, height, radius as Vec4);
+  roundRect(ctx, x, y, w, h, radius as Vec4);
   ctx.fillStyle = borderColor;
   ctx.fill();
-  const { 0: t, 1: r, 2: b, 3: l } = borderWidth as Vec4;
+  const { 0: t, 1: r, 2: b, 3: l } = borderw as Vec4;
 
   const path = new Path2D();
-  roundRect(
-    path,
-    x + l,
-    y + t,
-    width - (l + r),
-    height - (t + b),
-    borderRadius as Vec4,
-  );
+  roundRect(path, x + l, y + t, w - (l + r), h - (t + b), borderRadius as Vec4);
   ctx.clip(path);
   renderContext();
 }
@@ -103,8 +89,8 @@ export function shadow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  width: number,
-  height: number,
+  w: number,
+  h: number,
   color: string,
   projection: Vec4,
   radius: Vec4,
@@ -113,7 +99,7 @@ export function shadow(
   ctx.save();
   const cw = ctx.canvas.width;
   const ch = ctx.canvas.height;
-  const scaleFactor = (2 * projection[3] + width) / width;
+  const scaleFactor = (2 * projection[3] + w) / w;
   ctx.scale(scaleFactor, scaleFactor);
   ctx.shadowColor = color;
   ctx.shadowBlur = projection[2] * pixelRatio;
@@ -126,8 +112,8 @@ export function shadow(
     ctx,
     (x - spreadFactor - cw) / scaleFactor,
     (y - spreadFactor - ch) / scaleFactor,
-    width + spreadFactor,
-    height + spreadFactor,
+    w + spreadFactor,
+    h + spreadFactor,
     radius,
   );
   ctx.fillStyle = color;
@@ -141,10 +127,10 @@ export function strokeLine(
   y: number,
   x2: number,
   y2: number,
-  lineWidth: number,
+  w: number,
 ) {
   ctx.beginPath();
-  ctx.lineWidth = lineWidth;
+  ctx.lineWidth = w;
   ctx.moveTo(x, y);
   ctx.lineTo(x2, y2);
   ctx.stroke();

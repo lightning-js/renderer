@@ -32,11 +32,7 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
     this.uniform4fa('u_shadow', this.props!['shadow-projection']!);
     this.uniform4fa(
       'u_radius',
-      calcFactoredRadiusArray(
-        this.props!.radius as Vec4,
-        node.width,
-        node.height,
-      ),
+      calcFactoredRadiusArray(this.props!.radius as Vec4, node.w, node.h),
     );
   },
   vertex: Shadow.vertex as string,

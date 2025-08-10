@@ -39,8 +39,8 @@ export const RadialGradient: CanvasShaderType<
     let scaleX = 1;
     let scaleY = 1;
     const props = this.props as RadialGradientProps;
-    const pWidth = props.width;
-    const pHeight = props.height;
+    const pWidth = props.w;
+    const pHeight = props.h;
     if (pWidth > pHeight) {
       scaleX = pWidth / pHeight;
     } else if (pHeight > pWidth) {
@@ -48,8 +48,8 @@ export const RadialGradient: CanvasShaderType<
     }
 
     this.computed = {
-      pivotX: props.pivot[0] * node.width,
-      pivotY: props.pivot[1] * node.height,
+      pivotX: props.pivot[0] * node.w,
+      pivotY: props.pivot[1] * node.h,
       scaleX,
       scaleY,
       size: Math.min(pWidth, pHeight) * 0.5,
@@ -72,7 +72,7 @@ export const RadialGradient: CanvasShaderType<
       }
 
       ctx.fillStyle = gradient;
-      ctx.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      ctx.fillRect(quad.tx, quad.ty, quad.w, quad.h);
       return;
     }
 
@@ -90,8 +90,8 @@ export const RadialGradient: CanvasShaderType<
     ctx.fillRect(
       quad.tx / scaleX,
       quad.ty / scaleY,
-      quad.width / scaleX,
-      quad.height / scaleY,
+      quad.w / scaleX,
+      quad.h / scaleY,
     );
 
     ctx.restore();

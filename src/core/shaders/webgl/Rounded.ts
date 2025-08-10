@@ -34,11 +34,7 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
   update(node: CoreNode) {
     this.uniform4fa(
       'u_radius',
-      calcFactoredRadiusArray(
-        this.props!.radius as Vec4,
-        node.width,
-        node.height,
-      ),
+      calcFactoredRadiusArray(this.props!.radius as Vec4, node.w, node.h),
     );
   },
   vertex: `

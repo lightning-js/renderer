@@ -74,8 +74,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect = renderer.createNode({
     x: 1920 / 2 - (1920 * 0.75) / 2,
     y: 1080 / 2 - (1080 * 0.75) / 2,
-    width: 1440,
-    height: 810,
+    w: 1440,
+    h: 810,
     color: 0x000000ff,
     clipping: true,
     parent: testRoot,
@@ -86,8 +86,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 100,
     y: 305,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     pivot: 0,
     parent: boundaryRect,
@@ -97,8 +97,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 20,
     y: 20,
     alpha: 1,
-    width: 20,
-    height: 20,
+    w: 20,
+    h: 20,
     color: 0xffff00ff,
     pivot: 0,
     parent: redRect,
@@ -108,8 +108,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 50,
     y: 50,
     alpha: 1,
-    width: 20,
-    height: 20,
+    w: 20,
+    h: 20,
     color: 0xffff00ff,
     pivot: 0,
     parent: redRect,
@@ -119,8 +119,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 80,
     y: 80,
     alpha: 1,
-    width: 20,
-    height: 20,
+    w: 20,
+    h: 20,
     color: 0xffff00ff,
     pivot: 0,
     parent: redRect,
@@ -130,8 +130,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 110,
     y: 110,
     alpha: 1,
-    width: 20,
-    height: 20,
+    w: 20,
+    h: 20,
     color: 0xffff00ff,
     pivot: 0,
     parent: redRect,
@@ -237,8 +237,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 340,
     y: 100,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     pivot: 0,
     parent: testRoot,
@@ -314,7 +314,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       .waitUntilStopped();
 
     if (runAnimation) {
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       setTimeout(animate, 2000);
     }
   };
@@ -428,13 +427,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
       // resize redrect, should be inbounds again due to size change
       case 16:
-        redRect.width = 400;
+        redRect.w = 400;
         break;
 
       // but parent redRect out of bounds, update yellow rect colors
       // move in bounds and color change should be reflected
       case 17:
-        redRect.width = 200;
+        redRect.w = 200;
         yellow1Rect.color = 0x0000ffff;
         yellow2Rect.color = 0x0000ffff;
         yellow3Rect.color = 0x0000ffff;
@@ -467,7 +466,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         animate();
       }
     }
@@ -503,8 +501,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     if (e.key === 's') {
-      (redRect.width = Math.random() * 400),
-        (redRect.height = Math.random() * 400);
+      (redRect.w = Math.random() * 400), (redRect.h = Math.random() * 400);
     }
 
     if (e.key === 'c') {

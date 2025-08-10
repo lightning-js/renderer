@@ -28,7 +28,7 @@ export interface BorderProps {
    *
    * @default 0
    */
-  width: number | [number, number, number, number];
+  w: number | [number, number, number, number];
   /**
    * Color of the border in 0xRRGGBBAA
    *

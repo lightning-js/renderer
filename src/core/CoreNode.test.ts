@@ -40,7 +40,7 @@ describe('set color()', () => {
     colorTl: 0,
     colorTop: 0,
     colorTr: 0,
-    height: 0,
+    h: 0,
     mount: 0,
     mountX: 0,
     mountY: 0,
@@ -57,7 +57,7 @@ describe('set color()', () => {
     src: '',
     texture: null,
     textureOptions: {} as TextureOptions,
-    width: 0,
+    w: 0,
     x: 0,
     y: 0,
     zIndex: 0,
@@ -68,8 +68,8 @@ describe('set color()', () => {
   const clippingRect = {
     x: 0,
     y: 0,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     valid: false,
   };
 
@@ -125,8 +125,8 @@ describe('set color()', () => {
       node.alpha = 1;
       node.x = 0;
       node.y = 0;
-      node.width = 100;
-      node.height = 100;
+      node.w = 100;
+      node.h = 100;
       node.color = 0xffffffff;
 
       node.update(0, clippingRect);
@@ -138,8 +138,8 @@ describe('set color()', () => {
       node.alpha = 1;
       node.x = 0;
       node.y = 0;
-      node.width = 100;
-      node.height = 100;
+      node.w = 100;
+      node.h = 100;
       node.texture = mock<ImageTexture>({
         state: 'initial',
       });
@@ -159,8 +159,8 @@ describe('set color()', () => {
       node.alpha = 0;
       node.x = 0;
       node.y = 0;
-      node.width = 100;
-      node.height = 100;
+      node.w = 100;
+      node.h = 100;
       node.texture = mock<ImageTexture>({
         state: 'loaded',
       });
@@ -174,8 +174,8 @@ describe('set color()', () => {
       node.alpha = 1;
       node.x = 300;
       node.y = 300;
-      node.width = 100;
-      node.height = 100;
+      node.w = 100;
+      node.h = 100;
       node.texture = mock<ImageTexture>({
         state: 'loaded',
       });
@@ -189,8 +189,8 @@ describe('set color()', () => {
       node.alpha = 1;
       node.x = 0;
       node.y = 0;
-      node.width = 100;
-      node.height = 100;
+      node.w = 100;
+      node.h = 100;
       node.texture = mock<ImageTexture>({
         state: 'freed',
       });

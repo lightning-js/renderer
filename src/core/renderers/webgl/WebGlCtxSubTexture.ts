@@ -39,12 +39,14 @@ export class WebGlCtxSubTexture extends WebGlCtxTexture {
 
     if (props.data instanceof Uint8Array) {
       // its a 1x1 Color Texture
-      return { width: 1, height: 1 };
+      return { w: 1, h: 1 };
     }
 
     return {
-      width: props.data?.width || 0,
-      height: props.data?.height || 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      w: (props.data as any)?.width || 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      h: (props.data as any)?.height || 0,
     };
   }
 }

@@ -35,41 +35,41 @@ export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
   props: BorderTemplate.props,
   update() {
     this.computed.borderColor = formatRgba(parseColorRgba(this.props!.color));
-    this.computed.borderAsym = !valuesAreEqual(this.props!.width as number[]);
+    this.computed.borderAsym = !valuesAreEqual(this.props!.w as number[]);
   },
   render(ctx, quad, renderContext) {
     renderContext();
     ctx.strokeStyle = this.computed.borderColor!;
-    if (this.computed.borderAsym === false && this.props!.width[0] > 0) {
-      const bWidth = this.props!.width[0];
+    if (this.computed.borderAsym === false && this.props!.w[0] > 0) {
+      const bWidth = this.props!.w[0];
       const bHalfWidth = bWidth * 0.5;
       ctx.lineWidth = bWidth;
       ctx.beginPath();
       ctx.strokeRect(
         quad.tx + bHalfWidth,
         quad.ty + bHalfWidth,
-        quad.width - bWidth,
-        quad.height - bWidth,
+        quad.w - bWidth,
+        quad.h - bWidth,
       );
       return;
     }
 
-    const { 0: t, 1: r, 2: b, 3: l } = this.props!.width as Vec4;
+    const { 0: t, 1: r, 2: b, 3: l } = this.props!.w as Vec4;
     if (t > 0) {
       const y = quad.ty + t * 0.5;
-      strokeLine(ctx, quad.tx, y, quad.tx + quad.width, y, t);
+      strokeLine(ctx, quad.tx, y, quad.tx + quad.w, y, t);
     }
     if (r > 0) {
-      const x = quad.tx + quad.width - r * 0.5;
-      strokeLine(ctx, x, quad.ty, x, quad.ty + quad.height, r);
+      const x = quad.tx + quad.w - r * 0.5;
+      strokeLine(ctx, x, quad.ty, x, quad.ty + quad.h, r);
     }
     if (b > 0) {
-      const y = quad.ty + quad.height - b * 0.5;
-      strokeLine(ctx, quad.tx, y, quad.tx + quad.width, y, b);
+      const y = quad.ty + quad.h - b * 0.5;
+      strokeLine(ctx, quad.tx, y, quad.tx + quad.w, y, b);
     }
     if (l > 0) {
       const x = quad.tx + l * 0.5;
-      strokeLine(ctx, x, quad.ty, x, quad.ty + quad.height, l);
+      strokeLine(ctx, x, quad.ty, x, quad.ty + quad.h, l);
     }
   },
 };

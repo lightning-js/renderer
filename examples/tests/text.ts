@@ -126,7 +126,7 @@ export default async function ({
   });
 
   statusNode.on('loaded', ((target: any, { dimensions }) => {
-    statusNode.x = renderer.settings.appWidth - dimensions.width;
+    statusNode.x = renderer.settings.appWidth - dimensions.w;
   }) satisfies NodeLoadedEventHandler);
 
   function updateStatus() {

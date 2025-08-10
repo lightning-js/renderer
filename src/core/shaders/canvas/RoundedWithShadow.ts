@@ -38,8 +38,8 @@ export const RoundedWithShadow: CanvasShaderType<
     const props = this.props!;
     const radius = calcFactoredRadiusArray(
       props.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
     this.computed.radius = radius;
     this.computed.shadowColor = this.toColorString(props['shadow-color']);
@@ -48,14 +48,14 @@ export const RoundedWithShadow: CanvasShaderType<
     ) as Vec4;
   },
   render(ctx, quad, renderContext) {
-    const { tx, ty, width, height } = quad;
+    const { tx, ty, w, h } = quad;
     const computed = this.computed as ComputedValues;
     render.shadow(
       ctx,
       tx,
       ty,
-      width,
-      height,
+      w,
+      h,
       computed.shadowColor,
       this.props!['shadow-projection'],
       computed.shadowRadius,
@@ -63,7 +63,7 @@ export const RoundedWithShadow: CanvasShaderType<
     );
 
     const path = new Path2D();
-    render.roundRect(path, tx, ty, width, height, computed.radius);
+    render.roundRect(path, tx, ty, w, h, computed.radius);
     ctx.clip(path);
     renderContext();
   },

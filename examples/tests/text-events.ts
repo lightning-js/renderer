@@ -64,9 +64,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   );
 
   marqueeSdf.on('afterLayout', () => {
-    marqueeSdf.x = renderer.settings.appWidth / 2 - marqueeSdf.node.width / 2;
+    marqueeSdf.x = renderer.settings.appWidth / 2 - marqueeSdf.node.w / 2;
     marqueeSdf.y =
-      (renderer.settings.appHeight * 1) / 4 - marqueeSdf.node.height / 2;
+      (renderer.settings.appHeight * 1) / 4 - marqueeSdf.node.h / 2;
   });
 
   const canvasLabel = renderer.createTextNode({
@@ -91,10 +91,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   );
 
   marqueeCanvas.on('afterLayout', () => {
-    marqueeCanvas.x =
-      renderer.settings.appWidth / 2 - marqueeCanvas.node.width / 2;
+    marqueeCanvas.x = renderer.settings.appWidth / 2 - marqueeCanvas.node.w / 2;
     marqueeCanvas.y =
-      (renderer.settings.appHeight * 3) / 4 - marqueeCanvas.node.height / 2;
+      (renderer.settings.appHeight * 3) / 4 - marqueeCanvas.node.h / 2;
   });
 
   const marqueeText = `The following is a test of the text loaded event...
@@ -223,10 +222,10 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
   };
 
   private layout(textDimensions: Dimensions) {
-    this.node.width = textDimensions.width + BUTTON_PADDING * 2;
-    this.node.height = textDimensions.height + BUTTON_PADDING * 2;
-    this.textNode.x = this.node.width / 2 - textDimensions.width / 2;
-    this.textNode.y = this.node.height / 2 - textDimensions.height / 2;
+    this.node.w = textDimensions.w + BUTTON_PADDING * 2;
+    this.node.h = textDimensions.h + BUTTON_PADDING * 2;
+    this.textNode.x = this.node.w / 2 - textDimensions.w / 2;
+    this.textNode.y = this.node.h / 2 - textDimensions.h / 2;
     this.textNode.alpha = 1;
     this.emit('afterLayout');
   }

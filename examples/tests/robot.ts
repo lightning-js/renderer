@@ -31,8 +31,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const elevatorBg = renderer.createNode({
     x: 368,
     y: 228,
-    width: 226,
-    height: 214,
+    w: 226,
+    h: 214,
     zIndex: 0,
     src: elevatorBgImg,
     parent: testRoot,
@@ -41,8 +41,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const elevatorBg2 = renderer.createNode({
     x: 368,
     y: 827,
-    width: 226,
-    height: 214,
+    w: 226,
+    h: 214,
     zIndex: 0,
     src: elevatorBgImg,
     parent: testRoot,
@@ -51,8 +51,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const doorLeftGround = renderer.createNode({
     x: 480 - 68,
     y: 827,
-    width: 68,
-    height: 194,
+    w: 68,
+    h: 194,
     zIndex: 2,
     src: doorLeftGroundImg,
     parent: testRoot,
@@ -61,8 +61,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const doorRightGround = renderer.createNode({
     x: 480,
     y: 827,
-    width: 68,
-    height: 194,
+    w: 68,
+    h: 194,
     zIndex: 2,
     src: doorRightGroundImg,
     parent: testRoot,
@@ -71,8 +71,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const environment = renderer.createNode({
     x: 0,
     y: 0,
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     zIndex: 3,
     src: environmentImg,
     parent: testRoot,
@@ -81,8 +81,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const robot = renderer.createNode({
     x: -140,
     y: 850,
-    width: 140,
-    height: 140,
+    w: 140,
+    h: 140,
     zIndex: 5,
     color: 0x00000000,
     parent: testRoot,
@@ -91,8 +91,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const shadow = renderer.createNode({
     x: -40,
     y: 180,
-    width: 228,
-    height: 65,
+    w: 228,
+    h: 65,
     zIndex: 5,
     src: shadowImg,
     parent: robot,
@@ -101,16 +101,14 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const robotCore = renderer.createNode({
     x: 0,
     y: 0,
-    width: 140,
-    height: 140,
+    w: 140,
+    h: 140,
     zIndex: 5,
     src: robotImg,
     parent: robot,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   setTimeout(async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       await robotCore
         .animate({ y: 10 }, { duration: 500 })
@@ -126,8 +124,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const doorTopTop = renderer.createNode({
     x: 375,
     y: 207,
-    width: 211,
-    height: 129,
+    w: 211,
+    h: 129,
     zIndex: 4,
     src: doorTopTopImg,
     parent: testRoot,
@@ -136,14 +134,13 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const doorBottomTop = renderer.createNode({
     x: 375,
     y: 207 + 129,
-    width: 211,
-    height: 129,
+    w: 211,
+    h: 129,
     zIndex: 4,
     src: doorBottomTopImg,
     parent: testRoot,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   setTimeout(async () => {
     await openGroundDoors(1000);
     await robot

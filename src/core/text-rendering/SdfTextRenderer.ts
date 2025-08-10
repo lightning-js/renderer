@@ -68,8 +68,8 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
   // Early return if no text
   if (props.text.length === 0) {
     return {
-      width: 0,
-      height: 0,
+      w: 0,
+      h: 0,
     };
   }
 
@@ -78,8 +78,8 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
   if (fontData === null) {
     // Font not loaded, return empty result
     return {
-      width: 0,
-      height: 0,
+      w: 0,
+      h: 0,
     };
   }
 
@@ -88,8 +88,8 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
-    width: layout.width,
-    height: layout.height,
+    w: layout.w,
+    h: layout.h,
     layout, // Cache layout for addQuads
   };
 };
@@ -125,8 +125,8 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
 
     const x1 = glyph.x;
     const y1 = glyph.y;
-    const x2 = x1 + glyph.width;
-    const y2 = y1 + glyph.height;
+    const x2 = x1 + glyph.w;
+    const y2 = y1 + glyph.h;
 
     const u1 = glyph.atlasX;
     const v1 = glyph.atlasY;
@@ -252,8 +252,8 @@ const renderQuads = (
       alpha: worldAlpha,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       clippingRect: renderProps.clippingRect as any,
-      height: layout.height,
-      width: layout.width,
+      h: layout.h,
+      w: layout.w,
       rtt: false,
       parentHasRenderTexture: renderProps.parentHasRenderTexture,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
@@ -419,14 +419,14 @@ const generateTextLayout = (
         glyphId: glyph.id,
         x: currentX + glyph.xoffset,
         y: currentY + glyph.yoffset,
-        width: glyph.width,
-        height: glyph.height,
+        w: glyph.w,
+        h: glyph.h,
         xOffset: glyph.xoffset,
         yOffset: glyph.yoffset,
         atlasX: glyph.x / atlasWidth,
         atlasY: glyph.y / atlasHeight,
-        atlasWidth: glyph.width / atlasWidth,
-        atlasHeight: glyph.height / atlasHeight,
+        atlasWidth: glyph.w / atlasWidth,
+        atlasHeight: glyph.h / atlasHeight,
       };
 
       glyphs.push(glyphLayout);
@@ -443,8 +443,8 @@ const generateTextLayout = (
   return {
     glyphs,
     distanceRange: finalScale * fontData.distanceField.distanceRange,
-    width: Math.ceil(maxWidthFound * finalScale),
-    height: Math.ceil(designLineHeight * lines.length * finalScale),
+    w: Math.ceil(maxWidthFound * finalScale),
+    h: Math.ceil(designLineHeight * lines.length * finalScale),
     fontScale: finalScale,
     lineHeight,
     fontFamily,

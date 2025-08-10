@@ -95,8 +95,8 @@ const renderText = (
   props: CoreTextNodeProps,
 ): {
   imageData: ImageData | null;
-  width: number;
-  height: number;
+  w: number;
+  h: number;
   layout?: TextLayout;
 } => {
   assertTruthy(canvas, 'Canvas is not initialized');
@@ -194,10 +194,10 @@ const renderText = (
 
   // Set up canvas dimensions
   canvas.width = Math.min(
-    Math.ceil(dimensions.width + textRenderIssueMargin),
+    Math.ceil(dimensions.w + textRenderIssueMargin),
     MAX_TEXTURE_DIMENSION,
   );
-  canvas.height = Math.min(Math.ceil(dimensions.height), MAX_TEXTURE_DIMENSION);
+  canvas.height = Math.min(Math.ceil(dimensions.h), MAX_TEXTURE_DIMENSION);
 
   // Reset font context after canvas resize
   context.font = `${fontStyle} ${scaledFontSize}px ${fontFamily}`;
@@ -235,7 +235,7 @@ const renderText = (
     fontFamily,
   );
 
-  width = dimensions.width;
+  width = dimensions.w;
   const height = lineHeight * layout.lines.length;
   // Extract image data
   let imageData: ImageData | null = null;
@@ -245,8 +245,8 @@ const renderText = (
 
   return {
     imageData,
-    width,
-    height,
+    w: width,
+    h: height,
   };
 };
 
@@ -447,28 +447,28 @@ function calculateTextDimensions(
   initialHeight: number,
   wordWrap: boolean,
   textAlign: string,
-): { width: number; height: number } {
-  let width = initialWidth;
-  let height = initialHeight;
+): { w: number; h: number } {
+  let w = initialWidth;
+  let h = initialHeight;
 
   // Calculate width
   if (initialWidth === 0) {
-    width = layout.maxLineWidth + paddingLeft + paddingRight;
+    w = layout.maxLineWidth + paddingLeft + paddingRight;
   }
 
   // Adjust width for single-line left-aligned wrapped text
   if (
     wordWrap === true &&
-    width > layout.maxLineWidth &&
+    w > layout.maxLineWidth &&
     textAlign === 'left' &&
     layout.lines.length === 1
   ) {
-    width = layout.maxLineWidth + paddingLeft + paddingRight;
+    w = layout.maxLineWidth + paddingLeft + paddingRight;
   }
 
   // Calculate height if not provided
-  if (height === 0) {
-    height = calcHeight(
+  if (h === 0) {
+    h = calcHeight(
       textBaseline,
       fontSize,
       lineHeight,
@@ -477,7 +477,7 @@ function calculateTextDimensions(
     );
   }
 
-  return { width, height };
+  return { w, h };
 }
 
 /**

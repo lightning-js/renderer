@@ -32,8 +32,8 @@ import robotImg from './assets/robot.png';
   );
 
   const distortedBot = renderer.createNode({
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     src: robotImg,
     parent: renderer.root,
     shader: renderer.createShader('MyCustomShader', {
@@ -47,12 +47,12 @@ import robotImg from './assets/robot.png';
 
   const pacman = renderer.createNode({
     x: 600,
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     texture: renderer.createTexture('MyCustomTexture', {
       percent: 5,
-      width: 300,
-      height: 300,
+      w: 300,
+      h: 300,
     }),
     parent: renderer.root,
   });
