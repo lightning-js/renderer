@@ -30,12 +30,12 @@ export class MyCustomTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    const { percent, width, height } = this.props;
+    const { percent, w, h } = this.props;
     const radius = Math.min(width, height) / 2;
     const angle = 2 * Math.PI * (percent / 100);
     const canvas = document.createElement('canvas');
-    canvas.w = width;
-    canvas.h = height;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     assertTruthy(ctx);
     ctx.beginPath();
@@ -50,12 +50,12 @@ export class MyCustomTexture extends Texture {
     ctx.fill();
 
     this.setState('fetched', {
-      width,
-      height,
+      w,
+      h,
     });
 
     return {
-      data: ctx.getImageData(0, 0, canvas.w, canvas.h),
+      data: ctx.getImageData(0, 0, canvas.width, canvas.height),
     };
   }
 

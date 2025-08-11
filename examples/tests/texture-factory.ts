@@ -62,8 +62,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const factory = () => {
       factoryRuns++;
       const canvas = document.createElement('canvas');
-      canvas.w = 300;
-      canvas.h = 200;
+      canvas.width = 300;
+      canvas.height = 200;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Unable to create canvas 2d context');
       for (let i = 0; i < 10; i++) {

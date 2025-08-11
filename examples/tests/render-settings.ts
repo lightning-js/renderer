@@ -137,7 +137,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   yPos += 40;
 
   const pixelSize = renderer.createTextNode({
-    text: `Pixels: ${renderer.canvas.w}x${renderer.canvas.h}`,
+    text: `Pixels: ${renderer.canvas.width}x${renderer.canvas.height}`,
     fontSize: 30,
     x: 10,
     y: yPos,
@@ -350,8 +350,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
     redPosition.text = `Text X Position: ${redText.x}`;
     appSize.text = `App Size: ${renderer.root.w}x${renderer.root.h}`;
-    pixelSize.text = `Pixels: ${renderer.canvas.w * ppr}x${
-      renderer.canvas.h * ppr
+    pixelSize.text = `Pixels: ${renderer.canvas.height * ppr}x${
+      renderer.canvas.height * ppr
     }`;
   };
 
