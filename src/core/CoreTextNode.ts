@@ -114,7 +114,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (p === null) {
       return false;
     }
-    if (p.worldAlpha === 1 && p.renderState > CoreNodeRenderState.OutOfBounds) {
+    if (p.worldAlpha > 0 && p.renderState > CoreNodeRenderState.OutOfBounds) {
       return true;
     }
     return false;
