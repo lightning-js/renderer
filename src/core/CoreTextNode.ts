@@ -109,7 +109,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.stage.requestRender();
   };
 
-  isParentInBounds() {
+  allowTextGeneration() {
     const p = this.props.parent;
     if (p === null) {
       return false;
@@ -125,7 +125,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
     if (
-      (this.isParentInBounds() === true && this._layoutGenerated === false) ||
+      (this.allowTextGeneration() === true &&
+        this._layoutGenerated === false) ||
       (this.textProps.forceLoad === true &&
         this._layoutGenerated === false &&
         this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
