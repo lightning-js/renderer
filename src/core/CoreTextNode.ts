@@ -109,12 +109,23 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.stage.requestRender();
   };
 
+  allowTextGeneration() {
+    const p = this.props.parent;
+    if (p === null) {
+      return false;
+    }
+    if (p.worldAlpha > 0 && p.renderState > CoreNodeRenderState.OutOfBounds) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
     if (
-      (this.props.parent?.isRenderable === true &&
+      (this.allowTextGeneration() === true &&
         this._layoutGenerated === false) ||
       (this.textProps.forceLoad === true &&
         this._layoutGenerated === false &&
@@ -205,6 +216,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
+    if (this.parentHasRenderTexture === true) {
+      const rtt = renderer.renderToTextureActive;
+      if (rtt === false || this.parentRenderTexture !== renderer.activeRttNode)
+        return;
+    }
+
     // Canvas renderer: use standard texture rendering via CoreNode
     if (this._type === 'canvas') {
       super.renderQuads(renderer);
