@@ -59,8 +59,7 @@ export default async function ({
   renderer.createTextNode({
     x: 0,
     y: 100,
-    width: renderer.settings.appWidth,
-    contain: 'width',
+    maxWidth: renderer.settings.appWidth,
     text: `This test will create and display a random NoiseTexture node every 10ms and never offer a moment for Idle Texture Cleanup. Only Critical Texture Cleanup will be triggered.
 
 See docs/ManualRegressionTests.md for more information.

@@ -15,12 +15,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { formatRgba, parseColorRgba } from '../../lib/colorParser.js';
 import { valuesAreEqual } from '../../lib/utils.js';
 import type { CanvasShaderType } from '../../renderers/canvas/CanvasShaderNode.js';
-import {
-  formatRgba,
-  parseColorRgba,
-} from '../../renderers/canvas/internal/ColorUtils.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import {
   BorderTemplate,

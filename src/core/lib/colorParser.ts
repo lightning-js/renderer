@@ -47,7 +47,7 @@ export function parseColor(abgr: number): IParsedColor {
   return { isWhite: false, a, r, g, b };
 }
 
-export function parseToAbgrString(abgr: number) {
+export function parseToAbgrString(abgr: number): string {
   const a = ((abgr >>> 24) & 0xff) / 255;
   const b = (abgr >>> 16) & 0xff & 0xff;
   const g = (abgr >>> 8) & 0xff & 0xff;
@@ -55,7 +55,7 @@ export function parseToAbgrString(abgr: number) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-export function parseToRgbaString(rgba: number) {
+export function parseToRgbaString(rgba: number): string {
   const r = (rgba >>> 24) & 0xff;
   const g = (rgba >>> 16) & 0xff & 0xff;
   const b = (rgba >>> 8) & 0xff & 0xff;

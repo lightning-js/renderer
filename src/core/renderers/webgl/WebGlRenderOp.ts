@@ -128,8 +128,6 @@ export class WebGlRenderOp extends CoreRenderOp {
     stage.shManager.useShader(this.shader.program);
     this.shader.program.bindRenderOp(this);
 
-    // TODO: Reduce calculations required
-    const quadIdx = (this.bufferIdx / 32) * 6 * 2;
     // Clipping
     if (this.clippingRect.valid === true) {
       const clipX = Math.round(this.clippingRect.x * this.pixelRatio);
@@ -154,11 +152,19 @@ export class WebGlRenderOp extends CoreRenderOp {
       glw.setScissorTest(false);
     }
 
-    glw.drawElements(
-      glw.TRIANGLES,
-      6 * this.numQuads,
-      glw.UNSIGNED_SHORT,
-      quadIdx,
-    );
+    // Check if this is SDF rendering (has sdfBuffers)
+    if (this.sdfShaderProps !== undefined) {
+      // SDF rendering uses drawArrays with explicit triangle vertices (6 vertices per quad)
+      glw.drawArrays(glw.TRIANGLES, 0, 6 * this.numQuads);
+    } else {
+      // Regular rendering uses drawElements with index buffer (4 vertices per quad)
+      const quadIdx = (this.bufferIdx / 32) * 6 * 2;
+      glw.drawElements(
+        glw.TRIANGLES,
+        6 * this.numQuads,
+        glw.UNSIGNED_SHORT,
+        quadIdx,
+      );
+    }
   }
 }

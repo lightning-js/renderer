@@ -18,7 +18,7 @@
  */
 import { isProductionEnvironment } from '../utils.js';
 import type { Stage } from './Stage.js';
-import { TextureType, type Texture } from './textures/Texture.js';
+import { Texture, TextureType, type TextureState } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
 
 export interface TextureMemoryManagerSettings {
@@ -237,6 +237,15 @@ export class TextureMemoryManager {
         continue;
       }
 
+      // Skip textures that are in transitional states - we only want to clean up
+      // textures that are in a stable state (loaded, failed, or freed)
+      if (
+        texture.state === 'initial' ||
+        Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
+      ) {
+        continue;
+      }
+
       this.destroyTexture(texture);
     }
   }
@@ -247,6 +256,12 @@ export class TextureMemoryManager {
    * @param texture - The texture to destroy
    */
   destroyTexture(texture: Texture) {
+    if (this.debugLogging === true) {
+      console.log(
+        `[TextureMemoryManager] Destroying texture. State: ${texture.state}`,
+      );
+    }
+
     const txManager = this.stage.txManager;
     txManager.removeTextureFromQueue(texture);
     txManager.removeTextureFromCache(texture);
@@ -260,40 +275,26 @@ export class TextureMemoryManager {
     // Free non-renderable textures until we reach the target threshold
     const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
 
-    // sort by renderability
-    const filteredAndSortedTextures: Texture[] = [];
-    const textures = [...this.loadedTextures.keys()];
-    for (let i = 0; i < textures.length; i++) {
-      const texture = textures[i];
+    // Filter for textures that are candidates for cleanup
+    // note: This is an expensive operation, so we only do it in deep cleanup
+    const cleanupCandidates = [...this.loadedTextures.keys()].filter(
+      (texture) => {
+        return (
+          (texture.type === TextureType.image ||
+            texture.type === TextureType.noise ||
+            texture.type === TextureType.renderToTexture) &&
+          texture.renderable === false &&
+          texture.preventCleanup === false &&
+          texture.state !== 'initial' &&
+          !Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
+        );
+      },
+    );
+
+    while (this.memUsed >= memTarget && cleanupCandidates.length > 0) {
+      const texture = cleanupCandidates.shift();
       if (texture === undefined) {
         continue;
-      }
-
-      if (
-        texture.type === TextureType.image ||
-        texture.type === TextureType.noise ||
-        texture.type === TextureType.renderToTexture
-      ) {
-        if (texture.renderable === true) {
-          filteredAndSortedTextures.push(texture);
-        } else {
-          filteredAndSortedTextures.unshift(texture);
-        }
-      }
-    }
-
-    while (this.memUsed >= memTarget && filteredAndSortedTextures.length > 0) {
-      const texture = filteredAndSortedTextures.shift();
-      if (texture === undefined) {
-        continue;
-      }
-
-      if (texture.preventCleanup === true) {
-        continue;
-      }
-
-      if (texture.renderable === true) {
-        break;
       }
 
       this.destroyTexture(texture);
@@ -319,6 +320,15 @@ export class TextureMemoryManager {
         `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}. Aggressive: ${aggressive}`,
       );
     }
+
+    // Note: We skip textures in transitional states during cleanup:
+    // - 'initial': These textures haven't started loading yet
+    // - 'fetching': These textures are in the process of being fetched
+    // - 'fetched': These textures have been fetched but not yet uploaded to GPU
+    // - 'loading': These textures are being uploaded to the GPU
+    //
+    // For 'failed' and 'freed' states, we only remove them from the tracking
+    // arrays without trying to free GPU resources that don't exist.
 
     // try a quick cleanup first
     this.cleanupQuick(critical);
@@ -356,9 +366,9 @@ export class TextureMemoryManager {
     const renderableMemUsed = [...this.loadedTextures.keys()].reduce(
       (acc, texture) => {
         renderableTexturesLoaded += texture.renderable ? 1 : 0;
-        return (
-          acc + (texture.renderable ? this.loadedTextures.get(texture)! : 0)
-        );
+        // Get the memory used by the texture, defaulting to 0 if not found
+        const textureMemory = this.loadedTextures.get(texture) ?? 0;
+        return acc + (texture.renderable ? textureMemory : 0);
       },
       this.baselineMemoryAllocation,
     );

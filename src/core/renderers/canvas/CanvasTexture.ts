@@ -19,8 +19,8 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
+import { formatRgba, type IParsedColor } from '../../lib/colorParser.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
-import { formatRgba, type IParsedColor } from './internal/ColorUtils.js';
 
 export class CanvasTexture extends CoreContextTexture {
   protected image:
@@ -35,19 +35,19 @@ export class CanvasTexture extends CoreContextTexture {
       }
     | undefined;
 
-  load(): void {
+  async load(): Promise<void> {
     this.textureSource.setState('loading');
 
-    this.onLoadRequest()
-      .then((size) => {
-        this.textureSource.setState('loaded', size);
-        this.textureSource.freeTextureData();
-        this.updateMemSize();
-      })
-      .catch((err) => {
-        this.textureSource.setState('failed', err as Error);
-        this.textureSource.freeTextureData();
-      });
+    try {
+      const size = await this.onLoadRequest();
+      this.textureSource.setState('loaded', size);
+      this.textureSource.freeTextureData();
+      this.updateMemSize();
+    } catch (err) {
+      this.textureSource.setState('failed', err as Error);
+      this.textureSource.freeTextureData();
+      throw err;
+    }
   }
 
   free(): void {

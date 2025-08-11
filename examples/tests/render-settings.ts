@@ -51,8 +51,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontFamily: 'Ubuntu-ssdf',
     x: 10,
     y: 810,
-    contain: 'width',
-    width: renderer.root.width - 20,
+    maxWidth: renderer.root.width - 20,
     parent: testRoot,
   });
 

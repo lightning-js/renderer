@@ -102,6 +102,15 @@ export default async function test(settings: ExampleSettings) {
       if (canvas) canvas.x = offset;
       if (factory) factory.x = offset;
     }
+
+    if (e.key === ' ') {
+      if (ssdf) {
+        ssdf.text = 'SSDF Updated';
+      }
+      if (canvas) {
+        canvas.text = 'Canvas Updated';
+      }
+    }
   });
 
   drawText();

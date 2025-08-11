@@ -39,12 +39,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const leftStackText = renderer.createTextNode({
     x: 100,
     y: 100,
-    width: 400,
-    height: 268,
+    maxWidth: 400,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'These should neatly stack on top of each other.',
-    contain: 'both',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
@@ -120,12 +118,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rightStackText = renderer.createTextNode({
     x: 700,
     y: 100,
-    width: 700,
-    height: 268,
+    maxWidth: 700,
+    maxHeight: 268,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'Green box should overlap even though it has a lower zIndex because the parent is locked',
-    contain: 'both',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
@@ -170,9 +167,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndex: 148901482921849101841290481,
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndexLocked: 148901482921849101841290481,
     parent: testRoot,
   });
@@ -186,9 +183,9 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndex: -148901482921849101841290481,
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndexLocked: -148901482921849101841290481,
     parent: testRoot,
   });
@@ -265,10 +262,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
-    // eslint-disable-next-line  @typescript-eslint/no-empty-function
+
     zIndex: () => {},
     // @ts-expect-error Invalid prop test
-    // eslint-disable-next-line  @typescript-eslint/no-empty-function
+
     zIndexLocked: () => {},
     parent: testRoot,
   });

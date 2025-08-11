@@ -75,54 +75,65 @@ export class WebGlCtxTexture extends CoreContextTexture {
    * to force the texture to be pre-loaded prior to accessing the ctxTexture
    * property.
    */
-  load() {
-    // If the texture is already loading or loaded, don't load it again.
+  async load(): Promise<void> {
+    // If the texture is already loading or loaded, return resolved promise
     if (this.state === 'loading' || this.state === 'loaded') {
-      return;
+      return Promise.resolve();
     }
 
     this.state = 'loading';
     this.textureSource.setState('loading');
+
+    // Await the native texture creation to ensure GPU buffer is fully allocated
     this._nativeCtxTexture = this.createNativeCtxTexture();
 
     if (this._nativeCtxTexture === null) {
       this.state = 'failed';
-      this.textureSource.setState(
-        'failed',
-        new Error('Could not create WebGL Texture'),
-      );
+      const error = new Error('Could not create WebGL Texture');
+      this.textureSource.setState('failed', error);
       console.error('Could not create WebGL Texture');
-      return;
+      throw error;
     }
 
-    this.onLoadRequest()
-      .then(({ width, height }) => {
-        // If the texture has been freed while loading, return early.
-        if (this.state === 'freed') {
-          return;
-        }
+    try {
+      const { width, height } = await this.onLoadRequest();
 
-        this.state = 'loaded';
-        this._w = width;
-        this._h = height;
-        // Update the texture source's width and height so that it can be used
-        // for rendering.
-        this.textureSource.setState('loaded', { width, height });
+      // If the texture has been freed while loading, return early.
+      // Type assertion needed because state could change during async operations
+      if ((this.state as string) === 'freed') {
+        return;
+      }
 
-        // cleanup source texture data
+      this.state = 'loaded';
+      this._w = width;
+      this._h = height;
+      // Update the texture source's width and height so that it can be used
+      // for rendering.
+      this.textureSource.setState('loaded', { width, height });
+
+      // cleanup source texture data next tick
+      // This is done using queueMicrotask to ensure it runs after the current
+      // event loop tick, allowing the texture to be fully loaded and bound
+      // to the GL context before freeing the source data.
+      // This is important to avoid issues with the texture data being
+      // freed while the texture is still being loaded or used.
+      queueMicrotask(() => {
         this.textureSource.freeTextureData();
-      })
-      .catch((err) => {
-        // If the texture has been freed while loading, return early.
-        if (this.state === 'freed') {
-          return;
-        }
-
-        this.state = 'failed';
-        this.textureSource.setState('failed', err);
-        this.textureSource.freeTextureData();
-        console.error(err);
       });
+    } catch (err: unknown) {
+      // If the texture has been freed while loading, return early.
+      // Type assertion needed because state could change during async operations
+      if ((this.state as string) === 'freed') {
+        return;
+      }
+
+      this.state = 'failed';
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.textureSource.setState('failed', error);
+      this.textureSource.freeTextureData();
+      console.error(err);
+      throw error; // Re-throw to propagate the error
+    }
   }
 
   /**
@@ -265,17 +276,17 @@ export class WebGlCtxTexture extends CoreContextTexture {
   }
 
   /**
-   * Create native context texture
+   * Create native context texture asynchronously
    *
    * @remarks
-   * When this method returns the returned texture will be bound to the GL context state.
+   * When this method resolves, the returned texture will be bound to the GL context state
+   * and fully ready for use. This ensures proper GPU resource allocation timing.
    *
-   * @param width
-   * @param height
-   * @returns
+   * @returns Promise that resolves to the native WebGL texture or null on failure
    */
-  protected createNativeCtxTexture() {
+  protected createNativeCtxTexture(): WebGLTexture | null {
     const { glw } = this;
+
     const nativeTexture = glw.createTexture();
     if (!nativeTexture) {
       return null;
@@ -293,6 +304,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     // texture wrapping method
     glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
     glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
+
     return nativeTexture;
   }
 }

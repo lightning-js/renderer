@@ -190,7 +190,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 16383,
+  All = 14335,
 }
 
 /**
@@ -895,7 +895,7 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
+  protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     this.autosizeNode(dimensions);
     this.setUpdateType(UpdateType.IsRenderable);
 
@@ -923,6 +923,9 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    // immediately set isRenderable to false, so that we handle the error
+    // without waiting for the next frame loop
+    this.isRenderable = false;
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -937,6 +940,9 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
+    // immediately set isRenderable to false, so that we handle the error
+    // without waiting for the next frame loop
+    this.isRenderable = false;
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -1312,7 +1318,7 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  private notifyParentRTTOfUpdate() {
+  protected notifyParentRTTOfUpdate() {
     if (this.parent === null) {
       return;
     }
@@ -1358,8 +1364,10 @@ export class CoreNode extends EventEmitter {
   }
 
   updateBoundingRect() {
-    const transform = (this.sceneGlobalTransform || this.globalTransform)!;
-    const renderCoords = (this.sceneRenderCoords || this.renderCoords)!;
+    const transform = (this.sceneGlobalTransform ||
+      this.globalTransform) as Matrix3d;
+    const renderCoords = (this.sceneRenderCoords ||
+      this.renderCoords) as RenderCoords;
 
     if (transform.tb === 0 || transform.tc === 0) {
       this.renderBound = createBound(
