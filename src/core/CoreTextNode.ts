@@ -109,13 +109,23 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.stage.requestRender();
   };
 
+  isParentInBounds() {
+    const p = this.props.parent;
+    if (p === null) {
+      return false;
+    }
+    if (p.worldAlpha === 1 && p.renderState > CoreNodeRenderState.OutOfBounds) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
     if (
-      (this.props.parent?.isRenderable === true &&
-        this._layoutGenerated === false) ||
+      (this.isParentInBounds() === true && this._layoutGenerated === false) ||
       (this.textProps.forceLoad === true &&
         this._layoutGenerated === false &&
         this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
