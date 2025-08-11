@@ -216,6 +216,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
+    if (this.parentHasRenderTexture === true) {
+      const rtt = renderer.renderToTextureActive;
+      if (rtt === false || this.parentRenderTexture !== renderer.activeRttNode)
+        return;
+    }
+
     // Canvas renderer: use standard texture rendering via CoreNode
     if (this._type === 'canvas') {
       super.renderQuads(renderer);
