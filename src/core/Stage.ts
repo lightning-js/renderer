@@ -30,6 +30,7 @@ import { CoreShaderManager } from './CoreShaderManager.js';
 import {
   type FontHandler,
   type FontLoadOptions,
+  type FontStatus,
   type TextRenderer,
   type TextRenderers,
   type TrProps,
@@ -610,7 +611,9 @@ export class Stage {
    * Given a font name, and possible renderer override, return the best compatible text renderer.
    *
    * @remarks
-   * Will try to return a canvas renderer if no other suitable renderer can be resolved.
+   * Simplified logic:
+   * 1. MSDF (if loaded) do you have this font? yes assigned, no continue
+   * 2. Canvas (if loaded) do you have this font? yes assigned, no throw an error
    *
    * @param fontFamily
    * @param textRendererOverride
@@ -620,7 +623,7 @@ export class Stage {
     trProps: TrProps,
     textRendererOverride: keyof TextRenderers | null = null,
   ): TextRenderer | null {
-    // If we have an overide, return it
+    // If we have an override, return it
     if (textRendererOverride !== null) {
       const overrideKey = String(textRendererOverride);
       if (this.textRenderers[overrideKey] === undefined) {
@@ -631,37 +634,22 @@ export class Stage {
       return this.textRenderers[overrideKey];
     }
 
-    // If we have only one font engine early return it
-    if (this.singleFontEngine !== null) {
-      // If we have only one font engine and its the canvas engine, we can just return it
-      if (this.hasOnlyCanvasFontEngine === true) {
-        return this.singleFontEngine;
-      }
-
-      // If we have only one font engine and it can render the font, return it
-      if (this.singleFontHandler?.canRenderFont(trProps) === true) {
-        return this.singleFontEngine;
-      }
-
-      // If we have only one font engine and it cannot render the font, return null
-      console.warn(`Text renderer cannot render font`, trProps);
-
-      return null;
+    // 1. MSDF (if loaded) do you have this font?
+    if (
+      this.fontHandlers['sdf'] !== undefined &&
+      this.fontHandlers['sdf'].canRenderFont(trProps.fontFamily) === true
+    ) {
+      return this.textRenderers['sdf'] || null;
     }
 
-    // Multi font handling  - If we have multiple font engines, we need to resolve the best one
-
-    // First check SDF
-    if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
-      return this.textRenderers.sdf || null;
+    // 2. Canvas (if loaded) do you have this font? yes assigned, no throw an error
+    if (
+      this.fontHandlers['canvas'] !== undefined &&
+      this.fontHandlers['canvas'].canRenderFont(trProps.fontFamily) === true
+    ) {
+      return this.textRenderers['canvas'] || null;
     }
 
-    // If we have a canvas engine, we can return it (it can render all fonts)
-    if (this.hasCanvasEngine === true) {
-      return this.textRenderers.canvas || null;
-    }
-
-    // If we have no font engines, return null
     console.warn('No text renderers available. Your text will not render.');
     return null;
   }
@@ -884,12 +872,9 @@ export class Stage {
    *
    * @param rendererType - The type of text renderer ('canvas', 'sdf', etc.)
    * @param options - Font loading options specific to the renderer type
-   * @returns Promise that resolves when the font is loaded
+   * @returns FontStatus that contains loading status and emitter for completion events
    */
-  async loadFont(
-    rendererType: TextRenderers,
-    options: FontLoadOptions,
-  ): Promise<void> {
+  loadFont(rendererType: TextRenderers, options: FontLoadOptions): FontStatus {
     const rendererTypeKey = String(rendererType);
     const fontHandler = this.fontHandlers[rendererTypeKey];
 

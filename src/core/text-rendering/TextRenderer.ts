@@ -20,6 +20,7 @@
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
+import { EventEmitter } from '../../common/EventEmitter.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
@@ -335,20 +336,39 @@ export interface FontLoadOptions {
   atlasDataUrl?: string;
 }
 
+/**
+ * Font load result event emitter interface
+ */
+export interface FontLoadResult {
+  on(event: 'loaded', callback: () => void): void;
+  on(event: 'failed', callback: (error: Error) => void): void;
+  off(event: 'loaded', callback: () => void): void;
+  off(event: 'failed', callback: (error: Error) => void): void;
+}
+
+/**
+ * Font status information
+ */
+export interface FontStatus {
+  isLoaded: boolean;
+  emitter: FontLoadResult | null;
+}
+
 export interface FontHandler {
   init: (
     c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   ) => void;
   type: 'canvas' | 'sdf';
   isFontLoaded: (fontFamily: string) => boolean;
-  loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
+  loadFont: (stage: Stage, options: FontLoadOptions) => FontStatus;
   getFontFamilies: () => FontFamilyMap;
-  canRenderFont: (trProps: TrProps) => boolean;
+  canRenderFont: (fontFamily: string) => boolean;
   getFontMetrics: (
     fontFamily: string,
     fontSize: number,
   ) => NormalizedFontMetrics;
   setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
+  getFontStatus: (fontFamily: string) => FontStatus;
 }
 
 export interface TextRenderProps {
@@ -402,3 +422,40 @@ export type TextLineStruct = [string, number];
  * 2 - remaining text
  */
 export type WrappedLinesStruct = [TextLineStruct[], number, boolean];
+
+/**
+ * Shared Event emitter for font loading using composition for better compatibility
+ */
+export class FontLoadEventEmitter implements FontLoadResult {
+  private eventEmitter = new EventEmitter();
+
+  on(event: 'loaded', callback: () => void): void;
+  on(event: 'failed', callback: (error: Error) => void): void;
+  on(
+    event: 'loaded' | 'failed',
+    callback: (() => void) | ((error: Error) => void),
+  ): void {
+    if (event === 'loaded') {
+      this.eventEmitter.on(event, callback as () => void);
+    } else {
+      this.eventEmitter.on(event, (_, error: Error) =>
+        (callback as (error: Error) => void)(error),
+      );
+    }
+  }
+
+  off(event: 'loaded', callback: () => void): void;
+  off(event: 'failed', callback: (error: Error) => void): void;
+  off(event: 'loaded' | 'failed'): void {
+    // For off we clear all listeners for the event to avoid tracking wrapper functions
+    this.eventEmitter.off(event);
+  }
+
+  emitLoaded(): void {
+    this.eventEmitter.emit('loaded');
+  }
+
+  emitFailed(error: Error): void {
+    this.eventEmitter.emit('failed', error);
+  }
+}

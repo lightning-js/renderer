@@ -22,7 +22,9 @@ import type {
   FontLoadOptions,
   FontMetrics,
   NormalizedFontMetrics,
+  FontStatus,
 } from './TextRenderer.js';
+import { FontLoadEventEmitter } from './TextRenderer.js';
 import type { Stage } from '../Stage.js';
 import { calculateFontMetrics } from './Utils.js';
 
@@ -34,8 +36,7 @@ import { calculateFontMetrics } from './Utils.js';
 
 // Global state variables for fontHandler
 const fontFamilies: Record<string, FontFace> = {};
-const loadedFonts = new Set<string>();
-const fontLoadPromises = new Map<string, Promise<void>>();
+const registeredFonts = new Map<string, FontStatus>();
 const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -61,50 +62,69 @@ interface FontFaceSetWithAdd extends FontFaceSet {
 /**
  * Check if a font can be rendered
  */
-export const canRenderFont = (): boolean => {
-  // Canvas can always render any font family (assuming the browser supports it)
-  return true;
+export const canRenderFont = (fontFamily: string): boolean => {
+  // Simply check if the font is in our registered fonts map
+  return registeredFonts.has(fontFamily);
 };
 
 /**
  * Load a font by providing fontFamily, fontUrl, and optional metrics
  */
-export const loadFont = async (
+export const loadFont = (
   stage: Stage,
   options: FontLoadOptions,
-): Promise<void> => {
+): FontStatus => {
   const { fontFamily, fontUrl, metrics } = options;
 
-  // If already loaded, return immediately
-  if (loadedFonts.has(fontFamily) === true) {
-    return;
+  // If already registered, return existing status
+  const existingStatus = registeredFonts.get(fontFamily);
+  if (existingStatus) {
+    return existingStatus;
   }
 
-  const existingPromise = fontLoadPromises.get(fontFamily);
-  // If already loading, return the existing promise
-  if (existingPromise !== undefined) {
-    return existingPromise;
+  // Create new emitter and font status
+  const emitter = new FontLoadEventEmitter();
+  const fontStatus: FontStatus = {
+    isLoaded: false,
+    emitter,
+  };
+
+  // Register font status immediately
+  registeredFonts.set(fontFamily, fontStatus);
+
+  if (!fontUrl) {
+    // If no URL provided, emit error
+    setTimeout(() => {
+      emitter.emitFailed(new Error(`Font URL is required for ${fontFamily}`));
+    }, 0);
+    return fontStatus;
   }
-  // Create and store the loading promise
-  const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
+
+  // Start loading font asynchronously
+  const fontFace = new FontFace(fontFamily, `url(${fontUrl})`);
+  fontFace
     .load()
     .then((loadedFont) => {
       (document.fonts as FontFaceSetWithAdd).add(loadedFont);
-      loadedFonts.add(fontFamily);
-      fontLoadPromises.delete(fontFamily);
+
       // Store normalized metrics if provided
       if (metrics) {
         setFontMetrics(fontFamily, normalizeMetrics(metrics));
       }
+
+      // Update status to loaded
+      fontStatus.isLoaded = true;
+      emitter.emitLoaded();
     })
-    .catch((error) => {
-      fontLoadPromises.delete(fontFamily);
-      console.error(`Failed to load font: ${fontFamily}`, error);
-      throw error;
+    .catch((error: unknown) => {
+      registeredFonts.delete(fontFamily);
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
+      console.error(`Failed to load font: ${fontFamily}`, errorObj);
+      emitter.emitFailed(errorObj);
     });
 
-  fontLoadPromises.set(fontFamily, loadPromise);
-  return loadPromise;
+  return fontStatus;
 };
 
 /**
@@ -140,7 +160,17 @@ export const init = (
   };
 
   setFontMetrics('sans-serif', defaultMetrics);
-  loadedFonts.add('sans-serif');
+
+  // Create a dummy emitter for sans-serif that's always loaded
+  const sansSerifEmitter = new FontLoadEventEmitter();
+  const sansSerifStatus: FontStatus = {
+    isLoaded: true,
+    emitter: sansSerifEmitter,
+  };
+  registeredFonts.set('sans-serif', sansSerifStatus);
+  // Emit loaded immediately for sans-serif
+  setTimeout(() => sansSerifEmitter.emitLoaded(), 0);
+
   initialized = true;
 };
 
@@ -150,7 +180,34 @@ export const type = 'canvas';
  * Check if a font is already loaded by font family
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
-  return loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
+  if (fontFamily === 'sans-serif') return true;
+
+  // Check if the font is registered and actually loaded in the browser
+  if (!registeredFonts.has(fontFamily)) return false;
+
+  // Check if font is actually loaded in the browser
+  return document.fonts.check(`16px ${fontFamily}`);
+};
+
+/**
+ * Get font status and emitter for listening to load events
+ */
+export const getFontStatus = (fontFamily: string): FontStatus => {
+  const storedStatus = registeredFonts.get(fontFamily);
+
+  if (storedStatus) {
+    // Update the isLoaded status for canvas fonts by checking browser state
+    if (fontFamily !== 'sans-serif') {
+      storedStatus.isLoaded = document.fonts.check(`16px ${fontFamily}`);
+    }
+    return storedStatus;
+  }
+
+  // Return default status for unregistered fonts
+  return {
+    isLoaded: false,
+    emitter: null,
+  };
 };
 
 export const getFontMetrics = (

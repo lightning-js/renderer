@@ -21,9 +21,10 @@ import type {
   FontFamilyMap,
   FontMetrics,
   NormalizedFontMetrics,
-  TrProps,
   FontLoadOptions,
+  FontStatus,
 } from './TextRenderer.js';
+import { FontLoadEventEmitter } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
 import type { Stage } from '../Stage.js';
 
@@ -123,9 +124,8 @@ interface SdfFontCache {
 }
 
 //global state variables for SdfFontHandler
-const fontCache: Record<string, SdfFontCache> = Object.create(null);
-const loadedFonts = new Set<string>();
-const fontLoadPromises = new Map<string, Promise<void>>();
+const fontCache: Record<string, SdfFontCache> = {};
+const registeredFonts = new Map<string, FontStatus>();
 let initialized = false;
 
 /**
@@ -266,11 +266,11 @@ const processFontData = (
 
 /**
  * Check if the SDF font handler can render a font
- * @param {TrProps} trProps - Text rendering properties
+ * @param {string} fontFamily - Font family name to check
  * @returns {boolean} True if the font can be rendered
  */
-export const canRenderFont = (trProps: TrProps): boolean => {
-  return isFontLoaded(trProps.fontFamily);
+export const canRenderFont = (fontFamily: string): boolean => {
+  return registeredFonts.has(fontFamily);
 };
 
 /**
@@ -281,91 +281,108 @@ export const canRenderFont = (trProps: TrProps): boolean => {
  * @param {string} options.atlasUrl - PNG atlas texture URL
  * @param {FontMetrics} options.metrics - Optional font metrics
  */
-export const loadFont = async (
+export const loadFont = (
   stage: Stage,
   options: FontLoadOptions,
-): Promise<void> => {
+): FontStatus => {
   const { fontFamily, atlasUrl, atlasDataUrl, metrics } = options;
 
-  // Early return if already loaded
-  if (loadedFonts.has(fontFamily) === true) {
-    return;
+  // If already registered, return existing status
+  const existingStatus = registeredFonts.get(fontFamily);
+  if (existingStatus) {
+    return existingStatus;
   }
 
-  // Early return if already loading
-  const existingPromise = fontLoadPromises.get(fontFamily);
-  if (existingPromise !== undefined) {
-    return existingPromise;
-  }
+  // Create new emitter and font status
+  const emitter = new FontLoadEventEmitter();
+  const fontStatus: FontStatus = {
+    isLoaded: false,
+    emitter,
+  };
+
+  // Register font status immediately
+  registeredFonts.set(fontFamily, fontStatus);
 
   if (atlasDataUrl === undefined) {
-    throw new Error(
-      `Atlas data URL must be provided for SDF font: ${fontFamily}`,
-    );
+    setTimeout(() => {
+      emitter.emitFailed(
+        new Error(
+          `Atlas data URL must be provided for SDF font: ${fontFamily}`,
+        ),
+      );
+    }, 0);
+    return fontStatus;
   }
 
-  // Create loading promise
-  const loadPromise = (async (): Promise<void> => {
-    // Load font JSON data
-    const response = await fetch(atlasDataUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to load font data: ${response.statusText}`);
-    }
-
-    const fontData = (await response.json()) as SdfFontData;
-    if (!fontData || !fontData.chars) {
-      throw new Error('Invalid SDF font data format');
-    }
-
-    // Atlas texture should be provided externally
-    if (!atlasUrl) {
-      throw new Error('Atlas texture must be provided for SDF fonts');
-    }
-
-    // Wait for atlas texture to load
-    return new Promise<void>((resolve, reject) => {
-      // create new atlas texture using ImageTexture
-      const atlasTexture = stage.txManager.createTexture('ImageTexture', {
-        src: atlasUrl,
-        premultiplyAlpha: false,
-      });
-
-      atlasTexture.preventCleanup = true; // Prevent automatic cleanup
-
-      if (atlasTexture.state === 'loaded') {
-        // If already loaded, process immediately
-        processFontData(fontFamily, fontData, atlasTexture, metrics);
-        loadedFonts.add(fontFamily);
-        fontLoadPromises.delete(fontFamily);
-        return resolve();
+  // Start loading asynchronously
+  (async (): Promise<void> => {
+    try {
+      // Load font JSON data
+      const response = await fetch(atlasDataUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to load font data: ${response.statusText}`);
       }
 
-      atlasTexture.on('loaded', () => {
-        // Process and cache font data
-        processFontData(fontFamily, fontData, atlasTexture, metrics);
+      const fontData = (await response.json()) as SdfFontData;
+      if (!fontData || !fontData.chars) {
+        throw new Error('Invalid SDF font data format');
+      }
 
-        // Mark as loaded
-        loadedFonts.add(fontFamily);
-        fontLoadPromises.delete(fontFamily);
-        resolve();
-      });
+      // Atlas texture should be provided externally
+      if (!atlasUrl) {
+        throw new Error('Atlas texture must be provided for SDF fonts');
+      }
 
-      atlasTexture.on('failed', (error: Error) => {
-        // Cleanup on error
-        fontLoadPromises.delete(fontFamily);
-        if (fontCache[fontFamily]) {
-          delete fontCache[fontFamily];
+      // Wait for atlas texture to load
+      await new Promise<void>((resolve, reject) => {
+        // create new atlas texture using ImageTexture
+        const atlasTexture = stage.txManager.createTexture('ImageTexture', {
+          src: atlasUrl,
+          premultiplyAlpha: false,
+        });
+
+        atlasTexture.preventCleanup = true; // Prevent automatic cleanup
+
+        if (atlasTexture.state === 'loaded') {
+          // If already loaded, process immediately
+          processFontData(fontFamily, fontData, atlasTexture, metrics);
+          return resolve();
         }
-        console.error(`Failed to load SDF font: ${fontFamily}`, error);
-        reject(error);
+
+        atlasTexture.on('loaded', () => {
+          // Process and cache font data
+          processFontData(fontFamily, fontData, atlasTexture, metrics);
+          resolve();
+        });
+
+        atlasTexture.on('failed', (error: Error) => {
+          // Cleanup on error
+          if (fontCache[fontFamily]) {
+            delete fontCache[fontFamily];
+          }
+          console.error(`Failed to load SDF font: ${fontFamily}`, error);
+          reject(error);
+        });
+
+        atlasTexture.setRenderableOwner(stage, true);
       });
 
-      atlasTexture.setRenderableOwner(stage, true);
-    });
+      // Update status to loaded
+      fontStatus.isLoaded = true;
+      emitter.emitLoaded();
+    } catch (error: unknown) {
+      registeredFonts.delete(fontFamily);
+      if (fontCache[fontFamily]) {
+        delete fontCache[fontFamily];
+      }
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
+      console.error(`Failed to load SDF font: ${fontFamily}`, errorObj);
+      emitter.emitFailed(errorObj);
+    }
   })();
 
-  fontLoadPromises.set(fontFamily, loadPromise);
-  return loadPromise;
+  return fontStatus;
 };
 
 /**
@@ -382,9 +399,7 @@ export const getFontFamilies = (): FontFamilyMap => {
 /**
  * Initialize the SDF font handler
  */
-export const init = (
-  c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-): void => {
+export const init = (): void => {
   if (initialized === true) {
     return;
   }
@@ -398,7 +413,24 @@ export const type = 'sdf';
  * Check if a font is already loaded by font family
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
-  return loadedFonts.has(fontFamily);
+  return fontCache[fontFamily] !== undefined;
+};
+
+/**
+ * Get font status and emitter for listening to load events
+ */
+export const getFontStatus = (fontFamily: string): FontStatus => {
+  const storedStatus = registeredFonts.get(fontFamily);
+
+  if (storedStatus) {
+    return storedStatus;
+  }
+
+  // Return default status for unregistered fonts
+  return {
+    isLoaded: false,
+    emitter: null,
+  };
 };
 
 /**
@@ -496,7 +528,7 @@ export const getMaxCharHeight = (fontFamily: string): number => {
  * @returns {string[]} Array of font family names
  */
 export const getLoadedFonts = (): string[] => {
-  return Array.from(loadedFonts);
+  return Object.keys(fontCache);
 };
 
 /**
@@ -512,6 +544,6 @@ export const unloadFont = (fontFamily: string): void => {
     }
 
     delete fontCache[fontFamily];
-    loadedFonts.delete(fontFamily);
+    registeredFonts.delete(fontFamily);
   }
 };

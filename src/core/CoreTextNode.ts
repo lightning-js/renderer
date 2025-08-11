@@ -23,6 +23,7 @@ import type {
   TrProps,
   TextLayout,
   TextRenderInfo,
+  FontLoadResult,
 } from './text-rendering/TextRenderer.js';
 import {
   CoreNode,
@@ -66,6 +67,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   };
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
+
+  // Font loading state
+  private _fontStatusEmitter: FontLoadResult | null = null;
+  private _isWaitingForFont = false;
+  private _boundFontLoadedCallback = this._onFontLoaded.bind(this);
+  private _boundFontFailedCallback = this._onFontFailed.bind(this);
 
   constructor(
     stage: Stage,
@@ -113,22 +120,111 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    if (
+    // Check if we can render (either font is loaded or we should force load)
+    const canRender =
       (this.props.parent?.isRenderable === true &&
         this._layoutGenerated === false) ||
       (this.textProps.forceLoad === true &&
         this._layoutGenerated === false &&
-        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
-    ) {
+        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true);
+
+    if (canRender) {
+      console.log(
+        `Font '${this.textProps.fontFamily}' is loaded, rendering...`,
+      );
+
       this._cachedLayout = null; // Invalidate cached layout
       this._lastVertexBuffer = null; // Invalidate last vertex buffer
       const resp = this.textRenderer.renderText(this.stage, this.textProps);
       this.handleRenderResult(resp);
       this._layoutGenerated = true;
+    } else if (
+      !this.fontHandler.isFontLoaded(this.textProps.fontFamily) &&
+      !this._isWaitingForFont
+    ) {
+      console.log(
+        `Font '${this.textProps.fontFamily}' is not loaded, waiting for it...`,
+      );
+
+      // Font is not loaded, start waiting for it
+      this._isWaitingForFont = true;
+      this._setupFontLoadWaiting();
     }
 
     // First run the standard CoreNode update
     super.update(delta, parentClippingRect);
+  }
+
+  /**
+   * Setup listeners for font loading using the proper API
+   */
+  private _setupFontLoadWaiting(): void {
+    const fontStatus = this.fontHandler.getFontStatus(
+      this.textProps.fontFamily,
+    );
+
+    if (fontStatus.isLoaded) {
+      // Font is already loaded, proceed
+      this._isWaitingForFont = false;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+      return;
+    }
+
+    if (fontStatus.emitter) {
+      // Font is being loaded, listen for completion
+      this._fontStatusEmitter = fontStatus.emitter;
+      this._fontStatusEmitter.on('loaded', this._boundFontLoadedCallback);
+      this._fontStatusEmitter.on('failed', this._boundFontFailedCallback);
+    } else {
+      // Font is not registered at all, can't wait for it
+      console.warn(
+        `Font '${this.textProps.fontFamily}' is not registered for loading`,
+      );
+      this._isWaitingForFont = false;
+    }
+  }
+
+  /**
+   * Handle successful font loading
+   */
+  private _onFontLoaded(): void {
+    this._isWaitingForFont = false;
+    this._layoutGenerated = false; // Allow re-generation
+    this.setUpdateType(UpdateType.Local);
+    this._cleanupFontListeners();
+  }
+
+  /**
+   * Handle failed font loading
+   */
+  private _onFontFailed(error: Error): void {
+    console.error(
+      `Font loading failed for '${this.textProps.fontFamily}':`,
+      error,
+    );
+    this._isWaitingForFont = false;
+    this._cleanupFontListeners();
+    // Could emit a 'failed' event here if needed
+  }
+
+  /**
+   * Clean up font loading listeners
+   */
+  private _cleanupFontListeners(): void {
+    if (this._fontStatusEmitter) {
+      this._fontStatusEmitter.off('loaded', this._boundFontLoadedCallback);
+      this._fontStatusEmitter.off('failed', this._boundFontFailedCallback);
+      this._fontStatusEmitter = null;
+    }
+  }
+
+  /**
+   * Override destroy to prevent memory leaks from font loading listeners
+   */
+  override destroy(): void {
+    this._cleanupFontListeners();
+    super.destroy();
   }
 
   /**
@@ -300,8 +396,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set fontFamily(value: string) {
     if (this.textProps.fontFamily !== value) {
+      this._cleanupFontListeners(); // Clean up old font listeners
       this.textProps.fontFamily = value;
-      this._layoutGenerated = true;
+      this._layoutGenerated = false;
+      this._isWaitingForFont = false; // Reset waiting state
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -313,7 +411,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontStyle(value: TrProps['fontStyle']) {
     if (this.textProps.fontStyle !== value) {
       this.textProps.fontStyle = value;
-      this._layoutGenerated = true;
+      this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }
   }
