@@ -127,15 +127,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (
       (this.allowTextGeneration() === true &&
         this._layoutGenerated === false) ||
-      (this.textProps.forceLoad === true &&
-        this._layoutGenerated === false &&
-        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
+      (this.textProps.forceLoad === true && this._layoutGenerated === false)
     ) {
-      this._cachedLayout = null; // Invalidate cached layout
-      this._lastVertexBuffer = null; // Invalidate last vertex buffer
-      const resp = this.textRenderer.renderText(this.stage, this.textProps);
-      this.handleRenderResult(resp);
-      this._layoutGenerated = true;
+      if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+        this._cachedLayout = null; // Invalidate cached layout
+        this._lastVertexBuffer = null; // Invalidate last vertex buffer
+        const resp = this.textRenderer.renderText(this.stage, this.textProps);
+        this.handleRenderResult(resp);
+        this._layoutGenerated = true;
+      } else {
+        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
+      }
     }
 
     // First run the standard CoreNode update

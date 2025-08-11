@@ -25,6 +25,8 @@ import type {
 } from './TextRenderer.js';
 import type { Stage } from '../Stage.js';
 import { calculateFontMetrics } from './Utils.js';
+import type { CoreTextNode } from '../CoreTextNode.js';
+import { UpdateType } from '../CoreNode.js';
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
@@ -37,6 +39,7 @@ const fontFamilies: Record<string, FontFace> = {};
 const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
 const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
+const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -85,6 +88,8 @@ export const loadFont = async (
   if (existingPromise !== undefined) {
     return existingPromise;
   }
+
+  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create and store the loading promise
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
@@ -96,6 +101,10 @@ export const loadFont = async (
       if (metrics) {
         setFontMetrics(fontFamily, normalizeMetrics(metrics));
       }
+      for (let key in nwff) {
+        nwff[key]!.setUpdateType(UpdateType.Local);
+      }
+      delete nodesWaitingForFont[fontFamily];
     })
     .catch((error) => {
       fontLoadPromises.delete(fontFamily);
@@ -151,6 +160,12 @@ export const type = 'canvas';
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
   return loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
+};
+
+export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily]![node.id] === undefined) {
+    nodesWaitingForFont[fontFamily]![node.id] = node;
+  }
 };
 
 export const getFontMetrics = (
