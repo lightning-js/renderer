@@ -52,6 +52,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private fontHandler: FontHandler;
 
   private _layoutGenerated = false;
+  private _waitingForFont = false;
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
@@ -125,18 +126,20 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
     if (
-      (this.allowTextGeneration() === true &&
-        this._layoutGenerated === false) ||
-      (this.textProps.forceLoad === true && this._layoutGenerated === false)
+      (this.textProps.forceLoad === true ||
+        this.allowTextGeneration() === true) &&
+      this._layoutGenerated === false
     ) {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+        this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
         this._lastVertexBuffer = null; // Invalidate last vertex buffer
         const resp = this.textRenderer.renderText(this.stage, this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
-      } else {
+      } else if (this._waitingForFont === false) {
         this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
+        this._waitingForFont = true;
       }
     }
 
@@ -264,6 +267,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     );
   }
 
+  override destroy(): void {
+    if (this._waitingForFont === true) {
+      this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+    }
+
+    // Clear cached layout and vertex buffer
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
+
+    this.fontHandler = null!; // Clear reference to avoid memory leaks
+    this.textRenderer = null!; // Clear reference to avoid memory leaks
+
+    super.destroy();
+  }
+
   get maxWidth() {
     return this.textProps.maxWidth;
   }
@@ -287,19 +305,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }
-  }
-
-  override destroy(): void {
-    this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
-
-    // Clear cached layout and vertex buffer
-    this._cachedLayout = null;
-    this._lastVertexBuffer = null;
-
-    this.fontHandler = null!; // Clear reference to avoid memory leaks
-    this.textRenderer = null!; // Clear reference to avoid memory leaks
-
-    super.destroy();
   }
 
   get text(): string {
@@ -332,6 +337,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set fontFamily(value: string) {
     if (this.textProps.fontFamily !== value) {
+      if (this._waitingForFont === true) {
+        this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+      }
       this.textProps.fontFamily = value;
       this._layoutGenerated = true;
       this.setUpdateType(UpdateType.Local);

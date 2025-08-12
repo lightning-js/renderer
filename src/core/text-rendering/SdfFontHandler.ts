@@ -388,9 +388,7 @@ export const loadFont = async (
  * @param {CoreTextNode} node - Node that was waiting for the font
  */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
-  if (nodesWaitingForFont[fontFamily]![node.id] === undefined) {
-    nodesWaitingForFont[fontFamily]![node.id] = node;
-  }
+  nodesWaitingForFont[fontFamily]![node.id] = node;
 };
 
 /**
@@ -404,7 +402,6 @@ export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
   if (nodesWaitingForFont[fontFamily] === undefined) {
     return;
   }
-
   delete nodesWaitingForFont[fontFamily][node.id];
 };
 
