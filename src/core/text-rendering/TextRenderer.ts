@@ -343,6 +343,7 @@ export interface FontHandler {
   isFontLoaded: (fontFamily: string) => boolean;
   loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
   waitingForFont: (fontFamily: string, CoreTextNode) => void;
+  stopWaitingForFont: (fontFamily: string, CoreTextNode) => void;
   getFontFamilies: () => FontFamilyMap;
   canRenderFont: (trProps: TrProps) => boolean;
   getFontMetrics: (

@@ -162,10 +162,31 @@ export const isFontLoaded = (fontFamily: string): boolean => {
   return loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
 };
 
+/**
+ * Wait for a font to load
+ *
+ * @param fontFamily
+ * @param node
+ */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
   if (nodesWaitingForFont[fontFamily]![node.id] === undefined) {
     nodesWaitingForFont[fontFamily]![node.id] = node;
   }
+};
+
+/**
+ * Stop waiting for a font to load
+ *
+ * @param fontFamily
+ * @param node
+ * @returns
+ */
+export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    return;
+  }
+
+  delete nodesWaitingForFont[fontFamily][node.id];
 };
 
 export const getFontMetrics = (

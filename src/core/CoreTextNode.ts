@@ -289,6 +289,19 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
+  override destroy(): void {
+    this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+
+    // Clear cached layout and vertex buffer
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
+
+    this.fontHandler = null!; // Clear reference to avoid memory leaks
+    this.textRenderer = null!; // Clear reference to avoid memory leaks
+
+    super.destroy();
+  }
+
   get text(): string {
     return this.textProps.text;
   }

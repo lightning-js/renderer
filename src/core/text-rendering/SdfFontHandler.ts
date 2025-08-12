@@ -382,10 +382,30 @@ export const loadFont = async (
   return loadPromise;
 };
 
+/**
+ * Stop waiting for a font to load
+ * @param {string} fontFamily - Font family name
+ * @param {CoreTextNode} node - Node that was waiting for the font
+ */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
   if (nodesWaitingForFont[fontFamily]![node.id] === undefined) {
     nodesWaitingForFont[fontFamily]![node.id] = node;
   }
+};
+
+/**
+ * Stop waiting for a font to load
+ *
+ * @param fontFamily
+ * @param node
+ * @returns
+ */
+export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    return;
+  }
+
+  delete nodesWaitingForFont[fontFamily][node.id];
 };
 
 /**
