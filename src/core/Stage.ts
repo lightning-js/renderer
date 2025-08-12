@@ -800,6 +800,9 @@ export class Stage {
     const mount = props.mount ?? 0;
     const pivot = props.pivot ?? 0.5;
 
+    const width = props.w ?? props.width ?? 0;
+    const height = props.h ?? props.height ?? 0;
+
     const data = this.options.inspector
       ? santizeCustomDataMap(props.data ?? {})
       : {};
@@ -807,8 +810,8 @@ export class Stage {
     return {
       x: props.x ?? 0,
       y: props.y ?? 0,
-      width: props.width ?? 0,
-      height: props.height ?? 0,
+      width,
+      height,
       alpha: props.alpha ?? 1,
       autosize: props.autosize ?? false,
       boundsMargin: props.boundsMargin ?? null,

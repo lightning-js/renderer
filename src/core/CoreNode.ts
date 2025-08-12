@@ -231,16 +231,26 @@ export interface CoreNodeProps {
   y: number;
   /**
    * The width of the Node.
+   * @warning This will be deprecated in favor of `w` and `h` properties in the future.
    *
    * @default `0`
    */
   width: number;
   /**
    * The height of the Node.
+   * @warning This will be deprecated in favor of `w` and `h` properties in the future.
    *
    * @default `0`
    */
   height: number;
+  /**
+   * Short width of the Node.
+   */
+  w?: number;
+  /**
+   * Short height of the Node.
+   */
+  h?: number;
   /**
    * The alpha opacity of the Node.
    *
@@ -1797,6 +1807,28 @@ export class CoreNode extends EventEmitter {
     }
   }
 
+  get w(): number {
+    return this.props.width;
+  }
+
+  set w(value: number) {
+    if (this.props.width !== value) {
+      this.textureCoords = undefined;
+      this.props.width = value;
+      this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt === true) {
+        this.framebufferDimensions!.width = value;
+        this.texture = this.stage.txManager.createTexture(
+          'RenderTexture',
+          this.framebufferDimensions!,
+        );
+
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
+    }
+  }
+
   get width(): number {
     return this.props.width;
   }
@@ -1809,6 +1841,28 @@ export class CoreNode extends EventEmitter {
 
       if (this.props.rtt === true) {
         this.framebufferDimensions!.width = value;
+        this.texture = this.stage.txManager.createTexture(
+          'RenderTexture',
+          this.framebufferDimensions!,
+        );
+
+        this.setUpdateType(UpdateType.RenderTexture);
+      }
+    }
+  }
+
+  get h(): number {
+    return this.props.height;
+  }
+
+  set h(value: number) {
+    if (this.props.height !== value) {
+      this.textureCoords = undefined;
+      this.props.height = value;
+      this.setUpdateType(UpdateType.Local);
+
+      if (this.props.rtt === true) {
+        this.framebufferDimensions!.height = value;
         this.texture = this.stage.txManager.createTexture(
           'RenderTexture',
           this.framebufferDimensions!,
