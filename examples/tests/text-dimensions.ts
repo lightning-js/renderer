@@ -42,15 +42,15 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  testRoot.width = 200;
-  testRoot.height = 200;
+  testRoot.w = 200;
+  testRoot.h = 200;
   testRoot.color = 0xffffffff;
 
   const textBg = renderer.createNode({
     x: 0,
     y: 0,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x00ff00ff,
     parent: testRoot,
   });
@@ -58,8 +58,8 @@ export default async function test(settings: ExampleSettings) {
   const text1 = renderer.createTextNode({
     x: 0,
     y: 0,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
@@ -70,11 +70,11 @@ export default async function test(settings: ExampleSettings) {
   });
 
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -132,8 +132,8 @@ export default async function test(settings: ExampleSettings) {
     mutations[i]?.();
     indexInfo.text = (i + 1).toString();
     const dimensions = await waitPromise;
-    textBg.width = dimensions.width;
-    textBg.height = dimensions.height;
+    textBg.w = dimensions.width;
+    textBg.h = dimensions.h;
     return true;
   }
   await next(false, 0);

@@ -26,7 +26,7 @@ import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 export const Border: WebGlShaderType<BorderProps> = {
   props: BorderTemplate.props,
   update(node) {
-    this.uniform4fa('u_borderWidth', this.props!.width as Vec4);
+    this.uniform4fa('u_borderWidth', this.props!.w as Vec4);
     this.uniformRGBA('u_borderColor', this.props!.color);
   },
   vertex: `

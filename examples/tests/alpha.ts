@@ -29,8 +29,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const parent = renderer.createNode({
     x: 200,
     y: 240,
-    width: 500,
-    height: 500,
+    w: 500,
+    h: 500,
     color: 0x000000ff,
     parent: testRoot,
     zIndex: 0,
@@ -41,8 +41,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const child = renderer.createNode({
     x: 800,
     y: 0,
-    width: 500,
-    height: 500,
+    w: 500,
+    h: 500,
     color: 0xff0000ff,
     parent,
     zIndex: 12,

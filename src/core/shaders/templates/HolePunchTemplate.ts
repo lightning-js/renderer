@@ -33,13 +33,13 @@ export interface HolePunchProps {
   /**
    * Width of the hole punch
    */
-  width: number;
+  w: number;
   /**
    * height of the hole punch
    *
    * @remarks if not defined uses the width value
    */
-  height: number;
+  h: number;
   /**
    * Corner radius in pixels, to cut out of the corners of the hole punch
    *
@@ -67,8 +67,8 @@ export const HolePunchTemplate: CoreShaderType<HolePunchProps> = {
   props: {
     x: 0,
     y: 0,
-    width: 50,
-    height: 50,
+    w: 50,
+    h: 50,
     radius: {
       default: [0, 0, 0, 0],
       resolve(value) {

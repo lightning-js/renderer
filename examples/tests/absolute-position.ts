@@ -17,22 +17,22 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   /* Create a grid to show the values */
-  for (let index = 1; index <= Math.ceil(testRoot.width / 100); index++) {
+  for (let index = 1; index <= Math.ceil(testRoot.w / 100); index++) {
     renderer.createNode({
       x: index * 100,
       y: 0,
-      width: 2,
-      height: testRoot.height,
+      w: 2,
+      h: testRoot.h,
       color: index % 5 ? 0xffffff40 : 0xffffffa0,
       parent: testRoot,
     });
   }
-  for (let index = 1; index <= Math.ceil(testRoot.height / 100); index++) {
+  for (let index = 1; index <= Math.ceil(testRoot.h / 100); index++) {
     renderer.createNode({
       x: 0,
       y: index * 100,
-      width: testRoot.width,
-      height: 2,
+      w: testRoot.w,
+      h: 2,
       color: index % 5 ? 0xffffff40 : 0xffffffa0,
       parent: testRoot,
     });
@@ -41,8 +41,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const defaultRect = renderer.createNode({
     x: 100,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     mountX: 0,
     color: 0x00ff00ff,
     parent: testRoot,
@@ -52,8 +52,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const mount1Rect = renderer.createNode({
     x: 600,
     y: 200,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     mount: 1,
     parent: testRoot,
@@ -63,8 +63,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const scaleRect = renderer.createNode({
     x: 700,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     scale: 1.2,
     color: 0xff0000ff,
     parent: testRoot,
@@ -74,8 +74,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rotationPivot0Rect = renderer.createNode({
     x: 1100,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     rotation: Math.PI / 6,
     pivot: 0,
     color: 0xff0000ff,
@@ -86,8 +86,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rotationPivot1Rect = renderer.createNode({
     x: 1300,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     rotation: Math.PI / 6,
     pivot: 1,
     color: 0xff0000ff,
@@ -98,8 +98,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const mountX1Rect = renderer.createNode({
     x: 300,
     y: 500,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     mountX: 1,
     mountY: 0,
@@ -110,8 +110,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const mountY1Rect = renderer.createNode({
     x: 400,
     y: 600,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     mountX: 0,
     mountY: 1,
@@ -122,8 +122,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const mountThirdRect = renderer.createNode({
     x: 700,
     y: 600,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     mountX: 0.33,
     mountY: 0.66,
@@ -134,8 +134,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const mountScaleRect = renderer.createNode({
     x: 1200,
     y: 600,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     mountX: 1,
     mountY: 0.5,

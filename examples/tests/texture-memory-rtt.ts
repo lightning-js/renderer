@@ -69,13 +69,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const node = renderer.createNode({
         x,
         y: lastNoiseNodePosition + y,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         parent: testRoot,
         color: randomColor(),
         texture: renderer.createTexture('NoiseTexture', {
-          width: nodeSize,
-          height: nodeSize,
+          w: nodeSize,
+          h: nodeSize,
           cacheId: i + Math.random(),
         }),
       });
@@ -91,8 +91,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const clippingNode = renderer.createNode({
     x: 600,
     y: 200,
-    width: 1300,
-    height: 800,
+    w: 1300,
+    h: 800,
     parent: testRoot,
     color: 0xff0000ff,
     clipping: true,
@@ -101,8 +101,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1300,
-    height: 800,
+    w: 1300,
+    h: 800,
     parent: clippingNode,
     // color: 0x000000ff,
     clipping: false,
@@ -120,8 +120,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const rowNode = renderer.createNode({
       x: 0,
       y: y,
-      width: (nodeWidth + gap) * amount,
-      height: nodeHeight,
+      w: (nodeWidth + gap) * amount,
+      h: nodeHeight,
       parent: containerNode,
       // color: 0x000000ff,
       rtt: true,
@@ -137,8 +137,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const childNode = renderer.createNode({
         x: x, // Adjust position by subtracting the gap
         y: 0,
-        width: nodeWidth,
-        height: nodeHeight,
+        w: nodeWidth,
+        h: nodeHeight,
         parent: rowNode,
         rtt: false,
       });
@@ -146,8 +146,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const imageNode = renderer.createNode({
         x: 0,
         y: 0,
-        width: nodeWidth,
-        height: nodeHeight,
+        w: nodeWidth,
+        h: nodeHeight,
         parent: childNode,
         src: `https://picsum.photos/id/${id}/${nodeWidth}/${nodeHeight}`, // Random images
       });
@@ -169,13 +169,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const focusNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: nodeWidth + gap + gap,
-    height: nodeHeight + gap,
+    w: nodeWidth + gap + gap,
+    h: nodeHeight + gap,
     parent: containerNode,
     alpha: 0.5,
     shader: renderer.createShader('Border', {
       color: 0xff00ffff,
-      width: 10,
+      w: 10,
     }),
     zIndex: 100,
   });
@@ -192,7 +192,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   }
 
   // adjust container node size
-  containerNode.height = amountOfRows * (nodeHeight + gap);
+  containerNode.h = amountOfRows * (nodeHeight + gap);
 
   window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowDown') {

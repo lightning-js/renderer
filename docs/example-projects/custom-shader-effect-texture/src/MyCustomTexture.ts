@@ -15,8 +15,8 @@ declare module '@lightningjs/renderer' {
 
 export interface MyCustomTextureProps {
   percent?: number;
-  width: number;
-  height: number;
+  w: number;
+  h: number;
 }
 
 export class MyCustomTexture extends Texture {
@@ -71,8 +71,8 @@ export class MyCustomTexture extends Texture {
   ): Required<MyCustomTextureProps> {
     return {
       percent: props.percent ?? 20,
-      width: props.width,
-      height: props.height,
+      w: props.width,
+      h: props.height,
     };
   }
 }

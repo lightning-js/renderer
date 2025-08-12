@@ -67,8 +67,8 @@ export default async function test(settings: ExampleSettings) {
   const rightBackground = renderer.createNode({
     x: renderer.settings.appWidth / 2,
     y: 0,
-    width: renderer.settings.appWidth / 2,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth / 2,
+    h: renderer.settings.appHeight,
     color: rightSideBg === 'red' ? 0xff0000ff : 0x00ff00ff,
     parent: testRoot,
     zIndex: 0,
@@ -139,8 +139,8 @@ export default async function test(settings: ExampleSettings) {
     const alphaPropRgbaRectHalf1 = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: 0xffffffff,
       alpha: 0.5,
       parent: sideContainer,
@@ -152,8 +152,8 @@ export default async function test(settings: ExampleSettings) {
     const alphaPropRgbaRectHalf2 = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: mergeColorAlpha(0xffffffff, 0.5),
       alpha: 1.0,
       parent: sideContainer,
@@ -179,8 +179,8 @@ export default async function test(settings: ExampleSettings) {
     const sameColorRectAlphaFull = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: bgColor,
       parent: sideContainer,
       alpha: 1.0,
@@ -192,8 +192,8 @@ export default async function test(settings: ExampleSettings) {
     const sameColorRectAlphaHalf1 = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: bgColor,
       parent: sideContainer,
       alpha: 0.5,
@@ -205,8 +205,8 @@ export default async function test(settings: ExampleSettings) {
     const sameColorRectAlphaHalf2 = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: mergeColorAlpha(bgColor, 0.5),
       parent: sideContainer,
       alpha: 1.0,
@@ -218,8 +218,8 @@ export default async function test(settings: ExampleSettings) {
     const sameColorRectAlphaQuarter = renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       color: mergeColorAlpha(bgColor, 0.5),
       parent: sideContainer,
       alpha: 0.5,
@@ -244,8 +244,8 @@ export default async function test(settings: ExampleSettings) {
     renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       src: bgColorName === 'red' ? red100 : green100,
       alpha: 1,
       parent: sideContainer,
@@ -256,8 +256,8 @@ export default async function test(settings: ExampleSettings) {
     renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       src: bgColorName === 'red' ? red50 : green50,
       alpha: 1,
       parent: sideContainer,
@@ -268,8 +268,8 @@ export default async function test(settings: ExampleSettings) {
     renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       src: bgColorName === 'red' ? red100 : green100,
       alpha: 0.5,
       parent: sideContainer,
@@ -280,8 +280,8 @@ export default async function test(settings: ExampleSettings) {
     renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       src: bgColorName === 'red' ? red50 : green50,
       alpha: 0.5,
       parent: sideContainer,
@@ -292,8 +292,8 @@ export default async function test(settings: ExampleSettings) {
     renderer.createNode({
       x: curX,
       y: curY,
-      width: RECT_SIZE,
-      height: RECT_SIZE,
+      w: RECT_SIZE,
+      h: RECT_SIZE,
       src: bgColorName === 'red' ? red25 : green25,
       alpha: 1,
       parent: sideContainer,
@@ -455,17 +455,17 @@ export default async function test(settings: ExampleSettings) {
     curY += 30 + PADDING;
 
     const sizeToTexture: NodeLoadedEventHandler = (target, payload) => {
-      const { width, height } = payload.dimensions;
-      target.width = width;
-      target.height = height;
+      const { w, h } = payload.dimensions;
+      target.w = w;
+      target.h = h;
     };
 
     renderer
       .createNode({
         x: curX,
         y: curY,
-        width: RECT_SIZE,
-        height: RECT_SIZE,
+        w: RECT_SIZE,
+        h: RECT_SIZE,
         src: robot,
         alpha: 1,
         parent: sideContainer,

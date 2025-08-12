@@ -44,19 +44,19 @@ export class Component {
     this.node.y = y;
   }
 
-  get width() {
-    return this.node.width;
+  get w() {
+    return this.node.w;
   }
 
-  set width(width: number) {
-    this.node.width = width;
+  set w(w: number) {
+    this.node.w = w;
   }
 
-  get height() {
-    return this.node.height;
+  get h() {
+    return this.node.h;
   }
 
-  set height(height: number) {
-    this.node.height = height;
+  set h(h: number) {
+    this.node.h = h;
   }
 }

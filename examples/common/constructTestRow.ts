@@ -65,13 +65,13 @@ export async function constructTestRow(
           parent: rowNode,
         }),
       );
-      curX += descriptionPosition ? 0 : dimensions.width + padding;
+      curX += descriptionPosition ? 0 : dimensions.w + padding;
     } else {
       const container = renderer.createNode({
         parent: rowNode,
         color: 0xffffffff,
-        width: containerSize,
-        height: containerHeight,
+        w: containerSize,
+        h: containerHeight,
         clipping: true,
         x: curX,
         y: curY,

@@ -60,12 +60,12 @@ export interface SubTextureProps {
    *
    * @default 0
    */
-  width?: number;
+  w?: number;
 
   /**
    * The height of the sub-texture in pixels
    **/
-  height?: number;
+  h?: number;
 }
 
 /**
@@ -75,8 +75,8 @@ export interface SubTextureProps {
  * The parent texture can be a Sprite Sheet/Texture Atlas and set using the
  * {@link SubTextureProps.texture} prop. The sub-region relative to the parent
  * texture is defined with the {@link SubTextureProps.x},
- * {@link SubTextureProps.y}, {@link SubTextureProps.width}, and
- * {@link SubTextureProps.height} pixel values.
+ * {@link SubTextureProps.y}, {@link SubTextureProps.w}, and
+ * {@link SubTextureProps.h} pixel values.
  */
 export class SubTexture extends Texture {
   props: Required<SubTextureProps>;
@@ -134,8 +134,8 @@ export class SubTexture extends Texture {
     // We ignore the parent's passed dimensions, and simply use the SubTexture's
     // configured dimensions (because that's all that matters here)
     this.forwardParentTxState('loaded', {
-      width: this.props.width,
-      height: this.props.height,
+      w: this.props.w,
+      h: this.props.h,
     });
   };
 
@@ -145,8 +145,8 @@ export class SubTexture extends Texture {
 
   private onParentTxFetched = () => {
     this.forwardParentTxState('fetched', {
-      width: this.props.width,
-      height: this.props.height,
+      w: this.props.w,
+      h: this.props.h,
     });
   };
 
@@ -196,8 +196,8 @@ export class SubTexture extends Texture {
       texture: props.texture,
       x: props.x || 0,
       y: props.y || 0,
-      width: props.width || 0,
-      height: props.height || 0,
+      w: props.w || 0,
+      h: props.h || 0,
     };
   }
 

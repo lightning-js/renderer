@@ -462,14 +462,14 @@ export class Inspector {
         let value = mappedStyleResponse.value;
         if (property === 'x') {
           const mount = props.mountX;
-          const width = props.width;
+          const width = props.w;
 
           if (mount) {
             value = `${parseInt(value) - width * mount}px`;
           }
         } else if (property === 'y') {
           const mount = props.mountY;
-          const height = props.height;
+          const height = props.h;
 
           if (mount) {
             value = `${parseInt(value) - height * mount}px`;
@@ -538,8 +538,8 @@ export class Inspector {
     const {
       x,
       y,
-      width,
-      height,
+      w,
+      h,
       alpha = 1,
       rotation = 0,
       scale = 1,
@@ -551,10 +551,10 @@ export class Inspector {
     // ignoring loops and repeats for now, as that might be a bit too much for the inspector
     function animate() {
       setTimeout(() => {
-        div.style.top = `${y - height * mountY}px`;
-        div.style.left = `${x - width * mountX}px`;
-        div.style.width = `${width}px`;
-        div.style.height = `${height}px`;
+        div.style.top = `${y - h * mountY}px`;
+        div.style.left = `${x - w * mountX}px`;
+        div.style.width = `${w}px`;
+        div.style.height = `${h}px`;
         div.style.opacity = `${alpha}`;
         div.style.rotate = `${rotation}rad`;
         div.style.scale = `${scale}`;

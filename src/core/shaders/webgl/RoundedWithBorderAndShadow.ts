@@ -37,7 +37,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
 
       this.uniform4fa(
         'u_radius',
-        calcFactoredRadiusArray(props.radius as Vec4, node.width, node.height),
+        calcFactoredRadiusArray(props.radius as Vec4, node.w, node.h),
       );
     },
     vertex: `

@@ -31,8 +31,8 @@ export default async function test({
   const RedRect = renderer.createNode({
     x: 20,
     y: 20,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     shader: renderer.createShader('Border', { width: 1 }),
     parent: testRoot,
@@ -41,8 +41,8 @@ export default async function test({
   const RedRect2 = renderer.createNode({
     x: 250,
     y: 20,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     shader: renderer.createShader('Border', { width: 30 }),
     parent: testRoot,
@@ -51,8 +51,8 @@ export default async function test({
   const GreenRect = renderer.createNode({
     x: 20,
     y: 250,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x00ff00ff,
     shader: renderer.createShader('Border', {
       top: 10,
@@ -63,8 +63,8 @@ export default async function test({
   const GreenRect2 = renderer.createNode({
     x: 250,
     y: 250,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x00ff00ff,
     shader: renderer.createShader('Border', {
       right: 10,
@@ -75,8 +75,8 @@ export default async function test({
   const GreenRect3 = renderer.createNode({
     x: 480,
     y: 250,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x00ff00ff,
     shader: renderer.createShader('Border', {
       bottom: 10,
@@ -87,8 +87,8 @@ export default async function test({
   const GreenRect4 = renderer.createNode({
     x: 710,
     y: 250,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x00ff00ff,
     shader: renderer.createShader('Border', {
       left: 10,
@@ -99,8 +99,8 @@ export default async function test({
   const BlueRect = renderer.createNode({
     x: 20,
     y: 480,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       radius: 10,
@@ -112,8 +112,8 @@ export default async function test({
   const BlueRect2 = renderer.createNode({
     x: 250,
     y: 480,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       'top-right': 20,
@@ -125,8 +125,8 @@ export default async function test({
   const BlueRect3 = renderer.createNode({
     x: 480,
     y: 480,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       'border-width': 10,
@@ -140,8 +140,8 @@ export default async function test({
   const BlueRect4 = renderer.createNode({
     x: 710,
     y: 480,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       'bottom-left': 20,
@@ -153,8 +153,8 @@ export default async function test({
   const YellowRect = renderer.createNode({
     x: 20,
     y: 710,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'top-left': 20,
@@ -166,8 +166,8 @@ export default async function test({
   const YellowRect2 = renderer.createNode({
     x: 250,
     y: 710,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'top-right': 20,
@@ -179,8 +179,8 @@ export default async function test({
   const YellowRect3 = renderer.createNode({
     x: 480,
     y: 710,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'bottom-right': 20,
@@ -192,8 +192,8 @@ export default async function test({
   const YellowRect4 = renderer.createNode({
     x: 710,
     y: 710,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'bottom-left': 20,

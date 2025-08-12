@@ -35,8 +35,8 @@ export default async function ({
   let totalNodes = 0;
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
@@ -45,8 +45,8 @@ export default async function ({
     const container = renderer.createNode({
       x: Math.random() * 1920,
       y: Math.random() * 1080,
-      width: 100,
-      height: 100,
+      w: 100,
+      h: 100,
       clipping: true,
       parent: bg,
     });
@@ -54,8 +54,8 @@ export default async function ({
       mount: 0.5,
       x: 50,
       y: 50,
-      width: 200,
-      height: 200,
+      w: 200,
+      h: 200,
       src: robotImg,
       parent: container,
     });

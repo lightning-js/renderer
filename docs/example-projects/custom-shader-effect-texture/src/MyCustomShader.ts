@@ -79,8 +79,8 @@ export const MyCustomShader: WebGlShaderType<CustomShaderProps> = {
   },
   update(node) {
     const props = this.props!;
-    const width = props.normalized ? 1 : node.width;
-    const height = props.normalized ? 1 : node.height;
+    const width = props.normalized ? 1 : node.w;
+    const height = props.normalized ? 1 : node.h;
 
     const topLeft = [
       (props.topLeft?.x || 0) / width,

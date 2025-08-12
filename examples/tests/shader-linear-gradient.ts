@@ -31,8 +31,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const RedRect = renderer.createNode({
     x: 20,
     y: 20,
-    width: 600,
-    height: 400,
+    w: 600,
+    h: 400,
     color: 0xff0000ff,
     shader: renderer.createShader('LinearGradient'),
     parent: testRoot,
@@ -43,8 +43,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const RedRect2 = renderer.createNode({
     x: 720,
     y: 20,
-    width: 600,
-    height: 400,
+    w: 600,
+    h: 400,
     color: 0xff0000ff,
     shader: renderer.createShader('LinearGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff],
@@ -56,8 +56,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const GreenRect = renderer.createNode({
     x: 20,
     y: 520,
-    width: 600,
-    height: 400,
+    w: 600,
+    h: 400,
     color: 0x00ff00ff,
     shader: renderer.createShader('LinearGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff, 0xff0000ff],
@@ -69,8 +69,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const GreenRect2 = renderer.createNode({
     x: 720,
     y: 520,
-    width: 600,
-    height: 400,
+    w: 600,
+    h: 400,
     src: elevatorPng,
     shader: renderer.createShader('LinearGradient', {
       colors: [0x000000ff, 0x00000000],

@@ -62,15 +62,15 @@ export default async function test({
   testRoot,
   snapshot,
 }: ExampleSettings) {
-  testRoot.width = 250;
-  testRoot.height = 250;
+  testRoot.w = 250;
+  testRoot.h = 250;
   testRoot.color = 0xffffffff;
 
   const robot = renderer.createNode({
     x: 0,
     y: 0,
-    width: 140,
-    height: 140,
+    w: 140,
+    h: 140,
     zIndex: 5,
     src: robotImg,
     parent: testRoot,
@@ -78,8 +78,8 @@ export default async function test({
 
   const status = renderer.createTextNode({
     mount: 1,
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     fontSize: 40,
     fontFamily: 'Ubuntu',
     parent: testRoot,

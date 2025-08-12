@@ -36,8 +36,8 @@ export default async function ({
   const nodes: INode[] = [];
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
@@ -48,13 +48,13 @@ export default async function ({
       y: Math.random() * 1080,
       ...(i % 2 === 0
         ? {
-            width: 505,
-            height: 101,
+            w: 505,
+            h: 101,
             src: logo,
           }
         : {
-            width: 140,
-            height: 140,
+            w: 140,
+            h: 140,
             src: robot,
           }),
       parent: bg,

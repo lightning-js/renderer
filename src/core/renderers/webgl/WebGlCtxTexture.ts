@@ -96,7 +96,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     }
 
     try {
-      const { width, height } = await this.onLoadRequest();
+      const { w, h } = await this.onLoadRequest();
 
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
@@ -105,11 +105,11 @@ export class WebGlCtxTexture extends CoreContextTexture {
       }
 
       this.state = 'loaded';
-      this._w = width;
-      this._h = height;
+      this._w = w;
+      this._h = h;
       // Update the texture source's width and height so that it can be used
       // for rendering.
-      this.textureSource.setState('loaded', { width, height });
+      this.textureSource.setState('loaded', { w, h });
 
       // cleanup source texture data next tick
       // This is done using queueMicrotask to ensure it runs after the current
@@ -152,8 +152,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     glw.texImage2D(0, glw.RGBA, 1, 1, 0, glw.RGBA, glw.UNSIGNED_BYTE, null);
     this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
 
-    let width = 0;
-    let height = 0;
+    let w = 0;
+    let h = 0;
 
     glw.activeTexture(0);
 
@@ -170,8 +170,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
       // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(tdata)
     ) {
-      width = tdata.width;
-      height = tdata.height;
+      w = tdata.width;
+      h = tdata.height;
       glw.bindTexture(this._nativeCtxTexture);
       glw.pixelStorei(
         glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
@@ -180,10 +180,10 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
 
-      this.setTextureMemUse(height * width * formatBytes * memoryPadding);
+      this.setTextureMemUse(h * w * formatBytes * memoryPadding);
     } else if (tdata === null) {
-      width = 0;
-      height = 0;
+      w = 0;
+      h = 0;
       // Reset to a 1x1 transparent texture
       glw.bindTexture(this._nativeCtxTexture);
 
@@ -199,7 +199,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       );
       this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
     } else if ('mipmaps' in tdata && tdata.mipmaps) {
-      const { mipmaps, width = 0, height = 0, type, glInternalFormat } = tdata;
+      const { mipmaps, w = 0, h = 0, type, glInternalFormat } = tdata;
       const view =
         type === 'ktx'
           ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
@@ -207,7 +207,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       glw.bindTexture(this._nativeCtxTexture);
 
-      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
+      glw.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
       glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
@@ -216,8 +216,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
       this.setTextureMemUse(view.byteLength);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
-      width = 1;
-      height = 1;
+      w = 1;
+      h = 1;
 
       glw.bindTexture(this._nativeCtxTexture);
       glw.pixelStorei(
@@ -225,18 +225,9 @@ export class WebGlCtxTexture extends CoreContextTexture {
         !!textureData.premultiplyAlpha,
       );
 
-      glw.texImage2D(
-        0,
-        format,
-        width,
-        height,
-        0,
-        format,
-        glw.UNSIGNED_BYTE,
-        tdata,
-      );
+      glw.texImage2D(0, format, w, h, 0, format, glw.UNSIGNED_BYTE, tdata);
 
-      this.setTextureMemUse(width * height * formatBytes);
+      this.setTextureMemUse(w * h * formatBytes);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
@@ -245,8 +236,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     }
 
     return {
-      width,
-      height,
+      w,
+      h,
     };
   }
 

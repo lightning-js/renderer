@@ -36,8 +36,8 @@ const PADDING = 20;
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Resizemode Tests',
   });
 
@@ -51,8 +51,8 @@ export default async function test(settings: ExampleSettings) {
         for (let i = 0; i < 3; i++) {
           renderer.createNode({
             x: curX,
-            width: SQUARE_SIZE,
-            height: SQUARE_SIZE - 300,
+            w: SQUARE_SIZE,
+            h: SQUARE_SIZE - 300,
             texture: renderer.createTexture('ImageTexture', {
               src: testscreenImg,
             }),
@@ -68,8 +68,8 @@ export default async function test(settings: ExampleSettings) {
           curX += SQUARE_SIZE + PADDING;
         }
 
-        rowNode.height = SQUARE_SIZE - 300;
-        return rowNode.height;
+        rowNode.h = SQUARE_SIZE - 300;
+        return rowNode.h;
       },
     },
     {
@@ -81,8 +81,8 @@ export default async function test(settings: ExampleSettings) {
         for (let i = 0; i < 3; i++) {
           renderer.createNode({
             x: curX,
-            width: SQUARE_SIZE,
-            height: SQUARE_SIZE - 200,
+            w: SQUARE_SIZE,
+            h: SQUARE_SIZE - 200,
             texture: renderer.createTexture('ImageTexture', {
               src: testscreenImg,
             }),
@@ -98,8 +98,8 @@ export default async function test(settings: ExampleSettings) {
           curX += SQUARE_SIZE + PADDING;
         }
 
-        rowNode.height = SQUARE_SIZE - 200;
-        return rowNode.height;
+        rowNode.h = SQUARE_SIZE - 200;
+        return rowNode.h;
       },
     },
     {
@@ -111,8 +111,8 @@ export default async function test(settings: ExampleSettings) {
         for (let i = 0; i < 3; i++) {
           renderer.createNode({
             x: curX,
-            width: SQUARE_SIZE,
-            height: SQUARE_SIZE - 300,
+            w: SQUARE_SIZE,
+            h: SQUARE_SIZE - 300,
             texture: renderer.createTexture('ImageTexture', {
               src: testscreenRImg,
             }),
@@ -128,8 +128,8 @@ export default async function test(settings: ExampleSettings) {
           curX += SQUARE_SIZE + PADDING;
         }
 
-        rowNode.height = SQUARE_SIZE - 300;
-        return rowNode.height;
+        rowNode.h = SQUARE_SIZE - 300;
+        return rowNode.h;
       },
     },
     {
@@ -141,8 +141,8 @@ export default async function test(settings: ExampleSettings) {
         for (let i = 0; i < 5; i++) {
           renderer.createNode({
             x: curX,
-            width: SQUARE_SIZE - 400,
-            height: SQUARE_SIZE - 100,
+            w: SQUARE_SIZE - 400,
+            h: SQUARE_SIZE - 100,
             texture: renderer.createTexture('ImageTexture', {
               src: testscreenRImg,
             }),
@@ -158,8 +158,8 @@ export default async function test(settings: ExampleSettings) {
           curX += SQUARE_SIZE + PADDING - 330;
         }
 
-        rowNode.height = SQUARE_SIZE - 200;
-        return rowNode.height;
+        rowNode.h = SQUARE_SIZE - 200;
+        return rowNode.h;
       },
     },
     {
@@ -168,16 +168,16 @@ export default async function test(settings: ExampleSettings) {
       content: async (rowNode) => {
         let curX = 0;
         const containerProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE - 300,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE - 300,
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          width: containerProps.width,
-          height: containerProps.height,
+          w: containerProps.width,
+          h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
             src: testscreenImg,
@@ -201,8 +201,8 @@ export default async function test(settings: ExampleSettings) {
 
         curX += containerProps.width + PADDING;
 
-        rowNode.height = containerProps.height;
-        return rowNode.height;
+        rowNode.h = containerProps.h;
+        return rowNode.h;
       },
     },
     {
@@ -211,16 +211,16 @@ export default async function test(settings: ExampleSettings) {
       content: async (rowNode) => {
         const curX = 0;
         const containerProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE - 200,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE - 200,
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          width: containerProps.width,
-          height: containerProps.height,
+          w: containerProps.width,
+          h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
             src: testscreenImg,
@@ -242,8 +242,8 @@ export default async function test(settings: ExampleSettings) {
           parent: container1,
         });
 
-        rowNode.height = containerProps.height;
-        return rowNode.height;
+        rowNode.h = containerProps.h;
+        return rowNode.h;
       },
     },
     {
@@ -252,16 +252,16 @@ export default async function test(settings: ExampleSettings) {
       content: async (rowNode) => {
         let curX = 0;
         const containerProps = {
-          width: SQUARE_SIZE - 400,
-          height: SQUARE_SIZE - 200,
+          w: SQUARE_SIZE - 400,
+          h: SQUARE_SIZE - 200,
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          width: containerProps.width,
-          height: containerProps.height,
+          w: containerProps.width,
+          h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
             src: testscreenRImg,
@@ -294,14 +294,14 @@ export default async function test(settings: ExampleSettings) {
           ...textureNodeProps,
           mount: 0.5,
           x: containerProps.width / 2,
-          y: containerProps.height / 2,
+          y: containerProps.h / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),
           parent: container2,
         });
 
-        rowNode.height = containerProps.height;
-        return rowNode.height;
+        rowNode.h = containerProps.h;
+        return rowNode.h;
       },
     },
     {
@@ -310,16 +310,16 @@ export default async function test(settings: ExampleSettings) {
       content: async (rowNode) => {
         let curX = 0;
         const containerProps = {
-          width: SQUARE_SIZE - 150,
-          height: SQUARE_SIZE - 200,
+          w: SQUARE_SIZE - 150,
+          h: SQUARE_SIZE - 200,
           parent: rowNode,
           color: 0x333333ff,
           clipping: true,
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          width: containerProps.width,
-          height: containerProps.height,
+          w: containerProps.width,
+          h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
             src: testscreenRImg,
@@ -352,14 +352,14 @@ export default async function test(settings: ExampleSettings) {
           ...textureNodeProps,
           mount: 0.5,
           x: containerProps.width / 2,
-          y: containerProps.height / 2,
+          y: containerProps.h / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),
           parent: container2,
         });
 
-        rowNode.height = containerProps.height;
-        return rowNode.height;
+        rowNode.h = containerProps.h;
+        return rowNode.h;
       },
     },
   ]);

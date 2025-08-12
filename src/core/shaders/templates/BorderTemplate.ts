@@ -28,7 +28,7 @@ export interface BorderProps {
    *
    * @default 0
    */
-  width: number | [number, number, number, number];
+  w: number | [number, number, number, number];
   /**
    * Color of the border in 0xRRGGBBAA
    *
@@ -57,9 +57,9 @@ export function getBorderProps<P extends string>(
   prefix?: P,
 ): PrefixedType<BorderProps, P> {
   const pf = prefix && prefix.length > 0 ? `${prefix}-` : '';
-  const width = pf + 'width';
+  const w = pf + 'w';
   return {
-    [width]: {
+    [w]: {
       default: [0, 0, 0, 0],
       resolve(value) {
         if (value !== undefined) {
@@ -72,37 +72,37 @@ export function getBorderProps<P extends string>(
     [pf + 'top']: {
       default: 0,
       set(value, props) {
-        (props[width] as Vec4)[0] = value;
+        (props[w] as Vec4)[0] = value;
       },
       get(props) {
-        return (props[width] as Vec4)[0];
+        return (props[w] as Vec4)[0];
       },
     },
     [pf + 'right']: {
       default: 0,
       set(value, props) {
-        (props[width] as Vec4)[1] = value;
+        (props[w] as Vec4)[1] = value;
       },
       get(props) {
-        return (props[width] as Vec4)[1];
+        return (props[w] as Vec4)[1];
       },
     },
     [pf + 'bottom']: {
       default: 0,
       set(value, props) {
-        (props[width] as Vec4)[2] = value;
+        (props[w] as Vec4)[2] = value;
       },
       get(props) {
-        return (props[width] as Vec4)[2];
+        return (props[w] as Vec4)[2];
       },
     },
     [pf + 'left']: {
       default: 0,
       set(value, props) {
-        (props[width] as Vec4)[3] = value;
+        (props[w] as Vec4)[3] = value;
       },
       get(props) {
-        return (props[width] as Vec4)[3];
+        return (props[w] as Vec4)[3];
       },
     },
   } as PrefixedType<BorderProps, P>;

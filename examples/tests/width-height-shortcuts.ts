@@ -35,8 +35,8 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set test area
-  testRoot.width = 600;
-  testRoot.height = 270;
+  testRoot.w = 600;
+  testRoot.h = 270;
   testRoot.color = 0x222222ff;
 
   // Create header text
@@ -54,8 +54,8 @@ export default async function test(settings: ExampleSettings) {
   const nodeWithLongProps = renderer.createNode({
     x: 50,
     y: 80,
-    width: 120,
-    height: 80,
+    w: 120,
+    h: 80,
     color: 0xff0000ff,
     parent: testRoot,
   });
@@ -74,8 +74,8 @@ export default async function test(settings: ExampleSettings) {
   renderer.createNode({
     x: 350,
     y: 80,
-    width: 80,
-    height: 120,
+    w: 80,
+    h: 120,
     color: 0x0080ffff,
     parent: testRoot,
   });
@@ -96,7 +96,7 @@ export default async function test(settings: ExampleSettings) {
     color: 0xffffffff,
     fontFamily: 'Ubuntu',
     fontSize: 14,
-    text: 'width: 120\nheight: 80',
+    text: 'w: 120\nheight: 80',
     parent: testRoot,
   });
 
@@ -116,7 +116,7 @@ export default async function test(settings: ExampleSettings) {
     color: 0xffffffff,
     fontFamily: 'Ubuntu',
     fontSize: 14,
-    text: 'width: 80\nheight: 120',
+    text: 'w: 80\nheight: 120',
     parent: testRoot,
   });
 

@@ -56,8 +56,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const text = getLoremIpsum(1200);
   const fontSize = 20;
   const yPos = 0;
-  testRoot.width = 500;
-  testRoot.height = 500;
+  testRoot.w = 500;
+  testRoot.h = 500;
   testRoot.clipping = true;
   testRoot.color = 0xffffffff;
 
@@ -67,14 +67,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const background = renderer.createNode({
     x: 0,
     y: 0,
-    width: testRoot.width,
-    height: testRoot.height,
+    w: testRoot.w,
+    h: testRoot.h,
     color: 0x00ff0020,
     parent: testRoot,
   });
   const canvasText = renderer.createTextNode({
     y: yPos,
-    maxWidth: testRoot.width,
+    maxWidth: testRoot.w,
     text,
     fontSize,
     fontFamily,
@@ -84,7 +84,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   });
   const sdfText = renderer.createTextNode({
     y: yPos,
-    maxWidth: testRoot.width,
+    maxWidth: testRoot.w,
     text,
     fontSize,
     fontFamily,
@@ -93,8 +93,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     zIndex: 3,
   });
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
@@ -106,13 +106,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   let i = 0;
   const mutations = [
     () => {
-      canvasText.width = sdfText.width = background.width = 250;
+      canvasText.w = sdfText.w = background.w = 250;
     },
     () => {
-      canvasText.width = sdfText.width = background.width = 350;
+      canvasText.w = sdfText.w = background.w = 350;
     },
     () => {
-      canvasText.width = sdfText.width = background.width = 500;
+      canvasText.w = sdfText.w = background.w = 500;
     },
   ];
 

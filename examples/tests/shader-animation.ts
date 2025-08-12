@@ -36,7 +36,7 @@ export default async function test({
 
   const nodeSize = {
     width: 300,
-    height: 300,
+    h: 300,
   };
 
   const t1 = renderer.createNode({
@@ -52,7 +52,7 @@ export default async function test({
 
   const t1Radius = renderer.createTextNode({
     mountX: 1,
-    x: testRoot.width - 90,
+    x: testRoot.w - 90,
     y: 90,
     fontSize: 40,
     fontFamily: 'Ubuntu',

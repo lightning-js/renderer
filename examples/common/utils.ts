@@ -29,10 +29,10 @@ export async function waitForLoadedDimensions(
 ): Promise<Dimensions> {
   return new Promise((resolve) => {
     node.once('loaded', (_node: INode, payload: NodeTextLoadedPayload) => {
-      const { width, height } = payload.dimensions;
+      const { w, h } = payload.dimensions;
       resolve({
-        width,
-        height,
+        w,
+        h,
       });
     });
   });

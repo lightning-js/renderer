@@ -34,16 +34,16 @@ export default async function ({
   const nodes: INode[] = [];
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
 
   for (let i = 0; i < numOuterNodes; i++) {
     const node = renderer.createNode({
-      width: 505,
-      height: 101,
+      w: 505,
+      h: 101,
       x: Math.random() * 1920,
       y: Math.random() * 1080,
       // src: logo,

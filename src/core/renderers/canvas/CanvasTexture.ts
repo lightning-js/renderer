@@ -65,8 +65,8 @@ export class CanvasTexture extends CoreContextTexture {
     const mult = this.tintCache ? 8 : 4;
     if (this.textureSource.dimensions) {
       this.setTextureMemUse(
-        this.textureSource.dimensions.width *
-          this.textureSource.dimensions.height *
+        this.textureSource.dimensions.w *
+          this.textureSource.dimensions.h *
           mult,
       );
     }
@@ -142,15 +142,15 @@ export class CanvasTexture extends CoreContextTexture {
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.putImageData(data, 0, 0);
       this.image = canvas;
-      return { width: data.width, height: data.height };
+      return { w: data.width, h: data.height };
     } else if (
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
       data instanceof HTMLImageElement
     ) {
       this.image = data;
-      return { width: data.width, height: data.height };
+      return { w: data.width, h: data.height };
     }
 
-    return { width: 0, height: 0 };
+    return { w: 0, h: 0 };
   }
 }

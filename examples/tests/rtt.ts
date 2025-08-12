@@ -30,8 +30,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -39,8 +39,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rootRenderToTextureNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     parent: node,
     rtt: true,
     zIndex: 5,
@@ -53,8 +53,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       parent: rootRenderToTextureNode,
       x: (i % 15) * 120 + 120,
       y: Math.floor(i / 15) * 120 + 150,
-      width: 120,
-      height: 120,
+      w: 120,
+      h: 120,
       scale: 1,
       // src: '../assets/rocko.png',
       src: `https://picsum.photos/id/${i + 30}/120/120`,
@@ -65,8 +65,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const a = renderer.createNode({
       x: (i % 1) * 1920,
       y: Math.floor(i / 1) * 800,
-      width: 1920,
-      height: 1080,
+      w: 1920,
+      h: 1080,
       parent: testRoot,
       alpha: 1,
       color: 0xffffffff,

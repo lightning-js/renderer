@@ -28,8 +28,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0xff0000ff,
     shader: renderer.createShader('Rounded', {
       radius: 10,
@@ -40,8 +40,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const holder = renderer.createNode({
     x: 150,
     y: 900,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0xff0000ff,
     parent: testRoot,
     zIndex: 0,
@@ -52,8 +52,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const child = renderer.createNode({
     x: 111,
     y: 0,
-    width: 111,
-    height: 111,
+    w: 111,
+    h: 111,
     color: 0xff0000ff,
     parent: holder,
     zIndex: 12,
@@ -63,8 +63,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const greenRect = renderer.createNode({
     x: 100,
     y: 0,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0x00ff00ff,
     parent: testRoot,
   });
@@ -72,12 +72,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const shaft = renderer.createNode({
     x: 395,
     y: 0,
-    width: 210,
-    height: renderer.settings.appHeight,
+    w: 210,
+    h: renderer.settings.appHeight,
     color: 0xffffffff,
     texture: renderer.createTexture('NoiseTexture', {
-      width: 210,
-      height: renderer.settings.appHeight,
+      w: 210,
+      h: renderer.settings.appHeight,
     }),
     parent: testRoot,
   });
@@ -89,12 +89,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const relativePositioningPlatform = renderer.createNode({
     x: 605,
     y: 230,
-    width: 1315,
-    height: 50,
+    w: 1315,
+    h: 50,
     color: 0xaabb66ff,
     texture: renderer.createTexture('NoiseTexture', {
-      width: 1315,
-      height: 50,
+      w: 1315,
+      h: 50,
     }),
     parent: testRoot,
   });
@@ -102,26 +102,26 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const relativePositioningChild = renderer.createNode({
     x: 10,
     y: 10,
-    width: 1315 - 20,
-    height: 30,
+    w: 1315 - 20,
+    h: 30,
     color: 0xaaedffaa,
     parent: relativePositioningPlatform,
     texture: renderer.createTexture('NoiseTexture', {
-      width: 1315 - 20,
-      height: 30,
+      w: 1315 - 20,
+      h: 30,
     }),
   });
 
   const relativePositioningGrandchild = renderer.createNode({
     x: 10,
     y: 10,
-    width: 1315 - 20 - 20,
-    height: 10,
+    w: 1315 - 20 - 20,
+    h: 10,
     color: 0xff00ffff,
     parent: relativePositioningChild,
     texture: renderer.createTexture('NoiseTexture', {
-      width: 1315 - 20 - 20,
-      height: 50,
+      w: 1315 - 20 - 20,
+      h: 50,
     }),
   });
 
@@ -132,8 +132,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rockoRect = renderer.createNode({
     x: -181,
     y: renderer.settings.appHeight - 218,
-    width: 181,
-    height: 218,
+    w: 181,
+    h: 218,
     src: rocko,
     color: 0xffffffff,
     parent: testRoot,
@@ -143,8 +143,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const elevatorRect = renderer.createNode({
     x: 400,
     y: 0,
-    width: 200,
-    height: 268,
+    w: 200,
+    h: 268,
     src: elevator,
     color: 0x0000ffff,
     parent: testRoot,
@@ -169,8 +169,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setInterval(() => {
     shaft.texture = renderer.createTexture('NoiseTexture', {
-      width: 210,
-      height: renderer.settings.appHeight,
+      w: 210,
+      h: renderer.settings.appHeight,
       cacheId: Math.floor(Math.random() * 100000),
     });
   }, 1000);
@@ -203,7 +203,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       rockoAnimation = rockoRect
         .animate(
           {
-            y: elevatorRect.height - rockoRect.height,
+            y: elevatorRect.h - rockoRect.h,
           },
           {
             duration: 1000,
@@ -229,7 +229,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       await rockoAnimation.waitUntilStopped();
 
       console.log('resetting rocko');
-      rockoRect.x = -rockoRect.width;
+      rockoRect.x = -rockoRect.w;
       rockoRect.y = renderer.settings.appHeight - 218;
       rockoRect.flush();
     }
@@ -244,7 +244,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       elevatorAnimation = elevatorRect
         .animate(
           {
-            y: 1080 - elevatorRect.height,
+            y: 1080 - elevatorRect.h,
           },
           {
             duration: 1000,
@@ -256,7 +256,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       elevatorAnimation = elevatorRect
         .animate(
           {
-            // y: 1080 - elevatorRect.height,
+            // y: 1080 - elevatorRect.h,
           },
           {
             duration: 1000,
@@ -309,8 +309,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       blueRect = renderer.createNode({
         x: 200,
         y: 0,
-        width: 100,
-        height: 100,
+        w: 100,
+        h: 100,
         color: 0x0000ffff,
         parent: testRoot,
       });
@@ -340,8 +340,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       texture: spriteMapTexture,
       x,
       y,
-      width: 100,
-      height: 150,
+      w: 100,
+      h: 150,
     });
   });
 
@@ -402,10 +402,10 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   /// Text Demo
   const textNode = renderer.createTextNode({
-    x: shaft.x + shaft.width,
-    y: relativePositioningPlatform.y + relativePositioningPlatform.height,
+    x: shaft.x + shaft.w,
+    y: relativePositioningPlatform.y + relativePositioningPlatform.h,
     maxWidth: 300,
-    height: 200,
+    h: 200,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'Text Test: 0',
@@ -421,7 +421,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: renderer.settings.appHeight,
     mount: 1,
     maxWidth: 300,
-    height: 1,
+    h: 1,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'Rocko Test',

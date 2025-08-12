@@ -66,13 +66,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const node = renderer.createNode({
         x,
         y: lastNoiseNodePosition + y,
-        width: nodeSize,
-        height: nodeSize,
+        w: nodeSize,
+        h: nodeSize,
         parent: testRoot,
         color: randomColor(),
         texture: renderer.createTexture('NoiseTexture', {
-          width: nodeSize,
-          height: nodeSize,
+          w: nodeSize,
+          h: nodeSize,
           cacheId: i + Math.random(),
         }),
       });
@@ -117,8 +117,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const clippingNode = renderer.createNode({
     x: 600,
     y: 200,
-    width: 1300,
-    height: 800,
+    w: 1300,
+    h: 800,
     parent: testRoot,
     color: 0xff0000ff,
     clipping: true,
@@ -127,8 +127,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 500 * (nodeSize + 10),
-    height: 800,
+    w: 500 * (nodeSize + 10),
+    h: 800,
     parent: clippingNode,
     color: 0x00000022,
     clipping: false,
@@ -154,8 +154,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const rowNode = renderer.createNode({
       x: 0,
       y: y,
-      width: containerNode.width,
-      height: nodeHeight,
+      w: containerNode.w,
+      h: nodeHeight,
       parent: containerNode,
       color: 0x000000ff,
     });
@@ -185,8 +185,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const childNode = renderer.createNode({
         x: x, // Adjust position by subtracting the gap
         y: 0,
-        width: nodeWidth, // Width of the green node
-        height: nodeHeight, // Slightly smaller height
+        w: nodeWidth, // Width of the green node
+        h: nodeHeight, // Slightly smaller height
         parent: rowNode,
         color: color,
         texture: renderer.createTexture('SubTexture', {
@@ -194,8 +194,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           texture: loadedSpritemaps[currentTextureIndex],
           x: subtextureX,
           y: subtextureY,
-          width: 100,
-          height: 150,
+          w: 100,
+          h: 150,
         }),
       });
 
@@ -210,8 +210,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   spawnRow(0, amountOfRows);
 
   // adjust container node size
-  containerNode.width = amountOfRows * (nodeWidth + gap);
-  console.log(`Container node width: ${containerNode.width}`);
+  containerNode.w = amountOfRows * (nodeWidth + gap);
+  console.log(`Container node w: ${containerNode.w}`);
 
   window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowLeft') {

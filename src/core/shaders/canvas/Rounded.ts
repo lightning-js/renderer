@@ -34,8 +34,8 @@ export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
   update(node) {
     this.computed.radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
   },
   render(ctx, quad, renderContext) {

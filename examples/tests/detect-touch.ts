@@ -29,8 +29,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const holder = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -42,8 +42,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       parent: holder,
       x: getRandomValue(0, 1820),
       y: getRandomValue(0, 980),
-      width: dimension,
-      height: dimension,
+      w: dimension,
+      h: dimension,
       color: getRandomColor(),
       interactive: true,
       zIndex: getRandomValue(0, 100),

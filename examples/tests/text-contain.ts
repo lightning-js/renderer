@@ -23,15 +23,15 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  testRoot.width = 400;
-  testRoot.height = 400;
+  testRoot.w = 400;
+  testRoot.h = 400;
   testRoot.color = 0xffffffff;
 
   const textSizeAfterLoadingBg = renderer.createNode({
     x: 5,
     y: 5,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x22ff227f,
     parent: testRoot,
   });
@@ -39,8 +39,8 @@ export default async function test(settings: ExampleSettings) {
   const textReportedSizeBg = renderer.createNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0xff11117f,
     parent: testRoot,
   });
@@ -48,8 +48,8 @@ export default async function test(settings: ExampleSettings) {
   const text1 = renderer.createTextNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
@@ -65,8 +65,8 @@ Vivamus consectetur ex magna, non mollis.`,
   const text2 = renderer.createTextNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
@@ -81,8 +81,8 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
@@ -92,8 +92,8 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textSizeAfterLoadInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 20,
+    x: testRoot.w,
+    y: testRoot.h - 20,
     mount: 1,
     color: 0x00ff00ff,
     fontFamily: 'Ubuntu',
@@ -103,8 +103,8 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textReportedSizeInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 40,
+    x: testRoot.w,
+    y: testRoot.h - 40,
     mount: 1,
     color: 0xff0000ff,
     fontFamily: 'Ubuntu',
@@ -114,8 +114,8 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textSetDimsInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 60,
+    x: testRoot.w,
+    y: testRoot.h - 60,
     mount: 1,
     color: 0x0000ffff,
     fontFamily: 'Ubuntu',
@@ -125,8 +125,8 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const header = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 80,
+    x: testRoot.w,
+    y: testRoot.h - 80,
     mount: 1,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
@@ -164,7 +164,7 @@ Vivamus consectetur ex magna, non mollis.`,
       text1.alpha = 0;
       text2.alpha = 1;
       text2.maxWidth = 0;
-      text2.height = 0;
+      text2.h = 0;
     },
     () => {
       // Canvas, contain width
@@ -203,24 +203,24 @@ Vivamus consectetur ex magna, non mollis.`,
 
     header.text = makeHeader(
       targetText.textRendererOverride!,
-      targetText.width,
-      targetText.height,
+      targetText.w,
+      targetText.h,
     );
     indexInfo.text = (i + 1).toString();
-    textSetDimsInfo.text = `Set size: ${Math.round(
-      targetText.width,
-    )}x${Math.round(targetText.height)}`;
+    textSetDimsInfo.text = `Set size: ${Math.round(targetText.w)}x${Math.round(
+      targetText.h,
+    )}`;
     const dimensions = await waitForLoadedDimensions(targetText);
-    textSizeAfterLoadingBg.width = targetText.width;
-    textSizeAfterLoadingBg.height = targetText.height;
+    textSizeAfterLoadingBg.w = targetText.w;
+    textSizeAfterLoadingBg.h = targetText.h;
     textSizeAfterLoadInfo.text = `After 'loading' size: ${Math.round(
-      textSizeAfterLoadingBg.width,
-    )}x${Math.round(textSizeAfterLoadingBg.height)}`;
-    textReportedSizeBg.width = dimensions.width;
-    textReportedSizeBg.height = dimensions.height;
+      textSizeAfterLoadingBg.w,
+    )}x${Math.round(textSizeAfterLoadingBg.h)}`;
+    textReportedSizeBg.w = dimensions.w;
+    textReportedSizeBg.h = dimensions.h;
     textReportedSizeInfo.text = `'loading' event size: ${Math.round(
-      textReportedSizeBg.width,
-    )}x${Math.round(textReportedSizeBg.height)}`;
+      textReportedSizeBg.w,
+    )}x${Math.round(textReportedSizeBg.h)}`;
     return true;
   }
   await next(false, 0);

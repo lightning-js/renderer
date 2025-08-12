@@ -27,8 +27,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xffffffff,
     parent: testRoot,
   });
@@ -37,8 +37,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 300,
     y: 300,
     mount: 0.5,
-    width: 250,
-    height: 250,
+    w: 250,
+    h: 250,
     color: 0xff00ffff,
     shader: renderer.createShader('Shadow', {
       x: 50,
@@ -52,8 +52,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 700,
     y: 300,
     mount: 0.5,
-    width: 250,
-    height: 250,
+    w: 250,
+    h: 250,
     color: 0xff00ffff,
     shader: renderer.createShader('RoundedWithShadow', {
       radius: 10,
@@ -68,8 +68,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 1100,
     y: 300,
     mount: 0.5,
-    width: 250,
-    height: 250,
+    w: 250,
+    h: 250,
     color: 0xff00ffff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       radius: 10,

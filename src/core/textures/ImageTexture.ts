@@ -67,12 +67,12 @@ export interface ImageTextureProps {
    * Width of the image to be used as a texture. If not provided, the image's
    * natural width will be used.
    */
-  width?: number | null;
+  w?: number | null;
   /**
    * Height of the image to be used as a texture. If not provided, the image's
    * natural height will be used.
    */
-  height?: number | null;
+  h?: number | null;
   /**
    * Type, indicate an image type for overriding type detection
    *
@@ -276,21 +276,21 @@ export class ImageTexture extends Texture {
       };
     }
 
-    let width, height;
+    let w, h;
     // check if resp.data is typeof Uint8ClampedArray else
     // use resp.data.width and resp.data.height
     if (resp.data instanceof Uint8Array) {
-      width = this.props.width ?? 0;
-      height = this.props.height ?? 0;
+      w = this.props.w ?? 0;
+      h = this.props.h ?? 0;
     } else {
-      width = resp.data?.width ?? (this.props.width || 0);
-      height = resp.data?.height ?? (this.props.height || 0);
+      w = resp.data?.width ?? (this.props.w || 0);
+      h = resp.data?.height ?? (this.props.h || 0);
     }
 
     // we're loaded!
     this.setState('fetched', {
-      width,
-      height,
+      w,
+      h,
     });
 
     return {
@@ -336,8 +336,8 @@ export class ImageTexture extends Texture {
     if (type === 'svg') {
       return loadSvg(
         absoluteSrc,
-        this.props.width,
-        this.props.height,
+        this.props.w,
+        this.props.h,
         this.props.sx,
         this.props.sy,
         this.props.sw,
@@ -348,8 +348,8 @@ export class ImageTexture extends Texture {
     if (isSvgImage(src) === true) {
       return loadSvg(
         absoluteSrc,
-        this.props.width,
-        this.props.height,
+        this.props.w,
+        this.props.h,
         this.props.sx,
         this.props.sy,
         this.props.sw,
@@ -405,8 +405,8 @@ export class ImageTexture extends Texture {
       premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
       key: props.key ?? null,
       type: props.type ?? null,
-      width: props.width ?? null,
-      height: props.height ?? null,
+      w: props.w ?? null,
+      h: props.h ?? null,
       sx: props.sx ?? null,
       sy: props.sy ?? null,
       sw: props.sw ?? null,
