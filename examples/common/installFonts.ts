@@ -32,7 +32,7 @@ export async function installFonts(stage: Stage) {
     },
   });
 
-  await stage.loadFont('canvas', {
+  stage.loadFont('canvas', {
     fontFamily: 'Ubuntu',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
     metrics: {
@@ -43,7 +43,7 @@ export async function installFonts(stage: Stage) {
     },
   });
 
-  await stage.loadFont('canvas', {
+  stage.loadFont('canvas', {
     fontFamily: 'Ubuntu-No-Metrics',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
   });
@@ -55,7 +55,7 @@ export async function installFonts(stage: Stage) {
     unitsPerEm: 1000,
   };
 
-  await stage.loadFont('canvas', {
+  stage.loadFont('canvas', {
     fontFamily: 'Ubuntu-Modified-Metrics',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
     metrics: ubuntuModifiedMetrics,
@@ -63,7 +63,7 @@ export async function installFonts(stage: Stage) {
 
   // Load SDF fonts for WebGL renderer using the new unified API
   if (stage.renderer.mode === 'webgl') {
-    await stage.loadFont('sdf', {
+    stage.loadFont('sdf', {
       fontFamily: 'NotoSans',
       atlasUrl: './fonts/NotoSans-Regular.ssdf.png',
       atlasDataUrl: './fonts/NotoSans-Regular.ssdf.json',
@@ -75,7 +75,7 @@ export async function installFonts(stage: Stage) {
       },
     });
 
-    await stage.loadFont('sdf', {
+    stage.loadFont('sdf', {
       fontFamily: 'Ubuntu',
       atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
@@ -83,14 +83,14 @@ export async function installFonts(stage: Stage) {
       // encoded in the json file under `lightningMetrics`.
     });
 
-    await stage.loadFont('sdf', {
+    stage.loadFont('sdf', {
       fontFamily: 'Ubuntu-Modified-Metrics',
       atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
       metrics: ubuntuModifiedMetrics,
     });
 
-    await stage.loadFont('sdf', {
+    stage.loadFont('sdf', {
       fontFamily: 'Ubuntu-ssdf',
       atlasUrl: './fonts/Ubuntu-Regular.ssdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.ssdf.json',
