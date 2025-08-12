@@ -176,7 +176,7 @@ export default async function test(settings: ExampleSettings) {
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          w: containerProps.width,
+          w: containerProps.w,
           h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
@@ -199,7 +199,7 @@ export default async function test(settings: ExampleSettings) {
           parent: container1,
         });
 
-        curX += containerProps.width + PADDING;
+        curX += containerProps.w + PADDING;
 
         rowNode.h = containerProps.h;
         return rowNode.h;
@@ -219,7 +219,7 @@ export default async function test(settings: ExampleSettings) {
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          w: containerProps.width,
+          w: containerProps.w,
           h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
@@ -260,7 +260,7 @@ export default async function test(settings: ExampleSettings) {
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          w: containerProps.width,
+          w: containerProps.w,
           h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
@@ -283,7 +283,7 @@ export default async function test(settings: ExampleSettings) {
           parent: container1,
         });
 
-        curX += containerProps.width + PADDING;
+        curX += containerProps.w + PADDING;
 
         const container2 = renderer.createNode({
           ...containerProps,
@@ -293,7 +293,7 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           ...textureNodeProps,
           mount: 0.5,
-          x: containerProps.width / 2,
+          x: containerProps.w / 2,
           y: containerProps.h / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),
@@ -318,7 +318,7 @@ export default async function test(settings: ExampleSettings) {
         } satisfies Partial<INodeProps>;
 
         const textureNodeProps = {
-          w: containerProps.width,
+          w: containerProps.w,
           h: containerProps.h,
           clipping: true,
           texture: renderer.createTexture('ImageTexture', {
@@ -341,7 +341,7 @@ export default async function test(settings: ExampleSettings) {
           parent: container1,
         });
 
-        curX += containerProps.width + PADDING;
+        curX += containerProps.w + PADDING;
 
         const container2 = renderer.createNode({
           ...containerProps,
@@ -351,7 +351,7 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           ...textureNodeProps,
           mount: 0.5,
-          x: containerProps.width / 2,
+          x: containerProps.w / 2,
           y: containerProps.h / 2,
           pivotX: 0.5,
           rotation: deg2Rad(45),

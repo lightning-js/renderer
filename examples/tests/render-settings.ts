@@ -139,6 +139,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const pixelSize = renderer.createTextNode({
     text: `Pixels: ${renderer.canvas.width}x${renderer.canvas.height}`,
     fontSize: 30,
+    x: 10,
     y: yPos,
     fontFamily: 'Ubuntu-ssdf',
     parent: testRoot,
