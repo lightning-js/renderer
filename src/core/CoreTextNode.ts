@@ -137,7 +137,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._lastVertexBuffer = null; // Invalidate last vertex buffer
       const resp = this.textRenderer.renderText(this.stage, this.textProps);
       this.handleRenderResult(resp);
-      this._layoutGenerated = true;
     } else if (
       !this.fontHandler.isFontLoaded(this.textProps.fontFamily) &&
       !this._isWaitingForFont
@@ -153,6 +152,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // First run the standard CoreNode update
     super.update(delta, parentClippingRect);
+
+    //if can render but layout not generated try again next loop
+    if (canRender && this._layoutGenerated === false) {
+      this.setUpdateType(UpdateType.Local);
+    }
   }
 
   /**
@@ -245,6 +249,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Handle the result of text rendering for both Canvas and SDF renderers
    */
   private handleRenderResult(result: TextRenderInfo): void {
+    if (result.imageData === undefined && result.layout === undefined) {
+      return;
+    }
     // Host paths on top
     const textRendererType = this._type;
     let width = result.width;
@@ -288,6 +295,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     this._renderInfo = result;
+    this._layoutGenerated = true;
     this.emit('loaded', {
       type: 'text',
       dimensions: {
