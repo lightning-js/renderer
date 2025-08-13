@@ -28,15 +28,11 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
   props: RoundedWithBorderTemplate.props,
   update(node: CoreNode) {
     this.uniformRGBA('u_borderColor', this.props!['border-color']);
-    this.uniform4fa('u_borderWidth', this.props!['border-width'] as Vec4);
+    this.uniform4fa('u_borderWidth', this.props!['border-w'] as Vec4);
 
     this.uniform4fa(
       'u_radius',
-      calcFactoredRadiusArray(
-        this.props!.radius as Vec4,
-        node.width,
-        node.height,
-      ),
+      calcFactoredRadiusArray(this.props!.radius as Vec4, node.w, node.h),
     );
   },
   vertex: `

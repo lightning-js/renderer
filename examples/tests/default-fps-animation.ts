@@ -36,8 +36,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const backgroundNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x1a1a1aff,
     parent: testRoot,
   });
@@ -116,8 +116,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         const animatedNode = renderer.createNode({
           x,
           y,
-          width: 60,
-          height: 60,
+          w: 60,
+          h: 60,
           color,
           parent: backgroundNode,
         });
@@ -136,8 +136,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const rotatingNode = renderer.createNode({
     x: 1500,
     y: 400,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0xffa500ff,
     parent: backgroundNode,
     pivot: 0.5,
@@ -147,8 +147,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const scalingNode = renderer.createNode({
     x: 1650,
     y: 400,
-    width: 80,
-    height: 80,
+    w: 80,
+    h: 80,
     color: 0x9400d3ff,
     parent: backgroundNode,
     pivot: 0.5,

@@ -22,7 +22,6 @@ import {
   type Dimensions,
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
-  Texture,
 } from '@lightningjs/renderer';
 import rockoSvg from '../assets/rocko.svg';
 import lightning from '../assets/lightning.svg';
@@ -72,8 +71,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: curX,
     y: curY,
     src: lightning,
-    height: 25,
-    width: 125,
+    h: 25,
+    w: 125,
     parent: testRoot,
   });
 
@@ -138,7 +137,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
 
     let exception: string | false = false;
-    let dimensions: Dimensions = { width: 0, height: 0 };
+    let dimensions: Dimensions = { w: 0, h: 0 };
     try {
       dimensions = await waitForTxLoaded(imgNode);
     } catch (e: unknown) {
@@ -146,16 +145,16 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       exception = (e as any)?.message ?? 'Unknown';
     }
 
-    imgNode.width = dimensions.width;
-    imgNode.height = dimensions.height;
+    imgNode.w = dimensions.w;
+    imgNode.h = dimensions.h;
 
-    textNode.y = imgNode.y + imgNode.height;
+    textNode.y = imgNode.y + imgNode.h;
     let result = 'Fail';
     let expectedPostfix = '';
     if (
       !exception &&
-      imgNode.width === expectedWidth &&
-      imgNode.height === expectedHeight
+      imgNode.w === expectedWidth &&
+      imgNode.h === expectedHeight
     ) {
       textNode.color = 0x00ff00ff;
       result = 'Pass';
@@ -167,7 +166,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         expectedPostfix = ` (expected ${expectedWidth}x${expectedHeight})`;
       }
     }
-    textNode.text = `${curTest}. Loaded Event Test: ${result} (${imgNode.width}x${imgNode.height})${expectedPostfix}`;
+    textNode.text = `${curTest}. Loaded Event Test: ${result} (${imgNode.w}x${imgNode.h})${expectedPostfix}`;
     curY = textNode.y + FONT_SIZE;
     curTest++;
   }
@@ -190,7 +189,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       exception = (e as any)?.message ?? 'Unknown';
     }
 
-    textNode.y = imgNode.y + imgNode.height;
+    textNode.y = imgNode.y + imgNode.h;
     let result = '';
     if (!exception && failureTestPass) {
       textNode.color = 0x00ff00ff;

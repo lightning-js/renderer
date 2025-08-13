@@ -19,8 +19,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: -100,
     y: -100,
-    width: 2040,
-    height: 1280,
+    w: 2040,
+    h: 1280,
     color: 0xff0000ff, // Red
     parent: testRoot,
     clipping: true,
@@ -42,8 +42,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const childNode = renderer.createNode({
       x: i * childNodeWidth + i * 100,
       y: 300,
-      width: childNodeWidth,
-      height: 300,
+      w: childNodeWidth,
+      h: 300,
       color: 0x00ff00ff, // Green
       parent: containerNode,
     });
@@ -62,7 +62,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       'Container bound: ' + JSON.stringify(containerNode.renderState) + '\n';
 
     for (const node of containerNode.children) {
-       
       status += `${
         (node.children[0] as CoreTextNode)?.text
       } bound: ${JSON.stringify(node.renderState)} \n`;

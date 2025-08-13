@@ -22,15 +22,15 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
 
   const dataNodeCheckBox = renderer.createNode({
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     x: 80,
     y: 200,
     color: 0xff0000ff,
@@ -38,8 +38,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const dataNode = renderer.createNode({
-    width: 505,
-    height: 101,
+    w: 505,
+    h: 101,
     x: 200,
     y: 200,
     src: logo,
@@ -52,8 +52,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const tooLongStringCheckBox = renderer.createNode({
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     x: 80,
     y: 400,
     color: 0xff0000ff,
@@ -61,8 +61,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const tooLongString = renderer.createNode({
-    width: 505,
-    height: 101,
+    w: 505,
+    h: 101,
     x: 200,
     y: 400,
     src: logo,
@@ -74,8 +74,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const textNodeCheckBox = renderer.createNode({
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     x: 80,
     y: 600,
     color: 0xff0000ff,
@@ -85,7 +85,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const textNode = renderer.createTextNode({
     x: 200,
     y: 600,
-    height: 100,
+    h: 100,
     text: 'Hello World',
     fontFamily: 'Ubuntu',
     fontSize: 100,
@@ -98,7 +98,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const testDetailsText = renderer.createTextNode({
     x: 30,
     y: 80,
-    height: 100,
+    h: 100,
     text: 'Boxes should turn green if the inspector is enabled',
     fontFamily: 'Ubuntu',
     fontSize: 50,
@@ -108,7 +108,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const testQparamDetailsText = renderer.createTextNode({
     x: 30,
     y: 800,
-    height: 100,
+    h: 100,
     text: 'Please make sure to run this test with ?inspector=true',
     fontFamily: 'Ubuntu',
     fontSize: 50,

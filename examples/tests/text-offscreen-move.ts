@@ -43,8 +43,8 @@ export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
 
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text Offscreen Move Tests',
   });
 

@@ -85,8 +85,8 @@ const loadKTXData = async (buffer: ArrayBuffer): Promise<TextureData> => {
     data: {
       glInternalFormat: data.glInternalFormat,
       mipmaps,
-      width: data.pixelWidth || 0,
-      height: data.pixelHeight || 0,
+      w: data.pixelWidth || 0,
+      h: data.pixelHeight || 0,
       type: 'ktx',
     },
     premultiplyAlpha: false,
@@ -143,8 +143,8 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
     data: {
       glInternalFormat: pvrFormatEtc1,
       mipmaps: mipmaps,
-      width: data.pixelWidth || 0,
-      height: data.pixelHeight || 0,
+      w: data.pixelWidth || 0,
+      h: data.pixelHeight || 0,
       type: 'pvr',
     },
     premultiplyAlpha: false,

@@ -50,13 +50,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
   const fontSize = 100;
   const yPos = 0;
-  testRoot.width = 1000;
-  testRoot.height = 1000;
+  testRoot.w = 1000;
+  testRoot.h = 1000;
   testRoot.color = 0xffffffff;
 
   const canvasText = renderer.createTextNode({
     y: yPos,
-    maxWidth: testRoot.width,
+    maxWidth: testRoot.w,
     text,
     fontSize,
     fontFamily,
@@ -65,8 +65,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',

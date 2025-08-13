@@ -34,8 +34,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const bg = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -43,8 +43,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const x = renderer.createNode({
     x: 0,
     y: 1080 / 2,
-    width: 1920,
-    height: 4,
+    w: 1920,
+    h: 4,
     color: 0xffffffff,
     parent: testRoot,
     mountY: 0.5,
@@ -53,8 +53,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const y = renderer.createNode({
     x: 1920 / 2,
     y: 0,
-    width: 4,
-    height: 1080,
+    w: 4,
+    h: 1080,
     color: 0xffffffff,
     parent: testRoot,
     mountX: 0.5,
@@ -69,8 +69,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 1920 / 2,
     y: 1080 / 2,
-    width: 500,
-    height: 500,
+    w: 500,
+    h: 500,
     colorBottom: randomColor() * 0xffffffaa,
     colorTop: randomColor() * 0xffffffaa,
     parent: testRoot,
@@ -86,8 +86,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const pivotPoint = renderer.createNode({
     x: pivotX * 500,
     y: pivotY * 500,
-    width: 20,
-    height: 20,
+    w: 20,
+    h: 20,
     color: 0xffffffff,
     parent: node,
     shader: renderer.createShader('RoundedRectangle', {
@@ -97,12 +97,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     mount: 0.5,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+   
   setTimeout(async () => {
     const dimension = node
       .animate(
         {
-          width: 1920,
+          w: 1920,
         },
         {
           duration: 450,

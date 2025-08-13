@@ -321,8 +321,8 @@ export class Stage {
     const rootNode = new CoreNode(this, {
       x: 0,
       y: 0,
-      width: appWidth,
-      height: appHeight,
+      w: appWidth,
+      h: appHeight,
       alpha: 1,
       autosize: false,
       boundsMargin: null,
@@ -807,8 +807,8 @@ export class Stage {
     return {
       x: props.x ?? 0,
       y: props.y ?? 0,
-      width: props.width ?? 0,
-      height: props.height ?? 0,
+      w: props.w ?? 0,
+      h: props.h ?? 0,
       alpha: props.alpha ?? 1,
       autosize: props.autosize ?? false,
       boundsMargin: props.boundsMargin ?? null,

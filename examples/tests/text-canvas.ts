@@ -46,8 +46,8 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  // testRoot.width = 200;
-  // testRoot.height = 200;
+  // testRoot.w = 200;
+  // testRoot.h = 200;
   // testRoot.color = 0xffffffff;
 
   const nodes: any[] = [];

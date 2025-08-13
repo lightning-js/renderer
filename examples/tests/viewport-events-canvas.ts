@@ -50,8 +50,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect = renderer.createNode({
     x: 1920 / 2 - (1920 * 0.75) / 2,
     y: 1080 / 2 - (1080 * 0.75) / 2,
-    width: 1440,
-    height: 810,
+    w: 1440,
+    h: 810,
     color: 0x000000ff,
     clipping: true,
     parent: testRoot,
@@ -61,8 +61,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     x: 500,
     y: 305,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     pivot: 0,
     text: 'red',
@@ -93,8 +93,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     x: 1920 / 2 - 200,
     y: 100,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0x0000ffff,
     pivot: 0,
     text: 'blue',
@@ -173,7 +173,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       .waitUntilStopped();
 
     if (runAnimation) {
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+       
       setTimeout(animate, 2000);
     }
   };
@@ -184,7 +184,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+         
         animate();
       }
     }

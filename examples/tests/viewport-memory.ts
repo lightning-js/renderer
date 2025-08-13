@@ -16,8 +16,8 @@ export default async function test(settings: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: 200, // Offset from the left
     y: 200,
-    width: 2000,
-    height: 2000,
+    w: 2000,
+    h: 2000,
     color: 0x000000ff, // Black
     parent: testRoot,
     clipping: true,
@@ -26,8 +26,8 @@ export default async function test(settings: ExampleSettings) {
   const redCircle = renderer.createNode({
     x: 0,
     y: 0,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0xff0000ff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
@@ -38,8 +38,8 @@ export default async function test(settings: ExampleSettings) {
   const blueCircle = renderer.createNode({
     x: 150,
     y: 0,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
@@ -50,8 +50,8 @@ export default async function test(settings: ExampleSettings) {
   const yellowCircle = renderer.createNode({
     x: 300,
     y: 0,
-    width: 100,
-    height: 100,
+    w: 100,
+    h: 100,
     color: 0xffff00ff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 50,
@@ -83,8 +83,8 @@ export default async function test(settings: ExampleSettings) {
       const borderNode = renderer.createNode({
         x: totalWidth - randomWidth - gap, // Adjust position by subtracting the gap
         y: rowIndex * 100,
-        width: randomWidth + gap, // Width of the black rectangle to include the gap
-        height: 100, // Height of the border
+        w: randomWidth + gap, // Width of the black rectangle to include the gap
+        h: 100, // Height of the border
         color: 0x000000ff, // Black
         parent: containerNode,
         clipping: true,
@@ -94,8 +94,8 @@ export default async function test(settings: ExampleSettings) {
       const childNode = renderer.createNode({
         x: 5, // Offset for the green node to mimic a border
         y: 5, // Offset for the green node to mimic a border
-        width: randomWidth, // Width of the green node
-        height: 90, // Slightly smaller height
+        w: randomWidth, // Width of the green node
+        h: 90, // Slightly smaller height
         color: 0x00ff00ff, // Green
         parent: borderNode,
         shader: renderer.createShader('RoundedRectangle', {

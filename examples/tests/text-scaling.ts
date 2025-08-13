@@ -31,8 +31,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     parent: testRoot,
     title: 'Text Scaling',
   });
@@ -78,14 +78,14 @@ function generateScalingTest(
         });
 
         const dimensions = {
-          width: 74,
-          height: 51,
+          w: 74,
+          h: 51,
         };
 
         // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
+          x: 100 - dimensions.w / 2,
+          y: 100 - dimensions.h / 2,
         };
 
         baselineNode.x = position.x;
@@ -118,7 +118,7 @@ function generateScalingTest(
           renderer.createTextNode({
             ...nodeProps,
             ...position,
-            maxWidth: dimensions.width,
+            maxWidth: dimensions.w,
             pivot: 0.5,
             [scaleProp]: 2,
           }),
@@ -126,8 +126,8 @@ function generateScalingTest(
           renderer.createTextNode({
             ...nodeProps,
             ...position,
-            maxWidth: dimensions.width,
-            maxHeight: dimensions.height,
+            maxWidth: dimensions.w,
+            maxHeight: dimensions.h,
             pivot: 0.5,
             [scaleProp]: 2,
           }),
@@ -150,8 +150,8 @@ function generateScalingTest(
         });
 
         const dimensions = {
-          width: 74,
-          height: 51,
+          w: 74,
+          h: 51,
         };
 
         return await constructTestRow({ renderer, rowNode }, [
@@ -177,15 +177,15 @@ function generateScalingTest(
           "pivot 0.5 ->\ncontain -> 'width'",
           renderer.createTextNode({
             ...nodeProps,
-            maxWidth: dimensions.width,
+            maxWidth: dimensions.w,
             pivot: 0.5,
             [scaleProp]: 2,
           }),
           "pivot 0.5 ->\ncontain -> 'both'",
           renderer.createTextNode({
             ...nodeProps,
-            maxWidth: dimensions.width,
-            maxHeight: dimensions.height,
+            maxWidth: dimensions.w,
+            maxHeight: dimensions.h,
             pivot: 0.5,
             [scaleProp]: 2,
           }),
@@ -205,14 +205,14 @@ function generateScalingTest(
           ...nodeProps,
         });
         const dimensions = {
-          width: 74,
-          height: 51,
+          w: 74,
+          h: 51,
         };
 
         // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
+          x: 100 - dimensions.w / 2,
+          y: 100 - dimensions.h / 2,
         };
 
         baselineNode.x = position.x;
@@ -245,7 +245,7 @@ function generateScalingTest(
           renderer.createTextNode({
             ...nodeProps,
             ...position,
-            maxWidth: dimensions.width,
+            maxWidth: dimensions.w,
             pivot: 0.5,
             [scaleProp]: 2,
           }),
@@ -253,8 +253,8 @@ function generateScalingTest(
           renderer.createTextNode({
             ...nodeProps,
             ...position,
-            maxWidth: dimensions.width,
-            maxHeight: dimensions.height,
+            maxWidth: dimensions.w,
+            maxHeight: dimensions.h,
             pivot: 0.5,
             [scaleProp]: 2,
           }),

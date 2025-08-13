@@ -56,15 +56,15 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       texture: spriteMapTexture,
       x: x,
       y: 0,
-      width: 100,
-      height: 150,
+      w: 100,
+      h: 150,
     });
 
     renderer.createNode({
       x: 20,
       y: y + 80,
-      width: 100,
-      height: 150,
+      w: 100,
+      h: 150,
       texture: character,
       parent: testRoot,
     });

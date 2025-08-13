@@ -824,8 +824,8 @@ export class RendererMain extends EventEmitter {
 
     this.stage.renderer.updateViewport();
 
-    this.root.width = appWidth;
-    this.root.height = appHeight;
+    this.root.w = appWidth;
+    this.root.h = appHeight;
     this.stage.updateViewportBounds();
   }
 

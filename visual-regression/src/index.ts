@@ -294,10 +294,17 @@ async function runTest(browserType: 'chromium') {
 
       // Ensure clip dimensions are integers
       if (options.clip) {
-        for (const key of ['x', 'y', 'width', 'height']) {
-          options.clip[key as keyof typeof options.clip] = Math.round(
-            options.clip[key as keyof typeof options.clip],
-          );
+        for (const key of ['x', 'y', 'w', 'h']) {
+          // remap 'w' and 'h' to 'width' and 'height'
+          if (key === 'w' || key === 'h') {
+            options.clip[key === 'w' ? 'width' : 'height'] = Math.round(
+              options.clip[key as keyof typeof options.clip],
+            );
+          } else {
+            options.clip[key as keyof typeof options.clip] = Math.round(
+              options.clip[key as keyof typeof options.clip],
+            );
+          }
         }
       }
 

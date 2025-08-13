@@ -28,13 +28,13 @@ export interface RenderTextureProps {
    * WebGL Texture width
    * @default 256
    */
-  width?: number;
+  w?: number;
 
   /**
    * WebGL Texture height
    * @default 256
    */
-  height?: number;
+  h?: number;
 }
 
 export class RenderTexture extends Texture {
@@ -47,20 +47,20 @@ export class RenderTexture extends Texture {
     this.props = RenderTexture.resolveDefaults(props || {});
   }
 
-  get width() {
-    return this.props.width;
+  get w() {
+    return this.props.w;
   }
 
-  set width(value: number) {
-    this.props.width = value;
+  set w(value: number) {
+    this.props.w = value;
   }
 
-  get height() {
-    return this.props.height;
+  get h() {
+    return this.props.h;
   }
 
-  set height(value: number) {
-    this.props.height = value;
+  set h(value: number) {
+    this.props.h = value;
   }
 
   override async getTextureSource(): Promise<TextureData> {
@@ -76,8 +76,8 @@ export class RenderTexture extends Texture {
     props: RenderTextureProps,
   ): Required<RenderTextureProps> {
     return {
-      width: props.width || 256,
-      height: props.height || 256,
+      w: props.w || 256,
+      h: props.h || 256,
     };
   }
 

@@ -63,14 +63,14 @@ export class MemMonitor extends Component {
 
     this.interval = props.interval || 500;
     this.node.color = 0xffffffaa;
-    this.node.width = 400;
-    this.node.height = BAR_HEIGHT + MARGIN * 2;
+    this.node.w = 400;
+    this.node.h = BAR_HEIGHT + MARGIN * 2;
 
     this.bar = renderer.createNode({
-      x: this.node.width - BAR_WIDTH - MARGIN,
+      x: this.node.w - BAR_WIDTH - MARGIN,
       y: MARGIN,
-      width: BAR_WIDTH,
-      height: BAR_HEIGHT,
+      w: BAR_WIDTH,
+      h: BAR_HEIGHT,
       parent: this.node,
       color: 0x00000000,
     });
@@ -78,8 +78,8 @@ export class MemMonitor extends Component {
     this.baseMemBar = renderer.createNode({
       x: 0,
       y: 0,
-      width: BAR_WIDTH,
-      height: 0,
+      w: BAR_WIDTH,
+      h: 0,
       parent: this.bar,
       color: 0x808080ff,
     });
@@ -87,8 +87,8 @@ export class MemMonitor extends Component {
     this.memUsedBar = renderer.createNode({
       x: 0,
       y: 0,
-      width: BAR_WIDTH,
-      height: 0,
+      w: BAR_WIDTH,
+      h: 0,
       parent: this.bar,
       color: 0x0000ffff,
     });
@@ -96,19 +96,19 @@ export class MemMonitor extends Component {
     this.renderableMemBar = renderer.createNode({
       x: 0,
       y: 0,
-      width: BAR_WIDTH,
-      height: 0,
+      w: BAR_WIDTH,
+      h: 0,
       parent: this.bar,
       color: 0xff00ffff,
     });
 
     // Bar Frame
     renderer.createNode({
-      width: BAR_WIDTH,
-      height: BAR_HEIGHT,
+      w: BAR_WIDTH,
+      h: BAR_HEIGHT,
       color: 0x00000000,
       shader: renderer.createShader('Border', {
-        width: 4,
+        w: 4,
         color: 0x000000cc,
       }),
       parent: this.bar,
@@ -129,8 +129,8 @@ export class MemMonitor extends Component {
     this.criticalTick = renderer.createNode({
       x: BAR_WIDTH / 2,
       y: 0,
-      width: BAR_WIDTH * 2,
-      height: 2,
+      w: BAR_WIDTH * 2,
+      h: 2,
       parent: this.bar,
       color: 0xff0000ff,
       mount: 0.5,
@@ -151,16 +151,15 @@ export class MemMonitor extends Component {
     this.targetTick = renderer.createNode({
       x: BAR_WIDTH / 2,
       y: 0,
-      width: BAR_WIDTH * 2,
-      height: 2,
+      w: BAR_WIDTH * 2,
+      h: 2,
       parent: this.bar,
       color: 0x000000ff,
       mount: 0.5,
     });
 
     const numLines = 11;
-    const infoTextY =
-      this.node.height - MARGIN - INFO_TEXT_LINEHEIGHT * numLines;
+    const infoTextY = this.node.h - MARGIN - INFO_TEXT_LINEHEIGHT * numLines;
 
     this.criticalInfoText = renderer.createTextNode({
       x: MARGIN,
@@ -259,14 +258,13 @@ export class MemMonitor extends Component {
       0,
     );
 
-    this.baseMemBar.height = BAR_HEIGHT * baseUsedFraction;
-    this.baseMemBar.y = BAR_HEIGHT - this.baseMemBar.height;
-    this.memUsedBar.height = BAR_HEIGHT * memUsedFraction;
-    this.memUsedBar.y =
-      BAR_HEIGHT - this.memUsedBar.height - this.baseMemBar.height;
-    this.renderableMemBar.height = BAR_HEIGHT * renderableMemoryFraction;
+    this.baseMemBar.h = BAR_HEIGHT * baseUsedFraction;
+    this.baseMemBar.y = BAR_HEIGHT - this.baseMemBar.h;
+    this.memUsedBar.h = BAR_HEIGHT * memUsedFraction;
+    this.memUsedBar.y = BAR_HEIGHT - this.memUsedBar.h - this.baseMemBar.h;
+    this.renderableMemBar.h = BAR_HEIGHT * renderableMemoryFraction;
     this.renderableMemBar.y =
-      BAR_HEIGHT - this.renderableMemBar.height - this.baseMemBar.height;
+      BAR_HEIGHT - this.renderableMemBar.h - this.baseMemBar.h;
 
     this.memUsedText.text = `
 Memory Used

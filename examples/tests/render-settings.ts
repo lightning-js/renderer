@@ -51,7 +51,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     fontFamily: 'Ubuntu-ssdf',
     x: 10,
     y: 810,
-    maxWidth: renderer.root.width - 20,
+    maxWidth: renderer.root.w - 20,
     parent: testRoot,
   });
 
@@ -67,8 +67,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect1 = renderer.createNode({
     x: 1920 / 2 - (1920 * 0.75) / 2,
     y: 1080 / 2 - (1080 * 0.45) / 2,
-    width: 1000,
-    height: 410,
+    w: 1000,
+    h: 410,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -76,8 +76,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const screen = renderer.createNode({
     x: 50,
     y: 50,
-    width: boundaryRect1.width - 100,
-    height: boundaryRect1.height - 100,
+    w: boundaryRect1.w - 100,
+    h: boundaryRect1.h - 100,
     parent: boundaryRect1,
     color: 0x222222ff,
   });
@@ -85,8 +85,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect2 = renderer.createNode({
     x: 50,
     y: 50,
-    width: 1000 - 100,
-    height: 410 - 250,
+    w: 1000 - 100,
+    h: 410 - 250,
     color: 0x222222ff,
     parent: boundaryRect1,
   });
@@ -95,8 +95,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 380,
     y: 50,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     pivot: 0,
     text: 'red',
@@ -127,7 +127,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   yPos += 40;
 
   const appSize = renderer.createTextNode({
-    text: `App Size: ${renderer.root.width}x${renderer.root.height}`,
+    text: `App Size: ${renderer.root.w}x${renderer.root.h}`,
     fontSize: 30,
     x: 10,
     y: yPos,
@@ -157,8 +157,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   yPos += 40;
 
   const fpsCheckBox = renderer.createNode({
-    width: 30,
-    height: 30,
+    w: 30,
+    h: 30,
     x: 10,
     y: yPos,
     color: 0xff0000ff,
@@ -176,8 +176,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   yPos += 40;
 
   const inspectorCheckBox = renderer.createNode({
-    width: 30,
-    height: 30,
+    w: 30,
+    h: 30,
     x: 10,
     y: yPos,
     color: 0xff0000ff,
@@ -187,7 +187,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 50,
     y: yPos,
-    height: 100,
+    h: 100,
     text: 'Inspector enabled?',
     fontFamily: 'Ubuntu-ssdf',
     fontSize: 30,
@@ -278,7 +278,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           clearColor: 0xff6f00ff,
           inspector: false,
         });
-        info.width = renderer.root.width - 20;
+        info.w = renderer.root.w - 20;
         info.text =
           'PhysicalPixelRatio: 0.5. Pixels should be 960x540. Inspector disabled. ClearColor changed to orange.';
         break;
@@ -291,7 +291,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           devicePhysicalPixelRatio: ppr,
           clearColor: 0x00000000,
         });
-        info.width = renderer.root.width - 20;
+        info.w = renderer.root.w - 20;
         info.text =
           'Pixels should be 366x666. redText should be out of bounds. Default clearColor, LogicalPixelRatio and PhysicalPixelRatio';
         break;
@@ -333,8 +333,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         intervalID = setInterval(() => {
           screen.color = 0xffffffff;
           screen.texture = renderer.createTexture('NoiseTexture', {
-            width: 500,
-            height: 500,
+            w: 500,
+            h: 500,
             cacheId: Math.floor(Math.random() * 100000),
           });
           screen.textureOptions.preload = true;
@@ -349,7 +349,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     redPosition.text = `Text X Position: ${redText.x}`;
-    appSize.text = `App Size: ${renderer.root.width}x${renderer.root.height}`;
+    appSize.text = `App Size: ${renderer.root.w}x${renderer.root.h}`;
     pixelSize.text = `Pixels: ${renderer.canvas.width * ppr}x${
       renderer.canvas.height * ppr
     }`;

@@ -95,15 +95,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // ignore 1x1 pixel textures
-    if (dimensions.width > 1 && dimensions.height > 1) {
+    if (dimensions.w > 1 && dimensions.h > 1) {
       this.emit('loaded', {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
     }
 
-    this.width = this._renderInfo.width;
-    this.height = this._renderInfo.height;
+    this.w = this._renderInfo.width;
+    this.h = this._renderInfo.height;
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -202,8 +202,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.props.width = width;
-      this.props.height = height;
+      this.props.w = width;
+      this.props.h = height;
       this.setUpdateType(UpdateType.Local);
     }
 
@@ -211,8 +211,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: width,
-        height: height,
+        w: width,
+        h: height,
       },
     } satisfies NodeTextLoadedPayload);
   }
@@ -255,8 +255,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         worldAlpha: this.worldAlpha,
         globalTransform: this.globalTransform!.getFloatArr(),
         clippingRect: this.clippingRect,
-        width: this.props.width,
-        height: this.props.height,
+        width: this.props.w,
+        height: this.props.h,
         parentHasRenderTexture: this.parentHasRenderTexture,
         framebufferDimensions:
           this.parentHasRenderTexture === true
