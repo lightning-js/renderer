@@ -22,7 +22,6 @@ import {
   type Dimensions,
   type NodeLoadedEventHandler,
   type NodeFailedEventHandler,
-  Texture,
 } from '@lightningjs/renderer';
 import rockoSvg from '../assets/rocko.svg';
 import lightning from '../assets/lightning.svg';
@@ -147,7 +146,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     imgNode.w = dimensions.w;
-    imgNode.h = dimensions.height;
+    imgNode.h = dimensions.h;
 
     textNode.y = imgNode.y + imgNode.h;
     let result = 'Fail';

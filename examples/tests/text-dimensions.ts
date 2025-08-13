@@ -132,7 +132,7 @@ export default async function test(settings: ExampleSettings) {
     mutations[i]?.();
     indexInfo.text = (i + 1).toString();
     const dimensions = await waitPromise;
-    textBg.w = dimensions.width;
+    textBg.w = dimensions.w;
     textBg.h = dimensions.h;
     return true;
   }

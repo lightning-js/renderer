@@ -34,7 +34,7 @@ export default async function test({
     w: 200,
     h: 200,
     color: 0xff0000ff,
-    shader: renderer.createShader('Border', { width: 1 }),
+    shader: renderer.createShader('Border', { w: 1 }),
     parent: testRoot,
   });
 
@@ -44,7 +44,7 @@ export default async function test({
     w: 200,
     h: 200,
     color: 0xff0000ff,
-    shader: renderer.createShader('Border', { width: 30 }),
+    shader: renderer.createShader('Border', { w: 30 }),
     parent: testRoot,
   });
 
