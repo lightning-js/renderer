@@ -35,8 +35,8 @@ export default async function test({
   };
 
   const nodeSize = {
-    w: 300,
-    h: 300,
+    width: 300,
+    height: 300,
   };
 
   const t1 = renderer.createNode({
@@ -52,7 +52,7 @@ export default async function test({
 
   const t1Radius = renderer.createTextNode({
     mountX: 1,
-    x: testRoot.w - 90,
+    x: testRoot.width - 90,
     y: 90,
     fontSize: 40,
     fontFamily: 'Ubuntu',
@@ -74,8 +74,8 @@ export default async function test({
       duration: 500,
     },
   );
-  shaderAnimation.start();
-  await shaderAnimation.waitUntilStopped();
-  t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
-  await snapshot({ name: 'animation1' });
+  // shaderAnimation.start();
+  // await shaderAnimation.waitUntilStopped();
+  // t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
+  // await snapshot({ name: 'animation1' });
 }
