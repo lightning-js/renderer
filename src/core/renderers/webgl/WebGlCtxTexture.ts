@@ -167,8 +167,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     if (
       (typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap) ||
       tdata instanceof ImageData ||
-      // not using typeof HTMLImageElement due to web worker
-      isHTMLImageElement(tdata)
+      // not using typeof HTMLI mageElement due to web worker
+      isHTMLImageElement(tdata) === true
     ) {
       w = tdata.width;
       h = tdata.height;

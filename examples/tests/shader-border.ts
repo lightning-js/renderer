@@ -104,7 +104,7 @@ export default async function test({
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       radius: 10,
-      'border-width': 1,
+      'border-w': 1,
     }),
     parent: testRoot,
   });
@@ -129,7 +129,7 @@ export default async function test({
     h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
-      'border-width': 10,
+      'border-w': 10,
       'border-left': 20,
       'border-right': 20,
       radius: 50,
@@ -158,7 +158,7 @@ export default async function test({
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'top-left': 20,
-      'border-width': 1,
+      'border-w': 1,
     }),
     parent: testRoot,
   });
@@ -171,7 +171,7 @@ export default async function test({
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'top-right': 20,
-      'border-width': 1,
+      'border-w': 1,
     }),
     parent: testRoot,
   });
@@ -184,7 +184,7 @@ export default async function test({
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'bottom-right': 20,
-      'border-width': 1,
+      'border-w': 1,
     }),
     parent: testRoot,
   });
@@ -197,7 +197,7 @@ export default async function test({
     color: 0xff9900ff,
     shader: renderer.createShader('RoundedWithBorderAndShadow', {
       'bottom-left': 20,
-      'border-width': 1,
+      'border-w': 1,
     }),
     parent: testRoot,
   });

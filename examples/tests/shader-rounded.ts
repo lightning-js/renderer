@@ -100,7 +100,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
       'top-left': 20,
-      'border-width': 10,
+      'border-w': 10,
     }),
     parent: testRoot,
   });
@@ -125,7 +125,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     h: 200,
     color: 0x0000ffff,
     shader: renderer.createShader('RoundedWithBorder', {
-      'border-width': 10,
+      'border-w': 10,
       'border-left': 20,
       'border-right': 20,
       radius: 50,

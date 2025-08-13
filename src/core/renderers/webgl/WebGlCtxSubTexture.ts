@@ -60,18 +60,18 @@ export class WebGlCtxSubTexture extends WebGlCtxTexture {
       | HTMLImageElement
       | null,
   ): Dimensions {
-    if (!data) {
+    if (data === null) {
       return { w: 0, h: 0 };
     }
 
     // Check for standard web API objects first (most common case)
     // These use width/height properties: ImageBitmap, ImageData, HTMLImageElement
-    if (this.hasWidthHeight(data)) {
+    if (this.hasWidthHeight(data) === true) {
       return { w: data.width, h: data.height };
     }
 
     // Check for internal objects that use w/h properties: SubTextureProps, CompressedData
-    if (this.hasWH(data)) {
+    if (this.hasWH(data) === true) {
       return { w: data.w, h: data.h };
     }
 

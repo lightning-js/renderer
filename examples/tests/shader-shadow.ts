@@ -76,7 +76,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       'shadow-x': 50,
       'shadow-spread': 50,
       'shadow-blur': 100,
-      'border-width': 20,
+      'border-w': 20,
     }),
     parent: node,
   });
