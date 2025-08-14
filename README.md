@@ -131,3 +131,7 @@ await stage.loadFont('sdf', {
 ```
 
 For more information see [Font Loading](./docs/fontLoading.md)
+
+## Migration Guide
+
+Upgrading from Lightning 3 v2.x? See the [Migration Guide](./docs/migration-2x-to-3.0.md) for detailed information about breaking changes and how to update your code.
