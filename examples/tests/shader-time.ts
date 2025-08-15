@@ -7,8 +7,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 90,
     y: 90,
-    width: 90,
-    height: 90,
+    w: 90,
+    h: 90,
     color: 0xff0000ff,
     shader: renderer.createShader('Spinner'),
     parent: testRoot,
@@ -17,8 +17,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 290,
     y: 90,
-    width: 90,
-    height: 90,
+    w: 90,
+    h: 90,
     color: 0xff0000ff,
     shader: renderer.createShader('Spinner', {
       clockwise: false,
@@ -29,8 +29,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 490,
     y: 90,
-    width: 90,
-    height: 90,
+    w: 90,
+    h: 90,
     color: 0xff0000ff,
     shader: renderer.createShader('Spinner', {
       period: 0.4,
