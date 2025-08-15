@@ -1672,6 +1672,9 @@ export class CoreNode extends EventEmitter {
     this.destroyed = true;
     this.unloadTexture();
     this.isRenderable = false;
+    if (this.hasShaderTimeFn === true) {
+      this.stage.untrackTimedNode(this);
+    }
 
     // Kill children
     while (this.children.length > 0) {
@@ -1733,7 +1736,7 @@ export class CoreNode extends EventEmitter {
       framebufferDimensions: this.parentHasRenderTexture
         ? this.parentFramebufferDimensions
         : null,
-    time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
+      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
     });
   }
 
@@ -2303,6 +2306,12 @@ export class CoreNode extends EventEmitter {
       this.hasShaderUpdater = shader.update !== undefined;
       this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
+    }
+
+    if (this.hasShaderTimeFn === true) {
+      this.stage.trackTimedNode(this);
+    } else {
+      this.stage.untrackTimedNode(this);
     }
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable | UpdateType.RecalcUniforms);

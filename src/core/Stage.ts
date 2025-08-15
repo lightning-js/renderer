@@ -135,7 +135,7 @@ export class Stage {
   lastFrameTime = 0;
   currentFrameTime = 0;
   elapsedTime = 0;
-  private timedNodes = 0;
+  private timedNodes: CoreNode[] = [];
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
@@ -511,9 +511,13 @@ export class Stage {
       this.renderRequested = false;
     }
 
-    if (this.timedNodes > 0) {
-      this.timedNodes = 0;
-      this.requestRender();
+    if (this.timedNodes.length > 0) {
+      for (let key in this.timedNodes) {
+        if (this.timedNodes[key]!.isRenderable === true) {
+          this.requestRender();
+          break;
+        }
+      }
     }
   }
 
@@ -589,9 +593,6 @@ export class Stage {
     // If the node is renderable and has a loaded texture, render it
     if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
-      if (node.hasShaderTimeFn === true) {
-        this.timedNodes++;
-      }
     }
 
     for (let i = 0; i < node.children.length; i++) {
@@ -778,6 +779,30 @@ export class Stage {
       }
     }
     return topNode || null;
+  }
+
+  /**
+   * add node to timeNodes arrays
+   * @param node
+   * @returns
+   */
+  trackTimedNode(node: CoreNode) {
+    if (this.timedNodes[node.id] !== undefined) {
+      return;
+    }
+    this.timedNodes[node.id] = node;
+  }
+
+  /**
+   * remove node from timeNodes arrays
+   * @param node
+   * @returns
+   */
+  untrackTimedNode(node: CoreNode) {
+    if (this.timedNodes[node.id] === undefined) {
+      return;
+    }
+    delete this.timedNodes[node.id];
   }
 
   /**
