@@ -1505,11 +1505,7 @@ export class CoreNode extends EventEmitter {
    * @param isRenderable - The new renderable state
    */
   setRenderable(isRenderable: boolean) {
-    const previousState = this.isRenderable;
     this.isRenderable = isRenderable;
-    if (previousState === false && isRenderable === true) {
-      this.updateType |= UpdateType.RecalcUniforms;
-    }
     if (
       isRenderable === true &&
       this.stage.calculateTextureCoord === true &&
