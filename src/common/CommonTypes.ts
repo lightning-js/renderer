@@ -31,8 +31,8 @@ import type { CoreNodeRenderState } from '../core/CoreNode.js';
  * Represents a width and height.
  */
 export interface Dimensions {
-  width: number;
-  height: number;
+  w: number;
+  h: number;
 }
 
 /**

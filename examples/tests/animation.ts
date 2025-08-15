@@ -32,8 +32,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -41,8 +41,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const animatableNode = renderer.createNode({
     x: 0,
     y: 300,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xffffffff,
     parent: node,
   });
@@ -132,7 +132,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
     currentAnimation = animatableNode.animate(
       {
-        x: renderer.settings.appWidth - animatableNode.width,
+        x: renderer.settings.appWidth - animatableNode.w,
       },
       animationSettings, // Remove the unnecessary assertion
     );

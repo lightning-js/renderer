@@ -36,8 +36,8 @@ const PADDING = 20;
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Clipping Tests',
   });
 
@@ -50,8 +50,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP LEFT
         const clipContainerTopLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -59,8 +59,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerTopLeft,
         });
@@ -70,8 +70,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP RIGHT
         const clipContainerTopRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -79,8 +79,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerTopRight,
         });
@@ -90,8 +90,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM RIGHT
         const clipContainerBottomRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -99,8 +99,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 100,
           y: 100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerBottomRight,
         });
@@ -110,8 +110,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM LEFT
         const clipContainerBottomLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -119,8 +119,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: 100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerBottomLeft,
         });
@@ -130,8 +130,8 @@ export default async function test(settings: ExampleSettings) {
         // ALL SIDES
         const clipAllSides = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -139,8 +139,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE * 2,
-          height: SQUARE_SIZE * 2,
+          w: SQUARE_SIZE * 2,
+          h: SQUARE_SIZE * 2,
           src: robotImg,
           parent: clipAllSides,
         });
@@ -156,8 +156,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP LEFT
         const clipContainerTopLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -168,8 +168,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerTopLeft2,
         });
@@ -179,8 +179,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP RIGHT
         const clipContainerTopRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -191,8 +191,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerTopRight2,
         });
@@ -202,8 +202,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM RIGHT
         const clipContainerBottomRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -214,8 +214,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 100,
           y: 100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerBottomRight2,
         });
@@ -225,8 +225,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM LEFT
         const clipContainerBottomLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -237,8 +237,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: 100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerBottomLeft2,
         });
@@ -248,8 +248,8 @@ export default async function test(settings: ExampleSettings) {
         // ALL SIDES
         const clipAllSides = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -260,13 +260,13 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE * 2,
-          height: SQUARE_SIZE * 2,
+          w: SQUARE_SIZE * 2,
+          h: SQUARE_SIZE * 2,
           src: robotImg,
           parent: clipAllSides2,
         });
 
-        rowNode.height = SQUARE_SIZE;
+        rowNode.h = SQUARE_SIZE;
         return SQUARE_SIZE;
       },
     },
@@ -278,8 +278,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP LEFT
         const clipContainerTopLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -287,8 +287,8 @@ export default async function test(settings: ExampleSettings) {
         const clipContainerTopLeft2 = renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0xff0000ff,
           src: robotImg,
           parent: clipContainerTopLeft,
@@ -297,8 +297,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 50,
           y: 50,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           src: robotImg,
           parent: clipContainerTopLeft2,
         });
@@ -308,8 +308,8 @@ export default async function test(settings: ExampleSettings) {
         /// TOP RIGHT
         const clipContainerTopRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -317,8 +317,8 @@ export default async function test(settings: ExampleSettings) {
         const clipContainerTopRight2 = renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0xff0000ff,
           src: robotImg,
           parent: clipContainerTopRight,
@@ -327,8 +327,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 150,
           y: 50,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           src: robotImg,
           parent: clipContainerTopRight2,
         });
@@ -338,8 +338,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM RIGHT
         const clipContainerBottomRight = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -347,8 +347,8 @@ export default async function test(settings: ExampleSettings) {
         const clipContainerBottomRight2 = renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0xff0000ff,
           src: robotImg,
           parent: clipContainerBottomRight,
@@ -357,8 +357,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 150,
           y: 150,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           src: robotImg,
           parent: clipContainerBottomRight2,
         });
@@ -368,8 +368,8 @@ export default async function test(settings: ExampleSettings) {
         /// BOTTOM LEFT
         const clipContainerBottomLeft = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -377,8 +377,8 @@ export default async function test(settings: ExampleSettings) {
         const clipContainerBottomLeft2 = renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0xff0000ff,
           src: robotImg,
           parent: clipContainerBottomLeft,
@@ -387,8 +387,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 50,
           y: 150,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           src: robotImg,
           parent: clipContainerBottomLeft2,
         });
@@ -398,8 +398,8 @@ export default async function test(settings: ExampleSettings) {
         // ALL SIDES
         const clipContainerAllSides = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0x00ff00ff,
           parent: rowNode,
           clipping: true,
@@ -407,8 +407,8 @@ export default async function test(settings: ExampleSettings) {
         const clipContainerAllSides2 = renderer.createNode({
           x: -100,
           y: -100,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           color: 0xff0000ff,
           src: robotImg,
           parent: clipContainerAllSides,
@@ -417,8 +417,8 @@ export default async function test(settings: ExampleSettings) {
         renderer.createNode({
           x: 50,
           y: 50,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           src: robotImg,
           parent: clipContainerAllSides2,
         });
@@ -433,15 +433,15 @@ export default async function test(settings: ExampleSettings) {
 
         const parent = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent: rowNode,
           clipping: true,
         });
 
         renderer.createTextNode({
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent,
           fontFamily: 'Ubuntu',
           fontSize: 40,
@@ -461,15 +461,15 @@ export default async function test(settings: ExampleSettings) {
 
         const parent = renderer.createNode({
           x: curX,
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent: rowNode,
           clipping: true,
         });
 
         renderer.createTextNode({
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent,
           fontFamily: 'Ubuntu',
           fontSize: 40,
@@ -487,8 +487,8 @@ export default async function test(settings: ExampleSettings) {
         let curX = 0;
 
         const containerProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent: rowNode,
           color: 0x00ff00ff,
           clipping: true,
@@ -498,15 +498,15 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: SQUARE_SIZE / 2,
           y: SQUARE_SIZE / 2,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           clipping: true,
           // rotation: Math.PI / 4
         } satisfies Partial<INodeProps>;
 
         const clippingChildProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           mount: 0.5,
           src: robotImg,
         } satisfies Partial<INodeProps>;
@@ -539,7 +539,7 @@ export default async function test(settings: ExampleSettings) {
           }),
         );
 
-        curX += dim.width + PADDING;
+        curX += dim.w + PADDING;
 
         const container2 = renderer.createNode({
           ...containerProps,
@@ -559,7 +559,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        curX += dim.width + PADDING;
+        curX += dim.w + PADDING;
 
         const container3 = renderer.createNode({
           ...containerProps,
@@ -580,7 +580,7 @@ export default async function test(settings: ExampleSettings) {
 
         curX += SQUARE_SIZE + PADDING;
 
-        curX += dim.width + PADDING;
+        curX += dim.w + PADDING;
 
         const container4 = renderer.createNode({
           ...containerProps,
@@ -608,8 +608,8 @@ export default async function test(settings: ExampleSettings) {
         let curX = 0;
 
         const containerProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           parent: rowNode,
           color: 0x00ff00ff,
           clipping: true,
@@ -619,14 +619,14 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: SQUARE_SIZE / 2,
           y: SQUARE_SIZE / 2,
-          width: SQUARE_SIZE / 2,
-          height: SQUARE_SIZE / 2,
+          w: SQUARE_SIZE / 2,
+          h: SQUARE_SIZE / 2,
           clipping: true,
         } satisfies Partial<INodeProps>;
 
         const clippingChildProps = {
-          width: SQUARE_SIZE,
-          height: SQUARE_SIZE,
+          w: SQUARE_SIZE,
+          h: SQUARE_SIZE,
           mount: 0.5,
           src: robotImg,
         } satisfies Partial<INodeProps>;
@@ -659,7 +659,7 @@ export default async function test(settings: ExampleSettings) {
           }),
         );
 
-        curX += dimensions.width + PADDING;
+        curX += dimensions.w + PADDING;
 
         const container2 = renderer.createNode({
           ...containerProps,

@@ -17,8 +17,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: 10,
     y: 100,
-    width: 1000,
-    height: 600,
+    w: 1000,
+    h: 600,
     color: 0xff0000ff, // Red
     parent: testRoot,
     strictBounds: false,
@@ -40,8 +40,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const childNode = renderer.createNode({
       x: i * childNodeWidth + i * 100,
       y: 100,
-      width: childNodeWidth,
-      height: 300,
+      w: childNodeWidth,
+      h: 300,
       color: 0x00ff00ff, // Green
       parent: containerNode,
     });

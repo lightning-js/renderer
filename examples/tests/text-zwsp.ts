@@ -46,14 +46,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const fontFamily = 'Ubuntu';
   const fontSize = 40;
   const yPos = 0;
-  testRoot.width = 500;
-  testRoot.height = 500;
+  testRoot.w = 500;
+  testRoot.h = 500;
   testRoot.clipping = true;
   testRoot.color = 0xffffffff;
 
   const canvasText = renderer.createTextNode({
     y: yPos,
-    maxWidth: testRoot.width,
+    maxWidth: testRoot.w,
     fontSize,
     fontFamily,
     color: 0xff0000ff,
@@ -63,7 +63,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   const sdfText = renderer.createTextNode({
     y: yPos,
-    maxWidth: testRoot.width,
+    maxWidth: testRoot.w,
     fontSize,
     fontFamily,
     color: 0x0000ff77,
@@ -71,8 +71,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     zIndex: 3,
   });
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',

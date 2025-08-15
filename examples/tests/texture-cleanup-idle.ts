@@ -92,13 +92,13 @@ See docs/ManualRegressionTests.md for more information.
         const node = renderer.createNode({
           x: i * nodeWidth,
           y: j * nodeHeight,
-          width: nodeWidth,
-          height: nodeHeight,
+          w: nodeWidth,
+          h: nodeHeight,
           parent: testRoot,
           color: randomColor(),
           texture: renderer.createTexture('NoiseTexture', {
-            width: nodeWidth,
-            height: nodeHeight,
+            w: nodeWidth,
+            h: nodeHeight,
             cacheId: Math.floor(Math.random() * 100000),
           }),
           textureOptions: {

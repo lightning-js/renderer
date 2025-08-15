@@ -34,13 +34,13 @@ export interface RadialGradientProps {
   /**
    * Width of the RadialGradientEffect
    */
-  width: number;
+  w: number;
   /**
    * height of the RadialGradientEffect
    *
    * @remarks if not defined uses the width value
    */
-  height: number;
+  h: number;
   /**
    * center point of where the RadialGradientEffect is drawn
    */
@@ -74,8 +74,8 @@ export const RadialGradientTemplate: CoreShaderType<RadialGradientProps> = {
         return value;
       },
     },
-    width: 50,
-    height: 50,
+    w: 50,
+    h: 50,
     pivot: [0.5, 0.5],
   },
 };

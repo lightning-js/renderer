@@ -41,15 +41,13 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
     const props = this.props!;
     const radius = calcFactoredRadiusArray(
       props.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
     this.computed.radius = radius;
     this.computed.borderColor = this.toColorString(props['border-color']);
-    this.computed.borderAsym = !valuesAreEqual(
-      props['border-width'] as number[],
-    );
-    const borderWidth = props['border-width'] as Vec4;
+    this.computed.borderAsym = !valuesAreEqual(props['border-w'] as number[]);
+    const borderWidth = props['border-w'] as Vec4;
     this.computed.borderRadius = radius.map((value, index) =>
       Math.max(0, value - borderWidth[index]! * 0.5),
     ) as Vec4;

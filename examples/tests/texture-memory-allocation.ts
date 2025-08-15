@@ -63,8 +63,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const clippingNode = renderer.createNode({
     x: 600,
     y: 200,
-    width: 1300,
-    height: 800,
+    w: 1300,
+    h: 800,
     parent: testRoot,
     color: 0xff0000ff,
     clipping: true,
@@ -73,8 +73,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const containerNode = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1300,
-    height: 800,
+    w: 1300,
+    h: 800,
     parent: clippingNode,
     color: 0x000000ff,
     clipping: false,
@@ -109,8 +109,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     const rowNode = renderer.createNode({
       x: 0,
       y: y,
-      width: containerNode.width,
-      height: nodeHeight,
+      w: containerNode.w,
+      h: nodeHeight,
       parent: containerNode,
       color: 0x000000ff,
       clipping: true,
@@ -126,8 +126,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const childNode = renderer.createNode({
         x: x, // Adjust position by subtracting the gap
         y: 0,
-        width: nodeWidth, // Width of the green node
-        height: nodeHeight, // Slightly smaller height
+        w: nodeWidth, // Width of the green node
+        h: nodeHeight, // Slightly smaller height
         parent: rowNode,
         rtt: testMode === 'rtt',
       });
@@ -135,8 +135,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       const imageNode = renderer.createNode({
         x: 0,
         y: 0,
-        width: nodeWidth,
-        height: nodeHeight,
+        w: nodeWidth,
+        h: nodeHeight,
         parent: childNode,
         src: `https://picsum.photos/id/${id}/${nodeWidth}/${nodeHeight}`, // Random images
       });
@@ -200,14 +200,14 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     // adjust container node size
-    containerNode.height = amountOfRows * (nodeHeight + gap);
+    containerNode.h = amountOfRows * (nodeHeight + gap);
   };
 
   await spawnRows(20);
 
   window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowDown') {
-      if (containerNode.y > clippingNode.height + 200) {
+      if (containerNode.y > clippingNode.h + 200) {
         return;
       }
 
@@ -215,7 +215,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     }
 
     if (e.key === 'ArrowUp') {
-      if (containerNode.y < containerNode.height * -1 - 200) {
+      if (containerNode.y < containerNode.h * -1 - 200) {
         return;
       }
 

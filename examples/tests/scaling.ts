@@ -31,8 +31,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Scaling',
   });
 
@@ -47,8 +47,8 @@ export default async function test(settings: ExampleSettings) {
           // mount: 0, (should be default)
           x: 50,
           y: 50,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -84,8 +84,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: 100,
           y: 100,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -121,8 +121,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 1,
           x: 150,
           y: 150,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -161,8 +161,8 @@ export default async function test(settings: ExampleSettings) {
           // mount: 0, (should be default)
           x: 50,
           y: 50,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -198,8 +198,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: 100,
           y: 100,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -235,8 +235,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 1,
           x: 150,
           y: 150,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -275,8 +275,8 @@ export default async function test(settings: ExampleSettings) {
           // mount: 0, (should be default)
           x: 50,
           y: 50,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -312,8 +312,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 0.5,
           x: 100,
           y: 100,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 
@@ -349,8 +349,8 @@ export default async function test(settings: ExampleSettings) {
           mount: 1,
           x: 150,
           y: 150,
-          width: 100,
-          height: 100,
+          w: 100,
+          h: 100,
           src: robotImg,
         } satisfies Partial<INodeProps>;
 

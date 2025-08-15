@@ -26,6 +26,8 @@ import type {
 } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
 import type { Stage } from '../Stage.js';
+import type { CoreTextNode } from '../CoreTextNode.js';
+import { UpdateType } from '../CoreNode.js';
 
 /**
  * SDF Font Data structure matching msdf-bmfont-xml output
@@ -126,6 +128,7 @@ interface SdfFontCache {
 const fontCache: Record<string, SdfFontCache> = Object.create(null);
 const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
+const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
 let initialized = false;
 
 /**
@@ -270,7 +273,9 @@ const processFontData = (
  * @returns {boolean} True if the font can be rendered
  */
 export const canRenderFont = (trProps: TrProps): boolean => {
-  return isFontLoaded(trProps.fontFamily);
+  return (
+    isFontLoaded(trProps.fontFamily) || fontLoadPromises.has(trProps.fontFamily)
+  );
 };
 
 /**
@@ -286,7 +291,6 @@ export const loadFont = async (
   options: FontLoadOptions,
 ): Promise<void> => {
   const { fontFamily, atlasUrl, atlasDataUrl, metrics } = options;
-
   // Early return if already loaded
   if (loadedFonts.has(fontFamily) === true) {
     return;
@@ -304,6 +308,7 @@ export const loadFont = async (
     );
   }
 
+  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create loading promise
   const loadPromise = (async (): Promise<void> => {
     // Load font JSON data
@@ -330,6 +335,7 @@ export const loadFont = async (
         premultiplyAlpha: false,
       });
 
+      atlasTexture.setRenderableOwner(this, true);
       atlasTexture.preventCleanup = true; // Prevent automatic cleanup
 
       if (atlasTexture.state === 'loaded') {
@@ -337,6 +343,11 @@ export const loadFont = async (
         processFontData(fontFamily, fontData, atlasTexture, metrics);
         loadedFonts.add(fontFamily);
         fontLoadPromises.delete(fontFamily);
+
+        for (let key in nwff) {
+          nwff[key]!.setUpdateType(UpdateType.Local);
+        }
+        delete nodesWaitingForFont[fontFamily];
         return resolve();
       }
 
@@ -347,6 +358,11 @@ export const loadFont = async (
         // Mark as loaded
         loadedFonts.add(fontFamily);
         fontLoadPromises.delete(fontFamily);
+
+        for (let key in nwff) {
+          nwff[key]!.setUpdateType(UpdateType.Local);
+        }
+        delete nodesWaitingForFont[fontFamily];
         resolve();
       });
 
@@ -359,13 +375,34 @@ export const loadFont = async (
         console.error(`Failed to load SDF font: ${fontFamily}`, error);
         reject(error);
       });
-
-      atlasTexture.setRenderableOwner(stage, true);
     });
   })();
 
   fontLoadPromises.set(fontFamily, loadPromise);
   return loadPromise;
+};
+
+/**
+ * Stop waiting for a font to load
+ * @param {string} fontFamily - Font family name
+ * @param {CoreTextNode} node - Node that was waiting for the font
+ */
+export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  nodesWaitingForFont[fontFamily]![node.id] = node;
+};
+
+/**
+ * Stop waiting for a font to load
+ *
+ * @param fontFamily
+ * @param node
+ * @returns
+ */
+export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    return;
+  }
+  delete nodesWaitingForFont[fontFamily][node.id];
 };
 
 /**

@@ -34,8 +34,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 100,
     y: 170,
-    width: 550,
-    height: 550,
+    w: 550,
+    h: 550,
     src: '../assets/test-etc1.pvr',
     parent: testRoot,
   });
@@ -54,8 +54,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 800,
     y: 170,
-    width: 400,
-    height: 400,
+    w: 400,
+    h: 400,
     src: '../assets/test-s3tc.ktx',
     parent: testRoot,
   });

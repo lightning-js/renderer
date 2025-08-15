@@ -663,13 +663,12 @@ export class WebGlRenderer extends CoreRenderer {
 
       if (texture.type === TextureType.subTexture) {
         const props = (texture as SubTexture).props;
-        const { width: parentW = 0, height: parentH = 0 } = (
-          texture as SubTexture
-        ).parentTexture.dimensions || { width: 0, height: 0 };
+        const { w: parentW = 0, h: parentH = 0 } = (texture as SubTexture)
+          .parentTexture.dimensions || { w: 0, h: 0 };
         result.x1 = props.x / parentW;
-        result.x2 = result.x1 + props.width / parentW;
+        result.x2 = result.x1 + props.w / parentW;
         result.y1 = props.y / parentH;
-        result.y2 = result.y1 + props.height / parentH;
+        result.y2 = result.y1 + props.h / parentH;
       }
 
       if (
@@ -681,23 +680,23 @@ export class WebGlRenderer extends CoreRenderer {
         const resizeMode = textureOptions.resizeMode;
         const dimensions = texture.dimensions;
         if (resizeMode.type === 'cover') {
-          const scaleX = node.props.width / dimensions.width;
-          const scaleY = node.props.height / dimensions.height;
+          const scaleX = node.props.w / dimensions.w;
+          const scaleY = node.props.h / dimensions.h;
           const scale = Math.max(scaleX, scaleY);
           const precision = 1 / scale;
           // Determine based on width
           if (scaleX < scale) {
-            const desiredSize = precision * node.props.width;
+            const desiredSize = precision * node.props.w;
             result.x1 =
-              (1 - desiredSize / dimensions.width) * (resizeMode.clipX ?? 0.5);
-            result.x2 = result.x1 + desiredSize / dimensions.width;
+              (1 - desiredSize / dimensions.w) * (resizeMode.clipX ?? 0.5);
+            result.x2 = result.x1 + desiredSize / dimensions.w;
           }
           // Determine based on height
           if (scaleY < scale) {
-            const desiredSize = precision * node.props.height;
+            const desiredSize = precision * node.props.h;
             result.y1 =
-              (1 - desiredSize / dimensions.height) * (resizeMode.clipY ?? 0.5);
-            result.y2 = result.y1 + desiredSize / dimensions.height;
+              (1 - desiredSize / dimensions.h) * (resizeMode.clipY ?? 0.5);
+            result.y2 = result.y1 + desiredSize / dimensions.h;
           }
         }
       }

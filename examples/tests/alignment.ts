@@ -29,8 +29,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -38,8 +38,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const holderNode = renderer.createNode({
     x: 1920 / 2 - 100,
     y: 1080 / 3 - 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xffffffff,
     parent: node,
   });
@@ -56,8 +56,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const alignedNodeProps = {
     x: 0,
     y: 0,
-    width: 50,
-    height: 50,
+    w: 50,
+    h: 50,
     color: 0xffa500ff,
     parent: holderNode,
   };
@@ -100,8 +100,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const holderNodeTwo = renderer.createNode({
     x: 0,
     y: 0,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     parent: emptyHolderNode,
   });
 

@@ -162,8 +162,8 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
     for (const key in this.resolvedProps) {
       valueKey += `${key}:${this.resolvedProps[key]!};`;
     }
-    valueKey += `node-width:${this.node!.width}`;
-    valueKey += `node-height:${this.node!.height}`;
+    valueKey += `node-width:${this.node!.w}`;
+    valueKey += `node-height:${this.node!.h}`;
     return valueKey;
   }
 

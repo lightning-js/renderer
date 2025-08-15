@@ -52,6 +52,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private fontHandler: FontHandler;
 
   private _layoutGenerated = false;
+  private _waitingForFont = false;
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
@@ -94,37 +95,52 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // ignore 1x1 pixel textures
-    if (dimensions.width > 1 && dimensions.height > 1) {
+    if (dimensions.w > 1 && dimensions.h > 1) {
       this.emit('loaded', {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
     }
 
-    this.width = this._renderInfo.width;
-    this.height = this._renderInfo.height;
+    this.w = this._renderInfo.width;
+    this.h = this._renderInfo.height;
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
   };
 
+  allowTextGeneration() {
+    const p = this.props.parent;
+    if (p === null) {
+      return false;
+    }
+    if (p.worldAlpha > 0 && p.renderState > CoreNodeRenderState.OutOfBounds) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
     if (
-      (this.props.parent?.isRenderable === true &&
-        this._layoutGenerated === false) ||
-      (this.textProps.forceLoad === true &&
-        this._layoutGenerated === false &&
-        this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true)
+      (this.textProps.forceLoad === true ||
+        this.allowTextGeneration() === true) &&
+      this._layoutGenerated === false
     ) {
-      this._cachedLayout = null; // Invalidate cached layout
-      this._lastVertexBuffer = null; // Invalidate last vertex buffer
-      const resp = this.textRenderer.renderText(this.stage, this.textProps);
-      this.handleRenderResult(resp);
-      this._layoutGenerated = true;
+      if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+        this._waitingForFont = false;
+        this._cachedLayout = null; // Invalidate cached layout
+        this._lastVertexBuffer = null; // Invalidate last vertex buffer
+        const resp = this.textRenderer.renderText(this.stage, this.textProps);
+        this.handleRenderResult(resp);
+        this._layoutGenerated = true;
+      } else if (this._waitingForFont === false) {
+        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
+        this._waitingForFont = true;
+      }
     }
 
     // First run the standard CoreNode update
@@ -186,8 +202,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (textRendererType === 'sdf') {
       this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.props.width = width;
-      this.props.height = height;
+      this.props.w = width;
+      this.props.h = height;
       this.setUpdateType(UpdateType.Local);
     }
 
@@ -195,8 +211,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: width,
-        height: height,
+        w: width,
+        h: height,
       },
     } satisfies NodeTextLoadedPayload);
   }
@@ -205,6 +221,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override renderQuads to handle SDF vs Canvas rendering
    */
   override renderQuads(renderer: CoreRenderer): void {
+    if (this.parentHasRenderTexture === true) {
+      const rtt = renderer.renderToTextureActive;
+      if (rtt === false || this.parentRenderTexture !== renderer.activeRttNode)
+        return;
+    }
+
     // Canvas renderer: use standard texture rendering via CoreNode
     if (this._type === 'canvas') {
       super.renderQuads(renderer);
@@ -233,8 +255,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         worldAlpha: this.worldAlpha,
         globalTransform: this.globalTransform!.getFloatArr(),
         clippingRect: this.clippingRect,
-        width: this.props.width,
-        height: this.props.height,
+        width: this.props.w,
+        height: this.props.h,
         parentHasRenderTexture: this.parentHasRenderTexture,
         framebufferDimensions:
           this.parentHasRenderTexture === true
@@ -243,6 +265,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         stage: this.stage,
       },
     );
+  }
+
+  override destroy(): void {
+    if (this._waitingForFont === true) {
+      this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+    }
+
+    // Clear cached layout and vertex buffer
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
+
+    this.fontHandler = null!; // Clear reference to avoid memory leaks
+    this.textRenderer = null!; // Clear reference to avoid memory leaks
+
+    super.destroy();
   }
 
   get maxWidth() {
@@ -300,6 +337,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set fontFamily(value: string) {
     if (this.textProps.fontFamily !== value) {
+      if (this._waitingForFont === true) {
+        this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+      }
       this.textProps.fontFamily = value;
       this._layoutGenerated = true;
       this.setUpdateType(UpdateType.Local);

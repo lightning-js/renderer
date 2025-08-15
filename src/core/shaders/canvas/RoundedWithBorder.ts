@@ -38,16 +38,14 @@ export const RoundedWithBorder: CanvasShaderType<
     const props = this.props!;
     const radius = calcFactoredRadiusArray(
       props.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
     this.computed.radius = radius;
     this.computed.borderColor = this.toColorString(props['border-color']);
-    this.computed.borderAsym = !valuesAreEqual(
-      props['border-width'] as number[],
-    );
+    this.computed.borderAsym = !valuesAreEqual(props['border-w'] as number[]);
     //following vec4 convention 0, 1, 2, 3 => x, y, z, w;
-    const [x, y, z, w] = props['border-width'] as Vec4;
+    const [x, y, z, w] = props['border-w'] as Vec4;
     this.computed.borderRadius = [
       Math.max(0.0, radius[0] - Math.max(x, w) * 0.5),
       Math.max(0.0, radius[1] - Math.max(x, y) * 0.5),

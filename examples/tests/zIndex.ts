@@ -61,8 +61,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         renderer.createNode({
           x: 200 + i * 20,
           y: 200 + i * 20,
-          width: 200,
-          height: 200,
+          w: 200,
+          h: 200,
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           //@ts-ignore
           color: Colors[color],
@@ -78,8 +78,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const parentRect = renderer.createNode({
     x: 800,
     y: 200,
-    width: 600,
-    height: 600,
+    w: 600,
+    h: 600,
     color: Colors.Gray,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -92,8 +92,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const childRectWhite = renderer.createNode({
     x: 100,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: Colors.White,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -105,8 +105,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const childRectRed = renderer.createNode({
     x: 120,
     y: 120,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: Colors.Red,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -133,8 +133,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const blockingRect = renderer.createNode({
     x: 750,
     y: 300,
-    width: 400,
-    height: 100,
+    w: 400,
+    h: 100,
     color: Colors.Green,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -161,8 +161,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -177,8 +177,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -193,8 +193,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -209,8 +209,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -225,8 +225,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -241,8 +241,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 200,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -255,8 +255,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 200,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -273,8 +273,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 500,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,

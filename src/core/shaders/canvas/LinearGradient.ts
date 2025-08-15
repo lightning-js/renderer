@@ -36,8 +36,8 @@ export const LinearGradient: CanvasShaderType<
   props: LinearGradientTemplate.props,
   update(node) {
     const angle = this.props!.angle - (Math.PI / 180) * 90;
-    const nWidth = node.width;
-    const nHeight = node.height;
+    const nWidth = node.w;
+    const nHeight = node.h;
     const line =
       (Math.abs(nWidth * Math.sin(angle)) +
         Math.abs(nHeight * Math.cos(angle))) *

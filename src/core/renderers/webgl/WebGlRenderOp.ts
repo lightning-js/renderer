@@ -142,7 +142,7 @@ export class WebGlRenderOp extends CoreRenderOp {
       // to be relative to the parent's framebuffer
       if (this.parentHasRenderTexture) {
         clipY = this.framebufferDimensions
-          ? this.framebufferDimensions.height - this.height
+          ? this.framebufferDimensions.h - this.height
           : 0;
       }
 

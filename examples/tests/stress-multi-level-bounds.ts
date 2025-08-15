@@ -35,8 +35,8 @@ export default async function ({
   let totalNodes = 0;
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
@@ -48,8 +48,8 @@ export default async function ({
       parent: bg,
     });
     const node = renderer.createNode({
-      width: 505,
-      height: 101,
+      w: 505,
+      h: 101,
       src: logo,
       parent: container,
     });

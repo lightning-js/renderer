@@ -39,8 +39,8 @@ export class Character {
     this.node = renderer.createNode({
       x: props.x,
       y: props.y,
-      width: 200 / 2,
-      height: 300 / 2,
+      w: 200 / 2,
+      h: 300 / 2,
       texture: rightFrames[0],
       parent: renderer.root,
       zIndex: props.zIndex,
