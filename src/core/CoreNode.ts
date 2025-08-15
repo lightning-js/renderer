@@ -1148,7 +1148,7 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.WorldAlpha) {
-      this.worldAlpha = ((parent && parent.worldAlpha) || 1) * props.alpha;
+      this.worldAlpha = (parent?.worldAlpha ?? 1) * this.props.alpha;
       updateType |=
         UpdateType.PremultipliedColors |
         UpdateType.Children |
