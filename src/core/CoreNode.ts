@@ -983,6 +983,7 @@ export class CoreNode extends EventEmitter {
     const mountTranslateY = p.mountY * h;
 
     if (p.rotation !== 0 || p.scaleX !== 1 || p.scaleY !== 1) {
+      const scaleRotate = Matrix3d.rotate(p.rotation).scale(p.scaleX, p.scaleY);
       const pivotTranslateX = p.pivotX * w;
       const pivotTranslateY = p.pivotY * h;
 
@@ -991,8 +992,7 @@ export class CoreNode extends EventEmitter {
         y - mountTranslateY + pivotTranslateY,
         this.localTransform,
       )
-        .rotate(p.rotation)
-        .scale(p.scaleX, p.scaleY)
+        .multiply(scaleRotate)
         .translate(-pivotTranslateX, -pivotTranslateY);
     } else {
       this.localTransform = Matrix3d.translate(

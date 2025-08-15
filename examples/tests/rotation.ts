@@ -42,9 +42,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       colorBottom: randomColor(),
       colorTop: randomColor(),
       parent: testRoot,
-      shader: renderer.createShader('RoundedRectangle', {
-        radius: rnd(10, 50),
-      }),
       scale: 1,
       pivot,
     });
