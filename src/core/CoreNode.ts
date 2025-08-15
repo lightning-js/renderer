@@ -742,7 +742,8 @@ export class CoreNode extends EventEmitter {
     valid: false,
   };
   public textureCoords?: TextureCoords;
-  public updateTextureCoords?: boolean = false;
+  public updateTextureCoords: boolean = false;
+  public updateShaderUniforms: boolean = false;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
@@ -1184,7 +1185,7 @@ export class CoreNode extends EventEmitter {
 
       this.premultipliedColorTl = merged;
 
-      if (same) {
+      if (same === true) {
         this.premultipliedColorTr =
           this.premultipliedColorBl =
           this.premultipliedColorBr =
@@ -1230,6 +1231,11 @@ export class CoreNode extends EventEmitter {
       updateType & UpdateType.RecalcUniforms &&
       this.hasShaderUpdater === true
     ) {
+      this.updateShaderUniforms = true;
+    }
+
+    if (this.isRenderable === true && this.updateShaderUniforms === true) {
+      this.updateShaderUniforms = false;
       //this exists because the boolean hasShaderUpdater === true
       this.shader!.update!();
     }
@@ -1499,7 +1505,11 @@ export class CoreNode extends EventEmitter {
    * @param isRenderable - The new renderable state
    */
   setRenderable(isRenderable: boolean) {
+    const previousState = this.isRenderable;
     this.isRenderable = isRenderable;
+    if (previousState === false && isRenderable === true) {
+      this.updateType |= UpdateType.RecalcUniforms;
+    }
     if (
       isRenderable === true &&
       this.stage.calculateTextureCoord === true &&
