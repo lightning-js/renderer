@@ -251,17 +251,6 @@ export type RendererMainSettings = RendererRuntimeSettings & {
   forceWebGL2: boolean;
 
   /**
-   * Enable strictBounds
-   *
-   * @remarks
-   * Enable strict bounds for the renderer. This will ensure that the renderer
-   * will not render outside the bounds of the canvas.
-   *
-   * @defaultValue `true`
-   */
-  strictBounds: boolean;
-
-  /**
    * Canvas object to use for rendering
    *
    * @remarks
@@ -400,7 +389,6 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
-      strictBounds: settings.strictBounds ?? true,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
@@ -457,7 +445,6 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize!,
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
-      strictBounds: settings.strictBounds!,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
