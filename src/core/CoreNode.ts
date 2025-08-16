@@ -672,21 +672,6 @@ export interface CoreNodeProps {
    * @default false
    */
   interactive?: boolean;
-  /**
-   * By enabling Strict bounds the renderer will not process & render child nodes of a node that is out of the visible area
-   *
-   * @remarks
-   * When enabled out of bound nodes, i.e. nodes that are out of the visible area, will
-   * **NOT** have their children processed and renderer anymore. This means the children of a out of bound
-   * node will not receive update processing such as positioning updates and will not be drawn on screen.
-   * As such the rest of the branch of the update tree that sits below this node will not be processed anymore
-   *
-   * This is a big performance gain but may be disabled in cases where the width of the parent node is
-   * unknown and the render must process the child nodes regardless of the viewport status of the parent node
-   *
-   * @default true
-   */
-  strictBounds: boolean;
 }
 
 /**
@@ -796,7 +781,6 @@ export class CoreNode extends EventEmitter {
     p.mountY = props.mountY;
     p.mount = props.mount;
     p.pivot = props.pivot;
-    p.strictBounds = props.strictBounds;
 
     p.zIndex = props.zIndex;
     p.zIndexLocked = props.zIndexLocked;
@@ -1219,10 +1203,7 @@ export class CoreNode extends EventEmitter {
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
-    if (
-      props.strictBounds === true &&
-      this.renderState === CoreNodeRenderState.OutOfBounds
-    ) {
+    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
       updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
@@ -2449,20 +2430,6 @@ export class CoreNode extends EventEmitter {
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
-  }
-
-  get strictBounds(): boolean {
-    return this.props.strictBounds;
-  }
-
-  set strictBounds(v) {
-    if (v === this.props.strictBounds) {
-      return;
-    }
-
-    this.props.strictBounds = v;
-    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
-    this.childUpdateType |= UpdateType.RenderBounds | UpdateType.Children;
   }
 
   animate(

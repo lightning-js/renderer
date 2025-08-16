@@ -554,8 +554,7 @@ export class WebGlRenderer extends CoreRenderer {
       // Skip nodes that are not visible
       if (
         node.worldAlpha === 0 ||
-        (node.strictBounds === true &&
-          node.renderState === CoreNodeRenderState.OutOfBounds)
+        node.renderState === CoreNodeRenderState.OutOfBounds
       ) {
         continue;
       }
