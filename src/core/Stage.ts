@@ -102,7 +102,6 @@ export class Stage {
   public readonly defShaderNode: CoreShaderNode | null = null;
   public strictBound: Bound;
   public preloadBound: Bound;
-  public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
   public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
@@ -197,7 +196,6 @@ export class Stage {
 
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
-    this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -354,7 +352,6 @@ export class Stage {
       rtt: false,
       src: null,
       scale: 1,
-      strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
@@ -589,8 +586,7 @@ export class Stage {
 
       if (
         child.worldAlpha === 0 ||
-        (child.strictBounds === true &&
-          child.renderState === CoreNodeRenderState.OutOfBounds)
+        child.renderState === CoreNodeRenderState.OutOfBounds
       ) {
         continue;
       }
@@ -847,7 +843,6 @@ export class Stage {
       data,
       imageType: props.imageType,
       interactive: props.interactive ?? false,
-      strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
 
