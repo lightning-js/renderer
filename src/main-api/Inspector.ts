@@ -10,6 +10,34 @@ import { isProductionEnvironment } from '../utils.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 
 /**
+ * Inspector Options
+ *
+ * Configuration options for the Inspector's performance monitoring features.
+ */
+export interface InspectorOptions {
+  /**
+   * Enable performance monitoring for setter calls
+   *
+   * @defaultValue true
+   */
+  enablePerformanceMonitoring: boolean;
+
+  /**
+   * Threshold for excessive setter calls before logging a warning
+   *
+   * @defaultValue 100
+   */
+  excessiveCallThreshold: number;
+
+  /**
+   * Time interval in milliseconds to reset the setter call counters
+   *
+   * @defaultValue 5000
+   */
+  resetInterval: number;
+}
+
+/**
  * Inspector
  *
  * The inspector is a tool that allows you to inspect the state of the renderer
@@ -171,12 +199,30 @@ export class Inspector {
   private scaleX = 1;
   private scaleY = 1;
 
+  // Performance monitoring for frequent setter calls
+  private static setterCallCount = new Map<
+    string,
+    { count: number; lastReset: number; nodeId: number }
+  >();
+
+  // Performance monitoring settings (configured via constructor)
+  private performanceSettings!: InspectorOptions;
+
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
     if (isProductionEnvironment === true) return;
 
     if (!settings) {
       throw new Error('settings is required');
     }
+
+    // Initialize performance monitoring settings with defaults
+    this.performanceSettings = {
+      enablePerformanceMonitoring:
+        settings.inspectorOptions?.enablePerformanceMonitoring ?? true,
+      excessiveCallThreshold:
+        settings.inspectorOptions?.excessiveCallThreshold ?? 100,
+      resetInterval: settings.inspectorOptions?.resetInterval ?? 5000,
+    };
 
     // calc dimensions based on the devicePixelRatio
     this.height = Math.ceil(
@@ -213,6 +259,92 @@ export class Inspector {
     window.addEventListener('resize', this.setRootPosition.bind(this));
 
     console.warn('Inspector is enabled, this will impact performance');
+  }
+
+  /**
+   * Track setter calls for performance monitoring
+   * Only active when Inspector is loaded
+   */
+  private trackSetterCall(nodeId: number, setterName: string): void {
+    if (!this.performanceSettings.enablePerformanceMonitoring) {
+      return;
+    }
+
+    const key = `${nodeId}_${setterName}`;
+    const now = Date.now();
+    const existing = Inspector.setterCallCount.get(key);
+
+    if (!existing) {
+      Inspector.setterCallCount.set(key, { count: 1, lastReset: now, nodeId });
+      return;
+    }
+
+    // Reset counter if enough time has passed
+    if (now - existing.lastReset > this.performanceSettings.resetInterval) {
+      existing.count = 1;
+      existing.lastReset = now;
+      return;
+    }
+
+    existing.count++;
+
+    // Log if threshold exceeded
+    if (existing.count === this.performanceSettings.excessiveCallThreshold) {
+      console.warn(
+        `🚨 Inspector Performance Warning: Setter '${setterName}' called ${existing.count} times in ${this.performanceSettings.resetInterval}ms on node ${nodeId}`,
+      );
+    } else if (
+      existing.count > this.performanceSettings.excessiveCallThreshold &&
+      existing.count % 50 === 0
+    ) {
+      console.warn(
+        `🚨 Inspector Performance Warning: Setter '${setterName}' called ${existing.count} times in ${this.performanceSettings.resetInterval}ms on node ${nodeId} (continuing...)`,
+      );
+    }
+  }
+
+  /**
+   * Get current performance monitoring statistics
+   */
+  public static getPerformanceStats(): Array<{
+    nodeId: number;
+    setterName: string;
+    count: number;
+    timeWindow: number;
+  }> {
+    const stats: Array<{
+      nodeId: number;
+      setterName: string;
+      count: number;
+      timeWindow: number;
+    }> = [];
+    const now = Date.now();
+
+    Inspector.setterCallCount.forEach((data, key) => {
+      const parts = key.split('_');
+      const nodeIdStr = parts[0];
+      const setterName = parts[1];
+
+      if (nodeIdStr && setterName) {
+        const timeWindow = now - data.lastReset;
+
+        stats.push({
+          nodeId: parseInt(nodeIdStr, 10),
+          setterName,
+          count: data.count,
+          timeWindow,
+        });
+      }
+    });
+
+    return stats.sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Clear performance monitoring statistics
+   */
+  public static clearPerformanceStats(): void {
+    Inspector.setterCallCount.clear();
   }
 
   setRootPosition() {
@@ -322,6 +454,9 @@ export class Inspector {
           return originalProp?.get?.call(node);
         },
         set: (value) => {
+          // Track setter call for performance monitoring
+          this.trackSetterCall(node.id, property);
+
           originalProp?.set?.call(node, value);
           this.updateNodeProperty(
             div,
