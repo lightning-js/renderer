@@ -257,19 +257,19 @@ export class Inspector {
 
   // Performance monitoring settings (configured via constructor)
   private performanceSettings: InspectorOptions = {
-    enablePerformanceMonitoring: true,
+    enablePerformanceMonitoring: false,
     excessiveCallThreshold: 100,
     resetInterval: 5000,
-    enableAnimationMonitoring: true,
+    enableAnimationMonitoring: false,
     maxAnimationHistory: 1000,
-    animationStatsInterval: 15,
+    animationStatsInterval: 0,
   };
 
   // Animation stats printing timer
   private animationStatsTimer: NodeJS.Timeout | null = null;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
-    // if (isProductionEnvironment === true) return;
+    if (isProductionEnvironment === true) return;
 
     if (!settings) {
       throw new Error('settings is required');
@@ -278,16 +278,16 @@ export class Inspector {
     // Initialize performance monitoring settings with defaults
     this.performanceSettings = {
       enablePerformanceMonitoring:
-        settings.inspectorOptions?.enablePerformanceMonitoring ?? true,
+        settings.inspectorOptions?.enablePerformanceMonitoring ?? false,
       excessiveCallThreshold:
         settings.inspectorOptions?.excessiveCallThreshold ?? 100,
       resetInterval: settings.inspectorOptions?.resetInterval ?? 5000,
       enableAnimationMonitoring:
-        settings.inspectorOptions?.enableAnimationMonitoring ?? true,
+        settings.inspectorOptions?.enableAnimationMonitoring ?? false,
       maxAnimationHistory:
         settings.inspectorOptions?.maxAnimationHistory ?? 1000,
       animationStatsInterval:
-        settings.inspectorOptions?.animationStatsInterval ?? 15,
+        settings.inspectorOptions?.animationStatsInterval ?? 0,
     };
 
     // calc dimensions based on the devicePixelRatio
