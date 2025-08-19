@@ -268,7 +268,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override destroy(): void {
-    if (this._waitingForFont === true) {
+    if (this._waitingForFont === true && this.fontHandler) {
       this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
     }
 
