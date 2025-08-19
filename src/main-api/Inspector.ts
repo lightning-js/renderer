@@ -266,7 +266,7 @@ export class Inspector {
   };
 
   // Animation stats printing timer
-  private animationStatsTimer: NodeJS.Timeout | null = null;
+  private animationStatsTimer: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
     if (isProductionEnvironment === true) return;
@@ -671,7 +671,7 @@ export class Inspector {
     if (this.performanceSettings.animationStatsInterval > 0) {
       this.animationStatsTimer = setInterval(() => {
         this.printAnimationStats();
-      }, this.performanceSettings.animationStatsInterval * 1000);
+      }, this.performanceSettings.animationStatsInterval * 1000) as unknown as number;
     }
   }
 
