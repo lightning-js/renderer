@@ -47,25 +47,36 @@ function createTile(x: number, parent: INode, renderer: RendererMain) {
   });
 
   const textWrapper = renderer.createNode({
-    w: 200,
-    h: 200,
+    w: 100,
+    h: 4,
     y: 200,
+    color: 0xffffff00,
     parent: tile,
-    rtt: true,
   });
 
   const text = renderer.createTextNode({
-    text: 'ahahahahahaha',
+    text: '',
     fontFamily: 'Ubuntu',
     parent: textWrapper,
   });
 
   text.on('loaded', () => {
     console.log('text loaded');
+
+    // textWrapper.rtt = true;
     textWrapper.w = 200;
-    textWrapper.h = 200;
-    textWrapper.rtt = true;
+
+    textWrapper.animate(
+      {
+        h: 500,
+      },
+      { duration: 200 },
+    );
   });
+
+  setTimeout(() => {
+    text.text = 'habahahaba';
+  }, 200);
 
   return tile;
 }

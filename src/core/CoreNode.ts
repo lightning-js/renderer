@@ -882,6 +882,7 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
+    this.flagTextureCoordsUpdate();
 
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
@@ -1215,12 +1216,6 @@ export class CoreNode extends EventEmitter {
       this.updateShaderUniforms = true;
     }
 
-    if (this.isRenderable === true && this.updateShaderUniforms === true) {
-      this.updateShaderUniforms = false;
-      //this exists because the boolean hasShaderUpdater === true
-      this.shader!.update!();
-    }
-
     if (updateType & UpdateType.Children && this.children.length > 0) {
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
@@ -1260,9 +1255,19 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
-    if (this.updateTextureCoords === true) {
-      this.updateTextureCoords = false;
-      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+    if (this.isRenderable === true) {
+      //update shader uniforms
+      if (this.updateShaderUniforms === true) {
+        this.updateShaderUniforms = false;
+        //this exists because the boolean hasShaderUpdater === true
+        this.shader!.update!();
+      }
+
+      //update texture coords
+      if (this.updateTextureCoords === true) {
+        this.updateTextureCoords = false;
+        this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+      }
     }
 
     // If we're out of bounds, apply the render state now
@@ -1487,13 +1492,10 @@ export class CoreNode extends EventEmitter {
    */
   setRenderable(isRenderable: boolean) {
     this.isRenderable = isRenderable;
-    if (
-      isRenderable === true &&
-      this.stage.calculateTextureCoord === true &&
-      this.textureCoords === undefined
-    ) {
-      this.updateTextureCoords = true;
-    }
+  }
+
+  flagTextureCoordsUpdate() {
+    this.updateTextureCoords = this.stage.calculateTextureCoord === true;
   }
 
   /**
@@ -1780,10 +1782,11 @@ export class CoreNode extends EventEmitter {
 
   set w(value: number) {
     if (this.props.w !== value) {
-      this.textureCoords = undefined;
       this.props.w = value;
       this.setUpdateType(UpdateType.Local);
-
+      if (this.props.texture !== null) {
+        this.flagTextureCoordsUpdate();
+      }
       if (this.props.rtt === true) {
         this.framebufferDimensions!.w = value;
         this.texture = this.stage.txManager.createTexture(
@@ -1802,10 +1805,11 @@ export class CoreNode extends EventEmitter {
 
   set h(value: number) {
     if (this.props.h !== value) {
-      this.textureCoords = undefined;
       this.props.h = value;
       this.setUpdateType(UpdateType.Local);
-
+      if (this.props.texture !== null) {
+        this.flagTextureCoordsUpdate();
+      }
       if (this.props.rtt === true) {
         this.framebufferDimensions!.h = value;
         this.texture = this.stage.txManager.createTexture(
@@ -2397,7 +2401,7 @@ export class CoreNode extends EventEmitter {
       this.unloadTexture();
     }
 
-    this.textureCoords = undefined;
+    this.flagTextureCoordsUpdate();
     this.props.texture = value;
     if (value !== null) {
       value.setRenderableOwner(this, this.isRenderable);

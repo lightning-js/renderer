@@ -272,7 +272,7 @@ export class WebGlRenderer extends CoreRenderer {
     const tidx = this.addTexture(tx.ctxTexture as WebGlCtxTexture, i);
 
     const rc = params.renderCoords!;
-    const tc = params.textureCoords!;
+    const tc = params.textureCoords || this.defaultTextureCoords;
 
     const cTl = params.colorTl;
     const cTr = params.colorTr;
@@ -553,6 +553,8 @@ export class WebGlRenderer extends CoreRenderer {
 
       // Skip nodes that are not visible
       if (
+        node.props.w === 0 ||
+        node.props.h === 0 ||
         node.worldAlpha === 0 ||
         node.renderState === CoreNodeRenderState.OutOfBounds
       ) {
