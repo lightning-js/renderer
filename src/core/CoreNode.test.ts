@@ -17,9 +17,10 @@
  * limitations under the License.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
+import { CoreRenderer } from './renderers/CoreRenderer.js';
 import { mock } from 'vitest-mock-extended';
 import { type TextureOptions } from './CoreTextureManager.js';
 import { createBound } from './lib/utils.js';
@@ -78,6 +79,7 @@ describe('set color()', () => {
     defaultTexture: {
       state: 'loaded',
     },
+    renderer: mock<CoreRenderer>() as CoreRenderer,
   });
 
   describe('set color()', () => {
