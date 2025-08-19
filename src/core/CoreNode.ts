@@ -706,8 +706,8 @@ export class CoreNode extends EventEmitter {
   readonly props: CoreNodeProps;
 
   private hasShaderUpdater = false;
+  public hasShaderTimeFn = false;
   private hasColorProps = false;
-
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -1659,6 +1659,9 @@ export class CoreNode extends EventEmitter {
     this.destroyed = true;
     this.unloadTexture();
     this.isRenderable = false;
+    if (this.hasShaderTimeFn === true) {
+      this.stage.untrackTimedNode(this);
+    }
 
     // Kill children
     while (this.children.length > 0) {
@@ -1726,7 +1729,15 @@ export class CoreNode extends EventEmitter {
       framebufferDimensions: this.parentHasRenderTexture
         ? this.parentFramebufferDimensions
         : null,
+      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
     });
+  }
+
+  getTimerValue(): number {
+    if (typeof this.shader!.time === 'function') {
+      return this.shader!.time(this.stage);
+    }
+    return this.stage.elapsedTime;
   }
 
   //#region Properties
@@ -2290,7 +2301,14 @@ export class CoreNode extends EventEmitter {
     }
     if (shader.shaderKey !== 'default') {
       this.hasShaderUpdater = shader.update !== undefined;
+      this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
+    }
+
+    if (this.hasShaderTimeFn === true) {
+      this.stage.trackTimedNode(this);
+    } else {
+      this.stage.untrackTimedNode(this);
     }
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable | UpdateType.RecalcUniforms);
