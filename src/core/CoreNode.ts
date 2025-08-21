@@ -1700,6 +1700,12 @@ export class CoreNode extends EventEmitter {
     const coords = this.renderCoords;
     const texture = p.texture || this.stage.defaultTexture;
 
+    // There is a race condition where the texture can be null
+    // with RTT nodes. Adding this defensively to avoid errors.
+    if (texture && texture.state !== 'loaded') {
+      return;
+    }
+
     renderer.addQuad({
       width: p.w,
       height: p.h,
@@ -1786,7 +1792,7 @@ export class CoreNode extends EventEmitter {
 
   set w(value: number) {
     if (this.props.w !== value) {
-      this.textureCoords = undefined;
+      this.updateTextureCoords = true;
       this.props.w = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -1802,7 +1808,7 @@ export class CoreNode extends EventEmitter {
 
   set h(value: number) {
     if (this.props.h !== value) {
-      this.textureCoords = undefined;
+      this.updateTextureCoords = true;
       this.props.h = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -2133,6 +2139,10 @@ export class CoreNode extends EventEmitter {
   }
 
   set zIndex(value: number) {
+    if (this.props.zIndex === value) {
+      return;
+    }
+
     this.props.zIndex = value;
     this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
     for (let i = 0, length = this.children.length; i < length; i++) {
