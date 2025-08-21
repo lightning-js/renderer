@@ -1056,6 +1056,12 @@ export class CoreNode extends EventEmitter {
     // Handle specific RTT updates at this node level
     if (updateType & UpdateType.RenderTexture && this.rtt === true) {
       this.hasRTTupdates = true;
+      const fb = this.framebufferDimensions as Dimensions;
+      if (fb.w !== props.w || fb.h !== props.w) {
+        fb.w = props.w;
+        fb.h = props.h;
+        this.texture = this.stage.txManager.createTexture('RenderTexture', fb);
+      }
     }
 
     if (updateType & UpdateType.Global) {
@@ -1785,12 +1791,6 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt === true) {
-        this.framebufferDimensions!.w = value;
-        this.texture = this.stage.txManager.createTexture(
-          'RenderTexture',
-          this.framebufferDimensions!,
-        );
-
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -1807,12 +1807,6 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.Local);
 
       if (this.props.rtt === true) {
-        this.framebufferDimensions!.h = value;
-        this.texture = this.stage.txManager.createTexture(
-          'RenderTexture',
-          this.framebufferDimensions!,
-        );
-
         this.setUpdateType(UpdateType.RenderTexture);
       }
     }
@@ -2207,13 +2201,9 @@ export class CoreNode extends EventEmitter {
   }
   private initRenderTexture() {
     this.framebufferDimensions = {
-      w: this.props.w,
-      h: this.props.h,
+      w: 0,
+      h: 0,
     };
-    this.texture = this.stage.txManager.createTexture(
-      'RenderTexture',
-      this.framebufferDimensions,
-    );
     this.stage.renderer.renderToTexture(this);
   }
 
