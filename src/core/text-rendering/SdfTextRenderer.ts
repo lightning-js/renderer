@@ -35,10 +35,10 @@ import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
-import { wrapText, measureLines } from './sdf/index.js';
+import { wrapText, measureLines, parseBBCode } from './sdf/index.js';
 
-// Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
-const FLOATS_PER_VERTEX = 4;
+// Each glyph requires 6 vertices (2 triangles) with 8 floats each (x, y, u, v, r, g, b, a)
+const FLOATS_PER_VERTEX = 8;
 const VERTICES_PER_GLYPH = 6;
 
 // Type definition to match interface
@@ -95,6 +95,135 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
 };
 
 /**
+ * Helper function to add a quad for underline/strikethrough with proper color
+ */
+const addSegmentQuadToBuffer = (
+  vertexBuffer: Float32Array,
+  bufferIndex: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color?: number,
+): number => {
+  let r: number, g: number, b: number, a: number;
+
+  if (color !== undefined) {
+    // Use specific BBCode color for the segment
+    r = ((color >> 16) & 0xff) / 255.0;
+    g = ((color >> 8) & 0xff) / 255.0;
+    b = (color & 0xff) / 255.0;
+    a = 1.0;
+  } else {
+    // Use sentinel value (-1) to signal shader to use uniform color
+    r = -1.0;
+    g = -1.0;
+    b = -1.0;
+    a = -1.0;
+  }
+
+  return addQuadToBuffer(
+    vertexBuffer,
+    bufferIndex,
+    x1,
+    y1,
+    x2,
+    y2,
+    0.0,
+    0.0,
+    0.0,
+    0.0, // No texture coordinates for solid color quads
+    r,
+    g,
+    b,
+    a,
+  );
+};
+
+const addQuadToBuffer = (
+  vertexBuffer: Float32Array,
+  bufferIndex: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  u1: number,
+  v1: number,
+  u2: number,
+  v2: number,
+  r: number,
+  g: number,
+  b: number,
+  a: number,
+): number => {
+  let index = bufferIndex;
+
+  // Triangle 1: Top-left, top-right, bottom-left
+  // Vertex 1: Top-left
+  vertexBuffer[index++] = x1;
+  vertexBuffer[index++] = y1;
+  vertexBuffer[index++] = u1;
+  vertexBuffer[index++] = v1;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  // Vertex 2: Top-right
+  vertexBuffer[index++] = x2;
+  vertexBuffer[index++] = y1;
+  vertexBuffer[index++] = u2;
+  vertexBuffer[index++] = v1;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  // Vertex 3: Bottom-left
+  vertexBuffer[index++] = x1;
+  vertexBuffer[index++] = y2;
+  vertexBuffer[index++] = u1;
+  vertexBuffer[index++] = v2;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  // Triangle 2: Top-right, bottom-right, bottom-left
+  // Vertex 4: Top-right (duplicate)
+  vertexBuffer[index++] = x2;
+  vertexBuffer[index++] = y1;
+  vertexBuffer[index++] = u2;
+  vertexBuffer[index++] = v1;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  // Vertex 5: Bottom-right
+  vertexBuffer[index++] = x2;
+  vertexBuffer[index++] = y2;
+  vertexBuffer[index++] = u2;
+  vertexBuffer[index++] = v2;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  // Vertex 6: Bottom-left (duplicate)
+  vertexBuffer[index++] = x1;
+  vertexBuffer[index++] = y2;
+  vertexBuffer[index++] = u1;
+  vertexBuffer[index++] = v2;
+  vertexBuffer[index++] = r;
+  vertexBuffer[index++] = g;
+  vertexBuffer[index++] = b;
+  vertexBuffer[index++] = a;
+
+  return index;
+};
+
+/**
  * Add quads for rendering using cached layout data
  */
 const addQuads = (layout?: TextLayout): Float32Array | null => {
@@ -109,16 +238,35 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
     return null;
   }
 
+  // Count underline and strikethrough segments for additional quads
+  let decorationQuadCount = 0;
+
+  // Count decoration segments by grouping consecutive decorated glyphs
+  for (let i = 0; i < glyphsLength; i++) {
+    const glyph = glyphs[i];
+    const nextGlyph = glyphs[i + 1];
+
+    // If this is the end of an underline segment, count it
+    if (glyph?.underline === true && nextGlyph?.underline === false) {
+      decorationQuadCount++;
+    }
+
+    // If this is the end of a strikethrough segment, count it
+    if (glyph?.strikethrough === true && nextGlyph?.strikethrough === false) {
+      decorationQuadCount++;
+    }
+  }
+
+  const totalQuads = glyphsLength + decorationQuadCount;
   const vertexBuffer = new Float32Array(
-    glyphsLength * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
+    totalQuads * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
   );
 
   let bufferIndex = 0;
-  let glyphIndex = 0;
 
-  while (glyphIndex < glyphsLength) {
+  // Add glyph quads first
+  for (let glyphIndex = 0; glyphIndex < glyphsLength; glyphIndex++) {
     const glyph = glyphs[glyphIndex];
-    glyphIndex++;
     if (glyph === undefined) {
       continue;
     }
@@ -133,43 +281,102 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
     const u2 = u1 + glyph.atlasWidth;
     const v2 = v1 + glyph.atlasHeight;
 
-    // Triangle 1: Top-left, top-right, bottom-left
-    // Vertex 1: Top-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v1;
+    // Extract color from glyph formatting or use uniform color
+    const glyphColor = glyph.color;
+    let r: number, g: number, b: number, a: number;
 
-    // Vertex 2: Top-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
+    if (glyphColor !== undefined) {
+      r = ((glyphColor >> 16) & 0xff) / 255.0;
+      g = ((glyphColor >> 8) & 0xff) / 255.0;
+      b = (glyphColor & 0xff) / 255.0;
+      a = 1.0;
+    } else {
+      r = -1.0;
+      g = -1.0;
+      b = -1.0;
+      a = -1.0;
+    }
 
-    // Vertex 3: Bottom-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
+    bufferIndex = addQuadToBuffer(
+      vertexBuffer,
+      bufferIndex,
+      x1,
+      y1,
+      x2,
+      y2,
+      u1,
+      v1,
+      u2,
+      v2,
+      r,
+      g,
+      b,
+      a,
+    );
+  }
 
-    // Triangle 2: Top-right, bottom-right, bottom-left
-    // Vertex 4: Top-right (duplicate)
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
+  // Add decoration segments
+  for (let glyphIndex = 0; glyphIndex < glyphsLength; glyphIndex++) {
+    const glyph = glyphs[glyphIndex];
+    if (!glyph) continue;
 
-    // Vertex 5: Bottom-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v2;
+    const nextGlyph = glyphs[glyphIndex + 1];
 
-    // Vertex 6: Bottom-left (duplicate)
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
+    // Handle underline segments
+    if (
+      glyph.underline === true &&
+      (!nextGlyph || nextGlyph.underline === false)
+    ) {
+      let startIndex = glyphIndex;
+      while (startIndex > 0 && glyphs[startIndex - 1]?.underline === true) {
+        startIndex--;
+      }
+
+      const startGlyph = glyphs[startIndex];
+      const endGlyph = glyph;
+      if (!startGlyph) continue;
+
+      const underlineY = glyph.y + glyph.height + 2; // Position slightly below text with small gap
+      const underlineThickness = Math.max(2, layout.lineHeight * 0.05);
+
+      bufferIndex = addSegmentQuadToBuffer(
+        vertexBuffer,
+        bufferIndex,
+        startGlyph.x,
+        underlineY,
+        endGlyph.x + endGlyph.width,
+        underlineY + underlineThickness,
+        glyph.color,
+      );
+    }
+
+    // Handle strikethrough segments
+    if (
+      glyph.strikethrough === true &&
+      (!nextGlyph || nextGlyph.strikethrough === false)
+    ) {
+      let startIndex = glyphIndex;
+      while (startIndex > 0 && glyphs[startIndex - 1]?.strikethrough === true) {
+        startIndex--;
+      }
+
+      const startGlyph = glyphs[startIndex];
+      const endGlyph = glyph;
+      if (!startGlyph) continue;
+
+      const strikethroughY = glyph.y + glyph.height * 0.45; // Position in middle of text
+      const strikethroughThickness = Math.max(2, layout.lineHeight * 0.04);
+
+      bufferIndex = addSegmentQuadToBuffer(
+        vertexBuffer,
+        bufferIndex,
+        startGlyph.x,
+        strikethroughY,
+        endGlyph.x + endGlyph.width,
+        strikethroughY + strikethroughThickness,
+        glyph.color,
+      );
+    }
   }
 
   return vertexBuffer;
@@ -199,7 +406,7 @@ const renderQuads = (
 
   // We can safely assume this is a WebGL renderer else this wouldn't be called
   const glw = (renderer as WebGlRenderer).glw;
-  const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
+  const stride = 8 * Float32Array.BYTES_PER_ELEMENT; // 8 floats per vertex: x,y,u,v,r,g,b,a
   const webGlBuffer = glw.createBuffer();
 
   if (!webGlBuffer) {
@@ -226,6 +433,14 @@ const renderQuads = (
           normalized: false,
           stride,
           offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+        },
+        a_color: {
+          name: 'a_color',
+          size: 4,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 4 * Float32Array.BYTES_PER_ELEMENT,
         },
       },
     },
@@ -262,9 +477,36 @@ const renderQuads = (
     0,
   );
 
-  // Add atlas texture and set quad count
+  let underlineSegmentCount = 0;
+  let inUnderlineSegment = false;
+  let strikethroughSegmentCount = 0;
+  let inStrikethroughSegment = false;
+
+  for (let i = 0; i < layout.glyphs.length; i++) {
+    const glyph = layout.glyphs[i];
+    if (glyph?.underline === true) {
+      if (!inUnderlineSegment) {
+        underlineSegmentCount++;
+        inUnderlineSegment = true;
+      }
+    } else {
+      inUnderlineSegment = false;
+    }
+
+    if (glyph?.strikethrough === true) {
+      if (!inStrikethroughSegment) {
+        strikethroughSegmentCount++;
+        inStrikethroughSegment = true;
+      }
+    } else {
+      inStrikethroughSegment = false;
+    }
+  }
+
+  const totalQuads =
+    layout.glyphs.length + underlineSegmentCount + strikethroughSegmentCount;
   renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
-  renderOp.numQuads = layout.glyphs.length;
+  renderOp.numQuads = totalQuads;
 
   (renderer as WebGlRenderer).addRenderOp(renderOp);
 };
@@ -321,10 +563,14 @@ const generateTextLayout = (
 
   const hasMaxLines = effectiveMaxLines > 0;
 
+  // Parse BBCode and create a character map with formatting information
+  const parsedText = parseBBCode(text);
+  const plainText = parsedText.text;
+
   // Split text into lines based on wrapping constraints
   const [lines, remainingLines, remainingText] = shouldWrapText
     ? wrapText(
-        text,
+        plainText,
         fontFamily,
         finalScale,
         maxWidth,
@@ -335,7 +581,7 @@ const generateTextLayout = (
         hasMaxLines,
       )
     : measureLines(
-        text.split('\n'),
+        plainText.split('\n'),
         fontFamily,
         letterSpacing,
         finalScale,
@@ -348,14 +594,16 @@ const generateTextLayout = (
   let currentY = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i]![1] > maxWidthFound) {
-      maxWidthFound = lines[i]![1];
+    const line = lines[i];
+    if (line && line[1] > maxWidthFound) {
+      maxWidthFound = line[1];
     }
   }
 
   // Second pass: Generate glyph layouts with proper alignment
   let lineIndex = 0;
   const linesLength = lines.length;
+  let globalCharIndex = 0; // Track position in original plain text for formatting lookup
 
   while (lineIndex < linesLength) {
     const [line, lineWidth] = lines[lineIndex]!;
@@ -389,14 +637,24 @@ const generateTextLayout = (
         continue;
       }
 
+      // Sync globalCharIndex with plainText by finding the next matching character
+      while (
+        globalCharIndex < plainText.length &&
+        plainText[globalCharIndex] !== char
+      ) {
+        globalCharIndex++;
+      }
+
       // Skip zero-width spaces for rendering but keep them in the text flow
       if (isZeroWidthSpace(char)) {
+        globalCharIndex++;
         continue;
       }
 
       // Get glyph data from font handler
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
+        globalCharIndex++;
         continue;
       }
 
@@ -413,6 +671,9 @@ const generateTextLayout = (
         advance += kerning;
       }
 
+      // Get formatting for this character position
+      const formatting = parsedText.formatting[globalCharIndex];
+
       // Calculate glyph position and atlas coordinates (in design units)
       const glyphLayout: GlyphLayout = {
         codepoint,
@@ -427,6 +688,9 @@ const generateTextLayout = (
         atlasY: glyph.y / atlasHeight,
         atlasWidth: glyph.width / atlasWidth,
         atlasHeight: glyph.height / atlasHeight,
+        underline: formatting?.underline || false,
+        strikethrough: formatting?.strikethrough || false,
+        color: formatting?.color,
       };
 
       glyphs.push(glyphLayout);
@@ -434,6 +698,7 @@ const generateTextLayout = (
       // Advance position with letter spacing (in design units)
       currentX += advance + designLetterSpacing;
       prevCodepoint = codepoint;
+      globalCharIndex++;
     }
 
     currentY += designLineHeight;

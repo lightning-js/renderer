@@ -21,6 +21,187 @@ import { isZeroWidthSpace } from '../Utils.js';
 import * as SdfFontHandler from '../SdfFontHandler.js';
 import type { TextLineStruct, WrappedLinesStruct } from '../TextRenderer.js';
 
+/**
+ * BBCode formatting information for a character
+ */
+export interface CharacterFormatting {
+  underline?: boolean;
+  bold?: boolean;
+  italic?: boolean;
+  strikethrough?: boolean;
+  color?: number; // Color in 0xRRGGBB format
+}
+
+/**
+ * Result of BBCode parsing
+ */
+export interface ParsedBBCode {
+  text: string;
+  formatting: Record<number, CharacterFormatting>;
+}
+
+/**
+ * Parse color value from BBCode color attribute
+ * Supports hex colors (#ff0000, #f00) and named colors
+ */
+export const parseColor = (colorValue: string): number | null => {
+  const trimmed = colorValue.trim();
+
+  // Handle hex colors
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.substring(1);
+
+    // Handle 3-digit hex (#f00 -> #ff0000)
+    if (hex.length === 3) {
+      const r = parseInt(hex.charAt(0) + hex.charAt(0), 16);
+      const g = parseInt(hex.charAt(1) + hex.charAt(1), 16);
+      const b = parseInt(hex.charAt(2) + hex.charAt(2), 16);
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return (r << 16) | (g << 8) | b;
+      }
+    }
+
+    // Handle 6-digit hex (#ff0000)
+    if (hex.length === 6) {
+      const color = parseInt(hex, 16);
+      if (!isNaN(color)) {
+        return color;
+      }
+    }
+  }
+
+  // Handle named colors
+  const namedColors: Record<string, number> = {
+    red: 0xff0000,
+    green: 0x00ff00,
+    blue: 0x0000ff,
+    white: 0xffffff,
+    black: 0x000000,
+    yellow: 0xffff00,
+    cyan: 0x00ffff,
+    magenta: 0xff00ff,
+    orange: 0xff8000,
+    purple: 0x800080,
+    pink: 0xff69b4,
+    brown: 0xa52a2a,
+    gray: 0x808080,
+    grey: 0x808080,
+  };
+
+  const lowerName = trimmed.toLowerCase();
+  if (namedColors[lowerName] !== undefined) {
+    return namedColors[lowerName];
+  }
+
+  return null;
+};
+
+/**
+ * BBCode parser that supports [u] for underline, [b] for bold, [i] for italic, [s] for strikethrough, and [color=value] for colors
+ * Returns plain text and character-level formatting information
+ */
+export const parseBBCode = (text: string): ParsedBBCode => {
+  const result: ParsedBBCode = {
+    text: '',
+    formatting: {},
+  };
+
+  let currentFormatting: CharacterFormatting = {};
+  let i = 0;
+  let outputIndex = 0;
+
+  while (i < text.length) {
+    // Check for BBCode tags
+    if (text[i] === '[') {
+      let tagEnd = text.indexOf(']', i);
+
+      if (tagEnd !== -1) {
+        const tag = text.substring(i + 1, tagEnd).toLowerCase();
+        let isClosingTag = false;
+        let tagName = tag;
+
+        if (tag.startsWith('/')) {
+          isClosingTag = true;
+          tagName = tag.substring(1);
+        }
+
+        // Handle supported tags
+        if (tagName === 'u') {
+          if (isClosingTag) {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.underline;
+          } else {
+            currentFormatting = { ...currentFormatting, underline: true };
+          }
+          i = tagEnd + 1;
+          continue;
+        }
+        // Add support for other tags if needed
+        else if (tagName === 'b') {
+          if (isClosingTag) {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.bold;
+          } else {
+            currentFormatting = { ...currentFormatting, bold: true };
+          }
+          i = tagEnd + 1;
+          continue;
+        } else if (tagName === 'i') {
+          if (isClosingTag) {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.italic;
+          } else {
+            currentFormatting = { ...currentFormatting, italic: true };
+          }
+          i = tagEnd + 1;
+          continue;
+        } else if (tagName === 's') {
+          if (isClosingTag) {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.strikethrough;
+          } else {
+            currentFormatting = { ...currentFormatting, strikethrough: true };
+          }
+          i = tagEnd + 1;
+          continue;
+        } else if (tagName.startsWith('color=')) {
+          if (!isClosingTag) {
+            // Parse color value from tag like [color=#ff0000] or [color=red]
+            const colorValue = tagName.substring(6); // Remove 'color='
+            const parsedColor = parseColor(colorValue);
+            if (parsedColor !== null) {
+              currentFormatting = { ...currentFormatting, color: parsedColor };
+            }
+          } else {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.color;
+          }
+          i = tagEnd + 1;
+          continue;
+        } else if (tagName === 'color') {
+          // Handle closing [/color] tag
+          if (isClosingTag) {
+            currentFormatting = { ...currentFormatting };
+            delete currentFormatting.color;
+            i = tagEnd + 1;
+            continue;
+          }
+        }
+      }
+    }
+
+    // Regular character - add to output with current formatting
+    result.text += text[i];
+    if (Object.keys(currentFormatting).length > 0) {
+      result.formatting[outputIndex] = { ...currentFormatting };
+    }
+    outputIndex++;
+    i++;
+  }
+
+  return result;
+};
+
 export const measureLines = (
   lines: string[],
   fontFamily: string,
