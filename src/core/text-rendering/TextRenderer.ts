@@ -335,6 +335,15 @@ export interface FontLoadOptions {
   atlasDataUrl?: string;
 }
 
+/**
+ * Measure Width of Text function to be defined in font handlers, used in TextLayoutEngine
+ */
+export type MeasureTextFn = (
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+) => number;
+
 export interface FontHandler {
   init: (
     c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -351,6 +360,7 @@ export interface FontHandler {
     fontSize: number,
   ) => NormalizedFontMetrics;
   setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
+  measureText: MeasureTextFn;
 }
 
 export interface TextRenderProps {
@@ -378,7 +388,7 @@ export interface TextRenderInfo {
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
-  renderText: (stage: Stage, props: CoreTextNodeProps) => TextRenderInfo;
+  renderText: (props: CoreTextNodeProps) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
@@ -394,8 +404,9 @@ export interface TextRenderer {
  * Text line struct for text mapping
  * 0 - text
  * 1 - width
+ * 2 - line offset x
  */
-export type TextLineStruct = [string, number];
+export type TextLineStruct = [string, number, number];
 
 /**
  * Wrapped lines struct for text mapping
@@ -404,3 +415,19 @@ export type TextLineStruct = [string, number];
  * 2 - remaining text
  */
 export type WrappedLinesStruct = [TextLineStruct[], number, boolean];
+
+/**
+ * Wrapped lines struct for text mapping
+ * 0 - line structs
+ * 1 - remaining lines
+ * 2 - remaining text
+ * 3 - effective width
+ * 4 - effective height
+ */
+export type TextLayoutStruct = [
+  TextLineStruct[],
+  number,
+  boolean,
+  number,
+  number,
+];

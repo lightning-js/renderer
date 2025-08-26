@@ -23,11 +23,13 @@ import type {
   NormalizedFontMetrics,
   TrProps,
   FontLoadOptions,
+  MeasureTextFn,
 } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
 import type { Stage } from '../Stage.js';
 import type { CoreTextNode } from '../CoreTextNode.js';
 import { UpdateType } from '../CoreNode.js';
+import { hasZeroWidthSpace } from './Utils.js';
 
 /**
  * SDF Font Data structure matching msdf-bmfont-xml output
@@ -551,4 +553,49 @@ export const unloadFont = (fontFamily: string): void => {
     delete fontCache[fontFamily];
     loadedFonts.delete(fontFamily);
   }
+};
+
+export const measureText = (
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+): number => {
+  if (text.length === 1) {
+    const char = text.charAt(0);
+    const codepoint = text.codePointAt(0);
+    if (codepoint === undefined) return 0;
+    if (hasZeroWidthSpace(char) === true) return 0;
+
+    const glyph = getGlyph(fontFamily, codepoint);
+    if (glyph === null) return 0;
+    return glyph.xadvance + letterSpacing;
+  }
+  let width = 0;
+  let prevCodepoint = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charAt(i);
+    const codepoint = text.codePointAt(i);
+    if (codepoint === undefined) continue;
+
+    // Skip zero-width spaces in width calculations
+    if (hasZeroWidthSpace(char)) {
+      continue;
+    }
+
+    const glyph = getGlyph(fontFamily, codepoint);
+    if (glyph === null) continue;
+
+    let advance = glyph.xadvance;
+
+    // Add kerning if there's a previous character
+    if (prevCodepoint !== 0) {
+      const kerning = getKerning(fontFamily, prevCodepoint, codepoint);
+      advance += kerning;
+    }
+
+    width += advance + letterSpacing;
+    prevCodepoint = codepoint;
+  }
+
+  return width;
 };

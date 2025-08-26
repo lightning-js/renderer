@@ -17,9 +17,12 @@
  * limitations under the License.
  */
 
-import { calculateFontMetrics } from '../Utils.js';
 import { wrapText, wrapWord, measureText, calcHeight } from './Utils.js';
-import { getFontMetrics, setFontMetrics } from '../CanvasFontHandler.js';
+import {
+  calculateFontMetrics,
+  getFontMetrics,
+  setFontMetrics,
+} from '../CanvasFontHandler.js';
 import type {
   NormalizedFontMetrics,
   TextBaseline,
@@ -117,7 +120,7 @@ export function calculateRenderInfo(
   let metrics = getFontMetrics(fontFamily, fontSize);
 
   if (metrics === null) {
-    metrics = calculateFontMetrics(context, fontFamily, fontSize);
+    metrics = calculateFontMetrics(fontFamily, fontSize);
     setFontMetrics(fontFamily, metrics);
   }
 

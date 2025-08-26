@@ -104,7 +104,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     this.w = this._renderInfo.width;
     this.h = this._renderInfo.height;
-
     // Texture was loaded. In case the RAF loop has already stopped, we request
     // a render to ensure the texture is rendered.
     this.stage.requestRender();
@@ -134,7 +133,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
         this._lastVertexBuffer = null; // Invalidate last vertex buffer
-        const resp = this.textRenderer.renderText(this.stage, this.textProps);
+        const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
       } else if (this._waitingForFont === false) {
@@ -181,7 +180,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         } satisfies NodeTextFailedPayload);
         return;
       }
-
       this.texture = this.stage.txManager.createTexture('ImageTexture', {
         premultiplyAlpha: true,
         src: result.imageData as ImageData,

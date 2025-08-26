@@ -24,7 +24,7 @@ import type {
   NormalizedFontMetrics,
 } from './TextRenderer.js';
 import type { Stage } from '../Stage.js';
-import { calculateFontMetrics } from './Utils.js';
+import { hasZeroWidthSpace } from './Utils.js';
 import type { CoreTextNode } from '../CoreTextNode.js';
 import { UpdateType } from '../CoreNode.js';
 
@@ -42,6 +42,9 @@ const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
 const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+let measureContext:
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D;
 
 /**
  * Normalize font metrics to be in the range of 0 to 1
@@ -127,7 +130,8 @@ export const getFontFamilies = (): FontFamilyMap => {
  * Initialize the global font handler
  */
 export const init = (
-  c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  mc: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): void => {
   if (initialized === true) {
     return;
@@ -140,6 +144,7 @@ export const init = (
   }
 
   context = c;
+  measureContext = mc;
 
   // Register the default 'sans-serif' font face
   const defaultMetrics: NormalizedFontMetrics = {
@@ -197,7 +202,7 @@ export const getFontMetrics = (
   if (out !== undefined) {
     return out;
   }
-  out = calculateFontMetrics(context, fontFamily, fontSize);
+  out = calculateFontMetrics(fontFamily, fontSize);
   normalizedMetrics.set(fontFamily + fontSize, out);
   return out;
 };
@@ -208,3 +213,87 @@ export const setFontMetrics = (
 ): void => {
   normalizedMetrics.set(fontFamily, metrics);
 };
+
+export const measureText = (
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+) => {
+  if (letterSpacing === 0) {
+    return measureContext.measureText(text).width;
+  }
+  if (hasZeroWidthSpace(text) === false) {
+    return measureContext.measureText(text).width + letterSpacing * text.length;
+  }
+  return text.split('').reduce((acc, char) => {
+    if (hasZeroWidthSpace(char) === true) {
+      return acc;
+    }
+    return acc + measureContext.measureText(char).width + letterSpacing;
+  }, 0);
+};
+
+/**
+ * Get the font metrics for a font face.
+ *
+ * @remarks
+ * This function will attempt to grab the explicitly defined metrics from the
+ * font face first. If the font face does not have metrics defined, it will
+ * attempt to calculate the metrics using the browser's measureText method.
+ *
+ * If the browser does not support the font metrics API, it will use some
+ * default values.
+ *
+ * @param context
+ * @param fontFace
+ * @param fontSize
+ * @returns
+ */
+export function calculateFontMetrics(
+  fontFamily: string,
+  fontSize: number,
+): NormalizedFontMetrics {
+  // If the font face doesn't have metrics defined, we fallback to using the
+  // browser's measureText method to calculate take a best guess at the font
+  // actual font's metrics.
+  // - fontBoundingBox[Ascent|Descent] is the best estimate but only supported
+  //   in Chrome 87+ (2020), Firefox 116+ (2023), and Safari 11.1+ (2018).
+  //   - It is an estimate as it can vary between browsers.
+  // - actualBoundingBox[Ascent|Descent] is less accurate and supported in
+  //   Chrome 77+ (2019), Firefox 74+ (2020), and Safari 11.1+ (2018).
+  // - If neither are supported, we'll use some default values which will
+  //   get text on the screen but likely not be great.
+  // NOTE: It's been decided not to rely on fontBoundingBox[Ascent|Descent]
+  // as it's browser support is limited and it also tends to produce higher than
+  // expected values. It is instead HIGHLY RECOMMENDED that developers provide
+  // explicit metrics in the font face definition.
+  const browserMetrics = measureContext.measureText(
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+  );
+  console.warn(
+    `Font metrics not provided for Canvas Web font ${fontFamily}. ` +
+      'Using fallback values. It is HIGHLY recommended you use the latest ' +
+      'version of the Lightning 3 `msdf-generator` tool to extract the default ' +
+      'metrics for the font and provide them in the Canvas Web font definition.',
+  );
+  let metrics: NormalizedFontMetrics;
+  if (
+    browserMetrics.actualBoundingBoxDescent &&
+    browserMetrics.actualBoundingBoxAscent
+  ) {
+    metrics = {
+      ascender: browserMetrics.actualBoundingBoxAscent / fontSize,
+      descender: -browserMetrics.actualBoundingBoxDescent / fontSize,
+      lineGap: 0.2,
+    };
+  } else {
+    // If the browser doesn't support the font metrics API, we'll use some
+    // default values.
+    metrics = {
+      ascender: 0.8,
+      descender: -0.2,
+      lineGap: 0.2,
+    };
+  }
+  return metrics;
+}

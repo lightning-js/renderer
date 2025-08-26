@@ -18,7 +18,7 @@
  */
 
 import type { NormalizedFontMetrics } from '../TextRenderer.js';
-import { isZeroWidthSpace } from '../Utils.js';
+import { hasZeroWidthSpace } from '../Utils.js';
 import type { TextBaseline } from './Settings.js';
 
 export const measureText = (
@@ -30,7 +30,7 @@ export const measureText = (
     return context.measureText(word).width;
   }
   return word.split('').reduce((acc, char) => {
-    if (isZeroWidthSpace(char) === true) {
+    if (hasZeroWidthSpace(char) === true) {
       return acc;
     }
     return acc + context.measureText(char).width + space;
