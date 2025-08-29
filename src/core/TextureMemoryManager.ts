@@ -270,7 +270,10 @@ export class TextureMemoryManager {
 
       // Skip textures that are in transitional states - we only want to clean up
       // textures that are in a stable state (loaded, failed, or freed)
-      if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
+      if (
+        texture.state === 'initial' ||
+        Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
+      ) {
         continue;
       }
 
@@ -303,46 +306,26 @@ export class TextureMemoryManager {
     // Free non-renderable textures until we reach the target threshold
     const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
 
-    // sort by renderability
-    const filteredAndSortedTextures: Texture[] = [];
-    const textures = [...this.loadedTextures.keys()];
-    for (let i = 0; i < textures.length; i++) {
-      const texture = textures[i];
+    // Filter for textures that are candidates for cleanup
+    // note: This is an expensive operation, so we only do it in deep cleanup
+    const cleanupCandidates = [...this.loadedTextures.keys()].filter(
+      (texture) => {
+        return (
+          (texture.type === TextureType.image ||
+            texture.type === TextureType.noise ||
+            texture.type === TextureType.renderToTexture) &&
+          texture.renderable === false &&
+          texture.preventCleanup === false &&
+          texture.state !== 'initial' &&
+          !Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
+        );
+      },
+    );
+
+    while (this.memUsed >= memTarget && cleanupCandidates.length > 0) {
+      const texture = cleanupCandidates.shift();
       if (texture === undefined) {
         continue;
-      }
-
-      if (
-        texture.type === TextureType.image ||
-        texture.type === TextureType.noise ||
-        texture.type === TextureType.renderToTexture
-      ) {
-        if (texture.renderable === true) {
-          filteredAndSortedTextures.push(texture);
-        } else {
-          filteredAndSortedTextures.unshift(texture);
-        }
-      }
-    }
-
-    while (this.memUsed >= memTarget && filteredAndSortedTextures.length > 0) {
-      const texture = filteredAndSortedTextures.shift();
-      if (texture === undefined) {
-        continue;
-      }
-
-      if (texture.preventCleanup === true) {
-        continue;
-      }
-
-      if (texture.renderable === true) {
-        break;
-      }
-
-      // Skip textures that are in transitional states - we only want to clean up
-      // textures that are in a stable state (loaded, failed, or freed)
-      if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
-        break;
       }
 
       this.destroyTexture(texture);
