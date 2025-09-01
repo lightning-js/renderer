@@ -127,7 +127,7 @@ const renderText = (
     fontScale,
   );
   const lineHeight =
-    props.lineHeight || fontSize * (ascender - descender + lineGap);
+    props.lineHeight * ascender || fontSize * (ascender - descender + lineGap);
   const letterSpacing = props.letterSpacing * precision;
 
   // Get font metrics and calculate line height
@@ -207,7 +207,6 @@ const renderText = (
     imageData = context.getImageData(0, 0, effectiveWidth, effectiveHeight);
   }
 
-  console.log('return', imageData);
   return {
     imageData,
     width: effectiveWidth,
