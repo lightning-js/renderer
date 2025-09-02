@@ -381,6 +381,8 @@ export interface TextRenderProps {
 export interface TextRenderInfo {
   width: number;
   height: number;
+  hasRemainingText?: boolean;
+  remainingLines?: number;
   imageData?: ImageData | null; // Image data for Canvas Text Renderer
   layout?: TextLayout; // Layout data for SDF renderer caching
 }

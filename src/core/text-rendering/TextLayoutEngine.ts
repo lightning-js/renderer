@@ -127,6 +127,7 @@ export const wrapText = (
   let wrappedLine: TextLineStruct[] = [];
   let remainingLines = maxLines;
   let hasRemainingText = true;
+  let hasMaxLines = maxLines > 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
@@ -141,6 +142,7 @@ export const wrapText = (
       overflowSuffix,
       wordBreak,
       remainingLines,
+      hasMaxLines,
     );
 
     wrappedLines.push(...wrappedLine);
@@ -159,6 +161,7 @@ export const wrapLine = (
   overflowSuffix: string,
   wordBreak: string,
   remainingLines: number,
+  hasMaxLines: boolean,
 ): WrappedLinesStruct => {
   // Use the same space regex as Canvas renderer to handle ZWSP
   const spaceRegex = / |\u200B/g;
@@ -292,7 +295,7 @@ export const wrapLine = (
   }
 
   // Add the last line if it has content
-  if (currentLine.length > 0 && remainingLines === 0) {
+  if (currentLine.length > 0 && hasMaxLines === true && remainingLines === 0) {
     currentLine = truncateLineWithSuffix(
       measureText,
       currentLine,

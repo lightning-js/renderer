@@ -19,7 +19,7 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { TextLayout, TextLineStruct } from './TextRenderer.js';
+import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { hasZeroWidthSpace } from './Utils.js';
@@ -84,14 +84,7 @@ const init = (stage: Stage): void => {
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (
-  props: CoreTextNodeProps,
-): {
-  imageData: ImageData | null;
-  width: number;
-  height: number;
-  layout?: TextLayout;
-} => {
+const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
@@ -134,8 +127,6 @@ const renderText = (
   measureContext.font = `${fontStyle} ${fontScale}px ${fontFamily}`;
   measureContext.textBaseline = textBaseline;
 
-  const finalWordWrapWidth = maxWidth === 0 ? innerWidth : maxWidth;
-
   const [
     lines,
     remainingLines,
@@ -149,7 +140,7 @@ const renderText = (
     fontFamily,
     overflowSuffix,
     wordBreak,
-    finalWordWrapWidth,
+    maxWidth,
     maxHeight,
     lineHeight,
     letterSpacing,
@@ -157,8 +148,14 @@ const renderText = (
   );
 
   // Set up canvas dimensions
-  canvas.width = Math.min(Math.ceil(effectiveWidth), MAX_TEXTURE_DIMENSION);
-  canvas.height = Math.min(Math.ceil(effectiveHeight), MAX_TEXTURE_DIMENSION);
+  const canvasW = (canvas.width = Math.min(
+    Math.ceil(maxWidth || effectiveWidth),
+    MAX_TEXTURE_DIMENSION,
+  ));
+  const canvasH = (canvas.height = Math.min(
+    Math.ceil(maxHeight || effectiveHeight),
+    MAX_TEXTURE_DIMENSION,
+  ));
   context.fillStyle = 'white';
   // Reset font context after canvas resize
   context.font = `${fontStyle} ${fontScale}px ${fontFamily}`;
@@ -204,13 +201,19 @@ const renderText = (
   // Extract image data
   let imageData: ImageData | null = null;
   if (canvas.width > 0 && canvas.height > 0) {
-    imageData = context.getImageData(0, 0, effectiveWidth, effectiveHeight);
+    imageData = context.getImageData(
+      0,
+      0,
+      maxWidth || effectiveWidth,
+      maxHeight || effectiveHeight,
+    );
   }
-
   return {
     imageData,
-    width: effectiveWidth,
-    height: effectiveHeight,
+    width: canvasW,
+    height: canvasH,
+    remainingLines,
+    hasRemainingText,
   };
 };
 

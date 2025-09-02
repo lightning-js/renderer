@@ -115,13 +115,13 @@ export default async function ({
   const statusNode = renderer.createTextNode({
     text: '',
     fontSize: 30,
-    offsetY: -5,
+    // offsetY: -5,
     zIndex: 100,
     parent: testRoot,
   });
 
   statusNode.on('loaded', ((target: any, { dimensions }) => {
-    statusNode.x = renderer.settings.appWidth - dimensions.width;
+    statusNode.x = renderer.settings.appWidth - dimensions.w;
   }) satisfies NodeLoadedEventHandler);
 
   function updateStatus() {
@@ -132,7 +132,6 @@ export default async function ({
       `moveStep: ${moveStep}`,
       `x: ${msdfTextNode.x}`,
       `y: ${msdfTextNode.y}`,
-      `scrollY: ${msdfTextNode.scrollY}`,
       `offsetY: ${msdfTextNode.offsetY}`,
       `fontSize: ${Number(msdfTextNode.fontSize).toFixed(1)}`,
       `letterSpacing: ${msdfTextNode.letterSpacing}`,
@@ -346,12 +345,12 @@ export default async function ({
  * Added offset to the Y position of the text to account for the
  * difference in canvas and SDF text rendering
  */
-const sdfOffsetY = 6;
+const sdfOffsetY = 0;
 
-function getFontProps(fontType: keyof TrFontFaceMap): {
+function getFontProps(fontType: string): {
   fontFamily: string;
   offsetY: number;
-  textRendererOverride: keyof TextRendererMap;
+  textRendererOverride: 'sdf' | 'canvas';
 } {
   if (fontType === 'msdf') {
     return {

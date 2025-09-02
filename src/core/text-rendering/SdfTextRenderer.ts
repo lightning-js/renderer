@@ -89,6 +89,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
+    remainingLines: 0,
+    hasRemainingText: false,
     width: layout.width,
     height: layout.height,
     layout, // Cache layout for addQuads
