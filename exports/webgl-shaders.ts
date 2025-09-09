@@ -26,3 +26,4 @@ export { HolePunch } from '../src/core/shaders/webgl/HolePunch.js';
 export { LinearGradient } from '../src/core/shaders/webgl/LinearGradient.js';
 export { RadialGradient } from '../src/core/shaders/webgl/RadialGradient.js';
 export { Default } from '../src/core/shaders/webgl/Default.js';
+export { Refraction } from '../src/core/shaders/webgl/Refraction.js';

@@ -24,6 +24,7 @@ export async function installShaders(stage: Stage, renderMode: string) {
   } else if (renderMode === 'canvas') {
     shaders = await import('@lightningjs/renderer/canvas/shaders');
   }
+  console.log('Installing shaders for', renderMode, shaders);
   stage.shManager.registerShaderType('Rounded', shaders.Rounded);
   stage.shManager.registerShaderType(
     'RoundedWithBorder',
@@ -42,4 +43,5 @@ export async function installShaders(stage: Stage, renderMode: string) {
   stage.shManager.registerShaderType('HolePunch', shaders.HolePunch);
   stage.shManager.registerShaderType('RadialGradient', shaders.RadialGradient);
   stage.shManager.registerShaderType('LinearGradient', shaders.LinearGradient);
+  stage.shManager.registerShaderType('Refraction', shaders.Refraction);
 }
