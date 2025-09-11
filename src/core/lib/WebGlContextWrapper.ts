@@ -725,7 +725,7 @@ export class WebGlContextWrapper {
     const result = {} as Record<string, number>;
     for (let i = 0; i < length; i++) {
       const { name } = gl.getActiveAttrib(program, i) as WebGLActiveInfo;
-      result[name] = i;
+      result[name] = gl.getAttribLocation(program, name);
     }
     return result;
   }
