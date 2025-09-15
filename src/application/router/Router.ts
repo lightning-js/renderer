@@ -95,7 +95,7 @@ export type RouterEventHandler = (event: {
 }) => void;
 
 /**
- * High-performance TV-optimized Router for NAF applications
+ * High-performance TV-optimized Router for L3 applications
  *
  * @remarks
  * This router is designed specifically for TV applications with:

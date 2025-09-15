@@ -38,7 +38,7 @@ import type {
  * Component class that extends CoreNode with template processing and component lifecycle
  *
  * @remarks
- * This is the core Component class for the NAF (Not A Framework) application framework.
+ * This is the core Component class for L3
  * It provides:
  * - Template-driven UI development with JSON-based templates
  * - Component lifecycle management (init, mount, unmount, destroy)

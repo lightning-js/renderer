@@ -1,6 +1,6 @@
 # Lightning 3 Application Framework
 
-This directory contains the NAF (Not A Framework) prototype integration into Lightning 3, providing enhanced application development capabilities while maintaining full compatibility with the core Lightning 3 renderer.
+This directory contains the Lightning 3 Application Framework, providing enhanced application development capabilities while maintaining full compatibility with the core Lightning 3 renderer.
 
 ## Overview
 
@@ -239,7 +239,7 @@ TBD
 
 ## Development Status
 
-This is Phase 1 of the NAF integration. Current status:
+This is Phase 1 of the integration. Current status:
 
 - ✅ Node class with focus and key routing
 - ✅ TextNode class with focus capabilities

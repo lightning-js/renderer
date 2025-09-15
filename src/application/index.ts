@@ -18,7 +18,7 @@
  */
 
 /**
- * Lightning 3 Application Framework (NAF Integration)
+ * Lightning 3 Application Framework
  *
  * @remarks
  * This module exports the high-level application framework components

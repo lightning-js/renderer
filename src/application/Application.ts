@@ -37,10 +37,10 @@ export interface IApplicationConfig {
 }
 
 /**
- * Main Application class for NAF (Not A Framework)
+ * Main Application class
  *
  * @remarks
- * This is the entry point for NAF applications. It provides:
+ * This is the entry point for applications. It provides:
  * - Renderer initialization and management
  * - Top-level template and component management
  * - Router configuration and navigation (Phase 2)
@@ -88,6 +88,12 @@ export class Application extends Component {
     // Default empty template - subclasses should override
   };
 
+  /**
+   * Configurable route not found component for unresolved routes
+   */
+  routeNotFoundComponent: Component | null = null;
+  routeNotFoundComponentClass?: typeof Component;
+
   constructor(config: IApplicationConfig) {
     // Initialize renderer first
     const rendererSettings: Partial<RendererMainSettings> = {
@@ -121,6 +127,11 @@ export class Application extends Component {
 
     // Set up application
     this.setupApplication(config.routes, config.initialRoute);
+
+    // Optionally allow routeNotFoundComponentClass to be set via config
+    if ((config as any).routeNotFoundComponentClass) {
+      this.routeNotFoundComponentClass = (config as any).routeNotFoundComponentClass;
+    }
   }
 
   /**

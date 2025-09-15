@@ -1,9 +1,5 @@
 /*
  * Lightning 3 Application Framework Example
- *
- * This example demonstrates the NAF (Not A Framework) integration
- * with Lightning 3, showing how to create components with focus
- * management and key event handling.
  */
 
 import { Component } from '../application/index.js';
@@ -238,7 +234,7 @@ export class ExampleApp extends Component {
 
   override init(): void {
     console.log('Example App initialized');
-    console.log('Lightning 3 Application Framework (NAF Integration) Demo');
+    console.log('Lightning 3 Application Framework Demo');
     console.log(
       'Use Arrow Keys to navigate, Enter to select, Escape for menu actions',
     );

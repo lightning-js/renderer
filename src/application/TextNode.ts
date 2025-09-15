@@ -28,10 +28,9 @@ import { Node } from './Node.js';
  * Enhanced TextNode class that extends CoreTextNode with focus and key routing capabilities
  *
  * @remarks
- * This class provides the foundation for the NAF (Not A Framework) application
- * framework integration into Lightning 3. It adds focus management and key
- * event handling capabilities while maintaining full compatibility with the
- * core Lightning 3 text rendering.
+ * This class provides the foundation for the L3 application
+ * It adds focus management and key event handling capabilities while maintaining full compatibility
+ * with the core Lightning 3 text rendering.
  *
  * Key features:
  * - Focus management (onFocus/onBlur lifecycle)
