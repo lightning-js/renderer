@@ -76,7 +76,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   // Get font cache for this font family
   const fontData = SdfFontHandler.getFontData(props.fontFamily);
-  if (fontData === null) {
+  if (fontData === undefined) {
     // Font not loaded, return empty result
     return {
       width: 0,
@@ -274,14 +274,15 @@ const renderQuads = (
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
-  fontData: SdfFontHandler.SdfFontData,
+  fontCache: SdfFontHandler.SdfFontCache,
 ): TextLayout => {
   const fontSize = props.fontSize;
   const fontFamily = props.fontFamily;
   const lineHeight = props.lineHeight;
-  const metrics = fontData.lightningMetrics!;
+  const metrics = fontCache.metrics;
   const verticalAlign = props.verticalAlign;
 
+  const fontData = fontCache.data;
   const commonFontData = fontData.common;
   const designFontSize = fontData.info.size;
 
@@ -294,13 +295,6 @@ const generateTextLayout = (
 
   const maxWidth = props.maxWidth / fontScale;
   const maxHeight = props.maxHeight;
-
-  const fontLineHeight = fontData.common.lineHeight * fontScale;
-  const cssLineHeight =
-    props.lineHeight <= 3 ? fontSize * props.lineHeight : props.lineHeight;
-
-  const factor = cssLineHeight / fontLineHeight;
-  const effectiveLineHeight = factor;
 
   const [
     lines,

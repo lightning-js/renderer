@@ -19,11 +19,7 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type {
-  FontMetrics,
-  TextLineStruct,
-  TextRenderInfo,
-} from './TextRenderer.js';
+import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { hasZeroWidthSpace } from './Utils.js';
@@ -69,6 +65,7 @@ const init = (stage: Stage): void => {
     | OffscreenCanvasRenderingContext2D;
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.textRendering = 'optimizeSpeed';
 
   // Separate measuring canvas and context
   measureCanvas = stage.platform.createCanvas() as
@@ -79,6 +76,7 @@ const init = (stage: Stage): void => {
     | OffscreenCanvasRenderingContext2D;
 
   measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+  measureContext.textRendering = 'optimizeSpeed';
 
   // Set up a minimal size for the measuring canvas since we only use it for measurements
   measureCanvas.width = 1;
@@ -114,30 +112,14 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     wordBreak,
   } = props;
 
-  // Performance optimization constants
-  const precision = 1;
-  const paddingLeft = 0;
-  const paddingRight = 0;
-  const textIndent = 0;
-  const textRenderIssueMargin = 0;
-  const textColor = 0xffffffff;
-
-  const fontScale = fontSize * precision;
+  const fontScale = fontSize;
   // Get font metrics and calculate line height
   measureContext.font = `${fontStyle} ${fontScale}px Unknown, ${fontFamily}`;
   measureContext.textBaseline = 'hanging';
 
   const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontScale);
 
-  //compute metrics TODO: fix this on fontHandler level
-  const litMetrics: FontMetrics = {
-    unitsPerEm: 1000,
-    ascender: metrics.ascender * 1000,
-    descender: metrics.descender * 1000,
-    lineGap: 0,
-  };
-
-  const letterSpacing = props.letterSpacing * precision;
+  const letterSpacing = props.letterSpacing;
 
   const [
     lines,
@@ -149,7 +131,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     effectiveHeight,
   ] = mapTextLayout(
     CanvasFontHandler.measureText,
-    litMetrics,
+    metrics,
     text,
     textAlign,
     verticalAlign,
@@ -180,8 +162,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     context.fillRect(0, 0, 0.01, 0.01);
     context.globalAlpha = 1.0;
   }
-
-  const offset = (lineHeightPx - bareLineHeight) / 2;
 
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;

@@ -23,7 +23,6 @@ import type {
   NormalizedFontMetrics,
   TrProps,
   FontLoadOptions,
-  MeasureTextFn,
 } from './TextRenderer.js';
 import type { ImageTexture } from '../textures/ImageTexture.js';
 import type { Stage } from '../Stage.js';
@@ -117,12 +116,12 @@ type KerningTable = Record<
  * @typedef {Object} SdfFontCache
  * Cached font data for performance
  */
-interface SdfFontCache {
+export interface SdfFontCache {
   data: SdfFontData;
   glyphMap: Map<number, SdfFontData['chars'][0]>;
   kernings: KerningTable;
   atlasTexture: ImageTexture;
-  metrics: NormalizedFontMetrics;
+  metrics: FontMetrics;
   maxCharHeight: number;
 }
 
@@ -132,15 +131,6 @@ const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
 const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
 let initialized = false;
-
-/**
- * Normalize font metrics to be in the range of 0 to 1
- */
-const normalizeMetrics = (metrics: FontMetrics): NormalizedFontMetrics => ({
-  ascender: metrics.ascender / metrics.unitsPerEm,
-  descender: metrics.descender / metrics.unitsPerEm,
-  lineGap: metrics.lineGap / metrics.unitsPerEm,
-});
 
 /**
  * Build kerning lookup table for fast access
@@ -238,33 +228,29 @@ const processFontData = (
     i++;
   }
 
-  // Determine metrics
-  let normalizedMetrics: NormalizedFontMetrics;
-
-  if (metrics !== undefined) {
-    normalizedMetrics = normalizeMetrics(metrics);
-  } else if (fontData.lightningMetrics !== undefined) {
-    normalizedMetrics = normalizeMetrics(fontData.lightningMetrics);
-  } else {
+  if (metrics === undefined && fontData.lightningMetrics === undefined) {
     console.warn(
       `Font metrics not found for SDF font ${fontFamily}. ` +
         'Make sure you are using the latest version of the Lightning ' +
         '3 msdf-generator tool to generate your SDF fonts. Using default metrics.',
     );
-    // Use default metrics
-    normalizedMetrics = {
-      ascender: 0.8,
-      descender: -0.2,
-      lineGap: 0.2,
-    };
   }
+
+  metrics = metrics ||
+    fontData.lightningMetrics || {
+      ascender: 800,
+      descender: -200,
+      lineGap: 200,
+      unitsPerEm: 1000,
+    };
+
   // Cache processed data
   fontCache[fontFamily] = {
     data: fontData,
     glyphMap,
     kernings,
     atlasTexture,
-    metrics: normalizedMetrics,
+    metrics,
     maxCharHeight,
   };
 };
@@ -447,14 +433,15 @@ export const getFontMetrics = (
   fontFamily: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fontSize: number,
-): NormalizedFontMetrics => {
+): FontMetrics => {
   const cache = fontCache[fontFamily];
   return cache
     ? cache.metrics
     : {
-        ascender: 0.8,
-        descender: -0.2,
-        lineGap: 0.2,
+        ascender: 800,
+        descender: -200,
+        lineGap: 200,
+        unitsPerEm: 1000,
       };
 };
 
@@ -463,7 +450,7 @@ export const getFontMetrics = (
  */
 export const setFontMetrics = (
   fontFamily: string,
-  metrics: NormalizedFontMetrics,
+  metrics: FontMetrics,
 ): void => {
   const cache = fontCache[fontFamily];
   if (cache !== undefined) {
@@ -521,9 +508,8 @@ export const getAtlas = (fontFamily: string): ImageTexture | null => {
  * @param {string} fontFamily - Font family name
  * @returns {SdfFontData|null} Font data or null
  */
-export const getFontData = (fontFamily: string): SdfFontData | null => {
-  const cache = fontCache[fontFamily];
-  return cache !== undefined ? cache.data : null;
+export const getFontData = (fontFamily: string): SdfFontCache | undefined => {
+  return fontCache[fontFamily];
 };
 
 /**

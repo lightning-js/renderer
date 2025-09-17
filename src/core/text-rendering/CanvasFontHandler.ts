@@ -38,25 +38,14 @@ import { UpdateType } from '../CoreNode.js';
 const fontFamilies: Record<string, FontFace> = {};
 const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
-const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
+const normalizedMetrics = new Map<string, FontMetrics>();
 const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
+
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 let measureContext:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D;
-
-/**
- * Normalize font metrics to be in the range of 0 to 1
- */
-function normalizeMetrics(metrics: FontMetrics): NormalizedFontMetrics {
-  return {
-    ascender: metrics.ascender / metrics.unitsPerEm,
-    descender: metrics.descender / metrics.unitsPerEm,
-    lineGap: metrics.lineGap / metrics.unitsPerEm,
-  };
-}
-
 /**
  * make fontface add not show errors
  */
@@ -102,7 +91,7 @@ export const loadFont = async (
       fontLoadPromises.delete(fontFamily);
       // Store normalized metrics if provided
       if (metrics) {
-        setFontMetrics(fontFamily, normalizeMetrics(metrics));
+        setFontMetrics(fontFamily, metrics);
       }
       for (let key in nwff) {
         nwff[key]!.setUpdateType(UpdateType.Local);
@@ -147,10 +136,11 @@ export const init = (
   measureContext = mc;
 
   // Register the default 'sans-serif' font face
-  const defaultMetrics: NormalizedFontMetrics = {
-    ascender: 0.8,
-    descender: -0.2,
-    lineGap: 0.2,
+  const defaultMetrics: FontMetrics = {
+    ascender: 800,
+    descender: -200,
+    lineGap: 200,
+    unitsPerEm: 1000,
   };
 
   setFontMetrics('sans-serif', defaultMetrics);
@@ -195,7 +185,7 @@ export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
 export const getFontMetrics = (
   fontFamily: string,
   fontSize: number,
-): NormalizedFontMetrics => {
+): FontMetrics => {
   let out =
     normalizedMetrics.get(fontFamily) ||
     normalizedMetrics.get(fontFamily + fontSize);
@@ -209,7 +199,7 @@ export const getFontMetrics = (
 
 export const setFontMetrics = (
   fontFamily: string,
-  metrics: NormalizedFontMetrics,
+  metrics: FontMetrics,
 ): void => {
   normalizedMetrics.set(fontFamily, metrics);
 };
@@ -252,7 +242,7 @@ export const measureText = (
 export function calculateFontMetrics(
   fontFamily: string,
   fontSize: number,
-): NormalizedFontMetrics {
+): FontMetrics {
   // If the font face doesn't have metrics defined, we fallback to using the
   // browser's measureText method to calculate take a best guess at the font
   // actual font's metrics.
@@ -267,7 +257,7 @@ export function calculateFontMetrics(
   // as it's browser support is limited and it also tends to produce higher than
   // expected values. It is instead HIGHLY RECOMMENDED that developers provide
   // explicit metrics in the font face definition.
-  const browserMetrics = measureContext.measureText(
+  const metrics = measureContext.measureText(
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
   );
   console.warn(
@@ -276,24 +266,17 @@ export function calculateFontMetrics(
       'version of the Lightning 3 `msdf-generator` tool to extract the default ' +
       'metrics for the font and provide them in the Canvas Web font definition.',
   );
-  let metrics: NormalizedFontMetrics;
-  if (
-    browserMetrics.actualBoundingBoxDescent &&
-    browserMetrics.actualBoundingBoxAscent
-  ) {
-    metrics = {
-      ascender: browserMetrics.actualBoundingBoxAscent / fontSize,
-      descender: -browserMetrics.actualBoundingBoxDescent / fontSize,
-      lineGap: 0.2,
-    };
-  } else {
-    // If the browser doesn't support the font metrics API, we'll use some
-    // default values.
-    metrics = {
-      ascender: 0.8,
-      descender: -0.2,
-      lineGap: 0.2,
-    };
-  }
-  return metrics;
+  const ascender =
+    metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? 800;
+  const descender =
+    metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? 200;
+  return {
+    ascender,
+    descender: -descender,
+    lineGap:
+      (metrics.emHeightAscent ?? 0) +
+      (metrics.emHeightDescent ?? 0) -
+      (ascender + descender),
+    unitsPerEm: (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0),
+  };
 }
