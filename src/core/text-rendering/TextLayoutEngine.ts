@@ -1,4 +1,5 @@
 import type {
+  FontMetrics,
   MeasureTextFn,
   TextLayoutStruct,
   TextLineStruct,
@@ -7,23 +8,35 @@ import type {
 
 export const mapTextLayout = (
   measureText: MeasureTextFn,
+  metrics: FontMetrics,
   text: string,
   textAlign: string,
+  verticalAlign: string,
   fontFamily: string,
+  fontSize: number,
+  lineHeight: number,
   overflowSuffix: string,
   wordBreak: string,
-  maxWidth: number,
-  maxHeight: number,
-  lineHeight: number,
   letterSpacing: number,
   maxLines: number,
+  maxWidth: number,
+  maxHeight: number,
 ): TextLayoutStruct => {
-  //check effective max lines
+  const scale = fontSize / metrics.unitsPerEm;
+  const ascPx = metrics.ascender * scale;
+  const descPx = metrics.descender * scale;
+
+  const bareLineHeight = ascPx - descPx;
+  const lineHeightPx =
+    lineHeight <= 3 ? lineHeight * bareLineHeight : lineHeight;
+  const lineHeightDelta = lineHeightPx - bareLineHeight;
+  const halfDelta = lineHeightDelta * 0.5;
+
   let effectiveMaxLines = maxLines;
   if (maxHeight > 0) {
-    const calculatedMax = Math.floor(maxHeight / lineHeight);
-    if (calculatedMax < effectiveMaxLines) {
-      effectiveMaxLines = calculatedMax;
+    const maxFromHeight = Math.floor(maxHeight / lineHeightPx);
+    if (effectiveMaxLines === 0 || maxFromHeight < effectiveMaxLines) {
+      effectiveMaxLines = maxFromHeight;
     }
   }
 
@@ -51,7 +64,6 @@ export const mapTextLayout = (
 
   let effectiveLineAmount = lines.length;
   let effectiveMaxWidth = lines[0]![1];
-  const effectiveMaxHeight = effectiveLineAmount * lineHeight;
 
   //check for longest line
   if (effectiveLineAmount > 1) {
@@ -70,10 +82,29 @@ export const mapTextLayout = (
     }
   }
 
+  const effectiveMaxHeight = effectiveLineAmount * lineHeightPx;
+
+  let firstBaseLine = halfDelta;
+  if (maxHeight > 0 && verticalAlign !== 'top') {
+    if (verticalAlign === 'middle') {
+      firstBaseLine += (maxHeight - effectiveMaxHeight) / 2;
+    } else {
+      firstBaseLine += maxHeight - effectiveMaxHeight;
+    }
+  }
+
+  const startY = firstBaseLine;
+  for (let i = 0; i < effectiveLineAmount; i++) {
+    const line = lines[i] as TextLineStruct;
+    line[3] = startY + lineHeightPx * i;
+  }
+
   return [
     lines,
     remainingLines,
     remainingText,
+    bareLineHeight,
+    lineHeightPx,
     effectiveMaxWidth,
     effectiveMaxHeight,
   ];
@@ -92,13 +123,13 @@ export const measureLines = (
 
   while (remainingLines > 0) {
     const line = lines[i];
+    i++;
+    remainingLines--;
     if (line === undefined) {
       continue;
     }
     const width = measureText(line, fontFamily, letterSpacing);
-    measuredLines.push([line, width, 0]);
-    i++;
-    remainingLines--;
+    measuredLines.push([line, width, 0, 0]);
   }
 
   return [
@@ -216,7 +247,7 @@ export const wrapLine = (
       }
 
       if (wordBreak !== 'break-all' && currentLine.length > 0) {
-        wrappedLines.push([currentLine, currentLineWidth, 0]);
+        wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
         currentLine = '';
         currentLineWidth = 0;
         remainingLines--;
@@ -259,7 +290,7 @@ export const wrapLine = (
           currentLineWidth + firstLetterWidth + effectiveSpaceWidth >
           maxWidth
         ) {
-          wrappedLines.push([currentLine, currentLineWidth, 0]);
+          wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
           remainingLines -= 1;
           currentLine = '';
           currentLineWidth = 0;
@@ -281,13 +312,13 @@ export const wrapLine = (
           const [text, width] = lines[0]!;
           currentLine += ' ' + text;
           currentLineWidth = width;
-          wrappedLines.push([currentLine, currentLineWidth, 0]);
+          wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
         }
 
         for (let j = 1; j < lines.length; j++) {
           [currentLine, currentLineWidth] = lines[j]!;
           if (j < lines.length - 1) {
-            wrappedLines.push([currentLine, currentLineWidth, 0]);
+            wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
           }
         }
       }
@@ -307,9 +338,9 @@ export const wrapLine = (
   }
 
   if (currentLine.length > 0) {
-    wrappedLines.push([currentLine, currentLineWidth, 0]);
+    wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
   } else {
-    wrappedLines.push(['', 0, 0]);
+    wrappedLines.push(['', 0, 0, 0]);
   }
   return [wrappedLines, remainingLines, hasRemainingText];
 };
@@ -371,7 +402,7 @@ export const breakWord = (
       if (remainingLines === 0) {
         break;
       }
-      lines.push([currentPart, currentWidth, 0]);
+      lines.push([currentPart, currentWidth, 0, 0]);
       currentPart = char;
       currentWidth = charWidth;
     } else {
@@ -381,7 +412,7 @@ export const breakWord = (
   }
 
   if (currentPart.length > 0) {
-    lines.push([currentPart, currentWidth, 0]);
+    lines.push([currentPart, currentWidth, 0, 0]);
   }
 
   return [lines, remainingLines, i < word.length - 1];
@@ -414,7 +445,7 @@ export const breakAll = (
     const char = word.charAt(i);
     const charWidth = measureText(char, fontFamily, letterSpacing);
     if (currentWidth + charWidth > max && currentPart.length > 0) {
-      lines.push([currentPart, currentWidth, 0]);
+      lines.push([currentPart, currentWidth, 0, 0]);
       currentPart = char;
       currentWidth = charWidth;
       max = maxWidth;
@@ -426,7 +457,7 @@ export const breakAll = (
   }
 
   if (currentPart.length > 0) {
-    lines.push([currentPart, currentWidth, 0]);
+    lines.push([currentPart, currentWidth, 0, 0]);
   }
 
   return [lines, remainingLines, hasRemainingText];

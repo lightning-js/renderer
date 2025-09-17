@@ -400,18 +400,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  get textBaseline(): TrProps['textBaseline'] {
-    return this.textProps.textBaseline;
-  }
-
-  set textBaseline(value: TrProps['textBaseline']) {
-    if (this.textProps.textBaseline !== value) {
-      this.textProps.textBaseline = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
   get verticalAlign(): TrProps['verticalAlign'] {
     return this.textProps.verticalAlign;
   }

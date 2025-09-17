@@ -190,7 +190,6 @@ const renderQuads = (
 ): void => {
   const fontFamily = renderProps.fontFamily;
   const color = renderProps.color;
-  const offsetY = renderProps.offsetY;
   const worldAlpha = renderProps.worldAlpha;
   const globalTransform = renderProps.globalTransform;
 
@@ -246,9 +245,7 @@ const renderQuads = (
         transform: globalTransform,
         color: mergeColorAlpha(color, worldAlpha),
         size: layout.fontScale, // Use proper font scaling in shader
-        scrollY: offsetY || 0,
         distanceRange: layout.distanceRange,
-        debug: false, // Disable debug mode
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
       shader: sdfShader,
@@ -281,10 +278,11 @@ const generateTextLayout = (
 ): TextLayout => {
   const fontSize = props.fontSize;
   const fontFamily = props.fontFamily;
-  const commonFontData = fontData.common;
-  // Use the font's design size for proper scaling
-  const designLineHeight = commonFontData.lineHeight;
+  const lineHeight = props.lineHeight;
+  const metrics = fontData.lightningMetrics!;
+  const verticalAlign = props.verticalAlign;
 
+  const commonFontData = fontData.common;
   const designFontSize = fontData.info.size;
 
   const atlasWidth = commonFontData.scaleW;
@@ -292,46 +290,56 @@ const generateTextLayout = (
 
   // Calculate the pixel scale from design units to pixels
   const fontScale = fontSize / designFontSize;
-
-  const lineHeight =
-    props.lineHeight / fontScale ||
-    (designLineHeight * fontSize) / designFontSize;
   const letterSpacing = props.letterSpacing / fontScale;
 
   const maxWidth = props.maxWidth / fontScale;
-  const maxHeight = props.maxHeight / fontScale;
+  const maxHeight = props.maxHeight;
+
+  const fontLineHeight = fontData.common.lineHeight * fontScale;
+  const cssLineHeight =
+    props.lineHeight <= 3 ? fontSize * props.lineHeight : props.lineHeight;
+
+  const factor = cssLineHeight / fontLineHeight;
+  const effectiveLineHeight = factor;
 
   const [
     lines,
     remainingLines,
     hasRemainingText,
+    bareLineHeight,
+    lineHeightPx,
     effectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
     SdfFontHandler.measureText,
+    metrics,
     props.text,
     props.textAlign,
+    verticalAlign,
     fontFamily,
+    fontSize,
+    lineHeight,
     props.overflowSuffix,
     props.wordBreak,
-    maxWidth,
-    maxHeight,
-    lineHeight,
     letterSpacing,
     props.maxLines,
+    maxWidth,
+    maxHeight,
   );
 
   const lineAmount = lines.length;
+
   const glyphs: GlyphLayout[] = [];
   let currentX = 0;
   let currentY = 0;
-
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
     const textLineLength = textLine.length;
     let prevCodepoint = 0;
     currentX = line[2];
+    //convert Y coord to vertex value
+    currentY = line[3] / fontScale;
 
     for (let j = 0; j < textLineLength; j++) {
       const char = textLine.charAt(j);
@@ -382,7 +390,7 @@ const generateTextLayout = (
       currentX += advance + letterSpacing;
       prevCodepoint = codepoint;
     }
-    currentY += designLineHeight;
+    currentY += lineHeightPx;
   }
 
   // Convert final dimensions to pixel space for the layout
@@ -390,9 +398,9 @@ const generateTextLayout = (
     glyphs,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
     width: effectiveWidth,
-    height: effectiveHeight,
+    height: maxHeight || effectiveHeight,
     fontScale: fontScale,
-    lineHeight,
+    lineHeight: lineHeightPx,
     fontFamily,
   };
 };

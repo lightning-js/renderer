@@ -19,7 +19,11 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
+import type {
+  FontMetrics,
+  TextLineStruct,
+  TextRenderInfo,
+} from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { hasZeroWidthSpace } from './Utils.js';
@@ -56,11 +60,15 @@ const layoutCache = new Map<
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
+  const dpr = window.devicePixelRatio || 1;
+
   // Drawing canvas and context
   canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
   context = canvas.getContext('2d', { willReadFrequently: true }) as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
+
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // Separate measuring canvas and context
   measureCanvas = stage.platform.createCanvas() as
@@ -69,6 +77,8 @@ const init = (stage: Stage): void => {
   measureContext = measureCanvas.getContext('2d') as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
+
+  measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // Set up a minimal size for the measuring canvas since we only use it for measurements
   measureCanvas.width = 1;
@@ -96,12 +106,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     fontSize,
     textAlign,
     maxLines,
-    textBaseline,
+    lineHeight,
     verticalAlign,
     overflowSuffix,
     maxWidth,
     maxHeight,
-    offsetY,
     wordBreak,
   } = props;
 
@@ -114,52 +123,56 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   const textColor = 0xffffffff;
 
   const fontScale = fontSize * precision;
-
-  const { ascender, descender, lineGap } = CanvasFontHandler.getFontMetrics(
-    fontFamily,
-    fontScale,
-  );
-  const lineHeight =
-    props.lineHeight * ascender || fontSize * (ascender - descender + lineGap);
-  const letterSpacing = props.letterSpacing * precision;
-
   // Get font metrics and calculate line height
-  measureContext.font = `${fontStyle} ${fontScale}px ${fontFamily}`;
-  measureContext.textBaseline = textBaseline;
+  measureContext.font = `${fontStyle} ${fontScale}px Unknown, ${fontFamily}`;
+  measureContext.textBaseline = 'hanging';
+
+  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontScale);
+
+  //compute metrics TODO: fix this on fontHandler level
+  const litMetrics: FontMetrics = {
+    unitsPerEm: 1000,
+    ascender: metrics.ascender * 1000,
+    descender: metrics.descender * 1000,
+    lineGap: 0,
+  };
+
+  const letterSpacing = props.letterSpacing * precision;
 
   const [
     lines,
     remainingLines,
     hasRemainingText,
+    bareLineHeight,
+    lineHeightPx,
     effectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
     CanvasFontHandler.measureText,
+    litMetrics,
     text,
     textAlign,
+    verticalAlign,
     fontFamily,
+    fontSize,
+    lineHeight,
     overflowSuffix,
     wordBreak,
-    maxWidth,
-    maxHeight,
-    lineHeight,
     letterSpacing,
     maxLines,
+    maxWidth,
+    maxHeight,
   );
 
-  // Set up canvas dimensions
-  const canvasW = (canvas.width = Math.min(
-    Math.ceil(maxWidth || effectiveWidth),
-    MAX_TEXTURE_DIMENSION,
-  ));
-  const canvasH = (canvas.height = Math.min(
-    Math.ceil(maxHeight || effectiveHeight),
-    MAX_TEXTURE_DIMENSION,
-  ));
+  const lineAmount = lines.length;
+  const canvasW = Math.ceil(maxWidth || effectiveWidth);
+  const canvasH = Math.ceil(maxHeight || effectiveHeight);
+
+  canvas.width = canvasW;
+  canvas.height = canvasH;
   context.fillStyle = 'white';
-  // Reset font context after canvas resize
-  context.font = `${fontStyle} ${fontScale}px ${fontFamily}`;
-  context.textBaseline = textBaseline;
+  context.font = `${fontStyle} ${fontScale}px Unknown, ${fontFamily}`;
+  context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
   if (fontScale >= 128) {
@@ -168,17 +181,13 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     context.globalAlpha = 1.0;
   }
 
-  const lineAmount = lines.length;
-  const ascenderScale = ascender * fontSize;
-  let currentX = 0;
-  let currentY = 0;
+  const offset = (lineHeightPx - bareLineHeight) / 2;
 
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
-    currentX = line[2];
-    currentY = i * lineHeight + ascenderScale;
-
+    let currentX = Math.ceil(line[2]);
+    const currentY = Math.ceil(line[3]);
     if (letterSpacing === 0) {
       context.fillText(textLine, currentX, currentY);
     } else {
@@ -201,12 +210,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   // Extract image data
   let imageData: ImageData | null = null;
   if (canvas.width > 0 && canvas.height > 0) {
-    imageData = context.getImageData(
-      0,
-      0,
-      maxWidth || effectiveWidth,
-      maxHeight || effectiveHeight,
-    );
+    imageData = context.getImageData(0, 0, canvasW, canvasH);
   }
   return {
     imageData,

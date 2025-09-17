@@ -449,7 +449,13 @@ export const getFontMetrics = (
   fontSize: number,
 ): NormalizedFontMetrics => {
   const cache = fontCache[fontFamily];
-  return cache ? cache.metrics : { ascender: 0, descender: 0, lineGap: 0 };
+  return cache
+    ? cache.metrics
+    : {
+        ascender: 0.8,
+        descender: -0.2,
+        lineGap: 0.2,
+      };
 };
 
 /**

@@ -199,16 +199,6 @@ export interface TrProps extends TrFontProps {
    */
   maxLines: number;
   /**
-   * Baseline for text
-   *
-   * @remarks
-   * This property sets the text baseline used when drawing text.
-   * Not yet implemented in the SDF renderer.
-   *
-   * @default alphabetic
-   */
-  textBaseline: TextBaseline;
-  /**
    * Vertical Align for text when lineHeight > fontSize
    *
    * @remarks
@@ -407,8 +397,9 @@ export interface TextRenderer {
  * 0 - text
  * 1 - width
  * 2 - line offset x
+ * 3 - line offset y
  */
-export type TextLineStruct = [string, number, number];
+export type TextLineStruct = [string, number, number, number];
 
 /**
  * Wrapped lines struct for text mapping
@@ -423,13 +414,17 @@ export type WrappedLinesStruct = [TextLineStruct[], number, boolean];
  * 0 - line structs
  * 1 - remaining lines
  * 2 - remaining text
- * 3 - effective width
- * 4 - effective height
+ * 3 - bare line height
+ * 4 - line height pixels
+ * 5 - effective width
+ * 6 - effective height
  */
 export type TextLayoutStruct = [
   TextLineStruct[],
   number,
   boolean,
+  number,
+  number,
   number,
   number,
 ];
