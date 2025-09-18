@@ -274,12 +274,12 @@ const renderQuads = (
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
-  fontCache: SdfFontHandler.SdfFontCache,
+  fontCache: SdfFontHandler.SdfFont,
 ): TextLayout => {
   const fontSize = props.fontSize;
   const fontFamily = props.fontFamily;
   const lineHeight = props.lineHeight;
-  const metrics = fontCache.metrics;
+  const metrics = SdfFontHandler.getFontMetrics(fontFamily, fontSize);
   const verticalAlign = props.verticalAlign;
 
   const fontData = fontCache.data;
@@ -295,7 +295,6 @@ const generateTextLayout = (
 
   const maxWidth = props.maxWidth / fontScale;
   const maxHeight = props.maxHeight;
-
   const [
     lines,
     remainingLines,
@@ -311,7 +310,6 @@ const generateTextLayout = (
     props.textAlign,
     verticalAlign,
     fontFamily,
-    fontSize,
     lineHeight,
     props.overflowSuffix,
     props.wordBreak,

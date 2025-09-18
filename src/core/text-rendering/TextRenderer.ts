@@ -349,7 +349,6 @@ export interface FontHandler {
     fontFamily: string,
     fontSize: number,
   ) => NormalizedFontMetrics;
-  setFontMetrics: (fontFamily: string, metrics: FontMetrics) => void;
   measureText: MeasureTextFn;
 }
 

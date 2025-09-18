@@ -27,6 +27,16 @@ import type { Stage } from '../Stage.js';
 import { hasZeroWidthSpace } from './Utils.js';
 import type { CoreTextNode } from '../CoreTextNode.js';
 import { UpdateType } from '../CoreNode.js';
+import {
+  defaultFontMetrics,
+  normalizeFontMetrics,
+} from './TextLayoutEngine.js';
+
+interface CanvasFont {
+  fontFamily: string;
+  fontFace?: FontFace;
+  metrics?: FontMetrics;
+}
 
 /**
  * Global font set regardless of if run in the main thread or a web worker
@@ -36,10 +46,13 @@ import { UpdateType } from '../CoreNode.js';
 
 // Global state variables for fontHandler
 const fontFamilies: Record<string, FontFace> = {};
-const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
-const normalizedMetrics = new Map<string, FontMetrics>();
-const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
+const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
+const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(
+  null,
+) as Record<string, CoreTextNode[]>;
+
+const fontCache = new Map<string, CanvasFont>();
 
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -61,6 +74,19 @@ export const canRenderFont = (): boolean => {
   return true;
 };
 
+const processFontData = (
+  fontFamily: string,
+  fontFace?: FontFace,
+  metrics?: FontMetrics,
+) => {
+  metrics = metrics || defaultFontMetrics;
+  fontCache.set(fontFamily, {
+    fontFamily,
+    fontFace,
+    metrics,
+  });
+};
+
 /**
  * Load a font by providing fontFamily, fontUrl, and optional metrics
  */
@@ -71,7 +97,7 @@ export const loadFont = async (
   const { fontFamily, fontUrl, metrics } = options;
 
   // If already loaded, return immediately
-  if (loadedFonts.has(fontFamily) === true) {
+  if (fontCache.has(fontFamily) === true) {
     return;
   }
 
@@ -87,12 +113,8 @@ export const loadFont = async (
     .load()
     .then((loadedFont) => {
       (document.fonts as FontFaceSetWithAdd).add(loadedFont);
-      loadedFonts.add(fontFamily);
+      processFontData(fontFamily, loadedFont, metrics);
       fontLoadPromises.delete(fontFamily);
-      // Store normalized metrics if provided
-      if (metrics) {
-        setFontMetrics(fontFamily, metrics);
-      }
       for (let key in nwff) {
         nwff[key]!.setUpdateType(UpdateType.Local);
       }
@@ -143,8 +165,7 @@ export const init = (
     unitsPerEm: 1000,
   };
 
-  setFontMetrics('sans-serif', defaultMetrics);
-  loadedFonts.add('sans-serif');
+  processFontData('sans-serif', undefined, defaultMetrics);
   initialized = true;
 };
 
@@ -154,7 +175,7 @@ export const type = 'canvas';
  * Check if a font is already loaded by font family
  */
 export const isFontLoaded = (fontFamily: string): boolean => {
-  return loadedFonts.has(fontFamily) || fontFamily === 'sans-serif';
+  return fontCache.has(fontFamily);
 };
 
 /**
@@ -185,23 +206,27 @@ export const stopWaitingForFont = (fontFamily: string, node: CoreTextNode) => {
 export const getFontMetrics = (
   fontFamily: string,
   fontSize: number,
-): FontMetrics => {
-  let out =
-    normalizedMetrics.get(fontFamily) ||
-    normalizedMetrics.get(fontFamily + fontSize);
+): NormalizedFontMetrics => {
+  const out = normalizedMetrics.get(fontFamily + fontSize);
   if (out !== undefined) {
     return out;
   }
-  out = calculateFontMetrics(fontFamily, fontSize);
-  normalizedMetrics.set(fontFamily + fontSize, out);
-  return out;
+  let metrics = fontCache.get(fontFamily)!.metrics;
+  if (metrics === undefined) {
+    metrics = calculateFontMetrics(fontFamily, fontSize);
+  }
+  return processFontMetrics(fontFamily, fontSize, metrics);
 };
 
-export const setFontMetrics = (
+export const processFontMetrics = (
   fontFamily: string,
+  fontSize: number,
   metrics: FontMetrics,
-): void => {
-  normalizedMetrics.set(fontFamily, metrics);
+): NormalizedFontMetrics => {
+  const label = fontFamily + fontSize;
+  const normalized = normalizeFontMetrics(metrics, fontSize);
+  normalizedMetrics.set(label, normalized);
+  return normalized;
 };
 
 export const measureText = (
@@ -267,9 +292,9 @@ export function calculateFontMetrics(
       'metrics for the font and provide them in the Canvas Web font definition.',
   );
   const ascender =
-    metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? 800;
+    metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? 0;
   const descender =
-    metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? 200;
+    metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? 0;
   return {
     ascender,
     descender: -descender,

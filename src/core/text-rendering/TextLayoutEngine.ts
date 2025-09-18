@@ -1,19 +1,38 @@
 import type {
   FontMetrics,
   MeasureTextFn,
+  NormalizedFontMetrics,
   TextLayoutStruct,
   TextLineStruct,
   WrappedLinesStruct,
 } from './TextRenderer.js';
 
+export const defaultFontMetrics: FontMetrics = {
+  ascender: 800,
+  descender: -200,
+  lineGap: 200,
+  unitsPerEm: 1000,
+};
+
+export const normalizeFontMetrics = (
+  metrics: FontMetrics,
+  fontSize: number,
+): NormalizedFontMetrics => {
+  const scale = fontSize / metrics.unitsPerEm;
+  return {
+    ascender: metrics.ascender * scale,
+    descender: metrics.descender * scale,
+    lineGap: metrics.lineGap * scale,
+  };
+};
+
 export const mapTextLayout = (
   measureText: MeasureTextFn,
-  metrics: FontMetrics,
+  metrics: NormalizedFontMetrics,
   text: string,
   textAlign: string,
   verticalAlign: string,
   fontFamily: string,
-  fontSize: number,
   lineHeight: number,
   overflowSuffix: string,
   wordBreak: string,
@@ -22,9 +41,8 @@ export const mapTextLayout = (
   maxWidth: number,
   maxHeight: number,
 ): TextLayoutStruct => {
-  const scale = fontSize / metrics.unitsPerEm;
-  const ascPx = metrics.ascender * scale;
-  const descPx = metrics.descender * scale;
+  const ascPx = metrics.ascender;
+  const descPx = metrics.descender;
 
   const bareLineHeight = ascPx - descPx;
   const lineHeightPx =
