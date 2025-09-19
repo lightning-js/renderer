@@ -30,7 +30,7 @@ export const RANDOM = Math.random;
 export const ANGLE_ORDER = 'zyx';
 const degree = Math.PI / 180;
 
-export type TimingFunction = (t: number) => number | undefined;
+export type TimingFunction = (t: number) => number;
 
 export const setMatrixArrayType = (
   type: Float32ArrayConstructor | ArrayConstructor,
@@ -118,6 +118,8 @@ const getTimingBezier = (
         minT = t;
       }
     }
+
+    return time;
   };
 };
 
@@ -176,9 +178,7 @@ const parseCubicBezier = (str: string) => {
   return defaultTiming;
 };
 
-export const getTimingFunction = (
-  str: string,
-): ((time: number) => number | undefined) => {
+export const getTimingFunction = (str: string): TimingFunction => {
   if (str === 'linear') {
     return defaultTiming;
   }
@@ -204,7 +204,7 @@ export const getTimingFunction = (
     const [a, b, c, d] = lookup;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - TS doesn't understand that we've checked for undefined
-     
+
     const timing = getTimingBezier(a, b, c, d);
     timingMapping[str] = timing;
     return timing;

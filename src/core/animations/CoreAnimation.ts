@@ -163,8 +163,7 @@ export class CoreAnimation extends EventEmitter {
   }
 
   private applyEasing(p: number, s: number, e: number): number {
-    const timingResult = this.timingFunction(p);
-    return (timingResult === undefined ? p : timingResult) * (e - s) + s;
+    return this.timingFunction(p) * (e - s) + s;
   }
 
   updateValue(
