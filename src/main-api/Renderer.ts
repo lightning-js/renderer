@@ -39,6 +39,127 @@ import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
 import { Platform } from '../core/platforms/Platform.js';
 
 /**
+ * FPS Update Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('fpsUpdate', (data) => {
+ *   console.log(`Current FPS: ${data.fps}`);
+ *   if (data.contextSpyData) {
+ *     console.log('WebGL calls:', data.contextSpyData);
+ *   }
+ * });
+ * ```
+ */
+export interface RendererMainFpsUpdateEvent {
+  /** Current frames per second */
+  fps: number;
+  /** Context spy data (if enabled) - contains WebGL call statistics */
+  contextSpyData?: unknown;
+}
+
+/**
+ * Frame Tick Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('frameTick', (data) => {
+ *   console.log(`Frame time: ${data.time}ms, delta: ${data.delta}ms`);
+ * });
+ * ```
+ */
+export interface RendererMainFrameTickEvent {
+  /** Current timestamp */
+  time: number;
+  /** Time delta since last frame */
+  delta: number;
+}
+
+/**
+ * Quads Update Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('quadsUpdate', (data) => {
+ *   console.log(`Rendered quads: ${data.quads}`);
+ * });
+ * ```
+ */
+export interface RendererMainQuadsUpdateEvent {
+  /** Number of rendered quads */
+  quads: number;
+}
+
+/**
+ * Idle Event Data
+ *
+ * @category Events
+ * @remarks
+ * This event is emitted when the renderer has no scene updates to process.
+ * The event has no payload - use this for performance optimizations during idle periods.
+ *
+ * @example
+ * ```typescript
+ * renderer.on('idle', () => {
+ *   // Renderer is idle - perfect time for cleanup, analytics, etc.
+ *   console.log('Renderer is idle - no scene changes');
+ *
+ *   // Example: Perform background tasks
+ *   performBackgroundCleanup();
+ *   sendAnalytics();
+ * });
+ * ```
+ */
+export interface RendererMainIdleEvent {
+  /** This event has no payload - listen without parameters */
+  readonly __eventHasNoPayload?: never;
+}
+
+/**
+ * Critical Cleanup Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('criticalCleanup', (data) => {
+ *   console.log(`Memory cleanup triggered!`);
+ *   console.log(`Memory used: ${data.memUsed} bytes`);
+ *   console.log(`Critical threshold: ${data.criticalThreshold} bytes`);
+ * });
+ * ```
+ */
+export interface RendererMainCriticalCleanupEvent {
+  /** Memory used before cleanup (bytes) */
+  memUsed: number;
+  /** Critical threshold (bytes) */
+  criticalThreshold: number;
+}
+
+/**
+ * Critical Cleanup Failed Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('criticalCleanupFailed', (data) => {
+ *   console.warn(`Memory cleanup failed!`);
+ *   console.log(`Memory still used: ${data.memUsed} bytes`);
+ *   console.log(`Critical threshold: ${data.criticalThreshold} bytes`);
+ *   // Consider reducing texture usage or forcing cleanup
+ * });
+ * ```
+ */
+export interface RendererMainCriticalCleanupFailedEvent {
+  /** Memory used after cleanup (bytes) */
+  memUsed: number;
+  /** Critical threshold (bytes) */
+  criticalThreshold: number;
+}
+
+/**
  * Settings for the Renderer that can be updated during runtime.
  */
 export interface RendererRuntimeSettings {
@@ -321,31 +442,32 @@ export type RendererMainSettings = RendererRuntimeSettings & {
  * );
  * ```
  *
- * ## Events
- * - `fpsUpdate`
- *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
- * - `frameTick`
- *   - Emitted every frame tick
- * - `quadsUpdate`
- *  - Emitted when number of quads rendered is updated
- * - `idle`
- *   - Emitted when the renderer is idle (no changes to the scene
- *     graph/animations running)
- * - `criticalCleanup`
- *  - Emitted when the Texture Memory Manager Cleanup process is triggered
- *  - Payload: { memUsed: number, criticalThreshold: number }
- *    - `memUsed` - The amount of memory (in bytes) used by textures before the
- *       cleanup process
- *    - `criticalThreshold` - The critical threshold (in bytes)
- * - `criticalCleanupFailed`
- *   - Emitted when the Texture Memory Manager Cleanup process is unable to free
- *     up enough texture memory to reach below the critical threshold.
- *     This can happen when there is not enough non-renderable textures to
- *     free up.
- *   - Payload (object with keys):
- *     - `memUsed` - The amount of memory (in bytes) used by textures after
- *       the cleanup process
- *     - `criticalThreshold` - The critical threshold (in bytes)
+ * ## Event Handling
+ *
+ * Listen to events using the standard EventEmitter API:
+ * ```typescript
+ * renderer.on('fpsUpdate', (data: RendererMainFpsUpdateEvent) => {
+ *   console.log(`FPS: ${data.fps}`);
+ * });
+ *
+ * renderer.on('idle', (data: RendererMainIdleEvent) => {
+ *   // Renderer is idle - no scene changes
+ * });
+ * ```
+ *
+ * @see {@link RendererMainFpsUpdateEvent}
+ * @see {@link RendererMainFrameTickEvent}
+ * @see {@link RendererMainQuadsUpdateEvent}
+ * @see {@link RendererMainIdleEvent}
+ * @see {@link RendererMainCriticalCleanupEvent}
+ * @see {@link RendererMainCriticalCleanupFailedEvent}
+ *
+ * @fires RendererMain#fpsUpdate
+ * @fires RendererMain#frameTick
+ * @fires RendererMain#quadsUpdate
+ * @fires RendererMain#idle
+ * @fires RendererMain#criticalCleanup
+ * @fires RendererMain#criticalCleanupFailed
  */
 export class RendererMain extends EventEmitter {
   readonly root: INode;
