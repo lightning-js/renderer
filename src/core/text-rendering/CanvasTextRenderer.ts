@@ -112,12 +112,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     wordBreak,
   } = props;
 
-  const fontScale = fontSize;
+  const font = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
   // Get font metrics and calculate line height
-  measureContext.font = `${fontStyle} ${fontScale}px Unknown, ${fontFamily}`;
+  measureContext.font = font;
   measureContext.textBaseline = 'hanging';
 
-  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontScale);
+  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
 
   const letterSpacing = props.letterSpacing;
 
@@ -152,11 +152,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   canvas.width = canvasW;
   canvas.height = canvasH;
   context.fillStyle = 'white';
-  context.font = `${fontStyle} ${fontScale}px Unknown, ${fontFamily}`;
+  context.font = font;
   context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
-  if (fontScale >= 128) {
+  if (fontSize >= 128) {
     context.globalAlpha = 0.01;
     context.fillRect(0, 0, 0.01, 0.01);
     context.globalAlpha = 1.0;
