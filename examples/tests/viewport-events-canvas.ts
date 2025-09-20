@@ -173,7 +173,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       .waitUntilStopped();
 
     if (runAnimation) {
-       
       setTimeout(animate, 2000);
     }
   };
@@ -184,7 +183,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-         
         animate();
       }
     }

@@ -314,7 +314,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       .waitUntilStopped();
 
     if (runAnimation) {
-       
       setTimeout(animate, 2000);
     }
   };
@@ -467,7 +466,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-         
         animate();
       }
     }

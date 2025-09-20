@@ -97,7 +97,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     mount: 0.5,
   });
 
-   
   setTimeout(async () => {
     const dimension = node
       .animate(
