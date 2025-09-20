@@ -36,13 +36,13 @@ export const measureLines = (
 
   while (remainingLines > 0) {
     const line = lines[i];
+    i++;
+    remainingLines--;
     if (line === undefined) {
       continue;
     }
     const width = measureText(line, fontFamily, designLetterSpacing);
     measuredLines.push([line, width]);
-    i++;
-    remainingLines--;
   }
 
   return [

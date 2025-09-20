@@ -716,16 +716,17 @@ export class WebGlContextWrapper {
    * @param program
    * @returns object with numbers
    */
-  getAttributeLocations(program: WebGLProgram): Record<string, number> {
+  getAttributeLocations(program: WebGLProgram): string[] {
     const gl = this.gl;
     const length = gl.getProgramParameter(
       program,
       gl.ACTIVE_ATTRIBUTES,
     ) as number;
-    const result = {} as Record<string, number>;
+
+    const result: string[] = [];
     for (let i = 0; i < length; i++) {
       const { name } = gl.getActiveAttrib(program, i) as WebGLActiveInfo;
-      result[name] = i;
+      result[gl.getAttribLocation(program, name)] = name;
     }
     return result;
   }
