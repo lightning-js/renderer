@@ -213,7 +213,7 @@ export abstract class Texture extends EventEmitter {
   }
 
   load(): void {
-    this.txManager.loadTexture(this);
+    this.txManager.loadTexture(this, true);
   }
 
   /**
