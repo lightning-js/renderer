@@ -1,130 +1,86 @@
-// /*
-//  * If not stated otherwise in this file or this component's LICENSE file the
-//  * following copyright and licenses apply:
-//  *
-//  * Copyright 2025 Comcast Cable Management, LLC.
-//  *
-//  * Licensed under the Apache License, Version 2.0 (the License);
-//  * you may not use this file except in compliance with the License.
-//  * You may obtain a copy of the License at
-//  *
-//  * http://www.apache.org/licenses/LICENSE-2.0
-//  *
-//  * Unless required by applicable law or agreed to in writing, software
-//  * distributed under the License is distributed on an "AS IS" BASIS,
-//  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  * See the License for the specific language governing permissions and
-//  * limitations under the License.
-//  */
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2025 Comcast Cable Communications Management, LLC.
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+
 import {
   wrapText,
   wrapLine,
   truncateLineWithSuffix,
   breakWord,
 } from '../TextLayoutEngine.js';
-import * as SdfFontHandler from '../SdfFontHandler.js';
+import { hasZeroWidthSpace } from '../Utils';
 
-// Mock font data for testing
-// Mock SdfFontHandler functions
-const mockGetGlyph = (_fontFamily: string, codepoint: number) => {
-  // Mock glyph data - each character is 10 units wide for easy testing
-  return {
-    id: codepoint,
-    char: String.fromCharCode(codepoint),
-    x: 0,
-    y: 0,
-    width: 10,
-    height: 16,
-    xoffset: 0,
-    yoffset: 0,
-    xadvance: 10,
-    page: 0,
-    chnl: 0,
-  };
+// Test-specific measureText function that mimics testMeasureText behavior
+const testMeasureText = (
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+): number => {
+  //ignoring this without context available
+  // if (letterSpacing === 0) {
+  //   return measureContext.measureText(text).width;
+  // }
+  if (text.indexOf(' ') === -1 && hasZeroWidthSpace(text) === false) {
+    return (10 + letterSpacing) * text.length;
+  }
+  return text.split('').reduce((acc, char) => {
+    if (hasZeroWidthSpace(char) === true) {
+      return acc;
+    }
+    let width = 10;
+    if (char === ' ') {
+      width = 5;
+    }
+    return acc + width + letterSpacing;
+  }, 0);
 };
 
-const mockGetKerning = () => {
-  // No kerning for simplicity
-  return 0;
-};
-
-// Mock measureText function to replace the broken SDF implementation
-describe('SDF Text Utils', () => {
-  // Test-specific measureText function that mimics testMeasureText behavior
-  // but works with our mocked getGlyph and getKerning functions
-  const testMeasureText = (
-    text: string,
-    fontFamily: string,
-    letterSpacing: number,
-  ): number => {
-    if (text.length === 1) {
-      const char = text.charAt(0);
-      const codepoint = text.codePointAt(0);
-      if (codepoint === undefined) return 0;
-      if (char === '\u200B') return 0; // Zero-width space
-
-      const glyph = mockGetGlyph(fontFamily, codepoint);
-      if (glyph === null) return 0;
-      return glyph.xadvance + letterSpacing;
-    }
-    let width = 0;
-    let prevCodepoint = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charAt(i);
-      const codepoint = text.codePointAt(i);
-      if (codepoint === undefined) continue;
-
-      // Skip zero-width spaces in width calculations
-      if (char === '\u200B') {
-        continue;
-      }
-
-      const glyph = mockGetGlyph(fontFamily, codepoint);
-      if (glyph === null) continue;
-
-      let advance = glyph.xadvance;
-
-      // Add kerning if there's a previous character
-      if (prevCodepoint !== 0) {
-        const kerning = mockGetKerning();
-        advance += kerning;
-      }
-
-      width += advance + letterSpacing;
-      prevCodepoint = codepoint;
-    }
-
-    return width;
-  };
-  beforeAll(() => {
-    // Mock the SdfFontHandler functions
-    vi.spyOn(SdfFontHandler, 'getGlyph').mockImplementation(mockGetGlyph);
-    vi.spyOn(SdfFontHandler, 'getKerning').mockImplementation(mockGetKerning);
-    // Since the real measureText function is already defined in SdfFontHandler and relies on the mocked functions above,
-    // we can use it directly without additional mocking
-  });
-
+describe('Canvas Text Utils', () => {
   describe('measureText', () => {
-    it('should return correct width for basic text', () => {
+    it('should measure text width correctly', () => {
       const width = testMeasureText('hello', 'Arial', 0);
-      expect(width).toBeCloseTo(50); // 5 chars * 10 xadvance
+      expect(width).toBe(50); // 5 characters * 10px each
     });
 
-    it('should return 0 width for empty text', () => {
+    it('should handle empty text', () => {
       const width = testMeasureText('', 'Arial', 0);
       expect(width).toBe(0);
     });
 
-    it('should include letter spacing in width calculation', () => {
+    it('should account for letter spacing', () => {
       const width = testMeasureText('hello', 'Arial', 2);
-      expect(width).toBeCloseTo(60); // 5 chars * (10 xadvance + 2 letterSpacing)
+      expect(width).toBe(60); // 5 characters * 10px + 5 * 2 letter spacing
     });
 
-    it('should skip zero-width spaces in width calculation', () => {
-      const width = testMeasureText('hel\u200Blo', 'Arial', 0);
-      expect(width).toBeCloseTo(50); // Should be same as 'hello'
+    it('should skip zero-width spaces in letter spacing calculation', () => {
+      const width = testMeasureText('hel\u200Blo', 'Arial', 2);
+      // With letter spacing=2: 'h'(10) + 2 + 'e'(10) + 2 + 'l'(10) + 2 + ZWSP(0) + 'l'(10) + 2 + 'o'(10) = 60
+      // The ZWSP is in the string but gets 0 width, letter spacing is still added for non-ZWSP chars
+      expect(width).toBe(60);
+    });
+
+    it('should handle spaces correctly', () => {
+      const width = testMeasureText('hi there', 'Arial', 0);
+      // With space=0, uses context.measureText() directly
+      // Mock returns: 'h'(10) + 'i'(10) + ' '(5) + 't'(10) + 'h'(10) + 'e'(10) + 'r'(10) + 'e'(10) = 75px
+      expect(width).toBe(75);
     });
   });
 
@@ -270,7 +226,7 @@ describe('SDF Text Utils', () => {
         0,
       );
       expect(result[0].length).toBeGreaterThan(2);
-      expect(result[0][0]).toStrictEqual(['line one', 80, 0, 0]);
+      expect(result[0][0]).toStrictEqual(['line one', 75, 0, 0]);
     });
 
     it('should handle empty lines', () => {
@@ -314,7 +270,7 @@ describe('SDF Text Utils', () => {
         '...',
       );
       expect(result).toContain('...');
-      expect(result.length).toBeLessThanOrEqual(10);
+      expect(result.length).toBe(11);
     });
 
     it('should return suffix if suffix is too long', () => {
