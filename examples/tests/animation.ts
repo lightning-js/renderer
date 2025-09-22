@@ -17,12 +17,15 @@
  * limitations under the License.
  */
 
-import type { IAnimationController } from '@lightningjs/renderer';
-
+import type {
+  IAnimationController,
+  TimingFunction,
+} from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+
 interface AnimationExampleSettings {
   duration: number;
-  easing: string;
+  easing: string | TimingFunction;
   delay: number;
   loop: boolean;
   stopMethod: 'reverse' | 'reset' | false;
@@ -87,6 +90,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     'ease-in-out-back',
     'cubic-bezier(0,1.35,.99,-0.07)',
     'cubic-bezier(.41,.91,.99,-0.07)',
+    'loopCustomTiming',
     'loopStopMethodReverse',
     'loopStopMethodReset',
     'loop',
@@ -121,6 +125,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     } else if (easing === 'loop') {
       animationSettings.easing = 'linear';
       animationSettings.loop = true;
+    } else if (easing === 'loopCustomTiming') {
+      animationSettings.easing = (t: number) => {
+        return Math.round(t * 5) / 5;
+      };
+      animationSettings.loop = true;
+      animationSettings.stopMethod = 'reverse';
     } else {
       animationSettings.loop = false;
       animationSettings.stopMethod = false;
