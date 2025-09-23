@@ -28,7 +28,7 @@ import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.
 import type { TextRenderer } from '../core/text-rendering/TextRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
-import type { Inspector } from './Inspector.js';
+import type { Inspector, InspectorOptions } from './Inspector.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 import type {
   ExtractShaderProps,
@@ -247,6 +247,15 @@ export interface RendererRuntimeSettings {
    *
    */
   inspector: typeof Inspector | false;
+
+  /**
+   * Inspector Options
+   *
+   * @remarks
+   * Configuration options for the Inspector's performance monitoring features.
+   * Only used when inspector is enabled.
+   */
+  inspectorOptions?: Partial<InspectorOptions>;
 
   /**
    * Texture Processing Limit (in milliseconds)
@@ -508,6 +517,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy ?? false,
       forceWebGL2: settings.forceWebGL2 ?? false,
       inspector: settings.inspector ?? false,
+      inspectorOptions: settings.inspectorOptions ?? {},
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
