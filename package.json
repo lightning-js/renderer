@@ -52,19 +52,19 @@
   },
   "homepage": "https://github.com/lightning-js/renderer#readme",
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.16.0",
-    "@typescript-eslint/parser": "^8.16.0",
-    "@vitest/coverage-v8": "^2.1.5",
-    "concurrently": "^8.0.1",
-    "eslint": "^9.15.0",
-    "eslint-config-prettier": "^8.7.0",
+    "@types/node": "^20.19.17",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "concurrently": "^8.2.2",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^8.10.2",
     "husky": "^8.0.3",
-    "lint-staged": "^13.2.0",
-    "prettier": "^2.8.4",
-    "typedoc": "^0.26.11",
-    "typescript": "~5.6.3",
-    "vitest": "^2.0.0",
+    "lint-staged": "^13.3.0",
+    "prettier": "^2.8.8",
+    "typedoc": "^0.28.13",
+    "typescript": "~5.9.2",
+    "vitest": "^2.1.9",
     "vitest-mock-extended": "^2.0.2"
   },
   "lint-staged": {
@@ -83,10 +83,10 @@
     "README.md",
     "scripts"
   ],
-  "packageManager": "pnpm@8.9.2",
+  "packageManager": "pnpm@10.17.0",
   "engines": {
     "npm": ">= 10.0.0",
-    "pnpm": ">= 8.9.2",
+    "pnpm": ">= 10.17.0",
     "node": ">= 18.0.0"
   }
 }

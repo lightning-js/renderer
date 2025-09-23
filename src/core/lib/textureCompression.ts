@@ -114,7 +114,7 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
 
   const dataOffset = header[pvrMetadata] + 52;
   const pvrtcData = new Uint8Array(arrayBuffer, dataOffset);
-  const mipmaps: Uint8Array[] = [];
+  const mipmaps: ArrayBuffer[] = [];
   const data = {
     pixelWidth: header[pvrWidth],
     pixelHeight: header[pvrHeight],
@@ -133,7 +133,9 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
       level,
     );
 
-    mipmaps.push(view);
+    mipmaps.push(
+      view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength),
+    );
     offset += level;
     width = width >> 1;
     height = height >> 1;

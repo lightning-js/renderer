@@ -108,9 +108,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: robot,
   });
 
-   
   setTimeout(async () => {
-     
     while (true) {
       await robotCore
         .animate({ y: 10 }, { duration: 500 })
@@ -143,7 +141,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-   
   setTimeout(async () => {
     await openGroundDoors(1000);
     await robot

@@ -37,9 +37,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   let redRectAnimation: IAnimationController | null = null;
-   
+
   setTimeout(async () => {
-     
     while (true) {
       redRectAnimation = redRect
         .animate(
@@ -89,9 +88,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   let blueRectAnimation: IAnimationController | null = null;
-   
+
   setTimeout(async () => {
-     
     while (true) {
       blueRectAnimation = blueRect
         .animate(
