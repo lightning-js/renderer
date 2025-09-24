@@ -678,7 +678,7 @@ export class Stage {
       textAlign: props.textAlign || 'left',
       offsetY: props.offsetY || 0,
       letterSpacing: props.letterSpacing || 0,
-      lineHeight: props.lineHeight || 1,
+      lineHeight: props.lineHeight || 1.2,
       maxLines: props.maxLines || 0,
       verticalAlign: props.verticalAlign || 'middle',
       overflowSuffix: props.overflowSuffix || '...',
