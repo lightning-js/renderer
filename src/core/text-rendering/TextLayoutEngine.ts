@@ -179,8 +179,10 @@ export const wrapText = (
   let hasMaxLines = maxLines > 0;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-
+    const line = lines[i];
+    if (line === undefined || line.length === 0) {
+      continue;
+    }
     [wrappedLine, remainingLines, hasRemainingText] = wrapLine(
       measureText,
       line,
@@ -194,7 +196,25 @@ export const wrapText = (
       hasMaxLines,
     );
 
+    remainingLines--;
     wrappedLines.push(...wrappedLine);
+
+    if (hasMaxLines === true && remainingLines <= 0) {
+      const lastLine = wrappedLines[wrappedLines.length - 1]!;
+      if (i < lines.length - 1) {
+        if (lastLine[0].endsWith(overflowSuffix) === false) {
+          lastLine[0] = truncateLineWithSuffix(
+            measureText,
+            lastLine[0],
+            fontFamily,
+            maxWidth,
+            letterSpacing,
+            overflowSuffix,
+          );
+        }
+      }
+      break;
+    }
   }
 
   return [wrappedLines, remainingLines, hasRemainingText];
@@ -266,12 +286,10 @@ export const wrapLine = (
 
       if (wordBreak !== 'break-all' && currentLine.length > 0) {
         wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-        currentLine = '';
-        currentLineWidth = 0;
-        remainingLines--;
       }
 
       if (wordBreak !== 'break-all') {
+        remainingLines--;
         currentLine = word;
         currentLineWidth = wordWidth;
       }
@@ -343,6 +361,8 @@ export const wrapLine = (
     }
   }
 
+  console.log('remaining lines', remainingLines);
+
   // Add the last line if it has content
   if (currentLine.length > 0 && hasMaxLines === true && remainingLines === 0) {
     currentLine = truncateLineWithSuffix(
@@ -357,8 +377,6 @@ export const wrapLine = (
 
   if (currentLine.length > 0) {
     wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-  } else {
-    wrappedLines.push(['', 0, 0, 0]);
   }
   return [wrappedLines, remainingLines, hasRemainingText];
 };
