@@ -180,21 +180,25 @@ export const wrapText = (
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line === undefined || line.length === 0) {
+    if (line === undefined) {
       continue;
     }
-    [wrappedLine, remainingLines, hasRemainingText] = wrapLine(
-      measureText,
-      line,
-      fontFamily,
-      maxWidth,
-      letterSpacing,
-      spaceWidth,
-      overflowSuffix,
-      wordBreak,
-      remainingLines,
-      hasMaxLines,
-    );
+
+    [wrappedLine, remainingLines, hasRemainingText] =
+      line.length > 0
+        ? wrapLine(
+            measureText,
+            line,
+            fontFamily,
+            maxWidth,
+            letterSpacing,
+            spaceWidth,
+            overflowSuffix,
+            wordBreak,
+            remainingLines,
+            hasMaxLines,
+          )
+        : [[['', 0, 0, 0]], remainingLines, i < lines.length - 1];
 
     remainingLines--;
     wrappedLines.push(...wrappedLine);
@@ -360,8 +364,6 @@ export const wrapLine = (
       }
     }
   }
-
-  console.log('remaining lines', remainingLines);
 
   // Add the last line if it has content
   if (currentLine.length > 0 && hasMaxLines === true && remainingLines === 0) {
