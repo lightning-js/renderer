@@ -19,6 +19,8 @@
 
 import type { NormalizedFontMetrics } from './TextRenderer.js';
 
+const invisibleChars = /[\u200B\u200C\u200D\uFEFF\u00AD\u2060]/g;
+
 /**
  * Returns CSS font setting string for use in canvas context.
  *
@@ -65,8 +67,8 @@ export function getFontSetting(
  *
  * @param space
  */
-export function isZeroWidthSpace(space: string): boolean {
-  return space === '' || space === '\u200B';
+export function hasZeroWidthSpace(space: string): boolean {
+  return invisibleChars.test(space) === true;
 }
 
 /**
@@ -75,7 +77,7 @@ export function isZeroWidthSpace(space: string): boolean {
  * @param space
  */
 export function isSpace(space: string): boolean {
-  return isZeroWidthSpace(space) || space === ' ';
+  return hasZeroWidthSpace(space) || space === ' ';
 }
 
 /**
@@ -94,164 +96,4 @@ export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
   }
   final.pop();
   return final.filter((word) => word != '');
-}
-
-/**
- * Measure the width of a string accounting for letter spacing.
- *
- * @param context
- * @param word
- * @param space
- */
-export function measureText(
-  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  word: string,
-  space = 0,
-): number {
-  if (!space) {
-    return context.measureText(word).width;
-  }
-  return word.split('').reduce((acc, char) => {
-    // Zero-width spaces should not include letter spacing.
-    // And since we know the width of a zero-width space is 0, we can skip
-    // measuring it.
-    if (isZeroWidthSpace(char)) {
-      return acc;
-    }
-    return acc + context.measureText(char).width + space;
-  }, 0);
-}
-
-/**
- * Get the font metrics for a font face.
- *
- * @remarks
- * This function will attempt to grab the explicitly defined metrics from the
- * font face first. If the font face does not have metrics defined, it will
- * attempt to calculate the metrics using the browser's measureText method.
- *
- * If the browser does not support the font metrics API, it will use some
- * default values.
- *
- * @param context
- * @param fontFace
- * @param fontSize
- * @returns
- */
-export function calculateFontMetrics(
-  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  fontFamily: string,
-  fontSize: number,
-): NormalizedFontMetrics {
-  // If the font face doesn't have metrics defined, we fallback to using the
-  // browser's measureText method to calculate take a best guess at the font
-  // actual font's metrics.
-  // - fontBoundingBox[Ascent|Descent] is the best estimate but only supported
-  //   in Chrome 87+ (2020), Firefox 116+ (2023), and Safari 11.1+ (2018).
-  //   - It is an estimate as it can vary between browsers.
-  // - actualBoundingBox[Ascent|Descent] is less accurate and supported in
-  //   Chrome 77+ (2019), Firefox 74+ (2020), and Safari 11.1+ (2018).
-  // - If neither are supported, we'll use some default values which will
-  //   get text on the screen but likely not be great.
-  // NOTE: It's been decided not to rely on fontBoundingBox[Ascent|Descent]
-  // as it's browser support is limited and it also tends to produce higher than
-  // expected values. It is instead HIGHLY RECOMMENDED that developers provide
-  // explicit metrics in the font face definition.
-  const browserMetrics = context.measureText(
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-  );
-  console.warn(
-    `Font metrics not provided for Canvas Web font ${fontFamily}. ` +
-      'Using fallback values. It is HIGHLY recommended you use the latest ' +
-      'version of the Lightning 3 `msdf-generator` tool to extract the default ' +
-      'metrics for the font and provide them in the Canvas Web font definition.',
-  );
-  let metrics: NormalizedFontMetrics;
-  if (
-    browserMetrics.actualBoundingBoxDescent &&
-    browserMetrics.actualBoundingBoxAscent
-  ) {
-    metrics = {
-      ascender: browserMetrics.actualBoundingBoxAscent / fontSize,
-      descender: -browserMetrics.actualBoundingBoxDescent / fontSize,
-      lineGap: 0.2,
-    };
-  } else {
-    // If the browser doesn't support the font metrics API, we'll use some
-    // default values.
-    metrics = {
-      ascender: 0.8,
-      descender: -0.2,
-      lineGap: 0.2,
-    };
-  }
-  return metrics;
-}
-
-export interface WrapTextResult {
-  l: string[];
-  n: number[];
-}
-
-/**
- * Applies newlines to a string to have it optimally fit into the horizontal
- * bounds set by the Text object's wordWrapWidth property.
- *
- * @param context
- * @param text
- * @param wordWrapWidth
- * @param letterSpacing
- * @param indent
- */
-export function wrapText(
-  context: CanvasRenderingContext2D,
-  text: string,
-  wordWrapWidth: number,
-  letterSpacing: number,
-  indent: number,
-): WrapTextResult {
-  // Greedy wrapping algorithm that will wrap words as the line grows longer.
-  // than its horizontal bounds.
-  const spaceRegex = / |\u200B/g;
-  const lines = text.split(/\r?\n/g);
-  let allLines: string[] = [];
-  const realNewlines: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const resultLines: string[] = [];
-    let result = '';
-    let spaceLeft = wordWrapWidth - indent;
-    const words = lines[i]!.split(spaceRegex);
-    const spaces = lines[i]!.match(spaceRegex) || [];
-    for (let j = 0; j < words.length; j++) {
-      const space = spaces[j - 1] || '';
-      const word = words[j]!;
-      const wordWidth = measureText(context, word, letterSpacing);
-      const wordWidthWithSpace =
-        wordWidth + measureText(context, space, letterSpacing);
-      if (j === 0 || wordWidthWithSpace > spaceLeft) {
-        // Skip printing the newline if it's the first word of the line that is.
-        // greater than the word wrap width.
-        if (j > 0) {
-          resultLines.push(result);
-          result = '';
-        }
-        result += word;
-        spaceLeft = wordWrapWidth - wordWidth - (j === 0 ? indent : 0);
-      } else {
-        spaceLeft -= wordWidthWithSpace;
-        result += space + word;
-      }
-    }
-
-    resultLines.push(result);
-    result = '';
-
-    allLines = allLines.concat(resultLines);
-
-    if (i < lines.length - 1) {
-      realNewlines.push(allLines.length);
-    }
-  }
-
-  return { l: allLines, n: realNewlines };
 }
