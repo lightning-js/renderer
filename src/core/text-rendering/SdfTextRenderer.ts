@@ -389,7 +389,7 @@ const generateTextLayout = (
   return {
     glyphs,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
-    width: effectiveWidth,
+    width: maxWidth || effectiveWidth * fontScale,
     height: maxHeight || effectiveHeight,
     fontScale: fontScale,
     lineHeight: lineHeightPx,
