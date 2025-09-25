@@ -77,6 +77,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     // It will receive data from a buffer
     attribute vec2 a_position;
     attribute vec2 a_textureCoords;
+    attribute vec4 a_color;
 
     uniform vec2 u_resolution;
     uniform mat3 u_transform;
@@ -85,6 +86,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     uniform float u_size;
 
     varying vec2 v_texcoord;
+    varying vec4 v_color;
 
     void main() {
       vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
@@ -95,6 +97,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
       gl_Position = vec4(screenSpace, 0.0, 1.0);
       v_texcoord = a_textureCoords;
+      v_color = a_color;
 
     }
   `,
@@ -111,12 +114,20 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     uniform int u_debug;
 
     varying vec2 v_texcoord;
+    varying vec4 v_color;
 
     float median(float r, float g, float b) {
         return max(min(r, g), min(max(r, g), b));
     }
 
     void main() {
+        // Check if this is an underline/strikethrough quad (UV coordinates are very close to 0,0)
+        if (length(v_texcoord) < 0.001) {
+          // Render as solid color for underlines/strikethroughs, use uniform color
+          gl_FragColor = vec4(u_color.r, u_color.g, u_color.b, u_color.a);
+          return;
+        }
+
         vec3 sample = texture2D(u_texture, v_texcoord).rgb;
         if (u_debug == 1) {
           gl_FragColor = vec4(sample.r, sample.g, sample.b, 1.0);
@@ -124,11 +135,22 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
         }
         float scaledDistRange = u_distanceRange * u_pixelRatio;
         float sigDist = scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
-        float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
+        float opacity = clamp(sigDist + 0.5, 0.0, 1.0);
+
+        // Check if we should use uniform color or per-vertex color
+        vec4 finalColor;
+        if (v_color.r < 0.0) {
+          finalColor = u_color;
+        } else {
+          // Use per-vertex color from BBCode
+          finalColor = v_color;
+        }
+
+        opacity *= finalColor.a;
 
         // Build the final color.
         // IMPORTANT: We must premultiply the color by the alpha value before returning it.
-        gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
+        gl_FragColor = vec4(finalColor.r * opacity, finalColor.g * opacity, finalColor.b * opacity, opacity);
     }
   `,
 };

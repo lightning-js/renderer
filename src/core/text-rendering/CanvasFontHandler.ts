@@ -39,7 +39,7 @@ const fontFamilies: Record<string, FontFace> = {};
 const loadedFonts = new Set<string>();
 const fontLoadPromises = new Map<string, Promise<void>>();
 const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
-const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(null);
+const nodesWaitingForFont: Record<string, Record<number, CoreTextNode>> = {};
 let initialized = false;
 let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -89,7 +89,8 @@ export const loadFont = async (
     return existingPromise;
   }
 
-  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
+  const nwff: Record<number, CoreTextNode> = (nodesWaitingForFont[fontFamily] =
+    {});
   // Create and store the loading promise
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
@@ -102,7 +103,10 @@ export const loadFont = async (
         setFontMetrics(fontFamily, normalizeMetrics(metrics));
       }
       for (let key in nwff) {
-        nwff[key]!.setUpdateType(UpdateType.Local);
+        const node = nwff[key];
+        if (node) {
+          node.setUpdateType(UpdateType.Local);
+        }
       }
       delete nodesWaitingForFont[fontFamily];
     })
@@ -169,7 +173,10 @@ export const isFontLoaded = (fontFamily: string): boolean => {
  * @param node
  */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
-  nodesWaitingForFont[fontFamily]![node.id] = node;
+  if (!nodesWaitingForFont[fontFamily]) {
+    nodesWaitingForFont[fontFamily] = {};
+  }
+  nodesWaitingForFont[fontFamily][node.id] = node;
 };
 
 /**

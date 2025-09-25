@@ -289,6 +289,18 @@ export interface GlyphLayout {
   atlasY: number;
   atlasWidth: number;
   atlasHeight: number;
+  /**
+   * Whether this glyph should be underlined
+   */
+  underline?: boolean;
+  /**
+   * Whether this glyph should be struck through
+   */
+  strikethrough?: boolean;
+  /**
+   * Color override for this glyph (0xRRGGBB format)
+   */
+  color?: number;
 }
 
 /**
