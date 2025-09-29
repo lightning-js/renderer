@@ -100,14 +100,14 @@ const stylePropertyMap: {
   y: (y) => {
     return { prop: 'top', value: `${y}px` };
   },
-  width: (w) => {
+  w: (w) => {
     if (w === 0) {
       return null;
     }
 
     return { prop: 'width', value: `${w}px` };
   },
-  height: (h) => {
+  h: (h) => {
     if (h === 0) {
       return null;
     }
