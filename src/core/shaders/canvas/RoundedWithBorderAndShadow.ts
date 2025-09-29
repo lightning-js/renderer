@@ -78,7 +78,7 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
       quad.width,
       quad.height,
       computed.radius,
-      this.props!['border-width'] as Vec4,
+      this.props!['border-w'] as Vec4,
       computed.borderRadius,
       computed.borderColor,
       computed.borderAsym,
