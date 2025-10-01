@@ -107,6 +107,13 @@ export interface ImageTextureProps {
    * @default null
    */
   sy?: number | null;
+
+  /**
+   * Maximum number of times to retry loading the image if it fails.
+   *
+   * @default 5
+   */
+  maxRetryCount?: number | null;
 }
 
 /**
@@ -124,13 +131,14 @@ export interface ImageTextureProps {
  * {@link ImageTextureProps.premultiplyAlpha} prop to `false`.
  */
 export class ImageTexture extends Texture {
+  override readonly type = TextureType.image as const;
   public props: Required<ImageTextureProps>;
 
-  public override type: TextureType = TextureType.image;
-
   constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
+    const resolvedProps = ImageTexture.resolveDefaults(props);
     super(txManager);
-    this.props = ImageTexture.resolveDefaults(props);
+    this.props = resolvedProps;
+    this.maxRetryCount = props.maxRetryCount ?? 5;
   }
 
   hasAlphaChannel(mimeType: string) {
@@ -147,14 +155,19 @@ export class ImageTexture extends Texture {
     return new Promise<{
       data: HTMLImageElement | null;
       premultiplyAlpha: boolean;
-    }>((resolve) => {
+    }>((resolve, reject) => {
       img.onload = () => {
         resolve({ data: img, premultiplyAlpha: hasAlpha });
       };
 
-      img.onerror = () => {
-        console.warn('Image loading failed, returning fallback object.');
-        resolve({ data: null, premultiplyAlpha: hasAlpha });
+      img.onerror = (err) => {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : err instanceof Event
+            ? `Image loading failed for ${img.src}`
+            : 'Unknown image loading error';
+        reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
       if (src instanceof Blob) {
@@ -181,28 +194,40 @@ export class ImageTexture extends Texture {
 
     if (imageBitmapSupported.full === true && sw !== null && sh !== null) {
       // createImageBitmap with crop
-      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
+      try {
+        const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
+          premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+          colorSpaceConversion: 'none',
+          imageOrientation: 'none',
+        });
+        return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+      } catch (error) {
+        throw new Error(`Failed to create image bitmap with crop: ${error}`);
+      }
+    } else if (imageBitmapSupported.basic === true) {
+      // basic createImageBitmap without options or crop
+      // this is supported for Chrome v50 to v52/54 that doesn't support options
+      try {
+        return {
+          data: await createImageBitmap(blob),
+          premultiplyAlpha: hasAlphaChannel,
+        };
+      } catch (error) {
+        throw new Error(`Failed to create basic image bitmap: ${error}`);
+      }
+    }
+
+    // default createImageBitmap without crop but with options
+    try {
+      const bitmap = await createImageBitmap(blob, {
         premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
       return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
-    } else if (imageBitmapSupported.basic === true) {
-      // basic createImageBitmap without options or crop
-      // this is supported for Chrome v50 to v52/54 that doesn't support options
-      return {
-        data: await createImageBitmap(blob),
-        premultiplyAlpha: hasAlphaChannel,
-      };
+    } catch (error) {
+      throw new Error(`Failed to create image bitmap with options: ${error}`);
     }
-
-    // default createImageBitmap without crop but with options
-    const bitmap = await createImageBitmap(blob, {
-      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-      colorSpaceConversion: 'none',
-      imageOrientation: 'none',
-    });
-    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
   }
 
   async loadImage(src: string) {
@@ -214,14 +239,18 @@ export class ImageTexture extends Texture {
         this.txManager.hasWorker === true &&
         this.txManager.imageWorkerManager !== null
       ) {
-        return this.txManager.imageWorkerManager.getImage(
-          src,
-          premultiplyAlpha,
-          sx,
-          sy,
-          sw,
-          sh,
-        );
+        try {
+          return this.txManager.imageWorkerManager.getImage(
+            src,
+            premultiplyAlpha,
+            sx,
+            sy,
+            sw,
+            sh,
+          );
+        } catch (error) {
+          throw new Error(`Failed to load image via worker: ${error}`);
+        }
       }
 
       let blob;
@@ -229,9 +258,11 @@ export class ImageTexture extends Texture {
       if (isBase64Image(src) === true) {
         blob = dataURIToBlob(src);
       } else {
-        blob = await fetchJson(src, 'blob').then(
-          (response) => response as Blob,
-        );
+        try {
+          blob = (await fetchJson(src, 'blob')) as Blob;
+        } catch (error) {
+          throw new Error(`Failed to fetch image blob from ${src}: ${error}`);
+        }
       }
 
       return this.createImageBitmap(blob, premultiplyAlpha, sx, sy, sw, sh);
@@ -257,23 +288,6 @@ export class ImageTexture extends Texture {
         data: null,
       };
     }
-
-    let width, height;
-    // check if resp.data is typeof Uint8ClampedArray else
-    // use resp.data.width and resp.data.height
-    if (resp.data instanceof Uint8Array) {
-      width = this.props.width ?? 0;
-      height = this.props.height ?? 0;
-    } else {
-      width = resp.data?.width ?? (this.props.width || 0);
-      height = resp.data?.height ?? (this.props.height || 0);
-    }
-
-    // we're loaded!
-    this.setState('fetched', {
-      width,
-      height,
-    });
 
     return {
       data: resp.data,
@@ -393,6 +407,7 @@ export class ImageTexture extends Texture {
       sy: props.sy ?? null,
       sw: props.sw ?? null,
       sh: props.sh ?? null,
+      maxRetryCount: props.maxRetryCount ?? 5,
     };
   }
 

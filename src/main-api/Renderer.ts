@@ -739,8 +739,6 @@ export class RendererMain extends EventEmitter {
   /**
    * Cleanup textures that are not being used
    *
-   * @param aggressive - If true, will cleanup all textures, regardless of render status
-   *
    * @remarks
    * This can be used to free up GFX memory used by textures that are no longer
    * being displayed.
@@ -754,8 +752,8 @@ export class RendererMain extends EventEmitter {
    * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
    * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
    */
-  cleanup(aggressive: boolean = false) {
-    this.stage.cleanup(aggressive);
+  cleanup() {
+    this.stage.cleanup();
   }
 
   /**

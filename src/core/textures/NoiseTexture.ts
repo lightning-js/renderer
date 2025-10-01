@@ -75,7 +75,7 @@ export class NoiseTexture extends Texture {
       pixelData8[i + 3] = 255;
     }
 
-    this.setState('fetched');
+    // Noise texture data ready - dimensions will be set during upload
 
     return {
       data: new ImageData(pixelData8, width, height),

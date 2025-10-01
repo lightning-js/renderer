@@ -17,9 +17,8 @@
  * limitations under the License.
  */
 import { isProductionEnvironment } from '../utils.js';
-import { getTimeStamp } from './platform.js';
 import type { Stage } from './Stage.js';
-import { Texture, TextureType, type TextureState } from './textures/Texture.js';
+import { Texture, TextureType } from './textures/Texture.js';
 import { bytesToMb } from './utils.js';
 
 export interface TextureMemoryManagerSettings {
@@ -117,7 +116,6 @@ export interface MemoryInfo {
 export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: Map<Texture, number> = new Map();
-  private orphanedTextures: Texture[] = [];
   private criticalThreshold: number;
   private targetThreshold: number;
   private cleanupInterval: number;
@@ -182,35 +180,6 @@ export class TextureMemoryManager {
   }
 
   /**
-   * Add a texture to the orphaned textures list
-   *
-   * @param texture - The texture to add to the orphaned textures list
-   */
-  addToOrphanedTextures(texture: Texture) {
-    // if the texture is already in the orphaned textures list add it at the end
-    if (this.orphanedTextures.includes(texture)) {
-      this.removeFromOrphanedTextures(texture);
-    }
-
-    // If the texture can be cleaned up, add it to the orphaned textures list
-    if (texture.preventCleanup === false) {
-      this.orphanedTextures.push(texture);
-    }
-  }
-
-  /**
-   * Remove a texture from the orphaned textures list
-   *
-   * @param texture - The texture to remove from the orphaned textures list
-   */
-  removeFromOrphanedTextures(texture: Texture) {
-    const index = this.orphanedTextures.indexOf(texture);
-    if (index !== -1) {
-      this.orphanedTextures.splice(index, 1);
-    }
-  }
-
-  /**
    * Set the memory usage of a texture
    *
    * @param texture - The texture to set memory usage for
@@ -247,40 +216,6 @@ export class TextureMemoryManager {
     return this.memUsed > this.criticalThreshold;
   }
 
-  cleanupQuick(critical: boolean) {
-    // Free non-renderable textures until we reach the target threshold
-    const memTarget = this.targetThreshold;
-    const timestamp = getTimeStamp();
-
-    while (
-      this.memUsed >= memTarget &&
-      this.orphanedTextures.length > 0 &&
-      (critical || getTimeStamp() - timestamp < 10)
-    ) {
-      const texture = this.orphanedTextures.shift();
-
-      if (texture === undefined) {
-        continue;
-      }
-
-      if (texture.renderable === true) {
-        // If the texture is renderable, we can't free it up
-        continue;
-      }
-
-      // Skip textures that are in transitional states - we only want to clean up
-      // textures that are in a stable state (loaded, failed, or freed)
-      if (
-        texture.state === 'initial' ||
-        Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
-      ) {
-        continue;
-      }
-
-      this.destroyTexture(texture);
-    }
-  }
-
   /**
    * Destroy a texture and remove it from the memory manager
    *
@@ -294,45 +229,14 @@ export class TextureMemoryManager {
     }
 
     const txManager = this.stage.txManager;
-    txManager.removeTextureFromQueue(texture);
     txManager.removeTextureFromCache(texture);
 
     texture.destroy();
 
-    this.removeFromOrphanedTextures(texture);
     this.loadedTextures.delete(texture);
   }
-  cleanupDeep(critical: boolean) {
-    // Free non-renderable textures until we reach the target threshold
-    const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
 
-    // Filter for textures that are candidates for cleanup
-    // note: This is an expensive operation, so we only do it in deep cleanup
-    const cleanupCandidates = [...this.loadedTextures.keys()].filter(
-      (texture) => {
-        return (
-          (texture.type === TextureType.image ||
-            texture.type === TextureType.noise ||
-            texture.type === TextureType.renderToTexture) &&
-          texture.renderable === false &&
-          texture.preventCleanup === false &&
-          texture.state !== 'initial' &&
-          !Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)
-        );
-      },
-    );
-
-    while (this.memUsed >= memTarget && cleanupCandidates.length > 0) {
-      const texture = cleanupCandidates.shift();
-      if (texture === undefined) {
-        continue;
-      }
-
-      this.destroyTexture(texture);
-    }
-  }
-
-  cleanup(aggressive: boolean = false) {
+  cleanup() {
     const critical = this.criticalCleanupRequested;
     this.lastCleanupTime = this.frameTime;
 
@@ -345,25 +249,38 @@ export class TextureMemoryManager {
 
     if (this.debugLogging === true) {
       console.log(
-        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}. Aggressive: ${aggressive}`,
+        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}.`,
       );
     }
 
-    // Note: We skip textures in transitional states during cleanup:
-    // - 'initial': These textures haven't started loading yet
-    // - 'fetching': These textures are in the process of being fetched
-    // - 'fetched': These textures have been fetched but not yet uploaded to GPU
-    // - 'loading': These textures are being uploaded to the GPU
-    //
-    // For 'failed' and 'freed' states, we only remove them from the tracking
-    // arrays without trying to free GPU resources that don't exist.
+    // Free non-renderable textures until we reach the target threshold
+    const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
 
-    // try a quick cleanup first
-    this.cleanupQuick(critical);
+    // PERFORMANCE: Zero-overhead single-loop cleanup with immediate destruction
+    // Direct iteration with early exit when target reached - no arrays, no copies
+    let currentMemUsed = this.memUsed;
 
-    // if we're still above the target threshold, do a deep cleanup
-    if (aggressive === true && this.memUsed >= this.criticalThreshold) {
-      this.cleanupDeep(critical);
+    for (const [texture] of this.loadedTextures) {
+      // Early exit: target memory reached
+      if (currentMemUsed < memTarget) {
+        break;
+      }
+
+      // Fast type check for cleanable textures
+      const isCleanableType =
+        texture.type === TextureType.image ||
+        texture.type === TextureType.noise ||
+        texture.type === TextureType.renderToTexture;
+
+      // Immediate cleanup if eligible
+      if (isCleanableType && texture.canBeCleanedUp() === true) {
+        // Get memory used by this texture before destroying
+        const textureMemory = this.loadedTextures.get(texture) ?? 0;
+
+        // Destroy immediately and update local memory counter
+        this.destroyTexture(texture);
+        currentMemUsed -= textureMemory;
+      }
     }
 
     if (this.memUsed >= this.criticalThreshold) {

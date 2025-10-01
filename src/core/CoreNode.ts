@@ -27,6 +27,7 @@ import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
+  TextureType,
   type Texture,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
@@ -731,6 +732,8 @@ export class CoreNode extends EventEmitter {
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
+  private currentTextureTryCount = 0;
+
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -835,6 +838,7 @@ export class CoreNode extends EventEmitter {
 
       texture.preventCleanup =
         this.props.textureOptions?.preventCleanup ?? false;
+
       texture.on('loaded', this.onTextureLoaded);
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
@@ -866,7 +870,7 @@ export class CoreNode extends EventEmitter {
       this.texture.off('loaded', this.onTextureLoaded);
       this.texture.off('failed', this.onTextureFailed);
       this.texture.off('freed', this.onTextureFreed);
-      this.texture.setRenderableOwner(this, false);
+      this.texture.setRenderableOwner(this._id, false);
     }
   }
 
@@ -905,9 +909,11 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+    console.log('Texture failed to load', error);
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -925,6 +931,7 @@ export class CoreNode extends EventEmitter {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -1506,7 +1513,7 @@ export class CoreNode extends EventEmitter {
    * Changes the renderable state of the node.
    */
   updateTextureOwnership(isRenderable: boolean) {
-    this.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this._id, isRenderable);
   }
 
   /**
@@ -2333,6 +2340,7 @@ export class CoreNode extends EventEmitter {
       sy: this.props.srcY,
       sw: this.props.srcWidth,
       sh: this.props.srcHeight,
+      maxRetryCount: this.props.textureOptions.maxRetryCount || 5,
     });
   }
 
@@ -2418,13 +2426,12 @@ export class CoreNode extends EventEmitter {
 
     const oldTexture = this.props.texture;
     if (oldTexture) {
-      oldTexture.setRenderableOwner(this, false);
       this.unloadTexture();
     }
 
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable);
+      value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
     }
 

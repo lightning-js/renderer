@@ -45,13 +45,12 @@ export interface ColorTextureProps {
  * a Node are.
  */
 export class ColorTexture extends Texture {
-  public override type: TextureType = TextureType.color;
+  override readonly type = TextureType.color as const;
+  public props: Required<ColorTextureProps>;
 
-  props: Required<ColorTextureProps>;
-
-  constructor(txManager: CoreTextureManager, props?: ColorTextureProps) {
+  constructor(txManager: CoreTextureManager, props: ColorTextureProps) {
     super(txManager);
-    this.props = ColorTexture.resolveDefaults(props || {});
+    this.props = ColorTexture.resolveDefaults(props);
   }
 
   get color() {
@@ -76,8 +75,6 @@ export class ColorTexture extends Texture {
       pixelData[2] = this.color & 0xff; // Blue
       pixelData[3] = (this.color >>> 24) & 0xff; // Alpha
     }
-
-    this.setState('fetched', { width: 1, height: 1 });
 
     return {
       data: pixelData,

@@ -412,7 +412,7 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
         this.setStatus(state, 'failed', new Error(msg));
         return;
       }
-      trFontFace.texture.setRenderableOwner(state, true);
+      trFontFace.texture.setRenderableOwner(state.props.fontFamily, true);
     }
 
     // If the font hasn't been loaded yet, stop here.
@@ -787,13 +787,16 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
     renderable: boolean,
   ): void {
     super.setIsRenderable(state, renderable);
-    state.trFontFace?.texture.setRenderableOwner(state, renderable);
+    state.trFontFace?.texture.setRenderableOwner(
+      state.props.fontFamily,
+      renderable,
+    );
   }
 
   override destroyState(state: SdfTextRendererState): void {
     super.destroyState(state);
     // If there's a Font Face assigned we must free the owner relation to its texture
-    state.trFontFace?.texture.setRenderableOwner(state, false);
+    state.trFontFace?.texture.setRenderableOwner(state.props.fontFamily, false);
   }
   //#endregion Overrides
 
@@ -813,7 +816,10 @@ export class SdfTextRenderer extends TextRenderer<SdfTextRendererState> {
   protected releaseFontFace(state: SdfTextRendererState) {
     state.resLineHeight = undefined;
     if (state.trFontFace) {
-      state.trFontFace.texture.setRenderableOwner(state, false);
+      state.trFontFace.texture.setRenderableOwner(
+        state.props.fontFamily,
+        false,
+      );
       state.trFontFace = undefined;
     }
   }

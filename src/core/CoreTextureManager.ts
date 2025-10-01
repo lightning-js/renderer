@@ -139,6 +139,20 @@ export interface TextureOptions {
   preventCleanup?: boolean;
 
   /**
+   * Number of times to retry loading a failed texture
+   *
+   * @remarks
+   * When a texture fails to load, Lightning will retry up to this many times
+   * before permanently giving up. Each retry will clear the texture ownership
+   * and then re-establish it to trigger a new load attempt.
+   *
+   * Set to null to disable retries. Set to 0 to always try once and never retry.
+   * This is typically only used on ImageTexture instances.
+   *
+   */
+  maxRetryCount?: number | null;
+
+  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
@@ -329,27 +343,13 @@ export class CoreTextureManager extends EventEmitter {
     return texture as InstanceType<TextureMap[Type]>;
   }
 
-  orphanTexture(texture: Texture): void {
-    // if it is part of the download or upload queue, remove it
-    this.removeTextureFromQueue(texture);
-
-    if (texture.type === TextureType.subTexture) {
-      // ignore subtextures
-      return;
-    }
-
-    this.stage.txMemManager.addToOrphanedTextures(texture);
-  }
-
   /**
    * Override loadTexture to use the batched approach.
    *
    * @param texture - The texture to load
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
-  loadTexture(texture: Texture, priority?: boolean): void {
-    this.stage.txMemManager.removeFromOrphanedTextures(texture);
-
+  async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures - they get loaded through their parent
       return;
@@ -360,7 +360,7 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
+    if (texture.state === 'loading') {
       return;
     }
 
@@ -370,46 +370,33 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    // If the texture failed to load, we need to re-download it.
-    if (texture.state === 'failed') {
-      texture.free();
-      texture.freeTextureData();
-    }
-
     texture.setState('loading');
 
-    // Get the texture data
-    texture
-      .getTextureData()
-      .then(() => {
-        if (texture.state !== 'fetched') {
-          texture.setState('failed');
-          return;
-        }
+    // Get texture data - early return on failure
+    const textureDataResult = await texture.getTextureData().catch((err) => {
+      console.error(err);
+      texture.setState('failed');
+      return null;
+    });
 
-        // For non-image textures, upload immediately
-        if (texture.type !== TextureType.image) {
-          this.uploadTexture(texture).catch((err) => {
-            console.error('Failed to upload non-image texture:', err);
-            texture.setState('failed');
-          });
-        } else {
-          // For image textures, queue for throttled upload
-          // If it's a priority texture, upload it immediately
-          if (priority === true) {
-            this.uploadTexture(texture).catch((err) => {
-              console.error('Failed to upload priority texture:', err);
-              texture.setState('failed');
-            });
-          } else {
-            this.enqueueUploadTexture(texture);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error(err);
+    // Early return if texture data fetch failed
+    if (textureDataResult === null || texture.state === 'failed') {
+      return;
+    }
+
+    // Handle non-image textures: upload immediately
+    const shouldUploadImmediately =
+      texture.type !== TextureType.image || priority === true;
+    if (shouldUploadImmediately === true) {
+      await this.uploadTexture(texture).catch((err) => {
+        console.error(`Failed to upload texture:`, err);
         texture.setState('failed');
       });
+      return;
+    }
+
+    // Queue image textures for throttled upload
+    this.enqueueUploadTexture(texture);
   }
 
   /**
@@ -424,11 +411,30 @@ export class CoreTextureManager extends EventEmitter {
       this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
-      texture.setState('failed');
+      texture.setState('failed', new Error('Memory threshold exceeded'));
+      return;
+    }
+
+    if (texture.state === 'failed' || texture.state === 'freed') {
+      // don't upload failed or freed textures
+      return;
+    }
+
+    if (texture.state === 'loaded') {
+      // already loaded
+      return;
+    }
+
+    if (texture.textureData === null) {
+      texture.setState(
+        'failed',
+        new Error('Texture data is null, cannot upload texture'),
+      );
       return;
     }
 
     const coreContext = texture.loadCtxTexture();
+
     if (coreContext !== null && coreContext.state === 'loaded') {
       texture.setState('loaded');
       return;
@@ -526,18 +532,6 @@ export class CoreTextureManager extends EventEmitter {
     const cacheKey = inverseKeyCache.get(texture);
     if (cacheKey) {
       keyCache.delete(cacheKey);
-    }
-  }
-
-  /**
-   * Remove texture from the upload queue
-   *
-   * @param texture - The texture to remove
-   */
-  removeTextureFromQueue(texture: Texture): void {
-    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
-    if (uploadIndex !== -1) {
-      this.uploadTextureQueue.splice(uploadIndex, 1);
     }
   }
 

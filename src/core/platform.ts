@@ -63,7 +63,7 @@ export const startLoop = (stage: Stage) => {
       }
 
       if (stage.txMemManager.checkCleanup() === true) {
-        stage.txMemManager.cleanup(false);
+        stage.txMemManager.cleanup();
       }
 
       stage.flushFrameEvents();
