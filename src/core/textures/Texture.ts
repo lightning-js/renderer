@@ -401,8 +401,6 @@ export abstract class Texture extends EventEmitter {
       // to determine if we should try loading again
       this.retryCount += 1;
 
-      console.error(`Texture failed to load: ${this._error.message}`);
-
       queueMicrotask(() => {
         this.release();
       });

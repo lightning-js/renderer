@@ -732,8 +732,6 @@ export class CoreNode extends EventEmitter {
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
-  private currentTextureTryCount = 0;
-
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
 
@@ -909,7 +907,6 @@ export class CoreNode extends EventEmitter {
   };
 
   private onTextureFailed: TextureFailedEventHandler = (_, error) => {
-    console.log('Texture failed to load', error);
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
