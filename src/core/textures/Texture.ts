@@ -162,7 +162,7 @@ export abstract class Texture extends EventEmitter {
   public memUsed = 0;
 
   public retryCount = 0;
-  public maxRetryCount: number | null = null;
+  public maxRetryCount: number = 5;
 
   /**
    * Timestamp when texture was created (for startup grace period)
@@ -292,11 +292,7 @@ export abstract class Texture extends EventEmitter {
   }
 
   load(): void {
-    if (this.maxRetryCount === null && this.retryCount > 0) {
-      return;
-    }
-
-    if (this.maxRetryCount !== null && this.retryCount > this.maxRetryCount) {
+    if (this.retryCount > this.maxRetryCount) {
       // We've exceeded the max retry count, do not attempt to load again
       return;
     }
