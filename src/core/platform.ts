@@ -66,10 +66,6 @@ export const startLoop = (stage: Stage) => {
         stage.txMemManager.cleanup();
       }
 
-      if (stage.txMemManager.checkDefrag() === true) {
-        stage.txMemManager.defragment();
-      }
-
       stage.flushFrameEvents();
       return;
     }
