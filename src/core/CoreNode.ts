@@ -1466,8 +1466,16 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.texture !== null) {
-      needsTextureOwnership = true;
+      // preemptive check for failed textures this will mark the current node as non-renderable
+      // and will prevent further checks until the texture is reloaded or retry is reset on the texture
+      if (this.texture.retryCount > this.texture.maxRetryCount) {
+        // texture has failed to load, we cannot render
+        this.updateTextureOwnership(false);
+        this.setRenderable(false);
+        return;
+      }
 
+      needsTextureOwnership = true;
       // we're only renderable if the texture state is loaded
       newIsRenderable = this.texture.state === 'loaded';
     } else if (
