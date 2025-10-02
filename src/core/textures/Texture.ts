@@ -152,6 +152,15 @@ export abstract class Texture extends EventEmitter {
 
   public textureData: TextureData | null = null;
 
+  /**
+   * Memory used by this texture in bytes
+   *
+   * @remarks
+   * This is tracked by the TextureMemoryManager and updated when the texture
+   * is loaded/freed. Set to 0 when texture is not loaded.
+   */
+  public memUsed = 0;
+
   public retryCount = 0;
   public maxRetryCount: number | null = null;
 

@@ -115,13 +115,14 @@ export interface MemoryInfo {
  */
 export class TextureMemoryManager {
   private memUsed = 0;
-  private loadedTextures: Map<Texture, number> = new Map();
+  private loadedTextures: (Texture | null)[] = [];
   private criticalThreshold: number;
   private targetThreshold: number;
   private cleanupInterval: number;
   private debugLogging: boolean;
   private lastCleanupTime = 0;
   private baselineMemoryAllocation: number;
+  private needsDefrag = false;
 
   public criticalCleanupRequested = false;
   public doNotExceedCriticalThreshold: boolean;
@@ -186,17 +187,25 @@ export class TextureMemoryManager {
    * @param byteSize - The size of the texture in bytes
    */
   setTextureMemUse(texture: Texture, byteSize: number) {
-    if (this.loadedTextures.has(texture)) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.memUsed -= this.loadedTextures.get(texture)!;
-    }
+    // Update global memory counter by subtracting old value
+    this.memUsed -= texture.memUsed;
 
     if (byteSize === 0) {
-      this.loadedTextures.delete(texture);
+      // PERFORMANCE: Mark for deletion instead of splice (zero overhead)
+      const index = this.loadedTextures.indexOf(texture);
+      if (index !== -1) {
+        this.loadedTextures[index] = null;
+        this.needsDefrag = true;
+      }
+      texture.memUsed = 0;
       return;
     } else {
+      // Update texture memory and add to tracking if not already present
+      texture.memUsed = byteSize;
       this.memUsed += byteSize;
-      this.loadedTextures.set(texture, byteSize);
+      if (this.loadedTextures.indexOf(texture) === -1) {
+        this.loadedTextures.push(texture);
+      }
     }
 
     if (this.memUsed > this.criticalThreshold) {
@@ -217,7 +226,20 @@ export class TextureMemoryManager {
   }
 
   /**
-   * Destroy a texture and remove it from the memory manager
+   * Check if defragmentation is needed
+   *
+   * @remarks
+   * Returns true if the loadedTextures array has null entries that need
+   * to be compacted. Called by platform during idle periods.
+   *
+   * @returns true if defragmentation should be performed
+   */
+  checkDefrag() {
+    return this.needsDefrag;
+  }
+
+  /**
+   * Destroy a texture and null out its array position
    *
    * @param texture - The texture to destroy
    */
@@ -228,12 +250,22 @@ export class TextureMemoryManager {
       );
     }
 
+    // PERFORMANCE: Null out array position instead of splice (zero overhead)
+    const index = this.loadedTextures.indexOf(texture);
+    if (index !== -1) {
+      this.loadedTextures[index] = null;
+      this.needsDefrag = true;
+    }
+
+    // Destroy texture and update memory counters
     const txManager = this.stage.txManager;
     txManager.removeTextureFromCache(texture);
 
     texture.destroy();
 
-    this.loadedTextures.delete(texture);
+    // Update memory counters
+    this.memUsed -= texture.memUsed;
+    texture.memUsed = 0;
   }
 
   cleanup() {
@@ -256,15 +288,18 @@ export class TextureMemoryManager {
     // Free non-renderable textures until we reach the target threshold
     const memTarget = critical ? this.criticalThreshold : this.targetThreshold;
 
-    // PERFORMANCE: Zero-overhead single-loop cleanup with immediate destruction
-    // Direct iteration with early exit when target reached - no arrays, no copies
+    // PERFORMANCE: Zero-overhead cleanup with null marking
+    // Skip null entries, mark cleaned textures as null for later defrag
     let currentMemUsed = this.memUsed;
 
-    for (const [texture] of this.loadedTextures) {
+    for (let i = 0; i < this.loadedTextures.length; i++) {
       // Early exit: target memory reached
       if (currentMemUsed < memTarget) {
         break;
       }
+
+      const texture = this.loadedTextures[i];
+      if (!texture) continue; // Skip null entries from previous deletions
 
       // Fast type check for cleanable textures
       const isCleanableType =
@@ -274,10 +309,10 @@ export class TextureMemoryManager {
 
       // Immediate cleanup if eligible
       if (isCleanableType && texture.canBeCleanedUp() === true) {
-        // Get memory used by this texture before destroying
-        const textureMemory = this.loadedTextures.get(texture) ?? 0;
+        // Get memory before destroying
+        const textureMemory = texture.memUsed;
 
-        // Destroy immediately and update local memory counter
+        // Destroy texture (which will null out the array position)
         this.destroyTexture(texture);
         currentMemUsed -= textureMemory;
       }
@@ -300,6 +335,37 @@ export class TextureMemoryManager {
   }
 
   /**
+   * Defragment the loadedTextures array by removing null entries
+   *
+   * @remarks
+   * This should be called during idle periods to compact the array
+   * after null-marking deletions. Zero overhead during critical cleanup.
+   */
+  defragment() {
+    if (!this.needsDefrag) {
+      return;
+    }
+
+    // PERFORMANCE: Single-pass compaction
+    let writeIndex = 0;
+    for (
+      let readIndex = 0;
+      readIndex < this.loadedTextures.length;
+      readIndex++
+    ) {
+      const texture = this.loadedTextures[readIndex];
+      if (texture !== null && texture !== undefined) {
+        this.loadedTextures[writeIndex] = texture;
+        writeIndex++;
+      }
+    }
+
+    // Trim array to new size
+    this.loadedTextures.length = writeIndex;
+    this.needsDefrag = false;
+  }
+
+  /**
    * Get the current texture memory usage information
    *
    * @remarks
@@ -308,15 +374,19 @@ export class TextureMemoryManager {
    */
   getMemoryInfo(): MemoryInfo {
     let renderableTexturesLoaded = 0;
-    const renderableMemUsed = [...this.loadedTextures.keys()].reduce(
-      (acc, texture) => {
-        renderableTexturesLoaded += texture.renderable ? 1 : 0;
-        // Get the memory used by the texture, defaulting to 0 if not found
-        const textureMemory = this.loadedTextures.get(texture) ?? 0;
-        return acc + (texture.renderable ? textureMemory : 0);
-      },
-      this.baselineMemoryAllocation,
-    );
+    let renderableMemUsed = this.baselineMemoryAllocation;
+
+    for (const texture of this.loadedTextures) {
+      if (texture && texture.renderable) {
+        renderableTexturesLoaded += 1;
+        renderableMemUsed += texture.memUsed;
+      }
+    }
+
+    // Count non-null entries for accurate loaded texture count
+    const actualLoadedTextures = this.loadedTextures.filter(
+      (t) => t !== null,
+    ).length;
 
     return {
       criticalThreshold: this.criticalThreshold,
@@ -324,7 +394,7 @@ export class TextureMemoryManager {
       renderableMemUsed,
       memUsed: this.memUsed,
       renderableTexturesLoaded,
-      loadedTextures: this.loadedTextures.size,
+      loadedTextures: actualLoadedTextures,
       baselineMemoryAllocation: this.baselineMemoryAllocation,
     };
   }
