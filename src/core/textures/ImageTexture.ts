@@ -138,7 +138,7 @@ export class ImageTexture extends Texture {
     const resolvedProps = ImageTexture.resolveDefaults(props);
     super(txManager);
     this.props = resolvedProps;
-    this.maxRetryCount = props.maxRetryCount ?? 5;
+    this.maxRetryCount = props.maxRetryCount as number;
   }
 
   hasAlphaChannel(mimeType: string) {

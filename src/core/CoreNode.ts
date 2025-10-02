@@ -2337,7 +2337,7 @@ export class CoreNode extends EventEmitter {
       sy: this.props.srcY,
       sw: this.props.srcWidth,
       sh: this.props.srcHeight,
-      maxRetryCount: this.props.textureOptions.maxRetryCount || 5,
+      maxRetryCount: this.props.textureOptions.maxRetryCount,
     });
   }
 
