@@ -292,6 +292,10 @@ export abstract class Texture extends EventEmitter {
   }
 
   load(): void {
+    if (this.maxRetryCount === null && this.retryCount > 0) {
+      return;
+    }
+
     if (this.maxRetryCount !== null && this.retryCount > this.maxRetryCount) {
       // We've exceeded the max retry count, do not attempt to load again
       return;
