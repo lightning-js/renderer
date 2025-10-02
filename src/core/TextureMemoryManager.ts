@@ -122,7 +122,6 @@ export class TextureMemoryManager {
   private debugLogging: boolean;
   private lastCleanupTime = 0;
   private baselineMemoryAllocation: number;
-  private needsDefrag = false;
 
   public criticalCleanupRequested = false;
   public doNotExceedCriticalThreshold: boolean;
@@ -191,11 +190,10 @@ export class TextureMemoryManager {
     this.memUsed -= texture.memUsed;
 
     if (byteSize === 0) {
-      // PERFORMANCE: Mark for deletion instead of splice (zero overhead)
+      // PERFORMANCE: Mark for deletion, slot will be reused later
       const index = this.loadedTextures.indexOf(texture);
       if (index !== -1) {
         this.loadedTextures[index] = null;
-        this.needsDefrag = true;
       }
       texture.memUsed = 0;
       return;
@@ -204,7 +202,13 @@ export class TextureMemoryManager {
       texture.memUsed = byteSize;
       this.memUsed += byteSize;
       if (this.loadedTextures.indexOf(texture) === -1) {
-        this.loadedTextures.push(texture);
+        // PERFORMANCE: Reuse empty slots before appending
+        const emptyIndex = this.loadedTextures.indexOf(null);
+        if (emptyIndex !== -1) {
+          this.loadedTextures[emptyIndex] = texture;
+        } else {
+          this.loadedTextures.push(texture);
+        }
       }
     }
 
@@ -226,19 +230,6 @@ export class TextureMemoryManager {
   }
 
   /**
-   * Check if defragmentation is needed
-   *
-   * @remarks
-   * Returns true if the loadedTextures array has null entries that need
-   * to be compacted. Called by platform during idle periods.
-   *
-   * @returns true if defragmentation should be performed
-   */
-  checkDefrag() {
-    return this.needsDefrag;
-  }
-
-  /**
    * Destroy a texture and null out its array position
    *
    * @param texture - The texture to destroy
@@ -250,11 +241,10 @@ export class TextureMemoryManager {
       );
     }
 
-    // PERFORMANCE: Null out array position instead of splice (zero overhead)
+    // PERFORMANCE: Null out array position, slot will be reused later
     const index = this.loadedTextures.indexOf(texture);
     if (index !== -1) {
       this.loadedTextures[index] = null;
-      this.needsDefrag = true;
     }
 
     // Destroy texture and update memory counters
@@ -332,37 +322,6 @@ export class TextureMemoryManager {
     } else {
       this.criticalCleanupRequested = false;
     }
-  }
-
-  /**
-   * Defragment the loadedTextures array by removing null entries
-   *
-   * @remarks
-   * This should be called during idle periods to compact the array
-   * after null-marking deletions. Zero overhead during critical cleanup.
-   */
-  defragment() {
-    if (!this.needsDefrag) {
-      return;
-    }
-
-    // PERFORMANCE: Single-pass compaction
-    let writeIndex = 0;
-    for (
-      let readIndex = 0;
-      readIndex < this.loadedTextures.length;
-      readIndex++
-    ) {
-      const texture = this.loadedTextures[readIndex];
-      if (texture !== null && texture !== undefined) {
-        this.loadedTextures[writeIndex] = texture;
-        writeIndex++;
-      }
-    }
-
-    // Trim array to new size
-    this.loadedTextures.length = writeIndex;
-    this.needsDefrag = false;
   }
 
   /**
