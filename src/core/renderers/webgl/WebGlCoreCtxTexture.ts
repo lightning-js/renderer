@@ -22,7 +22,6 @@ import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
-import { isPowerOfTwo } from '../../utils.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 
@@ -50,6 +49,25 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     textureSource: Texture,
   ) {
     super(memManager, textureSource);
+  }
+
+  /**
+   * GL error check with direct state marking
+   * Uses cached error result to minimize function calls
+   */
+  private checkGLError(): boolean {
+    // Skip if already failed to prevent double-processing
+    if (this.state === 'failed') {
+      return true;
+    }
+
+    const error = this.glw.getError();
+    if (error !== 0) {
+      this.state = 'failed';
+      this.textureSource.setState('failed', new Error(`WebGL Error: ${error}`));
+      return true;
+    }
+    return false;
   }
 
   get ctxTexture(): WebGLTexture | null {
@@ -92,10 +110,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
     if (this._nativeCtxTexture === null) {
       this.state = 'failed';
-      const error = new Error('Could not create WebGL Texture');
-      this.textureSource.setState('failed', error);
-      console.error('Could not create WebGL Texture');
-      throw error;
+      this.textureSource.setState(
+        'failed',
+        new Error('WebGL Texture creation failed'),
+      );
+      return;
     }
 
     try {
@@ -113,16 +132,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       // Update the texture source's width and height so that it can be used
       // for rendering.
       this.textureSource.setState('loaded', { width, height });
-
-      // cleanup source texture data next tick
-      // This is done using queueMicrotask to ensure it runs after the current
-      // event loop tick, allowing the texture to be fully loaded and bound
-      // to the GL context before freeing the source data.
-      // This is important to avoid issues with the texture data being
-      // freed while the texture is still being loaded or used.
-      queueMicrotask(() => {
-        this.textureSource.freeTextureData();
-      });
+      this.textureSource.freeTextureData();
     } catch (err: unknown) {
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
@@ -130,12 +140,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         return;
       }
 
+      // Ensure texture is marked as failed
       this.state = 'failed';
-      const error = err instanceof Error ? err : new Error(String(err));
-      this.textureSource.setState('failed', error);
-      this.textureSource.freeTextureData();
-      console.error(err);
-      throw error; // Re-throw to propagate the error
+      this.textureSource.setState('failed');
     }
   }
 
@@ -145,10 +152,19 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   async onLoadRequest(): Promise<Dimensions> {
     const { glw } = this;
     const textureData = this.textureSource.textureData;
+
+    // Early return if texture is already failed
+    if (this.state === 'failed') {
+      return { width: 0, height: 0 };
+    }
+
     if (textureData === null || this._nativeCtxTexture === null) {
-      throw new Error(
-        'Texture data or native texture is null ' + this.textureSource.type,
+      this.state = 'failed';
+      this.textureSource.setState(
+        'failed',
+        new Error('No texture data available'),
       );
+      return { width: 0, height: 0 };
     }
 
     // Set to a 1x1 transparent texture
@@ -159,6 +175,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     let height = 0;
 
     glw.activeTexture(0);
+
+    // High-performance error check - single call, direct state marking
+    if (this.checkGLError() === true) {
+      return { width: 0, height: 0 };
+    }
 
     const tdata = textureData.data;
     const format = glw.RGBA;
@@ -183,25 +204,13 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
 
-      this.setTextureMemUse(height * width * formatBytes * memoryPadding);
-    } else if (tdata === null) {
-      width = 0;
-      height = 0;
-      // Reset to a 1x1 transparent texture
-      glw.bindTexture(this._nativeCtxTexture);
+      // Check for errors after image upload operations
+      if (this.checkGLError() === true) {
+        return { width: 0, height: 0 };
+      }
 
-      glw.texImage2D(
-        0,
-        format,
-        1,
-        1,
-        0,
-        format,
-        glw.UNSIGNED_BYTE,
-        TRANSPARENT_TEXTURE_DATA,
-      );
-      this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
-    } else if ('mipmaps' in tdata && tdata.mipmaps) {
+      this.setTextureMemUse(height * width * formatBytes * memoryPadding);
+    } else if (tdata && 'mipmaps' in tdata && tdata.mipmaps) {
       const { mipmaps, width = 0, height = 0, type, glInternalFormat } = tdata;
       const view =
         type === 'ktx'
@@ -215,6 +224,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
       glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+
+      // Check for errors after compressed texture operations
+      if (this.checkGLError() === true) {
+        return { width: 0, height: 0 };
+      }
 
       this.setTextureMemUse(view.byteLength);
     } else if (tdata && tdata instanceof Uint8Array) {
@@ -239,12 +253,24 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         tdata,
       );
 
+      // Check for errors after color texture operations
+      if (this.checkGLError() === true) {
+        return { width: 0, height: 0 };
+      }
+
       this.setTextureMemUse(width * height * formatBytes);
     } else {
       console.error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
         textureData,
       );
+
+      this.state = 'failed';
+      this.textureSource.setState(
+        'failed',
+        new Error('Unexpected texture data'),
+      );
+      return { width: 0, height: 0 };
     }
 
     return {
@@ -265,6 +291,13 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
     this.state = 'freed';
     this.textureSource.setState('freed');
+    this.release();
+  }
+
+  /**
+   * Release the WebGLTexture from the GPU without changing state
+   */
+  release(): void {
     this._w = 0;
     this._h = 0;
 
@@ -307,6 +340,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
     // texture wrapping method
     glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
     glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
+
+    const error = glw.getError();
+    if (error !== 0) {
+      return null;
+    }
 
     return nativeTexture;
   }

@@ -41,18 +41,20 @@ export class CanvasCoreTexture extends CoreContextTexture {
     try {
       const size = await this.onLoadRequest();
       this.textureSource.setState('loaded', size);
-      this.textureSource.freeTextureData();
       this.updateMemSize();
     } catch (err) {
       this.textureSource.setState('failed', err as Error);
-      this.textureSource.freeTextureData();
       throw err;
     }
   }
 
-  free(): void {
+  release(): void {
     this.image = undefined;
     this.tintCache = undefined;
+  }
+
+  free(): void {
+    this.release();
     this.textureSource.setState('freed');
     this.setTextureMemUse(0);
     this.textureSource.freeTextureData();

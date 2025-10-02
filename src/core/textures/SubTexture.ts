@@ -30,6 +30,8 @@ import {
   type TextureState,
 } from './Texture.js';
 
+let subTextureId = 0;
+
 /**
  * Properties of the {@link SubTexture}
  */
@@ -83,6 +85,7 @@ export class SubTexture extends Texture {
   parentTexture: Texture;
 
   public override type: TextureType = TextureType.subTexture;
+  public subtextureId = `subtexture-${subTextureId++}`;
 
   constructor(txManager: CoreTextureManager, props: SubTextureProps) {
     super(txManager);
@@ -97,8 +100,8 @@ export class SubTexture extends Texture {
     // Resolve parent texture from cache or fallback to provided texture
     this.parentTexture = txManager.resolveParentTexture(this.props.texture);
 
-    if (this.renderableOwners.size > 0) {
-      this.parentTexture.setRenderableOwner(this, true);
+    if (this.renderableOwners.length > 0) {
+      this.parentTexture.setRenderableOwner(this.subtextureId, true);
     }
 
     // If parent texture is already loaded / failed, trigger loaded event manually
@@ -107,23 +110,17 @@ export class SubTexture extends Texture {
     // synchronous task after calling loadTexture()
     queueMicrotask(() => {
       const parentTx = this.parentTexture;
-      if (parentTx.state === 'loaded') {
-        this.onParentTxLoaded(parentTx, parentTx.dimensions!);
-      } else if (parentTx.state === 'fetching') {
-        this.onParentTxFetching();
-      } else if (parentTx.state === 'fetched') {
-        this.onParentTxFetched();
+      if (parentTx.state === 'loaded' && parentTx.dimensions) {
+        this.onParentTxLoaded(parentTx, parentTx.dimensions);
       } else if (parentTx.state === 'loading') {
         this.onParentTxLoading();
-      } else if (parentTx.state === 'failed') {
-        this.onParentTxFailed(parentTx, parentTx.error!);
+      } else if (parentTx.state === 'failed' && parentTx.error) {
+        this.onParentTxFailed(parentTx, parentTx.error);
       } else if (parentTx.state === 'freed') {
         this.onParentTxFreed();
       }
 
-      parentTx.on('fetched', this.onParentTxFetched);
       parentTx.on('loading', this.onParentTxLoading);
-      parentTx.on('fetching', this.onParentTxFetching);
       parentTx.on('loaded', this.onParentTxLoaded);
       parentTx.on('failed', this.onParentTxFailed);
       parentTx.on('freed', this.onParentTxFreed);
@@ -143,17 +140,6 @@ export class SubTexture extends Texture {
     this.forwardParentTxState('failed', error);
   };
 
-  private onParentTxFetched = () => {
-    this.forwardParentTxState('fetched', {
-      width: this.props.width,
-      height: this.props.height,
-    });
-  };
-
-  private onParentTxFetching = () => {
-    this.forwardParentTxState('fetching');
-  };
-
   private onParentTxLoading = () => {
     this.forwardParentTxState('loading');
   };
@@ -171,17 +157,14 @@ export class SubTexture extends Texture {
 
   override onChangeIsRenderable(isRenderable: boolean): void {
     // Propagate the renderable owner change to the parent texture
-    this.parentTexture.setRenderableOwner(this, isRenderable);
+    this.parentTexture.setRenderableOwner(this.subtextureId, isRenderable);
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    // Check if parent texture is loaded
-    return new Promise((resolve, reject) => {
-      this.setState('fetched');
-      resolve({
-        data: this.props,
-      });
-    });
+    // SubTexture data ready - dimensions will be set during upload
+    return {
+      data: this.props,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

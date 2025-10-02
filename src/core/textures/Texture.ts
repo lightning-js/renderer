@@ -103,9 +103,7 @@ export interface TextureData {
 
 export type TextureState =
   | 'initial' // Before anything is loaded
-  | 'fetching' // Fetching or generating texture source
-  | 'fetched' // Texture source is ready
-  | 'loading' // Uploading to GPU
+  | 'loading' // Loading texture data and uploading to GPU
   | 'loaded' // Fully loaded and usable
   | 'failed' // Failed to load
   | 'freed'; // Released and must be reloaded
@@ -139,16 +137,10 @@ export abstract class Texture extends EventEmitter {
   private _dimensions: Dimensions | null = null;
   private _error: Error | null = null;
 
-  /**
-   * Texture states that are considered transitional and should be skipped during cleanup
-   */
-  public static readonly TRANSITIONAL_TEXTURE_STATES: readonly TextureState[] =
-    ['fetching', 'fetched', 'loading'];
-
   // aggregate state
   public state: TextureState = 'initial';
 
-  readonly renderableOwners = new Set<unknown>();
+  readonly renderableOwners: any[] = [];
 
   readonly renderable: boolean = false;
 
@@ -160,6 +152,34 @@ export abstract class Texture extends EventEmitter {
 
   public textureData: TextureData | null = null;
 
+  /**
+   * Memory used by this texture in bytes
+   *
+   * @remarks
+   * This is tracked by the TextureMemoryManager and updated when the texture
+   * is loaded/freed. Set to 0 when texture is not loaded.
+   */
+  public memUsed = 0;
+
+  public retryCount = 0;
+  public maxRetryCount: number | null = null;
+
+  /**
+   * Timestamp when texture was created (for startup grace period)
+   */
+  private createdAt: number = Date.now();
+
+  /**
+   * Flag to track if grace period has expired to avoid repeated Date.now() calls
+   */
+  private gracePeriodExpired: boolean = false;
+
+  /**
+   * Grace period in milliseconds to prevent premature cleanup during app startup
+   * This helps prevent race conditions when bounds calculation is delayed
+   */
+  private static readonly STARTUP_GRACE_PERIOD = 2000; // 2 seconds
+
   constructor(protected txManager: CoreTextureManager) {
     super();
   }
@@ -170,6 +190,59 @@ export abstract class Texture extends EventEmitter {
 
   get error(): Error | null {
     return this._error;
+  }
+
+  /**
+   * Checks if the texture is within the startup grace period.
+   * During this period, textures are protected from cleanup to prevent
+   * race conditions during app initialization.
+   */
+  isWithinStartupGracePeriod(): boolean {
+    // If grace period already expired, return false immediately
+    if (this.gracePeriodExpired) {
+      return false;
+    }
+
+    // Check if grace period has expired now
+    const hasExpired =
+      Date.now() - this.createdAt >= Texture.STARTUP_GRACE_PERIOD;
+
+    if (hasExpired) {
+      // Cache the result to avoid future Date.now() calls
+      this.gracePeriodExpired = true;
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if the texture can be safely cleaned up.
+   * Considers the renderable state, startup grace period, and renderable owners.
+   */
+  canBeCleanedUp(): boolean {
+    // Never cleanup if explicitly prevented
+    if (this.preventCleanup) {
+      return false;
+    }
+
+    // Don't cleanup if still within startup grace period
+    if (this.isWithinStartupGracePeriod()) {
+      return false;
+    }
+
+    // Don't cleanup if not renderable
+    if (this.renderable === true) {
+      return false;
+    }
+
+    // Don't cleanup if there are still renderable owners
+    if (this.renderableOwners.length > 0) {
+      return false;
+    }
+
+    // Safe to cleanup
+    return true;
   }
 
   /**
@@ -186,33 +259,44 @@ export abstract class Texture extends EventEmitter {
    * @param owner
    * @param renderable
    */
-  setRenderableOwner(owner: unknown, renderable: boolean): void {
-    const oldSize = this.renderableOwners.size;
+  setRenderableOwner(owner: string | number, renderable: boolean): void {
+    const oldSize = this.renderableOwners.length;
+    const hasOwnerIndex = this.renderableOwners.indexOf(owner);
 
     if (renderable === true) {
-      if (this.renderableOwners.has(owner) === false) {
+      if (hasOwnerIndex === -1) {
         // Add the owner to the set
-        this.renderableOwners.add(owner);
+        this.renderableOwners.push(owner);
       }
 
-      const newSize = this.renderableOwners.size;
-      if (newSize > oldSize && newSize === 1) {
+      const newSize = this.renderableOwners.length;
+      if (oldSize !== newSize && newSize === 1) {
         (this.renderable as boolean) = true;
         this.onChangeIsRenderable?.(true);
         this.load();
       }
     } else {
-      this.renderableOwners.delete(owner);
-      const newSize = this.renderableOwners.size;
-      if (newSize < oldSize && newSize === 0) {
+      if (hasOwnerIndex !== -1) {
+        this.renderableOwners.splice(hasOwnerIndex, 1);
+      }
+
+      const newSize = this.renderableOwners.length;
+      if (oldSize !== newSize && newSize === 0) {
         (this.renderable as boolean) = false;
         this.onChangeIsRenderable?.(false);
-        this.txManager.orphanTexture(this);
+
+        // note, not doing a cleanup here, cleanup is managed by the Stage/TextureMemoryManager
+        // when it deems appropriate based on memory pressure
       }
     }
   }
 
   load(): void {
+    if (this.maxRetryCount !== null && this.retryCount > this.maxRetryCount) {
+      // We've exceeded the max retry count, do not attempt to load again
+      return;
+    }
+
     this.txManager.loadTexture(this);
   }
 
@@ -252,6 +336,18 @@ export abstract class Texture extends EventEmitter {
   }
 
   /**
+   * Release the texture data and core context texture for this Texture without changing state.
+   *
+   * @remarks
+   * The ctxTexture is created by the renderer and lives on the GPU.
+   */
+  release(): void {
+    this.ctxTexture?.release();
+    this.ctxTexture = undefined;
+    this.freeTextureData();
+  }
+
+  /**
    * Destroy the texture.
    *
    * @remarks
@@ -276,7 +372,9 @@ export abstract class Texture extends EventEmitter {
    * e.g. ImageData that is downloaded from a URL.
    */
   freeTextureData(): void {
-    this.textureData = null;
+    queueMicrotask(() => {
+      this.textureData = null;
+    });
   }
 
   public setState(
@@ -289,6 +387,9 @@ export abstract class Texture extends EventEmitter {
 
     let payload: Error | Dimensions | null = null;
     if (state === 'loaded') {
+      // Clear any previous error when successfully loading
+      this._error = null;
+
       if (
         errorOrDimensions !== undefined &&
         'width' in errorOrDimensions === true &&
@@ -303,6 +404,22 @@ export abstract class Texture extends EventEmitter {
     } else if (state === 'failed') {
       this._error = errorOrDimensions as Error;
       payload = this._error;
+
+      // increment the retry count for the texture
+      // this is used to compare against maxRetryCount, if set
+      // to determine if we should try loading again
+      this.retryCount += 1;
+
+      queueMicrotask(() => {
+        this.release();
+      });
+    } else if (state === 'loading') {
+      // Clear error and reset dimensions when starting to load
+      // This ensures stale dimensions from previous loads don't persist
+      this._error = null;
+      this._dimensions = null;
+    } else {
+      this._error = null;
     }
 
     // emit the new state
@@ -372,5 +489,17 @@ export abstract class Texture extends EventEmitter {
     props: unknown,
   ): Record<string, unknown> {
     return {};
+  }
+
+  /**
+   * Retry the texture by resetting retryCount and setting state to 'initial'.
+   *
+   * @remarks
+   * This allows the texture to be loaded again.
+   */
+  public retry(): void {
+    this.release();
+    this.retryCount = 0;
+    this.load();
   }
 }

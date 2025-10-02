@@ -39,14 +39,25 @@ export function isCompressedTextureContainer(url: string): boolean {
 export const loadCompressedTexture = async (
   url: string,
 ): Promise<TextureData> => {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
+  try {
+    const response = await fetch(url);
 
-  if (url.indexOf('.ktx') !== -1) {
-    return loadKTXData(arrayBuffer);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch compressed texture: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+
+    if (url.indexOf('.ktx') !== -1) {
+      return loadKTXData(arrayBuffer);
+    }
+
+    return loadPVRData(arrayBuffer);
+  } catch (error) {
+    throw new Error(`Failed to load compressed texture from ${url}: ${error}`);
   }
-
-  return loadPVRData(arrayBuffer);
 };
 
 /**
@@ -111,7 +122,7 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
   const header = new Int32Array(arrayBuffer, 0, pvrHeaderLength);
 
   // @ts-expect-error Object possibly undefined
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+
   const dataOffset = header[pvrMetadata] + 52;
   const pvrtcData = new Uint8Array(arrayBuffer, dataOffset);
   const mipmaps = [];

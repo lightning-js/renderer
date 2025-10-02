@@ -353,7 +353,6 @@ export class Stage {
    * Create default PixelTexture
    */
   createDefaultTexture() {
-    console.log('Creating default texture');
     (this.defaultTexture as ColorTexture) = this.txManager.createTexture(
       'ColorTexture',
       {
@@ -367,7 +366,7 @@ export class Stage {
     // Mark the default texture as ALWAYS renderable
     // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
+    this.defaultTexture.setRenderableOwner('stage', true);
 
     // When the default texture is loaded, request a render in case the
     // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
@@ -422,16 +421,6 @@ export class Stage {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to cleanup textures
-    if (this.txMemManager.criticalCleanupRequested === true) {
-      this.txMemManager.cleanup(false);
-
-      if (this.txMemManager.criticalCleanupRequested === true) {
-        // If we still need to cleanup, request another but aggressive cleanup
-        this.txMemManager.cleanup(true);
-      }
-    }
-
     // If we have RTT nodes draw them first
     // So we can use them as textures in the main scene
     if (renderer.rttNodes.length > 0) {
@@ -450,6 +439,11 @@ export class Stage {
     // Reset renderRequested flag if it was set
     if (renderRequested) {
       this.renderRequested = false;
+    }
+
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup();
     }
   }
 
@@ -815,12 +809,12 @@ export class Stage {
   }
 
   /**
-   * Cleanup Orphaned Textures
+   * Cleanup Unused Textures
    *
    * @remarks
-   * This method is used to cleanup orphaned textures that are no longer in use.
+   * This method is used to cleanup unused textures that are no longer in use.
    */
-  cleanup(aggressive: boolean) {
-    this.txMemManager.cleanup(aggressive);
+  cleanup() {
+    this.txMemManager.cleanup();
   }
 }
