@@ -918,10 +918,16 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('failed', {
-      type: 'texture',
-      error,
-    } satisfies NodeTextureFailedPayload);
+    // only emit failed outward if we've exhausted all retry attempts
+    if (
+      this.texture !== null &&
+      this.texture.retryCount > this.texture.maxRetryCount
+    ) {
+      this.emit('failed', {
+        type: 'texture',
+        error,
+      } satisfies NodeTextureFailedPayload);
+    }
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
