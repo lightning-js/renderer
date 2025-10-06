@@ -32,6 +32,7 @@ import {
   validateCreateImageBitmap,
   type CreateImageBitmapSupport,
 } from './lib/validateImageBitmap.js';
+import { TextureError } from './TextureError.js';
 
 /**
  * Augmentable map of texture class types
@@ -324,7 +325,10 @@ export class CoreTextureManager extends EventEmitter {
     let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
-      throw new Error(`Texture type "${textureType}" is not registered`);
+      throw new TextureError(
+        `Texture type "${textureType}" is not registered`,
+        'TEXTURE_TYPE_NOT_REGISTERED',
+      );
     }
 
     const cacheKey = TextureClass.makeCacheKey(props as any);
@@ -411,7 +415,13 @@ export class CoreTextureManager extends EventEmitter {
       this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
-      texture.setState('failed', new Error('Memory threshold exceeded'));
+      texture.setState(
+        'failed',
+        new TextureError(
+          'Memory threshold exceeded',
+          'MEMORY_THRESHOLD_EXCEEDED',
+        ),
+      );
       return;
     }
 
@@ -428,7 +438,10 @@ export class CoreTextureManager extends EventEmitter {
     if (texture.textureData === null) {
       texture.setState(
         'failed',
-        new Error('Texture data is null, cannot upload texture'),
+        new TextureError(
+          'Texture data is null, cannot upload texture',
+          'TEXTURE_DATA_NULL',
+        ),
       );
       return;
     }

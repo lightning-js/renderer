@@ -122,6 +122,7 @@ export class TextureMemoryManager {
   private debugLogging: boolean;
   private lastCleanupTime = 0;
   private baselineMemoryAllocation: number;
+  private lastCriticalWarnTime = 0;
 
   public criticalCleanupRequested = false;
   public doNotExceedCriticalThreshold: boolean;
@@ -315,9 +316,13 @@ export class TextureMemoryManager {
       });
 
       if (this.debugLogging === true || isProductionEnvironment() === false) {
-        console.warn(
-          `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
-        );
+        const now = Date.now();
+        if (now - this.lastCriticalWarnTime >= 500) {
+          this.lastCriticalWarnTime = now;
+          console.warn(
+            `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
+          );
+        }
       }
     } else {
       this.criticalCleanupRequested = false;
