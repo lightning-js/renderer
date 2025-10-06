@@ -427,7 +427,7 @@ export class CoreTextureManager extends EventEmitter {
       this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
-      this.enqueueUploadTexture(texture);
+      texture.setState('failed');
       return;
     }
 

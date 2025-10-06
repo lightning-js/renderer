@@ -48,8 +48,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     parent: testRoot,
     title: 'Text Alpha',
   });
@@ -191,8 +191,8 @@ function createContainedTextNode(
   containerProps: Partial<INodeProps>,
 ) {
   const container = renderer.createNode({
-    width: containerSize,
-    height: containerSize,
+    w: containerSize,
+    h: containerSize,
     color: 0x00ff00ff,
     ...containerProps,
   });

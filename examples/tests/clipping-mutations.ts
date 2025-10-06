@@ -26,25 +26,25 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  testRoot.width = 200;
-  testRoot.height = 200;
+  testRoot.w = 200;
+  testRoot.h = 200;
   testRoot.color = 0xffffffff;
 
   const clippedContainer = renderer.createNode({
     x: 0,
     y: 0,
-    width: testRoot.width / 2,
-    height: testRoot.height / 2,
+    w: testRoot.w / 2,
+    h: testRoot.h / 2,
     parent: settings.testRoot,
     color: 0x00ffffff,
     clipping: true,
   });
 
   renderer.createNode({
-    x: -testRoot.width / 4,
-    y: -testRoot.height / 4,
-    width: testRoot.width,
-    height: testRoot.height,
+    x: -testRoot.w / 4,
+    y: -testRoot.h / 4,
+    w: testRoot.w,
+    h: testRoot.h,
     scale: 0.9,
     parent: clippedContainer,
     src: robotImg,
@@ -61,10 +61,10 @@ export default async function test(settings: ExampleSettings) {
       clippedContainer.x = 0;
       clippedContainer.y = 0;
     } else if (i === 1) {
-      clippedContainer.x = testRoot.width / 4;
+      clippedContainer.x = testRoot.w / 4;
     } else if (i === 2) {
-      clippedContainer.x = testRoot.width / 2;
-      clippedContainer.y = testRoot.height / 2;
+      clippedContainer.x = testRoot.w / 2;
+      clippedContainer.y = testRoot.h / 2;
     }
   }
 

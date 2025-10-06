@@ -35,8 +35,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text Vertical Align',
   });
 
@@ -61,19 +61,19 @@ const CONTAINER_SIZE = 200;
 
 function getSquare(renderer: RendererMain, node: ITextNode) {
   const wrapper = renderer.createNode({
-    width: CONTAINER_SIZE,
-    height: CONTAINER_SIZE,
+    w: CONTAINER_SIZE,
+    h: CONTAINER_SIZE,
   });
   const line1 = renderer.createNode({
-    width: CONTAINER_SIZE,
-    height: 1,
+    w: CONTAINER_SIZE,
+    h: 1,
     color: 0x00ff00ff,
     y: NODE_PROPS.lineHeight,
   });
   line1.parent = wrapper;
   const line2 = renderer.createNode({
-    width: CONTAINER_SIZE,
-    height: 1,
+    w: CONTAINER_SIZE,
+    h: 1,
     color: 0x00ff00ff,
     y: NODE_PROPS.lineHeight * 2,
   });

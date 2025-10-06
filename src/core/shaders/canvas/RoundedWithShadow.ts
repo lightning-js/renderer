@@ -38,8 +38,8 @@ export const RoundedWithShadow: CanvasShaderType<
     const props = this.props!;
     const radius = calcFactoredRadiusArray(
       props.radius as Vec4,
-      node.width,
-      node.height,
+      node.w,
+      node.h,
     );
     this.computed.radius = radius;
     this.computed.shadowColor = this.toColorString(props['shadow-color']);

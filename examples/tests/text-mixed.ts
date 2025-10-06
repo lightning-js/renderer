@@ -59,8 +59,8 @@ export default async function test(settings: ExampleSettings) {
     factory = renderer.createNode({
       x,
       y: 150,
-      width: 300,
-      height: 200,
+      w: 300,
+      h: 200,
       parent: testRoot,
       texture: renderer.createTexture('ImageTexture', {
         src: textFactory,
@@ -101,6 +101,15 @@ export default async function test(settings: ExampleSettings) {
       if (ssdf) ssdf.x = offset;
       if (canvas) canvas.x = offset;
       if (factory) factory.x = offset;
+    }
+
+    if (e.key === ' ') {
+      if (ssdf) {
+        ssdf.text = 'SSDF Updated';
+      }
+      if (canvas) {
+        canvas.text = 'Canvas Updated';
+      }
     }
   });
 

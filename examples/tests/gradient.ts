@@ -36,8 +36,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     return renderer.createNode({
       x: (idx % 4) * 300 + 100,
       y: Math.floor(idx / 4) * 300 + 100,
-      width: 250,
-      height: 250,
+      w: 250,
+      h: 250,
       color: 0x000000ff,
       [element]: 0xff0000ff,
       parent: testRoot,

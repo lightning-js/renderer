@@ -41,8 +41,8 @@ export default async function ({
   const screen = renderer.createNode({
     x: 0,
     y: 0,
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     parent: testRoot,
     color: 0xff00ffff,
   });
@@ -59,8 +59,7 @@ export default async function ({
   renderer.createTextNode({
     x: 0,
     y: 100,
-    width: renderer.settings.appWidth,
-    contain: 'width',
+    maxWidth: renderer.settings.appWidth,
     text: `This test will create and display a random NoiseTexture node every 10ms and never offer a moment for Idle Texture Cleanup. Only Critical Texture Cleanup will be triggered.
 
 See docs/ManualRegressionTests.md for more information.
@@ -73,8 +72,8 @@ See docs/ManualRegressionTests.md for more information.
   // Create a new random texture every 10ms
   setInterval(() => {
     screen.texture = renderer.createTexture('NoiseTexture', {
-      width: 500,
-      height: 500,
+      w: 500,
+      h: 500,
       cacheId: Math.floor(Math.random() * 100000),
     });
     screen.textureOptions.preload = true;

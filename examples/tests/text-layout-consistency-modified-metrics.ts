@@ -51,39 +51,37 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const text = getLoremIpsum(1200);
   const fontSize = 20;
   const yPos = 0;
-  testRoot.width = 500;
-  testRoot.height = 500;
+  testRoot.w = 500;
+  testRoot.h = 500;
   testRoot.clipping = true;
   testRoot.color = 0xffffffff;
 
   const canvasText = renderer.createTextNode({
     y: yPos,
-    width: testRoot.width,
+    maxWidth: testRoot.w,
     text,
     fontSize,
     fontFamily,
-    contain: 'width',
     color: 0xff0000ff,
     textRendererOverride: 'canvas',
     parent: testRoot,
   });
   const sdfText = renderer.createTextNode({
     y: yPos,
-    width: testRoot.width,
+    maxWidth: testRoot.w,
     text,
     fontSize,
     fontFamily,
-    contain: 'width',
     color: 0x0000ff77,
     parent: testRoot,
     zIndex: 3,
   });
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,

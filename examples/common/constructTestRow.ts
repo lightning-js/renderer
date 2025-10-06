@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { INode, RendererMain } from '@lightningjs/renderer';
+import type { INode, ITextNode, RendererMain } from '@lightningjs/renderer';
 import { waitForLoadedDimensions } from './utils.js';
 
 const CONTAINER_SIZE = 200;
@@ -35,7 +35,7 @@ export interface TestRowOptions {
 
 export async function constructTestRow(
   options: TestRowOptions,
-  testNodes: (INode | string)[],
+  testNodes: (INode | ITextNode | string)[],
 ): Promise<number> {
   const {
     renderer,
@@ -61,16 +61,17 @@ export async function constructTestRow(
           x: curX,
           y: textPos,
           text: testNode,
+          forceLoad: true,
           parent: rowNode,
         }),
       );
-      curX += descriptionPosition ? 0 : dimensions.width + padding;
+      curX += descriptionPosition ? 0 : dimensions.w + padding;
     } else {
       const container = renderer.createNode({
         parent: rowNode,
         color: 0xffffffff,
-        width: containerSize,
-        height: containerHeight,
+        w: containerSize,
+        h: containerHeight,
         clipping: true,
         x: curX,
         y: curY,

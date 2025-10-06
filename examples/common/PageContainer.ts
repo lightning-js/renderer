@@ -32,8 +32,8 @@ const PADDING = 20;
 interface PageContainerProps {
   x?: number;
   y?: number;
-  width?: number;
-  height?: number;
+  w?: number;
+  h?: number;
   parent?: INode | null;
   color?: number;
 
@@ -55,8 +55,8 @@ export class PageContainer extends Component {
       x: props.x,
       y: props.y,
       color: props.color ?? 0x00000000,
-      width: props.width,
-      height: props.height,
+      w: props.w,
+      h: props.h,
       parent: props.parent ? props.parent : settings.testRoot,
     });
 
@@ -75,7 +75,7 @@ export class PageContainer extends Component {
       fontFamily: 'Ubuntu',
       fontSize: 30,
       x: PADDING,
-      y: this.node.height - 30 - PADDING,
+      y: this.node.h - 30 - PADDING,
       parent: this.node,
     });
   }
@@ -120,8 +120,8 @@ export class PageContainer extends Component {
       x: PADDING,
       y: TITLE_FONT_SIZE + PADDING,
       color: 0x00000000,
-      width: this.contentWidth,
-      height: this.contentHeight,
+      w: this.contentWidth,
+      h: this.contentHeight,
       parent: this.node,
     });
 
@@ -172,11 +172,11 @@ export class PageContainer extends Component {
   }
 
   get contentHeight() {
-    return this.node.height - TITLE_FONT_SIZE - PADDING * 2;
+    return this.node.h - TITLE_FONT_SIZE - PADDING * 2;
   }
 
   get contentWidth() {
-    return this.node.width - PADDING * 2;
+    return this.node.w - PADDING * 2;
   }
 
   get padding() {

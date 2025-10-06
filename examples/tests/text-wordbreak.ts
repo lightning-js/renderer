@@ -12,8 +12,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text wordBreak',
   });
 
@@ -38,9 +38,7 @@ const NODE_PROPS = {
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
-  contain: 'width',
-  width: containerSize,
-  height: containerHeight,
+  maxWidth: containerSize,
   wordBreak: 'normal',
 } satisfies Partial<ITextNodeProps>;
 

@@ -9,8 +9,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const greenRect = renderer.createNode({
     x: 0,
     y: 540,
-    width: 960,
-    height: 540,
+    w: 960,
+    h: 540,
     color: 0x00ff00ff,
     clipping: true,
     parent: testRoot,
@@ -21,8 +21,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     x: 0,
     y: 0,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     pivot: 0,
     parent: testRoot,
@@ -37,9 +37,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   let redRectAnimation: IAnimationController | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+
   setTimeout(async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       redRectAnimation = redRect
         .animate(
@@ -71,8 +70,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const blueRect = renderer.createNode({
     x: 1921,
     y: 540,
-    width: 540,
-    height: 540,
+    w: 540,
+    h: 540,
     color: 0x0000ffff,
     mountX: 0.5,
     mountY: 0.5,
@@ -89,9 +88,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   let blueRectAnimation: IAnimationController | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+
   setTimeout(async () => {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       blueRectAnimation = blueRect
         .animate(

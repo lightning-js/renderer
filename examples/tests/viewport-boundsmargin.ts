@@ -61,8 +61,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect1 = renderer.createNode({
     x: 1920 / 2 - (1920 * 0.75) / 2,
     y: 1080 / 2 - (1080 * 0.75) / 2,
-    width: 1440,
-    height: 810,
+    w: 1440,
+    h: 810,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -70,8 +70,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const boundaryRect2 = renderer.createNode({
     x: 50,
     y: 50,
-    width: 1440 - 100,
-    height: 810 - 100,
+    w: 1440 - 100,
+    h: 810 - 100,
     color: 0x222222ff,
     parent: boundaryRect1,
   });
@@ -80,8 +80,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: 500,
     y: 305,
     alpha: 1,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xff0000ff,
     pivot: 0,
     text: 'red',

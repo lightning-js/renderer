@@ -185,8 +185,8 @@ async function runTest(
           return;
         }
 
-        overlayText.x = renderer.settings.appWidth - dimensions.width - 20;
-        overlayText.y = renderer.settings.appHeight - dimensions.height - 20;
+        overlayText.x = renderer.settings.appWidth - dimensions.w - 20;
+        overlayText.y = renderer.settings.appHeight - dimensions.h - 20;
       },
     );
   }
@@ -209,8 +209,8 @@ async function runTest(
       parent: renderer.root,
       x: renderer.root.x,
       y: renderer.root.y,
-      width: renderer.settings.appWidth,
-      height: renderer.settings.appHeight - 100,
+      w: renderer.settings.appWidth,
+      h: renderer.settings.appHeight - 100,
       color: 0x00000000,
     });
   }
@@ -264,7 +264,7 @@ async function initRenderer(
     'app',
   );
   await installShaders(renderer.stage, renderMode);
-  installFonts(renderer.stage);
+  await installFonts(renderer.stage);
 
   /**
    * Sample data captured
@@ -404,8 +404,8 @@ async function runAutomation(
           parent: renderer.root,
           x: renderer.root.x,
           y: renderer.root.y,
-          width: renderer.root.width,
-          height: renderer.root.height,
+          w: renderer.root.w,
+          h: renderer.root.h,
           color: 0x00000000,
         });
         const exampleSettings: ExampleSettings = {
@@ -423,8 +423,8 @@ async function runAutomation(
             const clipRect = options?.clip || {
               x: testRoot.x,
               y: testRoot.y,
-              width: testRoot.width,
-              height: testRoot.height,
+              w: testRoot.w,
+              h: testRoot.h,
             };
 
             const adjustedOptions = {
@@ -432,8 +432,8 @@ async function runAutomation(
               clip: {
                 x: Math.round(clipRect.x * logicalPixelRatio),
                 y: Math.round(clipRect.y * logicalPixelRatio),
-                width: Math.round(clipRect.width * logicalPixelRatio),
-                height: Math.round(clipRect.height * logicalPixelRatio),
+                w: Math.round(clipRect.w * logicalPixelRatio),
+                h: Math.round(clipRect.h * logicalPixelRatio),
               },
             };
 

@@ -39,12 +39,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const leftStackText = renderer.createTextNode({
     x: 100,
     y: 100,
-    width: 400,
-    height: 268,
+    maxWidth: 400,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'These should neatly stack on top of each other.',
-    contain: 'both',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
@@ -63,8 +61,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         renderer.createNode({
           x: 200 + i * 20,
           y: 200 + i * 20,
-          width: 200,
-          height: 200,
+          w: 200,
+          h: 200,
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           //@ts-ignore
           color: Colors[color],
@@ -80,8 +78,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const parentRect = renderer.createNode({
     x: 800,
     y: 200,
-    width: 600,
-    height: 600,
+    w: 600,
+    h: 600,
     color: Colors.Gray,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -94,8 +92,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const childRectWhite = renderer.createNode({
     x: 100,
     y: 100,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: Colors.White,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -107,8 +105,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const childRectRed = renderer.createNode({
     x: 120,
     y: 120,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: Colors.Red,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -120,12 +118,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const rightStackText = renderer.createTextNode({
     x: 700,
     y: 100,
-    width: 700,
-    height: 268,
+    maxWidth: 700,
+    maxHeight: 268,
     color: 0xffffffff,
     alpha: 1.0,
     text: 'Green box should overlap even though it has a lower zIndex because the parent is locked',
-    contain: 'both',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     textAlign: 'center',
@@ -136,8 +133,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const blockingRect = renderer.createNode({
     x: 750,
     y: 300,
-    width: 400,
-    height: 100,
+    w: 400,
+    h: 100,
     color: Colors.Green,
     // shader: renderer.createShader('RoundedRectangle', {
     //   radius: 40,
@@ -164,15 +161,15 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndex: 148901482921849101841290481,
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndexLocked: 148901482921849101841290481,
     parent: testRoot,
   });
@@ -180,15 +177,15 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 0,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndex: -148901482921849101841290481,
-    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+
     zIndexLocked: -148901482921849101841290481,
     parent: testRoot,
   });
@@ -196,8 +193,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -212,8 +209,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -228,8 +225,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 1000,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -244,8 +241,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 200,
     y: 0,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
@@ -258,17 +255,17 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 200,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
-    // eslint-disable-next-line  @typescript-eslint/no-empty-function
+
     zIndex: () => {},
     // @ts-expect-error Invalid prop test
-    // eslint-disable-next-line  @typescript-eslint/no-empty-function
+
     zIndexLocked: () => {},
     parent: testRoot,
   });
@@ -276,8 +273,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.createNode({
     x: 500,
     y: 900,
-    width: 10,
-    height: 10,
+    w: 10,
+    h: 10,
     color: 0x00ffffff,
     shader: renderer.createShader('RoundedRectangle', {
       radius: 2,

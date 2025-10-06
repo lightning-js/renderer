@@ -39,8 +39,8 @@ export default async function test({
   const nodes: INode[] = [];
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
@@ -51,8 +51,8 @@ export default async function test({
     const baseY = Math.floor(i / gridSize) * 60;
 
     const node = renderer.createNode({
-      width: 125,
-      height: 25,
+      w: 125,
+      h: 25,
       x: baseX,
       y: baseY,
       src: logo,
@@ -65,8 +65,8 @@ export default async function test({
     nodes.push(node);
 
     const textNode = renderer.createTextNode({
-      width: 125,
-      height: 25,
+      w: 125,
+      h: 25,
       x: baseX,
       y: baseY + 25,
       text: 'Lightning 3',

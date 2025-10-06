@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { type INode } from '@lightningjs/renderer';
+import { type INode, type ITextNode } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 const randomIntBetween = (from: number, to: number) =>
@@ -30,7 +30,7 @@ export default async function ({
 }: ExampleSettings) {
   // create 100 nodes
   const numOuterNodes = 100 * perfMultiplier;
-  const nodes: INode[] = [];
+  const nodes: ITextNode[] = [];
 
   const startMin = -1000;
   const startMax = 3000;
@@ -38,8 +38,8 @@ export default async function ({
   const endMax = 3000;
 
   const bg = renderer.createNode({
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0xff1e293b,
     parent: testRoot,
   });
@@ -52,8 +52,8 @@ export default async function ({
       textRendererOverride: 'sdf',
       text: 'Lightning 3.0',
       // contain: 'both',
-      // width: 237,
-      // height: 45,
+      // w: 237,
+      // h: 45,
       color: 0xffffffff,
       fontSize: 40,
       parent: bg,

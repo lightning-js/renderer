@@ -32,8 +32,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text Baseline',
   });
 
@@ -73,14 +73,15 @@ function generateBaselineTest(
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
+          forceLoad: true,
           parent: renderer.root,
         });
         const dimensions = await waitForLoadedDimensions(baselineNode);
 
         // Get the position for the center of the container based on mount = 0
         const position = {
-          x: 100 - dimensions.width / 2,
-          y: 100 - dimensions.height / 2,
+          x: 100 - dimensions.w / 2,
+          y: 100 - dimensions.h / 2,
         };
 
         baselineNode.x = position.x;

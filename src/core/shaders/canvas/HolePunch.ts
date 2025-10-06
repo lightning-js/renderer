@@ -36,23 +36,16 @@ export const HolePunch: CanvasShaderType<
   update() {
     this.computed.radius = calcFactoredRadiusArray(
       this.props!.radius as Vec4,
-      this.props!.width,
-      this.props!.height,
+      this.props!.w,
+      this.props!.h,
     );
   },
   render(ctx, quad, renderContext) {
     ctx.save();
     renderContext();
-    const { x, y, width, height } = this.props!;
+    const { x, y, w, h } = this.props!;
     ctx.beginPath();
-    roundRect(
-      ctx,
-      quad.tx + x,
-      quad.ty + y,
-      width,
-      height,
-      this.computed.radius!,
-    );
+    roundRect(ctx, quad.tx + x, quad.ty + y, w, h, this.computed.radius!);
     ctx.closePath();
     ctx.fillStyle = 'black';
     ctx.globalCompositeOperation = 'destination-out';

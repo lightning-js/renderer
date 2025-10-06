@@ -26,13 +26,10 @@ import {
   type QuadOptions,
 } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
-import {
-  parseColor,
-  parseToAbgrString,
-  parseToRgbaString,
-} from './internal/ColorUtils.js';
+import { parseColor } from '../../lib/colorParser.js';
 import { assertTruthy } from '../../../utils.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
+import { normalizeCanvasColor } from '../../lib/colorCache.js';
 
 export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -41,8 +38,6 @@ export class CanvasRenderer extends CoreRenderer {
   private clearColor: string;
   public renderToTextureActive = false;
   activeRttNode: CoreNode | null = null;
-
-  private parsedColorCache: Map<number, string> = new Map();
 
   constructor(options: CoreRendererOptions) {
     super(options);
@@ -53,7 +48,7 @@ export class CanvasRenderer extends CoreRenderer {
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = this.stage.pixelRatio;
-    this.clearColor = this.getParsedColor(this.stage.clearColor);
+    this.clearColor = normalizeCanvasColor(this.stage.clearColor);
   }
 
   reset(): void {
@@ -173,8 +168,8 @@ export class CanvasRenderer extends CoreRenderer {
           image,
           (quad.texture as SubTexture).props.x,
           (quad.texture as SubTexture).props.y,
-          (quad.texture as SubTexture).props.width,
-          (quad.texture as SubTexture).props.height,
+          (quad.texture as SubTexture).props.w,
+          (quad.texture as SubTexture).props.h,
           quad.tx,
           quad.ty,
           quad.width,
@@ -220,12 +215,12 @@ export class CanvasRenderer extends CoreRenderer {
         endX,
         endY,
       );
-      gradient.addColorStop(0, this.getParsedColor(color));
-      gradient.addColorStop(1, this.getParsedColor(endColor));
+      gradient.addColorStop(0, normalizeCanvasColor(color));
+      gradient.addColorStop(1, normalizeCanvasColor(endColor));
       this.context.fillStyle = gradient;
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
     } else if (textureType === TextureType.color) {
-      this.context.fillStyle = this.getParsedColor(color);
+      this.context.fillStyle = normalizeCanvasColor(color);
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
     }
   }
@@ -269,27 +264,13 @@ export class CanvasRenderer extends CoreRenderer {
     return null;
   }
 
-  getParsedColor(color: number, isRGBA: boolean = false) {
-    let out = this.parsedColorCache.get(color);
-    if (out !== undefined) {
-      return out;
-    }
-    if (isRGBA) {
-      out = parseToRgbaString(color);
-    } else {
-      out = parseToAbgrString(color);
-    }
-    this.parsedColorCache.set(color, out);
-    return out;
-  }
-
   /**
    * Updates the clear color of the canvas renderer.
    *
    * @param color - The color to set as the clear color.
    */
   updateClearColor(color: number) {
-    this.clearColor = this.getParsedColor(color);
+    this.clearColor = normalizeCanvasColor(color);
   }
 
   override updateViewport(): void {

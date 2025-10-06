@@ -17,12 +17,15 @@
  * limitations under the License.
  */
 
-import type { IAnimationController } from '@lightningjs/renderer';
-
+import type {
+  IAnimationController,
+  TimingFunction,
+} from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
+
 interface AnimationExampleSettings {
   duration: number;
-  easing: string;
+  easing: string | TimingFunction;
   delay: number;
   loop: boolean;
   stopMethod: 'reverse' | 'reset' | false;
@@ -32,8 +35,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
-    width: 1920,
-    height: 1080,
+    w: 1920,
+    h: 1080,
     color: 0x000000ff,
     parent: testRoot,
   });
@@ -41,8 +44,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const animatableNode = renderer.createNode({
     x: 0,
     y: 300,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     color: 0xffffffff,
     parent: node,
   });
@@ -87,6 +90,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     'ease-in-out-back',
     'cubic-bezier(0,1.35,.99,-0.07)',
     'cubic-bezier(.41,.91,.99,-0.07)',
+    'loopCustomTiming',
     'loopStopMethodReverse',
     'loopStopMethodReset',
     'loop',
@@ -121,6 +125,12 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     } else if (easing === 'loop') {
       animationSettings.easing = 'linear';
       animationSettings.loop = true;
+    } else if (easing === 'loopCustomTiming') {
+      animationSettings.easing = (t: number) => {
+        return Math.round(t * 5) / 5;
+      };
+      animationSettings.loop = true;
+      animationSettings.stopMethod = 'reverse';
     } else {
       animationSettings.loop = false;
       animationSettings.stopMethod = false;
@@ -132,7 +142,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
     currentAnimation = animatableNode.animate(
       {
-        x: renderer.settings.appWidth - animatableNode.width,
+        x: renderer.settings.appWidth - animatableNode.w,
       },
       animationSettings, // Remove the unnecessary assertion
     );

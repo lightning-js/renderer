@@ -32,8 +32,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text Overflow Suffix',
   });
 
@@ -48,15 +48,13 @@ export default async function test(settings: ExampleSettings) {
 const NODE_PROPS = {
   x: 100,
   y: 100,
-  width: 200,
-  height: 200,
+  maxWidth: 200,
   color: 0x000000ff,
   text: getLoremIpsum(100),
   fontFamily: 'Ubuntu',
   textRendererOverride: 'sdf',
   fontSize: 20,
   lineHeight: 28,
-  contain: 'both',
 } satisfies Partial<ITextNodeProps>;
 
 function generateOverflowSuffixTest(

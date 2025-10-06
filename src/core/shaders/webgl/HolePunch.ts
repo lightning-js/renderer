@@ -29,11 +29,11 @@ export const HolePunch: WebGlShaderType<HolePunchProps> = {
     const props = this.props!;
     this.uniform2f('u_pos', props.x, props.y);
     //precalculate to halfSize once instead of for every pixel
-    this.uniform2f('u_size', props.width * 0.5, props.height * 0.5);
+    this.uniform2f('u_size', props.w * 0.5, props.h * 0.5);
 
     this.uniform4fa(
       'u_radius',
-      calcFactoredRadiusArray(props.radius as Vec4, props.width, props.height),
+      calcFactoredRadiusArray(props.radius as Vec4, props.w, props.h),
     );
   },
   getCacheMarkers(props: HolePunchProps) {

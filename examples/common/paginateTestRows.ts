@@ -43,7 +43,7 @@ function createPageConstructor(curPageRowConstructors: RowConstructor[]) {
     for (const rowConstructor of rowConstructors) {
       const rowNode = await rowConstructor(pageNode);
       rowNode.y = curY;
-      curY += rowNode.height;
+      curY += rowNode.h;
     }
   }.bind(null, curPageRowConstructors);
 }
@@ -75,28 +75,29 @@ export async function paginateTestRows(
         const rowContainer = renderer.createNode({
           x: 0,
           y: pageCurY,
-          width: pageContainer.contentWidth,
-          height: 0,
+          w: pageContainer.contentWidth,
+          h: 0,
           color: 0x00000000,
           parent: pageNode,
         });
         const rowHeaderNode = renderer.createTextNode({
           fontFamily: 'Ubuntu',
           fontSize: HEADER_FONT_SIZE,
+          forceLoad: true,
           y: PADDING,
           parent: rowContainer,
         });
         const rowNode = renderer.createNode({
           y: HEADER_FONT_SIZE + PADDING * 2,
-          width: pageContainer.contentWidth,
-          height: 0,
+          w: pageContainer.contentWidth,
+          h: 0,
           color: 0x00000000,
           parent: rowContainer,
         });
         const rowHeight = await testRow.content(rowNode);
-        rowNode.height = rowHeight;
+        rowNode.h = rowHeight;
         rowHeaderNode.text = testRow.title;
-        rowContainer.height = HEADER_FONT_SIZE + PADDING * 2 + rowNode.height;
+        rowContainer.h = HEADER_FONT_SIZE + PADDING * 2 + rowNode.h;
         return rowContainer;
       });
 
@@ -108,10 +109,10 @@ export async function paginateTestRows(
       tmpRowContainer = await newRowConstructor(renderer.root);
       // curPageRowConstructors.push(newRowConstructor);
       // If it fits, add it to the current page
-      itFits = pageCurY + tmpRowContainer.height <= pageContainer.contentHeight;
+      itFits = pageCurY + tmpRowContainer.h <= pageContainer.contentHeight;
       if (itFits) {
         curPageRowConstructors.push(newRowConstructor);
-        pageCurY += tmpRowContainer.height;
+        pageCurY += tmpRowContainer.h;
         newRowConstructor = null;
       }
     }
@@ -121,7 +122,7 @@ export async function paginateTestRows(
       const pageConstructor = createPageConstructor(curPageRowConstructors);
       pageContainer.pushPage(pageConstructor);
 
-      pageCurY = tmpRowContainer?.height || 0;
+      pageCurY = tmpRowContainer?.h || 0;
       curPageRowConstructors = [];
       if (newRowConstructor) {
         curPageRowConstructors.push(newRowConstructor);

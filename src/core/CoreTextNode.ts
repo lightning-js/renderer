@@ -18,13 +18,12 @@
  */
 
 import type {
+  FontHandler,
   TextRenderer,
-  TextRendererMap,
   TrProps,
-  TextRendererState,
-  TrFailedEventHandler,
-  TrLoadedEventHandler,
-} from './text-rendering/renderers/TextRenderer.js';
+  TextLayout,
+  TextRenderInfo,
+} from './text-rendering/TextRenderer.js';
 import {
   CoreNode,
   CoreNodeRenderState,
@@ -32,51 +31,42 @@ import {
   type CoreNodeProps,
 } from './CoreNode.js';
 import type { Stage } from './Stage.js';
-import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
+  NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
-
+import type { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { TextureLoadedEventHandler } from './textures/Texture.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
-   *
-   * @remarks
-   * By default, Text Nodes resolve the Text Renderer to use based on the font
-   * that is matched using the font family and other font selection properties.
-   *
-   * If two fonts supported by two separate Text Renderers are matched setting
-   * this override forces the Text Node to resolve to the Text Renderer defined
-   * here.
-   *
-   * @default null
    */
-  textRendererOverride: keyof TextRendererMap | null;
+  textRendererOverride?: string | null;
+  forceLoad: boolean;
 }
 
-/**
- * An CoreNode in the Renderer scene graph that renders text.
- *
- * @remarks
- * A Text Node is the second graphical building block of the Renderer scene
- * graph. It renders text using a specific text renderer that is automatically
- * chosen based on the font requested and what type of fonts are installed
- * into an app.
- *
- * The text renderer can be overridden by setting the `textRendererOverride`
- *
- * The `texture` and `shader` properties are managed by loaded text renderer and
- * should not be set directly.
- *
- * For non-text rendering, see {@link CoreNode}.
- */
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
-  textRenderer: TextRenderer;
-  trState: TextRendererState;
-  private _textRendererOverride: CoreTextNodeProps['textRendererOverride'] =
-    null;
+  private textRenderer: TextRenderer;
+  private fontHandler: FontHandler;
+
+  private _layoutGenerated = false;
+  private _waitingForFont = false;
+
+  // SDF layout caching for performance
+  private _cachedLayout: TextLayout | null = null;
+  private _lastVertexBuffer: Float32Array | null = null;
+
+  // Text renderer properties - stored directly on the node
+  private textProps: CoreTextNodeProps;
+
+  private _renderInfo: TextRenderInfo = {
+    width: 0,
+    height: 0,
+  };
+
+  private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
   constructor(
     stage: Stage,
@@ -84,368 +74,410 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     textRenderer: TextRenderer,
   ) {
     super(stage, props);
-    this._textRendererOverride = props.textRendererOverride;
     this.textRenderer = textRenderer;
-    const textRendererState = this.createState({
-      x: 0,
-      y: 0,
-      width: props.width,
-      height: props.height,
-      textAlign: props.textAlign,
-      color: props.color,
-      zIndex: props.zIndex,
-      contain: props.contain,
-      scrollable: props.scrollable,
-      scrollY: props.scrollY,
-      offsetY: props.offsetY,
-      letterSpacing: props.letterSpacing,
-      debug: props.debug,
-      fontFamily: props.fontFamily,
-      fontSize: props.fontSize,
-      fontStretch: props.fontStretch,
-      fontStyle: props.fontStyle,
-      fontWeight: props.fontWeight,
-      text: props.text,
-      lineHeight: props.lineHeight,
-      maxLines: props.maxLines,
-      textBaseline: props.textBaseline,
-      verticalAlign: props.verticalAlign,
-      overflowSuffix: props.overflowSuffix,
-      wordBreak: props.wordBreak,
-    });
+    this.fontHandler = textRenderer.font;
+    this._type = textRenderer.type;
 
-    this.trState = textRendererState;
+    // Initialize text properties from props
+    // Props are guaranteed to have all defaults resolved by Stage.createTextNode
+    this.textProps = props;
+
+    this.setUpdateType(UpdateType.All);
   }
 
-  private onTextLoaded: TrLoadedEventHandler = () => {
-    const { contain } = this;
-    const setWidth = this.trState.props.width;
-    const setHeight = this.trState.props.height;
-    const calcWidth = this.trState.textW || 0;
-    const calcHeight = this.trState.textH || 0;
-
-    if (contain === 'both') {
-      this.props.width = setWidth;
-      this.props.height = setHeight;
-    } else if (contain === 'width') {
-      this.props.width = setWidth;
-      this.props.height = calcHeight;
-    } else if (contain === 'none') {
-      this.props.width = calcWidth;
-      this.props.height = calcHeight;
+  protected override onTextureLoaded: TextureLoadedEventHandler = (
+    _,
+    dimensions,
+  ) => {
+    // If parent has a render texture, flag that we need to update
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
     }
-    this.setUpdateType(UpdateType.Local);
 
-    // Incase the RAF loop has been stopped already before text was loaded,
-    // we request a render so it can be drawn.
+    // ignore 1x1 pixel textures
+    if (dimensions.w > 1 && dimensions.h > 1) {
+      this.emit('loaded', {
+        type: 'texture',
+        dimensions,
+      } satisfies NodeTextureLoadedPayload);
+    }
+
+    this.w = this._renderInfo.width;
+    this.h = this._renderInfo.height;
+
+    // Texture was loaded. In case the RAF loop has already stopped, we request
+    // a render to ensure the texture is rendered.
     this.stage.requestRender();
+  };
+
+  allowTextGeneration() {
+    const p = this.props.parent;
+    if (p === null) {
+      return false;
+    }
+    if (p.worldAlpha > 0 && p.renderState > CoreNodeRenderState.OutOfBounds) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Override CoreNode's update method to handle text-specific updates
+   */
+  override update(delta: number, parentClippingRect: RectWithValid): void {
+    if (
+      (this.textProps.forceLoad === true ||
+        this.allowTextGeneration() === true) &&
+      this._layoutGenerated === false
+    ) {
+      if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+        this._waitingForFont = false;
+        this._cachedLayout = null; // Invalidate cached layout
+        this._lastVertexBuffer = null; // Invalidate last vertex buffer
+        const resp = this.textRenderer.renderText(this.stage, this.textProps);
+        this.handleRenderResult(resp);
+        this._layoutGenerated = true;
+      } else if (this._waitingForFont === false) {
+        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
+        this._waitingForFont = true;
+      }
+    }
+
+    // First run the standard CoreNode update
+    super.update(delta, parentClippingRect);
+  }
+
+  /**
+   * Override is renderable check for SDF text nodes
+   */
+  override updateIsRenderable(): void {
+    // SDF text nodes are always renderable if they have a valid layout
+    if (this._type === 'canvas') {
+      super.updateIsRenderable();
+      return;
+    }
+
+    // For SDF, check if we have a cached layout
+    this.setRenderable(this._cachedLayout !== null);
+  }
+
+  /**
+   * Handle the result of text rendering for both Canvas and SDF renderers
+   */
+  private handleRenderResult(result: TextRenderInfo): void {
+    // Host paths on top
+    const textRendererType = this._type;
+    let width = result.width;
+    let height = result.height;
+
+    // Handle Canvas renderer (uses ImageData)
+    if (textRendererType === 'canvas') {
+      if (result.imageData === undefined) {
+        this.emit('failed', {
+          type: 'text',
+          error: new Error(
+            'Canvas text rendering failed, no image data returned',
+          ),
+        } satisfies NodeTextFailedPayload);
+        return;
+      }
+
+      this.texture = this.stage.txManager.createTexture('ImageTexture', {
+        premultiplyAlpha: true,
+        src: result.imageData as ImageData,
+      });
+
+      // It isn't renderable until the texture is loaded we have to set it to false here to avoid it
+      // being detected as a renderable default color node in the next frame
+      // it will be corrected once the texture is loaded
+      this.setRenderable(false);
+
+      if (this.renderState > CoreNodeRenderState.OutOfBounds) {
+        // We do want the texture to load immediately
+        this.texture.setRenderableOwner(this, true);
+      }
+    }
+
+    // Handle SDF renderer (uses layout caching)
+    if (textRendererType === 'sdf') {
+      this._cachedLayout = result.layout || null;
+      this.setRenderable(true);
+      this.props.w = width;
+      this.props.h = height;
+      this.setUpdateType(UpdateType.Local);
+    }
+
+    this._renderInfo = result;
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        width: this.trState.textW || 0,
-        height: this.trState.textH || 0,
+        w: width,
+        h: height,
       },
     } satisfies NodeTextLoadedPayload);
-  };
-
-  private onTextFailed: TrFailedEventHandler = (target, error) => {
-    this.emit('failed', {
-      type: 'text',
-      error,
-    } satisfies NodeTextFailedPayload);
-  };
-
-  override get width(): number {
-    return this.props.width;
   }
 
-  override set width(value: number) {
-    this.props.width = value;
-    this.textRenderer.set.width(this.trState, value);
-
-    // If not containing, we must update the local transform to account for the
-    // new width
-    if (this.contain === 'none') {
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
-  override get height(): number {
-    return this.props.height;
-  }
-
-  override set height(value: number) {
-    this.props.height = value;
-    this.textRenderer.set.height(this.trState, value);
-
-    // If not containing in the horizontal direction, we must update the local
-    // transform to account for the new height
-    if (this.contain !== 'both') {
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
-  override get color(): number {
-    return this.trState.props.color;
-  }
-
-  override set color(value: number) {
-    this.textRenderer.set.color(this.trState, value);
-    this.setUpdateType(UpdateType.RenderTexture);
-  }
-
-  get text(): string {
-    return this.trState.props.text;
-  }
-
-  set text(value: string) {
-    this.textRenderer.set.text(this.trState, value);
-  }
-
-  get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
-    return this._textRendererOverride;
-  }
-
-  set textRendererOverride(value: CoreTextNodeProps['textRendererOverride']) {
-    this._textRendererOverride = value;
-    this.textRenderer.destroyState(this.trState);
-
-    const textRenderer = this.stage.resolveTextRenderer(
-      this.trState.props,
-      this._textRendererOverride,
-    );
-
-    if (textRenderer === null) {
-      console.warn(
-        'Text Renderer not found for font',
-        this.trState.props.fontFamily,
-      );
-      return;
+  /**
+   * Override renderQuads to handle SDF vs Canvas rendering
+   */
+  override renderQuads(renderer: CoreRenderer): void {
+    if (this.parentHasRenderTexture === true) {
+      const rtt = renderer.renderToTextureActive;
+      if (rtt === false || this.parentRenderTexture !== renderer.activeRttNode)
+        return;
     }
 
-    this.textRenderer = textRenderer;
-    this.trState = this.createState(this.trState.props);
-  }
-
-  get fontSize(): CoreTextNodeProps['fontSize'] {
-    return this.trState.props.fontSize;
-  }
-
-  set fontSize(value: CoreTextNodeProps['fontSize']) {
-    this.textRenderer.set.fontSize(this.trState, value);
-  }
-
-  get fontFamily(): CoreTextNodeProps['fontFamily'] {
-    return this.trState.props.fontFamily;
-  }
-
-  set fontFamily(value: CoreTextNodeProps['fontFamily']) {
-    this.textRenderer.set.fontFamily(this.trState, value);
-  }
-
-  get fontStretch(): CoreTextNodeProps['fontStretch'] {
-    return this.trState.props.fontStretch;
-  }
-
-  set fontStretch(value: CoreTextNodeProps['fontStretch']) {
-    this.textRenderer.set.fontStretch(this.trState, value);
-  }
-
-  get fontStyle(): CoreTextNodeProps['fontStyle'] {
-    return this.trState.props.fontStyle;
-  }
-
-  set fontStyle(value: CoreTextNodeProps['fontStyle']) {
-    this.textRenderer.set.fontStyle(this.trState, value);
-  }
-
-  get fontWeight(): CoreTextNodeProps['fontWeight'] {
-    return this.trState.props.fontWeight;
-  }
-
-  set fontWeight(value: CoreTextNodeProps['fontWeight']) {
-    this.textRenderer.set.fontWeight(this.trState, value);
-  }
-
-  get textAlign(): CoreTextNodeProps['textAlign'] {
-    return this.trState.props.textAlign;
-  }
-
-  set textAlign(value: CoreTextNodeProps['textAlign']) {
-    this.textRenderer.set.textAlign(this.trState, value);
-  }
-
-  get contain(): CoreTextNodeProps['contain'] {
-    return this.trState.props.contain;
-  }
-
-  set contain(value: CoreTextNodeProps['contain']) {
-    this.textRenderer.set.contain(this.trState, value);
-  }
-
-  get scrollable(): CoreTextNodeProps['scrollable'] {
-    return this.trState.props.scrollable;
-  }
-
-  set scrollable(value: CoreTextNodeProps['scrollable']) {
-    this.textRenderer.set.scrollable(this.trState, value);
-  }
-
-  get scrollY(): CoreTextNodeProps['scrollY'] {
-    return this.trState.props.scrollY;
-  }
-
-  set scrollY(value: CoreTextNodeProps['scrollY']) {
-    this.textRenderer.set.scrollY(this.trState, value);
-  }
-
-  get offsetY(): CoreTextNodeProps['offsetY'] {
-    return this.trState.props.offsetY;
-  }
-
-  set offsetY(value: CoreTextNodeProps['offsetY']) {
-    this.textRenderer.set.offsetY(this.trState, value);
-  }
-
-  get letterSpacing(): CoreTextNodeProps['letterSpacing'] {
-    return this.trState.props.letterSpacing;
-  }
-
-  set letterSpacing(value: CoreTextNodeProps['letterSpacing']) {
-    this.textRenderer.set.letterSpacing(this.trState, value);
-  }
-
-  get lineHeight(): CoreTextNodeProps['lineHeight'] {
-    return this.trState.props.lineHeight;
-  }
-
-  set lineHeight(value: CoreTextNodeProps['lineHeight']) {
-    this.textRenderer.set.lineHeight(this.trState, value);
-  }
-
-  get maxLines(): CoreTextNodeProps['maxLines'] {
-    return this.trState.props.maxLines;
-  }
-
-  set maxLines(value: CoreTextNodeProps['maxLines']) {
-    this.textRenderer.set.maxLines(this.trState, value);
-  }
-
-  get textBaseline(): CoreTextNodeProps['textBaseline'] {
-    return this.trState.props.textBaseline;
-  }
-
-  set textBaseline(value: CoreTextNodeProps['textBaseline']) {
-    this.textRenderer.set.textBaseline(this.trState, value);
-  }
-
-  get verticalAlign(): CoreTextNodeProps['verticalAlign'] {
-    return this.trState.props.verticalAlign;
-  }
-
-  set verticalAlign(value: CoreTextNodeProps['verticalAlign']) {
-    this.textRenderer.set.verticalAlign(this.trState, value);
-  }
-
-  get overflowSuffix(): CoreTextNodeProps['overflowSuffix'] {
-    return this.trState.props.overflowSuffix;
-  }
-
-  set overflowSuffix(value: CoreTextNodeProps['overflowSuffix']) {
-    this.textRenderer.set.overflowSuffix(this.trState, value);
-  }
-
-  get wordBreak(): CoreTextNodeProps['wordBreak'] {
-    return this.trState.props.wordBreak;
-  }
-
-  set wordBreak(value: CoreTextNodeProps['wordBreak']) {
-    this.textRenderer.set.wordBreak(this.trState, value);
-  }
-
-  get debug(): CoreTextNodeProps['debug'] {
-    return this.trState.props.debug;
-  }
-
-  set debug(value: CoreTextNodeProps['debug']) {
-    this.textRenderer.set.debug(this.trState, value);
-  }
-
-  override update(delta: number, parentClippingRect: RectWithValid) {
-    super.update(delta, parentClippingRect);
-
-    // globalTransform is updated in super.update(delta)
-    this.textRenderer.set.x(this.trState, this.globalTransform!.tx);
-    this.textRenderer.set.y(this.trState, this.globalTransform!.ty);
-  }
-
-  override updateIsRenderable() {
-    // If the node is out of bounds or has an alpha of 0, it is not renderable
-    if (
-      this.worldAlpha === 0 ||
-      this.renderState <= CoreNodeRenderState.OutOfBounds
-    ) {
-      this.setRenderable(false);
-      return;
-    }
-
-    if (this.trState !== undefined && this.trState.props.text !== '') {
-      this.setRenderable(true);
-    }
-  }
-
-  override setRenderable(isRenderable: boolean) {
-    super.setRenderable(isRenderable);
-    this.textRenderer.setIsRenderable(this.trState, isRenderable);
-  }
-
-  override renderQuads(renderer: CoreRenderer) {
-    // If the text renderer does not support rendering quads, fallback to the
-    // default renderQuads method
-    if (this.textRenderer.renderQuads === undefined) {
+    // Canvas renderer: use standard texture rendering via CoreNode
+    if (this._type === 'canvas') {
       super.renderQuads(renderer);
       return;
     }
 
-    // If the text renderer does support rendering quads, use it...
-
-    // Prevent quad rendering if parent has a render texture
-    // and this node is not the render texture
-    if (this.parentHasRenderTexture === true) {
-      if (renderer.renderToTextureActive === false) {
-        return;
-      }
-      // Prevent quad rendering if parent render texture is not the active render texture
-      if (this.parentRenderTexture !== renderer.activeRttNode) {
-        return;
-      }
+    // Early return if no cached data
+    if (!this._cachedLayout) {
+      return;
     }
 
-    this.textRenderer.renderQuads(this);
+    if (this._lastVertexBuffer === null) {
+      this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
+    }
+
+    const props = this.textProps;
+    this.textRenderer.renderQuads(
+      renderer,
+      this._cachedLayout as TextLayout,
+      this._lastVertexBuffer!,
+      {
+        fontFamily: this.textProps.fontFamily,
+        fontSize: props.fontSize,
+        color: this.props.color || 0xffffffff,
+        offsetY: props.offsetY,
+        worldAlpha: this.worldAlpha,
+        globalTransform: this.globalTransform!.getFloatArr(),
+        clippingRect: this.clippingRect,
+        width: this.props.w,
+        height: this.props.h,
+        parentHasRenderTexture: this.parentHasRenderTexture,
+        framebufferDimensions:
+          this.parentHasRenderTexture === true
+            ? this.parentFramebufferDimensions
+            : null,
+        stage: this.stage,
+      },
+    );
   }
 
-  /**
-   * Destroy the node and cleanup all resources
-   */
   override destroy(): void {
-    super.destroy();
+    if (this._waitingForFont === true && this.fontHandler) {
+      this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+    }
 
-    this.textRenderer.destroyState(this.trState);
+    // Clear cached layout and vertex buffer
+    this._cachedLayout = null;
+    this._lastVertexBuffer = null;
+
+    this.fontHandler = null!; // Clear reference to avoid memory leaks
+    this.textRenderer = null!; // Clear reference to avoid memory leaks
+
+    super.destroy();
   }
 
-  /**
-   * Resolve a text renderer and a new state based on the current text renderer props provided
-   * @param props
-   * @returns
-   */
-  private createState(props: TrProps) {
-    const textRendererState = this.textRenderer.createState(props, this);
+  get maxWidth() {
+    return this.textProps.maxWidth;
+  }
 
-    textRendererState.emitter.on('loaded', this.onTextLoaded);
-    textRendererState.emitter.on('failed', this.onTextFailed);
+  set maxWidth(value: number) {
+    if (this.textProps.maxWidth !== value) {
+      this.textProps.maxWidth = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
 
-    this.textRenderer.scheduleUpdateState(textRendererState);
+  // Property getters and setters
+  get maxHeight() {
+    return this.textProps.maxHeight;
+  }
 
-    return textRendererState;
+  set maxHeight(value: number) {
+    if (this.textProps.maxHeight !== value) {
+      this.textProps.maxHeight = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get text(): string {
+    return this.textProps.text;
+  }
+
+  set text(value: string) {
+    if (this.textProps.text !== value) {
+      this.textProps.text = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get fontSize(): number {
+    return this.textProps.fontSize;
+  }
+
+  set fontSize(value: number) {
+    if (this.textProps.fontSize !== value) {
+      this.textProps.fontSize = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get fontFamily(): string {
+    return this.textProps.fontFamily;
+  }
+
+  set fontFamily(value: string) {
+    if (this.textProps.fontFamily !== value) {
+      if (this._waitingForFont === true) {
+        this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+      }
+      this.textProps.fontFamily = value;
+      this._layoutGenerated = true;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get fontStyle(): TrProps['fontStyle'] {
+    return this.textProps.fontStyle;
+  }
+
+  set fontStyle(value: TrProps['fontStyle']) {
+    if (this.textProps.fontStyle !== value) {
+      this.textProps.fontStyle = value;
+      this._layoutGenerated = true;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get textAlign(): TrProps['textAlign'] {
+    return this.textProps.textAlign;
+  }
+
+  set textAlign(value: TrProps['textAlign']) {
+    if (this.textProps.textAlign !== value) {
+      this.textProps.textAlign = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get letterSpacing(): number {
+    return this.textProps.letterSpacing;
+  }
+
+  set letterSpacing(value: number) {
+    if (this.textProps.letterSpacing !== value) {
+      this.textProps.letterSpacing = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get lineHeight(): number {
+    return this.textProps.lineHeight;
+  }
+
+  set lineHeight(value: number) {
+    if (this.textProps.lineHeight !== value) {
+      this.textProps.lineHeight = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get maxLines(): number {
+    return this.textProps.maxLines;
+  }
+
+  set maxLines(value: number) {
+    if (this.textProps.maxLines !== value) {
+      this.textProps.maxLines = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get textBaseline(): TrProps['textBaseline'] {
+    return this.textProps.textBaseline;
+  }
+
+  set textBaseline(value: TrProps['textBaseline']) {
+    if (this.textProps.textBaseline !== value) {
+      this.textProps.textBaseline = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get verticalAlign(): TrProps['verticalAlign'] {
+    return this.textProps.verticalAlign;
+  }
+
+  set verticalAlign(value: TrProps['verticalAlign']) {
+    if (this.textProps.verticalAlign !== value) {
+      this.textProps.verticalAlign = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get overflowSuffix(): string {
+    return this.textProps.overflowSuffix;
+  }
+
+  set overflowSuffix(value: string) {
+    if (this.textProps.overflowSuffix !== value) {
+      this.textProps.overflowSuffix = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get wordBreak(): TrProps['wordBreak'] {
+    return this.textProps.wordBreak;
+  }
+
+  set wordBreak(value: TrProps['wordBreak']) {
+    if (this.textProps.wordBreak !== value) {
+      this.textProps.wordBreak = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get offsetY(): number {
+    return this.textProps.offsetY;
+  }
+
+  set offsetY(value: number) {
+    if (this.textProps.offsetY !== value) {
+      this.textProps.offsetY = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get forceLoad() {
+    return this.textProps.forceLoad;
+  }
+
+  set forceLoad(value: boolean) {
+    if (this.textProps.forceLoad !== value) {
+      this.textProps.forceLoad = value;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get renderInfo(): TextRenderInfo {
+    return this._renderInfo;
   }
 }

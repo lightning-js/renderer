@@ -45,7 +45,7 @@ export type TextureLoadedEventHandler = (
 /**
  * Represents compressed texture data.
  */
-interface CompressedData {
+export interface CompressedData {
   /**
    * GLenum spcifying compression format
    */
@@ -66,12 +66,12 @@ interface CompressedData {
    *
    * @default 0
    */
-  width: number;
+  w: number;
 
   /**
    * The height of the compressed texture in pixels.
    **/
-  height: number;
+  h: number;
 }
 
 /**
@@ -296,10 +296,10 @@ export abstract class Texture extends EventEmitter {
     if (state === 'loaded') {
       if (
         errorOrDimensions !== undefined &&
-        'width' in errorOrDimensions === true &&
-        'height' in errorOrDimensions === true &&
-        errorOrDimensions.width !== undefined &&
-        errorOrDimensions.height !== undefined
+        'w' in errorOrDimensions === true &&
+        'h' in errorOrDimensions === true &&
+        errorOrDimensions.w !== undefined &&
+        errorOrDimensions.h !== undefined
       ) {
         this._dimensions = errorOrDimensions;
       }

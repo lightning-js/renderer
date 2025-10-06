@@ -42,16 +42,16 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       const childNode = renderer.createNode({
         x: i * nodeWidth, // Adjust position by subtracting the gap
         y: 0,
-        width: nodeWidth, // Width of the green node
-        height: nodeHeight, // Slightly smaller height
+        w: nodeWidth, // Width of the green node
+        h: nodeHeight, // Slightly smaller height
         parent: rowNode,
       });
 
       const imageNode = renderer.createNode({
         x: 0,
         y: 0,
-        width: nodeWidth,
-        height: nodeHeight,
+        w: nodeWidth,
+        h: nodeHeight,
         parent: childNode,
         src: `https://picsum.photos/id/${id}/${nodeWidth}/${nodeHeight}`, // Random images
       });
@@ -85,8 +85,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   const img = renderer.createNode({
-    width: 300,
-    height: 300,
+    w: 300,
+    h: 300,
     parent: holder2,
     src: 'https://images.unsplash.com/photo-1690360994204-3d10cc73a08d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80',
     alpha: 1,

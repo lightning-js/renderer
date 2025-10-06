@@ -85,8 +85,8 @@ const loadKTXData = async (buffer: ArrayBuffer): Promise<TextureData> => {
     data: {
       glInternalFormat: data.glInternalFormat,
       mipmaps,
-      width: data.pixelWidth || 0,
-      height: data.pixelHeight || 0,
+      w: data.pixelWidth || 0,
+      h: data.pixelHeight || 0,
       type: 'ktx',
     },
     premultiplyAlpha: false,
@@ -114,7 +114,7 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
 
   const dataOffset = header[pvrMetadata] + 52;
   const pvrtcData = new Uint8Array(arrayBuffer, dataOffset);
-  const mipmaps: Uint8Array[] = [];
+  const mipmaps: ArrayBuffer[] = [];
   const data = {
     pixelWidth: header[pvrWidth],
     pixelHeight: header[pvrHeight],
@@ -133,7 +133,9 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
       level,
     );
 
-    mipmaps.push(view);
+    mipmaps.push(
+      view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength),
+    );
     offset += level;
     width = width >> 1;
     height = height >> 1;
@@ -143,8 +145,8 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
     data: {
       glInternalFormat: pvrFormatEtc1,
       mipmaps: mipmaps,
-      width: data.pixelWidth || 0,
-      height: data.pixelHeight || 0,
+      w: data.pixelWidth || 0,
+      h: data.pixelHeight || 0,
       type: 'pvr',
     },
     premultiplyAlpha: false,

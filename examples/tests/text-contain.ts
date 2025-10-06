@@ -23,15 +23,15 @@ export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
 
   // Set a smaller snapshot area
-  testRoot.width = 400;
-  testRoot.height = 400;
+  testRoot.w = 400;
+  testRoot.h = 400;
   testRoot.color = 0xffffffff;
 
   const textSizeAfterLoadingBg = renderer.createNode({
     x: 5,
     y: 5,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x22ff227f,
     parent: testRoot,
   });
@@ -39,8 +39,8 @@ export default async function test(settings: ExampleSettings) {
   const textReportedSizeBg = renderer.createNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0xff11117f,
     parent: testRoot,
   });
@@ -48,9 +48,10 @@ export default async function test(settings: ExampleSettings) {
   const text1 = renderer.createTextNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     color: 0x000000ff,
+    forceLoad: true,
     fontFamily: 'Ubuntu',
     textRendererOverride: 'sdf',
     fontSize: 20,
@@ -61,12 +62,28 @@ Vivamus consectetur ex magna, non mollis.`,
     parent: testRoot,
   });
 
+  const text2 = renderer.createTextNode({
+    x: textSizeAfterLoadingBg.x,
+    y: textSizeAfterLoadingBg.y,
+    w: 0,
+    h: 0,
+    color: 0x000000ff,
+    forceLoad: true,
+    fontFamily: 'Ubuntu',
+    textRendererOverride: 'canvas',
+    fontSize: 20,
+    text: `Lorem ipsum dolor sit e
+Consectetur adipiscing elit. Vivamus id.
+Suspendisse sollicitudin posuere felis.
+Vivamus consectetur ex magna, non mollis.`,
+    parent: testRoot,
+    alpha: 0,
+  });
+
   const indexInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height,
+    x: testRoot.w,
+    y: testRoot.h,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -75,11 +92,9 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textSizeAfterLoadInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 20,
+    x: testRoot.w,
+    y: testRoot.h - 20,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x00ff00ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -88,11 +103,9 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textReportedSizeInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 40,
+    x: testRoot.w,
+    y: testRoot.h - 40,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0xff0000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -101,11 +114,9 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const textSetDimsInfo = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 60,
+    x: testRoot.w,
+    y: testRoot.h - 60,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x0000ffff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -114,11 +125,9 @@ Vivamus consectetur ex magna, non mollis.`,
   });
 
   const header = renderer.createTextNode({
-    x: testRoot.width,
-    y: testRoot.height - 80,
+    x: testRoot.w,
+    y: testRoot.h - 80,
     mount: 1,
-    width: 0,
-    height: 0,
     color: 0x000000ff,
     fontFamily: 'Ubuntu',
     fontSize: 20,
@@ -129,56 +138,50 @@ Vivamus consectetur ex magna, non mollis.`,
   let i = 0;
   const mutations = [
     () => {
-      // SDF, contain none
-      text1.textRendererOverride = 'sdf';
-      text1.contain = 'none';
-      text1.width = 0;
-      text1.height = 0;
+      text1.alpha = 1;
+      text2.alpha = 0;
+      text1.maxWidth = 0;
+      text1.maxHeight = 0;
     },
     () => {
       // SDF, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text1.maxWidth = 200;
     },
     () => {
       // SDF, contain width (smaller)
-      text1.width = 195;
+      text1.maxWidth = 195;
     },
     () => {
       // SDF, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text1.maxHeight = 203;
     },
     () => {
       // SDF, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text1.maxHeight = 204;
     },
     () => {
       // Canvas, contain none
-      text1.textRendererOverride = 'canvas';
-      text1.contain = 'none';
-      text1.width = 0;
-      text1.height = 0;
+      text1.alpha = 0;
+      text2.alpha = 1;
+      text2.maxWidth = 0;
+      text2.h = 0;
     },
     () => {
       // Canvas, contain width
-      text1.contain = 'width';
-      text1.width = 200;
+      text2.maxWidth = 200;
     },
     () => {
       // Canvas, contain width (smaller)
-      text1.contain = 'width';
-      text1.width = 195;
-      text1.height = 5;
+      text2.maxWidth = 195;
+      text2.maxHeight = 5;
     },
     () => {
       // Canvas, contain both
-      text1.contain = 'both';
-      text1.height = 203;
+      text2.maxHeight = 203;
     },
     () => {
       // Canvas, contain both (1 pixel larger to show another line)
-      text1.height = 204;
+      text2.maxHeight = 204;
     },
   ];
   /**
@@ -196,28 +199,28 @@ Vivamus consectetur ex magna, non mollis.`,
     }
     i = idx;
     mutations[i]?.();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const targetText = i > 4 ? text2 : text1;
+
     header.text = makeHeader(
-      text1.textRendererOverride!,
-      text1.contain,
-      text1.width,
-      text1.height,
+      targetText.textRendererOverride!,
+      targetText.w,
+      targetText.h,
     );
     indexInfo.text = (i + 1).toString();
-    textSetDimsInfo.text = `Set size: ${Math.round(text1.width)}x${Math.round(
-      text1.height,
+    textSetDimsInfo.text = `Set size: ${Math.round(targetText.w)}x${Math.round(
+      targetText.h,
     )}`;
-    const dimensions = await waitForLoadedDimensions(text1);
-    textSizeAfterLoadingBg.width = text1.width;
-    textSizeAfterLoadingBg.height = text1.height;
+    const dimensions = await waitForLoadedDimensions(targetText);
+    textSizeAfterLoadingBg.w = targetText.w;
+    textSizeAfterLoadingBg.h = targetText.h;
     textSizeAfterLoadInfo.text = `After 'loading' size: ${Math.round(
-      textSizeAfterLoadingBg.width,
-    )}x${Math.round(textSizeAfterLoadingBg.height)}`;
-    textReportedSizeBg.width = dimensions.width;
-    textReportedSizeBg.height = dimensions.height;
+      textSizeAfterLoadingBg.w,
+    )}x${Math.round(textSizeAfterLoadingBg.h)}`;
+    textReportedSizeBg.w = dimensions.w;
+    textReportedSizeBg.h = dimensions.h;
     textReportedSizeInfo.text = `'loading' event size: ${Math.round(
-      textReportedSizeBg.width,
-    )}x${Math.round(textReportedSizeBg.height)}`;
+      textReportedSizeBg.w,
+    )}x${Math.round(textReportedSizeBg.h)}`;
     return true;
   }
   await next(false, 0);
@@ -232,11 +235,6 @@ Vivamus consectetur ex magna, non mollis.`,
   return next;
 }
 
-function makeHeader(
-  renderer: string,
-  contain: string,
-  width: number,
-  height: number,
-) {
-  return `${renderer}, contain = ${contain}`;
+function makeHeader(renderer: string, maxWidth: number, maxHeight: number) {
+  return `${renderer}, maxWidth = ${maxWidth}, maxHeight = ${maxHeight}`;
 }

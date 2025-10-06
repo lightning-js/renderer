@@ -31,8 +31,8 @@ export async function automation(settings: ExampleSettings) {
 export default async function test(settings: ExampleSettings) {
   const { renderer } = settings;
   const pageContainer = new PageContainer(settings, {
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    w: renderer.settings.appWidth,
+    h: renderer.settings.appHeight,
     title: 'Text Line Height',
   });
 
@@ -77,7 +77,7 @@ function generateLineHeightTest(
 
         // // Get the position for the center of the container based on mount = 0
         // const position = {
-        //   y: 100 - dimensions.height / 2,
+        //   y: 100 - dimensions.h / 2,
         // };
 
         // baselineNode.y = position.y;

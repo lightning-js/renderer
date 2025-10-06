@@ -15,12 +15,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { formatRgba, parseColorRgba } from '../../lib/colorParser.js';
 import { valuesAreEqual } from '../../lib/utils.js';
 import type { CanvasShaderType } from '../../renderers/canvas/CanvasShaderNode.js';
-import {
-  formatRgba,
-  parseColorRgba,
-} from '../../renderers/canvas/internal/ColorUtils.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
 import {
   BorderTemplate,
@@ -38,13 +35,13 @@ export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
   props: BorderTemplate.props,
   update() {
     this.computed.borderColor = formatRgba(parseColorRgba(this.props!.color));
-    this.computed.borderAsym = !valuesAreEqual(this.props!.width as number[]);
+    this.computed.borderAsym = !valuesAreEqual(this.props!.w as number[]);
   },
   render(ctx, quad, renderContext) {
     renderContext();
     ctx.strokeStyle = this.computed.borderColor!;
-    if (this.computed.borderAsym === false && this.props!.width[0] > 0) {
-      const bWidth = this.props!.width[0];
+    if (this.computed.borderAsym === false && this.props!.w[0] > 0) {
+      const bWidth = this.props!.w[0];
       const bHalfWidth = bWidth * 0.5;
       ctx.lineWidth = bWidth;
       ctx.beginPath();
@@ -57,7 +54,7 @@ export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
       return;
     }
 
-    const { 0: t, 1: r, 2: b, 3: l } = this.props!.width as Vec4;
+    const { 0: t, 1: r, 2: b, 3: l } = this.props!.w as Vec4;
     if (t > 0) {
       const y = quad.ty + t * 0.5;
       strokeLine(ctx, quad.tx, y, quad.tx + quad.width, y, t);

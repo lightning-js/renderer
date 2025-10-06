@@ -19,8 +19,6 @@
 
 import {
   type ITextNodeProps,
-  type TextRendererMap,
-  type TrFontFaceMap,
   type NodeLoadedEventHandler,
 } from '@lightningjs/renderer';
 import { getLoremIpsum } from '../common/LoremIpsum.js';
@@ -41,9 +39,6 @@ const initialMutableProps: Partial<ITextNodeProps> = {
   fontFamily: FONT_FAMILY,
   fontSize: FONT_SIZE,
   color: 0x000000ff,
-  debug: {
-    sdfShaderDebug: false,
-  },
 };
 
 export const Colors = {
@@ -90,10 +85,9 @@ export default async function ({
   const initialProps: Partial<ITextNodeProps> = {
     ...(savedState?.mutableProps || initialMutableProps),
     fontFamily: FONT_FAMILY,
-    contain: 'both',
-    scrollable: true,
-    width: renderer.settings.appWidth,
-    height: renderer.settings.appHeight,
+    // scrollable: true,
+    maxWidth: renderer.settings.appWidth,
+    maxHeight: renderer.settings.appHeight,
     text,
   };
 
@@ -102,21 +96,21 @@ export default async function ({
     ...getFontProps('msdf'),
     zIndex: 1,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const ssdfTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('ssdf'),
     zIndex: 2,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const canvasTextNode = renderer.createTextNode({
     ...initialProps,
     ...getFontProps('web'),
     zIndex: 3,
     parent: testRoot,
-  });
+  } as Partial<ITextNodeProps>);
 
   const statusNode = renderer.createTextNode({
     text: '',
@@ -215,14 +209,14 @@ export default async function ({
       setMode(curMode + 1);
       changedState = true;
     } else if (e.code === 'ArrowUp') {
-      canvasTextNode.scrollY -= moveStep;
-      ssdfTextNode.scrollY -= moveStep;
-      msdfTextNode.scrollY -= moveStep;
+      // canvasTextNode.scrollY -= moveStep;
+      // ssdfTextNode.scrollY -= moveStep;
+      // msdfTextNode.scrollY -= moveStep;
       changedState = true;
     } else if (e.code === 'ArrowDown') {
-      canvasTextNode.scrollY += moveStep;
-      ssdfTextNode.scrollY += moveStep;
-      msdfTextNode.scrollY += moveStep;
+      // canvasTextNode.scrollY += moveStep;
+      // ssdfTextNode.scrollY += moveStep;
+      // msdfTextNode.scrollY += moveStep;
       changedState = true;
     } else if (e.code === 'KeyQ') {
       moveStep--;
@@ -310,18 +304,18 @@ export default async function ({
       changedState = true;
     } else if (e.code === 'Slash') {
       // Toggle SDF shader debug
-      canvasTextNode.debug = {
-        ...canvasTextNode.debug,
-        sdfShaderDebug: !canvasTextNode.debug.sdfShaderDebug,
-      };
-      ssdfTextNode.debug = {
-        ...ssdfTextNode.debug,
-        sdfShaderDebug: !ssdfTextNode.debug.sdfShaderDebug,
-      };
-      msdfTextNode.debug = {
-        ...msdfTextNode.debug,
-        sdfShaderDebug: !msdfTextNode.debug.sdfShaderDebug,
-      };
+      // canvasTextNode.debug = {
+      //   ...canvasTextNode.debug,
+      //   sdfShaderDebug: !canvasTextNode.debug.sdfShaderDebug,
+      // };
+      // ssdfTextNode.debug = {
+      //   ...ssdfTextNode.debug,
+      //   sdfShaderDebug: !ssdfTextNode.debug.sdfShaderDebug,
+      // };
+      // msdfTextNode.debug = {
+      //   ...msdfTextNode.debug,
+      //   sdfShaderDebug: !msdfTextNode.debug.sdfShaderDebug,
+      // };
       changedState = true;
     }
 
@@ -338,7 +332,7 @@ export default async function ({
           y: canvasTextNode.y,
           fontSize: canvasTextNode.fontSize,
           letterSpacing: canvasTextNode.letterSpacing,
-          scrollY: canvasTextNode.scrollY,
+          // scrollY: canvasTextNode.scrollY,
           // debug: canvasTextNode.debug,
         },
       });

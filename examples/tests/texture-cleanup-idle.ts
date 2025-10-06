@@ -64,8 +64,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   renderer.createTextNode({
     x: 0,
     y: 100,
-    width: renderer.settings.appWidth,
-    contain: 'width',
+    maxWidth: renderer.settings.appWidth,
     text: `This test will create and display a grid of random NoiseTexture nodes and move them off of the bounds margin every second.
 
 The Texture Memory Manager should perform Idle Texture Cleanup roughly every 5 seconds.
@@ -85,7 +84,6 @@ See docs/ManualRegressionTests.md for more information.
   const nodeWidth = screenWidth / gridWidth;
   const nodeHeight = screenHeight / gridHeight;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const curNodes: INode[] = [];
     // Create a 4x2 grid of nodes
@@ -94,13 +92,13 @@ See docs/ManualRegressionTests.md for more information.
         const node = renderer.createNode({
           x: i * nodeWidth,
           y: j * nodeHeight,
-          width: nodeWidth,
-          height: nodeHeight,
+          w: nodeWidth,
+          h: nodeHeight,
           parent: testRoot,
           color: randomColor(),
           texture: renderer.createTexture('NoiseTexture', {
-            width: nodeWidth,
-            height: nodeHeight,
+            w: nodeWidth,
+            h: nodeHeight,
             cacheId: Math.floor(Math.random() * 100000),
           }),
           textureOptions: {

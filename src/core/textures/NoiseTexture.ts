@@ -29,13 +29,13 @@ export interface NoiseTextureProps {
    *
    * @default 128
    */
-  width?: number;
+  w?: number;
   /**
    * Height of texture
    *
    * @default 128
    */
-  height?: number;
+  h?: number;
   /**
    * A number value that can be varied to force new textures to be generated
    *
@@ -64,8 +64,8 @@ export class NoiseTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    const { width, height } = this.props;
-    const size = width * height * 4;
+    const { w, h } = this.props;
+    const size = w * h * 4;
     const pixelData8 = new Uint8ClampedArray(size);
     for (let i = 0; i < size; i += 4) {
       const v = Math.floor(Math.random() * 256);
@@ -78,7 +78,7 @@ export class NoiseTexture extends Texture {
     this.setState('fetched');
 
     return {
-      data: new ImageData(pixelData8, width, height),
+      data: new ImageData(pixelData8, w, h),
     };
   }
 
@@ -87,15 +87,15 @@ export class NoiseTexture extends Texture {
       return false;
     }
     const resolvedProps = NoiseTexture.resolveDefaults(props);
-    return `NoiseTexture,${resolvedProps.width},${resolvedProps.height},${resolvedProps.cacheId}`;
+    return `NoiseTexture,${resolvedProps.w},${resolvedProps.h},${resolvedProps.cacheId}`;
   }
 
   static override resolveDefaults(
     props: NoiseTextureProps,
   ): Required<NoiseTextureProps> {
     return {
-      width: props.width ?? 128,
-      height: props.height ?? 128,
+      w: props.w ?? 128,
+      h: props.h ?? 128,
       cacheId: props.cacheId ?? 0,
     };
   }

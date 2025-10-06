@@ -37,14 +37,11 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const node = renderer.createNode({
       x: Math.floor(idx % 5) * 360 + 100,
       y: Math.floor(idx / 5) * 360 + 100,
-      width: 200,
-      height: 200,
+      w: 200,
+      h: 200,
       colorBottom: randomColor(),
       colorTop: randomColor(),
       parent: testRoot,
-      shader: renderer.createShader('RoundedRectangle', {
-        radius: rnd(10, 50),
-      }),
       scale: 1,
       pivot,
     });
@@ -52,8 +49,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const pivotPoint = renderer.createNode({
       x: pivot * 200 - 5,
       y: pivot * 200 - 5,
-      width: 10,
-      height: 10,
+      w: 10,
+      h: 10,
       color: 0xffffff55,
       parent: node,
       scale: 1,
@@ -62,8 +59,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const pointInner = renderer.createNode({
       x: 2,
       y: 2,
-      width: 6,
-      height: 6,
+      w: 6,
+      h: 6,
       color: 0x000000ff,
       parent: pivotPoint,
     });
@@ -75,8 +72,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
             scale: 1.2,
             y: 460,
             x: 820,
-            width: 10,
-            height: 180,
+            w: 10,
+            h: 180,
             rotation: Math.PI * 2,
           },
           {
