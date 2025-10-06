@@ -32,7 +32,7 @@ import {
   validateCreateImageBitmap,
   type CreateImageBitmapSupport,
 } from './lib/validateImageBitmap.js';
-import { TextureError } from './TextureError.js';
+import { TextureError, TextureErrorCode } from './TextureError.js';
 
 /**
  * Augmentable map of texture class types
@@ -327,7 +327,7 @@ export class CoreTextureManager extends EventEmitter {
     if (!TextureClass) {
       throw new TextureError(
         `Texture type "${textureType}" is not registered`,
-        'TEXTURE_TYPE_NOT_REGISTERED',
+        TextureErrorCode.TEXTURE_TYPE_NOT_REGISTERED,
       );
     }
 
@@ -419,7 +419,7 @@ export class CoreTextureManager extends EventEmitter {
         'failed',
         new TextureError(
           'Memory threshold exceeded',
-          'MEMORY_THRESHOLD_EXCEEDED',
+          TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED,
         ),
       );
       return;
@@ -440,7 +440,7 @@ export class CoreTextureManager extends EventEmitter {
         'failed',
         new TextureError(
           'Texture data is null, cannot upload texture',
-          'TEXTURE_DATA_NULL',
+          TextureErrorCode.TEXTURE_DATA_NULL,
         ),
       );
       return;
