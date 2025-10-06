@@ -13,7 +13,7 @@ export default [
           './tsconfig.json',
           './tsconfig.vitest.json',
           './tsconfig.cfg.json',
-          './examples/tsconfig.json',
+          './visual-regression-tests/tsconfig.json',
           './visual-regression/tsconfig.json',
           './performance/tsconfig.json',
         ],

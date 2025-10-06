@@ -10,9 +10,9 @@
     "test:visual": "tsc && node dist/src/index.js",
     "build": "tsc",
     "build:renderer": "cd .. && pnpm build",
-    "build:examples": "cd ../examples && pnpm build",
+    "build:examples": "cd ../visual-regression-tests && pnpm build",
     "build:docker": "tsc && node dist/src/build-docker.js",
-    "serve-examples": "cd ../examples && pnpm preview:automation",
+    "serve-examples": "cd ../visual-regression-tests && pnpm preview:automation",
     "node-version": "node --version"
   },
   "keywords": [],

@@ -11,7 +11,7 @@
     "esModuleInterop": true,
   },
   "files": [
-    "./examples/vite.config.ts",
+    "./visual-regression-tests/vite.config.ts",
     "./typedoc.config.cjs"
   ]
 }

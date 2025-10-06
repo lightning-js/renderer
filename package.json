@@ -16,6 +16,7 @@
   "scripts": {
     "start": "cd examples && pnpm start",
     "start:prod": "cd examples && pnpm start:prod",
+    "start:tests": "cd visual-regression-tests && pnpm start",
     "build": "tsc --build",
     "build:docker": "cd visual-regression && pnpm build:docker",
     "watch": "tsc --build --watch",

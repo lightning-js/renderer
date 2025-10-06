@@ -51,7 +51,7 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2(typescript@5.9.2)(vitest@2.1.9(@types/node@20.19.17)(terser@5.36.0))
 
-  examples:
+  visual-regression-tests:
     dependencies:
       '@lightningjs/renderer':
         specifier: link:..

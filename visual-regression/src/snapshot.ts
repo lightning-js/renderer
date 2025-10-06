@@ -9,7 +9,7 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 
 /**
- * Keep in sync with `examples/common/ExampleSettings.ts`
+ * Keep in sync with `visual-regression-tests/common/ExampleSettings.ts`
  */
 export interface SnapshotOptions {
   name?: string;

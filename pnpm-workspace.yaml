@@ -14,5 +14,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 packages:
-  - "examples"
+  # Main renderer package
+  - "."
+  # TypeScript configs
+  - "dist-cfg"
+  # Vitest build
+  - "dist-vitest"
+  # Example apps to test the renderer
+  - "visual-regression-tests"
   - "visual-regression"

@@ -22,7 +22,7 @@
  *
  * @remarks
  * This script is used to run visual regression tests on the specific examples
- * in `examples/tests` that export an `automation()` function.
+ * in `visual-regression-tests/tests` that export an `automation()` function.
  *
  * See `README.md` and `pnpm start --help` (from this directory) for more info.
  *
@@ -158,7 +158,7 @@ async function dockerCiMode(): Promise<number> {
     -v ${rootDir}:/work/ \
     -v /work/node_modules \
     -v /work/.pnpm-store \
-    -v /work/examples/node_modules \
+    -v /work/visual-regression-tests/node_modules \
     -v /work/visual-regression/node_modules \
     -w /work/ -it visual-regression:latest \
     /bin/bash -c ${`pnpm install && RUNTIME_ENV=ci pnpm test:visual ${commandLineStr}`}

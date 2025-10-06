@@ -4,7 +4,7 @@ node_modules
 typedocs
 dist
 dist-*
-examples/dist-tsc
+visual-regression-tests/dist-tsc
 visual-regression/failed-results
 visual-regression/certified-snapshots/*-local
 build
