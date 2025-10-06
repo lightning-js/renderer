@@ -21,7 +21,6 @@ import { CoreNode } from '../core/CoreNode.js';
 import type { CoreNodeProps } from '../core/CoreNode.js';
 import type { CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Stage } from '../core/Stage.js';
-import type { TrProps } from '../core/text-rendering/renderers/TextRenderer.js';
 import { Node } from './Node.js';
 import { TextNode } from './TextNode.js';
 import { handleKeyEvent, type IFocusContainer } from './lib/keyEventHandler.js';
@@ -356,7 +355,9 @@ export abstract class Component
     // Handle Component class directly (without props)
     if (typeof value === 'function' && this.isCapitalCase(key)) {
       const ComponentClass = value as ComponentClass;
+      // Use stage.resolveNodeDefaults to get properly resolved default props
       const defaultProps = stage.resolveNodeDefaults({});
+
       const componentInstance = new ComponentClass(
         stage,
         defaultProps,
@@ -371,8 +372,10 @@ export abstract class Component
     // Handle Component with props and optional children
     if (this.isComponentWithProps(value) && this.isCapitalCase(key)) {
       const type = value.type;
-      const props = stage.resolveNodeDefaults(value.props || {});
       const children = value.children;
+
+      // Use stage.resolveNodeDefaults to get properly resolved props
+      const props = stage.resolveNodeDefaults(value.props || {});
 
       // Create the component instance directly
       const componentInstance = new type(stage, props) as Component;
@@ -395,33 +398,29 @@ export abstract class Component
 
       // Check for text property (TextNode)
       if (this.hasTextProperty(value)) {
-        const resolvedTextProperties = stage.resolveTextNodeDefaults(
-          value as TrProps,
-        );
-        const resolvedTextRenderer = stage.resolveTextRenderer(
-          resolvedTextProperties,
+        // Use stage.resolveTextNodeDefaults - the public API
+        const textProps = stage.resolveTextNodeDefaults(
+          value as Partial<CoreTextNodeProps>,
         );
 
-        if (!resolvedTextRenderer) {
+        // Use stage.resolveTextRenderer to get the text renderer
+        const textRenderer = stage.resolveTextRenderer(textProps);
+
+        if (!textRenderer) {
           throw new Error(
-            `No compatible text renderer found for ${resolvedTextProperties.fontFamily}`,
+            `No compatible text renderer found for ${textProps.fontFamily}`,
           );
         }
 
-        createdNode = new TextNode(
-          stage,
-          resolvedTextProperties as CoreTextNodeProps,
-          resolvedTextRenderer,
-        );
+        createdNode = new TextNode(stage, textProps, textRenderer);
       } else {
-        // Create regular Node
-        const resolvedDefaults = stage.resolveNodeDefaults(
-          value as CoreNodeProps,
+        // Create regular Node using stage.resolveNodeDefaults
+        const props = stage.resolveNodeDefaults(
+          value as Partial<CoreNodeProps>,
         );
-        createdNode = new Node(stage, resolvedDefaults);
-      }
 
-      // Add directly to children array for performance
+        createdNode = new Node(stage, props);
+      } // Add directly to children array for performance
       this.children.push(createdNode);
 
       // Process nested children if they exist

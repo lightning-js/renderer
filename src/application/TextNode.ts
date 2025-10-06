@@ -21,7 +21,7 @@ import { CoreTextNode } from '../core/CoreTextNode.js';
 import { CoreNode } from '../core/CoreNode.js';
 import type { CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Stage } from '../core/Stage.js';
-import type { TextRenderer } from '../core/text-rendering/renderers/TextRenderer.js';
+import type { TextRenderer } from '../core/text-rendering/TextRenderer.js';
 import { Node } from './Node.js';
 
 /**

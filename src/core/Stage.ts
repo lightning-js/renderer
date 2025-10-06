@@ -803,7 +803,7 @@ export class Stage {
    * @param props
    * @returns
    */
-  protected resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
+  resolveNodeDefaults(props: Partial<CoreNodeProps>): CoreNodeProps {
     const {
       colorTop: top,
       colorBottom: bottom,

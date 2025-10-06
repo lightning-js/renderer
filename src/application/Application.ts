@@ -20,7 +20,7 @@
 import { RendererMain } from '../main-api/Renderer.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
 import type { INode } from '../main-api/INode.js';
-import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
+import type { CoreNodeProps } from '../core/CoreNode.js';
 import { Component } from './Component.js';
 import type { ITemplate } from './template/types.js';
 import { Router, type IRoute, type IRouteMatch } from './router/index.js';
@@ -34,6 +34,7 @@ export interface IApplicationConfig {
   initialRoute?: string;
   settings?: Partial<RendererMainSettings>;
   target?: string | HTMLElement;
+  routeNotFoundComponentClass?: typeof Component;
 }
 
 /**
@@ -108,10 +109,47 @@ export class Application extends Component {
     const rootProps: CoreNodeProps = {
       x: 0,
       y: 0,
-      width: renderer.settings.appWidth,
-      height: renderer.settings.appHeight,
-      parent: renderer.root, // Set parent to renderer root
-    } as CoreNodeProps;
+      w: renderer.settings.appWidth,
+      h: renderer.settings.appHeight,
+      alpha: 1,
+      autosize: false,
+      boundsMargin: null,
+      clipping: false,
+      color: 0xffffffff,
+      colorTop: 0xffffffff,
+      colorBottom: 0xffffffff,
+      colorLeft: 0xffffffff,
+      colorRight: 0xffffffff,
+      colorTl: 0xffffffff,
+      colorTr: 0xffffffff,
+      colorBl: 0xffffffff,
+      colorBr: 0xffffffff,
+      zIndex: 0,
+      zIndexLocked: 0,
+      parent: null, // Root component has no parent
+      texture: null,
+      textureOptions: {},
+      shader: renderer.stage.defShaderNode,
+      src: null,
+      srcHeight: undefined,
+      srcWidth: undefined,
+      srcX: undefined,
+      srcY: undefined,
+      scale: null,
+      scaleX: 1,
+      scaleY: 1,
+      mount: 0,
+      mountX: 0,
+      mountY: 0,
+      pivot: 0.5,
+      pivotX: 0.5,
+      pivotY: 0.5,
+      rotation: 0,
+      rtt: false,
+      data: {},
+      imageType: undefined,
+      interactive: false,
+    };
 
     super(renderer.stage, rootProps);
 
@@ -129,8 +167,8 @@ export class Application extends Component {
     this.setupApplication(config.routes, config.initialRoute);
 
     // Optionally allow routeNotFoundComponentClass to be set via config
-    if ((config as any).routeNotFoundComponentClass) {
-      this.routeNotFoundComponentClass = (config as any).routeNotFoundComponentClass;
+    if (config.routeNotFoundComponentClass) {
+      this.routeNotFoundComponentClass = config.routeNotFoundComponentClass;
     }
   }
 
@@ -226,9 +264,47 @@ export class Application extends Component {
       routeComponent = new RouteComponent(this.stage, {
         x: 0,
         y: 0,
-        width: this.renderer.settings.appWidth,
-        height: this.renderer.settings.appHeight,
-      } as CoreNodeProps) as Component;
+        w: this.renderer.settings.appWidth,
+        h: this.renderer.settings.appHeight,
+        alpha: 1,
+        autosize: false,
+        boundsMargin: null,
+        clipping: false,
+        color: 0xffffffff,
+        colorTop: 0xffffffff,
+        colorBottom: 0xffffffff,
+        colorLeft: 0xffffffff,
+        colorRight: 0xffffffff,
+        colorTl: 0xffffffff,
+        colorTr: 0xffffffff,
+        colorBl: 0xffffffff,
+        colorBr: 0xffffffff,
+        zIndex: 0,
+        zIndexLocked: 0,
+        parent: null,
+        texture: null,
+        textureOptions: {},
+        shader: this.stage.defShaderNode,
+        src: null,
+        srcHeight: undefined,
+        srcWidth: undefined,
+        srcX: undefined,
+        srcY: undefined,
+        scale: null,
+        scaleX: 1,
+        scaleY: 1,
+        mount: 0,
+        mountX: 0,
+        mountY: 0,
+        pivot: 0.5,
+        pivotX: 0.5,
+        pivotY: 0.5,
+        rotation: 0,
+        rtt: false,
+        data: {},
+        imageType: undefined,
+        interactive: false,
+      }) as Component;
 
       // Store tag reference for Lightning 2 compatibility
       (routeComponent as unknown as { tag: string }).tag = '_route';
