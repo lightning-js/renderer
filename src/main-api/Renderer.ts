@@ -329,6 +329,20 @@ export interface RendererMainSettings {
    * @defaultValue `full`
    */
   createImageBitmapSupport?: 'auto' | 'basic' | 'options' | 'full';
+
+  /**
+   * Number of times to retry loading a failed texture
+   *
+   * @remarks
+   * When a texture fails to load, Lightning will retry up to this many times
+   * before permanently giving up. Each retry will clear the texture ownership
+   * and then re-establish it to trigger a new load attempt.
+   *
+   * Set to null to disable retries. Set to 0 to always try once and never retry.
+   * This is typically only used on ImageTexture instances.
+   *
+   */
+  maxRetryCount?: number;
 }
 
 /**
@@ -432,6 +446,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas || document.createElement('canvas'),
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
+      maxRetryCount: settings.maxRetryCount ?? 5,
     };
     this.settings = resolvedSettings;
 
@@ -477,6 +492,7 @@ export class RendererMain extends EventEmitter {
       strictBounds: this.settings.strictBounds,
       textureProcessingTimeLimit: this.settings.textureProcessingTimeLimit,
       createImageBitmapSupport: this.settings.createImageBitmapSupport,
+      maxRetryCount: this.settings.maxRetryCount,
     });
 
     // Extract the root node
