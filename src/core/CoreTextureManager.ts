@@ -326,11 +326,12 @@ export class CoreTextureManager extends EventEmitter {
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
       throw new TextureError(
-        `Texture type "${textureType}" is not registered`,
         TextureErrorCode.TEXTURE_TYPE_NOT_REGISTERED,
+        `Texture type "${textureType}" is not registered`,
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const cacheKey = TextureClass.makeCacheKey(props as any);
     if (cacheKey && this.keyCache.has(cacheKey)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -417,10 +418,7 @@ export class CoreTextureManager extends EventEmitter {
       // we're at a critical memory threshold, don't upload textures
       texture.setState(
         'failed',
-        new TextureError(
-          'Memory threshold exceeded',
-          TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED,
-        ),
+        new TextureError(TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED),
       );
       return;
     }
@@ -439,8 +437,8 @@ export class CoreTextureManager extends EventEmitter {
       texture.setState(
         'failed',
         new TextureError(
-          'Texture data is null, cannot upload texture',
           TextureErrorCode.TEXTURE_DATA_NULL,
+          'Texture data is null, cannot upload texture',
         ),
       );
       return;
