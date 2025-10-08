@@ -230,7 +230,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
      * If the shader props contain any automatic properties, update it with the
      * current dimensions and or alpha that will be used to render the quad.
      */
-    if (params.shaderProps !== null) {
+    if (params.shader !== this.defaultShader) {
       if (hasOwn(params.shaderProps, '$dimensions') == true) {
         const dimensions = params.shaderProps.$dimensions as Dimensions;
         dimensions.width = params.width;
@@ -243,20 +243,11 @@ export class WebGlCoreRenderer extends CoreRenderer {
     }
 
     let { curBufferIdx: bufferIdx, curRenderOp } = this;
-    const targetDims = { width: -1, height: -1 };
-    targetDims.width = params.width;
-    targetDims.height = params.height;
-
-    const targetShader =
-      (params.shader as WebGlCoreShader) || this.defaultShader;
-    assertTruthy(
-      targetShader.getUniformLocation !== undefined,
-      'Invalid WebGL shader',
-    );
+    const targetDims = { width: params.width, height: params.height };
 
     if (this.reuseRenderOp(params) === false) {
       this.newRenderOp(
-        targetShader,
+        params.shader as WebGlCoreShader,
         params.shaderProps as Record<string, unknown>,
         params.alpha,
         targetDims,
@@ -542,10 +533,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
     const { shader, shaderProps, parentHasRenderTexture, rtt, clippingRect } =
       params;
 
-    const targetShader = shader || this.defaultShader;
-
     // Switching shader program will require a new render operation
-    if (this.curRenderOp?.shader !== targetShader) {
+    if (this.curRenderOp?.shader !== shader) {
       return false;
     }
 
@@ -557,18 +546,17 @@ export class WebGlCoreRenderer extends CoreRenderer {
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (parentHasRenderTexture !== undefined || rtt !== undefined) {
+    if (parentHasRenderTexture === true || rtt === true) {
       return false;
     }
 
     // Check if the shader can batch the shader properties
     if (
       this.curRenderOp.shader !== this.defaultShader &&
-      (shaderProps === null ||
-        this.curRenderOp.shader.canBatchShaderProps(
-          this.curRenderOp.shaderProps,
-          shaderProps,
-        ) === false)
+      this.curRenderOp.shader.canBatchShaderProps(
+        this.curRenderOp.shaderProps,
+        shaderProps,
+      ) === false
     ) {
       return false;
     }

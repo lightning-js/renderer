@@ -515,7 +515,7 @@ export class RendererMain extends EventEmitter {
     targetEl.appendChild(canvas);
 
     // Initialize inspector (if enabled)
-    if (inspector && !isProductionEnvironment()) {
+    if (inspector && !isProductionEnvironment) {
       this.inspector = new inspector(canvas, resolvedSettings);
     }
   }

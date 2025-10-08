@@ -44,8 +44,8 @@ export interface QuadOptions {
   texture: Texture | null;
   textureOptions: TextureOptions | null;
   zIndex: number;
-  shader: CoreShader | null;
-  shaderProps: Record<string, unknown> | null;
+  shader: CoreShader;
+  shaderProps: Record<string, unknown>;
   alpha: number;
   clippingRect: RectWithValid;
   tx: number;
