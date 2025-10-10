@@ -163,7 +163,7 @@ export abstract class Texture extends EventEmitter {
   public memUsed = 0;
 
   public retryCount = 0;
-  public maxRetryCount: number = 5;
+  public maxRetryCount: number;
 
   /**
    * Timestamp when texture was created (for startup grace period)
@@ -183,6 +183,7 @@ export abstract class Texture extends EventEmitter {
 
   constructor(protected txManager: CoreTextureManager) {
     super();
+    this.maxRetryCount = txManager.maxRetryCount;
   }
 
   get dimensions(): Dimensions | null {

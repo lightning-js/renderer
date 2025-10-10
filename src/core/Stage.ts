@@ -85,6 +85,7 @@ export interface StageOptions {
   strictBounds: boolean;
   textureProcessingTimeLimit: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  maxRetryCount: number;
 }
 
 export type StageFpsUpdateHandler = (
@@ -174,6 +175,7 @@ export class Stage {
       renderEngine,
       fontEngines,
       createImageBitmapSupport,
+      maxRetryCount,
     } = options;
 
     this.eventBus = options.eventBus;
@@ -184,6 +186,7 @@ export class Stage {
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
+      maxRetryCount,
     });
 
     // Wait for the Texture Manager to initialize

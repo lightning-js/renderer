@@ -65,6 +65,7 @@ export interface TextureManagerDebugInfo {
 export interface TextureManagerSettings {
   numImageWorkers: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  maxRetryCount: number;
 }
 
 export type ResizeModeOptions =
@@ -193,6 +194,7 @@ export class CoreTextureManager extends EventEmitter {
    */
   txConstructors: Partial<TextureMap> = {};
 
+  public maxRetryCount: number;
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
@@ -231,9 +233,11 @@ export class CoreTextureManager extends EventEmitter {
   constructor(stage: Stage, settings: TextureManagerSettings) {
     super();
 
-    const { numImageWorkers, createImageBitmapSupport } = settings;
+    const { numImageWorkers, createImageBitmapSupport, maxRetryCount } =
+      settings;
     this.stage = stage;
     this.numImageWorkers = numImageWorkers;
+    this.maxRetryCount = maxRetryCount;
 
     if (createImageBitmapSupport === 'auto') {
       validateCreateImageBitmap()
