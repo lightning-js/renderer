@@ -51,9 +51,10 @@ export {
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type {
+export {
   TextureError,
   TextureErrorCode,
+  isTextureError,
 } from '../src/core/TextureError.js';
 export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
