@@ -122,6 +122,7 @@ export class TextureMemoryManager {
   private debugLogging: boolean;
   private lastCleanupTime = 0;
   private baselineMemoryAllocation: number;
+  private hasWarnedAboveCritical = false;
 
   public criticalCleanupRequested = false;
   public doNotExceedCriticalThreshold: boolean;
@@ -313,14 +314,20 @@ export class TextureMemoryManager {
         memUsed: this.memUsed,
         criticalThreshold: this.criticalThreshold,
       });
-
-      if (this.debugLogging === true || isProductionEnvironment() === false) {
+      // Only emit the warning once per over-threshold period
+      if (
+        !this.hasWarnedAboveCritical &&
+        (this.debugLogging === true || isProductionEnvironment() === false)
+      ) {
         console.warn(
           `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,
         );
+
+        this.hasWarnedAboveCritical = true;
       }
     } else {
       this.criticalCleanupRequested = false;
+      this.hasWarnedAboveCritical = false;
     }
   }
 

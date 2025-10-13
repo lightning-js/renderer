@@ -22,6 +22,7 @@ import type { SubTextureProps } from './SubTexture.js';
 import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
+import type { TextureError } from '../TextureError.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -135,7 +136,7 @@ export abstract class Texture extends EventEmitter {
    * `null`.
    */
   private _dimensions: Dimensions | null = null;
-  private _error: Error | null = null;
+  private _error: TextureError | null = null;
 
   // aggregate state
   public state: TextureState = 'initial';
@@ -189,7 +190,7 @@ export abstract class Texture extends EventEmitter {
     return this._dimensions;
   }
 
-  get error(): Error | null {
+  get error(): TextureError | null {
     return this._error;
   }
 
