@@ -107,6 +107,7 @@ export type TextureState =
   | 'loading' // Loading texture data and uploading to GPU
   | 'loaded' // Fully loaded and usable
   | 'failed' // Failed to load
+  | 'failedm' // Failed to load for memory reasons
   | 'freed'; // Released and must be reloaded
 
 export enum TextureType {
@@ -404,6 +405,18 @@ export abstract class Texture extends EventEmitter {
 
       payload = this._dimensions;
     } else if (state === 'failed') {
+      this._error = errorOrDimensions as Error;
+      payload = this._error;
+
+      // increment the retry count for the texture
+      // this is used to compare against maxRetryCount, if set
+      // to determine if we should try loading again
+      this.retryCount += 1;
+
+      queueMicrotask(() => {
+        this.release();
+      });
+    } else if (state === 'failedm') {
       this._error = errorOrDimensions as Error;
       payload = this._error;
 

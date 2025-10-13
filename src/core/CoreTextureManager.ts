@@ -421,7 +421,7 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       // we're at a critical memory threshold, don't upload textures
       texture.setState(
-        'failed',
+        'failedm',
         new TextureError(TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED),
       );
       return;

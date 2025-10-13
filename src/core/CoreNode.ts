@@ -857,6 +857,9 @@ export class CoreNode extends EventEmitter {
       } else if (texture.state === 'failed') {
         assertTruthy(texture.error);
         this.onTextureFailed(texture, texture.error);
+      } else if (texture.state === 'failedm') {
+        assertTruthy(texture.error);
+        this.onTextureFailed(texture, texture.error);
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
       }
@@ -921,6 +924,7 @@ export class CoreNode extends EventEmitter {
     // only emit failed outward if we've exhausted all retry attempts
     if (
       this.texture !== null &&
+      this.texture.state === 'failedm' &&
       this.texture.retryCount > this.texture.maxRetryCount
     ) {
       this.emit('failed', {

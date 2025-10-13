@@ -129,6 +129,7 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       this.state = 'loaded';
       this._w = width;
       this._h = height;
+      this.textureSource.retryCount = 1;
       // Update the texture source's width and height so that it can be used
       // for rendering.
       this.textureSource.setState('loaded', { width, height });

@@ -310,6 +310,7 @@ export class Inspector {
       {
         onLoaded: () => void;
         onFailed: () => void;
+        onFailedm: () => void;
         onFreed: () => void;
       }
     >();
@@ -358,6 +359,17 @@ export class Inspector {
           }
           this.updateTextureAttributes(div, texture);
         };
+        const onFailedm = () => {
+          const metrics = this.textureMetrics.get(texture);
+          if (metrics) {
+            metrics.previousState =
+              metrics.previousState !== texture.state
+                ? metrics.previousState
+                : 'loading';
+            metrics.failedCount++;
+          }
+          this.updateTextureAttributes(div, texture);
+        };
         const onFreed = () => {
           const metrics = this.textureMetrics.get(texture);
           if (metrics) {
@@ -372,9 +384,15 @@ export class Inspector {
 
         texture.on('loaded', onLoaded);
         texture.on('failed', onFailed);
+        texture.on('failedm', onFailedm);
         texture.on('freed', onFreed);
 
-        textureListeners.set(texture, { onLoaded, onFailed, onFreed });
+        textureListeners.set(texture, {
+          onLoaded,
+          onFailed,
+          onFailedm,
+          onFreed,
+        });
       }
     };
     // Define traps for each property in knownProperties
@@ -426,6 +444,7 @@ export class Inspector {
         textureListeners.forEach((listeners, texture) => {
           texture.off('loaded', listeners.onLoaded);
           texture.off('failed', listeners.onFailed);
+          texture.off('failedm', listeners.onFailedm);
           texture.off('freed', listeners.onFreed);
           // Clean up metrics for this texture
           this.textureMetrics.delete(texture);
