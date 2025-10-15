@@ -533,7 +533,10 @@ export class Inspector {
 
     // Update error information if present
     if (texture.error) {
-      div.setAttribute('data-texture-error', texture.error.message);
+      div.setAttribute(
+        'data-texture-error',
+        texture.error.code || texture.error.message,
+      );
     } else {
       div.removeAttribute('data-texture-error');
     }

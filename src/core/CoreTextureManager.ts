@@ -32,6 +32,7 @@ import {
   validateCreateImageBitmap,
   type CreateImageBitmapSupport,
 } from './lib/validateImageBitmap.js';
+import { TextureError, TextureErrorCode } from './TextureError.js';
 
 /**
  * Augmentable map of texture class types
@@ -328,9 +329,13 @@ export class CoreTextureManager extends EventEmitter {
     let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
-      throw new Error(`Texture type "${textureType}" is not registered`);
+      throw new TextureError(
+        TextureErrorCode.TEXTURE_TYPE_NOT_REGISTERED,
+        `Texture type "${textureType}" is not registered`,
+      );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const cacheKey = TextureClass.makeCacheKey(props as any);
     if (cacheKey && this.keyCache.has(cacheKey)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -415,7 +420,10 @@ export class CoreTextureManager extends EventEmitter {
       this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
-      texture.setState('failed', new Error('Memory threshold exceeded'));
+      texture.setState(
+        'failed',
+        new TextureError(TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED),
+      );
       return;
     }
 
@@ -432,7 +440,10 @@ export class CoreTextureManager extends EventEmitter {
     if (texture.textureData === null) {
       texture.setState(
         'failed',
-        new Error('Texture data is null, cannot upload texture'),
+        new TextureError(
+          TextureErrorCode.TEXTURE_DATA_NULL,
+          'Texture data is null, cannot upload texture',
+        ),
       );
       return;
     }
