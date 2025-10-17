@@ -121,20 +121,6 @@ export class LinearGradientEffect extends ShaderEffect {
   };
 
   static override methods: Record<string, string> = {
-    fromLinear: `
-      vec4 function(vec4 linearRGB) {
-        vec4 higher = vec4(1.055)*pow(linearRGB, vec4(1.0/2.4)) - vec4(0.055);
-        vec4 lower = linearRGB * vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
-    toLinear: `
-      vec4 function(vec4 sRGB) {
-        vec4 higher = pow((sRGB + vec4(0.055))/vec4(1.055), vec4(2.4));
-        vec4 lower = sRGB/vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
     calcPoint: `
       vec2 function(float d, float angle) {
         return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
