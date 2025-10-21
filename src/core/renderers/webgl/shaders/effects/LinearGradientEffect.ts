@@ -121,20 +121,6 @@ export class LinearGradientEffect extends ShaderEffect {
   };
 
   static override methods: Record<string, string> = {
-    fromLinear: `
-      vec4 function(vec4 linearRGB) {
-        vec4 higher = vec4(1.055)*pow(linearRGB, vec4(1.0/2.4)) - vec4(0.055);
-        vec4 lower = linearRGB * vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
-    toLinear: `
-      vec4 function(vec4 sRGB) {
-        vec4 higher = pow((sRGB + vec4(0.055))/vec4(1.055), vec4(2.4));
-        vec4 lower = sRGB/vec4(12.92);
-        return mix(higher, lower, 1.0);
-      }
-    `,
     calcPoint: `
       vec2 function(float d, float angle) {
         return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
@@ -162,10 +148,29 @@ export class LinearGradientEffect extends ShaderEffect {
       vec2 gradVec = t - f;
       float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
 
-      float stopCalc = (dist - stops[0]) / (stops[1] - stops[0]);
-      vec4 colorOut = $fromLinear(mix($toLinear(colors[0]), $toLinear(colors[1]), stopCalc));
-      ${this.ColorLoop(colors)}
-      return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
+      //return early if dist is lower or equal to first stop
+      if(dist <= stops[0]) {
+        return mix(maskColor, colors[0], clamp(colors[0].a, 0.0, 1.0));
+      }
+      const int amount = ${colors};
+      const int last = amount - 1;
+
+      if(dist >= stops[last]) {
+        return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
+      }
+
+      for(int i = 0; i < last; i++) {
+        float left = stops[i];
+        float right = stops[i + 1];
+        if(dist >= left && dist <= right) {
+          float localDist = smoothstep(left, right, dist);
+          vec4 colorOut = mix(colors[i], colors[i + 1], localDist);
+          return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
+        }
+      }
+
+      //final fallback
+      return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
     `;
   };
 }
