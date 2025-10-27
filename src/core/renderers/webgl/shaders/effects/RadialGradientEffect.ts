@@ -162,7 +162,7 @@ export class RadialGradientEffect extends ShaderEffect {
   static override onColorize = (props: RadialGradientEffectProps) => {
     const colors = props.colors!.length || 1;
     return `
-      vec2 point = v_textureCoordinate.xy * u_dimensions;
+      vec2 point = v_nodeCoordinate.xy * u_dimensions;
       vec2 projection = vec2(pivot.x * u_dimensions.x, pivot.y * u_dimensions.y);
 
       float dist = length((point - projection) / vec2(width, height));

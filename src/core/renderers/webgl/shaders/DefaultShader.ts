@@ -26,12 +26,6 @@ export class DefaultShader extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2fv' },
-      ],
     });
   }
 
@@ -51,6 +45,7 @@ export class DefaultShader extends WebGlCoreShader {
 
       attribute vec2 a_position;
       attribute vec2 a_textureCoordinate;
+      attribute vec2 a_nodeCoordinate;
       attribute vec4 a_color;
 
       uniform vec2 u_resolution;
@@ -59,6 +54,7 @@ export class DefaultShader extends WebGlCoreShader {
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
+      varying vec2 v_nodeCoordinate;
 
       void main() {
         vec2 normalized = a_position * u_pixelRatio;
@@ -66,6 +62,7 @@ export class DefaultShader extends WebGlCoreShader {
 
         v_color = a_color;
         v_textureCoordinate = a_textureCoordinate;
+        v_nodeCoordinate = a_nodeCoordinate;
 
         gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
         gl_Position.y = -sign(screenSpace.y) * gl_Position.y;

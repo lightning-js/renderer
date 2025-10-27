@@ -29,17 +29,6 @@ export class DefaultShaderBatched extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: [
-        'a_position',
-        'a_textureCoordinate',
-        'a_color',
-        'a_textureIndex',
-      ],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_textures[0]', uniform: 'uniform1iv' },
-      ],
     });
   }
 

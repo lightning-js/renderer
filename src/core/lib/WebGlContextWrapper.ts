@@ -704,6 +704,53 @@ export class WebGlContextWrapper {
   }
 
   /**
+   * Returns object with Attribute names as key and numbers as location values
+   *
+   * @param program
+   * @returns object with numbers
+   */
+  getUniformLocations(
+    program: WebGLProgram,
+  ): Record<string, WebGLUniformLocation> {
+    const gl = this.gl;
+    const length = gl.getProgramParameter(
+      program,
+      gl.ACTIVE_UNIFORMS,
+    ) as number;
+    const result = {} as Record<string, WebGLUniformLocation>;
+    for (let i = 0; i < length; i++) {
+      const info = gl.getActiveUniform(program, i) as WebGLActiveInfo;
+      //remove bracket + value from uniform name;
+      let name = info.name.replace(/\[.*?\]/g, '');
+      result[name] = gl.getUniformLocation(
+        program,
+        name,
+      ) as WebGLUniformLocation;
+    }
+    return result;
+  }
+
+  /**
+   * Returns object with Attribute names as key and numbers as location values
+   * @param program
+   * @returns object with numbers
+   */
+  getAttributeLocations(program: WebGLProgram): string[] {
+    const gl = this.gl;
+    const length = gl.getProgramParameter(
+      program,
+      gl.ACTIVE_ATTRIBUTES,
+    ) as number;
+
+    const result: string[] = [];
+    for (let i = 0; i < length; i++) {
+      const { name } = gl.getActiveAttrib(program, i) as WebGLActiveInfo;
+      result[gl.getAttribLocation(program, name)] = name;
+    }
+    return result;
+  }
+
+  /**
    * ```
    * gl.useProgram(program);
    * ```

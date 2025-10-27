@@ -136,7 +136,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.defaultShader = this.defShaderCtrl.shader as WebGlCoreShader;
     const quadBuffer = glw.createBuffer();
     assertTruthy(quadBuffer);
-    const stride = 6 * Float32Array.BYTES_PER_ELEMENT;
+    const stride = 8 * Float32Array.BYTES_PER_ELEMENT;
     this.quadBufferCollection = new BufferCollection([
       {
         buffer: quadBuffer,
@@ -172,6 +172,14 @@ export class WebGlCoreRenderer extends CoreRenderer {
             normalized: false,
             stride,
             offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+          },
+          a_nodeCoordinate: {
+            name: 'a_nodeCoordinate',
+            size: 2,
+            type: glw.FLOAT,
+            normalized: false,
+            stride,
+            offset: 6 * Float32Array.BYTES_PER_ELEMENT,
           },
         },
       },
@@ -355,6 +363,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = params.colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = params.renderCoords.x2;
@@ -363,6 +373,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = params.colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Lower-Left
       fQuadBuffer[bufferIdx++] = params.renderCoords.x4;
@@ -371,6 +383,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 1;
 
       // Lower-Right
       fQuadBuffer[bufferIdx++] = params.renderCoords.x3;
@@ -379,6 +393,9 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 1;
     } else if (params.tb !== 0 || params.tc !== 0) {
       // Upper-Left
       fQuadBuffer[bufferIdx++] = params.tx; // vertexX
@@ -387,6 +404,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = params.colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = params.tx + params.width * params.ta;
@@ -395,6 +414,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = params.colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Lower-Left
       fQuadBuffer[bufferIdx++] = params.tx + params.height * params.tb;
@@ -403,6 +424,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 1;
 
       // Lower-Right
       fQuadBuffer[bufferIdx++] =
@@ -413,6 +436,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 1;
     } else {
       // Calculate the right corner of the quad
       // multiplied by the scale
@@ -426,6 +451,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1; // texCoordY
       uiQuadBuffer[bufferIdx++] = params.colorTl; // color
       fQuadBuffer[bufferIdx++] = textureIdx; // texIndex
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Upper-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
@@ -434,6 +461,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY1;
       uiQuadBuffer[bufferIdx++] = params.colorTr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 0;
 
       // Lower-Left
       fQuadBuffer[bufferIdx++] = params.tx;
@@ -442,6 +471,8 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBl;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 0;
+      fQuadBuffer[bufferIdx++] = 1;
 
       // Lower-Right
       fQuadBuffer[bufferIdx++] = rightCornerX;
@@ -450,9 +481,10 @@ export class WebGlCoreRenderer extends CoreRenderer {
       fQuadBuffer[bufferIdx++] = texCoordY2;
       uiQuadBuffer[bufferIdx++] = params.colorBr;
       fQuadBuffer[bufferIdx++] = textureIdx;
+      fQuadBuffer[bufferIdx++] = 1;
+      fQuadBuffer[bufferIdx++] = 1;
     }
     // Update the length of the current render op
-    this.curRenderOp.length += WORDS_PER_QUAD;
     this.curRenderOp.numQuads++;
     this.curBufferIdx = bufferIdx;
   }
@@ -607,7 +639,7 @@ export class WebGlCoreRenderer extends CoreRenderer {
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
 
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
-    const QUAD_SIZE_IN_BYTES = 4 * (6 * arr.BYTES_PER_ELEMENT); // 6 attributes per vertex
+    const QUAD_SIZE_IN_BYTES = 4 * (8 * arr.BYTES_PER_ELEMENT); // 8 attributes per vertex
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
   }
 
