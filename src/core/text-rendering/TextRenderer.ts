@@ -17,9 +17,10 @@
  * limitations under the License.
  */
 
-import type { CoreTextNodeProps } from '../CoreTextNode.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
+import type { CoreFont } from './CoreFont.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
@@ -378,12 +379,13 @@ export interface TextRenderInfo {
 
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
-  font: FontHandler;
-  renderText: (props: CoreTextNodeProps) => TextRenderInfo;
+  createFont: (settings: FontLoadOptions) => CoreFont | undefined;
+  renderText: (font: CoreFont, props: CoreTextNodeProps) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
     renderer: CoreRenderer,
+    font: CoreFont,
     layout: TextLayout,
     vertexBuffer: Float32Array,
     renderProps: TextRenderProps,

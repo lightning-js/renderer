@@ -18,8 +18,6 @@
  */
 
 import type {
-  FontHandler,
-  TextRenderer,
   TrProps,
   TextLayout,
   TextRenderInfo,
@@ -39,17 +37,13 @@ import type {
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
+import { FontState, type CoreFont } from './text-rendering/CoreFont.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
-  /**
-   * Force Text Node to use a specific Text Renderer
-   */
-  textRendererOverride?: string | null;
   forceLoad: boolean;
 }
 
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
-  private textRenderer: TextRenderer;
-  private fontHandler: FontHandler;
+  private font?: CoreFont;
 
   private _layoutGenerated = false;
   private _waitingForFont = false;
@@ -68,19 +62,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
-  constructor(
-    stage: Stage,
-    props: CoreTextNodeProps,
-    textRenderer: TextRenderer,
-  ) {
+  constructor(stage: Stage, props: CoreTextNodeProps) {
     super(stage, props);
-    this.textRenderer = textRenderer;
-    this.fontHandler = textRenderer.font;
-    this._type = textRenderer.type;
-
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
+    const fontFamily = props.fontFamily;
+    props.fontFamily = '';
     this.textProps = props;
+    this.fontFamily = fontFamily;
 
     this.setUpdateType(UpdateType.All);
   }
@@ -110,6 +99,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (p === null) {
       return false;
     }
+    if (this.font === undefined) {
+      return false;
+    }
+
     if (p.worldAlpha > 0 && p.renderState > CoreNodeRenderState.OutOfBounds) {
       return true;
     }
@@ -125,16 +118,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this.allowTextGeneration() === true) &&
       this._layoutGenerated === false
     ) {
-      if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+      //font existance is checked in allowTextGeneration method
+      const font = this.font as CoreFont;
+
+      if (font.state === FontState.Loaded) {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
         this._lastVertexBuffer = null; // Invalidate last vertex buffer
-        const resp = this.textRenderer.renderText(this.textProps);
+        const resp = font.textRenderer.renderText(font, this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
-      } else if (this._waitingForFont === false) {
-        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
-        this._waitingForFont = true;
+      } else if (
+        font.state !== FontState.Failed &&
+        this._waitingForFont === false
+      ) {
+        font.waiting(this);
       }
     }
 
@@ -228,17 +226,20 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // Early return if no cached data
-    if (!this._cachedLayout) {
+    if (this.font === undefined || this._cachedLayout === null) {
       return;
     }
 
     if (this._lastVertexBuffer === null) {
-      this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
+      this._lastVertexBuffer = this.font.textRenderer.addQuads(
+        this._cachedLayout,
+      );
     }
 
     const props = this.textProps;
-    this.textRenderer.renderQuads(
+    this.font.textRenderer.renderQuads(
       renderer,
+      this.font,
       this._cachedLayout as TextLayout,
       this._lastVertexBuffer!,
       {
@@ -262,16 +263,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override destroy(): void {
-    if (this._waitingForFont === true && this.fontHandler) {
-      this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+    if (this.font !== undefined) {
+      this.font.stopWaiting(this);
+      //remove font reference
+      delete this.font;
     }
 
     // Clear cached layout and vertex buffer
     this._cachedLayout = null;
     this._lastVertexBuffer = null;
-
-    this.fontHandler = null!; // Clear reference to avoid memory leaks
-    this.textRenderer = null!; // Clear reference to avoid memory leaks
 
     super.destroy();
   }
@@ -331,9 +331,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set fontFamily(value: string) {
     if (this.textProps.fontFamily !== value) {
-      if (this._waitingForFont === true) {
-        this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
-      }
+      this.font = this.stage.fontManager.getFont(value);
       this.textProps.fontFamily = value;
       this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
