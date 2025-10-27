@@ -66,11 +66,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     super(stage, props);
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
-    const fontFamily = props.fontFamily;
-    props.fontFamily = '';
     this.textProps = props;
-    this.fontFamily = fontFamily;
-
+    this.font = stage.fontManager.getFont(props.fontFamily);
     this.setUpdateType(UpdateType.All);
   }
 
