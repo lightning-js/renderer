@@ -39,6 +39,12 @@
  *
  * @module Utils
  */
-export { assertTruthy, mergeColorAlpha, deg2Rad } from '../src/utils.js';
+export {
+  assertTruthy,
+  mergeColorAlpha,
+  deg2Rad,
+  mergeColorProgress,
+} from '../src/utils.js';
 export { getNormalizedRgbaComponents } from '../src/core/lib/utils.js';
 export { EventEmitter } from '../src/common/EventEmitter.js';
+export { getTimingFunction } from '../src/core/utils.js';

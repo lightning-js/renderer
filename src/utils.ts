@@ -80,7 +80,7 @@ export function assertTruthy(
   condition: unknown,
   message?: string,
 ): asserts condition {
-  if (isProductionEnvironment() === true) return;
+  if (isProductionEnvironment) return;
   if (!condition) {
     throw new Error(message || 'Assertion failed');
   }
@@ -235,9 +235,9 @@ export function getImageAspectRatio(width: number, height: number): number {
  *
  * @returns
  */
-export function isProductionEnvironment(): boolean {
-  return import.meta.env && import.meta.env.PROD;
-}
+declare const __DEV__: boolean;
+export const isProductionEnvironment =
+  typeof __DEV__ !== 'undefined' ? !__DEV__ : true;
 
 /**
  * Returns a new unique ID

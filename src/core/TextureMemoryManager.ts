@@ -317,7 +317,7 @@ export class TextureMemoryManager {
       // Only emit the warning once per over-threshold period
       if (
         !this.hasWarnedAboveCritical &&
-        (this.debugLogging === true || isProductionEnvironment() === false)
+        (this.debugLogging === true || isProductionEnvironment === false)
       ) {
         console.warn(
           `[TextureMemoryManager] Memory usage above critical threshold after cleanup: ${this.memUsed}`,

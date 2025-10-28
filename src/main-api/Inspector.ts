@@ -192,7 +192,7 @@ export class Inspector {
   private textureMetrics = new Map<Texture, TextureMetrics>();
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
-    if (isProductionEnvironment()) return;
+    if (isProductionEnvironment) return;
 
     if (!settings) {
       throw new Error('settings is required');
