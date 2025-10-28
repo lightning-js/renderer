@@ -2339,7 +2339,7 @@ export class CoreNode extends EventEmitter {
       this.texture = null;
       return;
     }
-    console.log('change source', imageUrl);
+
     this.texture = this.stage.txManager.createTexture('ImageTexture', {
       src: imageUrl,
       width: this.props.width,
