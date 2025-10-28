@@ -824,7 +824,6 @@ export class CoreNode extends EventEmitter {
   loadTexture(): void {
     const { texture } = this.props;
     assertTruthy(texture);
-
     // If texture is already loaded / failed, trigger loaded event manually
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
@@ -841,16 +840,6 @@ export class CoreNode extends EventEmitter {
       texture.on('failed', this.onTextureFailed);
       texture.on('freed', this.onTextureFreed);
 
-      // If the parent is a render texture, the initial texture status
-      // will be set to freed until the texture is processed by the
-      // Render RTT nodes. So we only need to listen fo changes and
-      // no need to check the texture.state until we restructure how
-      // textures are being processed.
-      if (this.parentHasRenderTexture) {
-        this.notifyParentRTTOfUpdate();
-        return;
-      }
-
       if (texture.state === 'loaded') {
         assertTruthy(texture.dimensions);
         this.onTextureLoaded(texture, texture.dimensions);
@@ -859,6 +848,16 @@ export class CoreNode extends EventEmitter {
         this.onTextureFailed(texture, texture.error);
       } else if (texture.state === 'freed') {
         this.onTextureFreed(texture);
+      }
+
+      // If the parent is a render texture, the initial texture status
+      // will be set to freed until the texture is processed by the
+      // Render RTT nodes. So we only need to listen fo changes and
+      // no need to check the texture.state until we restructure how
+      // textures are being processed.
+      if (this.parentHasRenderTexture) {
+        this.notifyParentRTTOfUpdate();
+        return;
       }
     });
   }
@@ -891,7 +890,6 @@ export class CoreNode extends EventEmitter {
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
     }
-
     // ignore 1x1 pixel textures
     if (dimensions.width > 1 && dimensions.height > 1) {
       this.emit('loaded', {
@@ -2341,7 +2339,7 @@ export class CoreNode extends EventEmitter {
       this.texture = null;
       return;
     }
-
+    console.log('change source', imageUrl);
     this.texture = this.stage.txManager.createTexture('ImageTexture', {
       src: imageUrl,
       width: this.props.width,
