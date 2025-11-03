@@ -122,23 +122,21 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     const mountTranslateY = p.mountY * h;
 
     const tProps = this.textProps;
-    const { textAlign, verticalAlign } = tProps;
+    const { textAlign, verticalAlign, maxWidth, maxHeight } = tProps;
 
-    if (textAlign !== 'left') {
-      const maxW = tProps.maxWidth;
+    if (textAlign !== 'left' && maxWidth > 0) {
       if (textAlign === 'right') {
-        x += maxW - w;
+        x += maxWidth - w;
       } else if (textAlign === 'center') {
-        x += (maxW - w) * 0.5;
+        x += (maxWidth - w) * 0.5;
       }
     }
 
-    if (verticalAlign !== 'top') {
-      const maxH = tProps.maxHeight;
+    if (verticalAlign !== 'top' && maxHeight > 0) {
       if (verticalAlign === 'bottom') {
-        y += maxH - h;
+        y += maxHeight - h;
       } else if (verticalAlign === 'middle') {
-        y += (maxH - h) * 0.5;
+        y += (maxHeight - h) * 0.5;
       }
     }
 
