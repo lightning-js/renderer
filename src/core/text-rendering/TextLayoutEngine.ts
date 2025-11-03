@@ -344,8 +344,8 @@ export const wrapLine = (
         hasRemainingText = rt;
         if (linebreak === false) {
           const [text, width] = lines[0]!;
-          currentLine += ' ' + text;
-          currentLineWidth = width;
+          currentLine += text;
+          currentLineWidth += width;
           wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
         }
 
@@ -354,6 +354,11 @@ export const wrapLine = (
           if (j < lines.length - 1) {
             wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
           }
+        }
+
+        if (i < words.length - 1 && currentLine.endsWith(' ') === false) {
+          currentLine += ' ';
+          currentLineWidth += effectiveSpaceWidth;
         }
       }
     }
