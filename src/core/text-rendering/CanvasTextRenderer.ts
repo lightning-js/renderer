@@ -167,8 +167,8 @@ const renderText = (
   );
 
   const lineAmount = lines.length;
-  const canvasW = Math.ceil(maxWidth || effectiveWidth);
-  const canvasH = Math.ceil(maxHeight || effectiveHeight);
+  const canvasW = Math.ceil(effectiveWidth);
+  const canvasH = Math.ceil(effectiveHeight);
 
   canvas.width = canvasW;
   canvas.height = canvasH;

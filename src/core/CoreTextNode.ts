@@ -38,6 +38,7 @@ import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
 import { FontState, type CoreFont } from './text-rendering/CoreFont.js';
+import { Matrix3d } from './lib/Matrix3d.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   forceLoad: boolean;
 }
@@ -86,8 +87,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         dimensions,
       } satisfies NodeTextureLoadedPayload);
     }
-    this.w = this._renderInfo.width;
-    this.h = this._renderInfo.height;
     this.setUpdateType(UpdateType.IsRenderable);
   };
 
@@ -104,6 +103,54 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return true;
     }
     return false;
+  }
+
+  override updateLocalTransform() {
+    const p = this.props;
+    let { x, y, w, h } = p;
+    const mountTranslateX = p.mountX * w;
+    const mountTranslateY = p.mountY * h;
+
+    const tProps = this.textProps;
+    const { textAlign, verticalAlign } = tProps;
+
+    if (textAlign !== 'left') {
+      const maxW = tProps.maxWidth;
+      if (textAlign === 'right') {
+        x += maxW - w;
+      } else if (textAlign === 'center') {
+        x += (maxW - w) * 0.5;
+      }
+    }
+
+    if (verticalAlign !== 'top') {
+      const maxH = tProps.maxHeight;
+      if (verticalAlign === 'bottom') {
+        y += maxH - h;
+      } else if (verticalAlign === 'middle') {
+        y += (maxH - h) * 0.5;
+      }
+    }
+
+    if (p.rotation !== 0 || p.scaleX !== 1 || p.scaleY !== 1) {
+      const scaleRotate = Matrix3d.rotate(p.rotation).scale(p.scaleX, p.scaleY);
+      const pivotTranslateX = p.pivotX * w;
+      const pivotTranslateY = p.pivotY * h;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .multiply(scaleRotate)
+        .translate(-pivotTranslateX, -pivotTranslateY);
+    } else {
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX,
+        y - mountTranslateY,
+        this.localTransform,
+      );
+    }
   }
 
   /**
@@ -187,12 +234,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
+    this._cachedLayout = result.layout || null;
+    this.props.w = width;
+    this.props.h = height;
+
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
-      this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.props.w = width;
-      this.props.h = height;
       this.setUpdateType(UpdateType.Local);
     }
 
