@@ -185,6 +185,9 @@ export const isFontLoaded = (fontFamily: string): boolean => {
  * @param node
  */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    return;
+  }
   nodesWaitingForFont[fontFamily]![node.id] = node;
 };
 
