@@ -106,13 +106,13 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   let i = 0;
   const mutations = [
     () => {
-      canvasText.w = sdfText.w = background.w = 250;
+      canvasText.maxWidth = sdfText.maxWidth = background.w = 250;
     },
     () => {
-      canvasText.w = sdfText.w = background.w = 350;
+      canvasText.maxWidth = sdfText.maxWidth = background.w = 350;
     },
     () => {
-      canvasText.w = sdfText.w = background.w = 500;
+      canvasText.maxWidth = sdfText.maxWidth = background.w = 500;
     },
   ];
 

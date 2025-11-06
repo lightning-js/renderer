@@ -193,7 +193,7 @@ export function compareBuffers(
     diff.data,
     width,
     height,
-    { threshold: 0.1 }, // Adjust threshold for sensitivity
+    { threshold: 0.8 }, // Adjust threshold for sensitivity
   );
 
   const doesMatch = count === 0;

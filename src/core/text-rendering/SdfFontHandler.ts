@@ -377,6 +377,9 @@ export const loadFont = async (
  * @param {CoreTextNode} node - Node that was waiting for the font
  */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    return;
+  }
   nodesWaitingForFont[fontFamily]![node.id] = node;
 };
 
