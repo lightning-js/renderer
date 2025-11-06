@@ -22,6 +22,7 @@ import type {
   NodeTextLoadedPayload,
   INode,
   ITextNode,
+  RendererMain,
 } from '@lightningjs/renderer';
 
 export async function waitForLoadedDimensions(
@@ -35,5 +36,24 @@ export async function waitForLoadedDimensions(
         h,
       });
     });
+  });
+}
+
+export async function waitUntilIdle(renderer: RendererMain): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    if (renderer === undefined) {
+      reject(false);
+      return;
+    }
+    const done = () => {
+      renderer.off('idle', onRendererIdle);
+    };
+
+    const onRendererIdle = () => {
+      done();
+      resolve(true);
+    };
+
+    renderer.on('idle', onRendererIdle);
   });
 }
