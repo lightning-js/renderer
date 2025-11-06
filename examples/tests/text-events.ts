@@ -195,8 +195,9 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
     this.node = renderer.createNode({
       x: props.x,
       y: props.y,
-      colorTop: props.boxColor1,
-      colorBottom: props.boxColor2,
+      color: 0xff0000ff,
+      // colorTop: props.boxColor1,
+      // colorBottom: props.boxColor2,
       shader: renderer.createShader('RoundedRectangle', {
         radius: 10,
       }),
@@ -222,9 +223,9 @@ class BoxedText extends EventEmitter implements BoxedTextProps {
   };
 
   private layout(textDimensions: Dimensions) {
-    this.node.w = textDimensions.width + BUTTON_PADDING * 2;
+    this.node.w = textDimensions.w + BUTTON_PADDING * 2;
     this.node.h = textDimensions.h + BUTTON_PADDING * 2;
-    this.textNode.x = this.node.w / 2 - textDimensions.width / 2;
+    this.textNode.x = this.node.w / 2 - textDimensions.w / 2;
     this.textNode.y = this.node.h / 2 - textDimensions.h / 2;
     this.textNode.alpha = 1;
     this.emit('afterLayout');
