@@ -82,7 +82,7 @@ export class FadeOutEffect extends ShaderEffect {
   }
 
   static override onColorize = `
-  vec2 point = v_textureCoordinate.xy * u_dimensions.xy;
+  vec2 point = v_nodeCoordinate.xy * u_dimensions.xy;
   vec2 pos1;
   vec2 pos2;
   vec2 d;
@@ -99,16 +99,16 @@ export class FadeOutEffect extends ShaderEffect {
   }
 
   if(fade[1] > 0.0) {
-    pos1 = vec2(point.x - u_dimensions.x - fade[1], v_textureCoordinate.y);
-    pos2 = vec2(point.x - u_dimensions.x, v_textureCoordinate.y);
+    pos1 = vec2(point.x - u_dimensions.x - fade[1], v_nodeCoordinate.y);
+    pos2 = vec2(point.x - u_dimensions.x, v_nodeCoordinate.y);
     d = pos1 - pos2;
     c = dot(pos2, d) / dot(d, d);
     result = mix(vec4(0.0), result, smoothstep(0.0, 1.0, clamp(c, 0.0, 1.0)));
   }
 
   if(fade[2] > 0.0) {
-    pos1 = vec2(v_textureCoordinate.x, point.y - u_dimensions.y - fade[2]);
-    pos2 = vec2(v_textureCoordinate.x, point.y - u_dimensions.y);
+    pos1 = vec2(v_nodeCoordinate.x, point.y - u_dimensions.y - fade[2]);
+    pos2 = vec2(v_nodeCoordinate.x, point.y - u_dimensions.y);
     d = pos1 - pos2;
     c = dot(pos2, d) / dot(d, d);
     result = mix(vec4(0.0), result, smoothstep(0.0, 1.0, clamp(c, 0.0, 1.0)));

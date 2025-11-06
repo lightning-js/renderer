@@ -142,7 +142,7 @@ export class HolePunchEffect extends ShaderEffect {
   static override onShaderMask = `
   vec2 halfDimensions = u_dimensions * 0.5;
   vec2 size = vec2(width, height) * 0.5;
-  vec2 basePos = v_textureCoordinate.xy * u_dimensions.xy - vec2(x, y);
+  vec2 basePos = v_nodeCoordinate.xy * u_dimensions.xy - vec2(x, y);
   vec2 pos = basePos - size;
   float r = radius[0] * step(pos.x, 0.5) * step(pos.y, 0.5);
   r = r + radius[1] * step(0.5, pos.x) * step(pos.y, 0.5);

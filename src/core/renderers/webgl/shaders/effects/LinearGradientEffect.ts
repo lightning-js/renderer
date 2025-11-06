@@ -146,7 +146,7 @@ export class LinearGradientEffect extends ShaderEffect {
       vec2 f = $calcPoint(lineDist * 0.5, a);
       vec2 t = $calcPoint(lineDist * 0.5, a + PI);
       vec2 gradVec = t - f;
-      float dist = dot(v_textureCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
+      float dist = dot(v_nodeCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
 
       //return early if dist is lower or equal to first stop
       if(dist <= stops[0]) {

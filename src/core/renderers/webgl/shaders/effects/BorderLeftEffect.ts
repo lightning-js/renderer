@@ -91,7 +91,7 @@ export class BorderLeftEffect extends ShaderEffect {
 
   static override onEffectMask = `
   vec2 pos = vec2(width * 0.5, 0.0);
-  float mask = $rectDist(v_textureCoordinate.xy * u_dimensions - pos, vec2(width*0.5, u_dimensions.y));
+  float mask = $rectDist(v_nodeCoordinate.xy * u_dimensions - pos, vec2(width*0.5, u_dimensions.y));
   return mix(shaderColor, maskColor, $fillMask(mask));
   `;
 

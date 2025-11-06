@@ -118,15 +118,6 @@ export class DynamicShader extends WebGlCoreShader {
     const shader = DynamicShader.createShader(props, effectContructors);
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2fv' },
-        { name: 'u_dimensions', uniform: 'uniform2fv' },
-        { name: 'u_alpha', uniform: 'uniform1f' },
-        ...shader.uniforms,
-      ],
       shaderSources: {
         vertex: shader.vertex,
         fragment: shader.fragment,
@@ -504,6 +495,7 @@ export class DynamicShader extends WebGlCoreShader {
     # endif
 
     attribute vec2 a_textureCoordinate;
+    attribute vec2 a_nodeCoordinate;
     attribute vec2 a_position;
     attribute vec4 a_color;
     attribute float a_textureIndex;
@@ -514,6 +506,7 @@ export class DynamicShader extends WebGlCoreShader {
     varying vec4 v_color;
     varying vec2 v_textureCoordinate;
     varying float v_textureIndex;
+    varying vec2 v_nodeCoordinate;
 
     void main(){
       vec2 normalized = a_position * u_pixelRatio / u_resolution;
@@ -524,6 +517,7 @@ export class DynamicShader extends WebGlCoreShader {
       v_color = a_color;
       v_textureCoordinate = a_textureCoordinate;
       v_textureIndex = a_textureIndex;
+      v_nodeCoordinate = a_nodeCoordinate;
 
       // flip y
       gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
@@ -555,13 +549,14 @@ export class DynamicShader extends WebGlCoreShader {
 
     varying vec4 v_color;
     varying vec2 v_textureCoordinate;
+    varying vec2 v_nodeCoordinate;
 
     ${methods}
 
     ${effectMethods}
 
     void main() {
-      vec2 p = v_textureCoordinate.xy * u_dimensions - u_dimensions * 0.5;
+      vec2 p = v_nodeCoordinate.xy * u_dimensions - u_dimensions * 0.5;
       vec2 d = abs(p) - (u_dimensions) * 0.5;
       float lng_DefaultMask = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 

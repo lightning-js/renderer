@@ -65,7 +65,6 @@ export interface AlphaShaderProp {
 }
 
 export abstract class WebGlCoreShader extends CoreShader {
-  protected boundBufferCollection: BufferCollection | null = null;
   protected buffersBound = false;
   protected program: WebGLProgram;
   /**
@@ -77,11 +76,8 @@ export abstract class WebGlCoreShader extends CoreShader {
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlCoreRenderer;
   protected glw: WebGlContextWrapper;
-  protected attributeBuffers: Record<string, WebGLBuffer>;
-  protected attributeLocations: Record<string, number>;
-  protected attributeNames: string[];
+  protected attributeLocations: string[];
   protected uniformLocations: Record<string, WebGLUniformLocation>;
-  protected uniformTypes: Record<string, keyof UniformMethodMap>;
   readonly supportsIndexedTextures: boolean;
 
   constructor(options: ShaderOptions) {
@@ -160,61 +156,8 @@ export abstract class WebGlCoreShader extends CoreShader {
     }
     this.program = program;
 
-    this.attributeLocations = {} as Record<string, number>;
-    this.attributeBuffers = {} as Record<string, number>;
-    this.attributeNames = [];
-
-    [...options.attributes].forEach((attributeName) => {
-      const location = glw.getAttribLocation(this.program, attributeName);
-      if (location < 0) {
-        throw new Error(
-          `${this.constructor.name}: Vertex shader must have an attribute "${attributeName}"!`,
-        );
-      }
-      const buffer = glw.createBuffer();
-      if (!buffer) {
-        throw new Error(
-          `${this.constructor.name}: Could not create buffer for attribute "${attributeName}"`,
-        );
-      }
-
-      this.attributeLocations[attributeName] = location;
-      this.attributeBuffers[attributeName] = buffer;
-      this.attributeNames.push(attributeName);
-    });
-
-    this.uniformLocations = {} as Record<string, WebGLRenderingContext>;
-    this.uniformTypes = {} as Record<string, keyof UniformMethodMap>;
-    options.uniforms.forEach((uniform: UniformInfo) => {
-      const location = glw.getUniformLocation(this.program, uniform.name);
-      this.uniformTypes[uniform.name] = uniform.uniform;
-      if (!location) {
-        console.warn(
-          `Shader "${this.constructor.name}" could not get uniform location for "${uniform.name}"`,
-        );
-        return;
-      }
-      this.uniformLocations[uniform.name] = location;
-    });
-  }
-
-  private bindBufferAttribute(
-    location: number,
-    buffer: WebGLBuffer,
-    attribute: AttributeInfo,
-  ) {
-    const { glw } = this;
-    glw.enableVertexAttribArray(location);
-
-    glw.vertexAttribPointer(
-      buffer,
-      location,
-      attribute.size,
-      attribute.type,
-      attribute.normalized,
-      attribute.stride,
-      attribute.offset,
-    );
+    this.attributeLocations = glw.getAttributeLocations(this.program);
+    this.uniformLocations = glw.getUniformLocations(this.program);
   }
 
   disableAttribute(location: number) {
@@ -222,10 +165,11 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   disableAttributes() {
-    for (const loc in this.attributeLocations) {
-      this.disableAttribute(this.attributeLocations[loc] as number);
+    const glw = this.glw;
+    const attribLen = this.attributeLocations.length;
+    for (let i = 0; i < attribLen; i++) {
+      glw.disableVertexAttribArray(i);
     }
-    this.boundBufferCollection = null;
   }
 
   /**
@@ -325,21 +269,29 @@ export abstract class WebGlCoreShader extends CoreShader {
   }
 
   bindBufferCollection(buffer: BufferCollection) {
-    if (this.boundBufferCollection === buffer) {
-      return;
-    }
-    for (const attributeName in this.attributeLocations) {
-      const resolvedBuffer = buffer.getBuffer(attributeName);
-      const resolvedInfo = buffer.getAttributeInfo(attributeName);
-      assertTruthy(resolvedBuffer, `Buffer for "${attributeName}" not found`);
-      assertTruthy(resolvedInfo);
-      this.bindBufferAttribute(
-        this.attributeLocations[attributeName]!,
+    const { glw } = this;
+    const attribs = this.attributeLocations;
+    const attribLen = attribs.length;
+
+    for (let i = 0; i < attribLen; i++) {
+      const name = attribs[i]!;
+
+      const resolvedBuffer = buffer.getBuffer(name);
+      const resolvedInfo = buffer.getAttributeInfo(name);
+      if (resolvedBuffer === undefined || resolvedInfo === undefined) {
+        continue;
+      }
+      glw.enableVertexAttribArray(i);
+      glw.vertexAttribPointer(
         resolvedBuffer,
-        resolvedInfo,
+        i,
+        resolvedInfo.size,
+        resolvedInfo.type,
+        resolvedInfo.normalized,
+        resolvedInfo.stride,
+        resolvedInfo.offset,
       );
     }
-    this.boundBufferCollection = buffer;
   }
 
   protected override bindProps(props: Record<string, unknown>) {

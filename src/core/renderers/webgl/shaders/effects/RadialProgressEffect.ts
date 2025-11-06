@@ -162,7 +162,7 @@ export class RadialProgressEffect extends ShaderEffect {
 
     float endAngle = range * progress - 0.0005;
 
-    vec2 uv = v_textureCoordinate.xy * u_dimensions.xy - u_dimensions * 0.5;
+    vec2 uv = v_nodeCoordinate.xy * u_dimensions.xy - u_dimensions * 0.5;
 
     uv = $rotateUV(uv, -(offset));
     float linewidth = width * u_pixelRatio;

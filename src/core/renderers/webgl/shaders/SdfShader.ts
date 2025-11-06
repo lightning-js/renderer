@@ -64,18 +64,6 @@ export class SdfShader extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_transform', uniform: 'uniformMatrix3fv' },
-        { name: 'u_scrollY', uniform: 'uniform1f' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_color', uniform: 'uniform4fv' },
-        { name: 'u_size', uniform: 'uniform1f' },
-        { name: 'u_distanceRange', uniform: 'uniform1f' },
-        { name: 'u_debug', uniform: 'uniform1i' },
-      ],
     });
   }
 

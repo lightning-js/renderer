@@ -97,11 +97,11 @@ export class RadiusEffect extends ShaderEffect {
 
   static override onShaderMask = `
   vec2 halfDimensions = u_dimensions * 0.5;
-  float r = radius[0] * step(v_textureCoordinate.x, 0.5) * step(v_textureCoordinate.y, 0.5);
-  r = r + radius[1] * step(0.5, v_textureCoordinate.x) * step(v_textureCoordinate.y, 0.5);
-  r = r + radius[2] * step(0.5, v_textureCoordinate.x) * step(0.5, v_textureCoordinate.y);
-  r = r + radius[3] * step(v_textureCoordinate.x, 0.5) * step(0.5, v_textureCoordinate.y);
-  return $boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions, r);
+  float r = radius[0] * step(v_nodeCoordinate.x, 0.5) * step(v_nodeCoordinate.y, 0.5);
+  r = r + radius[1] * step(0.5, v_nodeCoordinate.x) * step(v_nodeCoordinate.y, 0.5);
+  r = r + radius[2] * step(0.5, v_nodeCoordinate.x) * step(0.5, v_nodeCoordinate.y);
+  r = r + radius[3] * step(v_nodeCoordinate.x, 0.5) * step(0.5, v_nodeCoordinate.y);
+  return $boxDist(v_nodeCoordinate.xy * u_dimensions - halfDimensions, halfDimensions, r);
   `;
 
   static override onEffectMask = `

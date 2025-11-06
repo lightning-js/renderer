@@ -45,14 +45,6 @@ export class RoundedRectangle extends WebGlCoreShader {
   constructor(renderer: WebGlCoreRenderer) {
     super({
       renderer,
-      attributes: ['a_position', 'a_textureCoordinate', 'a_color'],
-      uniforms: [
-        { name: 'u_resolution', uniform: 'uniform2fv' },
-        { name: 'u_pixelRatio', uniform: 'uniform1f' },
-        { name: 'u_texture', uniform: 'uniform2f' },
-        { name: 'u_dimensions', uniform: 'uniform2fv' },
-        { name: 'u_radius', uniform: 'uniform1f' },
-      ],
     });
   }
 
@@ -109,13 +101,14 @@ export class RoundedRectangle extends WebGlCoreShader {
       attribute vec2 a_textureCoordinate;
       attribute vec4 a_color;
       attribute float a_textureIndex;
-      attribute float a_depth;
+      attribute vec2 a_nodeCoordinate;
 
       uniform vec2 u_resolution;
       uniform float u_pixelRatio;
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
+      varying vec2 v_nodeCoordinate;
 
       void main() {
         vec2 normalized = a_position * u_pixelRatio / u_resolution;
@@ -125,6 +118,7 @@ export class RoundedRectangle extends WebGlCoreShader {
         // pass to fragment
         v_color = a_color;
         v_textureCoordinate = a_textureCoordinate;
+        v_nodeCoordinate = a_nodeCoordinate;
 
         // flip y
         gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
@@ -144,6 +138,7 @@ export class RoundedRectangle extends WebGlCoreShader {
 
       varying vec4 v_color;
       varying vec2 v_textureCoordinate;
+      varying vec2 v_nodeCoordinate;
 
       float boxDist(vec2 p, vec2 size, float radius){
         size -= vec2(radius);
@@ -159,7 +154,7 @@ export class RoundedRectangle extends WebGlCoreShader {
         vec4 color = texture2D(u_texture, v_textureCoordinate) * v_color;
         vec2 halfDimensions = u_dimensions * 0.5;
 
-        float d = boxDist(v_textureCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, u_radius);
+        float d = boxDist(v_nodeCoordinate.xy * u_dimensions - halfDimensions, halfDimensions + 0.5, u_radius);
         gl_FragColor = mix(vec4(0.0), color, fillMask(d));
       }
     `,
