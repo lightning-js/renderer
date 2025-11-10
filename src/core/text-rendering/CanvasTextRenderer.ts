@@ -193,8 +193,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   }
   return {
     imageData,
-    width: canvasW,
-    height: canvasH,
+    width: effectiveWidth,
+    height: effectiveHeight,
     remainingLines,
     hasRemainingText,
   };
