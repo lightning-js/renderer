@@ -446,7 +446,6 @@ export interface CoreNodeProps {
    * settings being defaults)
    */
   src: string | null;
-  zIndexLocked: number;
   /**
    * Scale to render the Node at
    *
@@ -702,11 +701,13 @@ export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
  */
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
-  protected _id: number = getNewId();
+  readonly id: number = getNewId();
   readonly props: CoreNodeProps;
 
   private hasShaderUpdater = false;
   private hasColorProps = false;
+  private zIndexMin = 0;
+  private zIndexMax = 0;
 
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -783,7 +784,6 @@ export class CoreNode extends EventEmitter {
     p.pivot = props.pivot;
 
     p.zIndex = props.zIndex;
-    p.zIndexLocked = props.zIndexLocked;
     p.textureOptions = props.textureOptions;
 
     p.data = props.data;
@@ -793,15 +793,18 @@ export class CoreNode extends EventEmitter {
     p.srcWidth = props.srcWidth;
     p.srcHeight = props.srcHeight;
 
-    p.parent = null;
+    p.parent = props.parent;
     p.texture = null;
     p.shader = null;
     p.src = null;
     p.rtt = false;
     p.boundsMargin = null;
 
+    if (props.parent !== null) {
+      props.parent.addChild(this);
+    }
+
     // Assign props to instances
-    this.parent = props.parent;
     this.texture = props.texture;
     this.shader = props.shader;
     this.src = props.src;
@@ -1195,12 +1198,6 @@ export class CoreNode extends EventEmitter {
 
     if (updateParent === true) {
       parent!.setUpdateType(UpdateType.Children);
-    }
-    // No need to update zIndex if there is no parent
-    if (updateType & UpdateType.CalculatedZIndex && parent !== null) {
-      this.calculateZIndex();
-      // Tell parent to re-sort children
-      parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
@@ -1634,18 +1631,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  calculateZIndex(): void {
-    const props = this.props;
-    const z = props.zIndex || 0;
-    const p = props.parent?.zIndex || 0;
-
-    let zIndex = z;
-    if (props.parent?.zIndexLocked) {
-      zIndex = z < p ? z : p;
-    }
-    this.calcZIndex = zIndex;
-  }
-
   /**
    * Destroy the node and cleanup all resources
    */
@@ -1667,11 +1652,7 @@ export class CoreNode extends EventEmitter {
 
     const parent = this.parent;
     if (parent !== null) {
-      const index = parent.children.indexOf(this);
-      parent.children.splice(index, 1);
-      parent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
+      parent.removeChild(this);
     }
 
     this.props.parent = null;
@@ -1729,11 +1710,55 @@ export class CoreNode extends EventEmitter {
     });
   }
 
-  //#region Properties
-  get id(): number {
-    return this._id;
+  removeChild(node: CoreNode) {
+    const children = this.children;
+    let index = -1;
+    for (let i = 0; i < children.length; i++) {
+      if (children[i]!.id === node.id) {
+        index = i;
+      }
+    }
+    if (index === -1) {
+      return;
+    }
+    children.splice(index, 1);
   }
 
+  addChild(node: CoreNode) {
+    const children = this.children;
+    const min = this.zIndexMin;
+    const max = this.zIndexMax;
+    const zIndex = node.zIndex;
+    if (max === zIndex && min === zIndex) {
+      children.push(node);
+      return;
+    }
+    if (children.length === 0) {
+      this.zIndexMin = zIndex;
+      this.zIndexMax = zIndex;
+      children.push(node);
+      return;
+    }
+    if (zIndex < min) {
+      this.zIndexMin = zIndex;
+      children.unshift(node);
+      return;
+    }
+    if (zIndex >= max) {
+      this.zIndexMax = zIndex;
+      children.push(node);
+      return;
+    }
+    let index = 0;
+    for (; index < children.length; index++) {
+      if (zIndex < children[index]!.zIndex) {
+        break;
+      }
+    }
+    children.splice(index, 0, node);
+  }
+
+  //#region Properties
   get data(): CustomDataMap | undefined {
     return this.props.data;
   }
@@ -2126,20 +2151,6 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(UpdateType.PremultipliedColors);
   }
 
-  // we're only interested in parent zIndex to test
-  // if we should use node zIndex is higher then parent zIndex
-  get zIndexLocked(): number {
-    return this.props.zIndexLocked || 0;
-  }
-
-  set zIndexLocked(value: number) {
-    this.props.zIndexLocked = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
-    }
-  }
-
   get zIndex(): number {
     return this.props.zIndex;
   }
@@ -2167,29 +2178,17 @@ export class CoreNode extends EventEmitter {
     }
     this.props.parent = newParent;
     if (oldParent) {
-      const index = oldParent.children.indexOf(this);
-      oldParent.children.splice(index, 1);
-      oldParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
+      oldParent.removeChild(this);
     }
-    if (newParent) {
-      newParent.children.push(this);
-      // Since this node has a new parent, to be safe, have it do a full update.
-      this.setUpdateType(UpdateType.All);
-      // Tell parent that it's children need to be updated and sorted.
-      newParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
-
+    if (newParent !== null) {
+      newParent.addChild(this);
       // If the new parent has an RTT enabled, apply RTT inheritance
       if (newParent.rtt || newParent.parentHasRenderTexture) {
         this.applyRTTInheritance(newParent);
       }
     }
-
-    // fetch render bounds from parent
-    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    // Since this node has a new parent, to be safe, have it do a full update.
+    this.setUpdateType(UpdateType.All);
   }
 
   get rtt(): boolean {
