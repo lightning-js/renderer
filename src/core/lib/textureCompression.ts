@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import type { ImageTextureProps } from '../textures/ImageTexture.js';
 import { type TextureData } from '../textures/Texture.js';
 
@@ -83,18 +82,21 @@ const loadKTXData = async (buffer: ArrayBuffer): Promise<TextureData> => {
     bytesOfKeyValueData: view.getUint32(60, littleEndian),
   };
 
-  let offset = 64;
-
   // Key Value Pairs of data start at byte offset 64
   // But the only known kvp is the API version, so skipping parsing.
-  offset += data.bytesOfKeyValueData;
+  let offset = 64 + data.bytesOfKeyValueData;
 
   for (let i = 0; i < data.numberOfMipmapLevels; i++) {
-    const imageSize = view.getUint32(offset);
+    const imageSize = view.getUint32(offset, littleEndian);
     offset += 4;
 
-    mipmaps.push(view.buffer.slice(offset, imageSize));
-    offset += imageSize;
+    const end = offset + imageSize;
+
+    mipmaps.push(view.buffer.slice(offset, end));
+    offset = end;
+    if (offset % 4 !== 0) {
+      offset += 4 - (offset % 4);
+    }
   }
 
   return {

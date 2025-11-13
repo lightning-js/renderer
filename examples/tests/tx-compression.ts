@@ -25,16 +25,16 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     color: 0xffffffff,
     alpha: 1.0,
-    text: 'etc1 compression in .pvr',
+    text: 'w: 400',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     parent: testRoot,
   });
 
   const url1 =
-    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=200&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=400&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
   const url2 =
-    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=199&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=333&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
 
   const ktx1 = renderer.createNode({
     x: 100,
@@ -46,8 +46,11 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  ktx1.on('loaded', (_, data) => {
-    console.log('pvr loaded', data.dimensions);
+  ktx1.on('loaded', (node, data) => {
+    console.log('ktx1 loaded');
+    const { width, height } = data.dimensions;
+    node.width = width;
+    node.height = height;
   });
 
   renderer.createTextNode({
@@ -55,7 +58,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 100,
     color: 0xffffffff,
     alpha: 1.0,
-    text: 's3tc compression in .ktx',
+    text: 'w: 333',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     parent: testRoot,
@@ -71,7 +74,10 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  ktx2.on('loaded', (_, data) => {
-    console.log('ktx loaded', data.dimensions);
+  ktx2.on('loaded', (node, data) => {
+    console.log('ktx2 loaded');
+    const { width, height } = data.dimensions;
+    node.width = width;
+    node.height = height;
   });
 }

@@ -216,24 +216,57 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       this.setTextureMemUse(height * width * formatBytes * memoryPadding);
     } else if (tdata && 'mipmaps' in tdata && tdata.mipmaps) {
-      const {
-        mipmaps,
-        width: w = 0,
-        height: h = 0,
-        type,
-        glInternalFormat,
-        blockInfo,
-      } = tdata;
-      console.log('derp', tdata);
-      const view =
-        type === 'ktx'
-          ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
-          : (mipmaps[0] as unknown as ArrayBufferView);
+      const { mipmaps, type, glInternalFormat, blockInfo } = tdata;
 
-      console.log('view', view);
+      let w = tdata.width;
+      let h = tdata.height;
+
       glw.bindTexture(this._nativeCtxTexture);
 
-      glw.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
+      const blockWidth = blockInfo.width;
+      const blockHeight = blockInfo.height;
+
+      for (let i = 0; i < mipmaps.length; i++) {
+        let view =
+          type === 'ktx'
+            ? new Uint8Array(mipmaps[i] ?? new ArrayBuffer(0))
+            : new Uint8Array(
+                (mipmaps[i]! as ArrayBufferView).buffer,
+                (mipmaps[i]! as ArrayBufferView).byteOffset,
+                (mipmaps[i]! as ArrayBufferView).byteLength,
+              );
+
+        const uploadW = Math.ceil(w / blockWidth) * blockWidth;
+        const uploadH = Math.ceil(h / blockHeight) * blockHeight;
+
+        const expectedBytes =
+          Math.ceil(w / blockWidth) *
+          Math.ceil(h / blockHeight) *
+          blockInfo.bytes;
+
+        if (view.byteLength < expectedBytes) {
+          const padded = new Uint8Array(expectedBytes);
+          padded.set(view);
+          view = padded;
+        }
+        console.log(
+          `Level ${i}: ${w}x${h}, (upload ${uploadW}x${uploadH}), data=${
+            view.byteLength
+          }, format=0x${glInternalFormat.toString(16)}`,
+        );
+        glw.compressedTexImage2D(
+          i,
+          glInternalFormat,
+          uploadW,
+          uploadH,
+          0,
+          view,
+        );
+
+        w = Math.max(1, w >> 1);
+        h = Math.max(1, h >> 1);
+      }
+
       glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
@@ -247,9 +280,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
       this.txCoordX2 = w / (Math.ceil(w / blockInfo.width) * blockInfo.width);
       this.txCoordY2 = h / (Math.ceil(h / blockInfo.height) * blockInfo.height);
 
-      width = w;
-      height = h;
-      this.setTextureMemUse(view.byteLength);
+      width = tdata.width;
+      height = tdata.height;
+      this.setTextureMemUse(mipmaps[0]?.byteLength ?? 0);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
       width = 1;
