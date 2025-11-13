@@ -20,7 +20,7 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
-  renderer.createTextNode({
+  const ktx1Label = renderer.createTextNode({
     x: 100,
     y: 100,
     color: 0xffffffff,
@@ -51,9 +51,11 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const { width, height } = data.dimensions;
     node.width = width;
     node.height = height;
+
+    ktx1Label.text = `w: ${width}, h: ${height}`;
   });
 
-  renderer.createTextNode({
+  const ktx2Label = renderer.createTextNode({
     x: 800,
     y: 100,
     color: 0xffffffff,
@@ -79,5 +81,6 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     const { width, height } = data.dimensions;
     node.width = width;
     node.height = height;
+    ktx2Label.text = `w: ${width}, h: ${height}`;
   });
 }
