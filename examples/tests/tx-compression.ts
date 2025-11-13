@@ -31,13 +31,23 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  renderer.createNode({
+  const url1 =
+    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=200&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+  const url2 =
+    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=199&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+
+  const ktx1 = renderer.createNode({
     x: 100,
     y: 170,
     width: 550,
     height: 550,
-    src: '../assets/test-etc1.pvr',
+    src: url1,
+    imageType: 'ktx',
     parent: testRoot,
+  });
+
+  ktx1.on('loaded', (_, data) => {
+    console.log('pvr loaded', data.dimensions);
   });
 
   renderer.createTextNode({
@@ -51,12 +61,17 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  renderer.createNode({
+  const ktx2 = renderer.createNode({
     x: 800,
     y: 170,
     width: 400,
     height: 400,
-    src: '../assets/test-s3tc.ktx',
+    src: url2,
+    imageType: 'ktx',
     parent: testRoot,
+  });
+
+  ktx2.on('loaded', (_, data) => {
+    console.log('ktx loaded', data.dimensions);
   });
 }

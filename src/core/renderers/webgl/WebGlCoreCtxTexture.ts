@@ -43,6 +43,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   private _w = 0;
   private _h = 0;
 
+  txCoordX1 = 0;
+  txCoordY1 = 0;
+  txCoordX2 = 1;
+  txCoordY2 = 1;
+
   constructor(
     protected glw: WebGlContextWrapper,
     memManager: TextureMemoryManager,
@@ -211,15 +216,24 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       this.setTextureMemUse(height * width * formatBytes * memoryPadding);
     } else if (tdata && 'mipmaps' in tdata && tdata.mipmaps) {
-      const { mipmaps, width = 0, height = 0, type, glInternalFormat } = tdata;
+      const {
+        mipmaps,
+        width: w = 0,
+        height: h = 0,
+        type,
+        glInternalFormat,
+        blockInfo,
+      } = tdata;
+      console.log('derp', tdata);
       const view =
         type === 'ktx'
           ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
           : (mipmaps[0] as unknown as ArrayBufferView);
 
+      console.log('view', view);
       glw.bindTexture(this._nativeCtxTexture);
 
-      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
+      glw.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
       glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
       glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
@@ -230,6 +244,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         return { width: 0, height: 0 };
       }
 
+      this.txCoordX2 = w / (Math.ceil(w / blockInfo.width) * blockInfo.width);
+      this.txCoordY2 = h / (Math.ceil(h / blockInfo.height) * blockInfo.height);
+
+      width = w;
+      height = h;
       this.setTextureMemUse(view.byteLength);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture

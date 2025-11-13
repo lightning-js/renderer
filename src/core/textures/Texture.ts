@@ -72,6 +72,15 @@ interface CompressedData {
    * The height of the compressed texture in pixels.
    **/
   height: number;
+
+  /**
+   * block info
+   */
+  blockInfo: {
+    width: number;
+    height: number;
+    bytes: number;
+  };
 }
 
 /**
@@ -298,7 +307,6 @@ export abstract class Texture extends EventEmitter {
       // We've exceeded the max retry count, do not attempt to load again
       return;
     }
-
     this.txManager.loadTexture(this);
   }
 
@@ -386,7 +394,6 @@ export abstract class Texture extends EventEmitter {
     if (this.state === state) {
       return;
     }
-
     let payload: Error | Dimensions | null = null;
     if (state === 'loaded') {
       // Clear any previous error when successfully loading

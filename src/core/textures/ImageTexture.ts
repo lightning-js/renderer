@@ -76,7 +76,7 @@ export interface ImageTextureProps {
    *
    * @default null
    */
-  type?: 'regular' | 'compressed' | 'svg' | null;
+  type?: 'regular' | 'compressed' | 'pvr' | 'ktx' | 'svg' | null;
   /**
    * The width of the rectangle from which the ImageBitmap will be extracted. This value
    * can be negative. Only works when createImageBitmap is supported on the browser.
@@ -355,11 +355,11 @@ export class ImageTexture extends Texture {
     }
 
     if (type === 'compressed') {
-      return loadCompressedTexture(absoluteSrc);
+      return loadCompressedTexture(absoluteSrc, this.props);
     }
 
-    if (isCompressedTextureContainer(src) === true) {
-      return loadCompressedTexture(absoluteSrc);
+    if (isCompressedTextureContainer(this.props) === true) {
+      return loadCompressedTexture(absoluteSrc, this.props);
     }
 
     // default
