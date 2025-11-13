@@ -49,15 +49,17 @@ const stylePropertyMap: {
     return { prop: 'top', value: `${y}px` };
   },
   width: (w) => {
+    // Always set width for testing tools (even if 0, set to 1px for Playwright visibility)
     if (w === 0) {
-      return null;
+      return { prop: 'width', value: '1px' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   height: (h) => {
+    // Always set height for testing tools (even if 0, set to 1px for Playwright visibility)
     if (h === 0) {
-      return null;
+      return { prop: 'height', value: '1px' };
     }
 
     return { prop: 'height', value: `${h}px` };
@@ -264,7 +266,11 @@ export class Inspector {
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
     return new Proxy(node, {
-      set: (target, property: keyof CoreNodeProps, value) => {
+      set: (
+        target,
+        property: keyof CoreNodeProps | keyof CoreTextNodeProps,
+        value,
+      ) => {
         this.updateNodeProperty(div, property, value);
         return Reflect.set(target, property, value);
       },
@@ -332,9 +338,17 @@ export class Inspector {
     if (property === 'text') {
       div.innerHTML = String(value);
 
-      // hide text because we can't render SDF fonts
-      // it would look weird and obstruct the WebGL rendering
-      div.style.visibility = 'hidden';
+      // Use opacity: 0 instead of visibility: hidden to make elements detectable by Playwright
+      // while still not obstructing WebGL rendering (SDF fonts can't be rendered in DOM)
+      div.style.opacity = '0';
+      div.style.pointerEvents = 'none';
+
+      // Update data-content with text content (data-testid remains stable as identifier)
+      if (value) {
+        div.setAttribute('data-content', String(value));
+      } else {
+        div.removeAttribute('data-content');
+      }
       return;
     }
 
@@ -390,6 +404,11 @@ export class Inspector {
 
     // custom data properties
     if (property === 'data') {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return;
+      }
+
+      // Set individual data-${key} attributes for easy querying
       for (const key in value) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const keyValue: unknown = value[key];

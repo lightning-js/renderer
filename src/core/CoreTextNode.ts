@@ -191,6 +191,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set text(value: string) {
     this.textRenderer.set.text(this.trState, value);
+    (this.props as CoreTextNodeProps).text = value;
   }
 
   get textRendererOverride(): CoreTextNodeProps['textRendererOverride'] {
