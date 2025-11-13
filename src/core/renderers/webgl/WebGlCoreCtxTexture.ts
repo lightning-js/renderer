@@ -231,9 +231,9 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           type === 'ktx'
             ? new Uint8Array(mipmaps[i] ?? new ArrayBuffer(0))
             : new Uint8Array(
-                (mipmaps[i]! as ArrayBufferView).buffer,
-                (mipmaps[i]! as ArrayBufferView).byteOffset,
-                (mipmaps[i]! as ArrayBufferView).byteLength,
+                (mipmaps[i] as unknown as ArrayBufferView).buffer,
+                (mipmaps[i] as unknown as ArrayBufferView).byteOffset,
+                (mipmaps[i] as unknown as ArrayBufferView).byteLength,
               );
 
         const uploadW = Math.ceil(w / blockWidth) * blockWidth;
@@ -249,11 +249,6 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
           padded.set(view);
           view = padded;
         }
-        console.log(
-          `Level ${i}: ${w}x${h}, (upload ${uploadW}x${uploadH}), data=${
-            view.byteLength
-          }, format=0x${glInternalFormat.toString(16)}`,
-        );
         glw.compressedTexImage2D(
           i,
           glInternalFormat,
@@ -277,11 +272,13 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
         return { width: 0, height: 0 };
       }
 
-      this.txCoordX2 = w / (Math.ceil(w / blockInfo.width) * blockInfo.width);
-      this.txCoordY2 = h / (Math.ceil(h / blockInfo.height) * blockInfo.height);
-
       width = tdata.width;
       height = tdata.height;
+      this.txCoordX2 =
+        width / (Math.ceil(width / blockInfo.width) * blockInfo.width);
+      this.txCoordY2 =
+        height / (Math.ceil(height / blockInfo.height) * blockInfo.height);
+
       this.setTextureMemUse(mipmaps[0]?.byteLength ?? 0);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
