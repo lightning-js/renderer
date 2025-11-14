@@ -211,6 +211,7 @@ const knownProperties = new Set<string>([
   'src',
   'parent',
   'data',
+  'text',
 ]);
 
 export class Inspector {
