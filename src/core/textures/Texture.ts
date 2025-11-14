@@ -45,7 +45,7 @@ export type TextureLoadedEventHandler = (
 /**
  * Represents compressed texture data.
  */
-interface CompressedData {
+export interface CompressedData {
   /**
    * GLenum spcifying compression format
    */
@@ -54,12 +54,12 @@ interface CompressedData {
   /**
    * All mipmap levels
    */
-  mipmaps?: ArrayBuffer[];
+  mipmaps: ArrayBuffer[];
 
   /**
-   * Supported container types ('pvr' or 'ktx').
+   * Supported container types ('pvr', 'ktx', 'astc').
    */
-  type: 'pvr' | 'ktx';
+  type: 'pvr' | 'ktx' | 'astc';
 
   /**
    * The width of the compressed texture in pixels. Defaults to 0.

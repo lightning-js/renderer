@@ -33,16 +33,18 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   const url1 =
     'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=400&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
-  const url2 =
-    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=333&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+
+  const randomWidth = Math.floor(Math.random() * 300) + 200;
+  const url2 = `https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=${randomWidth}&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast`;
 
   const ktx1 = renderer.createNode({
     x: 100,
     y: 170,
     width: 550,
     height: 550,
+    // src: '../assets/test-etc1.pvr',
     src: url1,
-    imageType: 'ktx',
+    imageType: 'compressed',
     parent: testRoot,
   });
 

@@ -21,6 +21,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { uploadCompressedTexture } from '../../lib/textureCompression.js';
 import type { Texture } from '../../textures/Texture.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
@@ -216,56 +217,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       this.setTextureMemUse(height * width * formatBytes * memoryPadding);
     } else if (tdata && 'mipmaps' in tdata && tdata.mipmaps) {
-      const { mipmaps, type, glInternalFormat, blockInfo } = tdata;
-
-      let w = tdata.width;
-      let h = tdata.height;
-
-      glw.bindTexture(this._nativeCtxTexture);
-
-      const blockWidth = blockInfo.width;
-      const blockHeight = blockInfo.height;
-
-      for (let i = 0; i < mipmaps.length; i++) {
-        let view =
-          type === 'ktx'
-            ? new Uint8Array(mipmaps[i] ?? new ArrayBuffer(0))
-            : new Uint8Array(
-                (mipmaps[i] as unknown as ArrayBufferView).buffer,
-                (mipmaps[i] as unknown as ArrayBufferView).byteOffset,
-                (mipmaps[i] as unknown as ArrayBufferView).byteLength,
-              );
-
-        const uploadW = Math.ceil(w / blockWidth) * blockWidth;
-        const uploadH = Math.ceil(h / blockHeight) * blockHeight;
-
-        const expectedBytes =
-          Math.ceil(w / blockWidth) *
-          Math.ceil(h / blockHeight) *
-          blockInfo.bytes;
-
-        if (view.byteLength < expectedBytes) {
-          const padded = new Uint8Array(expectedBytes);
-          padded.set(view);
-          view = padded;
-        }
-        glw.compressedTexImage2D(
-          i,
-          glInternalFormat,
-          uploadW,
-          uploadH,
-          0,
-          view,
-        );
-
-        w = Math.max(1, w >> 1);
-        h = Math.max(1, h >> 1);
-      }
-
-      glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-      glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+      const { mipmaps, type, blockInfo } = tdata;
+      uploadCompressedTexture[type]!(glw, this._nativeCtxTexture, tdata);
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {

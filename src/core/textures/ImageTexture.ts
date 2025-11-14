@@ -355,11 +355,11 @@ export class ImageTexture extends Texture {
     }
 
     if (type === 'compressed') {
-      return loadCompressedTexture(absoluteSrc, this.props);
+      return loadCompressedTexture(absoluteSrc);
     }
 
     if (isCompressedTextureContainer(this.props) === true) {
-      return loadCompressedTexture(absoluteSrc, this.props);
+      return loadCompressedTexture(absoluteSrc);
     }
 
     // default
