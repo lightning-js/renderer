@@ -28,7 +28,6 @@ export interface AnimationSettings {
   easing: string | TimingFunction;
   loop: boolean;
   repeat: number;
-  repeatDelay: number;
   stopMethod: 'reverse' | 'reset' | false;
 }
 
@@ -89,7 +88,6 @@ export class CoreAnimation extends EventEmitter {
       easing,
       loop: settings.loop ?? false,
       repeat: settings.repeat ?? 0,
-      repeatDelay: settings.repeatDelay ?? 0,
       stopMethod: settings.stopMethod ?? false,
     };
     this.timingFunction =
