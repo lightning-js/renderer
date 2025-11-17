@@ -92,24 +92,19 @@ export const mapTextLayout = (
 
   //update line x offsets
   if (textAlign !== 'left') {
-    const maxW = wrappedText === true ? maxWidth : effectiveMaxWidth;
     for (let i = 0; i < effectiveLineAmount; i++) {
       const line = lines[i]!;
       const w = line[1];
-      line[2] = textAlign === 'right' ? maxW - w : (maxW - w) / 2;
+      line[2] =
+        textAlign === 'right'
+          ? effectiveMaxWidth - w
+          : (effectiveMaxWidth - w) / 2;
     }
   }
 
   const effectiveMaxHeight = effectiveLineAmount * lineHeightPx;
 
   let firstBaseLine = halfDelta;
-  if (maxHeight > 0 && verticalAlign !== 'top') {
-    if (verticalAlign === 'middle') {
-      firstBaseLine += (maxHeight - effectiveMaxHeight) / 2;
-    } else {
-      firstBaseLine += maxHeight - effectiveMaxHeight;
-    }
-  }
 
   const startY = firstBaseLine;
   for (let i = 0; i < effectiveLineAmount; i++) {
@@ -350,8 +345,8 @@ export const wrapLine = (
         hasRemainingText = rt;
         if (linebreak === false) {
           const [text, width] = lines[0]!;
-          currentLine += ' ' + text;
-          currentLineWidth = width;
+          currentLine += text;
+          currentLineWidth += width;
           wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
         }
 
@@ -360,6 +355,11 @@ export const wrapLine = (
           if (j < lines.length - 1) {
             wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
           }
+        }
+
+        if (i < words.length - 1 && currentLine.endsWith(' ') === false) {
+          currentLine += ' ';
+          currentLineWidth += effectiveSpaceWidth;
         }
       }
     }

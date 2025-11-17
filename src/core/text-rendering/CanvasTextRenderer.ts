@@ -146,8 +146,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   );
 
   const lineAmount = lines.length;
-  const canvasW = Math.ceil(maxWidth || effectiveWidth);
-  const canvasH = Math.ceil(maxHeight || effectiveHeight);
+  const canvasW = Math.ceil(effectiveWidth);
+  const canvasH = Math.ceil(effectiveHeight);
 
   canvas.width = canvasW;
   canvas.height = canvasH;
@@ -193,8 +193,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   }
   return {
     imageData,
-    width: canvasW,
-    height: canvasH,
+    width: effectiveWidth,
+    height: effectiveHeight,
     remainingLines,
     hasRemainingText,
   };
