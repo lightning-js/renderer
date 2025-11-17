@@ -102,14 +102,16 @@ const stylePropertyMap: {
   },
   w: (w) => {
     if (w === 0) {
-      return null;
+      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
+      return { prop: 'width', value: '1px' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   h: (h) => {
     if (h === 0) {
-      return null;
+      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
+      return { prop: 'height', value: '1px' };
     }
 
     return { prop: 'height', value: `${h}px` };
@@ -909,9 +911,10 @@ export class Inspector {
     if (property === 'text') {
       div.innerHTML = String(value);
 
-      // hide text because we can't render SDF fonts
-      // it would look weird and obstruct the WebGL rendering
-      div.style.visibility = 'hidden';
+      // Keep DOM text invisible without breaking Playwright visibility checks by using color:transparent instead of opacity:0
+      div.style.color = 'transparent';
+      div.style.pointerEvents = 'none';
+      div.style.userSelect = 'none';
       return;
     }
 
