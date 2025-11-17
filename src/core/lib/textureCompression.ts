@@ -88,11 +88,18 @@ export const loadCompressedTexture = async (
     }
 
     const arrayBuffer = await response.arrayBuffer();
+
+    // Ensure we have enough data to check magic numbers
+    if (arrayBuffer.byteLength < 16) {
+      throw new Error(
+        `File too small to be a valid compressed texture (${arrayBuffer.byteLength} bytes). Expected at least 16 bytes for header inspection.`,
+      );
+    }
+
     const view = new DataView(arrayBuffer);
     const magic = view.getUint32(0, true);
-    console.log('magic', magic);
+
     if (magic === PVR_MAGIC) {
-      console.log('pvr');
       return loadPVR(view);
     }
 
@@ -100,12 +107,20 @@ export const loadCompressedTexture = async (
       return loadASTC(view);
     }
 
+    let isKTX = true;
+
     for (let i = 0; i < KTX_IDENTIFIER.length; i++) {
       if (view.getUint8(i) !== KTX_IDENTIFIER[i]) {
-        throw new Error('Unrecognized compressed texture format');
+        isKTX = false;
+        break;
       }
     }
-    return loadKTX(view);
+
+    if (isKTX === true) {
+      return loadKTX(view);
+    } else {
+      throw new Error('Unrecognized compressed texture format');
+    }
   } catch (error) {
     throw new Error(`Failed to load compressed texture from ${url}: ${error}`);
   }

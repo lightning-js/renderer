@@ -269,18 +269,12 @@ export class WebGlCoreRenderer extends CoreRenderer {
       assertTruthy(curRenderOp);
     }
 
-    let ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
-    if (ctxTexture === undefined) {
-      ctxTexture = this.stage.defaultTexture?.ctxTexture as WebGlCoreCtxTexture;
-      console.warn(
-        'WebGL Renderer: Texture does not have a ctxTexture, using default texture instead',
-      );
-    }
+    let ctxTexture = undefined;
 
-    let texCoordX1 = ctxTexture.txCoordX1;
-    let texCoordY1 = ctxTexture.txCoordY1;
-    let texCoordX2 = ctxTexture.txCoordX2;
-    let texCoordY2 = ctxTexture.txCoordY2;
+    let texCoordX1 = 0;
+    let texCoordY1 = 0;
+    let texCoordX2 = 1;
+    let texCoordY2 = 1;
 
     if (texture.type === TextureType.subTexture) {
       const {
@@ -297,6 +291,13 @@ export class WebGlCoreRenderer extends CoreRenderer {
       texCoordY1 = ty / parentH;
       texCoordY2 = texCoordY1 + th / parentH;
       texture = (texture as SubTexture).parentTexture;
+      ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
+    } else {
+      ctxTexture = texture.ctxTexture as WebGlCoreCtxTexture;
+      texCoordX1 = ctxTexture.txCoordX1;
+      texCoordY1 = ctxTexture.txCoordY1;
+      texCoordX2 = ctxTexture.txCoordX2;
+      texCoordY2 = ctxTexture.txCoordY2;
     }
 
     if (

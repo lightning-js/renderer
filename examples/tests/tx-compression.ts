@@ -20,7 +20,7 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
-  const ktx1Label = renderer.createTextNode({
+  const cn1Label = renderer.createTextNode({
     x: 100,
     y: 100,
     color: 0xffffffff,
@@ -31,33 +31,37 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  const url1 =
-    'https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=400&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast';
+  const url1 = `http://localhost:8080/?url=https%3A%2F%2Fimg001-eu-mo-prd.delivery.skycdp.com%2Fselect%2Fimage%3FentityId%3D8557447259811357112%26companyId%3D5598815685921580105%26width%3D1920%26ratio%3D16x9%26rule%3DSky_Tile%26partnerIdentifier%3Dsky-uk%26location%3DGB%26outputFormat%3Dpng&actions=(a:resize,t:inside,w:${
+    123 * 4
+  })&output=(f:ktx,c:etc,t:ETC1,q:etcfast)`;
 
   const randomWidth = Math.floor(Math.random() * 300) + 200;
-  const url2 = `https://img001-eu-mo-prd.delivery.skycdp.com/select/image?entityId=8557447259811357112&companyId=5598815685921580105&width=${randomWidth}&ratio=16x9&rule=Sky_Tile&partnerIdentifier=sky-uk&location=GB&route=lightning&outputFormat=ktx&compression=etc&compressionType=ETC1&compressionQuality=etcfast`;
+  const url2 = `http://localhost:8080/?url=https%3A%2F%2Fimg001-eu-mo-prd.delivery.skycdp.com%2Fselect%2Fimage%3FentityId%3D8557447259811357112%26companyId%3D5598815685921580105%26width%3D1920%26ratio%3D16x9%26rule%3DSky_Tile%26partnerIdentifier%3Dsky-uk%26location%3DGB%26outputFormat%3Dpng&actions=(a:resize,t:inside,w:${randomWidth})&output=(f:ktx,c:etc,t:ETC1,q:etcfast)`;
 
-  const ktx1 = renderer.createNode({
+  const compressedNode1 = renderer.createNode({
     x: 100,
     y: 170,
     width: 550,
     height: 550,
-    // src: '../assets/test-etc1.pvr',
+    // src: '../assets/green-25.png',
     src: url1,
     imageType: 'compressed',
     parent: testRoot,
   });
 
-  ktx1.on('loaded', (node, data) => {
-    console.log('ktx1 loaded');
+  compressedNode1.on('loaded', (node, data) => {
     const { width, height } = data.dimensions;
     node.width = width;
     node.height = height;
 
-    ktx1Label.text = `w: ${width}, h: ${height}`;
+    cn1Label.text = `w: ${width}, h: ${height}`;
   });
 
-  const ktx2Label = renderer.createTextNode({
+  compressedNode1.on('failed', (node, error) => {
+    console.error('compressed error', error);
+  });
+
+  const cn2Label = renderer.createTextNode({
     x: 800,
     y: 100,
     color: 0xffffffff,
@@ -68,21 +72,20 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  const ktx2 = renderer.createNode({
+  const compressedNode2 = renderer.createNode({
     x: 800,
     y: 170,
     width: 400,
     height: 400,
     src: url2,
-    imageType: 'ktx',
+    imageType: 'compressed',
     parent: testRoot,
   });
 
-  ktx2.on('loaded', (node, data) => {
-    console.log('ktx2 loaded');
+  compressedNode2.on('loaded', (node, data) => {
     const { width, height } = data.dimensions;
     node.width = width;
     node.height = height;
-    ktx2Label.text = `w: ${width}, h: ${height}`;
+    cn2Label.text = `w: ${width}, h: ${height}`;
   });
 }
