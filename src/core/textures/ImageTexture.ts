@@ -76,7 +76,7 @@ export interface ImageTextureProps {
    *
    * @default null
    */
-  type?: 'regular' | 'compressed' | 'pvr' | 'ktx' | 'svg' | null;
+  type?: 'regular' | 'compressed' | 'svg' | null;
   /**
    * The width of the rectangle from which the ImageBitmap will be extracted. This value
    * can be negative. Only works when createImageBitmap is supported on the browser.

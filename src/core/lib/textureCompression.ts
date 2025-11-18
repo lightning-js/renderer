@@ -37,9 +37,6 @@ export type UploadCompressedTextureFunction = (
 export function isCompressedTextureContainer(
   props: ImageTextureProps,
 ): boolean {
-  if (props.type === 'ktx' || props.type === 'pvr') {
-    return true;
-  }
   return /\.(ktx|pvr)$/.test(props.src as string);
 }
 
