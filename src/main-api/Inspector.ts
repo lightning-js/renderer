@@ -52,14 +52,16 @@ const stylePropertyMap: {
   },
   width: (w) => {
     if (w === 0) {
-      return null;
+      // Set to 1px instead of 0px so visibility checks (e.g. Playwright) keep treating the node as visible
+      return { prop: 'width', value: '1px' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   height: (h) => {
     if (h === 0) {
-      return null;
+      // Set to 1px instead of 0px so visibility checks (e.g. Playwright) keep treating the node as visible
+      return { prop: 'height', value: '1px' };
     }
 
     return { prop: 'height', value: `${h}px` };
@@ -179,6 +181,7 @@ const knownProperties = new Set<string>([
   'src',
   'parent',
   'data',
+  'text',
   'texture',
 ]);
 
@@ -575,9 +578,10 @@ export class Inspector {
     if (property === 'text') {
       div.innerHTML = String(value);
 
-      // hide text because we can't render SDF fonts
-      // it would look weird and obstruct the WebGL rendering
-      div.style.visibility = 'hidden';
+      // Keep DOM text invisible without breaking visibility checks by using color:transparent instead of opacity:0
+      div.style.color = 'transparent';
+      div.style.pointerEvents = 'none';
+      div.style.userSelect = 'none';
       return;
     }
 
