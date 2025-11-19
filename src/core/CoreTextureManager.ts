@@ -176,21 +176,6 @@ export interface TextureOptions {
    * The resize modes cover and contain are supported
    */
   resizeMode?: ResizeModeOptions;
-
-  /**
-   * Width info used for compressed textures. Otherwise falls back to node width.
-   */
-  width?: number;
-
-  /**
-   * Height info used for compressed textures. Otherwise falls back to node height.
-   */
-  height?: number;
-
-  /**
-   * Chunk size VxV, default value is 1. Used for Compressed textures
-   */
-  chunkSize?: number;
 }
 
 export class CoreTextureManager extends EventEmitter {
