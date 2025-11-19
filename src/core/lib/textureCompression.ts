@@ -153,7 +153,7 @@ const loadPVRData = async (buffer: ArrayBuffer): Promise<TextureData> => {
   return {
     data: {
       glInternalFormat: pvrFormatEtc1,
-      mipmaps: mipmaps,
+      mipmaps: mipmaps as unknown as ArrayBuffer[],
       width: data.pixelWidth || 0,
       height: data.pixelHeight || 0,
       type: 'pvr',
