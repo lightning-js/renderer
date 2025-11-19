@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { ImageTextureProps } from '../textures/ImageTexture.js';
 import { type CompressedData, type TextureData } from '../textures/Texture.js';
 import type { WebGlContextWrapper } from './WebGlContextWrapper.js';
 
@@ -34,10 +33,8 @@ export type UploadCompressedTextureFunction = (
  * and only supports the following extensions: .ktx and .pvr
  * @returns
  */
-export function isCompressedTextureContainer(
-  props: ImageTextureProps,
-): boolean {
-  return /\.(ktx|pvr)$/.test(props.src as string);
+export function isCompressedTextureContainer(src: string): boolean {
+  return /\.(ktx|pvr)$/.test(src);
 }
 
 const PVR_MAGIC = 0x03525650; // 'PVR3' in little-endian
@@ -136,9 +133,7 @@ function readUint24(view: DataView, offset: number) {
  * @param view
  * @returns
  */
-const loadASTC = async function (
-  view: DataView<ArrayBuffer>,
-): Promise<TextureData> {
+const loadASTC = async function (view: DataView): Promise<TextureData> {
   const blockX = view.getUint8(4);
   const blockY = view.getUint8(5);
   const sizeX = readUint24(view, 7);
@@ -160,8 +155,10 @@ const loadASTC = async function (
     throw new Error(`Unsupported ASTC block size: ${blockX}x${blockY}`);
   }
 
+  const buffer = view.buffer as ArrayBuffer;
+
   const mipmaps: ArrayBuffer[] = [];
-  mipmaps.push(view.buffer.slice(16));
+  mipmaps.push(buffer.slice(16));
 
   return {
     data: {
@@ -204,9 +201,7 @@ const uploadASTC = function (
  * @param view
  * @returns
  */
-const loadKTX = async function (
-  view: DataView<ArrayBuffer>,
-): Promise<TextureData> {
+const loadKTX = async function (view: DataView): Promise<TextureData> {
   const endianness = view.getUint32(12, true);
   const littleEndian = endianness === 0x04030201;
   if (littleEndian === false && endianness !== 0x01020304) {
@@ -243,6 +238,7 @@ const loadKTX = async function (
 
   const bytesOfKeyValueData = view.getUint32(60, littleEndian);
   const mipmaps: ArrayBuffer[] = [];
+  const buffer = view.buffer as ArrayBuffer;
   let offset = 64 + bytesOfKeyValueData;
 
   if (offset > view.byteLength) {
@@ -255,7 +251,7 @@ const loadKTX = async function (
 
     const end = offset + imageSize;
 
-    mipmaps.push(view.buffer.slice(offset, end));
+    mipmaps.push(buffer.slice(offset, end));
     offset = end;
     if (offset % 4 !== 0) {
       offset += 4 - (offset % 4);
@@ -327,9 +323,7 @@ function pvrtcMipSize(width: number, height: number, bpp: 2 | 4) {
   return (w * h * bpp) / 8;
 }
 
-const loadPVR = async function (
-  view: DataView<ArrayBuffer>,
-): Promise<TextureData> {
+const loadPVR = async function (view: DataView): Promise<TextureData> {
   const pixelFormatLow = view.getUint32(8, true);
   const internalFormat = PVR_TO_GL_INTERNAL_FORMAT[pixelFormatLow];
 
@@ -348,7 +342,7 @@ const loadPVR = async function (
   }
   const mipmapLevels = view.getInt32(44, true);
   const metadataSize = view.getUint32(48, true);
-  const buffer = view.buffer;
+  const buffer = view.buffer as ArrayBuffer;
 
   let offset = 52 + metadataSize;
   if (offset > buffer.byteLength) {

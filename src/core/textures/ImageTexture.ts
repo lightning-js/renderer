@@ -358,7 +358,7 @@ export class ImageTexture extends Texture {
       return loadCompressedTexture(absoluteSrc);
     }
 
-    if (isCompressedTextureContainer(this.props) === true) {
+    if (isCompressedTextureContainer(src) === true) {
       return loadCompressedTexture(absoluteSrc);
     }
 
