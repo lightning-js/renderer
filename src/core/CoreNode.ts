@@ -106,22 +106,13 @@ export enum UpdateType {
   Clipping = 8,
 
   /**
-   * Calculated ZIndex update
-   *
-   * @remarks
-   * CoreNode Properties Updated:
-   * - `calcZIndex`
-   */
-  CalculatedZIndex = 16,
-
-  /**
-   * Z-Index Sorted Children update
+   * Sort Z-Index Children update
    *
    * @remarks
    * CoreNode Properties Updated:
    * - `children` (sorts children by their `calcZIndex`)
    */
-  ZIndexSortedChildren = 32,
+  SortZIndexChildren = 16,
 
   /**
    * Premultiplied Colors update
@@ -133,7 +124,7 @@ export enum UpdateType {
    * - `premultipliedColorBl`
    * - `premultipliedColorBr`
    */
-  PremultipliedColors = 64,
+  PremultipliedColors = 32,
 
   /**
    * World Alpha update
@@ -142,7 +133,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `worldAlpha` = `parent.worldAlpha` * `alpha`
    */
-  WorldAlpha = 128,
+  WorldAlpha = 64,
 
   /**
    * Render State update
@@ -151,7 +142,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `renderState`
    */
-  RenderState = 256,
+  RenderState = 128,
 
   /**
    * Is Renderable update
@@ -160,27 +151,27 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `isRenderable`
    */
-  IsRenderable = 512,
+  IsRenderable = 256,
 
   /**
    * Render Texture update
    */
-  RenderTexture = 1024,
+  RenderTexture = 512,
 
   /**
    * Track if parent has render texture
    */
-  ParentRenderTexture = 2048,
+  ParentRenderTexture = 1024,
 
   /**
    * Render Bounds update
    */
-  RenderBounds = 4096,
+  RenderBounds = 2048,
 
   /**
    * RecalcUniforms
    */
-  RecalcUniforms = 8192,
+  RecalcUniforms = 4096,
 
   /**
    * None
@@ -190,7 +181,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 14335,
+  All = 7167,
 }
 
 /**
@@ -709,6 +700,9 @@ export class CoreNode extends EventEmitter {
   private zIndexMin = 0;
   private zIndexMax = 0;
 
+  public previousZIndex = -1;
+  public zIndexSortList: CoreNode[] = [];
+
   public hasShaderTimeFn = false;
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -962,7 +956,65 @@ export class CoreNode extends EventEmitter {
   }
 
   sortChildren() {
-    this.children.sort((a, b) => a.calcZIndex - b.calcZIndex);
+    const zIndexSortList = this.zIndexSortList;
+    const children = this.children;
+    if (
+      children.length === 1 ||
+      children.length === 0 ||
+      zIndexSortList.length === 0
+    ) {
+      return;
+    }
+
+    for (let i = 0; i < zIndexSortList.length; i++) {
+      const childIndex = this.findChildById(zIndexSortList[i]!.id);
+      //child not found
+      if (childIndex === -1) {
+        continue;
+      }
+    }
+
+    for (let i = 0; i < zIndexSortList.length; i++) {
+      const child = zIndexSortList[i]!;
+      const zIndex = child.props.zIndex;
+      const sortDir = zIndex >= child.previousZIndex ? 1 : -1;
+
+      for (let j = 0; j < children.length; j++) {
+        if (children[j]!.id === child.id) {
+          if (sortDir === 1) {
+            for (let k = j + 1; k < children.length; k++) {}
+          } else {
+          }
+
+          for (
+            let k = (j += sortDir);
+            k >= 0 && k < children.length;
+            k += sortDir
+          ) {
+            const compareChild = children[k]!;
+            if (
+              sortDir === 1 &&
+              child.props.zIndex < compareChild.props.zIndex
+            ) {
+              continue;
+            }
+          }
+        }
+      }
+    }
+
+    zIndexSortList.length = 0;
+    // this.children.sort((a, b) => a.calcZIndex - b.calcZIndex);
+  }
+
+  findChildById(id: number): number {
+    const children = this.children;
+    for (let i = 0; i < children.length; i++) {
+      if (children[i]!.id === id) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   updateLocalTransform() {
@@ -1253,7 +1305,7 @@ export class CoreNode extends EventEmitter {
 
     // Sorting children MUST happen after children have been updated so
     // that they have the oppotunity to update their calculated zIndex.
-    if (updateType & UpdateType.ZIndexSortedChildren) {
+    if (updateType & UpdateType.SortZIndexChildren) {
       // reorder z-index
       this.sortChildren();
     }
@@ -1724,7 +1776,14 @@ export class CoreNode extends EventEmitter {
     return this.stage.elapsedTime;
   }
 
-  removeChild(node: CoreNode) {
+  removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
+    if (
+      targetParent === null &&
+      this.props.rtt === true &&
+      this.parentHasRenderTexture === true
+    ) {
+      node.clearRTTInheritance();
+    }
     const children = this.children;
     let index = -1;
     for (let i = 0; i < children.length; i++) {
@@ -1738,11 +1797,29 @@ export class CoreNode extends EventEmitter {
     children.splice(index, 1);
   }
 
-  addChild(node: CoreNode) {
+  addChild(node: CoreNode, previousParent: CoreNode | null = null) {
+    const inRttCluster =
+      this.props.rtt === true || this.parentHasRenderTexture === true;
     const children = this.children;
     const min = this.zIndexMin;
     const max = this.zIndexMax;
     const zIndex = node.zIndex;
+
+    node.parentHasRenderTexture = inRttCluster;
+    if (previousParent !== null) {
+      const previousParentInRttCluster =
+        previousParent.props.rtt === true ||
+        previousParent.parentHasRenderTexture === true;
+      if (inRttCluster === false && previousParentInRttCluster === true) {
+        // update child RTT status
+        node.clearRTTInheritance();
+      }
+    }
+
+    if (inRttCluster === true) {
+      node.markChildrenWithRTT(this);
+    }
+
     if (max === zIndex && min === zIndex) {
       children.push(node);
       return;
@@ -2173,11 +2250,12 @@ export class CoreNode extends EventEmitter {
     if (this.props.zIndex === value) {
       return;
     }
-
+    this.previousZIndex = this.props.zIndex;
     this.props.zIndex = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
+    const parent = this.parent;
+    if (parent !== null) {
+      parent.zIndexSortList.push(this);
+      parent.setUpdateType(UpdateType.SortZIndexChildren);
     }
   }
 
@@ -2192,14 +2270,10 @@ export class CoreNode extends EventEmitter {
     }
     this.props.parent = newParent;
     if (oldParent) {
-      oldParent.removeChild(this);
+      oldParent.removeChild(this, newParent);
     }
     if (newParent !== null) {
-      newParent.addChild(this);
-      // If the new parent has an RTT enabled, apply RTT inheritance
-      if (newParent.rtt || newParent.parentHasRenderTexture) {
-        this.applyRTTInheritance(newParent);
-      }
+      newParent.addChild(this, oldParent);
     }
     // Since this node has a new parent, to be safe, have it do a full update.
     this.setUpdateType(UpdateType.All);
