@@ -45,7 +45,7 @@ export type TextureLoadedEventHandler = (
 /**
  * Represents compressed texture data.
  */
-interface CompressedData {
+export interface CompressedData {
   /**
    * GLenum spcifying compression format
    */
@@ -54,12 +54,12 @@ interface CompressedData {
   /**
    * All mipmap levels
    */
-  mipmaps?: ArrayBuffer[];
+  mipmaps: ArrayBuffer[];
 
   /**
-   * Supported container types ('pvr' or 'ktx').
+   * Supported container types ('pvr', 'ktx', 'astc').
    */
-  type: 'pvr' | 'ktx';
+  type: 'pvr' | 'ktx' | 'astc';
 
   /**
    * The width of the compressed texture in pixels. Defaults to 0.
@@ -72,6 +72,15 @@ interface CompressedData {
    * The height of the compressed texture in pixels.
    **/
   height: number;
+
+  /**
+   * block info
+   */
+  blockInfo: {
+    width: number;
+    height: number;
+    bytes: number;
+  };
 }
 
 /**
@@ -298,7 +307,6 @@ export abstract class Texture extends EventEmitter {
       // We've exceeded the max retry count, do not attempt to load again
       return;
     }
-
     this.txManager.loadTexture(this);
   }
 
@@ -386,7 +394,6 @@ export abstract class Texture extends EventEmitter {
     if (this.state === state) {
       return;
     }
-
     let payload: Error | Dimensions | null = null;
     if (state === 'loaded') {
       // Clear any previous error when successfully loading

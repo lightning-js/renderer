@@ -21,6 +21,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import { uploadCompressedTexture } from '../../lib/textureCompression.js';
 import type { Texture } from '../../textures/Texture.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
@@ -42,6 +43,11 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
   private _w = 0;
   private _h = 0;
+
+  txCoordX1 = 0;
+  txCoordY1 = 0;
+  txCoordX2 = 1;
+  txCoordY2 = 1;
 
   constructor(
     protected glw: WebGlContextWrapper,
@@ -211,26 +217,22 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       this.setTextureMemUse(height * width * formatBytes * memoryPadding);
     } else if (tdata && 'mipmaps' in tdata && tdata.mipmaps) {
-      const { mipmaps, width = 0, height = 0, type, glInternalFormat } = tdata;
-      const view =
-        type === 'ktx'
-          ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
-          : (mipmaps[0] as unknown as ArrayBufferView);
-
-      glw.bindTexture(this._nativeCtxTexture);
-
-      glw.compressedTexImage2D(0, glInternalFormat, width, height, 0, view);
-      glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-      glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+      const { mipmaps, type, blockInfo } = tdata;
+      uploadCompressedTexture[type]!(glw, this._nativeCtxTexture, tdata);
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {
         return { width: 0, height: 0 };
       }
 
-      this.setTextureMemUse(view.byteLength);
+      width = tdata.width;
+      height = tdata.height;
+      this.txCoordX2 =
+        width / (Math.ceil(width / blockInfo.width) * blockInfo.width);
+      this.txCoordY2 =
+        height / (Math.ceil(height / blockInfo.height) * blockInfo.height);
+
+      this.setTextureMemUse(mipmaps[0]?.byteLength ?? 0);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
       width = 1;

@@ -20,43 +20,64 @@
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 export default async function ({ renderer, testRoot }: ExampleSettings) {
-  renderer.createTextNode({
+  const cn1Label = renderer.createTextNode({
     x: 100,
     y: 100,
     color: 0xffffffff,
     alpha: 1.0,
-    text: 'etc1 compression in .pvr',
+    text: 'w: 400',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     parent: testRoot,
   });
 
-  renderer.createNode({
+  const compressedNode1 = renderer.createNode({
     x: 100,
     y: 170,
     width: 550,
     height: 550,
     src: '../assets/test-etc1.pvr',
+    imageType: 'compressed',
     parent: testRoot,
   });
 
-  renderer.createTextNode({
+  compressedNode1.on('loaded', (node, data) => {
+    const { width, height } = data.dimensions;
+    node.width = width;
+    node.height = height;
+
+    cn1Label.text = `w: ${width}, h: ${height}`;
+  });
+
+  compressedNode1.on('failed', (node, error) => {
+    console.error('compressed error', error);
+  });
+
+  const cn2Label = renderer.createTextNode({
     x: 800,
     y: 100,
     color: 0xffffffff,
     alpha: 1.0,
-    text: 's3tc compression in .ktx',
+    text: 'w: 333',
     fontFamily: 'Ubuntu',
     fontSize: 30,
     parent: testRoot,
   });
 
-  renderer.createNode({
+  const compressedNode2 = renderer.createNode({
     x: 800,
     y: 170,
     width: 400,
     height: 400,
     src: '../assets/test-s3tc.ktx',
+    imageType: 'compressed',
     parent: testRoot,
+  });
+
+  compressedNode2.on('loaded', (node, data) => {
+    const { width, height } = data.dimensions;
+    node.width = width;
+    node.height = height;
+    cn2Label.text = `w: ${width}, h: ${height}`;
   });
 }

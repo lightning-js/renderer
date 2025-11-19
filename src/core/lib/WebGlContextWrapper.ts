@@ -67,6 +67,7 @@ export class WebGlContextWrapper {
   public readonly TEXTURE_WRAP_S;
   public readonly TEXTURE_WRAP_T;
   public readonly LINEAR;
+  public readonly LINEAR_MIPMAP_LINEAR;
   public readonly CLAMP_TO_EDGE;
   public readonly RGB;
   public readonly RGBA;
@@ -158,6 +159,7 @@ export class WebGlContextWrapper {
     this.TEXTURE_WRAP_S = gl.TEXTURE_WRAP_S;
     this.TEXTURE_WRAP_T = gl.TEXTURE_WRAP_T;
     this.LINEAR = gl.LINEAR;
+    this.LINEAR_MIPMAP_LINEAR = gl.LINEAR_MIPMAP_LINEAR;
     this.CLAMP_TO_EDGE = gl.CLAMP_TO_EDGE;
     this.RGB = gl.RGB;
     this.RGBA = gl.RGBA;
