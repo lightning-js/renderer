@@ -66,8 +66,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           //@ts-ignore
           color: Colors[color],
-          shader: renderer.createShader('RoundedRectangle', {
-            radius: 2,
+          shader: renderer.createShader('Rounded', {
+            radius: 30,
           }),
           zIndex: 10 + (i + 1),
           parent: testRoot,
@@ -81,12 +81,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 600,
     h: 600,
     color: Colors.Gray,
-    // shader: renderer.createShader('RoundedRectangle', {
+    // shader: renderer.createShader('Rounded', {
     //   radius: 40,
     // }),
     zIndex: 2,
     parent: testRoot,
-    zIndexLocked: 1,
   });
 
   const childRectWhite = renderer.createNode({
@@ -95,7 +94,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 200,
     h: 200,
     color: Colors.White,
-    // shader: renderer.createShader('RoundedRectangle', {
+    // shader: renderer.createShader('Rounded', {
     //   radius: 40,
     // }),
     zIndex: 4,
@@ -108,7 +107,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 200,
     h: 200,
     color: Colors.Red,
-    // shader: renderer.createShader('RoundedRectangle', {
+    // shader: renderer.createShader('Rounded', {
     //   radius: 40,
     // }),
     zIndex: 5,
@@ -136,7 +135,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 400,
     h: 100,
     color: Colors.Green,
-    // shader: renderer.createShader('RoundedRectangle', {
+    // shader: renderer.createShader('Rounded', {
     //   radius: 40,
     // }),
     zIndex: 2,
@@ -164,13 +163,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
 
     zIndex: 148901482921849101841290481,
-
-    zIndexLocked: 148901482921849101841290481,
     parent: testRoot,
   });
 
@@ -180,13 +177,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
 
     zIndex: -148901482921849101841290481,
 
-    zIndexLocked: -148901482921849101841290481,
     parent: testRoot,
   });
 
@@ -196,13 +192,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
     zIndex: 'boop',
-    // @ts-expect-error Invalid prop test
-    zIndexLocked: 'boop',
     parent: testRoot,
   });
 
@@ -212,13 +206,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
     zIndex: true,
-    // @ts-expect-error Invalid prop test
-    zIndexLocked: true,
     parent: testRoot,
   });
 
@@ -228,13 +220,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
     zIndex: null,
-    // @ts-expect-error Invalid prop test
-    zIndexLocked: null,
     parent: testRoot,
   });
 
@@ -244,11 +234,10 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     zIndex: undefined,
-    zIndexLocked: undefined,
     parent: testRoot,
   });
 
@@ -258,15 +247,12 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
 
     zIndex: () => {},
-    // @ts-expect-error Invalid prop test
-
-    zIndexLocked: () => {},
     parent: testRoot,
   });
 
@@ -276,13 +262,11 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     w: 10,
     h: 10,
     color: 0x00ffffff,
-    shader: renderer.createShader('RoundedRectangle', {
+    shader: renderer.createShader('Rounded', {
       radius: 2,
     }),
     // @ts-expect-error Invalid prop test
     zIndex: {},
-    // @ts-expect-error Invalid prop test
-    zIndexLocked: {},
     parent: testRoot,
   });
 }
