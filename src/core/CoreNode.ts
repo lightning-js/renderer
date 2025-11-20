@@ -692,7 +692,7 @@ export interface CoreNodeAnimateProps extends NumberProps<CoreNodeProps> {
  */
 export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
-  readonly id: number = getNewId();
+  protected _id: number = getNewId();
   readonly props: CoreNodeProps;
 
   private hasShaderUpdater = false;
@@ -746,7 +746,6 @@ export class CoreNode extends EventEmitter {
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
-
     const p = (this.props = {} as CoreNodeProps);
 
     // Fast-path assign only known keys
@@ -1728,7 +1727,7 @@ export class CoreNode extends EventEmitter {
       let childIndex = -1;
       const child = zIndexSortList[i]!;
       for (let j = 0; j < children.length; j++) {
-        if (children[j]!.id === child.id) {
+        if (children[j]!._id === child._id) {
           childIndex = j;
           break;
         }
@@ -1768,7 +1767,7 @@ export class CoreNode extends EventEmitter {
     const children = this.children;
     let index = -1;
     for (let i = 0; i < children.length; i++) {
-      if (children[i]!.id === node.id) {
+      if (children[i]!._id === node._id) {
         index = i;
       }
     }
@@ -1831,6 +1830,10 @@ export class CoreNode extends EventEmitter {
   }
 
   //#region Properties
+  get id(): number {
+    return this._id;
+  }
+
   get data(): CustomDataMap | undefined {
     return this.props.data;
   }
