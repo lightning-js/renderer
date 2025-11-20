@@ -954,68 +954,6 @@ export class CoreNode extends EventEmitter {
     parent.setUpdateType(UpdateType.Children);
   }
 
-  sortChildren() {
-    const zIndexSortList = this.zIndexSortList;
-    const children = this.children;
-    if (
-      children.length === 1 ||
-      children.length === 0 ||
-      zIndexSortList.length === 0
-    ) {
-      return;
-    }
-
-    for (let i = 0; i < zIndexSortList.length; i++) {
-      const childIndex = this.findChildById(zIndexSortList[i]!.id);
-      //child not found
-      if (childIndex === -1) {
-        continue;
-      }
-    }
-
-    for (let i = 0; i < zIndexSortList.length; i++) {
-      const child = zIndexSortList[i]!;
-      const zIndex = child.props.zIndex;
-      const sortDir = zIndex >= child.previousZIndex ? 1 : -1;
-
-      for (let j = 0; j < children.length; j++) {
-        if (children[j]!.id === child.id) {
-          if (sortDir === 1) {
-            for (let k = j + 1; k < children.length; k++) {}
-          } else {
-          }
-
-          for (
-            let k = (j += sortDir);
-            k >= 0 && k < children.length;
-            k += sortDir
-          ) {
-            const compareChild = children[k]!;
-            if (
-              sortDir === 1 &&
-              child.props.zIndex < compareChild.props.zIndex
-            ) {
-              continue;
-            }
-          }
-        }
-      }
-    }
-
-    zIndexSortList.length = 0;
-    // this.children.sort((a, b) => a.calcZIndex - b.calcZIndex);
-  }
-
-  findChildById(id: number): number {
-    const children = this.children;
-    for (let i = 0; i < children.length; i++) {
-      if (children[i]!.id === id) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   updateLocalTransform() {
     const p = this.props;
     const { x, y, w, h } = p;
@@ -1302,8 +1240,7 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    // Sorting children MUST happen after children have been updated so
-    // that they have the oppotunity to update their calculated zIndex.
+    //Resort children if needed
     if (updateType & UpdateType.SortZIndexChildren) {
       // reorder z-index
       this.sortChildren();
@@ -1760,6 +1697,50 @@ export class CoreNode extends EventEmitter {
         ? this.parentFramebufferDimensions
         : null,
     });
+  }
+
+  sortChildren() {
+    const zIndexSortList = this.zIndexSortList;
+    const children = this.children;
+    if (
+      children.length === 1 ||
+      children.length === 0 ||
+      zIndexSortList.length === 0
+    ) {
+      return;
+    }
+
+    for (let i = 0; i < zIndexSortList.length; i++) {
+      let childIndex = -1;
+      const child = zIndexSortList[i]!;
+      for (let j = 0; j < children.length; j++) {
+        if (children[j]!.id === child.id) {
+          childIndex = j;
+          break;
+        }
+      }
+
+      //child not found
+      if (childIndex === -1) {
+        continue;
+      }
+
+      // remove child from current position
+      children.splice(childIndex, 1);
+
+      // find new position
+      let newIndex = 0;
+      for (; newIndex < children.length; newIndex++) {
+        if (child.props.zIndex < children[newIndex]!.props.zIndex) {
+          break;
+        }
+      }
+
+      // insert child at new position
+      children.splice(newIndex, 0, child);
+    }
+
+    zIndexSortList.length = 0;
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
