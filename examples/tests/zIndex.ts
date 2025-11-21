@@ -67,7 +67,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
           //@ts-ignore
           color: Colors[color],
           shader: renderer.createShader('Rounded', {
-            radius: 30,
+            radius: 2,
           }),
           zIndex: 10 + (i + 1),
           parent: testRoot,
