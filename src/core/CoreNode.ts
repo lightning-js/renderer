@@ -56,6 +56,11 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import {
+  bucketSortByZIndex,
+  incrementalRepositionByZIndex,
+  removeChild,
+} from './lib/collectionUtils.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -1210,8 +1215,7 @@ export class CoreNode extends EventEmitter {
     if (updateType & UpdateType.Children && this.children.length > 0) {
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
-
-        child.setUpdateType(childUpdateType);
+        child.updateType |= childUpdateType;
 
         if (child.updateType === 0) {
           continue;
@@ -1649,6 +1653,7 @@ export class CoreNode extends EventEmitter {
     if (this.rtt === true) {
       this.stage.renderer.removeRTTNode(this);
     }
+    this.stage.requestRender();
   }
 
   renderQuads(renderer: CoreRenderer): void {
@@ -1699,47 +1704,45 @@ export class CoreNode extends EventEmitter {
   }
 
   sortChildren() {
-    const zIndexSortList = this.zIndexSortList;
+    const changedCount = this.zIndexSortList.length;
+    if (changedCount === 0) {
+      return;
+    }
     const children = this.children;
-    if (
-      children.length === 1 ||
-      children.length === 0 ||
-      zIndexSortList.length === 0
-    ) {
+    let min = Infinity;
+    let max = -Infinity;
+    // find min and max zIndex
+    for (let i = 0; i < children.length; i++) {
+      const zIndex = children[i]!.props.zIndex;
+      if (zIndex < min) {
+        min = zIndex;
+      }
+      if (zIndex > max) {
+        max = zIndex;
+      }
+    }
+    // update min and max zIndex
+    this.zIndexMin = min;
+    this.zIndexMax = max;
+
+    // if min and max are the same, no need to sort
+    if (min === max) {
       return;
     }
 
-    for (let i = 0; i < zIndexSortList.length; i++) {
-      let childIndex = -1;
-      const child = zIndexSortList[i]!;
-      for (let j = 0; j < children.length; j++) {
-        if (children[j]!._id === child._id) {
-          childIndex = j;
-          break;
-        }
-      }
+    const n = children.length;
+    // decide whether to use incremental sort or bucket sort
+    const useIncremental = changedCount < n * 0.05;
 
-      //child not found
-      if (childIndex === -1) {
-        continue;
-      }
-
-      // remove child from current position
-      children.splice(childIndex, 1);
-
-      // find new position
-      let newIndex = 0;
-      for (; newIndex < children.length; newIndex++) {
-        if (child.props.zIndex < children[newIndex]!.props.zIndex) {
-          break;
-        }
-      }
-
-      // insert child at new position
-      children.splice(newIndex, 0, child);
+    // when changed count is less than 5% of total children, use incremental sort
+    if (useIncremental === true) {
+      incrementalRepositionByZIndex(this.zIndexSortList, children);
+    } else {
+      bucketSortByZIndex(children, min);
     }
 
-    zIndexSortList.length = 0;
+    this.zIndexSortList.length = 0;
+    this.zIndexSortList = [];
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
@@ -1750,17 +1753,7 @@ export class CoreNode extends EventEmitter {
     ) {
       node.clearRTTInheritance();
     }
-    const children = this.children;
-    let index = -1;
-    for (let i = 0; i < children.length; i++) {
-      if (children[i]!._id === node._id) {
-        index = i;
-      }
-    }
-    if (index === -1) {
-      return;
-    }
-    children.splice(index, 1);
+    removeChild(node, this.children);
   }
 
   addChild(node: CoreNode, previousParent: CoreNode | null = null) {
@@ -1786,33 +1779,12 @@ export class CoreNode extends EventEmitter {
       node.markChildrenWithRTT(this);
     }
 
-    if (max === zIndex && min === zIndex) {
-      children.push(node);
-      return;
+    children.push(node);
+
+    if (min !== max || zIndex < min || zIndex > max) {
+      this.zIndexSortList.push(node);
+      this.setUpdateType(UpdateType.SortZIndexChildren);
     }
-    if (children.length === 0) {
-      this.zIndexMin = zIndex;
-      this.zIndexMax = zIndex;
-      children.push(node);
-      return;
-    }
-    if (zIndex < min) {
-      this.zIndexMin = zIndex;
-      children.unshift(node);
-      return;
-    }
-    if (zIndex >= max) {
-      this.zIndexMax = zIndex;
-      children.push(node);
-      return;
-    }
-    let index = 0;
-    for (; index < children.length; index++) {
-      if (zIndex < children[index]!.zIndex) {
-        break;
-      }
-    }
-    children.splice(index, 0, node);
   }
 
   //#region Properties
@@ -2224,8 +2196,12 @@ export class CoreNode extends EventEmitter {
     this.props.zIndex = value;
     const parent = this.parent;
     if (parent !== null) {
-      parent.zIndexSortList.push(this);
-      parent.setUpdateType(UpdateType.SortZIndexChildren);
+      const min = parent.zIndexMin;
+      const max = parent.zIndexMax;
+      if (min !== max || value < min || value > max) {
+        parent.zIndexSortList.push(this);
+        parent.setUpdateType(UpdateType.SortZIndexChildren);
+      }
     }
   }
 
