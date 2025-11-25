@@ -385,7 +385,11 @@ export interface CoreNodeProps {
    * The Node's z-index.
    *
    * @remarks
-   * TBD
+   * Max z-index of children under the same parent determines which child
+   * is rendered on top. Higher z-index means the Node is rendered on top of
+   * children with lower z-index.
+   *
+   * Max value is 1000 and min value is -1000. Values outside of this range will be clamped.
    */
   zIndex: number;
   /**
@@ -798,6 +802,11 @@ export class CoreNode extends EventEmitter {
     p.src = null;
     p.rtt = false;
     p.boundsMargin = null;
+
+    // Only set non-default values
+    if (props.zIndex !== 0) {
+      this.zIndex = props.zIndex;
+    }
 
     if (props.parent !== null) {
       props.parent.addChild(this);
@@ -1735,6 +1744,7 @@ export class CoreNode extends EventEmitter {
         max = zIndex;
       }
     }
+
     // update min and max zIndex
     this.zIndexMin = min;
     this.zIndexMax = max;
@@ -1746,7 +1756,7 @@ export class CoreNode extends EventEmitter {
 
     const n = children.length;
     // decide whether to use incremental sort or bucket sort
-    const useIncremental = changedCount < n * 0.05;
+    const useIncremental = changedCount <= 2 && changedCount < n * 0.05;
 
     // when changed count is less than 5% of total children, use incremental sort
     if (useIncremental === true) {
@@ -1795,7 +1805,7 @@ export class CoreNode extends EventEmitter {
 
     children.push(node);
 
-    if (min !== max || zIndex < min || zIndex > max) {
+    if (min !== max || (zIndex !== min && zIndex !== max)) {
       this.zIndexSortList.push(node);
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
@@ -2203,16 +2213,31 @@ export class CoreNode extends EventEmitter {
   }
 
   set zIndex(value: number) {
-    if (this.props.zIndex === value) {
+    let sanitizedValue = value;
+    if (isNaN(sanitizedValue) || Number.isFinite(sanitizedValue) === false) {
+      console.warn(
+        `zIndex was set to an invalid value: ${value}, defaulting to 0`,
+      );
+      sanitizedValue = 0;
+    }
+
+    //Clamp to safe integer range
+    if (sanitizedValue > Number.MAX_SAFE_INTEGER) {
+      sanitizedValue = 1000;
+    } else if (sanitizedValue < Number.MIN_SAFE_INTEGER) {
+      sanitizedValue = -1000;
+    }
+
+    if (this.props.zIndex === sanitizedValue) {
       return;
     }
     this.previousZIndex = this.props.zIndex;
-    this.props.zIndex = value;
+    this.props.zIndex = sanitizedValue;
     const parent = this.parent;
     if (parent !== null) {
       const min = parent.zIndexMin;
       const max = parent.zIndexMax;
-      if (min !== max || value < min || value > max) {
+      if (min !== max || sanitizedValue < min || sanitizedValue > max) {
         parent.zIndexSortList.push(this);
         parent.setUpdateType(UpdateType.SortZIndexChildren);
       }

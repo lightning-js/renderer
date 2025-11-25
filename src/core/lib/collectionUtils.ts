@@ -20,30 +20,36 @@
 import type { CoreNode } from '../CoreNode.js';
 
 //Bucket sort implementation for sorting CoreNode arrays by zIndex
-export const bucketSortByZIndex = (
-  nodes: CoreNode[],
-  min: number = 0,
-): void => {
+export const bucketSortByZIndex = (nodes: CoreNode[], min: number): void => {
   const buckets: CoreNode[][] = [];
-  const bucketIds: number[] = [];
-
+  const bucketIndices: number[] = [];
   //distribute nodes into buckets
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
     const index = node.props.zIndex - min;
     //create bucket if it doesn't exist
-    if (!buckets[index]) {
+    if (buckets[index] === undefined) {
       buckets[index] = [];
-      //keep track of created bucket ids
-      bucketIds.push(index);
+      bucketIndices.push(index);
     }
     buckets[index]!.push(node);
   }
 
+  //sort each bucket using insertion sort
+  for (let i = 1; i < bucketIndices.length; i++) {
+    const key = bucketIndices[i]!;
+    let j = i - 1;
+    while (j >= 0 && bucketIndices[j]! > key) {
+      bucketIndices[j + 1] = bucketIndices[j]!;
+      j--;
+    }
+    bucketIndices[j + 1] = key;
+  }
+
   //flatten buckets
   let idx = 0;
-  for (let i = 0; i < bucketIds.length; i++) {
-    const bucket = buckets[bucketIds[i]!]!;
+  for (let i = 0; i < bucketIndices.length; i++) {
+    const bucket = buckets[bucketIndices[i]!]!;
     for (let j = 0; j < bucket.length; j++) {
       nodes[idx++] = bucket[j]!;
     }
@@ -51,7 +57,7 @@ export const bucketSortByZIndex = (
 
   //clean up
   buckets.length = 0;
-  bucketIds.length = 0;
+  bucketIndices.length = 0;
 };
 
 export const incrementalRepositionByZIndex = (
