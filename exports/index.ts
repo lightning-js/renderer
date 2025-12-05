@@ -59,7 +59,10 @@ export {
 export type { ShaderMap, EffectMap } from '../src/core/CoreShaderManager.js';
 export type { TextRendererMap } from '../src/core/text-rendering/renderers/TextRenderer.js';
 export type { TrFontFaceMap } from '../src/core/text-rendering/font-face-types/TrFontFace.js';
-export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
+export type {
+  AnimationSettings,
+  CoreAnimation,
+} from '../src/core/animations/CoreAnimation.js';
 export type {
   EffectProps,
   FadeOutEffectProps,
@@ -74,6 +77,8 @@ export type { WebGlCoreRenderer } from '../src/core/renderers/webgl/WebGlCoreRen
 export type { WebGlCoreCtxTexture } from '../src/core/renderers/webgl/WebGlCoreCtxTexture.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
+
+export type { CoreRenderer } from '../src/core/renderers/CoreRenderer.js';
 
 // Shaders
 export * from '../src/core/renderers/webgl/WebGlCoreShader.js';
