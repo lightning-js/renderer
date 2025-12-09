@@ -8,7 +8,8 @@ import type {
 } from './TextRenderer.js';
 
 // Use the same space regex as Canvas renderer to handle ZWSP
-const spaceRegex = /[ \u200B]+/g;
+const spaceRegex = / |\u200B/g;
+
 
 export const defaultFontMetrics: FontMetrics = {
   ascender: 800,
