@@ -134,7 +134,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     metrics,
     text,
     textAlign,
-    verticalAlign,
     fontFamily,
     lineHeight,
     overflowSuffix,

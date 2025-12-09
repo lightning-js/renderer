@@ -308,7 +308,6 @@ const generateTextLayout = (
     metrics,
     props.text,
     props.textAlign,
-    verticalAlign,
     fontFamily,
     lineHeight,
     props.overflowSuffix,

@@ -48,12 +48,20 @@ export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   forceLoad: boolean;
 }
 
+export enum TextConstraint {
+  'none' = 0,
+  'width' = 1,
+  'height' = 2,
+  'both' = 4,
+}
+
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
   private _layoutGenerated = false;
   private _waitingForFont = false;
+  private _containType: TextConstraint = TextConstraint.none;
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
@@ -82,6 +90,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
     this.textProps = props;
+    this._containType = TextConstraint[props.contain];
 
     this.setUpdateType(UpdateType.All);
   }
@@ -118,32 +127,50 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   override updateLocalTransform() {
     const p = this.props;
     let { x, y, w, h } = p;
-    const mountTranslateX = p.mountX * w;
-    const mountTranslateY = p.mountY * h;
+    const mountX = p.mountX;
+    const mountY = p.mountY;
+    let mountTranslateX = p.mountX * w;
+    let mountTranslateY = p.mountY * h;
+
+    let localTextTransform: Matrix3d | null = null;
 
     const tProps = this.textProps;
     const { textAlign, verticalAlign, maxWidth, maxHeight } = tProps;
+    const contain = this._containType;
 
-    if (textAlign !== 'left' && maxWidth > 0) {
-      if (textAlign === 'right') {
-        x += maxWidth - w;
-      } else if (textAlign === 'center') {
-        x += (maxWidth - w) * 0.5;
-      }
-    }
+    const hasMaxWidth = maxWidth > 0;
+    const hasMaxHeight = maxHeight > 0;
 
-    if (verticalAlign !== 'top' && maxHeight > 0) {
-      if (verticalAlign === 'bottom') {
-        y += maxHeight - h;
-      } else if (verticalAlign === 'middle') {
-        y += (maxHeight - h) * 0.5;
+    if (contain > 0 && (hasMaxWidth || hasMaxHeight)) {
+      let containX = 0;
+      let containY = 0;
+      if (contain & TextConstraint.width && hasMaxWidth === true) {
+        if (textAlign === 'right') {
+          containX = maxWidth - w;
+        } else if (textAlign === 'center') {
+          containX = (maxWidth - w) * 0.5;
+        }
+        mountTranslateX = mountX * maxWidth;
       }
+      if (contain & TextConstraint.height && maxHeight > 0) {
+        if (verticalAlign === 'bottom') {
+          containY = maxHeight - h;
+        } else if (verticalAlign === 'middle') {
+          containY = (maxHeight - h) * 0.5;
+        }
+        mountTranslateY = mountY * maxHeight;
+      }
+      localTextTransform = Matrix3d.translate(containX, containY);
     }
 
     if (p.rotation !== 0 || p.scaleX !== 1 || p.scaleY !== 1) {
       const scaleRotate = Matrix3d.rotate(p.rotation).scale(p.scaleX, p.scaleY);
-      const pivotTranslateX = p.pivotX * w;
-      const pivotTranslateY = p.pivotY * h;
+      const pivotW =
+        contain & TextConstraint.width && maxWidth > 0 ? maxWidth : w;
+      const pivotH =
+        contain & TextConstraint.height && maxHeight > 0 ? maxHeight : h;
+      const pivotTranslateX = p.pivotX * pivotW;
+      const pivotTranslateY = p.pivotY * pivotH;
 
       this.localTransform = Matrix3d.translate(
         x - mountTranslateX + pivotTranslateX,
@@ -158,6 +185,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         y - mountTranslateY,
         this.localTransform,
       );
+    }
+
+    if (localTextTransform !== null) {
+      this.localTransform = this.localTransform.multiply(localTextTransform);
     }
   }
 
@@ -343,6 +374,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (this.textProps.maxHeight !== value) {
       this.textProps.maxHeight = value;
       this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get contain(): TrProps['contain'] {
+    return this.textProps.contain;
+  }
+
+  set contain(value: TrProps['contain']) {
+    if (this.textProps.contain !== value) {
+      this.textProps.contain = value;
+      this._containType = TextConstraint[value];
       this.setUpdateType(UpdateType.Local);
     }
   }

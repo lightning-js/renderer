@@ -682,6 +682,7 @@ export class Stage {
       verticalAlign: props.verticalAlign || 'top',
       overflowSuffix: props.overflowSuffix || '...',
       wordBreak: props.wordBreak || 'normal',
+      contain: props.contain || 'none',
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
       forceLoad: props.forceLoad || false,

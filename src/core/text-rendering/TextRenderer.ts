@@ -233,7 +233,21 @@ export interface TrProps extends TrFontProps {
    */
   wordBreak: 'normal' | 'break-all' | 'break-word';
 
-  zIndex: number;
+  /**
+   * contain mode for text
+   *
+   * @remarks
+   *
+   * This property sets how the text should be contained within its bounding box.
+   *
+   * - 'width': The text is contained within the specified maxWidth, horizontal position of text will adjust according to {@link textAlign}.
+   * - 'height': The text is contained within the specified maxHeight, vertical position of text will adjust according to {@link verticalAlign}.
+   * - 'both': The text is contained within both the specified maxWidth and maxHeight.
+   * - 'none': The text is not contained within any bounding box.
+   *
+   * @default 'none'
+   */
+  contain: 'width' | 'height' | 'both' | 'none';
 }
 
 /**

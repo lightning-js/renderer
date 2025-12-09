@@ -7,6 +7,9 @@ import type {
   WrappedLinesStruct,
 } from './TextRenderer.js';
 
+// Use the same space regex as Canvas renderer to handle ZWSP
+const spaceRegex = / |\u200B/g;
+
 export const defaultFontMetrics: FontMetrics = {
   ascender: 800,
   descender: -200,
@@ -31,7 +34,6 @@ export const mapTextLayout = (
   metrics: NormalizedFontMetrics,
   text: string,
   textAlign: string,
-  verticalAlign: string,
   fontFamily: string,
   lineHeight: number,
   overflowSuffix: string,
@@ -202,14 +204,17 @@ export const wrapText = (
       const lastLine = wrappedLines[wrappedLines.length - 1]!;
       if (i < lines.length - 1) {
         if (lastLine[0].endsWith(overflowSuffix) === false) {
-          lastLine[0] = truncateLineWithSuffix(
+          const [line, lineWidth] = truncateLineWithSuffix(
             measureText,
             lastLine[0],
             fontFamily,
             maxWidth,
             letterSpacing,
+            spaceWidth,
             overflowSuffix,
           );
+          lastLine[0] = line;
+          lastLine[1] = lineWidth;
         }
       }
       break;
@@ -231,8 +236,6 @@ export const wrapLine = (
   remainingLines: number,
   hasMaxLines: boolean,
 ): WrappedLinesStruct => {
-  // Use the same space regex as Canvas renderer to handle ZWSP
-  const spaceRegex = / |\u200B/g;
   const words = line.split(spaceRegex);
   const spaces = line.match(spaceRegex) || [];
   const wrappedLines: TextLineStruct[] = [];
@@ -367,12 +370,13 @@ export const wrapLine = (
 
   // Add the last line if it has content
   if (currentLine.length > 0 && hasMaxLines === true && remainingLines === 0) {
-    currentLine = truncateLineWithSuffix(
+    [currentLine, currentLineWidth] = truncateLineWithSuffix(
       measureText,
       currentLine,
       fontFamily,
       maxWidth,
       letterSpacing,
+      spaceWidth,
       overflowSuffix,
     );
   }
@@ -392,24 +396,52 @@ export const truncateLineWithSuffix = (
   fontFamily: string,
   maxWidth: number,
   letterSpacing: number,
+  spaceWidth: number,
   overflowSuffix: string,
-): string => {
+): [string, number] => {
   const suffixWidth = measureText(overflowSuffix, fontFamily, letterSpacing);
-
-  if (suffixWidth >= maxWidth) {
-    return overflowSuffix.substring(0, Math.max(1, overflowSuffix.length - 1));
-  }
-
-  let truncatedLine = line;
-  while (truncatedLine.length > 0) {
-    const lineWidth = measureText(truncatedLine, fontFamily, letterSpacing);
-    if (lineWidth + suffixWidth <= maxWidth) {
-      return truncatedLine + overflowSuffix;
+  const words = line.split(spaceRegex);
+  if (words.length === 1) {
+    // single word, just truncate characters
+    const word = words[0]!;
+    let wordWidth = measureText(word, fontFamily, letterSpacing);
+    for (let i = word.length - 1; i > 0; i--) {
+      const letter = word.charAt(i);
+      const letterWidth = measureText(letter, fontFamily, letterSpacing);
+      const targetWidth = wordWidth - letterWidth + suffixWidth;
+      if (targetWidth <= maxWidth) {
+        return [word.substring(0, i) + overflowSuffix, targetWidth];
+      }
+      wordWidth -= letterWidth;
     }
-    truncatedLine = truncatedLine.substring(0, truncatedLine.length - 1);
+    return [overflowSuffix, suffixWidth];
   }
 
-  return overflowSuffix;
+  const spaces = line.match(spaceRegex) || [];
+  let currentLine = '';
+  let currentLineWidth = 0;
+
+  let i = 0;
+
+  for (; i < words.length; i++) {
+    const word = words[i];
+    if (word === undefined) {
+      continue;
+    }
+    const space = spaces[i - 1] || '';
+    const wordWidth = measureText(word, fontFamily, letterSpacing);
+    // For width calculation, treat ZWSP as having 0 width but regular space functionality
+    const effectiveSpaceWidth = space === '\u200B' ? 0 : spaceWidth;
+    const totalWidth = currentLineWidth + effectiveSpaceWidth + wordWidth;
+
+    if (totalWidth + suffixWidth > maxWidth) {
+      return [currentLine + overflowSuffix, currentLineWidth + suffixWidth];
+    }
+    currentLine += space + word;
+    currentLineWidth = totalWidth;
+  }
+
+  return [overflowSuffix, suffixWidth];
 };
 
 /**
