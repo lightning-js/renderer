@@ -303,6 +303,7 @@ describe('SDF Text Utils', () => {
         'Arial',
         100, // Max width for 10 characters
         0,
+        10, // spaceWidth
         '...',
       );
       expect(result).toContain('...');
@@ -316,6 +317,7 @@ describe('SDF Text Utils', () => {
         'Arial',
         30, // Only 3 characters fit
         0,
+        10, // spaceWidth
         'verylongsuffix',
       );
       expect(result).toMatch(/verylongsuffi/); // Truncated suffix
@@ -331,6 +333,7 @@ describe('SDF Text Utils', () => {
         'Arial',
         100,
         0,
+        10, // spaceWidth
         '...',
       );
       expect(result).toBe('short...');

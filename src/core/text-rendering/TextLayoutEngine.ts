@@ -7,6 +7,9 @@ import type {
   WrappedLinesStruct,
 } from './TextRenderer.js';
 
+// Use the same space regex as Canvas renderer to handle ZWSP
+const spaceRegex = / |\u200B/g;
+
 export const defaultFontMetrics: FontMetrics = {
   ascender: 800,
   descender: -200,
@@ -31,7 +34,6 @@ export const mapTextLayout = (
   metrics: NormalizedFontMetrics,
   text: string,
   textAlign: string,
-  verticalAlign: string,
   fontFamily: string,
   lineHeight: number,
   overflowSuffix: string,
@@ -208,8 +210,11 @@ export const wrapText = (
             fontFamily,
             maxWidth,
             letterSpacing,
+            spaceWidth,
             overflowSuffix,
           );
+          lastLine[0] = line;
+          lastLine[1] = lineWidth;
         }
       }
       break;
@@ -231,8 +236,6 @@ export const wrapLine = (
   remainingLines: number,
   hasMaxLines: boolean,
 ): WrappedLinesStruct => {
-  // Use the same space regex as Canvas renderer to handle ZWSP
-  const spaceRegex = / |\u200B/g;
   const words = line.split(spaceRegex);
   const spaces = line.match(spaceRegex) || [];
   const wrappedLines: TextLineStruct[] = [];
@@ -372,6 +375,7 @@ export const wrapLine = (
       fontFamily,
       maxWidth,
       letterSpacing,
+      spaceWidth,
       overflowSuffix,
     );
   }
@@ -391,6 +395,7 @@ export const truncateLineWithSuffix = (
   fontFamily: string,
   maxWidth: number,
   letterSpacing: number,
+  spaceWidth: number,
   overflowSuffix: string,
 ): string => {
   const suffixWidth = font.measureText(overflowSuffix, letterSpacing);
@@ -405,10 +410,11 @@ export const truncateLineWithSuffix = (
     if (lineWidth + suffixWidth <= maxWidth) {
       return truncatedLine + overflowSuffix;
     }
-    truncatedLine = truncatedLine.substring(0, truncatedLine.length - 1);
+    currentLine += space + word;
+    currentLineWidth = totalWidth;
   }
 
-  return overflowSuffix;
+  return [overflowSuffix, suffixWidth];
 };
 
 /**

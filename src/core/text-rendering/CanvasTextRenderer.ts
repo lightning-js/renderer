@@ -155,7 +155,6 @@ const renderText = (
     metrics,
     text,
     textAlign,
-    verticalAlign,
     fontFamily,
     lineHeight,
     overflowSuffix,

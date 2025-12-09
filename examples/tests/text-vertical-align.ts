@@ -93,12 +93,14 @@ function generateVerticalAlignTest(
         const nodeProps = {
           ...NODE_PROPS,
           text: 'txyz',
+          contain: 'height',
           textRendererOverride: textRenderer,
           maxHeight: CONTAINER_SIZE,
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
+          verticalAlign: 'middle',
         });
 
         return await constructTestRow({ renderer, rowNode }, [
@@ -130,11 +132,13 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'abcd\ntxyz',
           textRendererOverride: textRenderer,
+          contain: 'height',
           maxHeight: CONTAINER_SIZE,
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
           ...nodeProps,
+          verticalAlign: 'middle',
         });
 
         return await constructTestRow({ renderer, rowNode }, [
