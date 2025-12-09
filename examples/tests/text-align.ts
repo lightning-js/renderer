@@ -65,6 +65,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const canvasText = renderer.createTextNode({
     y: yPos,
     maxWidth: testRoot.w,
+    contain: 'width',
     fontSize,
     fontFamily,
     color: 0xff0000ff,
@@ -74,6 +75,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const sdfText = renderer.createTextNode({
     y: yPos,
     maxWidth: testRoot.w,
+    contain: 'width',
     fontSize,
     fontFamily,
     color: 0x0000ff77,
