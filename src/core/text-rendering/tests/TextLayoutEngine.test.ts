@@ -305,8 +305,8 @@ describe('SDF Text Utils', () => {
         240, // current line width
         '',
         100, // Max width for 10 characters
-        '...', // Suffix
-        30, // Suffix width
+        0,
+        '...',
       );
       expect(result[0]).toContain('...');
       expect(result.length).toBeLessThanOrEqual(10);
@@ -321,6 +321,7 @@ describe('SDF Text Utils', () => {
         50, // current line width
         '',
         30, // Only 3 characters fit
+        0,
         'verylongsuffix',
         140, // Suffix width
       );
@@ -335,10 +336,6 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'Arial',
         0,
-        'short',
-        50, // 5 characters fit
-        '',
-        40,
         '...',
         30,
       );
