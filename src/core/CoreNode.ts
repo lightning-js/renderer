@@ -37,6 +37,7 @@ import type {
   NodeTextureFailedPayload,
   NodeTextureFreedPayload,
   NodeTextureLoadedPayload,
+  NodeRenderablePayload,
 } from '../common/CommonTypes.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import {
@@ -1484,7 +1485,17 @@ export class CoreNode extends EventEmitter {
    * @param isRenderable - The new renderable state
    */
   setRenderable(isRenderable: boolean) {
+    const previousIsRenderable = this.isRenderable;
     this.isRenderable = isRenderable;
+
+    // Emit event if renderable status has changed
+    if (previousIsRenderable !== isRenderable) {
+      this.emit('renderable', {
+        type: 'renderable',
+        isRenderable,
+      } satisfies NodeRenderablePayload);
+    }
+
     if (
       isRenderable === true &&
       this.stage.calculateTextureCoord === true &&
