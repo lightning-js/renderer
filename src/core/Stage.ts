@@ -682,7 +682,7 @@ export class Stage {
       maxLines: props.maxLines || 0,
       verticalAlign: props.verticalAlign || 'top',
       overflowSuffix: props.overflowSuffix || '...',
-      wordBreak: props.wordBreak || 'normal',
+      wordBreak: props.wordBreak || 'break-word',
       contain: props.contain || 'none',
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
