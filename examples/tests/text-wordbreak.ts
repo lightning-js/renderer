@@ -39,7 +39,7 @@ const NODE_PROPS = {
   textRendererOverride: 'sdf',
   fontSize: 20,
   maxWidth: containerSize,
-  wordBreak: 'normal',
+  wordBreak: 'overflow',
 } satisfies Partial<ITextNodeProps>;
 
 function generateWordBreakTest(
