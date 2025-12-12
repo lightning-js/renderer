@@ -335,9 +335,9 @@ const generateTextLayout = (
     const textLine = line[0];
     const textLineLength = textLine.length;
     let prevCodepoint = 0;
-    currentX = line[2];
+    currentX = line[3];
     //convert Y coord to vertex value
-    currentY = line[3] / fontScale;
+    currentY = line[4] / fontScale;
 
     for (let j = 0; j < textLineLength; j++) {
       const char = textLine.charAt(j);

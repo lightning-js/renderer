@@ -164,7 +164,6 @@ const renderText = (
     maxWidth,
     maxHeight,
   );
-
   const lineAmount = lines.length;
   const canvasW = Math.ceil(effectiveWidth);
   const canvasH = Math.ceil(effectiveHeight);
@@ -185,8 +184,8 @@ const renderText = (
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
-    let currentX = Math.ceil(line[2]);
-    const currentY = Math.ceil(line[3]);
+    let currentX = Math.ceil(line[3]);
+    const currentY = Math.ceil(line[4]);
     if (letterSpacing === 0) {
       context.fillText(textLine, currentX, currentY);
     } else {

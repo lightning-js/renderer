@@ -226,13 +226,13 @@ export interface TrProps extends TrFontProps {
    * @remarks
    * This property sets how words should break when reaching the end of a line.
    *
-   * - `'normal'`: Use the default line break rule.
+   * - `'overflow'`: Uses the Css/HTML normal word-break behavior, generally not used in app development.
    * - `'break-all'`: To prevent overflow, word breaks should happen between any two characters.
    * - `'break-word'`: To prevent overflow, word breaks should happen between words. If words are too long word breaks happen between any two characters.
    *
-   * @default "normal"
+   * @default "break-word"
    */
-  wordBreak: 'normal' | 'break-all' | 'break-word';
+  wordBreak: 'overflow' | 'break-all' | 'break-word';
 
   /**
    * contain mode for text
@@ -411,10 +411,11 @@ export interface TextRenderer {
  * Text line struct for text mapping
  * 0 - text
  * 1 - width
- * 2 - line offset x
- * 3 - line offset y
+ * 2 - truncated
+ * 3 - line offset x
+ * 4 - line offset y
  */
-export type TextLineStruct = [string, number, number, number];
+export type TextLineStruct = [string, number, boolean, number, number];
 
 /**
  * Wrapped lines struct for text mapping
