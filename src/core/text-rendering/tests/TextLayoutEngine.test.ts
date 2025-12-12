@@ -24,10 +24,12 @@ import {
   breakWord,
   truncateLineEnd,
 } from '../TextLayoutEngine.js';
+import type { CoreFont } from '../CoreFont.js';
+import { measureText } from '../CanvasFontHandler.js';
 
 // Mock font data for testing
 // Mock SdfFontHandler functions
-const mockGetGlyph = (_fontFamily: string, codepoint: number) => {
+const mockGetGlyph = (codepoint: number) => {
   // Mock glyph data - each character is 10 units wide for easy testing
   return {
     id: codepoint,
@@ -53,7 +55,6 @@ const mockGetKerning = () => {
 // but works with our mocked getGlyph and getKerning functions
 const testMeasureText = (
   text: string,
-  fontFamily: string,
   letterSpacing: number,
 ): number => {
   if (text.length === 1) {
@@ -62,7 +63,7 @@ const testMeasureText = (
     if (codepoint === undefined) return 0;
     if (char === '\u200B') return 0; // Zero-width space
 
-    const glyph = mockGetGlyph(fontFamily, codepoint);
+    const glyph = mockGetGlyph(codepoint);
     if (glyph === null) return 0;
     return glyph.xadvance + letterSpacing;
   }
@@ -78,7 +79,7 @@ const testMeasureText = (
       continue;
     }
 
-    const glyph = mockGetGlyph(fontFamily, codepoint);
+    const glyph = mockGetGlyph(codepoint);
     if (glyph === null) continue;
 
     let advance = glyph.xadvance;
@@ -96,26 +97,30 @@ const testMeasureText = (
   return width;
 };
 
+const font = {
+  measureText: testMeasureText,
+} as unknown as CoreFont;
+
 // Mock measureText function to replace the broken SDF implementation
 describe('SDF Text Utils', () => {
   describe('measureText', () => {
     it('should return correct width for basic text', () => {
-      const width = testMeasureText('hello', 'Arial', 0);
+      const width = font.measureText('hello', 0);
       expect(width).toBeCloseTo(50); // 5 chars * 10 xadvance
     });
 
     it('should return 0 width for empty text', () => {
-      const width = testMeasureText('', 'Arial', 0);
+      const width = font.measureText('', 0);
       expect(width).toBe(0);
     });
 
     it('should include letter spacing in width calculation', () => {
-      const width = testMeasureText('hello', 'Arial', 2);
+      const width = font.measureText('hello', 2);
       expect(width).toBeCloseTo(60); // 5 chars * (10 xadvance + 2 letterSpacing)
     });
 
     it('should skip zero-width spaces in width calculation', () => {
-      const width = testMeasureText('hel\u200Blo', 'Arial', 0);
+      const width = font.measureText('hel\u200Blo', 0);
       expect(width).toBeCloseTo(50); // Should be same as 'hello'
     });
   });
@@ -123,9 +128,8 @@ describe('SDF Text Utils', () => {
   describe('wrapLine', () => {
     it('should wrap text that exceeds max width', () => {
       const result = wrapLine(
-        testMeasureText, // Add measureText as first parameter
+        font, // Add measureText as first parameter
         'hello world test',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -143,9 +147,8 @@ describe('SDF Text Utils', () => {
 
     it('should handle single word that fits', () => {
       const result = wrapLine(
-        testMeasureText,
+        font,
         'hello',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -300,6 +303,7 @@ describe('SDF Text Utils', () => {
       const result = truncateLineEnd(
         testMeasureText,
         'Arial',
+<<<<<<< HEAD
         0,
         'this is a very long line', //current line
         240, // current line width
@@ -307,6 +311,15 @@ describe('SDF Text Utils', () => {
         100, // Max width for 10 characters
         0,
         '...',
+=======
+        0,
+        'this is a very long line', //current line
+        240, // current line width
+        '',
+        100, // Max width for 10 characters
+        '...', // Suffix
+        30, // Suffix width
+>>>>>>> ba3404b2 (fixed truncation issues, fixed text engine tests)
       );
       expect(result[0]).toContain('...');
       expect(result.length).toBeLessThanOrEqual(10);
@@ -316,12 +329,20 @@ describe('SDF Text Utils', () => {
       const result = truncateLineEnd(
         testMeasureText,
         'Arial',
+<<<<<<< HEAD
         0,
         'hello',
         50, // current line width
         '',
         30, // Only 3 characters fit
         0,
+=======
+        0,
+        'hello',
+        50, // current line width
+        '',
+        30, // Only 3 characters fit
+>>>>>>> ba3404b2 (fixed truncation issues, fixed text engine tests)
         'verylongsuffix',
         140, // Suffix width
       );
@@ -336,6 +357,13 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'Arial',
         0,
+<<<<<<< HEAD
+=======
+        'short',
+        50, // 5 characters fit
+        '',
+        40,
+>>>>>>> ba3404b2 (fixed truncation issues, fixed text engine tests)
         '...',
         30,
       );
