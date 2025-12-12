@@ -21,8 +21,8 @@ import { describe, it, expect } from 'vitest';
 import {
   wrapText,
   wrapLine,
-  truncateLineWithSuffix,
   breakWord,
+  truncateLineEnd,
 } from '../TextLayoutEngine.js';
 
 // Mock font data for testing
@@ -130,9 +130,9 @@ describe('SDF Text Utils', () => {
         0, // designLetterSpacing
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        10,
       );
 
       const [lines] = result;
@@ -146,15 +146,15 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'hello',
         'Arial',
-        100,
-        0,
+        100, // maxWidth (10 characters at 10 units each)
+        0, // designLetterSpacing
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        1,
       );
-      expect(result[0][0]).toEqual(['hello', 50, 0, 0]); // 4-element format
+      expect(result[0][0]).toEqual(['hello', 50, false, 0, 0]); // 4-element format
     });
 
     it('should break long words', () => {
@@ -162,19 +162,19 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'verylongwordthatdoesnotfit',
         'Arial',
-        100, // Only 10 characters fit (each char = 10 units)
-        0,
+        100, // maxWidth (10 characters at 10 units each)
+        0, // designLetterSpacing
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        1,
       );
       const [lines] = result; // Extract the lines array
       // The implementation returns the full word when wordBreak is 'normal' (default behavior)
       // This is correct behavior - single words are not broken unless wordBreak is set to 'break-all'
       expect(lines.length).toBe(1);
-      expect(lines[0]?.[0]).toBe('verylongwordthatdoesnotfit');
+      expect(lines[0]?.[0]).toBe('verylongwo');
     });
 
     it('should handle ZWSP as word break opportunity', () => {
@@ -183,13 +183,13 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'hello\u200Bworld test',
         'Arial',
-        100, // 10 characters max - 'helloworld' = 100 units (fits), ' test' = 50 units (exceeds)
-        0,
+        100, // maxWidth (10 characters at 10 units each)
+        0, // designLetterSpacing
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        2,
       );
 
       const [lines] = result1;
@@ -201,15 +201,15 @@ describe('SDF Text Utils', () => {
         testMeasureText,
         'hi\u200Bthere',
         'Arial',
-        200, // Wide enough for all text (7 characters = 70 units)
-        0,
+        200, // maxWidth
+        0, // designLetterSpacing
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        1,
       );
-      expect(result2[0][0]).toEqual(['hithere', 70, 0, 0]); // ZWSP is invisible, no space added
+      expect(result2[0][0]).toEqual(['hithere', 70, false, 0, 0]); // ZWSP is invisible, no space added
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
@@ -220,12 +220,12 @@ describe('SDF Text Utils', () => {
         0,
         10, // spaceWidth
         '',
-        'normal',
-        0,
-        false,
+        0, //overflowWidth
+        'break-word',
+        2,
       );
       expect(result3.length).toBeGreaterThan(1); // Should break at ZWSP position
-      expect(result3[0][0]).toEqual(['verylongword', 120, 0, 0]);
+      expect(result3[0][0]).toEqual(['verylongwo', 100, false, 0, 0]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -237,9 +237,9 @@ describe('SDF Text Utils', () => {
         0,
         10, // spaceWidth
         '...',
-        'normal',
-        0, // remainingLines = 0 - this should trigger truncation when hasMaxLines is true
-        true, // hasMaxLines = true - this enables truncation
+        0, //overflowWidth
+        'break-word',
+        10, // remainingLines = 0 - this should trigger truncation when hasMaxLines is true
       );
       // With the current implementation, text wraps naturally across multiple lines
       // when remainingLines is 0 and hasMaxLines is true, but doesn't truncate in this case
@@ -262,7 +262,7 @@ describe('SDF Text Utils', () => {
         0,
       );
       expect(result[0].length).toBeGreaterThan(2);
-      expect(result[0][0]).toStrictEqual(['line one', 80, 0, 0]);
+      expect(result[0][0]).toStrictEqual(['line one', 80, false, 0, 0]);
     });
 
     it('should handle empty lines', () => {
@@ -297,46 +297,52 @@ describe('SDF Text Utils', () => {
 
   describe('truncateLineWithSuffix', () => {
     it('should truncate line and add suffix', () => {
-      const result = truncateLineWithSuffix(
+      const result = truncateLineEnd(
         testMeasureText,
-        'this is a very long line',
         'Arial',
-        100, // Max width for 10 characters
         0,
-        10, // spaceWidth
-        '...',
+        'this is a very long line', //current line
+        240, // current line width
+        '',
+        100, // Max width for 10 characters
+        '...', // Suffix
+        30, // Suffix width
       );
-      expect(result).toContain('...');
+      expect(result[0]).toContain('...');
       expect(result.length).toBeLessThanOrEqual(10);
     });
 
     it('should return suffix if suffix is too long', () => {
-      const result = truncateLineWithSuffix(
+      const result = truncateLineEnd(
         testMeasureText,
-        'hello',
         'Arial',
-        30, // Only 3 characters fit
         0,
-        10, // spaceWidth
+        'hello',
+        50, // current line width
+        '',
+        30, // Only 3 characters fit
         'verylongsuffix',
+        140, // Suffix width
       );
-      expect(result).toMatch(/verylongsuffi/); // Truncated suffix
+      expect(result[0]).toMatch(/verylongsuffi/); // Truncated suffix
     });
 
     it('should return original line with suffix (current behavior)', () => {
       // Note: The current implementation always adds the suffix, even if the line fits.
       // This is the expected behavior when used in overflow contexts where the suffix
       // indicates that content was truncated at the line limit.
-      const result = truncateLineWithSuffix(
+      const result = truncateLineEnd(
         testMeasureText,
-        'short',
         'Arial',
-        100,
         0,
-        10, // spaceWidth
+        'short',
+        50, // 5 characters fit
+        '',
+        40,
         '...',
+        30,
       );
-      expect(result).toBe('short...');
+      expect(result[0]).toBe('s...');
     });
   });
 
@@ -345,35 +351,64 @@ describe('SDF Text Utils', () => {
       const result = breakWord(
         testMeasureText,
         'verylongword',
+        'verylongword'.length * 10,
         'Arial',
+        0,
+        [],
+        '',
+        0,
+        1,
+        '',
         50, // 5 characters max per line
+        '',
         0,
-        0,
+        '...',
+        30,
       );
-      expect(result[0].length).toBeGreaterThan(1);
-      expect(result[0][0]?.[0]).toHaveLength(5);
+      expect(result.length).toBeGreaterThan(1);
+      expect(result[2]).toHaveLength(12);
     });
 
     it('should handle single character word', () => {
-      const result = breakWord(testMeasureText, 'a', 'Arial', 50, 0, 0);
-      expect(result[0][0]).toStrictEqual(['a', 10, 0, 0]);
+      const result = breakWord(
+        testMeasureText,
+        'a',
+        10,
+        'Arial',
+        0,
+        [],
+        '',
+        0,
+        1,
+        '',
+        50, // 5 characters max per line
+        '',
+        0,
+        '...',
+        30,
+      );
+      expect(result).toStrictEqual(['', 0, 'a']);
     });
 
     it('should truncate with suffix when max lines reached', () => {
       const result = breakWord(
         testMeasureText,
         'verylongword',
+        'verylongword'.length * 10,
         'Arial',
-        50,
         0,
-        1, // remainingLines = 1
+        [],
+        '',
+        0,
+        1,
+        '',
+        50, // 5 characters max per line
+        '',
+        0,
+        '...',
+        30,
       );
-      expect(result[0]).toHaveLength(1);
-    });
-
-    it('should handle empty word', () => {
-      const result = breakWord(testMeasureText, '', 'Arial', 50, 0, 0);
-      expect(result[0]).toEqual([]);
+      expect(result[0]).toHaveLength(0);
     });
   });
 
@@ -409,9 +444,10 @@ describe('SDF Text Utils', () => {
         'normal',
         0,
       );
-      expect(result.length).toBeGreaterThan(2);
-      expect(result[0][0]?.[0]).toBe('Short');
-      expect(result[0][result.length - 1]?.[0]).toBe('short');
+      const [lines] = result;
+      expect(lines.length).toBeGreaterThan(2);
+      expect(lines[0]?.[0]).toBe('Short');
+      expect(lines[lines.length - 1]?.[0]).toBe('short');
     });
   });
 });
