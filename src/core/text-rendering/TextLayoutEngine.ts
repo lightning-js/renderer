@@ -73,11 +73,16 @@ export const mapTextLayout = (
   let effectiveMaxLines = maxLines;
 
   if (maxHeight > 0) {
-    const maxFromHeight = Math.floor(maxHeight / lineHeightPx);
+    let maxFromHeight = Math.floor(maxHeight / lineHeightPx);
+    //ensure at least 1 line
+    if (maxFromHeight < 1) {
+      maxFromHeight = 1;
+    }
     if (effectiveMaxLines === 0 || maxFromHeight < effectiveMaxLines) {
       effectiveMaxLines = maxFromHeight;
     }
   }
+
   //trim start/end whitespace
   // text = text.trim();
   const wrappedText = maxWidth > 0;
@@ -591,6 +596,13 @@ export const truncateLineEnd = (
   overflowSuffix: string,
   overflowWidth: number,
 ): [string, number, string] => {
+  if (currentLineWidth + overflowWidth <= maxWidth) {
+    currentLine += overflowSuffix;
+    currentLineWidth += overflowWidth;
+    remainingWord = '';
+    return [currentLine, currentLineWidth, remainingWord];
+  }
+
   let truncated = false;
   for (let i = currentLine.length - 1; i > 0; i--) {
     const char = currentLine.charAt(i);
