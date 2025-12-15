@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
@@ -198,6 +198,55 @@ describe('set color()', () => {
 
       node.update(0, clippingRect);
       expect(node.isRenderable).toBe(false);
+    });
+
+    it('should emit renderable event when isRenderable status changes', () => {
+      const node = new CoreNode(stage, defaultProps);
+      const eventCallback = vi.fn();
+
+      // Listen for the renderableChanged event
+      node.on('renderable', eventCallback);
+
+      // Set up node as a color texture that should be renderable
+      node.alpha = 1;
+      node.x = 0;
+      node.y = 0;
+      node.w = 100;
+      node.h = 100;
+      node.color = 0xffffffff;
+
+      // Initial state should be false
+      expect(node.isRenderable).toBe(false);
+      expect(eventCallback).not.toHaveBeenCalled();
+
+      // Update should make it renderable (false -> true)
+      node.update(0, clippingRect);
+      expect(node.isRenderable).toBe(true);
+      expect(eventCallback).toHaveBeenCalledWith(node, {
+        type: 'renderable',
+        isRenderable: true,
+      });
+
+      // Reset the mock
+      eventCallback.mockClear();
+
+      // Make node invisible (alpha = 0) to make it not renderable (true -> false)
+      node.alpha = 0;
+      node.update(1, clippingRect);
+      expect(node.isRenderable).toBe(false);
+      expect(eventCallback).toHaveBeenCalledWith(node, {
+        type: 'renderable',
+        isRenderable: false,
+      });
+
+      // Reset the mock again
+      eventCallback.mockClear();
+
+      // Setting same value shouldn't trigger event
+      node.alpha = 0;
+      node.update(2, clippingRect);
+      expect(node.isRenderable).toBe(false);
+      expect(eventCallback).not.toHaveBeenCalled();
     });
   });
 });
