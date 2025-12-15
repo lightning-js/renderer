@@ -353,6 +353,24 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     super.destroy();
   }
 
+  override set w(value: number) {
+    // dont allow direct setting of width on text nodes, handled by text layout generation
+    console.warn('Cannot directly set w on CoreTextNode');
+  }
+
+  override get w(): number {
+    return this.props.w;
+  }
+
+  override set h(value: number) {
+    // dont allow direct setting of height on text nodes, handled by text layout generation
+    console.warn('Cannot directly set h on CoreTextNode');
+  }
+
+  override get h(): number {
+    return this.props.h;
+  }
+
   get maxWidth() {
     return this.textProps.maxWidth;
   }
