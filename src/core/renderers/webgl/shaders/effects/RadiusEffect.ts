@@ -75,7 +75,7 @@ export class RadiusEffect extends ShaderEffect {
   static override methods: Record<string, string> = {
     fillMask: `
       float function(float dist) {
-        return 1.0 - smoothstep(0.0, 1.0, dist);
+        return clamp(-dist, 0.0, 1.0);
       }
     `,
     boxDist: `
@@ -101,7 +101,7 @@ export class RadiusEffect extends ShaderEffect {
   vec4 r = radius;
   r.xy = (p.x > 0.0) ? r.yz : r.xw;
   float cornerRadius = (p.y > 0.0) ? r.y : r.x;
-  return $boxDist(p, halfDimensions + 0.5, cornerRadius);
+  return $boxDist(p, halfDimensions, cornerRadius);
   `;
 
   static override onEffectMask = `
