@@ -69,22 +69,29 @@ export const incrementalRepositionByZIndex = (
     const currentIndex = findChildIndexById(node, nodes);
     if (currentIndex === -1) continue;
 
-    //remove node from current position
-    nodes.splice(currentIndex, 1);
-
-    let left = 0;
-    let right = nodes.length - 1;
     const targetZIndex = node.props.zIndex;
+
+    //binary search for correct insertion position
+    let left = 0;
+    let right = nodes.length;
 
     while (left < right) {
       const mid = (left + right) >>> 1;
-      if (nodes[mid]!.props.zIndex < targetZIndex) {
+      if (nodes[mid]!.props.zIndex <= targetZIndex) {
         left = mid + 1;
       } else {
         right = mid;
       }
     }
-    nodes.splice(left, 0, node);
+
+    //adjust target position if it's after the current position
+    const targetIndex = left > currentIndex ? left - 1 : left;
+
+    //only reposition if target is different from current
+    if (targetIndex !== currentIndex) {
+      nodes.splice(currentIndex, 1);
+      nodes.splice(targetIndex, 0, node);
+    }
   }
 };
 
