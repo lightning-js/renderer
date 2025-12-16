@@ -1742,9 +1742,9 @@ export class CoreNode extends EventEmitter {
 
     const n = children.length;
     // decide whether to use incremental sort or bucket sort
-    const useIncremental = changedCount <= 2 && changedCount < n * 0.05;
+    const useIncremental = changedCount <= 2 || changedCount < n * 0.05;
 
-    // when changed count is less than 5% of total children, use incremental sort
+    // when changed count is less than 2 or 5% of total children, use incremental sort
     if (useIncremental === true) {
       incrementalRepositionByZIndex(this.zIndexSortList, children);
     } else {
@@ -2246,8 +2246,8 @@ export class CoreNode extends EventEmitter {
     if (newParent !== null) {
       newParent.addChild(this, oldParent);
     }
-    // Since this node has a new parent, to be safe, have it do a full update.
-    this.setUpdateType(UpdateType.All);
+    //since this node has a new parent, recalc global and render bounds
+    this.setUpdateType(UpdateType.Global | UpdateType.RenderBounds);
   }
 
   get rtt(): boolean {
