@@ -57,6 +57,7 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import { createAutosizeManager } from './AutosizeManager.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -255,14 +256,35 @@ export interface CoreNodeProps {
    */
   alpha: number;
   /**
-   * Autosize mode
+   * Autosize
    *
    * @remarks
-   * When enabled, when a texture is loaded into the Node, the Node will
-   * automatically resize to the dimensions of the texture.
+   * When enabled, the Node automatically resizes based on its content
    *
-   * Text Nodes are always autosized based on their text content regardless
-   * of this mode setting.
+   * **Texture Autosize Mode:**
+   * - When the Node has a texture, it automatically resizes to match the
+   *   texture's dimensions when the texture loads
+   * - This ensures images display at their natural size without manual sizing
+   * - Text Nodes always use this mode regardless of this setting
+   *
+   * **Children Autosize Mode:**
+   * - When the Node has no texture but contains children, it automatically
+   *   resizes to encompass all children's bounds
+   * - Calculates the bounding box that contains all child positions, dimensions,
+   *   and transforms (scale, rotation, mount/pivot points)
+   * - Creates container behavior where the parent grows to fit its content
+   * - Updates dynamically as children are added, removed, or transformed
+   *
+   * **Mode Selection Logic:**
+   * - Texture mode takes precedence over children mode
+   * - Mode switches automatically when texture is added/removed
+   * - If no texture and no children, autosize has no effect
+   *
+   * **Performance:**
+   * - Children mode uses efficient transform caching and differential updates
+   * - Only recalculates when child transforms actually change
+   * - Minimal memory allocation with factory function patterns
+   *
    *
    * @default `false`
    */
@@ -747,6 +769,14 @@ export class CoreNode extends EventEmitter {
    */
   public framebufferDimensions: Dimensions | null = null;
 
+  /**
+   * Autosize management properties
+   */
+  private autosizeManager: ReturnType<typeof createAutosizeManager> | null =
+    null;
+  private autosizeParent: CoreNode | null = null;
+  public autosizeNeedsUpdate = false;
+
   public destroyed = false;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
@@ -809,6 +839,11 @@ export class CoreNode extends EventEmitter {
     this.rtt = props.rtt;
     this.boundsMargin = props.boundsMargin;
     this.interactive = props.interactive;
+
+    // Initialize autosize if enabled
+    if (this.props.autosize) {
+      this.updateAutosizeMode();
+    }
 
     this.setUpdateType(
       UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
@@ -878,6 +913,8 @@ export class CoreNode extends EventEmitter {
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     if (this.autosize === true) {
+      // Disable children autosize temporarily to prevent conflicts
+      this.disableAutosizeChildren();
       this.w = dimensions.w;
       this.h = dimensions.h;
     }
@@ -1109,6 +1146,11 @@ export class CoreNode extends EventEmitter {
         updateParent = hasParent;
         childUpdateType |= UpdateType.RenderBounds;
       }
+
+      // Handle autosize updates when children transforms change
+      if (this.autosizeParent) {
+        this.notifyAutosizeParent();
+      }
     }
 
     if (updateType & UpdateType.RenderBounds) {
@@ -1245,6 +1287,11 @@ export class CoreNode extends EventEmitter {
 
         child.update(delta, childClippingRect);
       }
+    }
+
+    // Handle autosize parent updates
+    if (this.autosizeNeedsUpdate) {
+      this.processAutosizeUpdate();
     }
 
     // If the node has an RTT parent and requires a texture re-render, inform the RTT parent
@@ -1971,7 +2018,17 @@ export class CoreNode extends EventEmitter {
   }
 
   set autosize(value: boolean) {
+    if (this.props.autosize === value) {
+      return;
+    }
+
     this.props.autosize = value;
+
+    if (value) {
+      this.updateAutosizeMode();
+    } else {
+      this.disableAutosizeChildren();
+    }
   }
 
   get boundsMargin(): number | [number, number, number, number] | null {
@@ -2183,6 +2240,13 @@ export class CoreNode extends EventEmitter {
       oldParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
+
+      // Remove this node from old parent's autosize chain
+      this.removeFromAutosizeChain(oldParent);
+      // Update old parent's autosize mode after child removal
+      if (oldParent.autosize) {
+        oldParent.updateAutosizeMode();
+      }
     }
     if (newParent) {
       newParent.children.push(this);
@@ -2197,6 +2261,16 @@ export class CoreNode extends EventEmitter {
       if (newParent.rtt || newParent.parentHasRenderTexture) {
         this.applyRTTInheritance(newParent);
       }
+
+      // Add this node to new parent's autosize chain
+      this.addToAutosizeChain(newParent);
+      // Update new parent's autosize mode after child addition
+      if (newParent.autosize) {
+        newParent.updateAutosizeMode();
+      }
+    } else {
+      // No parent - remove from any autosize chain
+      this.clearAutosizeParent();
     }
 
     // fetch render bounds from parent
@@ -2425,6 +2499,11 @@ export class CoreNode extends EventEmitter {
       this.loadTexture();
     }
 
+    // Update autosize mode when texture changes
+    if (this.autosize) {
+      this.updateAutosizeMode();
+    }
+
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
@@ -2472,4 +2551,161 @@ export class CoreNode extends EventEmitter {
   }
 
   //#endregion Properties
+
+  //#region Autosize Methods
+
+  /**
+   * Update autosize mode based on current node state
+   * Chooses between texture autosize and children autosize
+   */
+  private updateAutosizeMode(): void {
+    if (!this.autosize) {
+      this.disableAutosizeChildren();
+      return;
+    }
+
+    // Priority 1: Texture autosize (if texture exists)
+    if (this.texture !== null) {
+      this.disableAutosizeChildren();
+      return;
+    }
+
+    // Priority 2: Children autosize (if no texture but has children)
+    if (this.children.length > 0) {
+      this.enableAutosizeChildren();
+    } else {
+      this.disableAutosizeChildren();
+    }
+  }
+
+  /**
+   * Enable autosize children mode for this node
+   */
+  private enableAutosizeChildren(): void {
+    if (this.autosizeManager) {
+      return; // Already enabled
+    }
+
+    this.autosizeManager = createAutosizeManager(this);
+    for (const child of this.children) {
+      this.autosizeManager.addOrUpdateChild(child);
+      child.addToAutosizeChain(this);
+    }
+  }
+
+  /**
+   * Disable autosize children mode for this node
+   */
+  private disableAutosizeChildren(): void {
+    if (!this.autosizeManager) {
+      return; // Already disabled
+    }
+
+    for (const child of this.children) {
+      child.removeFromAutosizeChain(this);
+    }
+
+    this.autosizeManager.deactivate();
+    this.autosizeManager = null;
+  }
+
+  /**
+   * Add this node to a parent's autosize calculation chain
+   */
+  private addToAutosizeChain(parent: CoreNode): void {
+    let autosizeParent: CoreNode | null = null;
+    let currentParent: CoreNode | null = parent;
+
+    while (currentParent) {
+      if (currentParent.autosize && currentParent.autosizeManager) {
+        autosizeParent = currentParent;
+        break; // Stop at first autosize parent found
+      }
+      currentParent = currentParent.parent;
+    }
+
+    if (autosizeParent && autosizeParent !== this.autosizeParent) {
+      // Remove from old autosize parent
+      if (this.autosizeParent?.autosizeManager) {
+        this.autosizeParent.autosizeManager.removeChild(this);
+      }
+
+      // Add to new autosize parent
+      this.autosizeParent = autosizeParent;
+      autosizeParent.autosizeManager?.addOrUpdateChild(this);
+    }
+  }
+
+  /**
+   * Remove this node from a parent's autosize calculation chain
+   */
+  private removeFromAutosizeChain(parent: CoreNode): void {
+    if (this.autosizeParent === parent) {
+      parent.autosizeManager?.removeChild(this);
+      this.autosizeParent = null;
+    }
+  }
+
+  /**
+   * Clear autosize parent relationship
+   */
+  private clearAutosizeParent(): void {
+    if (
+      this.autosizeParent == null ||
+      this.autosizeParent.autosizeManager === null
+    ) {
+      return;
+    }
+
+    this.autosizeParent.autosizeManager.removeChild(this);
+    this.autosizeParent = null;
+  }
+
+  /**
+   * Process autosize updates for this node (if it's an autosize parent)
+   */
+  private processAutosizeUpdate(): void {
+    if (this.autosizeManager === null || this.autosize === false) {
+      this.autosizeNeedsUpdate = false;
+      return;
+    }
+
+    const result = this.autosizeManager.calculateAutosize();
+    if (result.hasChanged === false) {
+      this.autosizeNeedsUpdate = false;
+      return;
+    }
+
+    const oldAutosize = this.props.autosize;
+    this.props.autosize = false; // Temporarily disable to avoid recursive updates
+
+    this.w = result.width;
+    this.h = result.height;
+
+    // Request an update on the next microtask
+    // This is required because else the update wont be picked up
+    queueMicrotask(() => {
+      this.setUpdateType(UpdateType.IsRenderable | UpdateType.Local);
+      this.stage.requestRender();
+    });
+
+    this.props.autosize = oldAutosize; // Restore autosize state
+    this.autosizeNeedsUpdate = false;
+  }
+
+  /**
+   * Notify the autosize parent that this node's transform has changed
+   */
+  private notifyAutosizeParent(): void {
+    if (
+      this.autosizeParent === null ||
+      this.autosizeParent.autosizeManager === null
+    ) {
+      return;
+    }
+
+    this.autosizeParent.autosizeManager.addOrUpdateChild(this);
+  }
+
+  //#endregion Autosize Methods
 }
