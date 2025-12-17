@@ -167,8 +167,10 @@ export function createAutosizeManager(parentNode: CoreNode) {
       childData.hasChanged = false;
     }
 
-    const newWidth = maxX > minX ? maxX - minX : 0;
-    const newHeight = maxY > minY ? maxY - minY : 0;
+    // Calculate container size based on maximum extent from container origin (0,0)
+    // This ensures the container position remains fixed and only size adjusts
+    const newWidth = maxX > 0 ? maxX : 0;
+    const newHeight = maxY > 0 ? maxY : 0;
     const dimensionsChanged =
       lastWidth !== newWidth || lastHeight !== newHeight;
 
