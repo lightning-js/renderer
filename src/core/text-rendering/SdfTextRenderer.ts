@@ -29,7 +29,7 @@ import { hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
-import { WebGlRenderOp } from '../renderers/webgl/WebGlRenderOp.js';
+
 import { Sdf, type SdfShaderProps } from '../shaders/webgl/SdfShader.js';
 import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
@@ -238,8 +238,7 @@ const renderQuads = (
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
 
-  const renderOp = new WebGlRenderOp(
-    renderer as WebGlRenderer,
+  const renderOp = (renderer as WebGlRenderer).createRenderOp(
     {
       sdfShaderProps: {
         transform: globalTransform,
@@ -265,8 +264,6 @@ const renderQuads = (
   // Add atlas texture and set quad count
   renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
   renderOp.numQuads = layout.glyphs.length;
-
-  (renderer as WebGlRenderer).addRenderOp(renderOp);
 };
 
 /**
