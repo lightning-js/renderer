@@ -522,7 +522,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
-      canvas: settings.canvas || document.createElement('canvas'),
+      canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
     };
@@ -533,7 +533,6 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
       inspector,
-      canvas,
     } = settings as RendererMainSettings;
 
     let platform;
@@ -547,6 +546,8 @@ export class RendererMain extends EventEmitter {
     } else {
       platform = new WebPlatform();
     }
+
+    const canvas = settings.canvas || platform.createCanvas();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
