@@ -59,12 +59,6 @@ let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 let measureContext:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D;
-/**
- * make fontface add not show errors
- */
-interface FontFaceSetWithAdd extends FontFaceSet {
-  add(font: FontFace): void;
-}
 
 /**
  * Check if a font can be rendered
@@ -112,7 +106,7 @@ export const loadFont = async (
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
     .then((loadedFont) => {
-      (document.fonts as FontFaceSetWithAdd).add(loadedFont);
+      stage.platform.addFont(loadedFont);
       processFontData(fontFamily, loadedFont, metrics);
       fontLoadPromises.delete(fontFamily);
       for (let key in nwff) {

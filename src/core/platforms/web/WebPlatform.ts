@@ -1,6 +1,13 @@
 import { Platform } from '../Platform.js';
 import type { Stage } from '../../Stage.js';
 
+/**
+ * make fontface add not show errors
+ */
+interface FontFaceSetWithAdd extends FontFaceSet {
+  add(font: FontFace): void;
+}
+
 export class WebPlatform extends Platform {
   ////////////////////////
   // Platform-specific methods
@@ -117,5 +124,9 @@ export class WebPlatform extends Platform {
 
   getTimeStamp(): number {
     return performance ? performance.now() : Date.now();
+  }
+
+  override addFont(font: FontFace): void {
+    (document.fonts as FontFaceSetWithAdd).add(font);
   }
 }
