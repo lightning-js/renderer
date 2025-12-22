@@ -74,4 +74,10 @@ export abstract class Platform {
    * @returns The current timestamp.
    */
   abstract getTimeStamp(): number;
+
+  /**
+   * Adds a FontFace to the platforms FontFaceSet
+   * @param font - The FontFace to add
+   */
+  abstract addFont(font: FontFace): void;
 }
