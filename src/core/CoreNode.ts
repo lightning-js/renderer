@@ -2693,6 +2693,8 @@ export class CoreNode extends EventEmitter {
     } else {
       this.disableAutosizeChildren();
     }
+
+    this.setUpdateType(UpdateType.IsRenderable | UpdateType.Local);
   }
 
   /**
