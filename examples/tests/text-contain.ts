@@ -48,8 +48,6 @@ export default async function test(settings: ExampleSettings) {
   const text1 = renderer.createTextNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    w: 0,
-    h: 0,
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
@@ -65,8 +63,6 @@ Vivamus consectetur ex magna, non mollis.`,
   const text2 = renderer.createTextNode({
     x: textSizeAfterLoadingBg.x,
     y: textSizeAfterLoadingBg.y,
-    w: 0,
-    h: 0,
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
@@ -164,7 +160,6 @@ Vivamus consectetur ex magna, non mollis.`,
       text1.alpha = 0;
       text2.alpha = 1;
       text2.maxWidth = 0;
-      text2.h = 0;
     },
     () => {
       // Canvas, contain width
@@ -202,9 +197,9 @@ Vivamus consectetur ex magna, non mollis.`,
     const targetText = i > 4 ? text2 : text1;
 
     header.text = makeHeader(
-      targetText.textRendererOverride!,
-      targetText.w,
-      targetText.h,
+      i > 4 ? 'canvas' : 'sdf',
+      targetText.maxWidth,
+      targetText.maxHeight,
     );
     indexInfo.text = (i + 1).toString();
     textSetDimsInfo.text = `Set size: ${Math.round(targetText.w)}x${Math.round(

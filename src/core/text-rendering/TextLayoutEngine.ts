@@ -7,12 +7,33 @@ import type {
   WrappedLinesStruct,
 } from './TextRenderer.js';
 
+// Use the same space regex as Canvas renderer to handle ZWSP
+const spaceRegex = /[ \u200B]+/g;
+
 export const defaultFontMetrics: FontMetrics = {
   ascender: 800,
   descender: -200,
   lineGap: 200,
   unitsPerEm: 1000,
 };
+
+type WrapStrategyFn = (
+  measureText: MeasureTextFn,
+  word: string,
+  wordWidth: number,
+  fontFamily: string,
+  letterSpacing: number,
+  wrappedLines: TextLineStruct[],
+  currentLine: string,
+  currentLineWidth: number,
+  remainingLines: number,
+  remainingWord: string,
+  maxWidth: number,
+  space: string,
+  spaceWidth: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+) => [string, number, string];
 
 export const normalizeFontMetrics = (
   metrics: FontMetrics,
@@ -31,7 +52,6 @@ export const mapTextLayout = (
   metrics: NormalizedFontMetrics,
   text: string,
   textAlign: string,
-  verticalAlign: string,
   fontFamily: string,
   lineHeight: number,
   overflowSuffix: string,
@@ -51,13 +71,20 @@ export const mapTextLayout = (
   const halfDelta = lineHeightDelta * 0.5;
 
   let effectiveMaxLines = maxLines;
+
   if (maxHeight > 0) {
-    const maxFromHeight = Math.floor(maxHeight / lineHeightPx);
+    let maxFromHeight = Math.floor(maxHeight / lineHeightPx);
+    //ensure at least 1 line
+    if (maxFromHeight < 1) {
+      maxFromHeight = 1;
+    }
     if (effectiveMaxLines === 0 || maxFromHeight < effectiveMaxLines) {
       effectiveMaxLines = maxFromHeight;
     }
   }
 
+  //trim start/end whitespace
+  // text = text.trim();
   const wrappedText = maxWidth > 0;
   //wrapText or just measureLines based on maxWidth
   const [lines, remainingLines, remainingText] =
@@ -70,23 +97,26 @@ export const mapTextLayout = (
           letterSpacing,
           overflowSuffix,
           wordBreak,
-          maxLines,
+          effectiveMaxLines,
         )
       : measureLines(
           measureText,
           text.split('\n'),
           fontFamily,
           letterSpacing,
-          maxLines,
+          effectiveMaxLines,
         );
 
   let effectiveLineAmount = lines.length;
-  let effectiveMaxWidth = lines[0]![1];
+  let effectiveMaxWidth = 0;
 
-  //check for longest line
-  if (effectiveLineAmount > 1) {
-    for (let i = 1; i < effectiveLineAmount; i++) {
-      effectiveMaxWidth = Math.max(effectiveMaxWidth, lines[i]![1]);
+  if (effectiveLineAmount > 0) {
+    effectiveMaxWidth = lines[0]![1];
+    //check for longest line
+    if (effectiveLineAmount > 1) {
+      for (let i = 1; i < effectiveLineAmount; i++) {
+        effectiveMaxWidth = Math.max(effectiveMaxWidth, lines[i]![1]);
+      }
     }
   }
 
@@ -95,7 +125,7 @@ export const mapTextLayout = (
     for (let i = 0; i < effectiveLineAmount; i++) {
       const line = lines[i]!;
       const w = line[1];
-      line[2] =
+      line[3] =
         textAlign === 'right'
           ? effectiveMaxWidth - w
           : (effectiveMaxWidth - w) / 2;
@@ -109,7 +139,7 @@ export const mapTextLayout = (
   const startY = firstBaseLine;
   for (let i = 0; i < effectiveLineAmount; i++) {
     const line = lines[i] as TextLineStruct;
-    line[3] = startY + lineHeightPx * i;
+    line[4] = startY + lineHeightPx * i;
   }
 
   return [
@@ -142,7 +172,7 @@ export const measureLines = (
       continue;
     }
     const width = measureText(line, fontFamily, letterSpacing);
-    measuredLines.push([line, width, 0, 0]);
+    measuredLines.push([line, width, false, 0, 0]);
   }
 
   return [
@@ -167,9 +197,10 @@ export const wrapText = (
 
   // Calculate space width for line wrapping
   const spaceWidth = measureText(' ', fontFamily, letterSpacing);
+  const overflowWidth = measureText(overflowSuffix, fontFamily, letterSpacing);
 
   let wrappedLine: TextLineStruct[] = [];
-  let remainingLines = maxLines;
+  let remainingLines = maxLines > 0 ? maxLines : 1000;
   let hasRemainingText = true;
   let hasMaxLines = maxLines > 0;
 
@@ -189,11 +220,11 @@ export const wrapText = (
             letterSpacing,
             spaceWidth,
             overflowSuffix,
+            overflowWidth,
             wordBreak,
             remainingLines,
-            hasMaxLines,
           )
-        : [[['', 0, 0, 0]], remainingLines, i < lines.length - 1];
+        : [[['', 0, false, 0, 0]], remainingLines, i < lines.length - 1];
 
     remainingLines--;
     wrappedLines.push(...wrappedLine);
@@ -201,15 +232,23 @@ export const wrapText = (
     if (hasMaxLines === true && remainingLines <= 0) {
       const lastLine = wrappedLines[wrappedLines.length - 1]!;
       if (i < lines.length - 1) {
-        if (lastLine[0].endsWith(overflowSuffix) === false) {
-          lastLine[0] = truncateLineWithSuffix(
+        //check if line is truncated already
+        if (lastLine[2] === false) {
+          let remainingText = '';
+          const [line, lineWidth] = truncateLineEnd(
             measureText,
-            lastLine[0],
             fontFamily,
-            maxWidth,
             letterSpacing,
+            lastLine[0],
+            lastLine[1],
+            remainingText,
+            maxWidth,
             overflowSuffix,
+            overflowWidth,
           );
+          lastLine[0] = line;
+          lastLine[1] = lineWidth;
+          lastLine[2] = true;
         }
       }
       break;
@@ -227,12 +266,10 @@ export const wrapLine = (
   letterSpacing: number,
   spaceWidth: number,
   overflowSuffix: string,
+  overflowWidth: number,
   wordBreak: string,
   remainingLines: number,
-  hasMaxLines: boolean,
 ): WrappedLinesStruct => {
-  // Use the same space regex as Canvas renderer to handle ZWSP
-  const spaceRegex = / |\u200B/g;
   const words = line.split(spaceRegex);
   const spaces = line.match(spaceRegex) || [];
   const wrappedLines: TextLineStruct[] = [];
@@ -240,263 +277,396 @@ export const wrapLine = (
   let currentLineWidth = 0;
   let hasRemainingText = true;
 
-  let i = 0;
+  const wrapFn = getWrapStrategy(wordBreak);
+  while (words.length > 0 && remainingLines > 0) {
+    let word = words.shift()!;
+    let wordWidth = measureText(word, fontFamily, letterSpacing);
+    let remainingWord = '';
 
-  for (; i < words.length; i++) {
-    const word = words[i];
-    if (word === undefined) {
+    //handle first word of new line separately to avoid empty line issues
+    if (currentLineWidth === 0) {
+      // Word doesn't fit on current line
+      //if first word doesn't fit on empty line
+      if (wordWidth > maxWidth) {
+        remainingLines--;
+        //truncate word to fit
+        [word, remainingWord, wordWidth] =
+          remainingLines === 0
+            ? truncateWord(
+                measureText,
+                word,
+                wordWidth,
+                maxWidth,
+                fontFamily,
+                letterSpacing,
+                overflowSuffix,
+                overflowWidth,
+              )
+            : splitWord(
+                measureText,
+                word,
+                wordWidth,
+                maxWidth,
+                fontFamily,
+                letterSpacing,
+              );
+
+        if (remainingWord.length > 0) {
+          words.unshift(remainingWord);
+        }
+        // first word doesn't fit on an empty line
+        wrappedLines.push([word, wordWidth, false, 0, 0]);
+      } else if (wordWidth + spaceWidth >= maxWidth) {
+        remainingLines--;
+        // word with space doesn't fit, but word itself fits - put on new line
+        wrappedLines.push([word, wordWidth, false, 0, 0]);
+      } else {
+        currentLine = word;
+        currentLineWidth = wordWidth;
+      }
       continue;
     }
-    const space = spaces[i - 1] || '';
-    const wordWidth = measureText(word, fontFamily, letterSpacing);
+    const space = spaces.shift() || '';
     // For width calculation, treat ZWSP as having 0 width but regular space functionality
     const effectiveSpaceWidth = space === '\u200B' ? 0 : spaceWidth;
     const totalWidth = currentLineWidth + effectiveSpaceWidth + wordWidth;
 
-    if (
-      (i === 0 && wordWidth <= maxWidth) ||
-      (i > 0 && totalWidth <= maxWidth)
-    ) {
-      // Word fits on current line
-      if (currentLine.length > 0) {
-        // Add space - for ZWSP, don't add anything to output (it's invisible)
-        if (space !== '\u200B') {
-          currentLine += space;
-          currentLineWidth += effectiveSpaceWidth;
-        }
-      }
-      currentLine += word;
-      currentLineWidth += wordWidth;
-    } else {
-      if (remainingLines === 1) {
-        if (currentLine.length > 0) {
-          // Add space - for ZWSP, don't add anything to output (it's invisible)
-          if (space !== '\u200B') {
-            currentLine += space;
-            currentLineWidth += effectiveSpaceWidth;
-          }
-        }
-        currentLine += word;
-        currentLineWidth += wordWidth;
-        remainingLines = 0;
-        hasRemainingText = i < words.length;
-        break;
-      }
+    if (totalWidth < maxWidth) {
+      currentLine += effectiveSpaceWidth > 0 ? space + word : word;
+      currentLineWidth = totalWidth;
+      continue;
+    }
+    // Will move to next line after loop finishes
+    remainingLines--;
 
-      if (wordBreak !== 'break-all' && currentLine.length > 0) {
-        wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-      }
+    if (totalWidth === maxWidth) {
+      currentLine += effectiveSpaceWidth > 0 ? space + word : word;
+      currentLineWidth = totalWidth;
+      wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
+      currentLine = '';
+      currentLineWidth = 0;
+      continue;
+    }
 
-      if (wordBreak !== 'break-all') {
-        remainingLines--;
-        currentLine = word;
-        currentLineWidth = wordWidth;
-      }
+    [currentLine, currentLineWidth, remainingWord] = wrapFn(
+      measureText,
+      word,
+      wordWidth,
+      fontFamily,
+      letterSpacing,
+      wrappedLines,
+      currentLine,
+      currentLineWidth,
+      remainingLines,
+      remainingWord,
+      maxWidth,
+      space,
+      spaceWidth,
+      overflowSuffix,
+      overflowWidth,
+    );
 
-      if (wordBreak === 'break-word') {
-        const [lines, rl, rt] = breakWord(
-          measureText,
-          word,
-          fontFamily,
-          maxWidth,
-          letterSpacing,
-          remainingLines,
-        );
-        remainingLines = rl;
-        hasRemainingText = rt;
-        if (lines.length === 1) {
-          [currentLine, currentLineWidth] = lines[lines.length - 1]!;
-        } else {
-          for (let j = 0; j < lines.length; j++) {
-            [currentLine, currentLineWidth] = lines[j]!;
-            if (j < lines.length - 1) {
-              wrappedLines.push(lines[j]!);
-            }
-          }
-        }
-      } else if (wordBreak === 'break-all') {
-        const firstLetterWidth = measureText(
-          word.charAt(0),
-          fontFamily,
-          letterSpacing,
-        );
-        let linebreak = false;
-        if (
-          currentLineWidth + firstLetterWidth + effectiveSpaceWidth >
-          maxWidth
-        ) {
-          wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-          remainingLines -= 1;
-          currentLine = '';
-          currentLineWidth = 0;
-          linebreak = true;
-        }
-        const initial = maxWidth - currentLineWidth;
-        const [lines, rl, rt] = breakAll(
-          measureText,
-          word,
-          fontFamily,
-          initial,
-          maxWidth,
-          letterSpacing,
-          remainingLines,
-        );
-        remainingLines = rl;
-        hasRemainingText = rt;
-        if (linebreak === false) {
-          const [text, width] = lines[0]!;
-          currentLine += text;
-          currentLineWidth += width;
-          wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-        }
-
-        for (let j = 1; j < lines.length; j++) {
-          [currentLine, currentLineWidth] = lines[j]!;
-          if (j < lines.length - 1) {
-            wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-          }
-        }
-
-        if (i < words.length - 1 && currentLine.endsWith(' ') === false) {
-          currentLine += ' ';
-          currentLineWidth += effectiveSpaceWidth;
-        }
-      }
+    if (remainingWord.length > 0) {
+      words.unshift(remainingWord);
     }
   }
 
-  // Add the last line if it has content
-  if (currentLine.length > 0 && hasMaxLines === true && remainingLines === 0) {
-    currentLine = truncateLineWithSuffix(
-      measureText,
-      currentLine,
-      fontFamily,
-      maxWidth,
-      letterSpacing,
-      overflowSuffix,
-    );
+  if (currentLineWidth > 0 && remainingLines > 0) {
+    wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
   }
 
-  if (currentLine.length > 0) {
-    wrappedLines.push([currentLine, currentLineWidth, 0, 0]);
-  }
   return [wrappedLines, remainingLines, hasRemainingText];
 };
 
-/**
- * Truncate a line with overflow suffix to fit within width
- */
-export const truncateLineWithSuffix = (
-  measureText: MeasureTextFn,
-  line: string,
-  fontFamily: string,
-  maxWidth: number,
-  letterSpacing: number,
-  overflowSuffix: string,
-): string => {
-  const suffixWidth = measureText(overflowSuffix, fontFamily, letterSpacing);
-
-  if (suffixWidth >= maxWidth) {
-    return overflowSuffix.substring(0, Math.max(1, overflowSuffix.length - 1));
+const getWrapStrategy = (wordBreak: string): WrapStrategyFn => {
+  //** default so probably first out */
+  if (wordBreak === 'break-word') {
+    return breakWord;
   }
-
-  let truncatedLine = line;
-  while (truncatedLine.length > 0) {
-    const lineWidth = measureText(truncatedLine, fontFamily, letterSpacing);
-    if (lineWidth + suffixWidth <= maxWidth) {
-      return truncatedLine + overflowSuffix;
-    }
-    truncatedLine = truncatedLine.substring(0, truncatedLine.length - 1);
+  //** second most used */
+  if (wordBreak === 'break-all') {
+    return breakAll;
   }
-
-  return overflowSuffix;
+  //** most similar to html/CSS 'normal' not really used in TV apps */
+  if (wordBreak === 'overflow') {
+    return overflow;
+  }
+  //fallback
+  return breakWord;
 };
 
+//break strategies
+
 /**
- * wordbreak function: https://developer.mozilla.org/en-US/docs/Web/CSS/word-break#break-word
+ * Overflow wordBreak strategy, if a word partially fits add it to the line, start new line if necessary or add overflowSuffix.
+ *
+ * @remarks This strategy is similar to 'normal' in html/CSS. However
  */
+export const overflow = (
+  measureText: MeasureTextFn,
+  word: string,
+  wordWidth: number,
+  fontFamily: string,
+  letterSpacing: number,
+  wrappedLines: TextLineStruct[],
+  currentLine: string,
+  currentLineWidth: number,
+  remainingLines: number,
+  remainingWord: string,
+  maxWidth: number,
+  space: string,
+  spaceWidth: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+): [string, number, string] => {
+  currentLine += space + word;
+  currentLineWidth += spaceWidth + wordWidth;
+
+  if (remainingLines === 0) {
+    currentLine += overflowSuffix;
+    currentLineWidth += overflowWidth;
+  }
+
+  wrappedLines.push([currentLine, currentLineWidth, true, 0, 0]);
+  return ['', 0, ''];
+};
+
 export const breakWord = (
   measureText: MeasureTextFn,
   word: string,
+  wordWidth: number,
   fontFamily: string,
-  maxWidth: number,
   letterSpacing: number,
+  wrappedLines: TextLineStruct[],
+  currentLine: string,
+  currentLineWidth: number,
   remainingLines: number,
-): WrappedLinesStruct => {
-  const lines: TextLineStruct[] = [];
-  let currentPart = '';
-  let currentWidth = 0;
-  let i = 0;
-
-  for (let i = 0; i < word.length; i++) {
-    const char = word.charAt(i);
-    const codepoint = char.codePointAt(0);
-    if (codepoint === undefined) continue;
-
-    const charWidth = measureText(char, fontFamily, letterSpacing);
-
-    if (currentWidth + charWidth > maxWidth && currentPart.length > 0) {
-      remainingLines--;
-      if (remainingLines === 0) {
-        break;
-      }
-      lines.push([currentPart, currentWidth, 0, 0]);
-      currentPart = char;
-      currentWidth = charWidth;
-    } else {
-      currentPart += char;
-      currentWidth += charWidth;
-    }
+  remainingWord: string,
+  maxWidth: number,
+  space: string,
+  spaceWidth: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+): [string, number, string] => {
+  remainingWord = word;
+  if (remainingLines === 0) {
+    [currentLine, currentLineWidth, remainingWord] = truncateLineEnd(
+      measureText,
+      fontFamily,
+      letterSpacing,
+      currentLine,
+      currentLineWidth,
+      remainingWord,
+      maxWidth,
+      overflowSuffix,
+      overflowWidth,
+    );
+    wrappedLines.push([currentLine, currentLineWidth, true, 0, 0]);
+  } else {
+    wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
+    currentLine = '';
+    currentLineWidth = 0;
   }
-
-  if (currentPart.length > 0) {
-    lines.push([currentPart, currentWidth, 0, 0]);
-  }
-
-  return [lines, remainingLines, i < word.length - 1];
+  return [currentLine, currentLineWidth, remainingWord];
 };
 
-/**
- * wordbreak function: https://developer.mozilla.org/en-US/docs/Web/CSS/word-break#break-word
- */
 export const breakAll = (
   measureText: MeasureTextFn,
   word: string,
+  wordWidth: number,
   fontFamily: string,
-  initial: number,
-  maxWidth: number,
   letterSpacing: number,
+  wrappedLines: TextLineStruct[],
+  currentLine: string,
+  currentLineWidth: number,
   remainingLines: number,
-): WrappedLinesStruct => {
-  const lines: TextLineStruct[] = [];
-  let currentPart = '';
-  let currentWidth = 0;
-  let max = initial;
-  let i = 0;
-  let hasRemainingText = false;
+  remainingWord: string,
+  maxWidth: number,
+  space: string,
+  spaceWidth: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+): [string, number, string] => {
+  let remainingSpace = maxWidth - currentLineWidth;
+  if (currentLineWidth > 0) {
+    remainingSpace -= spaceWidth;
+  }
+  const truncate = remainingLines === 0;
+  [word, remainingWord, wordWidth] = truncate
+    ? truncateWord(
+        measureText,
+        word,
+        wordWidth,
+        remainingSpace,
+        fontFamily,
+        letterSpacing,
+        overflowSuffix,
+        overflowWidth,
+      )
+    : splitWord(
+        measureText,
+        word,
+        wordWidth,
+        remainingSpace,
+        fontFamily,
+        letterSpacing,
+      );
+  currentLine += space + word;
+  currentLineWidth += spaceWidth + wordWidth;
 
-  for (; i < word.length; i++) {
-    if (remainingLines === 0) {
-      hasRemainingText = true;
+  // first word doesn't fit on an empty line
+  wrappedLines.push([currentLine, currentLineWidth, truncate, 0, 0]);
+
+  currentLine = '';
+  currentLineWidth = 0;
+
+  return [currentLine, currentLineWidth, remainingWord];
+};
+
+export const truncateLineEnd = (
+  measureText: MeasureTextFn,
+  fontFamily: string,
+  letterSpacing: number,
+  currentLine: string,
+  currentLineWidth: number,
+  remainingWord: string,
+  maxWidth: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+): [string, number, string] => {
+  if (currentLineWidth + overflowWidth <= maxWidth) {
+    currentLine += overflowSuffix;
+    currentLineWidth += overflowWidth;
+    remainingWord = '';
+    return [currentLine, currentLineWidth, remainingWord];
+  }
+
+  let truncated = false;
+  for (let i = currentLine.length - 1; i > 0; i--) {
+    const char = currentLine.charAt(i);
+    const charWidth = measureText(char, fontFamily, letterSpacing);
+    currentLineWidth -= charWidth;
+    if (currentLineWidth + overflowWidth <= maxWidth) {
+      currentLine = currentLine.substring(0, i) + overflowSuffix;
+      currentLineWidth += overflowWidth;
+      remainingWord = currentLine.substring(i) + ' ' + remainingWord;
+      truncated = true;
       break;
     }
+  }
+
+  if (truncated === false) {
+    currentLine = overflowSuffix;
+    currentLineWidth = overflowWidth;
+    remainingWord = currentLine;
+  }
+  return [currentLine, currentLineWidth, remainingWord];
+};
+
+export const truncateWord = (
+  measureText: MeasureTextFn,
+  word: string,
+  wordWidth: number,
+  maxWidth: number,
+  fontFamily: string,
+  letterSpacing: number,
+  overflowSuffix: string,
+  overflowWidth: number,
+): [string, string, number] => {
+  const targetWidth = maxWidth - overflowWidth;
+
+  if (targetWidth <= 0) {
+    return ['', word, 0];
+  }
+
+  const excessWidth = wordWidth - targetWidth;
+  // If excess is small (< 50%), we're keeping most - start from back and remove
+  // If excess is large (>= 50%), we're removing most - start from front and add
+  const shouldStartFromBack = excessWidth < wordWidth / 2;
+
+  if (shouldStartFromBack === false) {
+    // Start from back - remove characters until it fits (keeping most of word)
+    let currentWidth = wordWidth;
+    for (let i = word.length - 1; i > 0; i--) {
+      const char = word.charAt(i);
+      const charWidth = measureText(char, fontFamily, letterSpacing);
+      currentWidth -= charWidth;
+      if (currentWidth <= targetWidth) {
+        const remainingWord = word.substring(i);
+        return [
+          word.substring(0, i) + overflowSuffix,
+          remainingWord,
+          currentWidth + overflowWidth,
+        ];
+      }
+    }
+    // Even first character doesn't fit
+    return [overflowSuffix, word, overflowWidth];
+  }
+
+  // Start from front - add characters until we exceed limit (removing most of word)
+  let currentWidth = 0;
+  for (let i = 0; i < word.length; i++) {
     const char = word.charAt(i);
     const charWidth = measureText(char, fontFamily, letterSpacing);
-    if (currentWidth + charWidth > max && currentPart.length > 0) {
-      lines.push([currentPart, currentWidth, 0, 0]);
-      currentPart = char;
-      currentWidth = charWidth;
-      max = maxWidth;
-      remainingLines--;
-    } else {
-      currentPart += char;
-      currentWidth += charWidth;
+    if (currentWidth + charWidth > targetWidth) {
+      const remainingWord = word.substring(i);
+      return [
+        word.substring(0, i) + overflowSuffix,
+        remainingWord,
+        currentWidth + overflowWidth,
+      ];
     }
+    currentWidth += charWidth;
+  }
+  // Entire word fits (shouldn't happen, but safe fallback)
+  return [word + overflowSuffix, '', wordWidth + overflowWidth];
+};
+
+export const splitWord = (
+  measureText: MeasureTextFn,
+  word: string,
+  wordWidth: number,
+  maxWidth: number,
+  fontFamily: string,
+  letterSpacing: number,
+): [string, string, number] => {
+  if (maxWidth <= 0) {
+    return ['', word, 0];
   }
 
-  if (currentPart.length > 0) {
-    lines.push([currentPart, currentWidth, 0, 0]);
+  const excessWidth = wordWidth - maxWidth;
+  // If excess is small (< 50%), we're keeping most - start from back and remove
+  // If excess is large (>= 50%), we're removing most - start from front and add
+  const shouldStartFromBack = excessWidth < wordWidth / 2;
+
+  if (shouldStartFromBack === false) {
+    // Start from back - remove characters until it fits (keeping most of word)
+    let currentWidth = wordWidth;
+    for (let i = word.length - 1; i > 0; i--) {
+      const char = word.charAt(i);
+      const charWidth = measureText(char, fontFamily, letterSpacing);
+      currentWidth -= charWidth;
+      if (currentWidth <= maxWidth) {
+        const remainingWord = word.substring(i);
+        return [word.substring(0, i), remainingWord, currentWidth];
+      }
+    }
+    // Even first character doesn't fit
+    return ['', word, 0];
   }
 
-  return [lines, remainingLines, hasRemainingText];
+  // Start from front - add characters until we exceed limit (removing most of word)
+  let currentWidth = 0;
+  for (let i = 0; i < word.length; i++) {
+    const char = word.charAt(i);
+    const charWidth = measureText(char, fontFamily, letterSpacing);
+    if (currentWidth + charWidth > maxWidth) {
+      const remainingWord = word.substring(i);
+      return [word.substring(0, i), remainingWord, currentWidth];
+    }
+    currentWidth += charWidth;
+  }
+  // Entire word fits (shouldn't happen, but safe fallback)
+  return [word, '', wordWidth];
 };
