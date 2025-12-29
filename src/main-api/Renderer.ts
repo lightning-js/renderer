@@ -508,7 +508,7 @@ export class RendererMain extends EventEmitter {
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
-        settings.devicePhysicalPixelRatio || window.devicePixelRatio,
+        settings.devicePhysicalPixelRatio || (window.devicePixelRatio || 1),
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
       targetFPS: settings.targetFPS || 0,
