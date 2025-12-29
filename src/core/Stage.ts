@@ -579,7 +579,9 @@ export class Stage {
     if (nodes.length === 0) {
       return null;
     }
-    let topNode = nodes[0] as CoreNode;
+
+    //get last node in array (as top node)
+    let topNode = nodes[nodes.length - 1] as CoreNode;
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i]!.zIndex > topNode.zIndex) {
         topNode = nodes[i]!;
