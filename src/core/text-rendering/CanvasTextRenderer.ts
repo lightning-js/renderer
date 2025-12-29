@@ -56,7 +56,7 @@ const layoutCache = new Map<
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = stage.options.devicePhysicalPixelRatio || 1;
 
   // Drawing canvas and context
   canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
