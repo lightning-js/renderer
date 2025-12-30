@@ -52,7 +52,7 @@ export const RadialGradient: CanvasShaderType<
       pivotY: props.pivot[1] * node.h,
       scaleX,
       scaleY,
-      size: Math.min(pWidth, pHeight) * 0.5,
+      size: Math.min(pWidth, pHeight),
       colors: props.colors.map((value) => this.toColorString(value)),
     };
   },
