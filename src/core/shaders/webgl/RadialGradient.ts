@@ -33,7 +33,7 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
       props.pivot[0] * node.w,
       props.pivot[1] * node.h,
     );
-    this.uniform2f('u_size', props.w, props.h);
+    this.uniform2f('u_size', props.w * 0.5, props.h * 0.5);
     this.uniform1fv('u_stops', new Float32Array(props.stops));
     const colors: number[] = [];
     for (let i = 0; i < props.colors.length; i++) {

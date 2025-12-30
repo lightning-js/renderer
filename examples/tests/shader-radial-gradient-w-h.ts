@@ -51,8 +51,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     x: node.w * radialPivotX,
     y: node.h * radialPivotY,
     mount: 0.5,
-    w: radialW * 2,
-    h: radialH * 2,
+    w: radialW,
+    h: radialH,
     color: 0x00000000,
     shader: renderer.createShader('Border', {
       w: 2,
@@ -75,22 +75,22 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
     controlNode.x = node.w * pivotX;
     controlNode.y = node.h * pivotY;
-    controlNode.w = w * 2;
-    controlNode.h = h * 2;
+    controlNode.w = w;
+    controlNode.h = h;
   };
 
   const mutations = [
     () => {
-      changeGradientParams(200, 200, 0, 0);
+      changeGradientParams(400, 400, 0, 0);
     },
     () => {
-      changeGradientParams(200, 200, 1, 1);
+      changeGradientParams(400, 400, 1, 1);
     },
     () => {
-      changeGradientParams(1200, 400, 0.5, 1.1);
+      changeGradientParams(2400, 800, 0.5, 1.1);
     },
     () => {
-      changeGradientParams(200, 1200, 0.8, 0.5);
+      changeGradientParams(400, 2400, 0.8, 0.5);
     },
   ];
   let i = -1;
