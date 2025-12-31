@@ -62,7 +62,6 @@ describe('set color()', () => {
     x: 0,
     y: 0,
     zIndex: 0,
-    zIndexLocked: 0,
   };
 
   const clippingRect = {
