@@ -32,13 +32,15 @@ export interface RadialGradientProps {
    */
   stops: number[];
   /**
-   * Width of the RadialGradientEffect
+   * radial width of the RadialGradientEffect
+   *
+   * @remarks from the center to the outer edge of the gradient
    */
   w: number;
   /**
-   * height of the RadialGradientEffect
-   *
-   * @remarks if not defined uses the width value
+   * radial height of the RadialGradientEffect
+   * if not defined uses the width value
+   * @remarks from the center to the outer edge of the gradient
    */
   h: number;
   /**

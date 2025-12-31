@@ -33,7 +33,7 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
       props.pivot[0] * node.w,
       props.pivot[1] * node.h,
     );
-    this.uniform2f('u_size', props.w * 0.5, props.h * 0.5);
+    this.uniform2f('u_size', props.w, props.h);
     this.uniform1fv('u_stops', new Float32Array(props.stops));
     const colors: number[] = [];
     for (let i = 0; i < props.colors.length; i++) {
@@ -63,15 +63,13 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
 
       uniform vec2 u_projection;
       uniform vec2 u_size;
+
       uniform float u_stops[MAX_STOPS];
       uniform vec4 u_colors[MAX_STOPS];
 
       varying vec4 v_color;
       varying vec2 v_textureCoords;
-
-      vec2 calcPoint(float d, float angle) {
-        return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
-      }
+      varying vec2 v_nodeCoords;
 
       vec4 getGradientColor(float dist) {
         dist = clamp(dist, 0.0, 1.0);
@@ -92,15 +90,18 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
             return mix(u_colors[i], u_colors[i + 1], lDist);
           }
         }
+
+        return u_colors[LAST_STOP];
       }
 
       void main() {
         vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
-        vec2 point = v_textureCoords.xy * u_dimensions;
+        vec2 point = v_nodeCoords.xy * u_dimensions;
         float dist = length((point - u_projection) / u_size);
 
         vec4 colorOut = getGradientColor(dist);
-        gl_FragColor = mix(color, colorOut, clamp(colorOut.a, 0.0, 1.0));
+        vec3 blendedRGB = mix(color.rgb, colorOut.rgb, clamp(colorOut.a, 0.0, 1.0));
+        gl_FragColor = vec4(blendedRGB, color.a);
       }
     `;
   },

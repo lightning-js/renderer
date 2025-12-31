@@ -32,8 +32,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     h: 400,
     color: 0xff0000ff,
     shader: renderer.createShader('RadialGradient', {
-      w: 400,
-      h: 400,
+      w: 200,
+      h: 200,
     }),
     parent: testRoot,
   });
@@ -46,8 +46,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     color: 0xff0000ff,
     shader: renderer.createShader('RadialGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff],
-      w: 600,
-      h: 400,
+      w: 300,
+      h: 200,
     }),
     parent: testRoot,
   });
@@ -60,8 +60,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     color: 0x00ff00ff,
     shader: renderer.createShader('RadialGradient', {
       colors: [0xff00ffff, 0xffff00ff, 0x0000ffff, 0x00ff00ff, 0xff0000ff],
-      w: 400,
-      h: 600,
+      w: 200,
+      h: 300,
     }),
     parent: testRoot,
   });
@@ -75,8 +75,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     shader: renderer.createShader('RadialGradient', {
       colors: [0x00000000, 0x000000ff],
       stops: [0.3, 1.0],
-      w: 600,
-      h: 400,
+      w: 300,
+      h: 200,
     }),
     parent: testRoot,
   });
