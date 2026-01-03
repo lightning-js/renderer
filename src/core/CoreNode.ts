@@ -1047,6 +1047,10 @@ export class CoreNode extends EventEmitter {
     let childUpdateType = this.childUpdateType;
     let updateParent = false;
 
+    // reset update type
+    this.updateType = 0;
+    this.childUpdateType = 0;
+
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
 
@@ -1204,11 +1208,6 @@ export class CoreNode extends EventEmitter {
       parent.setUpdateType(UpdateType.ZIndexSortedChildren);
     }
 
-    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      updateType &= ~UpdateType.RenderBounds; // remove render bounds update
-      return;
-    }
-
     if (
       updateType & UpdateType.RecalcUniforms &&
       this.hasShaderUpdater === true
@@ -1282,10 +1281,6 @@ export class CoreNode extends EventEmitter {
         this.notifyChildrenRTTOfUpdate(renderState);
       }
     }
-
-    // reset update type
-    this.updateType = 0;
-    this.childUpdateType = 0;
   }
 
   private findParentRTTNode(): CoreNode | null {
