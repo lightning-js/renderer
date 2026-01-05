@@ -80,6 +80,7 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
     uniform vec2 u_resolution;
     uniform vec2 u_dimensions;
     uniform float u_alpha;
+    uniform float u_pixelRatio;
     uniform sampler2D u_texture;
 
     //custom uniforms
@@ -103,7 +104,8 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = roundedBox(boxUv, halfDimensions, u_radius);
 
-      float roundedAlpha = 1.0 - smoothstep(0.0, 1.0, boxDist);
+      float edgeWidth = 1.0 / u_pixelRatio;
+      float roundedAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, boxDist);
 
       vec4 resColor = vec4(0.0);
       resColor = mix(resColor, color, roundedAlpha);

@@ -130,7 +130,8 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
       float outerDist = roundedBox(boxUv, v_halfDimensions, u_radius);
 
-      float outerAlpha = 1.0 - smoothstep(0.0, 1.0, outerDist);
+      float edgeWidth = 1.0 / u_pixelRatio;
+      float outerAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, outerDist);
 
       if(v_borderZero == 1.0) {
         gl_FragColor = mix(vec4(0.0), color, outerAlpha) * u_alpha;
@@ -141,7 +142,7 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       boxUv.y += u_borderWidth.z > u_borderWidth.x ? ((u_borderWidth.z - u_borderWidth.x) * 0.5 + 0.5) : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
 
       float innerDist = roundedBox(boxUv, v_innerSize, v_innerRadius);
-      float innerAlpha = 1.0 - smoothstep(0.0, 1.0, innerDist);
+      float innerAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, innerDist);
 
       vec4 resColor = mix(u_borderColor, color, innerAlpha);
       resColor = mix(vec4(0.0), resColor, outerAlpha);
