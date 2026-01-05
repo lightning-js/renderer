@@ -493,7 +493,7 @@ export class RendererMain extends EventEmitter {
    */
   constructor(
     settings: Partial<RendererMainSettings>,
-    target: string | HTMLElement,
+    target?: string | HTMLElement,
   ) {
     super();
 
@@ -588,18 +588,22 @@ export class RendererMain extends EventEmitter {
     this.root = this.stage.root as unknown as INode;
 
     // Get the target element and attach the canvas to it
-    let targetEl: HTMLElement | null;
-    if (typeof target === 'string') {
-      targetEl = document.getElementById(target);
-    } else {
-      targetEl = target;
-    }
+    if (target) {
+      let targetEl: HTMLElement | null;
+      if (typeof target === 'string') {
+        targetEl = document.getElementById(target);
+      } else {
+        targetEl = target;
+      }
 
-    if (!targetEl) {
-      throw new Error('Could not find target element');
-    }
+      if (!targetEl) {
+        throw new Error('Could not find target element');
+      }
 
-    targetEl.appendChild(canvas);
+      targetEl.appendChild(canvas);
+    } else if (settings.canvas !== canvas) {
+      throw new Error('New canvas element could not be appended to undefined target');
+    }
 
     // Initialize inspector (if enabled)
     if (inspector && isProductionEnvironment === false) {
