@@ -732,7 +732,6 @@ export class CoreNode extends EventEmitter {
     valid: false,
   };
   public textureCoords?: TextureCoords;
-  public updateTextureCoords: boolean = false;
   public updateShaderUniforms: boolean = false;
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
@@ -909,6 +908,13 @@ export class CoreNode extends EventEmitter {
         type: 'texture',
         dimensions,
       } satisfies NodeTextureLoadedPayload);
+    }
+
+    if (
+      this.stage.calculateTextureCoord === true &&
+      this.props.textureOptions !== null
+    ) {
+      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
     }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
@@ -1259,11 +1265,6 @@ export class CoreNode extends EventEmitter {
       this.sortChildren();
     }
 
-    if (this.updateTextureCoords === true) {
-      this.updateTextureCoords = false;
-      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
-    }
-
     // If we're out of bounds, apply the render state now
     // this is done so nodes can finish their entire update loop before
     // being marked as out of bounds
@@ -1495,14 +1496,6 @@ export class CoreNode extends EventEmitter {
         isRenderable,
       } satisfies NodeRenderablePayload);
     }
-
-    if (
-      isRenderable === true &&
-      this.stage.calculateTextureCoord === true &&
-      this.textureCoords === undefined
-    ) {
-      this.updateTextureCoords = true;
-    }
   }
 
   /**
@@ -1687,6 +1680,8 @@ export class CoreNode extends EventEmitter {
     const t = this.globalTransform!;
     const coords = this.renderCoords;
     const texture = p.texture || this.stage.defaultTexture;
+    const textureCoords =
+      this.textureCoords || this.stage.renderer.defaultTextureCoords;
 
     // There is a race condition where the texture can be null
     // with RTT nodes. Adding this defensively to avoid errors.
@@ -1703,7 +1698,7 @@ export class CoreNode extends EventEmitter {
       colorBr: this.premultipliedColorBr,
       texture,
       textureOptions: p.textureOptions,
-      textureCoords: this.textureCoords,
+      textureCoords: textureCoords,
       shader: p.shader as CoreShaderNode<any>,
       alpha: this.worldAlpha,
       clippingRect: this.clippingRect,
@@ -1865,7 +1860,6 @@ export class CoreNode extends EventEmitter {
 
   set w(value: number) {
     if (this.props.w !== value) {
-      this.updateTextureCoords = true;
       this.props.w = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -1887,7 +1881,6 @@ export class CoreNode extends EventEmitter {
 
   set h(value: number) {
     if (this.props.h !== value) {
-      this.updateTextureCoords = true;
       this.props.h = value;
       this.setUpdateType(UpdateType.Local);
 
@@ -2488,6 +2481,9 @@ export class CoreNode extends EventEmitter {
 
   set textureOptions(value: TextureOptions) {
     this.props.textureOptions = value;
+    if (this.stage.calculateTextureCoord === true && value !== null) {
+      this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+    }
   }
 
   get textureOptions(): TextureOptions {

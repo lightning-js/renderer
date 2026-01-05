@@ -52,6 +52,7 @@ import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
+import type { Dimensions } from '../../../common/CommonTypes.js';
 
 export type WebGlRendererOptions = CoreRendererOptions;
 
@@ -77,7 +78,7 @@ export class WebGlRenderer extends CoreRenderer {
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
 
-  defaultTextureCoords: TextureCoords = {
+  override defaultTextureCoords: TextureCoords = {
     x1: 0,
     y1: 0,
     x2: 1,
@@ -640,85 +641,82 @@ export class WebGlRenderer extends CoreRenderer {
     return this.defaultShaderNode;
   }
 
-  override getTextureCoords(node: CoreNode): TextureCoords {
+  override getTextureCoords(node: CoreNode): TextureCoords | undefined {
     const texture = node.texture;
     if (texture === null) {
-      return this.defaultTextureCoords;
+      return undefined;
     }
 
-    const textureOptions = node.textureOptions;
+    //this stuff needs to be properly moved to CtxSubTexture at some point in the future.
+    const ctxTexture =
+      (texture as SubTexture).parentTexture !== undefined
+        ? (texture as SubTexture).parentTexture.ctxTexture
+        : texture.ctxTexture;
+    if (ctxTexture === undefined) {
+      return undefined;
+    }
+
+    const textureOptions = node.props.textureOptions;
+
+    //early exit for textures with no options unless its a subtexture
     if (
-      texture.type === TextureType.subTexture ||
-      texture.type === TextureType.image ||
-      texture.type === TextureType.renderToTexture ||
-      textureOptions !== null
+      texture.type !== TextureType.subTexture &&
+      textureOptions === undefined
     ) {
-      const result = {
-        x1: 0,
-        y1: 0,
-        x2: 1,
-        y2: 1,
-      };
-
-      if (texture.type === TextureType.subTexture) {
-        const props = (texture as SubTexture).props;
-        const { w: parentW = 0, h: parentH = 0 } = (texture as SubTexture)
-          .parentTexture.dimensions || { w: 0, h: 0 };
-        result.x1 = props.x / parentW;
-        result.x2 = result.x1 + props.w / parentW;
-        result.y1 = props.y / parentH;
-        result.y2 = result.y1 + props.h / parentH;
-      }
-
-      if (
-        texture.type === TextureType.image &&
-        textureOptions !== null &&
-        textureOptions.resizeMode !== undefined &&
-        texture.dimensions !== null
-      ) {
-        const resizeMode = textureOptions.resizeMode;
-        const dimensions = texture.dimensions;
-        if (resizeMode.type === 'cover') {
-          const scaleX = node.props.w / dimensions.w;
-          const scaleY = node.props.h / dimensions.h;
-          const scale = Math.max(scaleX, scaleY);
-          const precision = 1 / scale;
-          // Determine based on width
-          if (scaleX < scale) {
-            const desiredSize = precision * node.props.w;
-            result.x1 =
-              (1 - desiredSize / dimensions.w) * (resizeMode.clipX ?? 0.5);
-            result.x2 = result.x1 + desiredSize / dimensions.w;
-          }
-          // Determine based on height
-          if (scaleY < scale) {
-            const desiredSize = precision * node.props.h;
-            result.y1 =
-              (1 - desiredSize / dimensions.h) * (resizeMode.clipY ?? 0.5);
-            result.y2 = result.y1 + desiredSize / dimensions.h;
-          }
-        }
-      }
-
-      // Flip texture coordinates if dictated by texture options
-      let flipY = 0;
-      if (textureOptions !== null) {
-        if (textureOptions.flipX === true) {
-          [result.x1, result.x2] = [result.x2, result.x1];
-        }
-
-        // convert to integer for bitwise operation below
-        flipY = +(textureOptions.flipY || false);
-      }
-
-      // Eitherone should be true
-      if (flipY ^ +(texture.type === TextureType.renderToTexture)) {
-        [result.y1, result.y2] = [result.y2, result.y1];
-      }
-      return result as TextureCoords;
+      return (ctxTexture as WebGlCtxTexture).txCoords;
     }
 
-    return this.defaultTextureCoords;
+    let { x1, x2, y1, y2 } = (ctxTexture as WebGlCtxTexture).txCoords;
+    if (texture.type === TextureType.subTexture) {
+      const { w: parentW, h: parentH } = (texture as SubTexture).parentTexture
+        .dimensions!;
+      const { x, y, w, h } = (texture as SubTexture).props;
+      x1 = x / parentW;
+      y1 = y / parentH;
+      x2 = x1 + w / parentW;
+      y2 = y1 + h / parentH;
+    }
+
+    const resizeMode = textureOptions.resizeMode;
+    if (
+      resizeMode !== undefined &&
+      resizeMode.type === 'cover' &&
+      texture.dimensions !== null
+    ) {
+      const dimensions = texture.dimensions as Dimensions;
+      const w = node.props.w;
+      const h = node.props.h;
+      const scaleX = w / dimensions.w;
+      const scaleY = h / dimensions.h;
+      const scale = Math.max(scaleX, scaleY);
+      const precision = 1 / scale;
+
+      // Determine based on width
+      if (scaleX < scale) {
+        const desiredSize = precision * node.props.w;
+        x1 = (1 - desiredSize / dimensions.w) * (resizeMode.clipX ?? 0.5);
+        x2 = x1 + desiredSize / dimensions.w;
+      }
+      // Determine based on height
+      if (scaleY < scale) {
+        const desiredSize = precision * node.props.h;
+        y1 = (1 - desiredSize / dimensions.h) * (resizeMode.clipY ?? 0.5);
+        y2 = y1 + desiredSize / dimensions.h;
+      }
+    }
+
+    if (textureOptions.flipX === true) {
+      [x1, x2] = [x2, x1];
+    }
+    if (textureOptions.flipY === true) {
+      [y1, y2] = [y2, y1];
+    }
+    return {
+      x1,
+      y1,
+      x2,
+      y2,
+    };
   }
 
   /**

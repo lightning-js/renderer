@@ -20,6 +20,7 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { Bound } from '../../lib/utils.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
 import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 
@@ -27,6 +28,13 @@ export class WebGlCtxRenderTexture extends WebGlCtxTexture {
   declare textureSource: RenderTexture;
 
   public framebuffer: WebGLFramebuffer | null = null;
+
+  override txCoords: Bound = {
+    x1: 0,
+    y1: 1,
+    x2: 1,
+    y2: 0,
+  };
 
   constructor(
     glw: WebGlContextWrapper,
