@@ -81,7 +81,8 @@ export const RoundedWithShadow: WebGlShaderType<RoundedWithShadowProps> = {
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
       float boxDist = roundedBox(boxUv, halfDimensions, u_radius);
 
-      float roundedAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
+      float edgeWidth = 1.0 / u_pixelRatio;
+      float roundedAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, boxDist);
 
       float shadowAlpha = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_radius + u_shadow.z);
 
