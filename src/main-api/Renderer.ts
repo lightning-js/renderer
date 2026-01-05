@@ -508,6 +508,7 @@ export class RendererMain extends EventEmitter {
   constructor(
     settings: Partial<RendererMainSettings>,
     target?: string | HTMLElement,
+    target?: string | HTMLElement,
   ) {
     super();
 
@@ -618,9 +619,7 @@ export class RendererMain extends EventEmitter {
 
       targetEl.appendChild(canvas);
     } else if (settings.canvas !== canvas) {
-      throw new Error(
-        'New canvas element could not be appended to undefined target',
-      );
+      throw new Error('New canvas element could not be appended to undefined target');
     }
 
     // Initialize inspector (if enabled)
