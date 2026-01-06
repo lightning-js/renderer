@@ -275,14 +275,19 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     this._renderInfo = result;
+    queueMicrotask(this.emitTextLoadedEvent);
+  }
+
+  // Reusable bound method for emitting loaded event
+  private emitTextLoadedEvent = () => {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        w: width,
-        h: height,
+        w: this._renderInfo.width,
+        h: this._renderInfo.height,
       },
     } satisfies NodeTextLoadedPayload);
-  }
+  };
 
   /**
    * Override renderQuads to handle SDF vs Canvas rendering
