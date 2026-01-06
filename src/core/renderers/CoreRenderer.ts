@@ -70,7 +70,7 @@ export interface BufferInfo {
 export abstract class CoreRenderer {
   public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
-
+  defaultTextureCoords: TextureCoords | undefined = undefined;
   readonly stage: Stage;
 
   //// Core Managers
@@ -106,5 +106,5 @@ export abstract class CoreRenderer {
   abstract getQuadCount(): number | null;
   abstract updateViewport(): void;
   abstract updateClearColor(color: number): void;
-  getTextureCoords?(node: CoreNode): TextureCoords;
+  getTextureCoords?(node: CoreNode): TextureCoords | undefined;
 }

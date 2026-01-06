@@ -54,12 +54,12 @@ export interface CompressedData {
   /**
    * All mipmap levels
    */
-  mipmaps?: ArrayBuffer[];
+  mipmaps: ArrayBuffer[];
 
   /**
    * Supported container types ('pvr' or 'ktx').
    */
-  type: 'pvr' | 'ktx';
+  type: 'pvr' | 'ktx' | 'astc';
 
   /**
    * The width of the compressed texture in pixels. Defaults to 0.
@@ -72,6 +72,15 @@ export interface CompressedData {
    * The height of the compressed texture in pixels.
    **/
   h: number;
+
+  /**
+   * block info compressed texture format
+   */
+  blockInfo: {
+    width: number;
+    height: number;
+    bytes: number;
+  };
 }
 
 /**
