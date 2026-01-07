@@ -42,9 +42,12 @@ export class RenderTexture extends Texture {
 
   public override type: TextureType = TextureType.renderToTexture;
 
-  constructor(txManager: CoreTextureManager, props?: RenderTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<RenderTextureProps>,
+  ) {
     super(txManager);
-    this.props = RenderTexture.resolveDefaults(props || {});
+    this.props = props;
   }
 
   get w() {

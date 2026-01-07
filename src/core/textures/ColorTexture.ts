@@ -49,9 +49,12 @@ export class ColorTexture extends Texture {
 
   props: Required<ColorTextureProps>;
 
-  constructor(txManager: CoreTextureManager, props?: ColorTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<ColorTextureProps>,
+  ) {
     super(txManager);
-    this.props = ColorTexture.resolveDefaults(props || {});
+    this.props = props;
   }
 
   get color() {
@@ -86,8 +89,7 @@ export class ColorTexture extends Texture {
   }
 
   static override makeCacheKey(props: ColorTextureProps): string {
-    const resolvedProps = ColorTexture.resolveDefaults(props);
-    return `ColorTexture,${resolvedProps.color}`;
+    return `ColorTexture,${props.color}`;
   }
 
   static override resolveDefaults(

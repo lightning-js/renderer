@@ -87,9 +87,9 @@ export class SubTexture extends Texture {
   public override type: TextureType = TextureType.subTexture;
   public subtextureId = `subtexture-${subTextureId++}`;
 
-  constructor(txManager: CoreTextureManager, props: SubTextureProps) {
+  constructor(txManager: CoreTextureManager, props: Required<SubTextureProps>) {
     super(txManager);
-    this.props = SubTexture.resolveDefaults(props || {});
+    this.props = props;
 
     assertTruthy(this.props.texture, 'SubTexture requires a parent texture');
     assertTruthy(
