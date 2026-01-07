@@ -137,11 +137,14 @@ export class ImageTexture extends Texture {
   public props: Required<ImageTextureProps>;
   public override type: TextureType = TextureType.image;
 
-  constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<ImageTextureProps>,
+  ) {
     super(txManager);
 
     this.platform = txManager.platform;
-    this.props = ImageTexture.resolveDefaults(props);
+    this.props = props;
     this.maxRetryCount = props.maxRetryCount as number;
   }
 
@@ -271,11 +274,6 @@ export class ImageTexture extends Texture {
     } catch (e) {
       this.setState('failed', e as Error);
 
-      // log error only in development
-      if (isProductionEnvironment === false) {
-        console.error('ImageTexture:', e);
-      }
-
       return {
         data: null,
       };
@@ -370,26 +368,25 @@ export class ImageTexture extends Texture {
    * @returns The cache key as a string, or `false` if the key cannot be generated.
    */
   static override makeCacheKey(props: ImageTextureProps): string | false {
-    const resolvedProps = ImageTexture.resolveDefaults(props);
     // Only cache key-able textures; prioritise key
-    const key = resolvedProps.key || resolvedProps.src;
+    const key = props.key || props.src;
     if (typeof key !== 'string') {
       return false;
     }
 
-    // if we have source dimensions, cache the texture separately
-    let dimensionProps = '';
-    if (resolvedProps.sh !== null && resolvedProps.sw !== null) {
-      dimensionProps += ',';
-      dimensionProps += resolvedProps.sx ?? '';
-      dimensionProps += resolvedProps.sy ?? '';
-      dimensionProps += resolvedProps.sw || '';
-      dimensionProps += resolvedProps.sh || '';
+    let cacheKey = `ImageTexture,${key},${props.premultiplyAlpha ?? 'true'},${
+      props.maxRetryCount
+    }`;
+
+    if (props.sh !== null && props.sw !== null) {
+      cacheKey += ',';
+      cacheKey += props.sx ?? '';
+      cacheKey += props.sy ?? '';
+      cacheKey += props.sw || '';
+      cacheKey += props.sh || '';
     }
 
-    return `ImageTexture,${key},${
-      resolvedProps.premultiplyAlpha ?? 'true'
-    }${dimensionProps}`;
+    return cacheKey;
   }
 
   static override resolveDefaults(

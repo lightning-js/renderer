@@ -58,9 +58,12 @@ export class NoiseTexture extends Texture {
 
   public override type: TextureType = TextureType.noise;
 
-  constructor(txManager: CoreTextureManager, props: NoiseTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<NoiseTextureProps>,
+  ) {
     super(txManager);
-    this.props = NoiseTexture.resolveDefaults(props);
+    this.props = props;
   }
 
   override async getTextureSource(): Promise<TextureData> {
