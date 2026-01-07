@@ -326,7 +326,7 @@ export const loadFont = async (
         premultiplyAlpha: false,
       });
 
-      atlasTexture.setRenderableOwner(this, true);
+      atlasTexture.setRenderableOwner(fontFamily, true);
       atlasTexture.preventCleanup = true; // Prevent automatic cleanup
 
       if (atlasTexture.state === 'loaded') {

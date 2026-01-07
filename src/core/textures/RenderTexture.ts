@@ -64,8 +64,7 @@ export class RenderTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    this.setState('fetched');
-
+    // Render texture data ready - dimensions will be set during upload
     return {
       data: null,
       premultiplyAlpha: null,

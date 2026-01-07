@@ -32,6 +32,7 @@ import {
   type CreateImageBitmapSupport,
 } from './lib/validateImageBitmap.js';
 import type { Platform } from './platforms/Platform.js';
+import { TextureError, TextureErrorCode } from './TextureError.js';
 
 /**
  * Augmentable map of texture class types
@@ -64,6 +65,7 @@ export interface TextureManagerDebugInfo {
 export interface TextureManagerSettings {
   numImageWorkers: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+  maxRetryCount: number;
 }
 
 export type ResizeModeOptions =
@@ -139,6 +141,20 @@ export interface TextureOptions {
   preventCleanup?: boolean;
 
   /**
+   * Number of times to retry loading a failed texture
+   *
+   * @remarks
+   * When a texture fails to load, Lightning will retry up to this many times
+   * before permanently giving up. Each retry will clear the texture ownership
+   * and then re-establish it to trigger a new load attempt.
+   *
+   * Set to null to disable retries. Set to 0 to always try once and never retry.
+   * This is typically only used on ImageTexture instances.
+   *
+   */
+  maxRetryCount?: number | null;
+
+  /**
    * Flip the texture horizontally when rendering
    *
    * @defaultValue `false`
@@ -178,6 +194,7 @@ export class CoreTextureManager extends EventEmitter {
    */
   txConstructors: Partial<TextureMap> = {};
 
+  public maxRetryCount: number;
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
   private initialized = false;
@@ -218,10 +235,12 @@ export class CoreTextureManager extends EventEmitter {
   constructor(stage: Stage, settings: TextureManagerSettings) {
     super();
 
-    const { numImageWorkers, createImageBitmapSupport } = settings;
+    const { numImageWorkers, createImageBitmapSupport, maxRetryCount } =
+      settings;
     this.stage = stage;
     this.platform = stage.platform;
     this.numImageWorkers = numImageWorkers;
+    this.maxRetryCount = maxRetryCount;
 
     if (createImageBitmapSupport === 'auto') {
       validateCreateImageBitmap(this.platform)
@@ -332,25 +351,13 @@ export class CoreTextureManager extends EventEmitter {
     return texture as InstanceType<TextureMap[Type]>;
   }
 
-  orphanTexture(texture: Texture): void {
-    // if it is part of the download or upload queue, remove it
-    this.removeTextureFromQueue(texture);
-
-    if (texture.type === TextureType.subTexture) {
-      // ignore subtextures
-      return;
-    }
-
-    this.stage.txMemManager.addToOrphanedTextures(texture);
-  }
-
   /**
    * Override loadTexture to use the batched approach.
    *
    * @param texture - The texture to load
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
-  loadTexture(texture: Texture, priority?: boolean): void {
+  async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
     this.stage.txMemManager.removeFromOrphanedTextures(texture);
 
     if (texture.type === TextureType.subTexture) {
@@ -363,56 +370,39 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    if (Texture.TRANSITIONAL_TEXTURE_STATES.includes(texture.state)) {
-      return;
-    }
-
     // if we're not initialized, just queue the texture into the priority queue
     if (this.initialized === false) {
       this.priorityQueue.push(texture);
       return;
     }
 
-    // If the texture failed to load, we need to re-download it.
-    if (texture.state === 'failed') {
-      texture.free();
-      texture.freeTextureData();
-    }
-
     texture.setState('loading');
 
-    // Get the texture data
-    texture
-      .getTextureData()
-      .then(() => {
-        if (texture.state !== 'fetched') {
-          texture.setState('failed');
-          return;
-        }
+    // Get texture data - early return on failure
+    const textureDataResult = await texture.getTextureData().catch((err) => {
+      console.error(err);
+      texture.setState('failed');
+      return null;
+    });
 
-        // For non-image textures, upload immediately
-        if (texture.type !== TextureType.image) {
-          this.uploadTexture(texture).catch((err) => {
-            console.error('Failed to upload non-image texture:', err);
-            texture.setState('failed');
-          });
-        } else {
-          // For image textures, queue for throttled upload
-          // If it's a priority texture, upload it immediately
-          if (priority === true) {
-            this.uploadTexture(texture).catch((err) => {
-              console.error('Failed to upload priority texture:', err);
-              texture.setState('failed');
-            });
-          } else {
-            this.enqueueUploadTexture(texture);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error(err);
+    // Early return if texture data fetch failed
+    if (textureDataResult === null || texture.state === 'failed') {
+      return;
+    }
+
+    // Handle non-image textures: upload immediately
+    const shouldUploadImmediately =
+      texture.type !== TextureType.image || priority === true;
+    if (shouldUploadImmediately === true) {
+      await this.uploadTexture(texture).catch((err) => {
+        console.error(`Failed to upload texture:`, err);
         texture.setState('failed');
       });
+      return;
+    }
+
+    // Queue image textures for throttled upload
+    this.enqueueUploadTexture(texture);
   }
 
   /**
@@ -428,6 +418,27 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       // we're at a critical memory threshold, don't upload textures
       texture.setState('failed');
+      return;
+    }
+
+    if (texture.state === 'failed' || texture.state === 'freed') {
+      // don't upload failed or freed textures
+      return;
+    }
+
+    if (texture.state === 'loaded') {
+      // already loaded
+      return;
+    }
+
+    if (texture.textureData === null) {
+      texture.setState(
+        'failed',
+        new TextureError(
+          TextureErrorCode.TEXTURE_DATA_NULL,
+          'Texture data is null, cannot upload texture',
+        ),
+      );
       return;
     }
 

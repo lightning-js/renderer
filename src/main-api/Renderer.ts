@@ -425,6 +425,20 @@ export type RendererMainSettings = RendererRuntimeSettings & {
    * @defaultValue `null`
    */
   platform: typeof Platform | null;
+
+  /**
+   * Number of times to retry loading a failed texture
+   *
+   * @remarks
+   * When a texture fails to load, Lightning will retry up to this many times
+   * before permanently giving up. Each retry will clear the texture ownership
+   * and then re-establish it to trigger a new load attempt.
+   *
+   * Set to null to disable retries. Set to 0 to always try once and never retry.
+   * This is typically only used on ImageTexture instances.
+   *
+   */
+  maxRetryCount?: number;
 };
 
 /**
@@ -508,7 +522,7 @@ export class RendererMain extends EventEmitter {
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
-        settings.devicePhysicalPixelRatio || (window.devicePixelRatio || 1),
+        settings.devicePhysicalPixelRatio || window.devicePixelRatio || 1,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
       targetFPS: settings.targetFPS || 0,
@@ -525,6 +539,7 @@ export class RendererMain extends EventEmitter {
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
+      maxRetryCount: settings.maxRetryCount ?? 5,
     };
 
     const {
@@ -582,6 +597,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
+      maxRetryCount: settings.maxRetryCount ?? 5,
     });
 
     // Extract the root node
@@ -602,7 +618,9 @@ export class RendererMain extends EventEmitter {
 
       targetEl.appendChild(canvas);
     } else if (settings.canvas !== canvas) {
-      throw new Error('New canvas element could not be appended to undefined target');
+      throw new Error(
+        'New canvas element could not be appended to undefined target',
+      );
     }
 
     // Initialize inspector (if enabled)
@@ -836,8 +854,8 @@ export class RendererMain extends EventEmitter {
    * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
    * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
    */
-  cleanup(aggressive: boolean = false) {
-    this.stage.cleanup(aggressive);
+  cleanup() {
+    this.stage.cleanup();
   }
 
   /**
