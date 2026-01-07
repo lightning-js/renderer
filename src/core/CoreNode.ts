@@ -883,7 +883,7 @@ export class CoreNode extends EventEmitter {
     texture.off('loaded', this.onTextureLoaded);
     texture.off('failed', this.onTextureFailed);
     texture.off('freed', this.onTextureFreed);
-    texture.setRenderableOwner(this, false);
+    texture.setRenderableOwner(this._id, false);
   }
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
@@ -935,10 +935,15 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('failed', {
-      type: 'texture',
-      error,
-    } satisfies NodeTextureFailedPayload);
+    if (
+      this.texture !== null &&
+      this.texture.retryCount > this.texture.maxRetryCount
+    ) {
+      this.emit('failed', {
+        type: 'texture',
+        error,
+      } satisfies NodeTextureFailedPayload);
+    }
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
@@ -1503,7 +1508,7 @@ export class CoreNode extends EventEmitter {
    * Changes the renderable state of the node.
    */
   updateTextureOwnership(isRenderable: boolean) {
-    this.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this._id, isRenderable);
   }
 
   calculateRenderCoords() {
@@ -2493,7 +2498,7 @@ export class CoreNode extends EventEmitter {
     this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable);
+      value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
     }
 

@@ -145,9 +145,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       // to the GL context before freeing the source data.
       // This is important to avoid issues with the texture data being
       // freed while the texture is still being loaded or used.
-      queueMicrotask(() => {
-        this.textureSource.freeTextureData();
-      });
+      this.textureSource.freeTextureData();
     } catch (err: unknown) {
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
@@ -291,6 +289,13 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
     this.state = 'freed';
     this.textureSource.setState('freed');
+    this.release();
+  }
+
+  /**
+   * Release the WebGLTexture from the GPU without changing state
+   */
+  release(): void {
     this._w = 0;
     this._h = 0;
 

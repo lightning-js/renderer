@@ -61,7 +61,7 @@ import { CoreFontManager } from './text-rendering/FontManager.js';
 
 export type StageOptions = Omit<
   RendererMainSettings,
-  'inspector' | 'platform'
+  'inspector' | 'platform' | 'maxRetryCount'
 > & {
   textureMemory: TextureMemoryManagerSettings;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -69,6 +69,7 @@ export type StageOptions = Omit<
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
   inspector: boolean;
+  maxRetryCount: number;
 };
 
 export type StageFpsUpdateHandler = (
@@ -165,6 +166,7 @@ export class Stage {
       fontEngines,
       createImageBitmapSupport,
       platform,
+      maxRetryCount,
     } = options;
 
     assertTruthy(
@@ -184,6 +186,7 @@ export class Stage {
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
+      maxRetryCount,
     });
 
     // Wait for the Texture Manager to initialize
@@ -341,7 +344,7 @@ export class Stage {
     // Mark the default texture as ALWAYS renderable
     // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
+    this.defaultTexture.setRenderableOwner('stage', true);
 
     // When the default texture is loaded, request a render in case the
     // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
@@ -396,16 +399,6 @@ export class Stage {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to cleanup textures
-    if (txMemManager.criticalCleanupRequested === true) {
-      txMemManager.cleanup(false);
-
-      if (txMemManager.criticalCleanupRequested === true) {
-        // If we still need to cleanup, request another but aggressive cleanup
-        txMemManager.cleanup(true);
-      }
-    }
-
     // If we have RTT nodes draw them first
     // So we can use them as textures in the main scene
     if (renderer.rttNodes.length > 0) {
@@ -433,6 +426,11 @@ export class Stage {
           break;
         }
       }
+    }
+
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup();
     }
   }
 
@@ -738,8 +736,8 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup(aggressive: boolean) {
-    this.txMemManager.cleanup(aggressive);
+  cleanup() {
+    this.txMemManager.cleanup();
   }
 
   set clearColor(value: number) {
