@@ -66,6 +66,14 @@ export enum CoreNodeRenderState {
   InViewport = 8,
 }
 
+const NO_CLIPPING_RECT: RectWithValid = {
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  valid: false,
+};
+
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
@@ -1087,10 +1095,6 @@ export class CoreNode extends EventEmitter {
    * @param delta
    */
   update(delta: number, parentClippingRect: RectWithValid): void {
-    if (this.updateType === UpdateType.None) {
-      return;
-    }
-
     const props = this.props;
     const parent = props.parent;
     const parentHasRenderTexture = this.parentHasRenderTexture;
@@ -1101,6 +1105,9 @@ export class CoreNode extends EventEmitter {
     let updateType = this.updateType;
     let childUpdateType = this.childUpdateType;
     let updateParent = false;
+    // reset update type
+    this.updateType = 0;
+    this.childUpdateType = 0;
 
     if (updateType & UpdateType.Autosize && this.autosizer !== null) {
       this.autosizer.update();
@@ -1279,6 +1286,7 @@ export class CoreNode extends EventEmitter {
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
       updateType &= ~UpdateType.RenderBounds; // remove render bounds update
+      this.updateType = updateType;
       return;
     }
 
@@ -1296,24 +1304,21 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.Children && this.children.length > 0) {
+      let childClippingRect = this.clippingRect;
+
+      if (this.rtt === true) {
+        childClippingRect = NO_CLIPPING_RECT;
+      }
+
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
-        child.setUpdateType(childUpdateType);
+        if (childUpdateType !== 0) {
+          child.setUpdateType(childUpdateType);
+        }
 
         if (child.updateType === 0) {
           continue;
-        }
-
-        let childClippingRect = this.clippingRect;
-        if (this.rtt === true) {
-          childClippingRect = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            valid: false,
-          };
         }
 
         child.update(delta, childClippingRect);
@@ -1350,10 +1355,6 @@ export class CoreNode extends EventEmitter {
         this.notifyChildrenRTTOfUpdate(renderState);
       }
     }
-
-    // reset update type
-    this.updateType = 0;
-    this.childUpdateType = 0;
   }
 
   private findParentRTTNode(): CoreNode | null {
