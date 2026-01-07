@@ -137,6 +137,7 @@ export class SubTexture extends Texture {
   };
 
   private onParentTxFailed: TextureFailedEventHandler = (target, error) => {
+    this.retryCount = this.parentTexture.retryCount - 1;
     this.setState('failed', error);
   };
 
