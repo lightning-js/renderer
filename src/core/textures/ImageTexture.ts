@@ -109,6 +109,12 @@ export interface ImageTextureProps {
    * @default null
    */
   sy?: number | null;
+  /**
+   * Maximum number of times to retry loading the image if it fails.
+   *
+   * @default 5
+   */
+  maxRetryCount?: number;
 }
 
 /**
@@ -136,6 +142,7 @@ export class ImageTexture extends Texture {
 
     this.platform = txManager.platform;
     this.props = ImageTexture.resolveDefaults(props);
+    this.maxRetryCount = props.maxRetryCount as number;
   }
 
   hasAlphaChannel(mimeType: string) {
@@ -152,14 +159,19 @@ export class ImageTexture extends Texture {
     return new Promise<{
       data: HTMLImageElement | null;
       premultiplyAlpha: boolean;
-    }>((resolve) => {
+    }>((resolve, reject) => {
       img.onload = () => {
         resolve({ data: img, premultiplyAlpha: hasAlpha });
       };
 
-      img.onerror = () => {
-        console.warn('Image loading failed, returning fallback object.');
-        resolve({ data: null, premultiplyAlpha: hasAlpha });
+      img.onerror = (err) => {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : err instanceof Event
+            ? `Image loading failed for ${img.src}`
+            : 'Unknown image loading error';
+        reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
       if (src instanceof Blob) {
@@ -253,7 +265,7 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    let resp;
+    let resp: TextureData;
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
@@ -275,23 +287,6 @@ export class ImageTexture extends Texture {
         data: null,
       };
     }
-
-    let w, h;
-    // check if resp.data is typeof Uint8ClampedArray else
-    // use resp.data.width and resp.data.height
-    if (resp.data instanceof Uint8Array) {
-      w = this.props.w ?? 0;
-      h = this.props.h ?? 0;
-    } else {
-      w = resp.data?.width ?? (this.props.w || 0);
-      h = resp.data?.height ?? (this.props.h || 0);
-    }
-
-    // we're loaded!
-    this.setState('fetched', {
-      w,
-      h,
-    });
 
     return {
       data: resp.data,
@@ -411,6 +406,7 @@ export class ImageTexture extends Texture {
       sy: props.sy ?? null,
       sw: props.sw ?? null,
       sh: props.sh ?? null,
+      maxRetryCount: props.maxRetryCount ?? 5,
     };
   }
 
