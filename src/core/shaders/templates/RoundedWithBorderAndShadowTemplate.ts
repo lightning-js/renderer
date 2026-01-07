@@ -23,13 +23,30 @@ import { getShadowProps, type ShadowProps } from './ShadowTemplate.js';
 
 export type RoundedWithBorderAndShadowProps = RoundedProps &
   PrefixedType<BorderProps, 'border'> &
-  PrefixedType<ShadowProps, 'shadow'>;
+  PrefixedType<ShadowProps, 'shadow'> & {
+    /**
+     * Gap between the border and the content
+     *
+     * @default 0
+     */
+    'border-gap': number;
+    /**
+     * Color of the gap
+     *
+     * @default 0x00000000
+     */
+    'border-gapColor': number;
+  };
 
 const props = Object.assign(
   {},
   RoundedTemplate.props,
   getBorderProps('border'),
   getShadowProps('shadow'),
+  {
+    'border-gap': 0,
+    'border-gapColor': 0x00000000,
+  },
 ) as RoundedWithBorderAndShadowProps;
 
 export const RoundedWithBorderAndShadowTemplate: CoreShaderType<RoundedWithBorderAndShadowProps> =
