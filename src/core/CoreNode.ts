@@ -78,6 +78,14 @@ const NO_CLIPPING_RECT: RectWithValid = {
   valid: false,
 };
 
+const NO_CLIPPING_RECT: RectWithValid = {
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  valid: false,
+};
+
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
 CoreNodeRenderStateMap.set(CoreNodeRenderState.OutOfBounds, 'outOfBounds');
@@ -1127,6 +1135,13 @@ export class CoreNode extends EventEmitter {
     this.updateType = 0;
     this.childUpdateType = 0;
 
+    if (updateType & UpdateType.Autosize && this.autosizer !== null) {
+      this.autosizer.update();
+
+      updateType |= UpdateType.Local;
+      updateParent = hasParent;
+    }
+
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
 
@@ -1286,9 +1301,8 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      // Delay updating children until the node is in bounds
+      updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       this.updateType = updateType;
-      this.childUpdateType = childUpdateType;
       return;
     }
 
@@ -1316,9 +1330,18 @@ export class CoreNode extends EventEmitter {
         childClippingRect = NO_CLIPPING_RECT;
       }
 
+      let childClippingRect = this.clippingRect;
+
+      if (this.rtt === true) {
+        childClippingRect = NO_CLIPPING_RECT;
+      }
+
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
+        if (childUpdateType !== 0) {
+          child.setUpdateType(childUpdateType);
+        }
         if (childUpdateType !== 0) {
           child.setUpdateType(childUpdateType);
         }
