@@ -1261,7 +1261,9 @@ export class CoreNode extends EventEmitter {
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
-        child.setUpdateType(childUpdateType);
+        if (childUpdateType !== 0) {
+          child.setUpdateType(childUpdateType);
+        }
 
         if (child.updateType === 0) {
           continue;
