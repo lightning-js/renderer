@@ -388,7 +388,7 @@ export abstract class Texture extends EventEmitter {
    * e.g. ImageData that is downloaded from a URL.
    */
   freeTextureData(): void {
-    queueMicrotask(this.queuedFreeTextureData);
+    queueMicrotask(this.freeTextureDataTask);
   }
 
   public setState(
@@ -421,7 +421,7 @@ export abstract class Texture extends EventEmitter {
       // to determine if we should try loading again
       this.retryCount += 1;
 
-      queueMicrotask(this.queuedRelease);
+      queueMicrotask(this.releaseTask);
     } else if (state === 'loading') {
       this._error = null;
       this._dimensions = null;
@@ -453,22 +453,22 @@ export abstract class Texture extends EventEmitter {
   }
 
   /**
-   * Queued free texture data.
+   * Task for queueMicrotask to free texture data.
    *
    * @remarks
    * This method is called in a microtask to free the texture data.
    */
-  private queuedFreeTextureData = (): void => {
+  private freeTextureDataTask = (): void => {
     this.textureData = null;
   };
 
   /**
-   * Queued release.
+   * Task for queueMicrotask to release the texture.
    *
    * @remarks
    * This method is called in a microtask to release the texture.
    */
-  private queuedRelease = (): void => {
+  private releaseTask = (): void => {
     this.release();
   };
 

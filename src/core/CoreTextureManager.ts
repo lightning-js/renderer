@@ -237,6 +237,7 @@ export class CoreTextureManager extends EventEmitter {
 
     const { numImageWorkers, createImageBitmapSupport, maxRetryCount } =
       settings;
+
     this.stage = stage;
     this.platform = stage.platform;
     this.numImageWorkers = numImageWorkers;
@@ -334,14 +335,14 @@ export class CoreTextureManager extends EventEmitter {
     if (!TextureClass) {
       throw new Error(`Texture type "${textureType}" is not registered`);
     }
-
-    const cacheKey = TextureClass.makeCacheKey(props as any);
+    const resolvedProps = TextureClass.resolveDefaults(props as any);
+    const cacheKey = TextureClass.makeCacheKey(resolvedProps as any);
     if (cacheKey && this.keyCache.has(cacheKey)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       texture = this.keyCache.get(cacheKey)!;
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-      texture = new TextureClass(this, props as any);
+      texture = new TextureClass(this, resolvedProps as any);
 
       if (cacheKey) {
         this.initTextureToCache(texture, cacheKey);
