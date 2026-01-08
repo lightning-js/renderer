@@ -1329,6 +1329,44 @@ export class WebGlContextWrapper {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
   }
+
+  /**
+   * Check for WebGL errors and return error information
+   * @param operation Description of the operation for error reporting
+   * @returns Object with error information or null if no error
+   */
+  checkError(
+    operation: string,
+  ): { error: number; errorName: string; message: string } | null {
+    const error = this.getError();
+    if (error !== 0) {
+      // 0 is GL_NO_ERROR
+      let errorName = 'UNKNOWN_ERROR';
+      switch (error) {
+        case this.INVALID_ENUM:
+          errorName = 'INVALID_ENUM';
+          break;
+        case 0x0501: // GL_INVALID_VALUE
+          errorName = 'INVALID_VALUE';
+          break;
+        case this.INVALID_OPERATION:
+          errorName = 'INVALID_OPERATION';
+          break;
+        case 0x0505: // GL_OUT_OF_MEMORY
+          errorName = 'OUT_OF_MEMORY';
+          break;
+        case 0x9242: // GL_CONTEXT_LOST_WEBGL
+          errorName = 'CONTEXT_LOST_WEBGL';
+          break;
+      }
+
+      const message = `WebGL ${errorName} (0x${error.toString(
+        16,
+      )}) during ${operation}`;
+      return { error, errorName, message };
+    }
+    return null;
+  }
 }
 
 // prettier-ignore

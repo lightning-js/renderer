@@ -109,6 +109,12 @@ export interface ImageTextureProps {
    * @default null
    */
   sy?: number | null;
+  /**
+   * Maximum number of times to retry loading the image if it fails.
+   *
+   * @default 5
+   */
+  maxRetryCount?: number;
 }
 
 /**
@@ -131,11 +137,15 @@ export class ImageTexture extends Texture {
   public props: Required<ImageTextureProps>;
   public override type: TextureType = TextureType.image;
 
-  constructor(txManager: CoreTextureManager, props: ImageTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<ImageTextureProps>,
+  ) {
     super(txManager);
 
     this.platform = txManager.platform;
-    this.props = ImageTexture.resolveDefaults(props);
+    this.props = props;
+    this.maxRetryCount = props.maxRetryCount as number;
   }
 
   hasAlphaChannel(mimeType: string) {
@@ -152,14 +162,19 @@ export class ImageTexture extends Texture {
     return new Promise<{
       data: HTMLImageElement | null;
       premultiplyAlpha: boolean;
-    }>((resolve) => {
+    }>((resolve, reject) => {
       img.onload = () => {
         resolve({ data: img, premultiplyAlpha: hasAlpha });
       };
 
-      img.onerror = () => {
-        console.warn('Image loading failed, returning fallback object.');
-        resolve({ data: null, premultiplyAlpha: hasAlpha });
+      img.onerror = (err) => {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : err instanceof Event
+            ? `Image loading failed for ${img.src}`
+            : 'Unknown image loading error';
+        reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
       if (src instanceof Blob) {
@@ -253,16 +268,11 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    let resp;
+    let resp: TextureData;
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
       this.setState('failed', e as Error);
-
-      // log error only in development
-      if (isProductionEnvironment === false) {
-        console.error('ImageTexture:', e);
-      }
 
       return {
         data: null,
@@ -275,23 +285,6 @@ export class ImageTexture extends Texture {
         data: null,
       };
     }
-
-    let w, h;
-    // check if resp.data is typeof Uint8ClampedArray else
-    // use resp.data.width and resp.data.height
-    if (resp.data instanceof Uint8Array) {
-      w = this.props.w ?? 0;
-      h = this.props.h ?? 0;
-    } else {
-      w = resp.data?.width ?? (this.props.w || 0);
-      h = resp.data?.height ?? (this.props.h || 0);
-    }
-
-    // we're loaded!
-    this.setState('fetched', {
-      w,
-      h,
-    });
 
     return {
       data: resp.data,
@@ -375,26 +368,25 @@ export class ImageTexture extends Texture {
    * @returns The cache key as a string, or `false` if the key cannot be generated.
    */
   static override makeCacheKey(props: ImageTextureProps): string | false {
-    const resolvedProps = ImageTexture.resolveDefaults(props);
     // Only cache key-able textures; prioritise key
-    const key = resolvedProps.key || resolvedProps.src;
+    const key = props.key || props.src;
     if (typeof key !== 'string') {
       return false;
     }
 
-    // if we have source dimensions, cache the texture separately
-    let dimensionProps = '';
-    if (resolvedProps.sh !== null && resolvedProps.sw !== null) {
-      dimensionProps += ',';
-      dimensionProps += resolvedProps.sx ?? '';
-      dimensionProps += resolvedProps.sy ?? '';
-      dimensionProps += resolvedProps.sw || '';
-      dimensionProps += resolvedProps.sh || '';
+    let cacheKey = `ImageTexture,${key},${props.premultiplyAlpha ?? 'true'},${
+      props.maxRetryCount
+    }`;
+
+    if (props.sh !== null && props.sw !== null) {
+      cacheKey += ',';
+      cacheKey += props.sx ?? '';
+      cacheKey += props.sy ?? '';
+      cacheKey += props.sw || '';
+      cacheKey += props.sh || '';
     }
 
-    return `ImageTexture,${key},${
-      resolvedProps.premultiplyAlpha ?? 'true'
-    }${dimensionProps}`;
+    return cacheKey;
   }
 
   static override resolveDefaults(
@@ -411,6 +403,7 @@ export class ImageTexture extends Texture {
       sy: props.sy ?? null,
       sw: props.sw ?? null,
       sh: props.sh ?? null,
+      maxRetryCount: props.maxRetryCount ?? 5,
     };
   }
 

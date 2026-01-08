@@ -50,9 +50,13 @@ export class CanvasTexture extends CoreContextTexture {
     }
   }
 
-  free(): void {
+  release(): void {
     this.image = undefined;
     this.tintCache = undefined;
+  }
+
+  free(): void {
+    this.release();
     this.textureSource.setState('freed');
     this.setTextureMemUse(0);
     this.textureSource.freeTextureData();
