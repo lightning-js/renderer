@@ -58,9 +58,12 @@ export class NoiseTexture extends Texture {
 
   public override type: TextureType = TextureType.noise;
 
-  constructor(txManager: CoreTextureManager, props: NoiseTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<NoiseTextureProps>,
+  ) {
     super(txManager);
-    this.props = NoiseTexture.resolveDefaults(props);
+    this.props = props;
   }
 
   override async getTextureSource(): Promise<TextureData> {
@@ -75,8 +78,7 @@ export class NoiseTexture extends Texture {
       pixelData8[i + 3] = 255;
     }
 
-    this.setState('fetched');
-
+    // Noise Texture data ready - dimensions will be set during upload
     return {
       data: new ImageData(pixelData8, w, h),
     };

@@ -823,8 +823,7 @@ export class CoreNode extends EventEmitter {
 
   //#region Textures
   loadTexture(): void {
-    const { texture } = this.props;
-    if (!texture) {
+    if (this.props.texture === null) {
       return;
     }
 
@@ -832,36 +831,44 @@ export class CoreNode extends EventEmitter {
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
-    queueMicrotask(() => {
-      if (this.textureOptions.preload === true) {
-        this.stage.txManager.loadTexture(texture);
-      }
-
-      texture.preventCleanup =
-        this.props.textureOptions?.preventCleanup ?? false;
-      texture.on('loaded', this.onTextureLoaded);
-      texture.on('failed', this.onTextureFailed);
-      texture.on('freed', this.onTextureFreed);
-
-      // If the parent is a render texture, the initial texture status
-      // will be set to freed until the texture is processed by the
-      // Render RTT nodes. So we only need to listen fo changes and
-      // no need to check the texture.state until we restructure how
-      // textures are being processed.
-      if (this.parentHasRenderTexture) {
-        this.notifyParentRTTOfUpdate();
-        return;
-      }
-
-      if (texture.state === 'loaded') {
-        this.onTextureLoaded(texture, texture.dimensions!);
-      } else if (texture.state === 'failed') {
-        this.onTextureFailed(texture, texture.error!);
-      } else if (texture.state === 'freed') {
-        this.onTextureFreed(texture);
-      }
-    });
+    queueMicrotask(this.loadTextureTask);
   }
+
+  /**
+   * Task for queueMicrotask to loadTexture
+   *
+   * @remarks
+   * This method is called in a microtask to release the texture.
+   */
+  private loadTextureTask = (): void => {
+    const texture = this.texture as Texture;
+    if (this.textureOptions.preload === true) {
+      this.stage.txManager.loadTexture(texture);
+    }
+
+    texture.preventCleanup = this.props.textureOptions?.preventCleanup ?? false;
+    texture.on('loaded', this.onTextureLoaded);
+    texture.on('failed', this.onTextureFailed);
+    texture.on('freed', this.onTextureFreed);
+
+    // If the parent is a render texture, the initial texture status
+    // will be set to freed until the texture is processed by the
+    // Render RTT nodes. So we only need to listen fo changes and
+    // no need to check the texture.state until we restructure how
+    // textures are being processed.
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+      return;
+    }
+
+    if (texture.state === 'loaded') {
+      this.onTextureLoaded(texture, texture.dimensions!);
+    } else if (texture.state === 'failed') {
+      this.onTextureFailed(texture, texture.error!);
+    } else if (texture.state === 'freed') {
+      this.onTextureFreed(texture);
+    }
+  };
 
   unloadTexture(): void {
     if (this.texture === null) {
@@ -872,7 +879,7 @@ export class CoreNode extends EventEmitter {
     texture.off('loaded', this.onTextureLoaded);
     texture.off('failed', this.onTextureFailed);
     texture.off('freed', this.onTextureFreed);
-    texture.setRenderableOwner(this, false);
+    texture.setRenderableOwner(this._id, false);
   }
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
@@ -917,6 +924,7 @@ export class CoreNode extends EventEmitter {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -924,16 +932,22 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('failed', {
-      type: 'texture',
-      error,
-    } satisfies NodeTextureFailedPayload);
+    if (
+      this.texture !== null &&
+      this.texture.retryCount > this.texture.maxRetryCount
+    ) {
+      this.emit('failed', {
+        type: 'texture',
+        error,
+      } satisfies NodeTextureFailedPayload);
+    }
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -1443,6 +1457,17 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
+   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   */
+  checkBasicRenderability(): boolean {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  /**
    * Updates the `isRenderable` property based on various conditions.
    */
   updateIsRenderable() {
@@ -1450,25 +1475,30 @@ export class CoreNode extends EventEmitter {
     let needsTextureOwnership = false;
 
     // If the node is out of bounds or has an alpha of 0, it is not renderable
-    if (
-      this.worldAlpha === 0 ||
-      this.renderState <= CoreNodeRenderState.OutOfBounds
-    ) {
+    if (this.checkBasicRenderability() === false) {
       this.updateTextureOwnership(false);
       this.setRenderable(false);
       return;
     }
 
     if (this.texture !== null) {
-      needsTextureOwnership = true;
+      // preemptive check for failed textures this will mark the current node as non-renderable
+      // and will prevent further checks until the texture is reloaded or retry is reset on the texture
+      if (this.texture.retryCount > this.texture.maxRetryCount) {
+        // texture has failed to load, we cannot render
+        this.updateTextureOwnership(false);
+        this.setRenderable(false);
+        return;
+      }
 
+      needsTextureOwnership = true;
       // we're only renderable if the texture state is loaded
       newIsRenderable = this.texture.state === 'loaded';
     } else if (
       // check shader
       (this.props.shader !== null || this.hasColorProps === true) &&
       // check dimensions
-      (this.props.w !== 0 && this.props.h !== 0) === true
+      this.hasDimensions() === true
     ) {
       // This mean we have dimensions and a color set, so we can render a ColorTexture
       if (
@@ -1504,7 +1534,21 @@ export class CoreNode extends EventEmitter {
    * Changes the renderable state of the node.
    */
   updateTextureOwnership(isRenderable: boolean) {
-    this.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this._id, isRenderable);
+  }
+
+  /**
+   * Checks if the node is out of the viewport bounds.
+   */
+  isOutOfBounds(): boolean {
+    return this.renderState <= CoreNodeRenderState.OutOfBounds;
+  }
+
+  /**
+   * Checks if the node has dimensions (width/height)
+   */
+  hasDimensions(): boolean {
+    return this.props.w !== 0 && this.props.h !== 0;
   }
 
   calculateRenderCoords() {
@@ -2414,7 +2458,7 @@ export class CoreNode extends EventEmitter {
     this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable);
+      value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
     }
 
