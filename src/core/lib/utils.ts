@@ -97,6 +97,11 @@ export interface Bound {
   y2: number;
 }
 
+export interface Coord {
+  x: number;
+  y: number;
+}
+
 export interface BoundWithValid extends Bound {
   valid: boolean;
 }

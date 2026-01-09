@@ -57,7 +57,7 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
-import { createAutosizeManager } from './AutosizeManager.js';
+import { Autosizer } from './Autosizer.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -185,6 +185,10 @@ export enum UpdateType {
   RecalcUniforms = 8192,
 
   /**
+   * Autosize update
+   */
+  Autosize = 16384,
+  /**
    * None
    */
   None = 0,
@@ -192,7 +196,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 14335,
+  All = 32766,
 }
 
 /**
@@ -769,13 +773,9 @@ export class CoreNode extends EventEmitter {
    */
   public framebufferDimensions: Dimensions | null = null;
 
-  /**
-   * Autosize management properties
-   */
-  private autosizeManager: ReturnType<typeof createAutosizeManager> | null =
-    null;
-  private autosizeParent: CoreNode | null = null;
-  public autosizeNeedsUpdate = false;
+  /**Autosize properties */
+  autosizer: Autosizer | null = null;
+  parentAutosizer: Autosizer | null = null;
 
   public destroyed = false;
 
@@ -823,6 +823,7 @@ export class CoreNode extends EventEmitter {
     p.srcY = props.srcY;
     p.srcWidth = props.srcWidth;
     p.srcHeight = props.srcHeight;
+    p.autosize = props.autosize;
 
     p.parent = null;
     p.texture = null;
@@ -841,8 +842,8 @@ export class CoreNode extends EventEmitter {
     this.interactive = props.interactive;
 
     // Initialize autosize if enabled
-    if (this.props.autosize) {
-      this.updateAutosizeMode();
+    if (p.autosize === true) {
+      this.autosizer = new Autosizer(this);
     }
 
     this.setUpdateType(
@@ -912,11 +913,8 @@ export class CoreNode extends EventEmitter {
   }
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
-    if (this.autosize === true) {
-      // Disable children autosize temporarily to prevent conflicts
-      this.disableAutosizeChildren();
-      this.w = dimensions.w;
-      this.h = dimensions.h;
+    if (this.autosizer !== null) {
+      this.autosizer.update(true);
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
@@ -1084,6 +1082,13 @@ export class CoreNode extends EventEmitter {
     let childUpdateType = this.childUpdateType;
     let updateParent = false;
 
+    if (updateType & UpdateType.Autosize && this.autosizer !== null) {
+      this.autosizer.update();
+
+      updateType |= UpdateType.Local;
+      updateParent = hasParent;
+    }
+
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
 
@@ -1134,22 +1139,19 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      updateType |=
-        UpdateType.RenderState |
-        UpdateType.Children |
-        UpdateType.RecalcUniforms;
+      updateType |= UpdateType.RenderState | UpdateType.RecalcUniforms;
       updateParent = hasParent;
-      childUpdateType |= UpdateType.Global;
+
+      //only propagate children updates if not autosizing
+      if ((updateType & UpdateType.Autosize) === 0) {
+        updateType |= UpdateType.Children;
+        childUpdateType |= UpdateType.Global;
+      }
 
       if (this.clipping === true) {
         updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
         updateParent = hasParent;
         childUpdateType |= UpdateType.RenderBounds;
-      }
-
-      // Handle autosize updates when children transforms change
-      if (this.autosizeParent) {
-        this.notifyAutosizeParent();
       }
     }
 
@@ -1187,6 +1189,15 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
+    }
+
+    // Handle autosize updates when children transforms change
+    if (
+      updateType & UpdateType.Global &&
+      this.isRenderable === true &&
+      this.parentAutosizer !== null
+    ) {
+      this.parentAutosizer.patch(this);
     }
 
     if (updateType & UpdateType.Clipping) {
@@ -1287,11 +1298,6 @@ export class CoreNode extends EventEmitter {
 
         child.update(delta, childClippingRect);
       }
-    }
-
-    // Handle autosize parent updates
-    if (this.autosizeNeedsUpdate) {
-      this.processAutosizeUpdate();
     }
 
     // If the node has an RTT parent and requires a texture re-render, inform the RTT parent
@@ -2024,10 +2030,10 @@ export class CoreNode extends EventEmitter {
 
     this.props.autosize = value;
 
-    if (value) {
-      this.updateAutosizeMode();
+    if (value === true && this.autosizer === null) {
+      this.autosizer = new Autosizer(this);
     } else {
-      this.disableAutosizeChildren();
+      this.autosizer = null;
     }
   }
 
@@ -2233,6 +2239,11 @@ export class CoreNode extends EventEmitter {
     if (oldParent === newParent) {
       return;
     }
+    let oldParentAutosizer: Autosizer | null = null;
+    let newParentAutosizer: Autosizer | null = null;
+    if (newParent !== null) {
+      newParentAutosizer = newParent.autosizer || newParent.parentAutosizer;
+    }
     this.props.parent = newParent;
     if (oldParent) {
       const index = oldParent.children.indexOf(this);
@@ -2241,17 +2252,20 @@ export class CoreNode extends EventEmitter {
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
       );
 
-      // Remove this node from old parent's autosize chain
-      this.removeFromAutosizeChain(oldParent);
-      // Update old parent's autosize mode after child removal
-      if (oldParent.autosize) {
-        oldParent.updateAutosizeMode();
+      oldParentAutosizer = oldParent.autosizer || oldParent.parentAutosizer;
+      // detach this node only if the autosizer is different from the new parent's autosizer
+      if (
+        (newParentAutosizer === null && oldParentAutosizer !== null) ||
+        (newParentAutosizer !== null &&
+          oldParentAutosizer !== null &&
+          newParentAutosizer.id !== oldParentAutosizer.id)
+      ) {
+        oldParentAutosizer.detach(this);
       }
     }
     if (newParent) {
       newParent.children.push(this);
-      // Since this node has a new parent, to be safe, have it do a full update.
-      this.setUpdateType(UpdateType.All);
+
       // Tell parent that it's children need to be updated and sorted.
       newParent.setUpdateType(
         UpdateType.Children | UpdateType.ZIndexSortedChildren,
@@ -2262,19 +2276,15 @@ export class CoreNode extends EventEmitter {
         this.applyRTTInheritance(newParent);
       }
 
-      // Add this node to new parent's autosize chain
-      this.addToAutosizeChain(newParent);
-      // Update new parent's autosize mode after child addition
-      if (newParent.autosize) {
-        newParent.updateAutosizeMode();
+      if (
+        newParentAutosizer !== null &&
+        oldParentAutosizer !== newParentAutosizer
+      ) {
+        newParentAutosizer.attach(this);
       }
-    } else {
-      // No parent - remove from any autosize chain
-      this.clearAutosizeParent();
     }
-
     // fetch render bounds from parent
-    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    this.setUpdateType(UpdateType.Global);
   }
 
   get rtt(): boolean {
@@ -2499,11 +2509,6 @@ export class CoreNode extends EventEmitter {
       this.loadTexture();
     }
 
-    // Update autosize mode when texture changes
-    if (this.autosize) {
-      this.updateAutosizeMode();
-    }
-
     this.setUpdateType(UpdateType.IsRenderable);
   }
 
@@ -2551,163 +2556,4 @@ export class CoreNode extends EventEmitter {
   }
 
   //#endregion Properties
-
-  //#region Autosize Methods
-
-  /**
-   * Update autosize mode based on current node state
-   * Chooses between texture autosize and children autosize
-   */
-  private updateAutosizeMode(): void {
-    if (!this.autosize) {
-      this.disableAutosizeChildren();
-      return;
-    }
-
-    // Priority 1: Texture autosize (if texture exists)
-    if (this.texture !== null) {
-      this.disableAutosizeChildren();
-      return;
-    }
-
-    // Priority 2: Children autosize (if no texture but has children)
-    if (this.children.length > 0) {
-      this.enableAutosizeChildren();
-    } else {
-      this.disableAutosizeChildren();
-    }
-
-    this.setUpdateType(UpdateType.IsRenderable | UpdateType.Local);
-  }
-
-  /**
-   * Enable autosize children mode for this node
-   */
-  private enableAutosizeChildren(): void {
-    if (this.autosizeManager) {
-      return; // Already enabled
-    }
-
-    this.autosizeManager = createAutosizeManager(this);
-    for (const child of this.children) {
-      this.autosizeManager.addOrUpdateChild(child);
-      child.addToAutosizeChain(this);
-    }
-  }
-
-  /**
-   * Disable autosize children mode for this node
-   */
-  private disableAutosizeChildren(): void {
-    if (!this.autosizeManager) {
-      return; // Already disabled
-    }
-
-    for (const child of this.children) {
-      child.removeFromAutosizeChain(this);
-    }
-
-    this.autosizeManager.deactivate();
-    this.autosizeManager = null;
-  }
-
-  /**
-   * Add this node to a parent's autosize calculation chain
-   */
-  private addToAutosizeChain(parent: CoreNode): void {
-    let autosizeParent: CoreNode | null = null;
-    let currentParent: CoreNode | null = parent;
-
-    while (currentParent) {
-      if (currentParent.autosize && currentParent.autosizeManager) {
-        autosizeParent = currentParent;
-        break; // Stop at first autosize parent found
-      }
-      currentParent = currentParent.parent;
-    }
-
-    if (autosizeParent && autosizeParent !== this.autosizeParent) {
-      // Remove from old autosize parent
-      if (this.autosizeParent?.autosizeManager) {
-        this.autosizeParent.autosizeManager.removeChild(this);
-      }
-
-      // Add to new autosize parent
-      this.autosizeParent = autosizeParent;
-      autosizeParent.autosizeManager?.addOrUpdateChild(this);
-    }
-  }
-
-  /**
-   * Remove this node from a parent's autosize calculation chain
-   */
-  private removeFromAutosizeChain(parent: CoreNode): void {
-    if (this.autosizeParent === parent) {
-      parent.autosizeManager?.removeChild(this);
-      this.autosizeParent = null;
-    }
-  }
-
-  /**
-   * Clear autosize parent relationship
-   */
-  private clearAutosizeParent(): void {
-    if (
-      this.autosizeParent == null ||
-      this.autosizeParent.autosizeManager === null
-    ) {
-      return;
-    }
-
-    this.autosizeParent.autosizeManager.removeChild(this);
-    this.autosizeParent = null;
-  }
-
-  /**
-   * Process autosize updates for this node (if it's an autosize parent)
-   */
-  private processAutosizeUpdate(): void {
-    if (this.autosizeManager === null || this.autosize === false) {
-      this.autosizeNeedsUpdate = false;
-      return;
-    }
-
-    const result = this.autosizeManager.calculateAutosize();
-    if (result.hasChanged === false) {
-      this.autosizeNeedsUpdate = false;
-      return;
-    }
-
-    const oldAutosize = this.props.autosize;
-    this.props.autosize = false; // Temporarily disable to avoid recursive updates
-
-    this.w = result.width;
-    this.h = result.height;
-
-    // Request an update on the next microtask
-    // This is required because else the update wont be picked up
-    queueMicrotask(() => {
-      this.setUpdateType(UpdateType.IsRenderable | UpdateType.Local);
-      this.stage.requestRender();
-    });
-
-    this.props.autosize = oldAutosize; // Restore autosize state
-    this.autosizeNeedsUpdate = false;
-  }
-
-  /**
-   * Notify the autosize parent that this node's transform has changed
-   */
-  private notifyAutosizeParent(): void {
-    if (
-      this.autosizeParent === null ||
-      this.autosizeParent.autosizeManager === null
-    ) {
-      return;
-    }
-
-    this.autosizeParent.autosizeManager.addOrUpdateChild(this);
-  }
-
-  //#endregion Autosize Methods
 }
