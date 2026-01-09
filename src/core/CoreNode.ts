@@ -57,6 +57,11 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import {
+  bucketSortByZIndex,
+  incrementalRepositionByZIndex,
+  removeChild,
+} from './lib/collectionUtils.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -64,6 +69,14 @@ export enum CoreNodeRenderState {
   InBounds = 4,
   InViewport = 8,
 }
+
+const NO_CLIPPING_RECT: RectWithValid = {
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  valid: false,
+};
 
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
@@ -107,22 +120,13 @@ export enum UpdateType {
   Clipping = 8,
 
   /**
-   * Calculated ZIndex update
-   *
-   * @remarks
-   * CoreNode Properties Updated:
-   * - `calcZIndex`
-   */
-  CalculatedZIndex = 16,
-
-  /**
-   * Z-Index Sorted Children update
+   * Sort Z-Index Children update
    *
    * @remarks
    * CoreNode Properties Updated:
    * - `children` (sorts children by their `calcZIndex`)
    */
-  ZIndexSortedChildren = 32,
+  SortZIndexChildren = 16,
 
   /**
    * Premultiplied Colors update
@@ -134,7 +138,7 @@ export enum UpdateType {
    * - `premultipliedColorBl`
    * - `premultipliedColorBr`
    */
-  PremultipliedColors = 64,
+  PremultipliedColors = 32,
 
   /**
    * World Alpha update
@@ -143,7 +147,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `worldAlpha` = `parent.worldAlpha` * `alpha`
    */
-  WorldAlpha = 128,
+  WorldAlpha = 64,
 
   /**
    * Render State update
@@ -152,7 +156,7 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `renderState`
    */
-  RenderState = 256,
+  RenderState = 128,
 
   /**
    * Is Renderable update
@@ -161,27 +165,27 @@ export enum UpdateType {
    * CoreNode Properties Updated:
    * - `isRenderable`
    */
-  IsRenderable = 512,
+  IsRenderable = 256,
 
   /**
    * Render Texture update
    */
-  RenderTexture = 1024,
+  RenderTexture = 512,
 
   /**
    * Track if parent has render texture
    */
-  ParentRenderTexture = 2048,
+  ParentRenderTexture = 1024,
 
   /**
    * Render Bounds update
    */
-  RenderBounds = 4096,
+  RenderBounds = 2048,
 
   /**
    * RecalcUniforms
    */
-  RecalcUniforms = 8192,
+  RecalcUniforms = 4096,
 
   /**
    * None
@@ -191,7 +195,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 14335,
+  All = 7167,
 }
 
 /**
@@ -390,7 +394,11 @@ export interface CoreNodeProps {
    * The Node's z-index.
    *
    * @remarks
-   * TBD
+   * Max z-index of children under the same parent determines which child
+   * is rendered on top. Higher z-index means the Node is rendered on top of
+   * children with lower z-index.
+   *
+   * Max value is 1000 and min value is -1000. Values outside of this range will be clamped.
    */
   zIndex: number;
   /**
@@ -447,7 +455,6 @@ export interface CoreNodeProps {
    * settings being defaults)
    */
   src: string | null;
-  zIndexLocked: number;
   /**
    * Scale to render the Node at
    *
@@ -707,7 +714,13 @@ export class CoreNode extends EventEmitter {
   readonly props: CoreNodeProps;
 
   private hasShaderUpdater = false;
+  public hasShaderTimeFn = false;
   private hasColorProps = false;
+  private zIndexMin = 0;
+  private zIndexMax = 0;
+
+  public previousZIndex = -1;
+  public zIndexSortList: CoreNode[] = [];
 
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -750,7 +763,6 @@ export class CoreNode extends EventEmitter {
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
-
     const p = (this.props = {} as CoreNodeProps);
 
     // Fast-path assign only known keys
@@ -783,7 +795,6 @@ export class CoreNode extends EventEmitter {
     p.pivot = props.pivot;
 
     p.zIndex = props.zIndex;
-    p.zIndexLocked = props.zIndexLocked;
     p.textureOptions = props.textureOptions;
 
     p.data = props.data;
@@ -793,15 +804,23 @@ export class CoreNode extends EventEmitter {
     p.srcWidth = props.srcWidth;
     p.srcHeight = props.srcHeight;
 
-    p.parent = null;
+    p.parent = props.parent;
     p.texture = null;
     p.shader = null;
     p.src = null;
     p.rtt = false;
     p.boundsMargin = null;
 
+    // Only set non-default values
+    if (props.zIndex !== 0) {
+      this.zIndex = props.zIndex;
+    }
+
+    if (props.parent !== null) {
+      props.parent.addChild(this);
+    }
+
     // Assign props to instances
-    this.parent = props.parent;
     this.texture = props.texture;
     this.shader = props.shader;
     this.src = props.src;
@@ -823,8 +842,7 @@ export class CoreNode extends EventEmitter {
 
   //#region Textures
   loadTexture(): void {
-    const { texture } = this.props;
-    if (!texture) {
+    if (this.props.texture === null) {
       return;
     }
 
@@ -832,36 +850,44 @@ export class CoreNode extends EventEmitter {
     // so that users get a consistent event experience.
     // We do this in a microtask to allow listeners to be attached in the same
     // synchronous task after calling loadTexture()
-    queueMicrotask(() => {
-      if (this.textureOptions.preload === true) {
-        this.stage.txManager.loadTexture(texture);
-      }
-
-      texture.preventCleanup =
-        this.props.textureOptions?.preventCleanup ?? false;
-      texture.on('loaded', this.onTextureLoaded);
-      texture.on('failed', this.onTextureFailed);
-      texture.on('freed', this.onTextureFreed);
-
-      // If the parent is a render texture, the initial texture status
-      // will be set to freed until the texture is processed by the
-      // Render RTT nodes. So we only need to listen fo changes and
-      // no need to check the texture.state until we restructure how
-      // textures are being processed.
-      if (this.parentHasRenderTexture) {
-        this.notifyParentRTTOfUpdate();
-        return;
-      }
-
-      if (texture.state === 'loaded') {
-        this.onTextureLoaded(texture, texture.dimensions!);
-      } else if (texture.state === 'failed') {
-        this.onTextureFailed(texture, texture.error!);
-      } else if (texture.state === 'freed') {
-        this.onTextureFreed(texture);
-      }
-    });
+    queueMicrotask(this.loadTextureTask);
   }
+
+  /**
+   * Task for queueMicrotask to loadTexture
+   *
+   * @remarks
+   * This method is called in a microtask to release the texture.
+   */
+  private loadTextureTask = (): void => {
+    const texture = this.texture as Texture;
+    if (this.textureOptions.preload === true) {
+      this.stage.txManager.loadTexture(texture);
+    }
+
+    texture.preventCleanup = this.props.textureOptions?.preventCleanup ?? false;
+    texture.on('loaded', this.onTextureLoaded);
+    texture.on('failed', this.onTextureFailed);
+    texture.on('freed', this.onTextureFreed);
+
+    // If the parent is a render texture, the initial texture status
+    // will be set to freed until the texture is processed by the
+    // Render RTT nodes. So we only need to listen fo changes and
+    // no need to check the texture.state until we restructure how
+    // textures are being processed.
+    if (this.parentHasRenderTexture) {
+      this.notifyParentRTTOfUpdate();
+      return;
+    }
+
+    if (texture.state === 'loaded') {
+      this.onTextureLoaded(texture, texture.dimensions!);
+    } else if (texture.state === 'failed') {
+      this.onTextureFailed(texture, texture.error!);
+    } else if (texture.state === 'freed') {
+      this.onTextureFreed(texture);
+    }
+  };
 
   unloadTexture(): void {
     if (this.texture === null) {
@@ -872,7 +898,7 @@ export class CoreNode extends EventEmitter {
     texture.off('loaded', this.onTextureLoaded);
     texture.off('failed', this.onTextureFailed);
     texture.off('freed', this.onTextureFreed);
-    texture.setRenderableOwner(this, false);
+    texture.setRenderableOwner(this._id, false);
   }
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
@@ -917,6 +943,7 @@ export class CoreNode extends EventEmitter {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -924,16 +951,22 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('failed', {
-      type: 'texture',
-      error,
-    } satisfies NodeTextureFailedPayload);
+    if (
+      this.texture !== null &&
+      this.texture.retryCount > this.texture.maxRetryCount
+    ) {
+      this.emit('failed', {
+        type: 'texture',
+        error,
+      } satisfies NodeTextureFailedPayload);
+    }
   };
 
   private onTextureFreed: TextureFreedEventHandler = () => {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
+    this.updateTextureOwnership(false);
     this.setUpdateType(UpdateType.IsRenderable);
 
     // If parent has a render texture, flag that we need to update
@@ -962,10 +995,6 @@ export class CoreNode extends EventEmitter {
     if (!parent) return;
 
     parent.setUpdateType(UpdateType.Children);
-  }
-
-  sortChildren() {
-    this.children.sort((a, b) => a.calcZIndex - b.calcZIndex);
   }
 
   updateLocalTransform() {
@@ -1038,10 +1067,6 @@ export class CoreNode extends EventEmitter {
    * @param delta
    */
   update(delta: number, parentClippingRect: RectWithValid): void {
-    if (this.updateType === UpdateType.None) {
-      return;
-    }
-
     const props = this.props;
     const parent = props.parent;
     const parentHasRenderTexture = this.parentHasRenderTexture;
@@ -1052,6 +1077,9 @@ export class CoreNode extends EventEmitter {
     let updateType = this.updateType;
     let childUpdateType = this.childUpdateType;
     let updateParent = false;
+    // reset update type
+    this.updateType = 0;
+    this.childUpdateType = 0;
 
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
@@ -1203,15 +1231,10 @@ export class CoreNode extends EventEmitter {
     if (updateParent === true) {
       parent!.setUpdateType(UpdateType.Children);
     }
-    // No need to update zIndex if there is no parent
-    if (updateType & UpdateType.CalculatedZIndex && parent !== null) {
-      this.calculateZIndex();
-      // Tell parent to re-sort children
-      parent.setUpdateType(UpdateType.ZIndexSortedChildren);
-    }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
       updateType &= ~UpdateType.RenderBounds; // remove render bounds update
+      this.updateType = updateType;
       return;
     }
 
@@ -1229,24 +1252,21 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.Children && this.children.length > 0) {
+      let childClippingRect = this.clippingRect;
+
+      if (this.rtt === true) {
+        childClippingRect = NO_CLIPPING_RECT;
+      }
+
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 
-        child.setUpdateType(childUpdateType);
+        if (childUpdateType !== 0) {
+          child.setUpdateType(childUpdateType);
+        }
 
         if (child.updateType === 0) {
           continue;
-        }
-
-        let childClippingRect = this.clippingRect;
-        if (this.rtt === true) {
-          childClippingRect = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            valid: false,
-          };
         }
 
         child.update(delta, childClippingRect);
@@ -1260,9 +1280,8 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    // Sorting children MUST happen after children have been updated so
-    // that they have the oppotunity to update their calculated zIndex.
-    if (updateType & UpdateType.ZIndexSortedChildren) {
+    //Resort children if needed
+    if (updateType & UpdateType.SortZIndexChildren) {
       // reorder z-index
       this.sortChildren();
     }
@@ -1283,10 +1302,6 @@ export class CoreNode extends EventEmitter {
         this.notifyChildrenRTTOfUpdate(renderState);
       }
     }
-
-    // reset update type
-    this.updateType = 0;
-    this.childUpdateType = 0;
   }
 
   private findParentRTTNode(): CoreNode | null {
@@ -1443,6 +1458,17 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
+   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   */
+  checkBasicRenderability(): boolean {
+    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  /**
    * Updates the `isRenderable` property based on various conditions.
    */
   updateIsRenderable() {
@@ -1450,25 +1476,30 @@ export class CoreNode extends EventEmitter {
     let needsTextureOwnership = false;
 
     // If the node is out of bounds or has an alpha of 0, it is not renderable
-    if (
-      this.worldAlpha === 0 ||
-      this.renderState <= CoreNodeRenderState.OutOfBounds
-    ) {
+    if (this.checkBasicRenderability() === false) {
       this.updateTextureOwnership(false);
       this.setRenderable(false);
       return;
     }
 
     if (this.texture !== null) {
-      needsTextureOwnership = true;
+      // preemptive check for failed textures this will mark the current node as non-renderable
+      // and will prevent further checks until the texture is reloaded or retry is reset on the texture
+      if (this.texture.retryCount > this.texture.maxRetryCount) {
+        // texture has failed to load, we cannot render
+        this.updateTextureOwnership(false);
+        this.setRenderable(false);
+        return;
+      }
 
+      needsTextureOwnership = true;
       // we're only renderable if the texture state is loaded
       newIsRenderable = this.texture.state === 'loaded';
     } else if (
       // check shader
       (this.props.shader !== null || this.hasColorProps === true) &&
       // check dimensions
-      (this.props.w !== 0 && this.props.h !== 0) === true
+      this.hasDimensions() === true
     ) {
       // This mean we have dimensions and a color set, so we can render a ColorTexture
       if (
@@ -1504,7 +1535,21 @@ export class CoreNode extends EventEmitter {
    * Changes the renderable state of the node.
    */
   updateTextureOwnership(isRenderable: boolean) {
-    this.texture?.setRenderableOwner(this, isRenderable);
+    this.texture?.setRenderableOwner(this._id, isRenderable);
+  }
+
+  /**
+   * Checks if the node is out of the viewport bounds.
+   */
+  isOutOfBounds(): boolean {
+    return this.renderState <= CoreNodeRenderState.OutOfBounds;
+  }
+
+  /**
+   * Checks if the node has dimensions (width/height)
+   */
+  hasDimensions(): boolean {
+    return this.props.w !== 0 && this.props.h !== 0;
   }
 
   calculateRenderCoords() {
@@ -1638,18 +1683,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  calculateZIndex(): void {
-    const props = this.props;
-    const z = props.zIndex || 0;
-    const p = props.parent?.zIndex || 0;
-
-    let zIndex = z;
-    if (props.parent?.zIndexLocked) {
-      zIndex = z < p ? z : p;
-    }
-    this.calcZIndex = zIndex;
-  }
-
   /**
    * Destroy the node and cleanup all resources
    */
@@ -1663,6 +1696,9 @@ export class CoreNode extends EventEmitter {
     this.destroyed = true;
     this.unloadTexture();
     this.isRenderable = false;
+    if (this.hasShaderTimeFn === true) {
+      this.stage.untrackTimedNode(this);
+    }
 
     // Kill children
     while (this.children.length > 0) {
@@ -1671,11 +1707,7 @@ export class CoreNode extends EventEmitter {
 
     const parent = this.parent;
     if (parent !== null) {
-      const index = parent.children.indexOf(this);
-      parent.children.splice(index, 1);
-      parent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
+      parent.removeChild(this);
     }
 
     this.props.parent = null;
@@ -1684,6 +1716,7 @@ export class CoreNode extends EventEmitter {
     if (this.rtt === true) {
       this.stage.renderer.removeRTTNode(this);
     }
+    this.stage.requestRender();
   }
 
   renderQuads(renderer: CoreRenderer): void {
@@ -1732,7 +1765,100 @@ export class CoreNode extends EventEmitter {
       framebufferDimensions: this.parentHasRenderTexture
         ? this.parentFramebufferDimensions
         : null,
+      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
     });
+  }
+
+  getTimerValue(): number {
+    if (typeof this.shader!.time === 'function') {
+      return this.shader!.time(this.stage);
+    }
+    return this.stage.elapsedTime;
+  }   
+ 
+  sortChildren() {
+    const changedCount = this.zIndexSortList.length;
+    if (changedCount === 0) {
+      return;
+    }
+    const children = this.children;
+    let min = Infinity;
+    let max = -Infinity;
+    // find min and max zIndex
+    for (let i = 0; i < children.length; i++) {
+      const zIndex = children[i]!.props.zIndex;
+      if (zIndex < min) {
+        min = zIndex;
+      }
+      if (zIndex > max) {
+        max = zIndex;
+      }
+    }
+
+    // update min and max zIndex
+    this.zIndexMin = min;
+    this.zIndexMax = max;
+
+    // if min and max are the same, no need to sort
+    if (min === max) {
+      return;
+    }
+
+    const n = children.length;
+    // decide whether to use incremental sort or bucket sort
+    const useIncremental = changedCount <= 2 || changedCount < n * 0.05;
+
+    // when changed count is less than 2 or 5% of total children, use incremental sort
+    if (useIncremental === true) {
+      incrementalRepositionByZIndex(this.zIndexSortList, children);
+    } else {
+      bucketSortByZIndex(children, min);
+    }
+
+    this.zIndexSortList.length = 0;
+    this.zIndexSortList = [];
+  }
+
+  removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
+    if (
+      targetParent === null &&
+      this.props.rtt === true &&
+      this.parentHasRenderTexture === true
+    ) {
+      node.clearRTTInheritance();
+    }
+    removeChild(node, this.children);
+  }
+
+  addChild(node: CoreNode, previousParent: CoreNode | null = null) {
+    const inRttCluster =
+      this.props.rtt === true || this.parentHasRenderTexture === true;
+    const children = this.children;
+    const min = this.zIndexMin;
+    const max = this.zIndexMax;
+    const zIndex = node.zIndex;
+
+    node.parentHasRenderTexture = inRttCluster;
+    if (previousParent !== null) {
+      const previousParentInRttCluster =
+        previousParent.props.rtt === true ||
+        previousParent.parentHasRenderTexture === true;
+      if (inRttCluster === false && previousParentInRttCluster === true) {
+        // update child RTT status
+        node.clearRTTInheritance();
+      }
+    }
+
+    if (inRttCluster === true) {
+      node.markChildrenWithRTT(this);
+    }
+
+    children.push(node);
+
+    if (min !== max || (zIndex !== min && zIndex !== max)) {
+      this.zIndexSortList.push(node);
+      this.setUpdateType(UpdateType.SortZIndexChildren);
+    }
   }
 
   //#region Properties
@@ -2130,33 +2256,39 @@ export class CoreNode extends EventEmitter {
     this.setUpdateType(UpdateType.PremultipliedColors);
   }
 
-  // we're only interested in parent zIndex to test
-  // if we should use node zIndex is higher then parent zIndex
-  get zIndexLocked(): number {
-    return this.props.zIndexLocked || 0;
-  }
-
-  set zIndexLocked(value: number) {
-    this.props.zIndexLocked = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
-    }
-  }
-
   get zIndex(): number {
     return this.props.zIndex;
   }
 
   set zIndex(value: number) {
-    if (this.props.zIndex === value) {
-      return;
+    let sanitizedValue = value;
+    if (isNaN(sanitizedValue) || Number.isFinite(sanitizedValue) === false) {
+      console.warn(
+        `zIndex was set to an invalid value: ${value}, defaulting to 0`,
+      );
+      sanitizedValue = 0;
     }
 
-    this.props.zIndex = value;
-    this.setUpdateType(UpdateType.CalculatedZIndex | UpdateType.Children);
-    for (let i = 0, length = this.children.length; i < length; i++) {
-      this.children[i]!.setUpdateType(UpdateType.CalculatedZIndex);
+    //Clamp to safe integer range
+    if (sanitizedValue > Number.MAX_SAFE_INTEGER) {
+      sanitizedValue = 1000;
+    } else if (sanitizedValue < Number.MIN_SAFE_INTEGER) {
+      sanitizedValue = -1000;
+    }
+
+    if (this.props.zIndex === sanitizedValue) {
+      return;
+    }
+    this.previousZIndex = this.props.zIndex;
+    this.props.zIndex = sanitizedValue;
+    const parent = this.parent;
+    if (parent !== null) {
+      const min = parent.zIndexMin;
+      const max = parent.zIndexMax;
+      if (min !== max || sanitizedValue < min || sanitizedValue > max) {
+        parent.zIndexSortList.push(this);
+        parent.setUpdateType(UpdateType.SortZIndexChildren);
+      }
     }
   }
 
@@ -2171,29 +2303,13 @@ export class CoreNode extends EventEmitter {
     }
     this.props.parent = newParent;
     if (oldParent) {
-      const index = oldParent.children.indexOf(this);
-      oldParent.children.splice(index, 1);
-      oldParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
+      oldParent.removeChild(this, newParent);
     }
-    if (newParent) {
-      newParent.children.push(this);
-      // Since this node has a new parent, to be safe, have it do a full update.
-      this.setUpdateType(UpdateType.All);
-      // Tell parent that it's children need to be updated and sorted.
-      newParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
-
-      // If the new parent has an RTT enabled, apply RTT inheritance
-      if (newParent.rtt || newParent.parentHasRenderTexture) {
-        this.applyRTTInheritance(newParent);
-      }
+    if (newParent !== null) {
+      newParent.addChild(this, oldParent);
     }
-
-    // fetch render bounds from parent
-    this.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+    //since this node has a new parent, recalc global and render bounds
+    this.setUpdateType(UpdateType.Global | UpdateType.RenderBounds);
   }
 
   get rtt(): boolean {
@@ -2294,7 +2410,14 @@ export class CoreNode extends EventEmitter {
     }
     if (shader.shaderKey !== 'default') {
       this.hasShaderUpdater = shader.update !== undefined;
+      this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
+    }
+
+    if (this.hasShaderTimeFn === true) {
+      this.stage.trackTimedNode(this);
+    } else {
+      this.stage.untrackTimedNode(this);
     }
     this.props.shader = shader;
     this.setUpdateType(UpdateType.IsRenderable | UpdateType.RecalcUniforms);
@@ -2414,7 +2537,7 @@ export class CoreNode extends EventEmitter {
     this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
-      value.setRenderableOwner(this, this.isRenderable);
+      value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
     }
 

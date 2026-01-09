@@ -50,6 +50,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
   protected useSystemDimensions = false;
+  protected useTimeValue = false;
   public isDestroyed = false;
   supportsIndexedTextures = false;
 
@@ -123,6 +124,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.useSystemAlpha = uniLocs['u_alpha'] !== undefined;
     this.useSystemDimensions = uniLocs['u_dimensions'] !== undefined;
 
+    this.useTimeValue =
+      this.glw.getUniformLocation(program, 'u_dimensions') !== null &&
+      config.time !== undefined;
+
     this.lifecycle = {
       update: config.update,
       canBatch: config.canBatch,
@@ -149,6 +154,12 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return this.lifecycle.canBatch(incomingQuad, currentRenderOp);
     }
 
+    if (this.useTimeValue === true) {
+      if (incomingQuad.time !== currentRenderOp.time) {
+        return false;
+      }
+    }
+
     if (this.useSystemAlpha === true) {
       if (incomingQuad.alpha !== currentRenderOp.alpha) {
         return false;
@@ -169,6 +180,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     if (incomingQuad.shader !== null) {
       shaderPropsA = incomingQuad.shader.resolvedProps;
     }
+
     if (currentRenderOp.shader !== null) {
       shaderPropsB = currentRenderOp.shader.resolvedProps;
     }
@@ -219,6 +231,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         this.glw.canvas.width,
         this.glw.canvas.height,
       );
+    }
+
+    if (this.useTimeValue === true) {
+      this.glw.uniform1f('u_time', renderOp.time as number);
     }
 
     if (this.useSystemAlpha === true) {

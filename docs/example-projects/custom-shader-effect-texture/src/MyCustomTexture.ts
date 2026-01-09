@@ -24,18 +24,21 @@ export class MyCustomTexture extends Texture {
 
   private props: Required<MyCustomTextureProps>;
 
-  constructor(txManager: CoreTextureManager, props: MyCustomTextureProps) {
+  constructor(
+    txManager: CoreTextureManager,
+    props: Required<MyCustomTextureProps>,
+  ) {
     super(txManager);
-    this.props = MyCustomTexture.resolveDefaults(props);
+    this.props = props;
   }
 
   override async getTextureSource(): Promise<TextureData> {
-    const { percent, width, height } = this.props;
-    const radius = Math.min(width, height) / 2;
+    const { percent, w, h } = this.props;
+    const radius = Math.min(w, h) / 2;
     const angle = 2 * Math.PI * (percent / 100);
     const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     assertTruthy(ctx);
     ctx.beginPath();
@@ -48,11 +51,6 @@ export class MyCustomTexture extends Texture {
     ctx.closePath();
     ctx.fillStyle = 'blue';
     ctx.fill();
-
-    this.setState('fetched', {
-      width,
-      height,
-    });
 
     return {
       data: ctx.getImageData(0, 0, canvas.width, canvas.height),
@@ -71,8 +69,8 @@ export class MyCustomTexture extends Texture {
   ): Required<MyCustomTextureProps> {
     return {
       percent: props.percent ?? 20,
-      w: props.width,
-      h: props.height,
+      w: props.w,
+      h: props.h,
     };
   }
 }

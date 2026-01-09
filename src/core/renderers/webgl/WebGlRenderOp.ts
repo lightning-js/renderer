@@ -34,8 +34,9 @@ type ReqQuad =
   | 'rtt'
   | 'clippingRect'
   | 'height'
-  | 'width';
-export type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
+  | 'width'
+  | 'time';
+type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
   Partial<Omit<QuadOptions, ReqQuad>> & {
     sdfShaderProps?: Record<string, unknown>;
     sdfBuffers?: BufferCollection;
@@ -66,6 +67,7 @@ export class WebGlRenderOp extends CoreRenderOp {
   alpha: number;
   pixelRatio: number;
   bufferIdx: number;
+  time?: number | null;
 
   constructor(
     readonly renderer: WebGlRenderer,
@@ -85,6 +87,7 @@ export class WebGlRenderOp extends CoreRenderOp {
     this.alpha = quad.alpha;
     this.pixelRatio =
       this.parentHasRenderTexture === true ? 1 : renderer.stage.pixelRatio;
+    this.time = quad.time;
 
     /**
      * related to line 51
