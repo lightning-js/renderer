@@ -248,4 +248,118 @@ describe('set color()', () => {
       expect(eventCallback).not.toHaveBeenCalled();
     });
   });
+
+  describe('autosize system', () => {
+    it('should initialize with autosize disabled', () => {
+      const node = new CoreNode(stage, defaultProps);
+      expect(node.autosize).toBe(false);
+    });
+
+    it('should enable texture autosize when texture is present', () => {
+      const node = new CoreNode(stage, defaultProps);
+      const mockTexture = mock<ImageTexture>();
+      mockTexture.state = 'loading';
+
+      node.texture = mockTexture;
+      node.autosize = true;
+
+      // Should not create autosize manager for texture mode
+      expect((node as any).autosizer).toBeTruthy();
+    });
+
+    it('should enable children autosize when no texture but has children', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+
+      parent.autosize = true;
+      child.parent = parent;
+
+      // Should create autosize manager for children mode
+      expect((parent as any).autosizer).toBeTruthy();
+    });
+
+    it('should prioritize texture autosize over children autosize', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+      const mockTexture = mock<ImageTexture>();
+      mockTexture.state = 'loading';
+
+      child.parent = parent;
+      parent.texture = mockTexture;
+      parent.autosize = true;
+
+      expect(parent.autosize).toBe(true);
+      // Should NOT create autosize manager when texture is present
+      expect((parent as any).autosizer).toBeTruthy();
+    });
+
+    it('should switch from children to texture autosize when texture is added', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+
+      child.parent = parent;
+      parent.autosize = true;
+      expect((parent as any).autosizer).toBeTruthy();
+
+      // Add texture - should switch to texture autosize
+      const mockTexture = mock<ImageTexture>();
+      mockTexture.state = 'loading';
+      parent.texture = mockTexture;
+
+      expect((parent as any).autosizer).toBeTruthy();
+    });
+
+    it('should switch from texture to children autosize when texture is removed', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+      const mockTexture = mock<ImageTexture>();
+      mockTexture.state = 'loading';
+
+      child.parent = parent;
+      parent.texture = mockTexture;
+      parent.autosize = true;
+      expect((parent as any).autosizer).toBeTruthy();
+
+      // Remove texture - should switch to children autosize
+      parent.texture = null;
+      expect((parent as any).autosizer).toBeTruthy();
+    });
+
+    it('should cleanup autosize manager when disabled', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+
+      child.parent = parent;
+      parent.autosize = true;
+      expect((parent as any).autosizer).toBeTruthy();
+
+      parent.autosize = false;
+      expect((parent as any).autosizer).toBeFalsy();
+    });
+
+    it('should establish autosize chain when child is added to autosize parent', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+
+      // Enable autosize BEFORE adding child
+      parent.autosize = true;
+      child.parent = parent;
+
+      expect((child as any).parentAutosizer).toBe(parent.autosizer);
+      expect((parent as any).autosizer.childMap.size).toBe(1);
+    });
+
+    it('should remove from autosize chain when child is removed', () => {
+      const parent = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, defaultProps);
+
+      // Enable autosize BEFORE adding child
+      parent.autosize = true;
+      child.parent = parent;
+      expect((parent as any).autosizer.childMap.size).toBe(1);
+
+      child.parent = null;
+      expect((child as any).parentAutosizer).toBeNull();
+    });
+  });
 });

@@ -57,6 +57,7 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import { Autosizer } from './Autosizer.js';
 import {
   bucketSortByZIndex,
   incrementalRepositionByZIndex,
@@ -188,6 +189,10 @@ export enum UpdateType {
   RecalcUniforms = 4096,
 
   /**
+   * Autosize update
+   */
+  Autosize = 8192,
+  /**
    * None
    */
   None = 0,
@@ -195,7 +200,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 7167,
+  All = 16383,
 }
 
 /**
@@ -259,14 +264,35 @@ export interface CoreNodeProps {
    */
   alpha: number;
   /**
-   * Autosize mode
+   * Autosize
    *
    * @remarks
-   * When enabled, when a texture is loaded into the Node, the Node will
-   * automatically resize to the dimensions of the texture.
+   * When enabled, the Node automatically resizes based on its content
    *
-   * Text Nodes are always autosized based on their text content regardless
-   * of this mode setting.
+   * **Texture Autosize Mode:**
+   * - When the Node has a texture, it automatically resizes to match the
+   *   texture's dimensions when the texture loads
+   * - This ensures images display at their natural size without manual sizing
+   * - Text Nodes always use this mode regardless of this setting
+   *
+   * **Children Autosize Mode:**
+   * - When the Node has no texture but contains children, it automatically
+   *   resizes to encompass all children's bounds
+   * - Calculates the bounding box that contains all child positions, dimensions,
+   *   and transforms (scale, rotation, mount/pivot points)
+   * - Creates container behavior where the parent grows to fit its content
+   * - Updates dynamically as children are added, removed, or transformed
+   *
+   * **Mode Selection Logic:**
+   * - Texture mode takes precedence over children mode
+   * - Mode switches automatically when texture is added/removed
+   * - If no texture and no children, autosize has no effect
+   *
+   * **Performance:**
+   * - Children mode uses efficient transform caching and differential updates
+   * - Only recalculates when child transforms actually change
+   * - Minimal memory allocation with factory function patterns
+   *
    *
    * @default `false`
    */
@@ -759,6 +785,10 @@ export class CoreNode extends EventEmitter {
    */
   public framebufferDimensions: Dimensions | null = null;
 
+  /**Autosize properties */
+  autosizer: Autosizer | null = null;
+  parentAutosizer: Autosizer | null = null;
+
   public destroyed = false;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
@@ -803,6 +833,7 @@ export class CoreNode extends EventEmitter {
     p.srcY = props.srcY;
     p.srcWidth = props.srcWidth;
     p.srcHeight = props.srcHeight;
+    p.autosize = props.autosize;
 
     p.parent = props.parent;
     p.texture = null;
@@ -827,6 +858,11 @@ export class CoreNode extends EventEmitter {
     this.rtt = props.rtt;
     this.boundsMargin = props.boundsMargin;
     this.interactive = props.interactive;
+
+    // Initialize autosize if enabled
+    if (p.autosize === true) {
+      this.autosizer = new Autosizer(this);
+    }
 
     this.setUpdateType(
       UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
@@ -902,9 +938,8 @@ export class CoreNode extends EventEmitter {
   }
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
-    if (this.autosize === true) {
-      this.w = dimensions.w;
-      this.h = dimensions.h;
+    if (this.autosizer !== null) {
+      this.autosizer.update(true);
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
@@ -1081,6 +1116,13 @@ export class CoreNode extends EventEmitter {
     this.updateType = 0;
     this.childUpdateType = 0;
 
+    if (updateType & UpdateType.Autosize && this.autosizer !== null) {
+      this.autosizer.update();
+
+      updateType |= UpdateType.Local;
+      updateParent = hasParent;
+    }
+
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
 
@@ -1131,12 +1173,14 @@ export class CoreNode extends EventEmitter {
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      updateType |=
-        UpdateType.RenderState |
-        UpdateType.Children |
-        UpdateType.RecalcUniforms;
+      updateType |= UpdateType.RenderState | UpdateType.RecalcUniforms;
       updateParent = hasParent;
-      childUpdateType |= UpdateType.Global;
+
+      //only propagate children updates if not autosizing
+      if ((updateType & UpdateType.Autosize) === 0) {
+        updateType |= UpdateType.Children;
+        childUpdateType |= UpdateType.Global;
+      }
 
       if (this.clipping === true) {
         updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
@@ -1179,6 +1223,15 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.IsRenderable) {
       this.updateIsRenderable();
+    }
+
+    // Handle autosize updates when children transforms change
+    if (
+      updateType & UpdateType.Global &&
+      this.isRenderable === true &&
+      this.parentAutosizer !== null
+    ) {
+      this.parentAutosizer.patch(this);
     }
 
     if (updateType & UpdateType.Clipping) {
@@ -1820,12 +1873,14 @@ export class CoreNode extends EventEmitter {
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
-    if (
-      targetParent === null &&
-      this.props.rtt === true &&
-      this.parentHasRenderTexture === true
-    ) {
-      node.clearRTTInheritance();
+    if (targetParent === null) {
+      if (this.props.rtt === true && this.parentHasRenderTexture === true) {
+        node.clearRTTInheritance();
+      }
+      const autosizeTarget = this.autosizer || this.parentAutosizer;
+      if (autosizeTarget !== null) {
+        autosizeTarget.detach(node);
+      }
     }
     removeChild(node, this.children);
   }
@@ -1837,6 +1892,8 @@ export class CoreNode extends EventEmitter {
     const min = this.zIndexMin;
     const max = this.zIndexMax;
     const zIndex = node.zIndex;
+    const autosizeTarget = this.autosizer || this.parentAutosizer;
+    let attachToAutosizer = autosizeTarget !== null;
 
     node.parentHasRenderTexture = inRttCluster;
     if (previousParent !== null) {
@@ -1847,6 +1904,22 @@ export class CoreNode extends EventEmitter {
         // update child RTT status
         node.clearRTTInheritance();
       }
+      const previousAutosizer = node.autosizer || node.parentAutosizer;
+
+      if (previousAutosizer !== null) {
+        if (
+          autosizeTarget === null ||
+          previousAutosizer.id !== autosizeTarget.id
+        ) {
+          previousAutosizer.detach(node);
+        }
+        attachToAutosizer = false;
+      }
+    }
+
+    if (attachToAutosizer === true) {
+      //if this is true, then the autosizer really exists
+      autosizeTarget!.attach(node);
     }
 
     if (inRttCluster === true) {
@@ -2090,7 +2163,17 @@ export class CoreNode extends EventEmitter {
   }
 
   set autosize(value: boolean) {
+    if (this.props.autosize === value) {
+      return;
+    }
+
     this.props.autosize = value;
+
+    if (value === true && this.autosizer === null) {
+      this.autosizer = new Autosizer(this);
+    } else {
+      this.autosizer = null;
+    }
   }
 
   get boundsMargin(): number | [number, number, number, number] | null {
