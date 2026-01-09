@@ -21,12 +21,29 @@ import { RoundedTemplate, type RoundedProps } from './RoundedTemplate.js';
 import type { PrefixedType } from '../utils.js';
 
 export type RoundedWithBorderProps = RoundedProps &
-  PrefixedType<BorderProps, 'border'>;
+  PrefixedType<BorderProps, 'border'> & {
+    /**
+     * Gap between the border and the content
+     *
+     * @default 0
+     */
+    'border-gap': number;
+    /**
+     * Color of the gap
+     *
+     * @default 0x00000000
+     */
+    'border-gapColor': number;
+  };
 
 const props = Object.assign(
   {},
   RoundedTemplate.props,
   getBorderProps('border'),
+  {
+    'border-gap': 0,
+    'border-gapColor': 0x00000000,
+  },
 ) as RoundedWithBorderProps;
 
 export const RoundedWithBorderTemplate: CoreShaderType<RoundedWithBorderProps> =
