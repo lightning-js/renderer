@@ -21,8 +21,10 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
+import { uploadCompressedTexture } from '../../lib/textureCompression.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
+import type { Bound } from '../../lib/utils.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -42,12 +44,38 @@ export class WebGlCtxTexture extends CoreContextTexture {
   private _w = 0;
   private _h = 0;
 
+  txCoords: Bound = {
+    x1: 0,
+    y1: 0,
+    x2: 1,
+    y2: 1,
+  };
+
   constructor(
     protected glw: WebGlContextWrapper,
     memManager: TextureMemoryManager,
     textureSource: Texture,
   ) {
     super(memManager, textureSource);
+  }
+
+  /**
+   * GL error check with direct state marking
+   * Uses cached error result to minimize function calls
+   */
+  private checkGLError(): boolean {
+    // Skip if already failed to prevent double-processing
+    if (this.state === 'failed') {
+      return true;
+    }
+
+    const error = this.glw.getError();
+    if (error !== 0) {
+      this.state = 'failed';
+      this.textureSource.setState('failed', new Error(`WebGL Error: ${error}`));
+      return true;
+    }
+    return false;
   }
 
   get ctxTexture(): WebGLTexture | null {
@@ -117,9 +145,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       // to the GL context before freeing the source data.
       // This is important to avoid issues with the texture data being
       // freed while the texture is still being loaded or used.
-      queueMicrotask(() => {
-        this.textureSource.freeTextureData();
-      });
+      this.textureSource.freeTextureData();
     } catch (err: unknown) {
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
@@ -180,6 +206,11 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
 
+      // Check for errors after compressed texture operations
+      if (this.checkGLError() === true) {
+        return { w: 0, h: 0 };
+      }
+
       this.setTextureMemUse(h * w * formatBytes * memoryPadding);
     } else if (tdata === null) {
       w = 0;
@@ -199,21 +230,21 @@ export class WebGlCtxTexture extends CoreContextTexture {
       );
       this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
     } else if ('mipmaps' in tdata && tdata.mipmaps) {
-      const { mipmaps, w = 0, h = 0, type, glInternalFormat } = tdata;
-      const view =
-        type === 'ktx'
-          ? new DataView(mipmaps[0] ?? new ArrayBuffer(0))
-          : (mipmaps[0] as unknown as ArrayBufferView);
+      const { mipmaps, type, blockInfo } = tdata;
+      uploadCompressedTexture[type]!(glw, this._nativeCtxTexture, tdata);
 
-      glw.bindTexture(this._nativeCtxTexture);
+      // Check for errors after compressed texture operations
+      if (this.checkGLError() === true) {
+        return { w: 0, h: 0 };
+      }
 
-      glw.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
-      glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-      glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-      glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
+      w = tdata.w;
+      h = tdata.h;
+      this.txCoords.x2 = w / (Math.ceil(w / blockInfo.width) * blockInfo.width);
+      this.txCoords.y2 =
+        h / (Math.ceil(h / blockInfo.height) * blockInfo.height);
 
-      this.setTextureMemUse(view.byteLength);
+      this.setTextureMemUse(mipmaps[0]?.byteLength ?? 0);
     } else if (tdata && tdata instanceof Uint8Array) {
       // Color Texture
       w = 1;
@@ -226,6 +257,11 @@ export class WebGlCtxTexture extends CoreContextTexture {
       );
 
       glw.texImage2D(0, format, w, h, 0, format, glw.UNSIGNED_BYTE, tdata);
+
+      // Check for errors after compressed texture operations
+      if (this.checkGLError() === true) {
+        return { w: 0, h: 0 };
+      }
 
       this.setTextureMemUse(w * h * formatBytes);
     } else {
@@ -253,6 +289,13 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
     this.state = 'freed';
     this.textureSource.setState('freed');
+    this.release();
+  }
+
+  /**
+   * Release the WebGLTexture from the GPU without changing state
+   */
+  release(): void {
     this._w = 0;
     this._h = 0;
 

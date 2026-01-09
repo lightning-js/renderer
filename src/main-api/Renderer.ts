@@ -28,7 +28,7 @@ import type { TextureMemoryManagerSettings } from '../core/TextureMemoryManager.
 import type { TextRenderer } from '../core/text-rendering/TextRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
-import type { Inspector } from './Inspector.js';
+import type { Inspector, InspectorOptions } from './Inspector.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 import type {
   ExtractShaderProps,
@@ -37,6 +37,127 @@ import type {
 } from '../core/CoreShaderManager.js';
 import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
 import { Platform } from '../core/platforms/Platform.js';
+
+/**
+ * FPS Update Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('fpsUpdate', (data) => {
+ *   console.log(`Current FPS: ${data.fps}`);
+ *   if (data.contextSpyData) {
+ *     console.log('WebGL calls:', data.contextSpyData);
+ *   }
+ * });
+ * ```
+ */
+export interface RendererMainFpsUpdateEvent {
+  /** Current frames per second */
+  fps: number;
+  /** Context spy data (if enabled) - contains WebGL call statistics */
+  contextSpyData?: unknown;
+}
+
+/**
+ * Frame Tick Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('frameTick', (data) => {
+ *   console.log(`Frame time: ${data.time}ms, delta: ${data.delta}ms`);
+ * });
+ * ```
+ */
+export interface RendererMainFrameTickEvent {
+  /** Current timestamp */
+  time: number;
+  /** Time delta since last frame */
+  delta: number;
+}
+
+/**
+ * Quads Update Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('quadsUpdate', (data) => {
+ *   console.log(`Rendered quads: ${data.quads}`);
+ * });
+ * ```
+ */
+export interface RendererMainQuadsUpdateEvent {
+  /** Number of rendered quads */
+  quads: number;
+}
+
+/**
+ * Idle Event Data
+ *
+ * @category Events
+ * @remarks
+ * This event is emitted when the renderer has no scene updates to process.
+ * The event has no payload - use this for performance optimizations during idle periods.
+ *
+ * @example
+ * ```typescript
+ * renderer.on('idle', () => {
+ *   // Renderer is idle - perfect time for cleanup, analytics, etc.
+ *   console.log('Renderer is idle - no scene changes');
+ *
+ *   // Example: Perform background tasks
+ *   performBackgroundCleanup();
+ *   sendAnalytics();
+ * });
+ * ```
+ */
+export interface RendererMainIdleEvent {
+  /** This event has no payload - listen without parameters */
+  readonly __eventHasNoPayload?: never;
+}
+
+/**
+ * Critical Cleanup Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('criticalCleanup', (data) => {
+ *   console.log(`Memory cleanup triggered!`);
+ *   console.log(`Memory used: ${data.memUsed} bytes`);
+ *   console.log(`Critical threshold: ${data.criticalThreshold} bytes`);
+ * });
+ * ```
+ */
+export interface RendererMainCriticalCleanupEvent {
+  /** Memory used before cleanup (bytes) */
+  memUsed: number;
+  /** Critical threshold (bytes) */
+  criticalThreshold: number;
+}
+
+/**
+ * Critical Cleanup Failed Event Data
+ *
+ * @category Events
+ * @example
+ * ```typescript
+ * renderer.on('criticalCleanupFailed', (data) => {
+ *   console.warn(`Memory cleanup failed!`);
+ *   console.log(`Memory still used: ${data.memUsed} bytes`);
+ *   console.log(`Critical threshold: ${data.criticalThreshold} bytes`);
+ *   // Consider reducing texture usage or forcing cleanup
+ * });
+ * ```
+ */
+export interface RendererMainCriticalCleanupFailedEvent {
+  /** Memory used after cleanup (bytes) */
+  memUsed: number;
+  /** Critical threshold (bytes) */
+  criticalThreshold: number;
+}
 
 /**
  * Settings for the Renderer that can be updated during runtime.
@@ -126,6 +247,15 @@ export interface RendererRuntimeSettings {
    *
    */
   inspector: typeof Inspector | false;
+
+  /**
+   * Inspector Options
+   *
+   * @remarks
+   * Configuration options for the Inspector's performance monitoring features.
+   * Only used when inspector is enabled.
+   */
+  inspectorOptions?: Partial<InspectorOptions>;
 
   /**
    * Texture Processing Limit (in milliseconds)
@@ -251,17 +381,6 @@ export type RendererMainSettings = RendererRuntimeSettings & {
   forceWebGL2: boolean;
 
   /**
-   * Enable strictBounds
-   *
-   * @remarks
-   * Enable strict bounds for the renderer. This will ensure that the renderer
-   * will not render outside the bounds of the canvas.
-   *
-   * @defaultValue `true`
-   */
-  strictBounds: boolean;
-
-  /**
    * Canvas object to use for rendering
    *
    * @remarks
@@ -306,6 +425,20 @@ export type RendererMainSettings = RendererRuntimeSettings & {
    * @defaultValue `null`
    */
   platform: typeof Platform | null;
+
+  /**
+   * Number of times to retry loading a failed texture
+   *
+   * @remarks
+   * When a texture fails to load, Lightning will retry up to this many times
+   * before permanently giving up. Each retry will clear the texture ownership
+   * and then re-establish it to trigger a new load attempt.
+   *
+   * Set to null to disable retries. Set to 0 to always try once and never retry.
+   * This is typically only used on ImageTexture instances.
+   *
+   */
+  maxRetryCount?: number;
 };
 
 /**
@@ -332,31 +465,32 @@ export type RendererMainSettings = RendererRuntimeSettings & {
  * );
  * ```
  *
- * ## Events
- * - `fpsUpdate`
- *   - Emitted every `fpsUpdateInterval` milliseconds with the current FPS
- * - `frameTick`
- *   - Emitted every frame tick
- * - `quadsUpdate`
- *  - Emitted when number of quads rendered is updated
- * - `idle`
- *   - Emitted when the renderer is idle (no changes to the scene
- *     graph/animations running)
- * - `criticalCleanup`
- *  - Emitted when the Texture Memory Manager Cleanup process is triggered
- *  - Payload: { memUsed: number, criticalThreshold: number }
- *    - `memUsed` - The amount of memory (in bytes) used by textures before the
- *       cleanup process
- *    - `criticalThreshold` - The critical threshold (in bytes)
- * - `criticalCleanupFailed`
- *   - Emitted when the Texture Memory Manager Cleanup process is unable to free
- *     up enough texture memory to reach below the critical threshold.
- *     This can happen when there is not enough non-renderable textures to
- *     free up.
- *   - Payload (object with keys):
- *     - `memUsed` - The amount of memory (in bytes) used by textures after
- *       the cleanup process
- *     - `criticalThreshold` - The critical threshold (in bytes)
+ * ## Event Handling
+ *
+ * Listen to events using the standard EventEmitter API:
+ * ```typescript
+ * renderer.on('fpsUpdate', (data: RendererMainFpsUpdateEvent) => {
+ *   console.log(`FPS: ${data.fps}`);
+ * });
+ *
+ * renderer.on('idle', (data: RendererMainIdleEvent) => {
+ *   // Renderer is idle - no scene changes
+ * });
+ * ```
+ *
+ * @see {@link RendererMainFpsUpdateEvent}
+ * @see {@link RendererMainFrameTickEvent}
+ * @see {@link RendererMainQuadsUpdateEvent}
+ * @see {@link RendererMainIdleEvent}
+ * @see {@link RendererMainCriticalCleanupEvent}
+ * @see {@link RendererMainCriticalCleanupFailedEvent}
+ *
+ * @fires RendererMain#fpsUpdate
+ * @fires RendererMain#frameTick
+ * @fires RendererMain#quadsUpdate
+ * @fires RendererMain#idle
+ * @fires RendererMain#criticalCleanup
+ * @fires RendererMain#criticalCleanupFailed
  */
 export class RendererMain extends EventEmitter {
   readonly root: INode;
@@ -373,7 +507,7 @@ export class RendererMain extends EventEmitter {
    */
   constructor(
     settings: Partial<RendererMainSettings>,
-    target: string | HTMLElement,
+    target?: string | HTMLElement,
   ) {
     super();
 
@@ -388,7 +522,7 @@ export class RendererMain extends EventEmitter {
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
-        settings.devicePhysicalPixelRatio || window.devicePixelRatio,
+        settings.devicePhysicalPixelRatio || window.devicePixelRatio || 1,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
       targetFPS: settings.targetFPS || 0,
@@ -397,14 +531,15 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy ?? false,
       forceWebGL2: settings.forceWebGL2 ?? false,
       inspector: settings.inspector ?? false,
+      inspectorOptions: settings.inspectorOptions ?? {},
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
-      strictBounds: settings.strictBounds ?? true,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
-      canvas: settings.canvas || document.createElement('canvas'),
+      canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || null,
+      maxRetryCount: settings.maxRetryCount ?? 5,
     };
 
     const {
@@ -413,7 +548,6 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
       inspector,
-      canvas,
     } = settings as RendererMainSettings;
 
     let platform;
@@ -427,6 +561,8 @@ export class RendererMain extends EventEmitter {
     } else {
       platform = new WebPlatform();
     }
+
+    const canvas = settings.canvas || platform.createCanvas();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
@@ -457,29 +593,35 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize!,
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
-      strictBounds: settings.strictBounds!,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
+      maxRetryCount: settings.maxRetryCount ?? 5,
     });
 
     // Extract the root node
     this.root = this.stage.root as unknown as INode;
 
     // Get the target element and attach the canvas to it
-    let targetEl: HTMLElement | null;
-    if (typeof target === 'string') {
-      targetEl = document.getElementById(target);
-    } else {
-      targetEl = target;
-    }
+    if (target) {
+      let targetEl: HTMLElement | null;
+      if (typeof target === 'string') {
+        targetEl = document.getElementById(target);
+      } else {
+        targetEl = target;
+      }
 
-    if (!targetEl) {
-      throw new Error('Could not find target element');
-    }
+      if (!targetEl) {
+        throw new Error('Could not find target element');
+      }
 
-    targetEl.appendChild(canvas);
+      targetEl.appendChild(canvas);
+    } else if (settings.canvas !== canvas) {
+      throw new Error(
+        'New canvas element could not be appended to undefined target',
+      );
+    }
 
     // Initialize inspector (if enabled)
     if (inspector && isProductionEnvironment === false) {
@@ -712,8 +854,8 @@ export class RendererMain extends EventEmitter {
    * **NOTE3**: This will not cleanup textures that are marked as `preventCleanup`.
    * **NOTE4**: This has nothing to do with the garbage collection of JavaScript.
    */
-  cleanup(aggressive: boolean = false) {
-    this.stage.cleanup(aggressive);
+  cleanup() {
+    this.stage.cleanup();
   }
 
   /**

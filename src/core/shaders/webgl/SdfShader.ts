@@ -25,7 +25,6 @@ const IDENTITY_MATRIX_3x3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
  */
 export interface SdfShaderProps {
   transform: Float32Array;
-  scrollY: number;
   /**
    * Color in RGBA format
    *
@@ -35,7 +34,6 @@ export interface SdfShaderProps {
   color: number;
   size: number;
   distanceRange: number;
-  debug: boolean;
 }
 /**
  * SdfShader supports multi-channel and single-channel signed distance field textures.
@@ -53,19 +51,15 @@ export interface SdfShaderProps {
 export const Sdf: WebGlShaderType<SdfShaderProps> = {
   props: {
     transform: IDENTITY_MATRIX_3x3,
-    scrollY: 0,
     color: 0xffffffff,
     size: 16,
     distanceRange: 1.0,
-    debug: false,
   },
   onSdfBind(props) {
     this.uniformMatrix3fv('u_transform', props.transform);
-    this.uniform1f('u_scrollY', props.scrollY);
     this.uniform4fa('u_color', getNormalizedRgbaComponents(props.color));
     this.uniform1f('u_size', props.size);
     this.uniform1f('u_distanceRange', props.distanceRange);
-    this.uniform1i('u_debug', props.debug ? 1 : 0);
   },
   vertex: `
     # ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -80,14 +74,13 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
     uniform vec2 u_resolution;
     uniform mat3 u_transform;
-    uniform float u_scrollY;
     uniform float u_pixelRatio;
     uniform float u_size;
 
     varying vec2 v_texcoord;
 
     void main() {
-      vec2 scrolledPosition = a_position * u_size - vec2(0, u_scrollY);
+      vec2 scrolledPosition = a_position * u_size;
       vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
 
       // Calculate screen space with pixel ratio
@@ -118,10 +111,6 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
     void main() {
         vec3 sample = texture2D(u_texture, v_texcoord).rgb;
-        if (u_debug == 1) {
-          gl_FragColor = vec4(sample.r, sample.g, sample.b, 1.0);
-          return;
-        }
         float scaledDistRange = u_distanceRange * u_pixelRatio;
         float sigDist = scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
         float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;

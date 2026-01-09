@@ -30,6 +30,8 @@ export const RANDOM = Math.random;
 export const ANGLE_ORDER = 'zyx';
 const degree = Math.PI / 180;
 
+export type TimingFunction = (t: number) => number;
+
 export const setMatrixArrayType = (
   type: Float32ArrayConstructor | ArrayConstructor,
 ) => {
@@ -57,7 +59,7 @@ const getTimingBezier = (
   b: number,
   c: number,
   d: number,
-): ((time: number) => number | undefined) => {
+): TimingFunction => {
   const xc = 3.0 * a;
   const xb = 3.0 * (c - a) - xc;
   const xa = 1.0 - xc - xb;
@@ -65,7 +67,7 @@ const getTimingBezier = (
   const yb = 3.0 * (d - b) - yc;
   const ya = 1.0 - yc - yb;
 
-  return function (time: number): number | undefined {
+  return function (time) {
     if (time >= 1.0) {
       return 1;
     }
@@ -116,11 +118,13 @@ const getTimingBezier = (
         minT = t;
       }
     }
+
+    return time;
   };
 };
 
 interface TimingFunctionMap {
-  [key: string]: (time: number) => number | undefined;
+  [key: string]: TimingFunction;
 }
 
 type TimingLookupArray = number[];
@@ -174,9 +178,7 @@ const parseCubicBezier = (str: string) => {
   return defaultTiming;
 };
 
-export const getTimingFunction = (
-  str: string,
-): ((time: number) => number | undefined) => {
+export const getTimingFunction = (str: string): TimingFunction => {
   if (str === 'linear') {
     return defaultTiming;
   }
@@ -202,7 +204,7 @@ export const getTimingFunction = (
     const [a, b, c, d] = lookup;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - TS doesn't understand that we've checked for undefined
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
     const timing = getTimingBezier(a, b, c, d);
     timingMapping[str] = timing;
     return timing;

@@ -35,6 +35,7 @@ export abstract class CoreContextTexture {
   }
 
   abstract load(): Promise<void>;
+  abstract release(): void;
   abstract free(): void;
 
   get renderable(): boolean {

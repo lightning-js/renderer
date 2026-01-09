@@ -18,17 +18,16 @@
  */
 
 import { type CoreNode, type CoreNodeAnimateProps } from '../CoreNode.js';
-import { getTimingFunction } from '../utils.js';
+import { getTimingFunction, type TimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 
 export interface AnimationSettings {
   duration: number;
   delay: number;
-  easing: string;
+  easing: string | TimingFunction;
   loop: boolean;
   repeat: number;
-  repeatDelay: number;
   stopMethod: 'reverse' | 'reset' | false;
 }
 
@@ -43,7 +42,7 @@ export class CoreAnimation extends EventEmitter {
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
-  private timingFunction: (t: number) => number | undefined;
+  private timingFunction: TimingFunction;
 
   propValuesMap: PropValuesMap = {};
 
@@ -89,10 +88,10 @@ export class CoreAnimation extends EventEmitter {
       easing,
       loop: settings.loop ?? false,
       repeat: settings.repeat ?? 0,
-      repeatDelay: settings.repeatDelay ?? 0,
       stopMethod: settings.stopMethod ?? false,
     };
-    this.timingFunction = getTimingFunction(easing);
+    this.timingFunction =
+      typeof easing === 'string' ? getTimingFunction(easing) : easing;
     this.delayFor = delay;
     this.delay = delay;
   }
@@ -162,14 +161,14 @@ export class CoreAnimation extends EventEmitter {
   }
 
   private applyEasing(p: number, s: number, e: number): number {
-    return (this.timingFunction(p) || p) * (e - s) + s;
+    return this.timingFunction(p) * (e - s) + s;
   }
 
   updateValue(
     propName: string,
     propValue: number,
     startValue: number,
-    easing: string | undefined,
+    easing: string | TimingFunction | undefined,
   ): number {
     if (this.progress === 1) {
       return propValue;
@@ -201,7 +200,7 @@ export class CoreAnimation extends EventEmitter {
   private updateValues(
     target: Record<string, number>,
     valueMap: Record<string, PropValues>,
-    easing: string | undefined,
+    easing: string | TimingFunction | undefined,
   ) {
     const entries = Object.entries(valueMap);
     const eLength = entries.length;

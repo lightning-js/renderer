@@ -19,17 +19,11 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type {
-  TextLayout,
-  NormalizedFontMetrics,
-  TextBaseline,
-} from './TextRenderer.js';
+import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
-import { type LineType } from './canvas/calculateRenderInfo.js';
-import { calcHeight, measureText, wrapText, wrapWord } from './canvas/Utils.js';
-import { normalizeCanvasColor } from '../lib/colorCache.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { isZeroWidthSpace } from './Utils.js';
+import { hasZeroWidthSpace } from './Utils.js';
+import { mapTextLayout } from './TextLayoutEngine.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
@@ -62,11 +56,16 @@ const layoutCache = new Map<
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
+  const dpr = stage.options.devicePhysicalPixelRatio;
+
   // Drawing canvas and context
   canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
   context = canvas.getContext('2d', { willReadFrequently: true }) as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
+
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+  context.textRendering = 'optimizeSpeed';
 
   // Separate measuring canvas and context
   measureCanvas = stage.platform.createCanvas() as
@@ -76,11 +75,14 @@ const init = (stage: Stage): void => {
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
 
+  measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+  measureContext.textRendering = 'optimizeSpeed';
+
   // Set up a minimal size for the measuring canvas since we only use it for measurements
   measureCanvas.width = 1;
   measureCanvas.height = 1;
 
-  CanvasFontHandler.init(context);
+  CanvasFontHandler.init(context, measureContext);
 };
 
 /**
@@ -90,18 +92,10 @@ const init = (stage: Stage): void => {
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (
-  stage: Stage,
-  props: CoreTextNodeProps,
-): {
-  imageData: ImageData | null;
-  width: number;
-  height: number;
-  layout?: TextLayout;
-} => {
+const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
-
+  assertTruthy(measureContext, 'Canvas measureContext is not available');
   // Extract already normalized properties
   const {
     text,
@@ -109,160 +103,100 @@ const renderText = (
     fontStyle,
     fontSize,
     textAlign,
-    lineHeight: propLineHeight,
     maxLines,
-    textBaseline,
+    lineHeight,
     verticalAlign,
     overflowSuffix,
     maxWidth,
     maxHeight,
-    offsetY,
-    letterSpacing,
+    wordBreak,
   } = props;
 
-  // Performance optimization constants
-  const precision = 1;
-  const paddingLeft = 0;
-  const paddingRight = 0;
-  const textIndent = 0;
-  const textRenderIssueMargin = 0;
-  const textColor = 0xffffffff;
-
-  // Determine word wrap behavior
-  const wordWrap = maxWidth > 0;
-  const textOverflow = overflowSuffix ? 'ellipsis' : null;
-
-  // Calculate scaled values
-  const scaledFontSize = fontSize * precision;
-  const scaledOffsetY = offsetY * precision;
-  const scaledLetterSpacing = letterSpacing * precision;
+  const font = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
   // Get font metrics and calculate line height
-  context.font = `${fontStyle} ${scaledFontSize}px ${fontFamily}`;
-  context.textBaseline = textBaseline;
+  measureContext.font = font;
+  measureContext.textBaseline = 'hanging';
 
-  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, scaledFontSize);
-  const lineHeight =
-    propLineHeight === 0
-      ? scaledFontSize *
-        (metrics.ascender - metrics.descender + metrics.lineGap) *
-        precision
-      : propLineHeight;
+  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
 
-  // Calculate max lines constraint
-  const containedMaxLines =
-    maxHeight !== null ? Math.floor(maxHeight / lineHeight) : 0;
-  const computedMaxLines = calculateMaxLines(containedMaxLines, maxLines);
+  const letterSpacing = props.letterSpacing;
 
-  // Calculate initial width and inner width
-  let width = maxWidth || 2048 / precision;
-  let innerWidth = width - paddingLeft;
-  if (innerWidth < 10) {
-    width += 10 - innerWidth;
-    innerWidth = 10;
-  }
-  const finalWordWrapWidth = maxWidth === 0 ? innerWidth : maxWidth;
-
-  // Calculate text layout using cached helper function
-  const layout = calculateTextLayout(
+  const [
+    lines,
+    remainingLines,
+    hasRemainingText,
+    bareLineHeight,
+    lineHeightPx,
+    effectiveWidth,
+    effectiveHeight,
+  ] = mapTextLayout(
+    CanvasFontHandler.measureText,
+    metrics,
     text,
+    textAlign,
     fontFamily,
-    scaledFontSize,
-    fontStyle,
-    wordWrap,
-    finalWordWrapWidth,
-    scaledLetterSpacing,
-    textIndent,
-    computedMaxLines,
-    overflowSuffix,
-    textOverflow,
-  );
-
-  // Calculate final dimensions
-  const dimensions = calculateTextDimensions(
-    layout,
-    paddingLeft,
-    paddingRight,
-    textBaseline,
-    scaledFontSize,
     lineHeight,
-    scaledOffsetY,
+    overflowSuffix,
+    wordBreak,
+    letterSpacing,
+    maxLines,
     maxWidth,
     maxHeight,
-    wordWrap,
-    textAlign,
   );
+  const lineAmount = lines.length;
+  const canvasW = Math.ceil(effectiveWidth);
+  const canvasH = Math.ceil(effectiveHeight);
 
-  // Set up canvas dimensions
-  canvas.width = Math.min(
-    Math.ceil(dimensions.width + textRenderIssueMargin),
-    MAX_TEXTURE_DIMENSION,
-  );
-  canvas.height = Math.min(Math.ceil(dimensions.height), MAX_TEXTURE_DIMENSION);
-
-  // Reset font context after canvas resize
-  context.font = `${fontStyle} ${scaledFontSize}px ${fontFamily}`;
-  context.textBaseline = textBaseline;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+  context.fillStyle = 'white';
+  context.font = font;
+  context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
-  if (scaledFontSize >= 128) {
+  if (fontSize >= 128) {
     context.globalAlpha = 0.01;
     context.fillRect(0, 0, 0.01, 0.01);
     context.globalAlpha = 1.0;
   }
 
-  // Calculate drawing positions
-  const drawLines = calculateDrawPositions(
-    layout.lines,
-    layout.lineWidths,
-    textAlign,
-    verticalAlign,
-    innerWidth,
-    paddingLeft,
-    textIndent,
-    lineHeight,
-    metrics,
-    scaledFontSize,
-  );
+  for (let i = 0; i < lineAmount; i++) {
+    const line = lines[i] as TextLineStruct;
+    const textLine = line[0];
+    let currentX = Math.ceil(line[3]);
+    const currentY = Math.ceil(line[4]);
+    if (letterSpacing === 0) {
+      context.fillText(textLine, currentX, currentY);
+    } else {
+      const textLineLength = textLine.length;
+      for (let j = 0; j < textLineLength; j++) {
+        const char = textLine.charAt(j);
+        if (hasZeroWidthSpace(char) === true) {
+          continue;
+        }
+        context.fillText(char, currentX, currentY);
+        currentX += CanvasFontHandler.measureText(
+          char,
+          fontFamily,
+          letterSpacing,
+        );
+      }
+    }
+  }
 
-  // Render text to canvas
-  renderTextToCanvas(
-    context,
-    drawLines,
-    scaledLetterSpacing,
-    textColor,
-    fontStyle,
-    scaledFontSize,
-    fontFamily,
-  );
-
-  width = dimensions.width;
-  const height = lineHeight * layout.lines.length;
   // Extract image data
   let imageData: ImageData | null = null;
   if (canvas.width > 0 && canvas.height > 0) {
-    imageData = context.getImageData(0, 0, width, height);
+    imageData = context.getImageData(0, 0, canvasW, canvasH);
   }
-
   return {
     imageData,
-    width,
-    height,
+    width: effectiveWidth,
+    height: effectiveHeight,
+    remainingLines,
+    hasRemainingText,
   };
 };
-
-/**
- * Calculate the effective max lines constraint
- */
-function calculateMaxLines(
-  containedMaxLines: number,
-  maxLines: number,
-): number {
-  if (containedMaxLines > 0 && maxLines > 0) {
-    return containedMaxLines < maxLines ? containedMaxLines : maxLines;
-  } else {
-    return containedMaxLines > maxLines ? containedMaxLines : maxLines;
-  }
-}
 
 /**
  * Generate a cache key for text layout calculations
@@ -279,307 +213,6 @@ function generateLayoutCacheKey(
   overflowSuffix: string,
 ): string {
   return `${text}-${fontFamily}-${fontSize}-${fontStyle}-${wordWrap}-${wordWrapWidth}-${letterSpacing}-${maxLines}-${overflowSuffix}`;
-}
-
-/**
- * Calculate text dimensions and wrapping
- */
-function calculateTextLayout(
-  text: string,
-  fontFamily: string,
-  fontSize: number,
-  fontStyle: string,
-  wordWrap: boolean,
-  wordWrapWidth: number,
-  letterSpacing: number,
-  textIndent: number,
-  maxLines: number,
-  overflowSuffix: string,
-  textOverflow: string | null,
-): {
-  lines: string[];
-  lineWidths: number[];
-  maxLineWidth: number;
-  remainingText: string;
-  moreTextLines: boolean;
-} {
-  assertTruthy(measureContext, 'Measure context is not available');
-
-  // Check cache first
-  const cacheKey = generateLayoutCacheKey(
-    text,
-    fontFamily,
-    fontSize,
-    fontStyle,
-    wordWrap,
-    wordWrapWidth,
-    letterSpacing,
-    maxLines,
-    overflowSuffix,
-  );
-
-  const cached = layoutCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  // Set font context for measurements on the dedicated measuring context
-  measureContext.font = `${fontStyle} ${fontSize}px ${fontFamily}`;
-
-  // Handle text overflow for non-wrapped text
-  let processedText = text;
-  if (textOverflow !== null && wordWrap === false) {
-    let suffix: string;
-    if (textOverflow === 'clip') {
-      suffix = '';
-    } else if (textOverflow === 'ellipsis') {
-      suffix = overflowSuffix;
-    } else {
-      suffix = textOverflow;
-    }
-    processedText = wrapWord(
-      measureContext,
-      text,
-      wordWrapWidth - textIndent,
-      suffix,
-      letterSpacing,
-    );
-  }
-
-  // Word wrap
-  let linesInfo: { n: number[]; l: string[] };
-  if (wordWrap === true) {
-    linesInfo = wrapText(
-      measureContext,
-      processedText,
-      wordWrapWidth,
-      letterSpacing,
-      textIndent,
-    );
-  } else {
-    linesInfo = { l: processedText.split(/(?:\r\n|\r|\n)/), n: [] };
-    const n = linesInfo.l.length;
-    for (let i = 0; i < n - 1; i++) {
-      linesInfo.n.push(i);
-    }
-  }
-  let lines: string[] = linesInfo.l;
-
-  let remainingText = '';
-  let moreTextLines = false;
-
-  // Handle max lines constraint
-  if (maxLines > 0 && lines.length > maxLines) {
-    const usedLines = lines.slice(0, maxLines);
-    let otherLines: string[] = [];
-    if (overflowSuffix.length > 0) {
-      const w = measureText(measureContext, overflowSuffix, letterSpacing);
-      const al = wrapText(
-        measureContext,
-        usedLines[usedLines.length - 1] || '',
-        wordWrapWidth - w,
-        letterSpacing,
-        textIndent,
-      );
-      usedLines[usedLines.length - 1] = `${al.l[0] || ''}${overflowSuffix}`;
-      otherLines = [al.l.length > 1 ? al.l[1] || '' : ''];
-    } else {
-      otherLines = [''];
-    }
-
-    // Re-assemble the remaining text
-    let i: number;
-    const n = lines.length;
-    let j = 0;
-    const m = linesInfo.n.length;
-    for (i = maxLines; i < n; i++) {
-      otherLines[j] += `${otherLines[j] ? ' ' : ''}${lines[i] ?? ''}`;
-      if (i + 1 < m && linesInfo.n[i + 1] !== undefined) {
-        j++;
-      }
-    }
-    remainingText = otherLines.join('\n');
-    moreTextLines = true;
-    lines = usedLines;
-  }
-
-  // Calculate line widths using the dedicated measuring context
-  let maxLineWidth = 0;
-  const lineWidths: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const lineWidth =
-      measureText(measureContext, lines[i] || '', letterSpacing) +
-      (i === 0 ? textIndent : 0);
-    lineWidths.push(lineWidth);
-    maxLineWidth = Math.max(maxLineWidth, lineWidth);
-  }
-
-  const result = {
-    lines,
-    lineWidths,
-    maxLineWidth,
-    remainingText,
-    moreTextLines,
-  };
-
-  // Cache the result
-  layoutCache.set(cacheKey, result);
-
-  return result;
-}
-
-/**
- * Calculate text dimensions based on layout
- */
-function calculateTextDimensions(
-  layout: {
-    lines: string[];
-    lineWidths: number[];
-    maxLineWidth: number;
-  },
-  paddingLeft: number,
-  paddingRight: number,
-  textBaseline: TextBaseline,
-  fontSize: number,
-  lineHeight: number,
-  offsetY: number,
-  initialWidth: number,
-  initialHeight: number,
-  wordWrap: boolean,
-  textAlign: string,
-): { width: number; height: number } {
-  let width = initialWidth;
-  let height = initialHeight;
-
-  // Calculate width
-  if (initialWidth === 0) {
-    width = layout.maxLineWidth + paddingLeft + paddingRight;
-  }
-
-  // Adjust width for single-line left-aligned wrapped text
-  if (
-    wordWrap === true &&
-    width > layout.maxLineWidth &&
-    textAlign === 'left' &&
-    layout.lines.length === 1
-  ) {
-    width = layout.maxLineWidth + paddingLeft + paddingRight;
-  }
-
-  // Calculate height if not provided
-  if (height === 0) {
-    height = calcHeight(
-      textBaseline,
-      fontSize,
-      lineHeight,
-      layout.lines.length,
-      offsetY,
-    );
-  }
-
-  return { width, height };
-}
-
-/**
- * Calculate drawing positions for text lines
- */
-function calculateDrawPositions(
-  lines: string[],
-  lineWidths: number[],
-  textAlign: string,
-  verticalAlign: string,
-  innerWidth: number,
-  paddingLeft: number,
-  textIndent: number,
-  lineHeight: number,
-  metrics: NormalizedFontMetrics,
-  fontSize: number,
-): LineType[] {
-  const drawLines: LineType[] = [];
-  const ascenderPx = metrics.ascender * fontSize;
-  const bareLineHeightPx = (metrics.ascender - metrics.descender) * fontSize;
-
-  for (let i = 0, n = lines.length; i < n; i++) {
-    let linePositionX = i === 0 ? textIndent : 0;
-    let linePositionY = i * lineHeight + ascenderPx;
-
-    // Vertical alignment
-    if (verticalAlign == 'middle') {
-      linePositionY += (lineHeight - bareLineHeightPx) / 2;
-    } else if (verticalAlign == 'bottom') {
-      linePositionY += lineHeight - bareLineHeightPx;
-    }
-
-    // Horizontal alignment
-    const lineWidth = lineWidths[i];
-    if (lineWidth !== undefined) {
-      if (textAlign === 'right') {
-        linePositionX += innerWidth - lineWidth;
-      } else if (textAlign === 'center') {
-        linePositionX += (innerWidth - lineWidth) / 2;
-      }
-    }
-
-    linePositionX += paddingLeft;
-
-    const lineText = lines[i];
-    if (lineText !== undefined) {
-      drawLines.push({
-        text: lineText,
-        x: linePositionX,
-        y: linePositionY,
-        w: lineWidth || 0,
-      });
-    }
-  }
-
-  return drawLines;
-}
-
-/**
- * Render text lines to canvas
- */
-function renderTextToCanvas(
-  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  drawLines: LineType[],
-  letterSpacing: number,
-  textColor: number,
-  fontStyle: string,
-  fontSize: number,
-  fontFamily: string,
-): void {
-  assertTruthy(measureContext, 'Measure context is not available');
-
-  context.fillStyle = normalizeCanvasColor(textColor);
-
-  // Sync font settings to measure context if we need to use it for letter spacing
-  if (letterSpacing > 0) {
-    measureContext.font = `${fontStyle} ${fontSize}px ${fontFamily}`;
-  }
-
-  for (let i = 0, n = drawLines.length; i < n; i++) {
-    const drawLine = drawLines[i];
-    if (drawLine) {
-      if (letterSpacing === 0) {
-        context.fillText(drawLine.text, drawLine.x, drawLine.y);
-      } else {
-        const textSplit = drawLine.text.split('');
-        let x = drawLine.x;
-        for (let j = 0, k = textSplit.length; j < k; j++) {
-          const char = textSplit[j];
-          if (char) {
-            // Skip zero-width spaces for rendering but keep them in the text flow
-            if (isZeroWidthSpace(char)) {
-              continue;
-            }
-            context.fillText(char, x, drawLine.y);
-            // Use the dedicated measuring context for letter spacing calculations
-            x += measureText(measureContext, char, letterSpacing);
-          }
-        }
-      }
-    }
-  }
 }
 
 /**

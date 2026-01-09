@@ -45,7 +45,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlRenderer;
   protected glw: WebGlContextWrapper;
-  protected attributeLocations: Record<string, number>;
+  protected attributeLocations: string[];
   protected uniformLocations: Record<string, WebGLUniformLocation> | null;
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
   protected useSystemAlpha = false;
@@ -140,8 +140,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   disableAttributes() {
     const glw = this.glw;
-    const attribs = Object.keys(this.attributeLocations);
-    const attribLen = attribs.length;
+    const attribLen = this.attributeLocations.length;
     for (let i = 0; i < attribLen; i++) {
       glw.disableVertexAttribArray(i);
     }
@@ -294,7 +293,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   bindBufferCollection(buffer: BufferCollection) {
     const { glw } = this;
-    const attribs = Object.keys(this.attributeLocations);
+    const attribs = this.attributeLocations;
     const attribLen = attribs.length;
 
     for (let i = 0; i < attribLen; i++) {
@@ -348,8 +347,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.program = null;
     this.uniformLocations = null;
 
-    const attribs = Object.keys(this.attributeLocations);
-    const attribLen = attribs.length;
+    const attribs = this.attributeLocations;
+    const attribLen = this.attributeLocations.length;
     for (let i = 0; i < attribLen; i++) {
       this.glw.deleteBuffer(attribs[i]!);
     }

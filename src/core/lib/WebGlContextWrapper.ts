@@ -73,6 +73,7 @@ export class WebGlContextWrapper {
   public readonly TEXTURE_WRAP_S;
   public readonly TEXTURE_WRAP_T;
   public readonly LINEAR;
+  public readonly LINEAR_MIPMAP_LINEAR;
   public readonly CLAMP_TO_EDGE;
   public readonly RGB;
   public readonly RGBA;
@@ -164,6 +165,7 @@ export class WebGlContextWrapper {
     this.TEXTURE_WRAP_S = gl.TEXTURE_WRAP_S;
     this.TEXTURE_WRAP_T = gl.TEXTURE_WRAP_T;
     this.LINEAR = gl.LINEAR;
+    this.LINEAR_MIPMAP_LINEAR = gl.LINEAR_MIPMAP_LINEAR;
     this.CLAMP_TO_EDGE = gl.CLAMP_TO_EDGE;
     this.RGB = gl.RGB;
     this.RGBA = gl.RGBA;
@@ -716,16 +718,17 @@ export class WebGlContextWrapper {
    * @param program
    * @returns object with numbers
    */
-  getAttributeLocations(program: WebGLProgram): Record<string, number> {
+  getAttributeLocations(program: WebGLProgram): string[] {
     const gl = this.gl;
     const length = gl.getProgramParameter(
       program,
       gl.ACTIVE_ATTRIBUTES,
     ) as number;
-    const result = {} as Record<string, number>;
+
+    const result: string[] = [];
     for (let i = 0; i < length; i++) {
       const { name } = gl.getActiveAttrib(program, i) as WebGLActiveInfo;
-      result[name] = i;
+      result[gl.getAttribLocation(program, name)] = name;
     }
     return result;
   }
@@ -1325,6 +1328,44 @@ export class WebGlContextWrapper {
     if (this.isWebGl2()) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
+  }
+
+  /**
+   * Check for WebGL errors and return error information
+   * @param operation Description of the operation for error reporting
+   * @returns Object with error information or null if no error
+   */
+  checkError(
+    operation: string,
+  ): { error: number; errorName: string; message: string } | null {
+    const error = this.getError();
+    if (error !== 0) {
+      // 0 is GL_NO_ERROR
+      let errorName = 'UNKNOWN_ERROR';
+      switch (error) {
+        case this.INVALID_ENUM:
+          errorName = 'INVALID_ENUM';
+          break;
+        case 0x0501: // GL_INVALID_VALUE
+          errorName = 'INVALID_VALUE';
+          break;
+        case this.INVALID_OPERATION:
+          errorName = 'INVALID_OPERATION';
+          break;
+        case 0x0505: // GL_OUT_OF_MEMORY
+          errorName = 'OUT_OF_MEMORY';
+          break;
+        case 0x9242: // GL_CONTEXT_LOST_WEBGL
+          errorName = 'CONTEXT_LOST_WEBGL';
+          break;
+      }
+
+      const message = `WebGL ${errorName} (0x${error.toString(
+        16,
+      )}) during ${operation}`;
+      return { error, errorName, message };
+    }
+    return null;
   }
 }
 

@@ -39,6 +39,7 @@ import type {
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
+import { Matrix3d } from './lib/Matrix3d.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
@@ -47,12 +48,20 @@ export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   forceLoad: boolean;
 }
 
+export enum TextConstraint {
+  'none' = 0,
+  'width' = 1,
+  'height' = 2,
+  'both' = 4,
+}
+
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
   private _layoutGenerated = false;
   private _waitingForFont = false;
+  private _containType: TextConstraint = TextConstraint.none;
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
@@ -81,6 +90,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Initialize text properties from props
     // Props are guaranteed to have all defaults resolved by Stage.createTextNode
     this.textProps = props;
+    this._containType = TextConstraint[props.contain];
 
     this.setUpdateType(UpdateType.All);
   }
@@ -93,7 +103,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
     }
-
     // ignore 1x1 pixel textures
     if (dimensions.w > 1 && dimensions.h > 1) {
       this.emit('loaded', {
@@ -101,13 +110,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         dimensions,
       } satisfies NodeTextureLoadedPayload);
     }
-
-    this.w = this._renderInfo.width;
-    this.h = this._renderInfo.height;
-
-    // Texture was loaded. In case the RAF loop has already stopped, we request
-    // a render to ensure the texture is rendered.
-    this.stage.requestRender();
+    this.setUpdateType(UpdateType.IsRenderable);
   };
 
   allowTextGeneration() {
@@ -119,6 +122,74 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return true;
     }
     return false;
+  }
+
+  override updateLocalTransform() {
+    const p = this.props;
+    let { x, y, w, h } = p;
+    const mountX = p.mountX;
+    const mountY = p.mountY;
+    let mountTranslateX = p.mountX * w;
+    let mountTranslateY = p.mountY * h;
+
+    let localTextTransform: Matrix3d | null = null;
+
+    const tProps = this.textProps;
+    const { textAlign, verticalAlign, maxWidth, maxHeight } = tProps;
+    const contain = this._containType;
+
+    const hasMaxWidth = maxWidth > 0;
+    const hasMaxHeight = maxHeight > 0;
+
+    if (contain > 0 && (hasMaxWidth || hasMaxHeight)) {
+      let containX = 0;
+      let containY = 0;
+      if (contain & TextConstraint.width && hasMaxWidth === true) {
+        if (textAlign === 'right') {
+          containX = maxWidth - w;
+        } else if (textAlign === 'center') {
+          containX = (maxWidth - w) * 0.5;
+        }
+        mountTranslateX = mountX * maxWidth;
+      }
+      if (contain & TextConstraint.height && maxHeight > 0) {
+        if (verticalAlign === 'bottom') {
+          containY = maxHeight - h;
+        } else if (verticalAlign === 'middle') {
+          containY = (maxHeight - h) * 0.5;
+        }
+        mountTranslateY = mountY * maxHeight;
+      }
+      localTextTransform = Matrix3d.translate(containX, containY);
+    }
+
+    if (p.rotation !== 0 || p.scaleX !== 1 || p.scaleY !== 1) {
+      const scaleRotate = Matrix3d.rotate(p.rotation).scale(p.scaleX, p.scaleY);
+      const pivotW =
+        contain & TextConstraint.width && maxWidth > 0 ? maxWidth : w;
+      const pivotH =
+        contain & TextConstraint.height && maxHeight > 0 ? maxHeight : h;
+      const pivotTranslateX = p.pivotX * pivotW;
+      const pivotTranslateY = p.pivotY * pivotH;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .multiply(scaleRotate)
+        .translate(-pivotTranslateX, -pivotTranslateY);
+    } else {
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX,
+        y - mountTranslateY,
+        this.localTransform,
+      );
+    }
+
+    if (localTextTransform !== null) {
+      this.localTransform = this.localTransform.multiply(localTextTransform);
+    }
   }
 
   /**
@@ -134,7 +205,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
         this._lastVertexBuffer = null; // Invalidate last vertex buffer
-        const resp = this.textRenderer.renderText(this.stage, this.textProps);
+        const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
       } else if (this._waitingForFont === false) {
@@ -186,7 +257,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         premultiplyAlpha: true,
         src: result.imageData as ImageData,
       });
-
       // It isn't renderable until the texture is loaded we have to set it to false here to avoid it
       // being detected as a renderable default color node in the next frame
       // it will be corrected once the texture is loaded
@@ -194,28 +264,34 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
       if (this.renderState > CoreNodeRenderState.OutOfBounds) {
         // We do want the texture to load immediately
-        this.texture.setRenderableOwner(this, true);
+        this.texture.setRenderableOwner(this._id, true);
       }
     }
 
+    this._cachedLayout = result.layout || null;
+    this.props.w = width;
+    this.props.h = height;
+
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
-      this._cachedLayout = result.layout || null;
       this.setRenderable(true);
-      this.props.w = width;
-      this.props.h = height;
       this.setUpdateType(UpdateType.Local);
     }
 
     this._renderInfo = result;
+    queueMicrotask(this.emitTextLoadedEvent);
+  }
+
+  // Reusable bound method for emitting loaded event
+  private emitTextLoadedEvent = () => {
     this.emit('loaded', {
       type: 'text',
       dimensions: {
-        w: width,
-        h: height,
+        w: this._renderInfo.width,
+        h: this._renderInfo.height,
       },
     } satisfies NodeTextLoadedPayload);
-  }
+  };
 
   /**
    * Override renderQuads to handle SDF vs Canvas rendering
@@ -268,7 +344,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override destroy(): void {
-    if (this._waitingForFont === true) {
+    if (this._waitingForFont === true && this.fontHandler) {
       this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
     }
 
@@ -280,6 +356,24 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textRenderer = null!; // Clear reference to avoid memory leaks
 
     super.destroy();
+  }
+
+  override set w(value: number) {
+    // dont allow direct setting of width on text nodes, handled by text layout generation
+    console.warn('Cannot directly set w on CoreTextNode');
+  }
+
+  override get w(): number {
+    return this.props.w;
+  }
+
+  override set h(value: number) {
+    // dont allow direct setting of height on text nodes, handled by text layout generation
+    console.warn('Cannot directly set h on CoreTextNode');
+  }
+
+  override get h(): number {
+    return this.props.h;
   }
 
   get maxWidth() {
@@ -303,6 +397,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (this.textProps.maxHeight !== value) {
       this.textProps.maxHeight = value;
       this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
+  get contain(): TrProps['contain'] {
+    return this.textProps.contain;
+  }
+
+  set contain(value: TrProps['contain']) {
+    if (this.textProps.contain !== value) {
+      this.textProps.contain = value;
+      this._containType = TextConstraint[value];
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -341,7 +447,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
       }
       this.textProps.fontFamily = value;
-      this._layoutGenerated = true;
+      this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -353,7 +459,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set fontStyle(value: TrProps['fontStyle']) {
     if (this.textProps.fontStyle !== value) {
       this.textProps.fontStyle = value;
-      this._layoutGenerated = true;
+      this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -401,18 +507,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxLines(value: number) {
     if (this.textProps.maxLines !== value) {
       this.textProps.maxLines = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
-    }
-  }
-
-  get textBaseline(): TrProps['textBaseline'] {
-    return this.textProps.textBaseline;
-  }
-
-  set textBaseline(value: TrProps['textBaseline']) {
-    if (this.textProps.textBaseline !== value) {
-      this.textProps.textBaseline = value;
       this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }

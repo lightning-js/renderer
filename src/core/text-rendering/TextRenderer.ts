@@ -199,16 +199,6 @@ export interface TrProps extends TrFontProps {
    */
   maxLines: number;
   /**
-   * Baseline for text
-   *
-   * @remarks
-   * This property sets the text baseline used when drawing text.
-   * Not yet implemented in the SDF renderer.
-   *
-   * @default alphabetic
-   */
-  textBaseline: TextBaseline;
-  /**
    * Vertical Align for text when lineHeight > fontSize
    *
    * @remarks
@@ -235,15 +225,29 @@ export interface TrProps extends TrFontProps {
    * @remarks
    * This property sets how words should break when reaching the end of a line.
    *
-   * - `'normal'`: Use the default line break rule.
+   * - `'overflow'`: Uses the Css/HTML normal word-break behavior, generally not used in app development.
    * - `'break-all'`: To prevent overflow, word breaks should happen between any two characters.
    * - `'break-word'`: To prevent overflow, word breaks should happen between words. If words are too long word breaks happen between any two characters.
    *
-   * @default "normal"
+   * @default "break-word"
    */
-  wordBreak: 'normal' | 'break-all' | 'break-word';
+  wordBreak: 'overflow' | 'break-all' | 'break-word';
 
-  zIndex: number;
+  /**
+   * contain mode for text
+   *
+   * @remarks
+   *
+   * This property sets how the text should be contained within its bounding box.
+   *
+   * - 'width': The text is contained within the specified maxWidth, horizontal position of text will adjust according to {@link textAlign}.
+   * - 'height': The text is contained within the specified maxHeight, vertical position of text will adjust according to {@link verticalAlign}.
+   * - 'both': The text is contained within both the specified maxWidth and maxHeight.
+   * - 'none': The text is not contained within any bounding box.
+   *
+   * @default 'none'
+   */
+  contain: 'width' | 'height' | 'both' | 'none';
 }
 
 /**
@@ -335,6 +339,15 @@ export interface FontLoadOptions {
   atlasDataUrl?: string;
 }
 
+/**
+ * Measure Width of Text function to be defined in font handlers, used in TextLayoutEngine
+ */
+export type MeasureTextFn = (
+  text: string,
+  fontFamily: string,
+  letterSpacing: number,
+) => number;
+
 export interface FontHandler {
   init: (
     c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -350,7 +363,7 @@ export interface FontHandler {
     fontFamily: string,
     fontSize: number,
   ) => NormalizedFontMetrics;
-  setFontMetrics: (fontFamily: string, metrics: NormalizedFontMetrics) => void;
+  measureText: MeasureTextFn;
 }
 
 export interface TextRenderProps {
@@ -371,6 +384,8 @@ export interface TextRenderProps {
 export interface TextRenderInfo {
   width: number;
   height: number;
+  hasRemainingText?: boolean;
+  remainingLines?: number;
   imageData?: ImageData | null; // Image data for Canvas Text Renderer
   layout?: TextLayout; // Layout data for SDF renderer caching
 }
@@ -378,7 +393,7 @@ export interface TextRenderInfo {
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
-  renderText: (stage: Stage, props: CoreTextNodeProps) => TextRenderInfo;
+  renderText: (props: CoreTextNodeProps) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
@@ -394,8 +409,11 @@ export interface TextRenderer {
  * Text line struct for text mapping
  * 0 - text
  * 1 - width
+ * 2 - truncated
+ * 3 - line offset x
+ * 4 - line offset y
  */
-export type TextLineStruct = [string, number];
+export type TextLineStruct = [string, number, boolean, number, number];
 
 /**
  * Wrapped lines struct for text mapping
@@ -404,3 +422,23 @@ export type TextLineStruct = [string, number];
  * 2 - remaining text
  */
 export type WrappedLinesStruct = [TextLineStruct[], number, boolean];
+
+/**
+ * Wrapped lines struct for text mapping
+ * 0 - line structs
+ * 1 - remaining lines
+ * 2 - remaining text
+ * 3 - bare line height
+ * 4 - line height pixels
+ * 5 - effective width
+ * 6 - effective height
+ */
+export type TextLayoutStruct = [
+  TextLineStruct[],
+  number,
+  boolean,
+  number,
+  number,
+  number,
+  number,
+];

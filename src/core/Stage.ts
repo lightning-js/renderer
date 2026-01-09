@@ -60,7 +60,7 @@ import type { RendererMainSettings } from '../main-api/Renderer.js';
 
 export type StageOptions = Omit<
   RendererMainSettings,
-  'inspector' | 'platform'
+  'inspector' | 'platform' | 'maxRetryCount'
 > & {
   textureMemory: TextureMemoryManagerSettings;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -68,6 +68,7 @@ export type StageOptions = Omit<
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
   inspector: boolean;
+  maxRetryCount: number;
 };
 
 export type StageFpsUpdateHandler = (
@@ -102,7 +103,6 @@ export class Stage {
   public readonly defShaderNode: CoreShaderNode | null = null;
   public strictBound: Bound;
   public preloadBound: Bound;
-  public readonly strictBounds: boolean;
   public readonly defaultTexture: Texture | null = null;
   public pixelRatio: number;
   public readonly bufferMemory: number = 2e6;
@@ -171,6 +171,7 @@ export class Stage {
       fontEngines,
       createImageBitmapSupport,
       platform,
+      maxRetryCount,
     } = options;
 
     assertTruthy(
@@ -190,6 +191,7 @@ export class Stage {
     this.txManager = new CoreTextureManager(this, {
       numImageWorkers,
       createImageBitmapSupport,
+      maxRetryCount,
     });
 
     // Wait for the Texture Manager to initialize
@@ -202,7 +204,6 @@ export class Stage {
 
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
-    this.strictBounds = options.strictBounds;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -342,7 +343,6 @@ export class Stage {
       colorBl: 0x00000000,
       colorBr: 0x00000000,
       zIndex: 0,
-      zIndexLocked: 0,
       scaleX: 1,
       scaleY: 1,
       mountX: 0,
@@ -359,7 +359,6 @@ export class Stage {
       rtt: false,
       src: null,
       scale: 1,
-      strictBounds: this.strictBounds,
     });
 
     this.root = rootNode;
@@ -426,7 +425,7 @@ export class Stage {
     // Mark the default texture as ALWAYS renderable
     // This prevents it from ever being cleaned up.
     // Fixes https://github.com/lightning-js/renderer/issues/262
-    this.defaultTexture.setRenderableOwner(this, true);
+    this.defaultTexture.setRenderableOwner('stage', true);
 
     // When the default texture is loaded, request a render in case the
     // RAF is paused. Fixes: https://github.com/lightning-js/renderer/issues/123
@@ -481,16 +480,6 @@ export class Stage {
     // Reset render operations and clear the canvas
     renderer.reset();
 
-    // Check if we need to cleanup textures
-    if (txMemManager.criticalCleanupRequested === true) {
-      txMemManager.cleanup(false);
-
-      if (txMemManager.criticalCleanupRequested === true) {
-        // If we still need to cleanup, request another but aggressive cleanup
-        txMemManager.cleanup(true);
-      }
-    }
-
     // If we have RTT nodes draw them first
     // So we can use them as textures in the main scene
     if (renderer.rttNodes.length > 0) {
@@ -518,6 +507,10 @@ export class Stage {
           break;
         }
       }
+    }
+    // Check if we need to cleanup textures
+    if (this.txMemManager.criticalCleanupRequested === true) {
+      this.txMemManager.cleanup();
     }
   }
 
@@ -604,8 +597,7 @@ export class Stage {
 
       if (
         child.worldAlpha === 0 ||
-        (child.strictBounds === true &&
-          child.renderState === CoreNodeRenderState.OutOfBounds)
+        child.renderState === CoreNodeRenderState.OutOfBounds
       ) {
         continue;
       }
@@ -697,12 +689,12 @@ export class Stage {
       textAlign: props.textAlign || 'left',
       offsetY: props.offsetY || 0,
       letterSpacing: props.letterSpacing || 0,
-      lineHeight: props.lineHeight || 0,
+      lineHeight: props.lineHeight || 1.2,
       maxLines: props.maxLines || 0,
-      textBaseline: props.textBaseline || 'alphabetic',
-      verticalAlign: props.verticalAlign || 'middle',
+      verticalAlign: props.verticalAlign || 'top',
       overflowSuffix: props.overflowSuffix || '...',
-      wordBreak: props.wordBreak || 'normal',
+      wordBreak: props.wordBreak || 'break-word',
+      contain: props.contain || 'none',
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
       forceLoad: props.forceLoad || false,
@@ -772,7 +764,9 @@ export class Stage {
     if (nodes.length === 0) {
       return null;
     }
-    let topNode = nodes[0] as CoreNode;
+
+    //get last node in array (as top node)
+    let topNode = nodes[nodes.length - 1] as CoreNode;
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i]!.zIndex > topNode.zIndex) {
         topNode = nodes[i]!;
@@ -862,7 +856,6 @@ export class Stage {
       colorBl,
       colorBr,
       zIndex: props.zIndex ?? 0,
-      zIndexLocked: props.zIndexLocked ?? 0,
       parent: props.parent ?? null,
       texture: props.texture ?? null,
       textureOptions: props.textureOptions ?? {},
@@ -886,7 +879,6 @@ export class Stage {
       data,
       imageType: props.imageType,
       interactive: props.interactive ?? false,
-      strictBounds: props.strictBounds ?? this.strictBounds,
     };
   }
 
@@ -896,8 +888,8 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup(aggressive: boolean) {
-    this.txMemManager.cleanup(aggressive);
+  cleanup() {
+    this.txMemManager.cleanup();
   }
 
   set clearColor(value: number) {

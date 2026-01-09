@@ -1,6 +1,13 @@
 import { Platform } from '../Platform.js';
 import type { Stage } from '../../Stage.js';
 
+/**
+ * make fontface add not show errors
+ */
+interface FontFaceSetWithAdd extends FontFaceSet {
+  add(font: FontFace): void;
+}
+
 export class WebPlatform extends Platform {
   ////////////////////////
   // Platform-specific methods
@@ -55,14 +62,14 @@ export class WebPlatform extends Platform {
           setTimeout(() => requestAnimationFrame(runLoop), 16.666666666666668);
         }
 
-        if (!isIdle) {
+        if (isIdle === false) {
           stage.shManager.cleanup();
           stage.eventBus.emit('idle');
           isIdle = true;
         }
 
         if (stage.txMemManager.checkCleanup() === true) {
-          stage.txMemManager.cleanup(false);
+          stage.txMemManager.cleanup();
         }
 
         stage.flushFrameEvents();
@@ -117,5 +124,9 @@ export class WebPlatform extends Platform {
 
   getTimeStamp(): number {
     return performance ? performance.now() : Date.now();
+  }
+
+  override addFont(font: FontFace): void {
+    (document.fonts as FontFaceSetWithAdd).add(font);
   }
 }

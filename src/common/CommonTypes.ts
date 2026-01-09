@@ -82,6 +82,14 @@ export type NodeTextureFreedPayload = {
 };
 
 /**
+ * Payload for when node renderable status changes
+ */
+export type NodeRenderablePayload = {
+  type: 'renderable';
+  isRenderable: boolean;
+};
+
+/**
  * Combined type for all failed payloads
  */
 export type NodeFailedPayload =
@@ -102,6 +110,14 @@ export type NodeLoadedEventHandler = (
 export type NodeFailedEventHandler = (
   target: any,
   payload: NodeFailedPayload,
+) => void;
+
+/**
+ * Event handler for when the renderable status of a node changes
+ */
+export type NodeRenderableEventHandler = (
+  target: any,
+  payload: NodeRenderablePayload,
 ) => void;
 
 export type NodeRenderStatePayload = {

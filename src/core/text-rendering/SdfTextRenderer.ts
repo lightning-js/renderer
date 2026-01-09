@@ -20,11 +20,12 @@
 import type { Stage } from '../Stage.js';
 import type {
   FontHandler,
+  TextLineStruct,
   TextRenderInfo,
   TextRenderProps,
 } from './TextRenderer.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { isZeroWidthSpace } from './Utils.js';
+import { hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -35,7 +36,7 @@ import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
-import { wrapText, measureLines } from './sdf/index.js';
+import { mapTextLayout } from './TextLayoutEngine.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
 const FLOATS_PER_VERTEX = 4;
@@ -64,7 +65,7 @@ const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
+const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   // Early return if no text
   if (props.text.length === 0) {
     return {
@@ -75,7 +76,7 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
 
   // Get font cache for this font family
   const fontData = SdfFontHandler.getFontData(props.fontFamily);
-  if (fontData === null) {
+  if (fontData === undefined) {
     // Font not loaded, return empty result
     return {
       width: 0,
@@ -88,6 +89,8 @@ const renderText = (stage: Stage, props: CoreTextNodeProps): TextRenderInfo => {
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
+    remainingLines: 0,
+    hasRemainingText: false,
     width: layout.width,
     height: layout.height,
     layout, // Cache layout for addQuads
@@ -187,7 +190,6 @@ const renderQuads = (
 ): void => {
   const fontFamily = renderProps.fontFamily;
   const color = renderProps.color;
-  const offsetY = renderProps.offsetY;
   const worldAlpha = renderProps.worldAlpha;
   const globalTransform = renderProps.globalTransform;
 
@@ -243,9 +245,7 @@ const renderQuads = (
         transform: globalTransform,
         color: mergeColorAlpha(color, worldAlpha),
         size: layout.fontScale, // Use proper font scaling in shader
-        scrollY: offsetY || 0,
         distanceRange: layout.distanceRange,
-        debug: false, // Disable debug mode
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
       shader: sdfShader,
@@ -274,132 +274,78 @@ const renderQuads = (
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
-  fontData: SdfFontHandler.SdfFontData,
+  fontCache: SdfFontHandler.SdfFont,
 ): TextLayout => {
-  const commonFontData = fontData.common;
-  const text = props.text;
   const fontSize = props.fontSize;
-  const letterSpacing = props.letterSpacing;
   const fontFamily = props.fontFamily;
-  const textAlign = props.textAlign;
-  const maxWidth = props.maxWidth;
-  const maxHeight = props.maxHeight;
-  const maxLines = props.maxLines;
-  const overflowSuffix = props.overflowSuffix;
-  const wordBreak = props.wordBreak;
+  const lineHeight = props.lineHeight;
+  const metrics = SdfFontHandler.getFontMetrics(fontFamily, fontSize);
+  const verticalAlign = props.verticalAlign;
 
-  // Use the font's design size for proper scaling
-  const designLineHeight = commonFontData.lineHeight;
-
+  const fontData = fontCache.data;
+  const commonFontData = fontData.common;
   const designFontSize = fontData.info.size;
 
-  const lineHeight =
-    props.lineHeight || (designLineHeight * fontSize) / designFontSize;
   const atlasWidth = commonFontData.scaleW;
   const atlasHeight = commonFontData.scaleH;
 
   // Calculate the pixel scale from design units to pixels
-  const finalScale = fontSize / designFontSize;
+  const fontScale = fontSize / designFontSize;
+  const letterSpacing = props.letterSpacing / fontScale;
 
-  // Calculate design letter spacing
-  const designLetterSpacing = (letterSpacing * designFontSize) / fontSize;
+  const maxWidth = props.maxWidth / fontScale;
+  const maxHeight = props.maxHeight;
+  const [
+    lines,
+    remainingLines,
+    hasRemainingText,
+    bareLineHeight,
+    lineHeightPx,
+    effectiveWidth,
+    effectiveHeight,
+  ] = mapTextLayout(
+    SdfFontHandler.measureText,
+    metrics,
+    props.text,
+    props.textAlign,
+    fontFamily,
+    lineHeight,
+    props.overflowSuffix,
+    props.wordBreak,
+    letterSpacing,
+    props.maxLines,
+    maxWidth,
+    maxHeight,
+  );
 
-  // Determine text wrapping behavior based on contain mode
-  const shouldWrapText = maxWidth > 0;
-  const heightConstraint = maxHeight > 0;
-
-  // Calculate maximum lines constraint from height if needed
-  let effectiveMaxLines = maxLines;
-  if (heightConstraint === true) {
-    const maxLinesFromHeight = Math.floor(
-      maxHeight / (lineHeight * finalScale),
-    );
-    if (effectiveMaxLines === 0 || maxLinesFromHeight < effectiveMaxLines) {
-      effectiveMaxLines = maxLinesFromHeight;
-    }
-  }
-
-  const hasMaxLines = effectiveMaxLines > 0;
-
-  // Split text into lines based on wrapping constraints
-  const [lines, remainingLines, remainingText] = shouldWrapText
-    ? wrapText(
-        text,
-        fontFamily,
-        finalScale,
-        maxWidth,
-        letterSpacing,
-        overflowSuffix,
-        wordBreak,
-        effectiveMaxLines,
-        hasMaxLines,
-      )
-    : measureLines(
-        text.split('\n'),
-        fontFamily,
-        letterSpacing,
-        finalScale,
-        effectiveMaxLines,
-        hasMaxLines,
-      );
+  const lineAmount = lines.length;
 
   const glyphs: GlyphLayout[] = [];
-  let maxWidthFound = 0;
+  let currentX = 0;
   let currentY = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i]![1] > maxWidthFound) {
-      maxWidthFound = lines[i]![1];
-    }
-  }
-
-  // Second pass: Generate glyph layouts with proper alignment
-  let lineIndex = 0;
-  const linesLength = lines.length;
-
-  while (lineIndex < linesLength) {
-    const [line, lineWidth] = lines[lineIndex]!;
-    lineIndex++;
-
-    // Calculate line X offset based on text alignment
-    let lineXOffset = 0;
-    if (textAlign === 'center') {
-      const availableWidth = shouldWrapText
-        ? maxWidth / finalScale
-        : maxWidthFound;
-      lineXOffset = (availableWidth - lineWidth) / 2;
-    } else if (textAlign === 'right') {
-      const availableWidth = shouldWrapText
-        ? maxWidth / finalScale
-        : maxWidthFound;
-      lineXOffset = availableWidth - lineWidth;
-    }
-
-    let currentX = lineXOffset;
-    let charIndex = 0;
-    const lineLength = line.length;
+  for (let i = 0; i < lineAmount; i++) {
+    const line = lines[i] as TextLineStruct;
+    const textLine = line[0];
+    const textLineLength = textLine.length;
     let prevCodepoint = 0;
+    currentX = line[3];
+    //convert Y coord to vertex value
+    currentY = line[4] / fontScale;
 
-    while (charIndex < lineLength) {
-      const char = line.charAt(charIndex);
+    for (let j = 0; j < textLineLength; j++) {
+      const char = textLine.charAt(j);
+      if (hasZeroWidthSpace(char) === true) {
+        continue;
+      }
       const codepoint = char.codePointAt(0);
-      charIndex++;
-
       if (codepoint === undefined) {
         continue;
       }
-
-      // Skip zero-width spaces for rendering but keep them in the text flow
-      if (isZeroWidthSpace(char)) {
-        continue;
-      }
-
       // Get glyph data from font handler
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
         continue;
       }
-
       // Calculate advance with kerning (in design units)
       let advance = glyph.xadvance;
 
@@ -432,21 +378,20 @@ const generateTextLayout = (
       glyphs.push(glyphLayout);
 
       // Advance position with letter spacing (in design units)
-      currentX += advance + designLetterSpacing;
+      currentX += advance + letterSpacing;
       prevCodepoint = codepoint;
     }
-
-    currentY += designLineHeight;
+    currentY += lineHeightPx;
   }
 
   // Convert final dimensions to pixel space for the layout
   return {
     glyphs,
-    distanceRange: finalScale * fontData.distanceField.distanceRange,
-    width: Math.ceil(maxWidthFound * finalScale),
-    height: Math.ceil(designLineHeight * lines.length * finalScale),
-    fontScale: finalScale,
-    lineHeight,
+    distanceRange: fontScale * fontData.distanceField.distanceRange,
+    width: effectiveWidth * fontScale,
+    height: effectiveHeight,
+    fontScale: fontScale,
+    lineHeight: lineHeightPx,
     fontFamily,
   };
 };

@@ -1,5 +1,5 @@
 # Use Playwright's base image
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy
+FROM mcr.microsoft.com/playwright:v1.56.1-jammy
 
 # Set the working directory
 WORKDIR /work
@@ -9,7 +9,7 @@ COPY .npmrc .npmrc
 COPY package.json package.json
 
 # Install PNPM
-RUN corepack enable && corepack prepare pnpm@8.15.5 --activate
+RUN corepack enable && corepack prepare pnpm@10.17.0 --activate
 
 # Get pnpm to install the version of Node declared in .npmrc
 RUN pnpm exec ls

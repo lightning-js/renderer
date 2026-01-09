@@ -49,6 +49,8 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
     # endif
 
     #define PI 3.14159265359
+    #define MAX_STOPS ${props.colors.length}
+    #define LAST_STOP ${props.colors.length - 1}
 
     uniform float u_alpha;
     uniform vec2 u_dimensions;
@@ -56,14 +58,35 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
     uniform sampler2D u_texture;
 
     uniform float u_angle;
-    uniform float u_stops[${props.stops.length}];
-    uniform vec4 u_colors[${props.colors.length}];
+    uniform float u_stops[MAX_STOPS];
+    uniform vec4 u_colors[MAX_STOPS];
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
 
     vec2 calcPoint(float d, float angle) {
       return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
+    }
+
+    vec4 getGradientColor(float dist) {
+      dist = clamp(dist, 0.0, 1.0);
+
+      if(dist <= u_stops[0]) {
+        return u_colors[0];
+      }
+
+      if(dist >= u_stops[LAST_STOP]) {
+        return u_colors[LAST_STOP];
+      }
+
+      for(int i = 0; i < LAST_STOP; i++) {
+        float left = u_stops[i];
+        float right = u_stops[i + 1];
+        if(dist >= left && dist <= right) {
+          float lDist = smoothstep(left, right, dist);
+          return mix(u_colors[i], u_colors[i + 1], lDist);
+        }
+      }
     }
 
     void main() {
@@ -74,8 +97,9 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
       vec2 t = calcPoint(lineDist * 0.5, a + PI);
       vec2 gradVec = t - f;
       float dist = dot(v_textureCoords.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
-      ${genGradientColors(props.stops.length)}
-      gl_FragColor = mix(color, colorOut, clamp(colorOut.a, 0.0, 1.0));
+      vec4 colorOut = getGradientColor(dist);
+      vec3 blendedRGB = mix(color.rgb, colorOut.rgb, clamp(colorOut.a, 0.0, 1.0));
+      gl_FragColor = vec4(blendedRGB, color.a);
     }
   `;
   },
