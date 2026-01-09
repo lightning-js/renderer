@@ -191,7 +191,7 @@ export enum UpdateType {
   /**
    * Autosize update
    */
-  Autosize = 16384,
+  Autosize = 8192,
   /**
    * None
    */
@@ -200,7 +200,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 32766,
+  All = 16383,
 }
 
 /**
@@ -1861,12 +1861,14 @@ export class CoreNode extends EventEmitter {
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
-    if (
-      targetParent === null &&
-      this.props.rtt === true &&
-      this.parentHasRenderTexture === true
-    ) {
-      node.clearRTTInheritance();
+    if (targetParent === null) {
+      if (this.props.rtt === true && this.parentHasRenderTexture === true) {
+        node.clearRTTInheritance();
+      }
+      const autosizeTarget = this.autosizer || this.parentAutosizer;
+      if (autosizeTarget !== null) {
+        autosizeTarget.detach(node);
+      }
     }
     removeChild(node, this.children);
   }
@@ -1878,6 +1880,8 @@ export class CoreNode extends EventEmitter {
     const min = this.zIndexMin;
     const max = this.zIndexMax;
     const zIndex = node.zIndex;
+    const autosizeTarget = this.autosizer || this.parentAutosizer;
+    let attachToAutosizer = autosizeTarget !== null;
 
     node.parentHasRenderTexture = inRttCluster;
     if (previousParent !== null) {
@@ -1888,6 +1892,22 @@ export class CoreNode extends EventEmitter {
         // update child RTT status
         node.clearRTTInheritance();
       }
+      const previousAutosizer = node.autosizer || node.parentAutosizer;
+
+      if (previousAutosizer !== null) {
+        if (
+          autosizeTarget === null ||
+          previousAutosizer.id !== autosizeTarget.id
+        ) {
+          previousAutosizer.detach(node);
+        }
+        attachToAutosizer = false;
+      }
+    }
+
+    if (attachToAutosizer === true) {
+      //if this is true, then the autosizer really exists
+      autosizeTarget!.attach(node);
     }
 
     if (inRttCluster === true) {
@@ -2352,52 +2372,8 @@ export class CoreNode extends EventEmitter {
     if (oldParent === newParent) {
       return;
     }
-    let oldParentAutosizer: Autosizer | null = null;
-    let newParentAutosizer: Autosizer | null = null;
-    if (newParent !== null) {
-      newParentAutosizer = newParent.autosizer || newParent.parentAutosizer;
-    }
     this.props.parent = newParent;
     if (oldParent) {
-      const index = oldParent.children.indexOf(this);
-      oldParent.children.splice(index, 1);
-      oldParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
-
-      oldParentAutosizer = oldParent.autosizer || oldParent.parentAutosizer;
-      // detach this node only if the autosizer is different from the new parent's autosizer
-      if (
-        (newParentAutosizer === null && oldParentAutosizer !== null) ||
-        (newParentAutosizer !== null &&
-          oldParentAutosizer !== null &&
-          newParentAutosizer.id !== oldParentAutosizer.id)
-      ) {
-        oldParentAutosizer.detach(this);
-      }
-    }
-    if (newParent) {
-      newParent.children.push(this);
-
-      // Tell parent that it's children need to be updated and sorted.
-      newParent.setUpdateType(
-        UpdateType.Children | UpdateType.ZIndexSortedChildren,
-      );
-
-      // If the new parent has an RTT enabled, apply RTT inheritance
-      if (newParent.rtt || newParent.parentHasRenderTexture) {
-        this.applyRTTInheritance(newParent);
-      }
-
-      if (
-        newParentAutosizer !== null &&
-        oldParentAutosizer !== newParentAutosizer
-      ) {
-        newParentAutosizer.attach(this);
-      }
-    }
-    // fetch render bounds from parent
-    this.setUpdateType(UpdateType.Global);
       oldParent.removeChild(this, newParent);
     }
     if (newParent !== null) {
