@@ -53,6 +53,7 @@ export interface QuadOptions {
   rtt: boolean;
   parentHasRenderTexture: boolean;
   framebufferDimensions: Dimensions | null;
+  time?: number | null;
 }
 
 export interface CoreRendererOptions {
