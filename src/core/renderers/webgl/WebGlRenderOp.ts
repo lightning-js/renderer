@@ -53,27 +53,29 @@ export class WebGlRenderOp extends CoreRenderOp {
   /**
    * need to improve this when TextRenderers are refactored
    */
-  readonly sdfShaderProps: Record<string, unknown> | undefined;
-  readonly sdfNode: CoreTextNode | undefined;
-  readonly maxTextures: number;
-  readonly buffers: BufferCollection;
-  readonly shader: WebGlShaderNode;
-  readonly width: number;
-  readonly height: number;
-  readonly clippingRect: RectWithValid;
-  readonly rtt: boolean;
-  readonly parentHasRenderTexture: boolean;
-  readonly framebufferDimensions?: Dimensions | null;
-  readonly alpha: number;
-  readonly pixelRatio: number;
-  readonly time?: number | null;
+  sdfShaderProps: Record<string, unknown> | undefined;
+  sdfNode: CoreTextNode | undefined;
+  maxTextures: number;
+  buffers: BufferCollection;
+  shader: WebGlShaderNode;
+  width: number;
+  height: number;
+  clippingRect: RectWithValid;
+  rtt: boolean;
+  parentHasRenderTexture: boolean;
+  framebufferDimensions?: Dimensions | null;
+  alpha: number;
+  pixelRatio: number;
+  bufferIdx: number;
+  time?: number | null;
 
   constructor(
     readonly renderer: WebGlRenderer,
     quad: RenderOpQuadOptions,
-    readonly bufferIdx: number,
+    bufferIdx: number,
   ) {
     super();
+    this.bufferIdx = bufferIdx;
     this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
     this.shader = quad.shader as WebGlShaderNode;
     this.width = quad.width;

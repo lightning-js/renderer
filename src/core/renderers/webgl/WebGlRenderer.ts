@@ -24,7 +24,7 @@ import {
   type CoreRendererOptions,
   type QuadOptions,
 } from '../CoreRenderer.js';
-import { WebGlRenderOp } from './WebGlRenderOp.js';
+import { WebGlRenderOp, type RenderOpQuadOptions } from './WebGlRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -71,6 +71,7 @@ export class WebGlRenderer extends CoreRenderer {
   fQuadBuffer: Float32Array;
   uiQuadBuffer: Uint32Array;
   renderOps: WebGlRenderOp[] = [];
+  renderOpPool: WebGlRenderOp[] = [];
 
   //// Render Op / Buffer Filling State
   curBufferIdx = 0;
@@ -188,6 +189,7 @@ export class WebGlRenderer extends CoreRenderer {
     const { glw } = this;
     this.curBufferIdx = 0;
     this.curRenderOp = null;
+    this.renderOpPool.push(...this.renderOps);
     this.renderOps.length = 0;
     glw.setScissorTest(false);
     glw.clear();
@@ -261,7 +263,7 @@ export class WebGlRenderer extends CoreRenderer {
     let ro = this.curRenderOp!;
     const reuse = this.reuseRenderOp(params) === false;
     if (reuse) {
-      this.newRenderOp(params, i);
+      this.createRenderOp(params, i);
       ro = this.curRenderOp!;
     }
 
@@ -331,10 +333,42 @@ export class WebGlRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(quad: QuadOptions | WebGlRenderOp, bufferIdx: number) {
-    const curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
+  public createRenderOp(
+    quad: RenderOpQuadOptions | WebGlRenderOp,
+    bufferIdx: number,
+  ): WebGlRenderOp {
+    let curRenderOp = this.renderOpPool.pop();
+    if (curRenderOp) {
+      curRenderOp.bufferIdx = bufferIdx;
+      curRenderOp.buffers =
+        (quad as RenderOpQuadOptions).sdfBuffers || this.quadBufferCollection;
+      curRenderOp.shader = quad.shader as WebGlShaderNode;
+      curRenderOp.width = quad.width;
+      curRenderOp.height = quad.height;
+      curRenderOp.clippingRect = quad.clippingRect;
+      curRenderOp.parentHasRenderTexture = quad.parentHasRenderTexture || false;
+      curRenderOp.framebufferDimensions = quad.framebufferDimensions;
+      curRenderOp.rtt = quad.rtt || false;
+      curRenderOp.alpha = quad.alpha;
+      curRenderOp.pixelRatio =
+        curRenderOp.parentHasRenderTexture === true ? 1 : this.stage.pixelRatio;
+      curRenderOp.sdfShaderProps = (quad as RenderOpQuadOptions).sdfShaderProps;
+      curRenderOp.maxTextures = curRenderOp.shader.program
+        .supportsIndexedTextures
+        ? (this.glw.getParameter(
+            this.glw.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+          ) as number)
+        : 1;
+
+      curRenderOp.numQuads = 0;
+      curRenderOp.textures.length = 0;
+    } else {
+      curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
+    }
+
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
+    return curRenderOp;
   }
 
   /**
@@ -360,7 +394,7 @@ export class WebGlRenderer extends CoreRenderer {
       if (recursive) {
         throw new Error('Unable to add texture to render op');
       }
-      this.newRenderOp(this.curRenderOp!, bufferIdx);
+      this.createRenderOp(this.curRenderOp!, bufferIdx);
       return this.addTexture(texture, bufferIdx, true);
     }
     return textureIdx;
