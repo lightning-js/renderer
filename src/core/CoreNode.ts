@@ -915,7 +915,11 @@ export class CoreNode extends EventEmitter {
    * This method is called in a microtask to release the texture.
    */
   private loadTextureTask = (): void => {
-    const texture = this.texture as Texture;
+    const texture = this.props.texture as Texture;
+    //it is possible that texture is null here if user sets the texture to null right after loadTexture call
+    if (texture === null) {
+      return;
+    }
     if (this.textureOptions.preload === true) {
       this.stage.txManager.loadTexture(texture);
     }
@@ -2646,11 +2650,17 @@ export class CoreNode extends EventEmitter {
     const oldTexture = this.props.texture;
     if (oldTexture) {
       this.unloadTexture();
+      if (this.autosizer !== null && value === null) {
+        this.autosizer.setMode(0); // Set to children size mode
+      }
     }
 
     this.textureCoords = undefined;
     this.props.texture = value;
     if (value !== null) {
+      if (this.autosizer !== null) {
+        this.autosizer.setMode(1); // Set to texture size mode
+      }
       value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
     }

@@ -20,6 +20,11 @@
 import { UpdateType, type CoreNode } from './CoreNode.js';
 import type { Coord } from './lib/utils.js';
 
+export enum AutosizeMode {
+  Children = 0,
+  Texture = 1,
+}
+
 export enum AutosizeUpdateType {
   None = 0,
   Filtered = 1,
@@ -45,7 +50,7 @@ let autosizerId = 0;
 
 export class Autosizer {
   public id = autosizerId++;
-
+  mode: AutosizeMode = AutosizeMode.Children;
   updateType: AutosizeUpdateType = AutosizeUpdateType.All;
   lastWidth: number = 0;
   lastHeight: number = 0;
@@ -66,7 +71,11 @@ export class Autosizer {
     { x: 0, y: 0 },
   ];
 
-  constructor(public node: CoreNode) {}
+  constructor(public node: CoreNode) {
+    if (node.texture !== null) {
+      this.mode = AutosizeMode.Texture;
+    }
+  }
 
   attach(node: CoreNode) {
     this.childMap.set(node.id, node);
@@ -109,10 +118,19 @@ export class Autosizer {
     this.node.setUpdateType(UpdateType.Autosize);
   }
 
+  setMode(mode: AutosizeMode) {
+    this.mode = mode;
+    this.setUpdateType(AutosizeUpdateType.All);
+  }
+
   update(carryOver = false) {
     const node = this.node;
 
-    if (node.texture !== null && node.texture.dimensions !== null) {
+    if (
+      this.mode === AutosizeMode.Texture &&
+      node.texture !== null &&
+      node.texture.dimensions !== null
+    ) {
       const { w, h } = node.texture.dimensions;
       applyDimensions(node, carryOver, w, h);
       this.lastWidth = w;
