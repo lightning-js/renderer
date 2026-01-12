@@ -390,10 +390,7 @@ export class WebGlRenderer extends CoreRenderer {
     // Force new render operation if rendering to texture
     // @todo: This needs to be improved, render operations could also be reused
     // for rendering to texture
-    if (
-      params.parentHasRenderTexture !== undefined ||
-      params.rtt !== undefined
-    ) {
+    if (params.parentHasRenderTexture === true || params.rtt === true) {
       return false;
     }
 
