@@ -130,9 +130,12 @@ export class Stage {
   public readonly eventBus: EventEmitter;
 
   /// State
+  startTime = 0;
   deltaTime = 0;
   lastFrameTime = 0;
   currentFrameTime = 0;
+  elapsedTime = 0;
+  private timedNodes: CoreNode[] = [];
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
   private fpsElapsedTime = 0;
@@ -177,6 +180,8 @@ export class Stage {
     );
 
     this.platform = platform;
+
+    this.startTime = platform.getTimeStamp();
 
     this.eventBus = options.eventBus;
 
@@ -385,9 +390,10 @@ export class Stage {
   }
 
   updateFrameTime() {
-    const newFrameTime = this.platform!.getTimeStamp();
+    const newFrameTime = this.platform.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
+    this.elapsedTime = this.startTime - newFrameTime;
     this.deltaTime = !this.lastFrameTime
       ? 100 / 6
       : newFrameTime - this.lastFrameTime;
@@ -494,6 +500,14 @@ export class Stage {
       this.renderRequested = false;
     }
 
+    if (this.timedNodes.length > 0) {
+      for (let key in this.timedNodes) {
+        if (this.timedNodes[key]!.isRenderable === true) {
+          this.requestRender();
+          break;
+        }
+      }
+    }
     // Check if we need to cleanup textures
     if (this.txMemManager.criticalCleanupRequested === true) {
       this.txMemManager.cleanup();
@@ -759,6 +773,30 @@ export class Stage {
       }
     }
     return topNode || null;
+  }
+
+  /**
+   * add node to timeNodes arrays
+   * @param node
+   * @returns
+   */
+  trackTimedNode(node: CoreNode) {
+    if (this.timedNodes[node.id] !== undefined) {
+      return;
+    }
+    this.timedNodes[node.id] = node;
+  }
+
+  /**
+   * remove node from timeNodes arrays
+   * @param node
+   * @returns
+   */
+  untrackTimedNode(node: CoreNode) {
+    if (this.timedNodes[node.id] === undefined) {
+      return;
+    }
+    delete this.timedNodes[node.id];
   }
 
   /**
