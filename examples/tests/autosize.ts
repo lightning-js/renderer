@@ -11,12 +11,12 @@ import rockoImg from '../assets/rocko.png';
 export async function automation(settings: ExampleSettings) {
   // Snapshot single page
   await autosizeExample(settings);
-  await settings.snapshot();
 }
 
 export default async function autosizeExample({
   renderer,
   testRoot,
+  snapshot,
 }: ExampleSettings) {
   const rootNode = testRoot;
 
@@ -76,17 +76,6 @@ export default async function autosizeExample({
     color: 0xff0000ff,
     parent: test2Parent,
   });
-  // Add second child after 500ms
-  setTimeout(() => {
-    renderer.createNode({
-      x: 90,
-      y: 70,
-      w: 80,
-      h: 60,
-      color: 0x0000ffff,
-      parent: test2Parent,
-    });
-  }, 200);
 
   // Test 3: Autosize parent with 2 children, child 1 position updated
   createLabel('3: Update position', 550, 50);
@@ -113,12 +102,6 @@ export default async function autosizeExample({
     color: 0x0000ffff,
     parent: test3Parent,
   });
-
-  // Move child after 500ms
-  setTimeout(() => {
-    test3Child1.x = 100;
-    test3Child1.y = 100;
-  }, 200);
 
   // Test 4: Autosize parent with 2 children, 1 child alpha 0
   createLabel('4: child alpha=0', 800, 50);
@@ -174,12 +157,6 @@ export default async function autosizeExample({
     parent: test5Parent,
   });
 
-  // Move into screen after 500ms
-  setTimeout(() => {
-    test5Parent.x = 1050;
-    test5Parent.y = 80;
-  }, 200);
-
   // Test 6: Autosize parent with 2 children, later removed child
   createLabel('6: Remove child later', 1300, 50);
   const test6Parent = renderer.createNode({
@@ -205,10 +182,6 @@ export default async function autosizeExample({
     color: 0x0000ffff,
     parent: test6Parent,
   });
-  // Remove child after 500ms
-  setTimeout(() => {
-    test6Child2.parent = null;
-  }, 200);
 
   // Test 7: Autosize OFF, parent with 2 children
   createLabel('7: Autosize=false', 50, 350);
@@ -261,6 +234,36 @@ export default async function autosizeExample({
     src: rockoImg,
     parent: rootNode,
   });
+  console.log('All autosize nodes created.');
 
-  console.log('All autosize tests created.');
+  await snapshot();
+
+  await new Promise((resolve) =>
+    setTimeout(() => {
+      console.log('Making updates to autosize nodes...');
+      // add node to test 2
+      renderer.createNode({
+        x: 90,
+        y: 70,
+        w: 80,
+        h: 60,
+        color: 0x0000ffff,
+        parent: test2Parent,
+      });
+
+      // move child in test 3
+      test3Child1.x = 100;
+      test3Child1.y = 100;
+
+      // Move into screen test 5
+      test5Parent.x = 1050;
+      test5Parent.y = 80;
+
+      // remove child from test 6
+      test6Child2.parent = null;
+      resolve(true);
+    }, 200),
+  );
+
+  await snapshot();
 }

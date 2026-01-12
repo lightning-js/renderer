@@ -106,10 +106,7 @@ export class Autosizer {
 
   setUpdateType(updateType: AutosizeUpdateType) {
     this.updateType |= updateType;
-
-    queueMicrotask(() => {
-      this.node.setUpdateType(UpdateType.Autosize);
-    });
+    this.node.setUpdateType(UpdateType.Autosize);
   }
 
   update(carryOver = false) {
