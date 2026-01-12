@@ -125,6 +125,7 @@ export class WebGlRenderer extends CoreRenderer {
     this.updateClearColor(this.stage.clearColor);
 
     glw.setBlend(true);
+    gl.disable(gl.DEPTH_TEST);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
     createIndexBuffer(glw, this.stage.bufferMemory);
