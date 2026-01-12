@@ -1234,7 +1234,7 @@ export class CoreNode extends EventEmitter {
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
       updateType &= ~UpdateType.RenderBounds; // remove render bounds update
-      this.updateType = updateType;
+      // this.updateType = updateType;
       return;
     }
 
@@ -1774,8 +1774,8 @@ export class CoreNode extends EventEmitter {
       return this.shader!.time(this.stage);
     }
     return this.stage.elapsedTime;
-  }   
- 
+  }
+
   sortChildren() {
     const changedCount = this.zIndexSortList.length;
     if (changedCount === 0) {
