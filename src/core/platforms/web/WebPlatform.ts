@@ -33,15 +33,20 @@ export class WebPlatform extends Platform {
     const runLoop = (currentTime: number = 0) => {
       const targetFrameTime = stage.targetFrameTime;
 
-      // Check if we should throttle this frame
-      if (
-        targetFrameTime > 0 &&
-        currentTime - lastFrameTime < targetFrameTime
-      ) {
-        // Too early for next frame, schedule with setTimeout for precise timing
-        const delay = targetFrameTime - (currentTime - lastFrameTime);
-        setTimeout(() => requestAnimationFrame(runLoop), delay);
-        return;
+      if (targetFrameTime > 0) {
+        // Calculate elapsed time since the last frame
+        const elapsed = currentTime - lastFrameTime;
+
+        // If not enough time has passed, skip this frame
+        if (elapsed < targetFrameTime) {
+          requestAnimationFrame(runLoop);
+          return;
+        }
+
+        // Adjust lastFrameTime to maintain the target FPS
+        lastFrameTime = currentTime - (elapsed % targetFrameTime);
+      } else {
+        lastFrameTime = currentTime;
       }
 
       stage.updateFrameTime();
@@ -81,17 +86,7 @@ export class WebPlatform extends Platform {
       stage.flushFrameEvents();
 
       // Schedule next frame
-      if (targetFrameTime > 0) {
-        // Use setTimeout + rAF combination for precise FPS control
-        const nextFrameDelay = Math.max(
-          0,
-          targetFrameTime - (performance.now() - currentTime),
-        );
-        setTimeout(() => requestAnimationFrame(runLoop), nextFrameDelay);
-      } else {
-        // Use standard rAF when not throttling
-        requestAnimationFrame(runLoop);
-      }
+      requestAnimationFrame(runLoop);
     };
     requestAnimationFrame(runLoop);
   }
