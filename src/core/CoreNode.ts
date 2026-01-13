@@ -1233,7 +1233,6 @@ export class CoreNode extends EventEmitter {
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      updateType &= ~UpdateType.RenderBounds; // remove render bounds update
       return;
     }
 
