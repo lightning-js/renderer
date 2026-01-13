@@ -47,25 +47,22 @@ export const Default: WebGlShaderType = {
     attribute vec2 a_position;
     attribute vec2 a_textureCoords;
     attribute vec4 a_color;
-    attribute vec2 a_nodeCoords;
 
     uniform vec2 u_resolution;
     uniform float u_pixelRatio;
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
-    varying vec2 v_nodeCoords;
 
     void main() {
-      vec2 normalized = a_position * u_pixelRatio;
-      vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
+      vec2 normalized = a_position * u_pixelRatio / u_resolution;
+      vec2 zero_two = normalized * 2.0;
+      vec2 clip_space = zero_two - 1.0;
 
       v_color = a_color;
-      v_nodeCoords = a_nodeCoords;
       v_textureCoords = a_textureCoords;
 
-      gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
-      gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
+      gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
     }
   `,
   fragment: `
@@ -82,8 +79,7 @@ export const Default: WebGlShaderType = {
     varying vec2 v_textureCoords;
 
     void main() {
-      vec4 color = texture2D(u_texture, v_textureCoords);
-      gl_FragColor = vec4(v_color) * texture2D(u_texture, v_textureCoords);
+      gl_FragColor = v_color * texture2D(u_texture, v_textureCoords);
     }
   `,
 };
