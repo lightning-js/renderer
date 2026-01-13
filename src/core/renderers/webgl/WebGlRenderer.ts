@@ -385,11 +385,24 @@ export class WebGlRenderer extends CoreRenderer {
       return false;
     }
 
-    // Force new render operation if rendering to texture
-    // @todo: This needs to be improved, render operations could also be reused
-    // for rendering to texture
-    if (params.parentHasRenderTexture === true || params.rtt === true) {
+    // Force new render operation if rendering to texture is different
+    if (
+      this.curRenderOp.parentHasRenderTexture !==
+        params.parentHasRenderTexture ||
+      this.curRenderOp.rtt !== params.rtt
+    ) {
       return false;
+    }
+
+    if (params.parentHasRenderTexture === true) {
+      if (
+        this.curRenderOp.framebufferDimensions?.w !==
+          params.framebufferDimensions?.w ||
+        this.curRenderOp.framebufferDimensions?.h !==
+          params.framebufferDimensions?.h
+      ) {
+        return false;
+      }
     }
 
     if (
