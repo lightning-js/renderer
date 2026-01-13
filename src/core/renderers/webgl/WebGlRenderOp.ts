@@ -36,7 +36,7 @@ type ReqQuad =
   | 'height'
   | 'width'
   | 'time';
-type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
+export type RenderOpQuadOptions = Pick<QuadOptions, ReqQuad> &
   Partial<Omit<QuadOptions, ReqQuad>> & {
     sdfShaderProps?: Record<string, unknown>;
     sdfBuffers?: BufferCollection;
