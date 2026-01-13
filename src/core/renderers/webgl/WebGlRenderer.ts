@@ -258,11 +258,9 @@ export class WebGlRenderer extends CoreRenderer {
     const u = this.uiQuadBuffer;
     let i = this.curBufferIdx;
 
-    let ro = this.curRenderOp!;
-    const reuse = this.reuseRenderOp(params) === false;
-    if (reuse) {
+    const reuse = this.reuseRenderOp(params);
+    if (reuse === false) {
       this.newRenderOp(params, i);
-      ro = this.curRenderOp!;
     }
 
     let tx = params.texture!;
@@ -320,7 +318,7 @@ export class WebGlRenderer extends CoreRenderer {
     f[i + 30] = 1;
     f[i + 31] = 1;
 
-    ro.numQuads++;
+    this.curRenderOp!.numQuads++;
     this.curBufferIdx = i + 32;
   }
 
