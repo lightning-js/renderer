@@ -578,8 +578,9 @@ export class Inspector {
     if (property === 'text') {
       div.innerHTML = String(value);
 
-      // Keep DOM text invisible without breaking visibility checks by using color:transparent instead of opacity:0
-      div.style.color = 'transparent';
+      // Keep DOM text invisible without breaking visibility checks
+      // Use very low opacity (0.001) instead of 0 so Playwright still detects it
+      div.style.opacity = '0.001';
       div.style.pointerEvents = 'none';
       div.style.userSelect = 'none';
       return;
