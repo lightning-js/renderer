@@ -76,8 +76,10 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     uniform mat3 u_transform;
     uniform float u_pixelRatio;
     uniform float u_size;
+    uniform float u_distanceRange;
 
     varying vec2 v_texcoord;
+    varying float v_scaledDistRange;
 
     void main() {
       vec2 scrolledPosition = a_position * u_size;
@@ -88,7 +90,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
       gl_Position = vec4(screenSpace, 0.0, 1.0);
       v_texcoord = a_textureCoords;
-
+      v_scaledDistRange = u_distanceRange * u_pixelRatio;
     }
   `,
   fragment: `
@@ -99,20 +101,17 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     # endif
     uniform vec4 u_color;
     uniform sampler2D u_texture;
-    uniform float u_distanceRange;
-    uniform float u_pixelRatio;
-    uniform int u_debug;
 
     varying vec2 v_texcoord;
+    varying float v_scaledDistRange;
 
     float median(float r, float g, float b) {
-        return max(min(r, g), min(max(r, g), b));
+        return clamp(b, min(r, g), max(r, g));
     }
 
     void main() {
         vec3 sample = texture2D(u_texture, v_texcoord).rgb;
-        float scaledDistRange = u_distanceRange * u_pixelRatio;
-        float sigDist = scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
+        float sigDist = v_scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
         float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
 
         // Build the final color.
