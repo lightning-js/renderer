@@ -5,13 +5,34 @@ import type { INode } from '../../dist/exports/index.js';
 export async function automation(settings: ExampleSettings) {
   const page = await test(settings);
   page(1);
+  await waitForRendererIdle(settings.renderer);
   await settings.snapshot();
 
   page(2);
+  await waitForRendererIdle(settings.renderer);
   await settings.snapshot();
 
   page(3);
+  await waitForRendererIdle(settings.renderer);
   await settings.snapshot();
+}
+
+function waitForRendererIdle(renderer: ExampleSettings['renderer']) {
+  return new Promise<void>((resolve) => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    const finishSoon = () => {
+      timeout = setTimeout(() => resolve(), 200);
+    };
+
+    renderer.once('idle', () => {
+      if (timeout) clearTimeout(timeout);
+      finishSoon();
+    });
+
+    // Fallback in case `idle` already fired before we attached the listener
+    finishSoon();
+  });
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
@@ -62,7 +83,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       'Container bound: ' + JSON.stringify(containerNode.renderState) + '\n';
 
     for (const node of containerNode.children) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+       
       status += `${
         (node.children[0] as CoreTextNode)?.text
       } bound: ${JSON.stringify(node.renderState)} \n`;
