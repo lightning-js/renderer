@@ -102,16 +102,14 @@ const stylePropertyMap: {
   },
   w: (w) => {
     if (w === 0) {
-      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
-      return { prop: 'width', value: '1px' };
+      return { prop: 'width', value: 'auto' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   h: (h) => {
     if (h === 0) {
-      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
-      return { prop: 'height', value: '1px' };
+      return { prop: 'height', value: 'auto' };
     }
 
     return { prop: 'height', value: `${h}px` };
@@ -911,8 +909,9 @@ export class Inspector {
     if (property === 'text') {
       div.innerHTML = String(value);
 
-      // Keep DOM text invisible without breaking Playwright visibility checks by using color:transparent instead of opacity:0
-      div.style.color = 'transparent';
+      // Keep DOM text invisible without breaking visibility checks
+      // Use very low opacity (0.001) instead of 0 so Playwright still detects it
+      div.style.opacity = '0.001';
       div.style.pointerEvents = 'none';
       div.style.userSelect = 'none';
       return;
