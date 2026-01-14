@@ -400,10 +400,10 @@ export class WebGlRenderer extends CoreRenderer {
       params.framebufferDimensions !== null
     ) {
       if (
-        this.curRenderOp.framebufferDimensions?.w !==
-          params.framebufferDimensions?.w ||
-        this.curRenderOp.framebufferDimensions?.h !==
-          params.framebufferDimensions?.h
+        this.curRenderOp.framebufferDimensions.w !==
+          params.framebufferDimensions.w ||
+        this.curRenderOp.framebufferDimensions.h !==
+          params.framebufferDimensions.h
       ) {
         return false;
       }
