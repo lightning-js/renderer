@@ -52,16 +52,14 @@ const stylePropertyMap: {
   },
   width: (w) => {
     if (w === 0) {
-      // Set to 1px instead of 0px so visibility checks (e.g. Playwright) keep treating the node as visible
-      return { prop: 'width', value: '1px' };
+      return { prop: 'width', value: 'auto' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   height: (h) => {
     if (h === 0) {
-      // Set to 1px instead of 0px so visibility checks (e.g. Playwright) keep treating the node as visible
-      return { prop: 'height', value: '1px' };
+      return { prop: 'height', value: 'auto' };
     }
 
     return { prop: 'height', value: `${h}px` };
