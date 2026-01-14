@@ -47,12 +47,14 @@ export const Default: WebGlShaderType = {
     attribute vec2 a_position;
     attribute vec2 a_textureCoords;
     attribute vec4 a_color;
+    attribute vec2 a_nodeCoords;
 
     uniform vec2 u_resolution;
     uniform float u_pixelRatio;
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
+    varying vec2 v_nodeCoords;
 
     void main() {
       vec2 normalized = a_position * u_pixelRatio / u_resolution;
@@ -61,6 +63,7 @@ export const Default: WebGlShaderType = {
 
       v_color = a_color;
       v_textureCoords = a_textureCoords;
+      v_nodeCoords = a_nodeCoords;
 
       gl_Position = vec4(clip_space * vec2(1.0, -1.0), 0, 1);
     }
