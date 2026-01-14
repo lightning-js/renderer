@@ -102,16 +102,14 @@ const stylePropertyMap: {
   },
   w: (w) => {
     if (w === 0) {
-      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
-      return { prop: 'width', value: '1px' };
+      return { prop: 'width', value: 'auto' };
     }
 
     return { prop: 'width', value: `${w}px` };
   },
   h: (h) => {
     if (h === 0) {
-      // Set to 1px instead of 0px so Playwright's toBeVisible() passes
-      return { prop: 'height', value: '1px' };
+      return { prop: 'height', value: 'auto' };
     }
 
     return { prop: 'height', value: `${h}px` };
