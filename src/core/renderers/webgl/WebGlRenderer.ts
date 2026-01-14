@@ -394,7 +394,11 @@ export class WebGlRenderer extends CoreRenderer {
       return false;
     }
 
-    if (params.parentHasRenderTexture === true) {
+    if (
+      params.parentHasRenderTexture === true &&
+      this.curRenderOp.framebufferDimensions !== null &&
+      params.framebufferDimensions !== null
+    ) {
       if (
         this.curRenderOp.framebufferDimensions?.w !==
           params.framebufferDimensions?.w ||
