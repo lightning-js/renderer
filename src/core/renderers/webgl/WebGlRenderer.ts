@@ -258,11 +258,9 @@ export class WebGlRenderer extends CoreRenderer {
     const u = this.uiQuadBuffer;
     let i = this.curBufferIdx;
 
-    let ro = this.curRenderOp!;
-    const reuse = this.reuseRenderOp(params) === false;
-    if (reuse) {
+    const reuse = this.reuseRenderOp(params);
+    if (reuse === false) {
       this.newRenderOp(params, i);
-      ro = this.curRenderOp!;
     }
 
     let tx = params.texture!;
@@ -320,7 +318,7 @@ export class WebGlRenderer extends CoreRenderer {
     f[i + 30] = 1;
     f[i + 31] = 1;
 
-    ro.numQuads++;
+    this.curRenderOp!.numQuads++;
     this.curBufferIdx = i + 32;
   }
 
@@ -387,14 +385,28 @@ export class WebGlRenderer extends CoreRenderer {
       return false;
     }
 
-    // Force new render operation if rendering to texture
-    // @todo: This needs to be improved, render operations could also be reused
-    // for rendering to texture
+    // Force new render operation if rendering to texture is different
     if (
-      params.parentHasRenderTexture !== undefined ||
-      params.rtt !== undefined
+      this.curRenderOp.parentHasRenderTexture !==
+        params.parentHasRenderTexture ||
+      this.curRenderOp.rtt !== params.rtt
     ) {
       return false;
+    }
+
+    if (
+      params.parentHasRenderTexture === true &&
+      this.curRenderOp.framebufferDimensions !== null &&
+      params.framebufferDimensions !== null
+    ) {
+      if (
+        this.curRenderOp.framebufferDimensions.w !==
+          params.framebufferDimensions.w ||
+        this.curRenderOp.framebufferDimensions.h !==
+          params.framebufferDimensions.h
+      ) {
+        return false;
+      }
     }
 
     if (
