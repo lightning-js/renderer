@@ -31,19 +31,23 @@ export enum AutosizeUpdateType {
   All = 2,
 }
 
-const applyDimensions = (
-  node: CoreNode,
-  carryOver: boolean,
-  w: number,
-  h: number,
-) => {
-  if (carryOver === true) {
-    node.w = w;
-    node.h = h;
-    return;
-  }
+const applyDimensions = (node: CoreNode, w: number, h: number) => {
   node.props.w = w;
   node.props.h = h;
+  node.setUpdateType(UpdateType.Local);
+};
+
+const getFilteredChildren = (
+  children: number[],
+  childMap: Map<number, CoreNode>,
+) => {
+  const filtered: CoreNode[] = [];
+  while (children.length > 0) {
+    const id = children.pop()!;
+    const child = childMap.get(id)!;
+    filtered.push(child);
+  }
+  return filtered;
 };
 
 let autosizerId = 0;
@@ -56,7 +60,7 @@ export class Autosizer {
   lastHeight: number = 0;
   lastHasChanged: boolean = false;
 
-  flaggedChildren: CoreNode[] = [];
+  flaggedChildren: number[] = [];
   childMap: Map<number, CoreNode> = new Map();
 
   minX = Infinity;
@@ -104,12 +108,12 @@ export class Autosizer {
     }
   }
 
-  patch(node: CoreNode) {
-    const entry = this.childMap.get(node.id);
+  patch(id: number) {
+    const entry = this.childMap.get(id);
     if (entry === undefined) {
       return;
     }
-    this.flaggedChildren.push(node);
+    this.flaggedChildren.push(id);
     this.setUpdateType(AutosizeUpdateType.Filtered);
   }
 
@@ -123,7 +127,7 @@ export class Autosizer {
     this.setUpdateType(AutosizeUpdateType.All);
   }
 
-  update(carryOver = false) {
+  update() {
     const node = this.node;
 
     if (
@@ -132,7 +136,9 @@ export class Autosizer {
       node.texture.dimensions !== null
     ) {
       const { w, h } = node.texture.dimensions;
-      applyDimensions(node, carryOver, w, h);
+      if (w !== node.w || h !== node.h) {
+        applyDimensions(node, w, h);
+      }
       this.lastWidth = w;
       this.lastHeight = h;
       this.updateType = AutosizeUpdateType.None;
@@ -141,7 +147,7 @@ export class Autosizer {
 
     let filtered: CoreNode[] =
       this.updateType === AutosizeUpdateType.Filtered
-        ? this.flaggedChildren
+        ? getFilteredChildren(this.flaggedChildren, this.childMap)
         : Array.from(this.childMap.values());
 
     if (filtered.length === 0) {
@@ -196,13 +202,12 @@ export class Autosizer {
         if (corner.y > maxY) maxY = corner.y;
       }
     }
-    this.flaggedChildren.length = 0;
     this.updateType = AutosizeUpdateType.None;
 
     const newWidth = maxX > 0 ? maxX : 0;
     const newHeight = maxY > 0 ? maxY : 0;
 
-    applyDimensions(node, carryOver, newWidth, newHeight);
+    applyDimensions(node, newWidth, newHeight);
     this.lastWidth = newWidth;
     this.lastHeight = newHeight;
   }
