@@ -193,7 +193,7 @@ export class ImageTexture extends Texture {
     sw: number | null,
     sh: number | null,
   ): Promise<{
-    data: ImageBitmap | HTMLImageElement;
+    data: ImageBitmap | HTMLImageElement | WebGLTexture;
     premultiplyAlpha: boolean;
   }> {
     const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');

@@ -112,6 +112,17 @@ export class WebGlCtxTexture extends CoreContextTexture {
     this.state = 'loading';
     this.textureSource.setState('loading');
 
+    // Special case for the ION runtime which creates WebGLTextures directly
+    // as a result of the createImageBitmap platform method.
+    if (this.textureSource.textureData?.data instanceof WebGLTexture) {
+      this._nativeCtxTexture = this.textureSource.textureData.data;
+      this.state = 'loaded';
+      this.textureSource.setState('loaded');
+
+      //FIXME get width and height from texture somehow
+      return;
+    }
+
     // Await the native texture creation to ensure GPU buffer is fully allocated
     this._nativeCtxTexture = this.createNativeCtxTexture();
 
