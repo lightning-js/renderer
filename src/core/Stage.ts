@@ -393,7 +393,7 @@ export class Stage {
     const newFrameTime = this.platform.getTimeStamp();
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
-    this.elapsedTime = this.startTime - newFrameTime;
+    this.elapsedTime = newFrameTime - this.startTime;
     this.deltaTime = !this.lastFrameTime
       ? 100 / 6
       : newFrameTime - this.lastFrameTime;
