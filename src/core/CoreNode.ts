@@ -962,7 +962,7 @@ export class CoreNode extends EventEmitter {
 
   protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
     if (this.autosizer !== null) {
-      this.autosizer.update(true);
+      this.autosizer.update();
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
@@ -1135,16 +1135,15 @@ export class CoreNode extends EventEmitter {
     let updateType = this.updateType;
     let childUpdateType = this.childUpdateType;
     let updateParent = false;
+
+    //this needs to be handled before setting updateTypes are reset
+    if (updateType & UpdateType.Autosize && this.autosizer !== null) {
+      this.autosizer.update();
+    }
+
     // reset update type
     this.updateType = 0;
     this.childUpdateType = 0;
-
-    if (updateType & UpdateType.Autosize && this.autosizer !== null) {
-      this.autosizer.update();
-
-      updateType |= UpdateType.Local;
-      updateParent = hasParent;
-    }
 
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
@@ -1254,7 +1253,7 @@ export class CoreNode extends EventEmitter {
       this.isRenderable === true &&
       this.parentAutosizer !== null
     ) {
-      this.parentAutosizer.patch(this);
+      this.parentAutosizer.patch(this.id);
     }
 
     if (updateType & UpdateType.Clipping) {
