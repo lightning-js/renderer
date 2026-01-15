@@ -58,6 +58,7 @@ export class WebGlCtxSubTexture extends WebGlCtxTexture {
       | SubTextureProps
       | CompressedData
       | HTMLImageElement
+      | WebGLTexture
       | null,
   ): Dimensions {
     if (data === null) {
