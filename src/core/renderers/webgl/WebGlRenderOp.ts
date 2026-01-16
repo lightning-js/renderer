@@ -63,7 +63,7 @@ export class WebGlRenderOp extends CoreRenderOp {
   clippingRect: RectWithValid;
   rtt: boolean;
   parentHasRenderTexture: boolean;
-  framebufferDimensions?: Dimensions | null;
+  framebufferDimensions: Dimensions | null;
   alpha: number;
   pixelRatio: number;
   bufferIdx: number;
@@ -82,7 +82,7 @@ export class WebGlRenderOp extends CoreRenderOp {
     this.height = quad.height;
     this.clippingRect = quad.clippingRect;
     this.parentHasRenderTexture = quad.parentHasRenderTexture;
-    this.framebufferDimensions = quad.framebufferDimensions;
+    this.framebufferDimensions = quad.framebufferDimensions || null;
     this.rtt = quad.rtt;
     this.alpha = quad.alpha;
     this.pixelRatio =

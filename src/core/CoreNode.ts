@@ -764,6 +764,9 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
     const p = (this.props = {} as CoreNodeProps);
+    //inital update type
+    let initialUpdateType =
+      UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState;
 
     // Fast-path assign only known keys
     p.x = props.x;
@@ -773,8 +776,8 @@ export class CoreNode extends EventEmitter {
     p.alpha = props.alpha;
     p.autosize = props.autosize;
     p.clipping = props.clipping;
-    p.color = props.color;
 
+    p.color = props.color;
     p.colorTop = props.colorTop;
     p.colorBottom = props.colorBottom;
     p.colorLeft = props.colorLeft;
@@ -783,6 +786,22 @@ export class CoreNode extends EventEmitter {
     p.colorTr = props.colorTr;
     p.colorBl = props.colorBl;
     p.colorBr = props.colorBr;
+
+    //check if any color props are set for premultiplied color updates
+    if (
+      props.color > 0 ||
+      props.colorTop > 0 ||
+      props.colorBottom > 0 ||
+      props.colorLeft > 0 ||
+      props.colorRight > 0 ||
+      props.colorTl > 0 ||
+      props.colorTr > 0 ||
+      props.colorBl > 0 ||
+      props.colorBr > 0
+    ) {
+      this.hasColorProps = true;
+      initialUpdateType |= UpdateType.PremultipliedColors;
+    }
 
     p.scaleX = props.scaleX;
     p.scaleY = props.scaleY;
@@ -828,9 +847,7 @@ export class CoreNode extends EventEmitter {
     this.boundsMargin = props.boundsMargin;
     this.interactive = props.interactive;
 
-    this.setUpdateType(
-      UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState,
-    );
+    this.setUpdateType(initialUpdateType);
 
     // if the default texture isn't loaded yet, wait for it to load
     // this only happens when the node is created before the stage is ready
@@ -1072,7 +1089,7 @@ export class CoreNode extends EventEmitter {
     const parentHasRenderTexture = this.parentHasRenderTexture;
     const hasParent = props.parent !== null;
 
-    let renderState: CoreNodeRenderState | null = null;
+    let newRenderState: CoreNodeRenderState | null = null;
 
     let updateType = this.updateType;
     let childUpdateType = this.childUpdateType;
@@ -1154,7 +1171,7 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.RenderState) {
-      renderState = this.checkRenderBounds();
+      newRenderState = this.checkRenderBounds();
 
       updateType |= UpdateType.IsRenderable;
       updateParent = hasParent;
@@ -1162,8 +1179,8 @@ export class CoreNode extends EventEmitter {
       // if we're not going out of bounds, update the render state
       // this is done so the update loop can finish before we mark a node
       // as out of bounds
-      if (renderState !== CoreNodeRenderState.OutOfBounds) {
-        this.updateRenderState(renderState);
+      if (newRenderState !== CoreNodeRenderState.OutOfBounds) {
+        this.updateRenderState(newRenderState);
       }
     }
 
@@ -1228,14 +1245,15 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    if (updateParent === true) {
-      parent!.setUpdateType(UpdateType.Children);
+    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
+      // Delay updating children until the node is in bounds
+      this.updateType = updateType;
+      this.childUpdateType = childUpdateType;
+      return;
     }
 
-    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      updateType &= ~UpdateType.RenderBounds; // remove render bounds update
-      this.updateType = updateType;
-      return;
+    if (updateParent === true) {
+      parent!.setUpdateType(UpdateType.Children);
     }
 
     if (
@@ -1289,17 +1307,17 @@ export class CoreNode extends EventEmitter {
     // If we're out of bounds, apply the render state now
     // this is done so nodes can finish their entire update loop before
     // being marked as out of bounds
-    if (renderState === CoreNodeRenderState.OutOfBounds) {
-      this.updateRenderState(renderState);
+    if (newRenderState === CoreNodeRenderState.OutOfBounds) {
+      this.updateRenderState(newRenderState);
       this.updateIsRenderable();
 
       if (
         this.rtt === true &&
-        renderState === CoreNodeRenderState.OutOfBounds
+        newRenderState === CoreNodeRenderState.OutOfBounds
       ) {
         // notify children that we are going out of bounds
         // we have to do this now before we stop processing the render tree
-        this.notifyChildrenRTTOfUpdate(renderState);
+        this.notifyChildrenRTTOfUpdate(newRenderState);
       }
     }
   }
@@ -1774,8 +1792,8 @@ export class CoreNode extends EventEmitter {
       return this.shader!.time(this.stage);
     }
     return this.stage.elapsedTime;
-  }   
- 
+  }
+
   sortChildren() {
     const changedCount = this.zIndexSortList.length;
     if (changedCount === 0) {
@@ -1859,6 +1877,7 @@ export class CoreNode extends EventEmitter {
       this.zIndexSortList.push(node);
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
+    this.setUpdateType(UpdateType.Children);
   }
 
   //#region Properties

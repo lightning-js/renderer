@@ -27,7 +27,6 @@ import {
 } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
-import { assertTruthy } from '../../../utils.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
 import { normalizeCanvasColor } from '../../lib/colorCache.js';
 
@@ -43,7 +42,6 @@ export class CanvasRenderer extends CoreRenderer {
     super(options);
 
     this.mode = 'canvas';
-
     const { canvas } = options;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -72,28 +70,15 @@ export class CanvasRenderer extends CoreRenderer {
     const ctx = this.context;
     const { tx, ty, ta, tb, tc, td, clippingRect } = quad;
     let texture = quad.texture;
-    const textureType = texture?.type;
-    assertTruthy(textureType, 'Texture type is not defined');
-
-    // The Canvas2D renderer only supports image and color textures
-    if (
-      textureType !== TextureType.image &&
-      textureType !== TextureType.color &&
-      textureType !== TextureType.subTexture &&
-      textureType !== TextureType.noise
-    ) {
-      return;
-    }
-
-    if (texture) {
-      if (texture instanceof SubTexture) {
-        texture = texture.parentTexture;
-      }
-
-      if (texture.state === 'freed') {
-        return;
-      }
-      if (texture.state !== 'loaded') {
+    // The Canvas2D renderer only supports image textures, no textures are used for color blocks
+    if (texture !== null) {
+      const textureType = texture.type;
+      if (
+        textureType !== TextureType.image &&
+        textureType !== TextureType.subTexture &&
+        textureType !== TextureType.color &&
+        textureType !== TextureType.noise
+      ) {
         return;
       }
     }
@@ -151,50 +136,46 @@ export class CanvasRenderer extends CoreRenderer {
 
   renderContext(quad: QuadOptions) {
     const color = quad.colorTl;
-    const textureType = quad.texture?.type;
-    if (
-      (textureType === TextureType.image ||
-        textureType === TextureType.subTexture ||
-        textureType === TextureType.noise) &&
-      quad.texture?.ctxTexture
-    ) {
+    const texture = quad.texture!;
+    const textureType = texture.type;
+    if (textureType !== TextureType.color) {
       const tintColor = parseColor(color);
-      const image = (quad.texture.ctxTexture as CanvasTexture).getImage(
-        tintColor,
-      );
-      this.context.globalAlpha = tintColor.a ?? quad.alpha;
-      if (textureType === TextureType.subTexture) {
+      if (textureType !== TextureType.subTexture) {
+        const image = (texture.ctxTexture as CanvasTexture).getImage(tintColor);
+        this.context.globalAlpha = tintColor.a ?? quad.alpha;
         this.context.drawImage(
           image,
-          (quad.texture as SubTexture).props.x,
-          (quad.texture as SubTexture).props.y,
-          (quad.texture as SubTexture).props.w,
-          (quad.texture as SubTexture).props.h,
           quad.tx,
           quad.ty,
           quad.width,
           quad.height,
         );
-      } else {
-        try {
-          this.context.drawImage(
-            image,
-            quad.tx,
-            quad.ty,
-            quad.width,
-            quad.height,
-          );
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
-          // noop
-        }
+        this.context.globalAlpha = 1;
+        return;
       }
+      const image = (
+        (texture as SubTexture).parentTexture.ctxTexture as CanvasTexture
+      ).getImage(tintColor);
+      const props = (texture as SubTexture).props;
+
+      this.context.globalAlpha = tintColor.a ?? quad.alpha;
+      this.context.drawImage(
+        image,
+        props.x,
+        props.y,
+        props.w,
+        props.h,
+        quad.tx,
+        quad.ty,
+        quad.width,
+        quad.height,
+      );
       this.context.globalAlpha = 1;
       return;
     }
     const hasGradient =
       quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
-    if (textureType === TextureType.color && hasGradient) {
+    if (hasGradient === true) {
       let endX: number = quad.tx;
       let endY: number = quad.ty;
       let endColor: number;
@@ -219,7 +200,7 @@ export class CanvasRenderer extends CoreRenderer {
       gradient.addColorStop(1, normalizeCanvasColor(endColor));
       this.context.fillStyle = gradient;
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
-    } else if (textureType === TextureType.color) {
+    } else {
       this.context.fillStyle = normalizeCanvasColor(color);
       this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
     }
