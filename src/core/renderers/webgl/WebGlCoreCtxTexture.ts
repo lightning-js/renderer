@@ -262,9 +262,8 @@ export class WebGlCoreCtxTexture extends CoreContextTexture {
 
       this.setTextureMemUse(width * height * formatBytes);
     } else {
-      console.error(
+      throw new Error(
         `WebGlCoreCtxTexture.onLoadRequest: Unexpected textureData returned`,
-        textureData,
       );
 
       this.state = 'failed';
