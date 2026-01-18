@@ -736,8 +736,8 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup() {
-    this.txMemManager.cleanup();
+  cleanup(full: boolean = false) {
+    this.txMemManager.cleanup(full);
   }
 
   set clearColor(value: number) {
