@@ -253,7 +253,7 @@ export class TextureMemoryManager {
     texture.memUsed = 0;
   }
 
-  cleanup() {
+  cleanup(full: boolean = false) {
     const critical = this.criticalCleanupRequested;
     this.lastCleanupTime = this.frameTime;
 
@@ -266,7 +266,7 @@ export class TextureMemoryManager {
 
     if (this.debugLogging === true) {
       console.log(
-        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}.`,
+        `[TextureMemoryManager] Cleaning up textures. Critical: ${critical}. Full: ${full}`,
       );
     }
 
@@ -279,7 +279,7 @@ export class TextureMemoryManager {
 
     for (let i = 0; i < this.loadedTextures.length; i++) {
       // Early exit: target memory reached
-      if (currentMemUsed < memTarget) {
+      if (!full && currentMemUsed < memTarget) {
         break;
       }
 
