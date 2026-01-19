@@ -1098,175 +1098,177 @@ export class CoreNode extends EventEmitter {
     this.updateType = 0;
     this.childUpdateType = 0;
 
-    if (updateType & UpdateType.Local) {
-      this.updateLocalTransform();
+    if (updateType > UpdateType.Children) {
+      if (updateType & UpdateType.Local) {
+        this.updateLocalTransform();
 
-      updateType |= UpdateType.Global;
-      updateParent = hasParent;
-    }
-
-    // Handle specific RTT updates at this node level
-    if (updateType & UpdateType.RenderTexture && this.rtt === true) {
-      this.hasRTTupdates = true;
-    }
-
-    if (updateType & UpdateType.Global) {
-      if (this.parentHasRenderTexture === true && parent?.rtt === true) {
-        // we are at the start of the RTT chain, so we need to reset the globalTransform
-        // for correct RTT rendering
-        this.globalTransform = Matrix3d.identity();
-
-        // Maintain a full scene global transform for bounds detection
-        this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.globalTransform || Matrix3d.identity(),
-        ).multiply(this.localTransform!);
-      } else if (
-        this.parentHasRenderTexture === true &&
-        parent?.rtt === false
-      ) {
-        // we're part of an RTT chain but our parent is not the main RTT node
-        // so we need to propogate the sceneGlobalTransform of the parent
-        // to maintain a full scene global transform for bounds detection
-        this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.sceneGlobalTransform || this.localTransform!,
-        ).multiply(this.localTransform!);
-
-        this.globalTransform = Matrix3d.copy(
-          parent?.globalTransform || this.localTransform!,
-          this.globalTransform,
-        );
-      } else {
-        this.globalTransform = Matrix3d.copy(
-          parent?.globalTransform || this.localTransform!,
-          this.globalTransform,
-        );
+        updateType |= UpdateType.Global;
+        updateParent = hasParent;
       }
 
-      if (parent !== null) {
-        this.globalTransform.multiply(this.localTransform!);
+      // Handle specific RTT updates at this node level
+      if (updateType & UpdateType.RenderTexture && this.rtt === true) {
+        this.hasRTTupdates = true;
       }
-      this.calculateRenderCoords();
-      this.updateBoundingRect();
 
-      updateType |=
-        UpdateType.RenderState |
-        UpdateType.Children |
-        UpdateType.RecalcUniforms;
-      updateParent = hasParent;
-      childUpdateType |= UpdateType.Global;
+      if (updateType & UpdateType.Global) {
+        if (this.parentHasRenderTexture === true && parent?.rtt === true) {
+          // we are at the start of the RTT chain, so we need to reset the globalTransform
+          // for correct RTT rendering
+          this.globalTransform = Matrix3d.identity();
 
-      if (this.clipping === true) {
-        updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
+          // Maintain a full scene global transform for bounds detection
+          this.sceneGlobalTransform = Matrix3d.copy(
+            parent?.globalTransform || Matrix3d.identity(),
+          ).multiply(this.localTransform!);
+        } else if (
+          this.parentHasRenderTexture === true &&
+          parent?.rtt === false
+        ) {
+          // we're part of an RTT chain but our parent is not the main RTT node
+          // so we need to propogate the sceneGlobalTransform of the parent
+          // to maintain a full scene global transform for bounds detection
+          this.sceneGlobalTransform = Matrix3d.copy(
+            parent?.sceneGlobalTransform || this.localTransform!,
+          ).multiply(this.localTransform!);
+
+          this.globalTransform = Matrix3d.copy(
+            parent?.globalTransform || this.localTransform!,
+            this.globalTransform,
+          );
+        } else {
+          this.globalTransform = Matrix3d.copy(
+            parent?.globalTransform || this.localTransform!,
+            this.globalTransform,
+          );
+        }
+
+        if (parent !== null) {
+          this.globalTransform.multiply(this.localTransform!);
+        }
+        this.calculateRenderCoords();
+        this.updateBoundingRect();
+
+        updateType |=
+          UpdateType.RenderState |
+          UpdateType.Children |
+          UpdateType.RecalcUniforms;
+        updateParent = hasParent;
+        childUpdateType |= UpdateType.Global;
+
+        if (this.clipping === true) {
+          updateType |= UpdateType.Clipping | UpdateType.RenderBounds;
+          updateParent = hasParent;
+          childUpdateType |= UpdateType.RenderBounds;
+        }
+      }
+
+      if (updateType & UpdateType.RenderBounds) {
+        this.createRenderBounds();
+
+        updateType |= UpdateType.RenderState | UpdateType.Children;
         updateParent = hasParent;
         childUpdateType |= UpdateType.RenderBounds;
       }
-    }
 
-    if (updateType & UpdateType.RenderBounds) {
-      this.createRenderBounds();
+      if (updateType & UpdateType.RenderState) {
+        newRenderState = this.checkRenderBounds();
 
-      updateType |= UpdateType.RenderState | UpdateType.Children;
-      updateParent = hasParent;
-      childUpdateType |= UpdateType.RenderBounds;
-    }
+        updateType |= UpdateType.IsRenderable;
+        updateParent = hasParent;
 
-    if (updateType & UpdateType.RenderState) {
-      newRenderState = this.checkRenderBounds();
-
-      updateType |= UpdateType.IsRenderable;
-      updateParent = hasParent;
-
-      // if we're not going out of bounds, update the render state
-      // this is done so the update loop can finish before we mark a node
-      // as out of bounds
-      if (newRenderState !== CoreNodeRenderState.OutOfBounds) {
-        this.updateRenderState(newRenderState);
+        // if we're not going out of bounds, update the render state
+        // this is done so the update loop can finish before we mark a node
+        // as out of bounds
+        if (newRenderState !== CoreNodeRenderState.OutOfBounds) {
+          this.updateRenderState(newRenderState);
+        }
       }
-    }
 
-    if (updateType & UpdateType.WorldAlpha) {
-      this.worldAlpha = (parent?.worldAlpha ?? 1) * this.props.alpha;
-      updateType |=
-        UpdateType.PremultipliedColors |
-        UpdateType.Children |
-        UpdateType.IsRenderable;
-      updateParent = hasParent;
-      childUpdateType |= UpdateType.WorldAlpha;
-    }
-
-    if (updateType & UpdateType.IsRenderable) {
-      this.updateIsRenderable();
-    }
-
-    if (updateType & UpdateType.Clipping) {
-      this.calculateClippingRect(parentClippingRect);
-      updateType |= UpdateType.Children;
-      updateParent = hasParent;
-
-      childUpdateType |= UpdateType.Clipping | UpdateType.RenderBounds;
-    }
-
-    if (updateType & UpdateType.PremultipliedColors) {
-      const alpha = this.worldAlpha;
-
-      const tl = props.colorTl;
-      const tr = props.colorTr;
-      const bl = props.colorBl;
-      const br = props.colorBr;
-
-      // Fast equality check (covers all 4 corners)
-      const same = tl === tr && tl === bl && tl === br;
-
-      const merged = mergeColorAlphaPremultiplied(tl, alpha, true);
-
-      this.premultipliedColorTl = merged;
-
-      if (same === true) {
-        this.premultipliedColorTr =
-          this.premultipliedColorBl =
-          this.premultipliedColorBr =
-            merged;
-      } else {
-        this.premultipliedColorTr = mergeColorAlphaPremultiplied(
-          tr,
-          alpha,
-          true,
-        );
-        this.premultipliedColorBl = mergeColorAlphaPremultiplied(
-          bl,
-          alpha,
-          true,
-        );
-        this.premultipliedColorBr = mergeColorAlphaPremultiplied(
-          br,
-          alpha,
-          true,
-        );
+      if (updateType & UpdateType.WorldAlpha) {
+        this.worldAlpha = (parent?.worldAlpha ?? 1) * this.props.alpha;
+        updateType |=
+          UpdateType.PremultipliedColors |
+          UpdateType.Children |
+          UpdateType.IsRenderable;
+        updateParent = hasParent;
+        childUpdateType |= UpdateType.WorldAlpha;
       }
-    }
 
-    if (this.renderState === CoreNodeRenderState.OutOfBounds) {
-      // Delay updating children until the node is in bounds
-      this.updateType = updateType;
-      this.childUpdateType = childUpdateType;
-      return;
-    }
+      if (updateType & UpdateType.IsRenderable) {
+        this.updateIsRenderable();
+      }
 
-    if (updateParent === true) {
-      parent!.setUpdateType(UpdateType.Children);
-    }
+      if (updateType & UpdateType.Clipping) {
+        this.calculateClippingRect(parentClippingRect);
+        updateType |= UpdateType.Children;
+        updateParent = hasParent;
 
-    if (
-      updateType & UpdateType.RecalcUniforms &&
-      this.hasShaderUpdater === true
-    ) {
-      this.updateShaderUniforms = true;
-    }
+        childUpdateType |= UpdateType.Clipping | UpdateType.RenderBounds;
+      }
 
-    if (this.isRenderable === true && this.updateShaderUniforms === true) {
-      this.updateShaderUniforms = false;
-      //this exists because the boolean hasShaderUpdater === true
-      this.shader!.update!();
+      if (updateType & UpdateType.PremultipliedColors) {
+        const alpha = this.worldAlpha;
+
+        const tl = props.colorTl;
+        const tr = props.colorTr;
+        const bl = props.colorBl;
+        const br = props.colorBr;
+
+        // Fast equality check (covers all 4 corners)
+        const same = tl === tr && tl === bl && tl === br;
+
+        const merged = mergeColorAlphaPremultiplied(tl, alpha, true);
+
+        this.premultipliedColorTl = merged;
+
+        if (same === true) {
+          this.premultipliedColorTr =
+            this.premultipliedColorBl =
+            this.premultipliedColorBr =
+              merged;
+        } else {
+          this.premultipliedColorTr = mergeColorAlphaPremultiplied(
+            tr,
+            alpha,
+            true,
+          );
+          this.premultipliedColorBl = mergeColorAlphaPremultiplied(
+            bl,
+            alpha,
+            true,
+          );
+          this.premultipliedColorBr = mergeColorAlphaPremultiplied(
+            br,
+            alpha,
+            true,
+          );
+        }
+      }
+
+      if (this.renderState === CoreNodeRenderState.OutOfBounds) {
+        // Delay updating children until the node is in bounds
+        this.updateType = updateType;
+        this.childUpdateType = childUpdateType;
+        return;
+      }
+
+      if (updateParent === true) {
+        parent!.setUpdateType(UpdateType.Children);
+      }
+
+      if (
+        updateType & UpdateType.RecalcUniforms &&
+        this.hasShaderUpdater === true
+      ) {
+        this.updateShaderUniforms = true;
+      }
+
+      if (this.isRenderable === true && this.updateShaderUniforms === true) {
+        this.updateShaderUniforms = false;
+        //this exists because the boolean hasShaderUpdater === true
+        this.shader!.update!();
+      }
     }
 
     if (updateType & UpdateType.Children && this.children.length > 0) {
