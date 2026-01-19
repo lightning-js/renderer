@@ -57,6 +57,7 @@ import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
+import { AutosizeMode, Autosizer } from './Autosizer.js';
 import {
   bucketSortByZIndex,
   incrementalRepositionByZIndex,
@@ -2650,7 +2651,7 @@ export class CoreNode extends EventEmitter {
     if (oldTexture) {
       this.unloadTexture();
       if (this.autosizer !== null && value === null) {
-        this.autosizer.setMode(0); // Set to children size mode
+        this.autosizer.setMode(AutosizeMode.Children); // Set to children size mode
       }
     }
 
@@ -2658,7 +2659,7 @@ export class CoreNode extends EventEmitter {
     this.props.texture = value;
     if (value !== null) {
       if (this.autosizer !== null) {
-        this.autosizer.setMode(1); // Set to texture size mode
+        this.autosizer.setMode(AutosizeMode.Texture); // Set to texture size mode
       }
       value.setRenderableOwner(this._id, this.isRenderable);
       this.loadTexture();
