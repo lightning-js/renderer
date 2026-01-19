@@ -279,7 +279,7 @@ export class TextureMemoryManager {
 
     for (let i = 0; i < this.loadedTextures.length; i++) {
       // Early exit: target memory reached
-      if (!full && currentMemUsed < memTarget) {
+      if (full === false && currentMemUsed < memTarget) {
         break;
       }
 
