@@ -2012,19 +2012,28 @@ export class CoreNode extends EventEmitter {
   }
 
   set w(value: number) {
-    if (this.props.w !== value) {
-      this.props.w = value;
-      this.setUpdateType(UpdateType.Local);
+    const props = this.props;
+    if (props.w !== value) {
+      props.w = value;
+      let updateType = UpdateType.Local;
 
-      if (this.props.rtt === true) {
+      if (
+        props.texture !== null &&
+        this.stage.calculateTextureCoord === true &&
+        props.textureOptions !== null
+      ) {
+        this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+      }
+
+      if (props.rtt === true) {
         this.framebufferDimensions!.w = value;
         this.texture = this.stage.txManager.createTexture(
           'RenderTexture',
           this.framebufferDimensions!,
         );
-
-        this.setUpdateType(UpdateType.RenderTexture);
+        updateType |= UpdateType.RenderTexture;
       }
+      this.setUpdateType(updateType);
     }
   }
 
@@ -2033,19 +2042,28 @@ export class CoreNode extends EventEmitter {
   }
 
   set h(value: number) {
-    if (this.props.h !== value) {
-      this.props.h = value;
-      this.setUpdateType(UpdateType.Local);
+    const props = this.props;
+    if (props.h !== value) {
+      props.h = value;
+      let updateType = UpdateType.Local;
 
-      if (this.props.rtt === true) {
+      if (
+        props.texture !== null &&
+        this.stage.calculateTextureCoord === true &&
+        props.textureOptions !== null
+      ) {
+        this.textureCoords = this.stage.renderer.getTextureCoords!(this);
+      }
+
+      if (props.rtt === true) {
         this.framebufferDimensions!.h = value;
         this.texture = this.stage.txManager.createTexture(
           'RenderTexture',
           this.framebufferDimensions!,
         );
-
-        this.setUpdateType(UpdateType.RenderTexture);
+        updateType |= UpdateType.RenderTexture;
       }
+      this.setUpdateType(updateType);
     }
   }
 
