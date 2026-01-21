@@ -359,8 +359,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override set w(value: number) {
-    // dont allow direct setting of width on text nodes, handled by text layout generation
-    console.warn('Cannot directly set w on CoreTextNode');
+    this.maxWidth = value;
   }
 
   override get w(): number {
@@ -368,8 +367,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override set h(value: number) {
-    // dont allow direct setting of height on text nodes, handled by text layout generation
-    console.warn('Cannot directly set h on CoreTextNode');
+    this.maxHeight = value;
   }
 
   override get h(): number {
