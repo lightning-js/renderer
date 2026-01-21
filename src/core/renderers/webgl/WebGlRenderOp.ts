@@ -22,10 +22,11 @@ import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
-import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreTextNode } from '../../CoreTextNode.js';
 import type { RectWithValid } from '../../lib/utils.js';
+import type { QuadOptions } from '../CoreRenderer.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import { CoreNode } from '../../CoreNode.js';
 
 type ReqQuad =
   | 'alpha'
@@ -70,27 +71,45 @@ export class WebGlRenderOp extends CoreRenderOp {
 
   constructor(
     readonly renderer: WebGlRenderer,
-    quad: RenderOpQuadOptions,
+    quad: RenderOpQuadOptions | CoreNode,
     readonly bufferIdx: number,
   ) {
     super();
-    this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
-    this.shader = quad.shader as WebGlShaderNode;
-    this.width = quad.width;
-    this.height = quad.height;
-    this.clippingRect = quad.clippingRect;
-    this.parentHasRenderTexture = quad.parentHasRenderTexture;
-    this.framebufferDimensions = quad.framebufferDimensions || null;
-    this.rtt = quad.rtt;
-    this.alpha = quad.alpha;
+    let q: Partial<RenderOpQuadOptions>;
+    if (quad instanceof CoreNode) {
+      const p = quad.props;
+      q = {
+        width: p.w,
+        height: p.h,
+        shader: p.shader || renderer.getDefaultShaderNode(),
+        clippingRect: quad.clippingRect,
+        parentHasRenderTexture: quad.parentHasRenderTexture,
+        framebufferDimensions: quad.parentHasRenderTexture
+          ? quad.parentFramebufferDimensions
+          : null,
+        rtt: p.rtt,
+        alpha: quad.worldAlpha,
+        time: quad.renderTime,
+      };
+      this.buffers = renderer.quadBufferCollection;
+    } else {
+      q = quad;
+      this.buffers = quad.sdfBuffers || renderer.quadBufferCollection;
+    }
+
+    this.shader = q.shader as WebGlShaderNode;
+    this.width = q.width!;
+    this.height = q.height!;
+    this.clippingRect = q.clippingRect!;
+    this.parentHasRenderTexture = q.parentHasRenderTexture!;
+    this.framebufferDimensions = q.framebufferDimensions || null;
+    this.rtt = q.rtt!;
+    this.alpha = q.alpha!;
     this.pixelRatio =
       this.parentHasRenderTexture === true ? 1 : renderer.stage.pixelRatio;
-    this.time = quad.time;
+    this.time = q.time;
 
-    /**
-     * related to line 51
-     */
-    this.sdfShaderProps = quad.sdfShaderProps;
+    this.sdfShaderProps = (quad as RenderOpQuadOptions).sdfShaderProps;
 
     this.maxTextures = this.shader.program.supportsIndexedTextures
       ? (renderer.glw.getParameter(

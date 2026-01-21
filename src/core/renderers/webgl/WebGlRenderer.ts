@@ -22,7 +22,6 @@ import {
   CoreRenderer,
   type BufferInfo,
   type CoreRendererOptions,
-  type QuadOptions,
 } from '../CoreRenderer.js';
 import { WebGlRenderOp } from './WebGlRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
@@ -253,30 +252,30 @@ export class WebGlRenderer extends CoreRenderer {
    * Finally, it calculates the vertices for the quad, taking into account any transformations, and adds them to the quad buffer.
    * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
-  addQuad(params: QuadOptions) {
+  addQuad(node: CoreNode) {
     const f = this.fQuadBuffer;
     const u = this.uiQuadBuffer;
     let i = this.curBufferIdx;
 
-    const reuse = this.reuseRenderOp(params);
+    const reuse = this.reuseRenderOp(node);
     if (reuse === false) {
-      this.newRenderOp(params, i);
+      this.newRenderOp(node, i);
     }
 
-    let tx = params.texture!;
+    let tx = node.renderTexture!;
     if (tx.type === TextureType.subTexture) {
       tx = (tx as SubTexture).parentTexture;
     }
 
     const tidx = this.addTexture(tx.ctxTexture as WebGlCtxTexture, i);
 
-    const rc = params.renderCoords!;
-    const tc = params.textureCoords!;
+    const rc = node.renderCoords!;
+    const tc = node.renderTextureCoords!;
 
-    const cTl = params.colorTl;
-    const cTr = params.colorTr;
-    const cBl = params.colorBl;
-    const cBr = params.colorBr;
+    const cTl = node.premultipliedColorTl;
+    const cTr = node.premultipliedColorTr;
+    const cBl = node.premultipliedColorBl;
+    const cBr = node.premultipliedColorBr;
 
     // Upper-Left
     f[i] = rc.x1;
@@ -329,8 +328,8 @@ export class WebGlRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(quad: QuadOptions | WebGlRenderOp, bufferIdx: number) {
-    const curRenderOp = new WebGlRenderOp(this, quad, bufferIdx);
+  private newRenderOp(node: CoreNode | WebGlRenderOp, bufferIdx: number) {
+    const curRenderOp = new WebGlRenderOp(this, node, bufferIdx);
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
   }
@@ -369,41 +368,38 @@ export class WebGlRenderer extends CoreRenderer {
    * @param params
    * @returns
    */
-  reuseRenderOp(params: QuadOptions): boolean {
+  reuseRenderOp(node: CoreNode): boolean {
     // Switching shader program will require a new render operation
-    if (
-      this.curRenderOp?.shader.shaderKey !==
-      (params.shader as WebGlShaderNode).shaderKey
-    ) {
+    const shader = node.props.shader as WebGlShaderNode;
+    if (this.curRenderOp?.shader.shaderKey !== shader?.shaderKey) {
       return false;
     }
 
     // Switching clipping rect will require a new render operation
     if (
-      compareRect(this.curRenderOp.clippingRect, params.clippingRect) === false
+      compareRect(this.curRenderOp.clippingRect, node.clippingRect) === false
     ) {
       return false;
     }
 
     // Force new render operation if rendering to texture is different
     if (
-      this.curRenderOp.parentHasRenderTexture !==
-        params.parentHasRenderTexture ||
-      this.curRenderOp.rtt !== params.rtt
+      this.curRenderOp.parentHasRenderTexture !== node.parentHasRenderTexture ||
+      this.curRenderOp.rtt !== node.props.rtt
     ) {
       return false;
     }
 
     if (
-      params.parentHasRenderTexture === true &&
+      node.parentHasRenderTexture === true &&
       this.curRenderOp.framebufferDimensions !== null &&
-      params.framebufferDimensions !== null
+      node.parentFramebufferDimensions !== null
     ) {
       if (
         this.curRenderOp.framebufferDimensions.w !==
-          params.framebufferDimensions.w ||
+          node.parentFramebufferDimensions.w ||
         this.curRenderOp.framebufferDimensions.h !==
-          params.framebufferDimensions.h
+          node.parentFramebufferDimensions.h
       ) {
         return false;
       }
@@ -411,17 +407,15 @@ export class WebGlRenderer extends CoreRenderer {
 
     if (
       this.curRenderOp.shader.shaderKey === 'default' &&
-      params.shader?.shaderKey === 'default'
+      shader?.shaderKey === 'default'
     ) {
       return true;
     }
 
     // Check if the shader can batch the shader properties
     if (
-      this.curRenderOp.shader.program.reuseRenderOp(
-        params,
-        this.curRenderOp,
-      ) === false
+      this.curRenderOp.shader.program.reuseRenderOp(node, this.curRenderOp) ===
+      false
     ) {
       return false;
     }
