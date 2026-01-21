@@ -23,6 +23,7 @@ import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
+import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -32,6 +33,7 @@ import {
   type UniformSet3Params,
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
+import { CoreNode } from '../../CoreNode.js';
 import { CoreNode } from '../../CoreNode.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
@@ -147,26 +149,29 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   reuseRenderOp(node: CoreNode, currentRenderOp: WebGlRenderOp): boolean {
+  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlRenderOp): boolean {
     if (this.lifecycle.canBatch !== undefined) {
+      return this.lifecycle.canBatch(node, currentRenderOp);
       return this.lifecycle.canBatch(node, currentRenderOp);
     }
 
-    const { time, worldAlpha, w, h } = node;
+    const { renderTime, worldAlpha } = node;
+    const { w, h } = node.props;
 
     if (this.useTimeValue === true) {
-      if (time !== currentRenderOp.time) {
+      if (renderTime !== currentRenderOp.time) {
         return false;
       }
     }
 
     if (this.useSystemAlpha === true) {
-      if (worldAlpha !== currentRenderOp.worldAlpha) {
+      if (worldAlpha !== currentRenderOp.alpha) {
         return false;
       }
     }
 
     if (this.useSystemDimensions === true) {
-      if (w !== currentRenderOp.w || h !== currentRenderOp.h) {
+      if (w !== currentRenderOp.width || h !== currentRenderOp.height) {
         return false;
       }
     }
@@ -174,6 +179,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     let shaderPropsA: Record<string, unknown> | undefined = undefined;
     let shaderPropsB: Record<string, unknown> | undefined = undefined;
 
+    const shader = node.props.shader;
+
+    if (shader !== null) {
+      shaderPropsA = (shader as WebGlShaderNode).resolvedProps;
     const shader = node.props.shader;
 
     if (shader !== null) {
