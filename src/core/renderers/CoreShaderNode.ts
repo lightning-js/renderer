@@ -96,6 +96,10 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   protected node: CoreNode | null = null;
   readonly time: CoreShaderType['time'] = undefined;
   update: (() => void) | undefined = undefined;
+  protected _valueKeyCache = '';
+  protected _valueKeyDirty = true;
+  protected _lastW = 0;
+  protected _lastH = 0;
 
   constructor(
     readonly shaderKey: string,
@@ -141,6 +145,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
           } else {
             this.resolvedProps![key] = value;
           }
+          this._valueKeyDirty = true;
 
           if (this.update !== undefined && this.node !== null) {
             this.node.setUpdateType(UpdateType.RecalcUniforms);
@@ -158,12 +163,27 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   }
 
   createValueKey() {
+    if (
+      this._valueKeyDirty === false &&
+      this.node !== null &&
+      this.node.w === this._lastW &&
+      this.node.h === this._lastH
+    ) {
+      return this._valueKeyCache;
+    }
+
     let valueKey = '';
     for (const key in this.resolvedProps) {
       valueKey += `${key}:${this.resolvedProps[key]!};`;
     }
     valueKey += `node-width:${this.node!.w}`;
     valueKey += `node-height:${this.node!.h}`;
+
+    this._valueKeyCache = valueKey;
+    this._valueKeyDirty = false;
+    this._lastW = this.node!.w;
+    this._lastH = this.node!.h;
+
     return valueKey;
   }
 
