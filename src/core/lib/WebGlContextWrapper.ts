@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
-import { assertTruthy } from '../../utils.js';
+import { assertTruthy, isProductionEnvironment } from '../../utils.js';
 import type {
   Vec2,
   Vec3,
@@ -1082,7 +1082,10 @@ export class WebGlContextWrapper {
    * @returns
    */
   getError() {
-    return this.gl.getError();
+    if (isProductionEnvironment === false) {
+      return this.gl.getError();
+    }
+    return 0;
   }
 
   /**
