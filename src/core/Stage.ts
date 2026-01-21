@@ -471,11 +471,13 @@ export class Stage {
 
     // Process some textures asynchronously but don't block the frame
     // Use a background task to prevent frame drops
-    this.txManager
-      .processSome(this.options.textureProcessingTimeLimit)
-      .catch((err) => {
-        console.error('Error processing textures:', err);
-      });
+    if (this.txManager.hasUpdates()) {
+      this.txManager
+        .processSome(this.options.textureProcessingTimeLimit)
+        .catch((err) => {
+          console.error('Error processing textures:', err);
+        });
+    }
 
     // Reset render operations and clear the canvas
     renderer.reset();
