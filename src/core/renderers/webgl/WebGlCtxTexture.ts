@@ -187,11 +187,13 @@ export class WebGlCtxTexture extends CoreContextTexture {
     const format = glw.RGBA;
     const formatBytes = 4;
     const memoryPadding = 1.1; // Add padding to account for GPU Padding
+    const isImageBitmap =
+      typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap;
 
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
-      (typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap) ||
+      isImageBitmap ||
       tdata instanceof ImageData ||
       // not using typeof HTMLI mageElement due to web worker
       isHTMLImageElement(tdata) === true
@@ -201,7 +203,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       glw.bindTexture(this._nativeCtxTexture);
       glw.pixelStorei(
         glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-        !!textureData.premultiplyAlpha,
+        isImageBitmap ? false : !!textureData.premultiplyAlpha,
       );
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
