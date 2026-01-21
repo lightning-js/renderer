@@ -390,7 +390,7 @@ export class Stage {
 
     // Process some textures asynchronously but don't block the frame
     // Use a background task to prevent frame drops
-    if (this.txManager.hasUpdates()) {
+    if (this.txManager.hasUpdates() === true) {
       this.txManager
         .processSome(this.options.textureProcessingTimeLimit)
         .catch((err) => {
