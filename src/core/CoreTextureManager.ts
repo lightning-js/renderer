@@ -505,7 +505,7 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   public hasUpdates(): boolean {
-    return this.uploadTextureQueue.length > 0;
+    return this.uploadTextureQueue.length > 0 || this.priorityQueue.length > 0;
   }
 
   /**
