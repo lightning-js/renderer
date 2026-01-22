@@ -190,7 +190,9 @@ export class WebGlRenderer extends CoreRenderer {
     this.curRenderOp = null;
     this.renderOps.length = 0;
     glw.setScissorTest(false);
-    glw.clear();
+    if (this.stage.options.enableClear !== false) {
+      glw.clear();
+    }
   }
 
   createShaderProgram(
