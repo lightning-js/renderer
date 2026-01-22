@@ -66,10 +66,11 @@ export class CanvasRenderer extends CoreRenderer {
     // noop
   }
 
-  addQuad(quad: QuadOptions): void {
+  addQuad(node: CoreNode): void {
     const ctx = this.context;
-    const { tx, ty, ta, tb, tc, td, clippingRect } = quad;
-    let texture = quad.texture;
+    const { tx, ty, ta, tb, tc, td } = node.globalTransform!;
+    const clippingRect = node.clippingRect;
+    let texture = node.renderTexture;
     // The Canvas2D renderer only supports image textures, no textures are used for color blocks
     if (texture !== null) {
       const textureType = texture.type;
@@ -85,12 +86,12 @@ export class CanvasRenderer extends CoreRenderer {
 
     const hasTransform = ta !== 1;
     const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
-    const hasShader = quad.shader !== null;
+    const shader = node.props.shader;
+    const hasShader = shader !== null;
 
     let saveAndRestore = hasTransform === true || hasClipping === true;
     if (hasShader === true) {
-      saveAndRestore =
-        saveAndRestore || (quad.shader as CanvasShaderNode).applySNR;
+      saveAndRestore = saveAndRestore || (shader as CanvasShaderNode).applySNR;
     }
 
     if (saveAndRestore) {
@@ -121,12 +122,40 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasShader === true) {
       let renderContext: (() => void) | null = () => {
-        this.renderContext(quad);
+        this.renderContext(node);
       };
-      (quad.shader as CanvasShaderNode).render(ctx, quad, renderContext);
+      const quad: QuadOptions = {
+        width: node.props.w,
+        height: node.props.h,
+        colorTl: node.premultipliedColorTl,
+        colorTr: node.premultipliedColorTr,
+        colorBl: node.premultipliedColorBl,
+        colorBr: node.premultipliedColorBr,
+        texture: texture,
+        textureOptions: node.props.textureOptions,
+        textureCoords: node.renderTextureCoords,
+        zIndex: node.zIndex, // zIndex usage?
+        shader: shader,
+        alpha: node.worldAlpha,
+        clippingRect: clippingRect,
+        tx,
+        ty,
+        ta,
+        tb,
+        tc,
+        td,
+        renderCoords: node.renderCoords,
+        rtt: node.props.rtt,
+        parentHasRenderTexture: node.parentHasRenderTexture,
+        framebufferDimensions: node.parentHasRenderTexture
+          ? node.parentFramebufferDimensions
+          : null,
+      };
+
+      (shader as CanvasShaderNode).render(ctx, quad, renderContext);
       renderContext = null;
     } else {
-      this.renderContext(quad);
+      this.renderContext(node);
     }
 
     if (saveAndRestore) {
@@ -134,22 +163,21 @@ export class CanvasRenderer extends CoreRenderer {
     }
   }
 
-  renderContext(quad: QuadOptions) {
-    const color = quad.colorTl;
-    const texture = quad.texture!;
+  renderContext(node: CoreNode) {
+    const color = node.premultipliedColorTl;
+    const texture = node.renderTexture!;
     const textureType = texture.type;
+    const tx = node.globalTransform!.tx;
+    const ty = node.globalTransform!.ty;
+    const width = node.props.w;
+    const height = node.props.h;
+
     if (textureType !== TextureType.color) {
       const tintColor = parseColor(color);
       if (textureType !== TextureType.subTexture) {
         const image = (texture.ctxTexture as CanvasTexture).getImage(tintColor);
-        this.context.globalAlpha = tintColor.a ?? quad.alpha;
-        this.context.drawImage(
-          image,
-          quad.tx,
-          quad.ty,
-          quad.width,
-          quad.height,
-        );
+        this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
+        this.context.drawImage(image, tx, ty, width, height);
         this.context.globalAlpha = 1;
         return;
       }
@@ -158,51 +186,47 @@ export class CanvasRenderer extends CoreRenderer {
       ).getImage(tintColor);
       const props = (texture as SubTexture).props;
 
-      this.context.globalAlpha = tintColor.a ?? quad.alpha;
+      this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
       this.context.drawImage(
         image,
         props.x,
         props.y,
         props.w,
         props.h,
-        quad.tx,
-        quad.ty,
-        quad.width,
-        quad.height,
+        tx,
+        ty,
+        width,
+        height,
       );
       this.context.globalAlpha = 1;
       return;
     }
     const hasGradient =
-      quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
+      node.premultipliedColorTl !== node.premultipliedColorTr ||
+      node.premultipliedColorTl !== node.premultipliedColorBr;
     if (hasGradient === true) {
-      let endX: number = quad.tx;
-      let endY: number = quad.ty;
+      let endX: number = tx;
+      let endY: number = ty;
       let endColor: number;
-      if (quad.colorTl === quad.colorTr) {
+      if (node.premultipliedColorTl === node.premultipliedColorTr) {
         // vertical
-        endX = quad.tx;
-        endY = quad.ty + quad.height;
-        endColor = quad.colorBr;
+        endX = tx;
+        endY = ty + height;
+        endColor = node.premultipliedColorBr;
       } else {
         // horizontal
-        endX = quad.tx + quad.width;
-        endY = quad.ty;
-        endColor = quad.colorTr;
+        endX = tx + width;
+        endY = ty;
+        endColor = node.premultipliedColorTr;
       }
-      const gradient = this.context.createLinearGradient(
-        quad.tx,
-        quad.ty,
-        endX,
-        endY,
-      );
+      const gradient = this.context.createLinearGradient(tx, ty, endX, endY);
       gradient.addColorStop(0, normalizeCanvasColor(color));
       gradient.addColorStop(1, normalizeCanvasColor(endColor));
       this.context.fillStyle = gradient;
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(tx, ty, width, height);
     } else {
       this.context.fillStyle = normalizeCanvasColor(color);
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(tx, ty, width, height);
     }
   }
 
