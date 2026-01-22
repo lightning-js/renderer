@@ -52,14 +52,21 @@ export async function validateCreateImageBitmap(
   // Test basic createImageBitmap support
   const blob = new Blob([pngBinaryData], { type: 'image/png' });
   const bitmap = await platform.createImageBitmap(blob);
-  bitmap.close?.();
+  if ('close' in bitmap && typeof bitmap.close === 'function') {
+    bitmap.close();
+  }
   support.basic = true;
 
   // Test createImageBitmap with options support
   try {
     const options = { premultiplyAlpha: 'none' as const };
     const bitmapWithOptions = await platform.createImageBitmap(blob, options);
-    bitmapWithOptions.close?.();
+    if (
+      'close' in bitmapWithOptions &&
+      typeof bitmapWithOptions.close === 'function'
+    ) {
+      bitmapWithOptions.close();
+    }
     support.options = true;
   } catch (e) {
     /* ignore */
@@ -77,7 +84,12 @@ export async function validateCreateImageBitmap(
         premultiplyAlpha: 'none',
       },
     );
-    bitmapWithFullOptions.close?.();
+    if (
+      'close' in bitmapWithFullOptions &&
+      typeof bitmapWithFullOptions.close === 'function'
+    ) {
+      bitmapWithFullOptions.close();
+    }
     support.full = true;
   } catch (e) {
     /* ignore */
