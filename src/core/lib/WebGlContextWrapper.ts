@@ -1082,10 +1082,7 @@ export class WebGlContextWrapper {
    * @returns
    */
   getError() {
-    if (isProductionEnvironment === false) {
-      return this.gl.getError();
-    }
-    return 0;
+    return this.gl.getError();
   }
 
   /**

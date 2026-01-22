@@ -25,6 +25,7 @@ import { uploadCompressedTexture } from '../../lib/textureCompression.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 import type { Bound } from '../../lib/utils.js';
+import { isProductionEnvironment } from '../../../utils.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -69,11 +70,16 @@ export class WebGlCtxTexture extends CoreContextTexture {
       return true;
     }
 
-    const error = this.glw.getError();
-    if (error !== 0) {
-      this.state = 'failed';
-      this.textureSource.setState('failed', new Error(`WebGL Error: ${error}`));
-      return true;
+    if (isProductionEnvironment === false) {
+      const error = this.glw.getError();
+      if (error !== 0) {
+        this.state = 'failed';
+        this.textureSource.setState(
+          'failed',
+          new Error(`WebGL Error: ${error}`),
+        );
+        return true;
+      }
     }
     return false;
   }
