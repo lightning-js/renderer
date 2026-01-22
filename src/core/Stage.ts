@@ -69,6 +69,7 @@ export type StageOptions = Omit<
   platform: Platform | WebPlatform;
   inspector: boolean;
   maxRetryCount: number;
+  enableClear: boolean;
 };
 
 export type StageFpsUpdateHandler = (
