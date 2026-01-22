@@ -239,6 +239,17 @@ export interface RendererRuntimeSettings {
   fpsUpdateInterval: number;
 
   /**
+   * Clears the render buffer on reset
+   *
+   * @remarks
+   * If false, the renderer will not clear the buffer before rendering a new frame.
+   * This is useful if you want to preserve the previous frame.
+   *
+   * @defaultValue `true`
+   */
+  enableClear: boolean;
+
+  /**
    * DOM Inspector
    *
    * @remarks
@@ -526,6 +537,7 @@ export class RendererMain extends EventEmitter {
         settings.devicePhysicalPixelRatio || window.devicePixelRatio || 1,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      enableClear: settings.enableClear ?? true,
       targetFPS: settings.targetFPS || 0,
       numImageWorkers:
         settings.numImageWorkers !== undefined ? settings.numImageWorkers : 2,
@@ -587,6 +599,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy!,
       forceWebGL2: settings.forceWebGL2!,
       fpsUpdateInterval: settings.fpsUpdateInterval!,
+      enableClear: settings.enableClear!,
       numImageWorkers: settings.numImageWorkers!,
       renderEngine: settings.renderEngine!,
       textureMemory: resolvedTxSettings,
