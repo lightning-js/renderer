@@ -471,11 +471,13 @@ export class Stage {
 
     // Process some textures asynchronously but don't block the frame
     // Use a background task to prevent frame drops
-    this.txManager
-      .processSome(this.options.textureProcessingTimeLimit)
-      .catch((err) => {
-        console.error('Error processing textures:', err);
-      });
+    if (this.txManager.hasUpdates() === true) {
+      this.txManager
+        .processSome(this.options.textureProcessingTimeLimit)
+        .catch((err) => {
+          console.error('Error processing textures:', err);
+        });
+    }
 
     // Reset render operations and clear the canvas
     renderer.reset();
@@ -888,8 +890,8 @@ export class Stage {
    * @remarks
    * This method is used to cleanup orphaned textures that are no longer in use.
    */
-  cleanup() {
-    this.txMemManager.cleanup();
+  cleanup(full: boolean = false) {
+    this.txMemManager.cleanup(full);
   }
 
   set clearColor(value: number) {
