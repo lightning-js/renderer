@@ -9,8 +9,7 @@ import type {
   Vec3,
   Vec4,
 } from './internal/ShaderUtils.js';
-import type { WebGlRenderer } from './WebGlRenderer.js';
-import type { WebGlRenderOp } from './WebGlRenderOp.js';
+import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
 export type ShaderSource<T> =

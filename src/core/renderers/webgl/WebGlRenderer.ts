@@ -23,7 +23,7 @@ import {
   type BufferInfo,
   type CoreRendererOptions,
 } from '../CoreRenderer.js';
-import { WebGlRenderOp } from './WebGlRenderOp.js';
+import type { SdfRenderOp } from './SdfRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -46,7 +46,7 @@ import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
-import { CoreNodeRenderState, type CoreNode } from '../../CoreNode.js';
+import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
@@ -59,6 +59,8 @@ interface CoreWebGlSystem {
   parameters: CoreWebGlParameters;
   extensions: CoreWebGlExtensions;
 }
+
+export type WebGlRenderOp = CoreNode | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -267,7 +269,13 @@ export class WebGlRenderer extends CoreRenderer {
       tx = (tx as SubTexture).parentTexture;
     }
 
-    const tidx = this.addTexture(tx.ctxTexture as WebGlCtxTexture, i);
+    const texture = tx.ctxTexture as WebGlCtxTexture;
+    let tidx = this.curRenderOp!.addTexture(texture);
+
+    if (tidx === 0xffffffff) {
+      this.newRenderOp(node, i);
+      tidx = this.curRenderOp!.addTexture(texture);
+    }
 
     const rc = node.renderCoords!;
     const tc = node.renderTextureCoords!;
@@ -328,39 +336,14 @@ export class WebGlRenderer extends CoreRenderer {
    * @param shader
    * @param bufferIdx
    */
-  private newRenderOp(node: CoreNode | WebGlRenderOp, bufferIdx: number) {
-    const curRenderOp = new WebGlRenderOp(this, node, bufferIdx);
+  private newRenderOp(node: CoreNode, bufferIdx: number) {
+    const curRenderOp = node;
+    curRenderOp.renderOpBufferIdx = bufferIdx;
+    curRenderOp.numQuads = 0;
+    curRenderOp.renderOpTextures.length = 0;
+
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
-  }
-
-  /**
-   * Add a texture to the current RenderOp. If the texture cannot be added to the
-   * current RenderOp, a new RenderOp will be created and the texture will be added
-   * to that one.
-   *
-   * If the texture cannot be added to the new RenderOp, an error will be thrown.
-   *
-   * @param texture
-   * @param bufferIdx
-   * @param recursive
-   * @returns Assigned Texture Index of the texture in the render op
-   */
-  private addTexture(
-    texture: WebGlCtxTexture,
-    bufferIdx: number,
-    recursive?: boolean,
-  ): number {
-    const textureIdx = this.curRenderOp!.addTexture(texture);
-    // TODO: Refactor to be more DRY
-    if (textureIdx === 0xffffffff) {
-      if (recursive) {
-        throw new Error('Unable to add texture to render op');
-      }
-      this.newRenderOp(this.curRenderOp!, bufferIdx);
-      return this.addTexture(texture, bufferIdx, true);
-    }
-    return textureIdx;
   }
 
   /**
@@ -369,58 +352,58 @@ export class WebGlRenderer extends CoreRenderer {
    * @returns
    */
   reuseRenderOp(node: CoreNode): boolean {
-    // Switching shader program will require a new render operation
+    const curRenderOp = this.curRenderOp;
+    if (curRenderOp === null) {
+      return false;
+    }
+
     const shader = node.props.shader as WebGlShaderNode;
-    if (this.curRenderOp?.shader.shaderKey !== shader?.shaderKey) {
+    const curShader = curRenderOp.shader as WebGlShaderNode;
+
+    if (curShader?.shaderKey !== shader?.shaderKey) {
       return false;
     }
 
     // Switching clipping rect will require a new render operation
-    if (
-      compareRect(this.curRenderOp.clippingRect, node.clippingRect) === false
-    ) {
+    if (compareRect(curRenderOp.clippingRect, node.clippingRect) === false) {
       return false;
     }
 
     // Force new render operation if rendering to texture is different
+    const curRtt = curRenderOp.rtt;
     if (
-      this.curRenderOp.parentHasRenderTexture !== node.parentHasRenderTexture ||
-      this.curRenderOp.rtt !== node.props.rtt
+      curRenderOp.parentHasRenderTexture !== node.parentHasRenderTexture ||
+      curRtt !== (node.props.rtt === true)
     ) {
       return false;
     }
 
     if (
       node.parentHasRenderTexture === true &&
-      this.curRenderOp.framebufferDimensions !== null &&
       node.parentFramebufferDimensions !== null
     ) {
+      const curFbDims =
+        curRenderOp instanceof CoreNode
+          ? curRenderOp.parentFramebufferDimensions
+          : curRenderOp.framebufferDimensions;
       if (
-        this.curRenderOp.framebufferDimensions.w !==
-          node.parentFramebufferDimensions.w ||
-        this.curRenderOp.framebufferDimensions.h !==
-          node.parentFramebufferDimensions.h
+        curFbDims === null ||
+        curFbDims.w !== node.parentFramebufferDimensions.w ||
+        curFbDims.h !== node.parentFramebufferDimensions.h
       ) {
         return false;
       }
     }
 
-    if (
-      this.curRenderOp.shader.shaderKey === 'default' &&
-      shader?.shaderKey === 'default'
-    ) {
+    if (curShader?.shaderKey === 'default' && shader?.shaderKey === 'default') {
       return true;
     }
 
     // Check if the shader can batch the shader properties
-    if (
-      this.curRenderOp.shader.program.reuseRenderOp(node, this.curRenderOp) ===
-      false
-    ) {
+    if (curShader?.program.reuseRenderOp(node, curRenderOp) === false) {
       return false;
     }
 
-    // Render operation can be reused
     return true;
   }
 
@@ -448,9 +431,9 @@ export class WebGlRenderer extends CoreRenderer {
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.renderOps[i]!.draw();
+      this.renderOps[i]!.draw(this);
     }
+
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
 
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
