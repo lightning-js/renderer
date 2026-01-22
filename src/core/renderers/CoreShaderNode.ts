@@ -96,10 +96,10 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   protected node: CoreNode | null = null;
   readonly time: CoreShaderType['time'] = undefined;
   update: (() => void) | undefined = undefined;
-  protected _valueKeyCache = '';
-  protected _valueKeyDirty = true;
-  protected _lastW = 0;
-  protected _lastH = 0;
+  private _valueKeyCache = '';
+  private _valueKeyDirty = true;
+  private _lastW = 0;
+  private _lastH = 0;
 
   constructor(
     readonly shaderKey: string,
