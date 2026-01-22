@@ -362,6 +362,53 @@ export default async function test(settings: ExampleSettings) {
         return rowNode.h;
       },
     },
+    {
+      title:
+        'Texture Width > Height - resizeMode cover - update height after 20ms',
+      content: async (rowNode) => {
+        const curX = 0;
+        const containerProps = {
+          w: SQUARE_SIZE * 1.4,
+          h: SQUARE_SIZE * 1.4,
+          parent: rowNode,
+          color: 0x333333ff,
+          clipping: true,
+        } satisfies Partial<INodeProps>;
+
+        const textureNodeProps = {
+          w: containerProps.w,
+          h: containerProps.h,
+          texture: renderer.createTexture('ImageTexture', {
+            src: testscreenImg,
+          }),
+          textureOptions: {
+            resizeMode: {
+              type: 'cover',
+            },
+          },
+        } satisfies Partial<INodeProps>;
+
+        const container1 = renderer.createNode({
+          ...containerProps,
+          x: curX,
+        });
+
+        const node = renderer.createNode({
+          ...textureNodeProps,
+          parent: container1,
+        });
+
+        // Add 150 to the h of the node after 20ms
+
+        setTimeout(() => {
+          node.h += 200;
+        }, 10);
+
+        rowNode.h = containerProps.h + 200;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return rowNode.h;
+      },
+    },
   ]);
 
   return pageContainer;
