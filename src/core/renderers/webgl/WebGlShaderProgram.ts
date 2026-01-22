@@ -21,8 +21,8 @@ import { Default } from '../../shaders/webgl/Default.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
+import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
-import { WebGlShaderNode } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
@@ -33,7 +33,6 @@ import {
   type UniformSet3Params,
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
-import { CoreNode } from '../../CoreNode.js';
 import { CoreNode } from '../../CoreNode.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
@@ -155,26 +154,29 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return this.lifecycle.canBatch(node, currentRenderOp);
     }
 
-    const { renderTime, worldAlpha } = node;
-    const { w, h } = node.props;
+    const { time, worldAlpha, width, height } = node;
 
     if (this.useTimeValue === true) {
-      if (renderTime !== currentRenderOp.time) {
+      if (time !== currentRenderOp.time) {
         return false;
       }
     }
 
     if (this.useSystemAlpha === true) {
-      if (worldAlpha !== currentRenderOp.alpha) {
+      if (worldAlpha !== currentRenderOp.worldAlpha) {
         return false;
       }
     }
 
     if (this.useSystemDimensions === true) {
-      if (w !== currentRenderOp.width || h !== currentRenderOp.height) {
+      if (
+        width !== currentRenderOp.width ||
+        height !== currentRenderOp.height
+      ) {
         return false;
       }
     }
+
 
     let shaderPropsA: Record<string, unknown> | undefined = undefined;
     let shaderPropsB: Record<string, unknown> | undefined = undefined;
@@ -189,6 +191,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       shaderPropsA = (shader as WebGlShaderNode).resolvedProps;
     }
 
+    const opShader = currentRenderOp.shader;
+    if (opShader !== null) {
+      shaderPropsB = (opShader as WebGlShaderNode).resolvedProps;
     const opShader = currentRenderOp.shader;
     if (opShader !== null) {
       shaderPropsB = (opShader as WebGlShaderNode).resolvedProps;
@@ -213,7 +218,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   bindRenderOp(renderOp: WebGlRenderOp) {
-    const isCoreNode = renderOp.isCoreNode;
+    const isCoreNode = renderOp instanceof CoreNode;
 
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
@@ -232,6 +237,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     // if the parent has a render texture
     if (parentHasRenderTexture === true && framebufferDimensions) {
       const { w, h } = framebufferDimensions;
+    if (parentHasRenderTexture === true && framebufferDimensions) {
+      const { w, h } = framebufferDimensions;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);
@@ -239,7 +246,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       // Set resolution to the framebuffer dimensions
       this.glw.uniform2f('u_resolution', w, h);
     } else {
-      this.glw.uniform1f('u_pixelRatio', renderOp.stage.pixelRatio);
+      // CoreNode has stage.
+      const stage = isCoreNode ? renderOp.stage : renderOp.renderer.stage;
+      this.glw.uniform1f('u_pixelRatio', stage.pixelRatio);
 
       this.glw.uniform2f(
         'u_resolution',
@@ -250,9 +259,11 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     if (this.useTimeValue === true) {
       this.glw.uniform1f('u_time', renderOp.time);
+      this.glw.uniform1f('u_time', renderOp.time);
     }
 
     if (this.useSystemAlpha === true) {
+      this.glw.uniform1f('u_alpha', renderOp.worldAlpha);
       this.glw.uniform1f('u_alpha', renderOp.worldAlpha);
     }
 
@@ -264,12 +275,17 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     if (isCoreNode === false && renderOp.sdfShaderProps !== undefined) {
       const opShader = renderOp.shader; // SdfRenderOp has .shader
       (opShader.shaderType as WebGlShaderType).onSdfBind?.call(
+    if (isCoreNode === false && renderOp.sdfShaderProps !== undefined) {
+      const opShader = renderOp.shader; // SdfRenderOp has .shader
+      (opShader.shaderType as WebGlShaderType).onSdfBind?.call(
         this.glw,
         renderOp.sdfShaderProps,
       );
       return;
     }
 
+    const shader = renderOp.shader as WebGlShaderNode;
+    if (shader.props !== undefined) {
     const shader = renderOp.shader as WebGlShaderNode;
     if (shader.props !== undefined) {
       /**
@@ -279,14 +295,22 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
       for (const key in uniforms.single) {
         const { method, value } = uniforms.single[key]!;
+      const uniforms = shader.uniforms;
+
+      for (const key in uniforms.single) {
+        const { method, value } = uniforms.single[key]!;
         this.glw[method as keyof UniformSet1Param](key, value as never);
       }
 
       for (const key in uniforms.vec2) {
         const { method, value } = uniforms.vec2[key]!;
+      for (const key in uniforms.vec2) {
+        const { method, value } = uniforms.vec2[key]!;
         this.glw[method as keyof UniformSet2Params](key, value[0], value[1]);
       }
 
+      for (const key in uniforms.vec3) {
+        const { method, value } = uniforms.vec3[key]!;
       for (const key in uniforms.vec3) {
         const { method, value } = uniforms.vec3[key]!;
         this.glw[method as keyof UniformSet3Params](
@@ -297,6 +321,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         );
       }
 
+      for (const key in uniforms.vec4) {
+        const { method, value } = uniforms.vec4[key]!;
       for (const key in uniforms.vec4) {
         const { method, value } = uniforms.vec4[key]!;
         this.glw[method as keyof UniformSet4Params](
