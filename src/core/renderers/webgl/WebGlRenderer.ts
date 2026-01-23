@@ -384,10 +384,9 @@ export class WebGlRenderer extends CoreRenderer {
       node.parentHasRenderTexture === true &&
       node.parentFramebufferDimensions !== null
     ) {
-      const curFbDims =
-        curRenderOp instanceof CoreNode
-          ? curRenderOp.parentFramebufferDimensions
-          : curRenderOp.framebufferDimensions;
+      const curFbDims = curRenderOp.isCoreNode
+        ? curRenderOp.parentFramebufferDimensions
+        : curRenderOp.framebufferDimensions;
       if (
         curFbDims === null ||
         curFbDims.w !== node.parentFramebufferDimensions.w ||
