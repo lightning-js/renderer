@@ -207,7 +207,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   bindRenderOp(renderOp: WebGlRenderOp) {
-    const isCoreNode = renderOp instanceof CoreNode;
+    const isCoreNode = renderOp.isCoreNode;
 
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
@@ -233,9 +233,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       // Set resolution to the framebuffer dimensions
       this.glw.uniform2f('u_resolution', w, h);
     } else {
-      // CoreNode has stage.
-      const stage = isCoreNode ? renderOp.stage : renderOp.renderer.stage;
-      this.glw.uniform1f('u_pixelRatio', stage.pixelRatio);
+      this.glw.uniform1f('u_pixelRatio', renderOp.stage.pixelRatio);
 
       this.glw.uniform2f(
         'u_resolution',

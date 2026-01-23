@@ -24,6 +24,7 @@ import type { BufferCollection } from './internal/BufferCollection.js';
 import type { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { RectWithValid } from '../../lib/utils.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { Stage } from '../../Stage.js';
 
 /**
  * Can render multiple quads with multiple textures (up to vertex shader texture limit)
@@ -31,8 +32,10 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
  */
 export class SdfRenderOp extends CoreRenderOp {
   public numQuads = 0;
+  public readonly isCoreNode = false as const;
   public renderOpTextures: WebGlCtxTexture[] = [];
   public time: number = 0;
+  readonly stage: Stage;
 
   constructor(
     readonly renderer: WebGlRenderer,
@@ -48,6 +51,7 @@ export class SdfRenderOp extends CoreRenderOp {
     readonly framebufferDimensions: Dimensions | null,
   ) {
     super();
+    this.stage = renderer.stage;
   }
 
   addTexture(texture: WebGlCtxTexture): number {
