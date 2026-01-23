@@ -29,6 +29,8 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
   update(node: CoreNode) {
     this.uniformRGBA('u_borderColor', this.props!['border-color']);
     this.uniform4fa('u_borderWidth', this.props!['border-w'] as Vec4);
+    this.uniform1f('u_borderGap', this.props!['border-gap'] as number);
+    this.uniform1f('u_borderAlign', this.props!['border-align'] as number);
 
     this.uniform4fa(
       'u_radius',
@@ -53,41 +55,104 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
 
     uniform vec4 u_radius;
     uniform vec4 u_borderWidth;
+    uniform float u_borderGap;
+    uniform float u_borderAlign;
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
     varying vec2 v_nodeCoords;
 
-    varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
+    varying vec2 v_outerSize;
+    varying vec2 v_outerBorderUv;
+    varying vec2 v_innerBorderUv;
+    varying vec4 v_innerBorderRadius;
+    varying vec4 v_outerBorderRadius;
     varying vec2 v_halfDimensions;
+    varying float v_edgeWidth;
     varying float v_borderZero;
 
     void main() {
-      vec2 normalized = a_position * u_pixelRatio;
+      vec2 vertexPos = a_position * u_pixelRatio;
       vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
-
-      v_color = a_color;
-      v_nodeCoords = a_nodeCoords;
-      v_textureCoords = a_textureCoords;
-
-      v_halfDimensions = u_dimensions * 0.5;
+      vec2 edge = clamp(a_nodeCoords * 2.0 - vec2(1.0), -1.0, 1.0);
+      vec2 edgeOffset = vec2(0.0);
 
       v_borderZero = u_borderWidth == vec4(0.0) ? 1.0 : 0.0;
+      v_innerSize = vec2(0.0);
+      v_outerSize = vec2(0.0);
 
       if(v_borderZero == 0.0) {
-        v_innerRadius = vec4(
-          max(0.0, u_radius.x - max(u_borderWidth.x, u_borderWidth.w) - 0.5),
-          max(0.0, u_radius.y - max(u_borderWidth.x, u_borderWidth.y) - 0.5),
-          max(0.0, u_radius.z - max(u_borderWidth.z, u_borderWidth.y) - 0.5),
-          max(0.0, u_radius.w - max(u_borderWidth.z, u_borderWidth.w) - 0.5)
+        float borderTop = u_borderWidth.x;
+        float borderRight = u_borderWidth.y;
+        float borderBottom = u_borderWidth.z;
+        float borderLeft = u_borderWidth.w;
+
+        v_outerBorderUv = vec2(0.0);
+        v_innerBorderUv = vec2(0.0);
+
+        vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
+        vec2 extraSize = borderSize * u_borderAlign;
+        vec2 gapSize = vec2(borderSize.x > 0.0 ? u_borderGap : 0.0, borderSize.y > 0.0 ? u_borderGap : 0.0);
+
+        v_outerSize = u_dimensions + gapSize * 2.0 + extraSize;
+        v_innerSize = v_outerSize - vec2(borderRight + borderLeft, borderTop + borderBottom);
+
+        float borderCalc;
+
+        if(borderRight > borderLeft) {
+          borderCalc = (borderRight - borderLeft - u_borderGap);
+          v_outerBorderUv.x = -borderCalc * u_borderAlign * 0.5;
+          v_innerBorderUv.x = v_outerBorderUv.x + borderCalc * 0.5;
+        } else if(borderLeft > borderRight) {
+          borderCalc = (borderLeft - borderRight - u_borderGap);
+          v_outerBorderUv.x = borderCalc * u_borderAlign * 0.5;
+          v_innerBorderUv.x = v_outerBorderUv.x - borderCalc * 0.5;
+        }
+
+        if(borderBottom > borderTop) {
+          borderCalc = (borderBottom - borderTop - u_borderGap);
+          v_outerBorderUv.y = -borderCalc * u_borderAlign * 0.5;
+          v_innerBorderUv.y = v_outerBorderUv.y + borderCalc * 0.5;
+        } else if(borderTop > borderBottom) {
+          borderCalc = (borderTop - borderBottom - u_borderGap);
+          v_outerBorderUv.y = borderCalc * u_borderAlign * 0.5;
+          v_innerBorderUv.y = v_outerBorderUv.y - borderCalc * 0.5;
+        }
+
+        v_outerBorderRadius = vec4(
+          max(0.0, u_radius.x + max(borderTop * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap)),
+          max(0.0, u_radius.y + max(borderTop * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
+          max(0.0, u_radius.z + max(borderBottom * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
+          max(0.0, u_radius.w + max(borderBottom * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap))
         );
 
-        v_innerSize = (vec2(u_dimensions.x - (u_borderWidth[3] + u_borderWidth[1]) + 1.0, u_dimensions.y - (u_borderWidth[0] + u_borderWidth[2])) - 2.0) * 0.5;
+        v_innerBorderRadius = vec4(
+          max(0.0, v_outerBorderRadius.x - max(borderTop, borderLeft)),
+          max(0.0, v_outerBorderRadius.y - max(borderTop, borderRight)),
+          max(0.0, v_outerBorderRadius.z - max(borderBottom, borderRight)),
+          max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
+        );
+
+        if(v_outerSize.x > u_dimensions.x) {
+          edgeOffset.x = edge.x * (extraSize.x + u_borderGap);
+        }
+
+        if(v_outerSize.y > u_dimensions.y) {
+          edgeOffset.y = edge.y * (extraSize.y + u_borderGap);
+        }
+
+        vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
       }
 
-      gl_Position = vec4(normalized.x * screenSpace.x - 1.0, normalized.y * -abs(screenSpace.y) + 1.0, 0.0, 1.0);
-      gl_Position.y = -sign(screenSpace.y) * gl_Position.y;
+      gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
+
+      v_color = a_color;
+      v_nodeCoords = a_nodeCoords + (screenSpace + edgeOffset) / (u_dimensions);
+      v_textureCoords = a_textureCoords + (screenSpace + edgeOffset) / (u_dimensions);
+
+      v_halfDimensions = u_dimensions * 0.5;
+      v_edgeWidth = 1.0 / u_pixelRatio;
     }
   `,
   fragment: `
@@ -104,17 +169,23 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     uniform sampler2D u_texture;
 
     uniform vec4 u_radius;
-
     uniform vec4 u_borderWidth;
     uniform vec4 u_borderColor;
+    uniform float u_borderGap;
+    uniform float u_borderAlign;
 
     varying vec4 v_color;
     varying vec2 v_textureCoords;
     varying vec2 v_nodeCoords;
 
-    varying vec2 v_halfDimensions;
-    varying vec4 v_innerRadius;
     varying vec2 v_innerSize;
+    varying vec2 v_outerSize;
+    varying vec2 v_outerBorderUv;
+    varying vec2 v_innerBorderUv;
+    varying vec4 v_innerBorderRadius;
+    varying vec4 v_outerBorderRadius;
+    varying vec2 v_halfDimensions;
+    varying float v_edgeWidth;
     varying float v_borderZero;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
@@ -128,25 +199,23 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
 
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
-      float outerDist = roundedBox(boxUv, v_halfDimensions, u_radius);
-
-      float edgeWidth = 1.0 / u_pixelRatio;
-      float outerAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, outerDist);
+      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
 
       if(v_borderZero == 1.0) {
-        gl_FragColor = mix(vec4(0.0), color, outerAlpha) * u_alpha;
+        gl_FragColor = mix(vec4(0.0), color, nodeAlpha) * u_alpha;
         return;
       }
+      vec4 resultColor = mix(vec4(0.0), color, nodeAlpha);
 
-      boxUv.x += u_borderWidth.y > u_borderWidth.w ? (u_borderWidth.y - u_borderWidth.w) * 0.5 : -(u_borderWidth.w - u_borderWidth.y) * 0.5;
-      boxUv.y += u_borderWidth.z > u_borderWidth.x ? ((u_borderWidth.z - u_borderWidth.x) * 0.5 + 0.5) : -(u_borderWidth.x - u_borderWidth.z) * 0.5;
+      float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize * 0.5 - v_edgeWidth, v_outerBorderRadius);
+      float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize * 0.5 - v_edgeWidth, v_innerBorderRadius);
 
-      float innerDist = roundedBox(boxUv, v_innerSize, v_innerRadius);
-      float innerAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, innerDist);
+      float borderDist = max(-innerDist, outerDist);
+      float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
+      resultColor = mix(resultColor, mix(resultColor, u_borderColor, u_borderColor.a), borderAlpha);
 
-      vec4 resColor = mix(u_borderColor, color, innerAlpha);
-      resColor = mix(vec4(0.0), resColor, outerAlpha);
-      gl_FragColor = resColor * u_alpha;
+      gl_FragColor = resultColor * u_alpha;
     }
   `,
 };
