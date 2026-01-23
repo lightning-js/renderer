@@ -29,7 +29,7 @@ import { hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
-import { WebGlRenderOp } from '../renderers/webgl/WebGlRenderOp.js';
+import { SdfRenderOp } from '../renderers/webgl/SdfRenderOp.js';
 import { Sdf, type SdfShaderProps } from '../shaders/webgl/SdfShader.js';
 import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
@@ -238,28 +238,25 @@ const renderQuads = (
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
 
-  const renderOp = new WebGlRenderOp(
+  const renderOp = new SdfRenderOp(
     renderer as WebGlRenderer,
+    sdfShader!, // Ensure sdfShader is not null
     {
-      sdfShaderProps: {
-        transform: globalTransform,
-        color: mergeColorAlpha(color, worldAlpha),
-        size: layout.fontScale, // Use proper font scaling in shader
-        distanceRange: layout.distanceRange,
-      } satisfies SdfShaderProps,
-      sdfBuffers: webGlBuffers,
-      shader: sdfShader,
-      alpha: worldAlpha,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-      clippingRect: renderProps.clippingRect as any,
-      height: layout.height,
-      width: layout.width,
-      rtt: false,
-      parentHasRenderTexture: renderProps.parentHasRenderTexture,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-      framebufferDimensions: renderProps.framebufferDimensions as any,
-    },
-    0,
+      transform: globalTransform,
+      color: mergeColorAlpha(color, worldAlpha),
+      size: layout.fontScale, // Use proper font scaling in shader
+      distanceRange: layout.distanceRange,
+    } satisfies SdfShaderProps,
+    webGlBuffers,
+    worldAlpha,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderProps.clippingRect as any,
+    layout.width,
+    layout.height,
+    false,
+    renderProps.parentHasRenderTexture,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderProps.framebufferDimensions as any,
   );
 
   // Add atlas texture and set quad count
