@@ -76,32 +76,18 @@ export const Border: WebGlShaderType<BorderProps> = {
 
       vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
       vec2 extraSize = borderSize * u_borderAlign;
-      vec2 gapSize = vec2(borderSize.x > 0.0 ? u_borderGap : 0.0, borderSize.y > 0.0 ? u_borderGap : 0.0);
+      vec2 gapSize = step(0.001, borderSize) * u_borderGap;
 
       v_outerSize = (u_dimensions + gapSize * 2.0 + extraSize) * 0.5;
-      v_innerSize = v_outerSize - vec2(borderRight + borderLeft, borderTop + borderBottom) * 0.5;
+      v_innerSize = v_outerSize - borderSize * 0.5;
 
-      float borderCalc;
+      // Use sign() to avoid branching
+      vec2 borderDiff = vec2(borderRight - borderLeft, borderBottom - borderTop);
+      vec2 signDiff = sign(borderDiff);
+      borderDiff = abs(borderDiff) - u_borderGap;
 
-      if(borderRight > borderLeft) {
-        borderCalc = (borderRight - borderLeft - u_borderGap);
-        v_outerBorderUv.x = -borderCalc * u_borderAlign * 0.5;
-        v_innerBorderUv.x = v_outerBorderUv.x + borderCalc * 0.5;
-      } else if(borderLeft > borderRight) {
-        borderCalc = (borderLeft - borderRight - u_borderGap);
-        v_outerBorderUv.x = borderCalc * u_borderAlign * 0.5;
-        v_innerBorderUv.x = v_outerBorderUv.x - borderCalc * 0.5;
-      }
-
-      if(borderBottom > borderTop) {
-        borderCalc = (borderBottom - borderTop - u_borderGap);
-        v_outerBorderUv.y = -borderCalc * u_borderAlign * 0.5;
-        v_innerBorderUv.y = v_outerBorderUv.y + borderCalc * 0.5;
-      } else if(borderTop > borderBottom) {
-        borderCalc = (borderTop - borderBottom - u_borderGap);
-        v_outerBorderUv.y = borderCalc * u_borderAlign * 0.5;
-        v_innerBorderUv.y = v_outerBorderUv.y - borderCalc * 0.5;
-      }
+      v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5;
+      v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
       vec2 borderEdge = vec2(0.0);
 
@@ -169,7 +155,7 @@ export const Border: WebGlShaderType<BorderProps> = {
 
       float borderDist = max(-innerDist, outerDist);
       float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
-      resultColor = mix(resultColor, mix(resultColor, u_borderColor, u_borderColor.a), borderAlpha);
+      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
 
       gl_FragColor = resultColor * u_alpha;
     }
