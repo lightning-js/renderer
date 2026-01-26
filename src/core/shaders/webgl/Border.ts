@@ -89,7 +89,7 @@ export const Border: WebGlShaderType<BorderProps> = {
       v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5;
       v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
-      vec2 edgeOffsetExtra = step(u_dimensions, v_outerSize) * edge * (extraSize + u_borderGap);
+      vec2 edgeOffsetExtra = step(u_dimensions * 0.5, v_outerSize) * edge * (extraSize + u_borderGap);
       vec2 borderEdge = edgeOffsetExtra;
 
       vec2 vertexPos = (a_position + edge + borderEdge) * u_pixelRatio;
