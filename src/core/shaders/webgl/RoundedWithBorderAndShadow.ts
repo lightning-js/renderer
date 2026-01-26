@@ -228,7 +228,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       }
 
       if(v_outerSize.x > u_dimensions.x || v_outerSize.y > u_dimensions.y) {
-        shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_outerSize + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
+        shadowAlpha = shadowBox(boxUv + v_outerBorderUv - u_shadow.xy, v_outerSize * 0.5 + u_shadow.w - v_edgeWidth, v_outerBorderRadius + u_shadow.z);
       }
       else {
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
