@@ -120,13 +120,8 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
           max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
         );
 
-        if(v_outerSize.x > u_dimensions.x) {
-          edgeOffset.x = edge.x * (extraSize.x + u_borderGap);
-        }
-
-        if(v_outerSize.y > u_dimensions.y) {
-          edgeOffset.y = edge.y * (extraSize.y + u_borderGap);
-        }
+        vec2 edgeOffsetExtra = step(u_dimensions, v_outerSize) * edge * (extraSize + u_borderGap);
+        edgeOffset = edgeOffsetExtra;
 
         vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
       }
@@ -183,24 +178,36 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
-
+      vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
-      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
+
+      float nodeDist;
+      float nodeAlpha;
 
       if(v_borderZero == 1.0) {
+        nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+        nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
         gl_FragColor = mix(vec4(0.0), color, nodeAlpha) * u_alpha;
         return;
       }
-      vec4 resultColor = mix(vec4(0.0), color, nodeAlpha);
 
       float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize * 0.5 - v_edgeWidth, v_outerBorderRadius);
       float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize * 0.5 - v_edgeWidth, v_innerBorderRadius);
 
+      if(u_borderGap == 0.0) {
+        resultColor = mix(resultColor, u_borderColor, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, outerDist));
+        resultColor = mix(resultColor, color, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, innerDist));
+        gl_FragColor = resultColor * u_alpha;
+        return;
+      }
+
+      nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+      nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
       float borderDist = max(-innerDist, outerDist);
       float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
-      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
 
+      resultColor = mix(vec4(0.0), color, nodeAlpha);
+      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
       gl_FragColor = resultColor * u_alpha;
     }
   `,

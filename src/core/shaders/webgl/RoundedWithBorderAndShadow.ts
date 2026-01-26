@@ -129,13 +129,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
           max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
         );
 
-        if(v_outerSize.x > u_dimensions.x) {
-          edgeOffset.x += edge.x * (extraSize.x + u_borderGap);
-        }
-
-        if(v_outerSize.y > u_dimensions.y) {
-          edgeOffset.y += edge.y * (extraSize.y + u_borderGap);
-        }
+        vec2 edgeOffsetExtra = step(u_dimensions, v_outerSize) * edge * (extraSize + u_borderGap);
+        edgeOffset += edgeOffsetExtra;
 
         vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
       }
@@ -202,11 +197,13 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
-      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
-      float shadowAlpha = 0.0;
+      float nodeDist;
+      float nodeAlpha;
+      float shadowAlpha;
 
       if(v_borderZero == 1.0) {
+        nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+        nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
         resultColor = mix(resultColor, u_shadowColor, shadowAlpha);
         gl_FragColor = mix(resultColor, color, nodeAlpha) * u_alpha;
@@ -220,12 +217,12 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
       }
 
+      nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+      nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
       float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize * 0.5 - v_edgeWidth, v_outerBorderRadius);
       float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize * 0.5 - v_edgeWidth, v_innerBorderRadius);
-
       float borderDist = max(-innerDist, outerDist);
       float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
-
       resultColor = mix(resultColor, u_shadowColor, shadowAlpha);
       resultColor = mix(resultColor, color, nodeAlpha);
       resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
