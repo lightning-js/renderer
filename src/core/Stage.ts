@@ -682,6 +682,7 @@ export class Stage {
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
     const fontSize = props.fontSize || 16;
+
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
       text: props.text || '',
       textRendererOverride: props.textRendererOverride || null,
@@ -700,6 +701,12 @@ export class Stage {
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
       forceLoad: props.forceLoad || false,
+      shadow: props.shadow || false,
+      shadowAlpha: props.shadowAlpha || 1,
+      shadowColor: props.shadowColor || 0x00000000,
+      shadowOffsetX: props.shadowOffsetX || 5,
+      shadowOffsetY: props.shadowOffsetY || 5,
+      shadowBlur: props.shadowBlur || 2,
     });
 
     const resolvedTextRenderer = this.resolveTextRenderer(

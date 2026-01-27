@@ -339,6 +339,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
             ? this.parentFramebufferDimensions
             : null,
         stage: this.stage,
+        shadow: props.shadow,
+        shadowAlpha: props.shadowAlpha,
+        shadowColor: props.shadowColor,
+        shadowOffsetX: props.shadowOffsetX,
+        shadowOffsetY: props.shadowOffsetY,
+        shadowBlur: props.shadowBlur,
       },
     );
   }
@@ -571,5 +577,99 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   get renderInfo(): TextRenderInfo {
     return this._renderInfo;
+  }
+
+  set shadow(value: boolean) {
+    if (this.textProps.shadow !== value) {
+      this.textProps.shadow = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      } else {
+        this.stage.requestRender();
+      }
+    }
+  }
+
+  get shadow(): boolean {
+    return this.textProps.shadow;
+  }
+
+  set shadowAlpha(value: number) {
+    if (this.textProps.shadowAlpha !== value) {
+      this.textProps.shadowAlpha = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      } else {
+        this.stage.requestRender();
+      }
+    }
+  }
+
+  get shadowAlpha(): number {
+    return this.textProps.shadowAlpha;
+  }
+
+  set shadowColor(value: number) {
+    if (this.textProps.shadowColor !== value) {
+      this.textProps.shadowColor = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      } else {
+        this.stage.requestRender();
+      }
+    }
+  }
+
+  get shadowColor(): number {
+    return this.textProps.shadowColor;
+  }
+
+  set shadowOffsetX(value: number) {
+    if (this.textProps.shadowOffsetX !== value) {
+      this.textProps.shadowOffsetX = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      }
+    }
+  }
+
+  get shadowOffsetX(): number {
+    return this.textProps.shadowOffsetX;
+  }
+
+  set shadowOffsetY(value: number) {
+    if (this.textProps.shadowOffsetY !== value) {
+      this.textProps.shadowOffsetY = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      } else {
+        this.stage.requestRender();
+      }
+    }
+  }
+
+  get shadowOffsetY(): number {
+    return this.textProps.shadowOffsetY;
+  }
+
+  set shadowBlur(value: number) {
+    if (this.textProps.shadowBlur !== value) {
+      this.textProps.shadowBlur = value;
+      if (this.stage.renderer.mode === 'canvas') {
+        this._layoutGenerated = false;
+        this.setUpdateType(UpdateType.Local);
+      } else {
+        this.stage.requestRender();
+      }
+    }
+  }
+
+  get shadowBlur(): number {
+    return this.textProps.shadowBlur;
   }
 }

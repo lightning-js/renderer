@@ -246,6 +246,12 @@ const renderQuads = (
         color: mergeColorAlpha(color, worldAlpha),
         size: layout.fontScale, // Use proper font scaling in shader
         distanceRange: layout.distanceRange,
+        shadow: renderProps.shadow,
+        shadowAlpha: renderProps.shadowAlpha,
+        shadowColor: renderProps.shadowColor,
+        shadowOffsetY: renderProps.shadowOffsetY,
+        shadowOffsetX: renderProps.shadowOffsetX,
+        shadowBlur: renderProps.shadowBlur,
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
       shader: sdfShader,

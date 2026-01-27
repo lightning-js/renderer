@@ -245,6 +245,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
     }
 
+    console.log('renderOp.sdfShaderProps', renderOp);
     /**temporary fix to make sdf texts work */
     if (renderOp.sdfShaderProps !== undefined) {
       (renderOp.shader.shaderType as WebGlShaderType).onSdfBind?.call(

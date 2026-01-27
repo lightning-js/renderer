@@ -248,6 +248,13 @@ export interface TrProps extends TrFontProps {
    * @default 'none'
    */
   contain: 'width' | 'height' | 'both' | 'none';
+
+  shadow: boolean;
+  shadowAlpha: number;
+  shadowColor: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
 }
 
 /**
@@ -379,6 +386,12 @@ export interface TextRenderProps {
   parentHasRenderTexture: boolean;
   framebufferDimensions: unknown;
   stage: Stage;
+  shadow: boolean;
+  shadowAlpha: number;
+  shadowColor: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  shadowBlur: number;
 }
 
 export interface TextRenderInfo {
