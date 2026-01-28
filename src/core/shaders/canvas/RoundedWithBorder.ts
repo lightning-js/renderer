@@ -26,11 +26,15 @@ import type { ComputedBorderValues } from './Border.js';
 import type { ComputedRoundedValues } from './Rounded.js';
 import { roundedRectWithBorder } from './utils/render.js';
 
-type ComputedValues = ComputedRoundedValues & ComputedBorderValues;
+export type ComputedRoundedWithBorderValues = ComputedRoundedValues &
+  ComputedBorderValues & {
+    outerBorderRadius: Vec4;
+    innerBorderRadius: Vec4;
+  };
 
 export const RoundedWithBorder: CanvasShaderType<
   RoundedWithBorderProps,
-  ComputedValues
+  ComputedRoundedWithBorderValues
 > = {
   props: RoundedWithBorderTemplate.props,
   saveAndRestore: true,
@@ -44,17 +48,55 @@ export const RoundedWithBorder: CanvasShaderType<
     this.computed.radius = radius;
     this.computed.borderColor = this.toColorString(props['border-color']);
     this.computed.borderAsym = !valuesAreEqual(props['border-w'] as number[]);
-    //following vec4 convention 0, 1, 2, 3 => x, y, z, w;
-    const [x, y, z, w] = props['border-w'] as Vec4;
-    this.computed.borderRadius = [
-      Math.max(0.0, radius[0] - Math.max(x, w) * 0.5),
-      Math.max(0.0, radius[1] - Math.max(x, y) * 0.5),
-      Math.max(0.0, radius[2] - Math.max(z, y) * 0.5),
-      Math.max(0.0, radius[3] - Math.max(z, w) * 0.5),
+    const borderAlign = this.props!['border-align'] as number;
+    const borderGap = this.props!['border-gap'] as number;
+
+    // Calculate outer and inner rectangle dimensions
+    const [t, r, b, l] = this.props!['border-w'] as Vec4;
+
+    const outerX = (this.computed.outerX = -l * borderAlign - borderGap);
+    const outerY = (this.computed.outerY = -t * borderAlign - borderGap);
+    let outerW = 0;
+    let outerH = 0;
+
+    if (r > 0) {
+      outerW += r * borderAlign + borderGap;
+    }
+    if (l > 0) {
+      outerW += l * borderAlign + borderGap;
+    }
+
+    if (b > 0) {
+      outerH += b * borderAlign + borderGap;
+    }
+    if (t > 0) {
+      outerH += t * borderAlign + borderGap;
+    }
+
+    this.computed.outerW = outerW;
+    this.computed.outerH = outerH;
+
+    this.computed.innerX = outerX + l;
+    this.computed.innerY = outerY + t;
+    this.computed.innerW = outerW - l - r;
+    this.computed.innerH = outerH - t - b;
+
+    this.computed.outerBorderRadius = [
+      Math.max(0.0, radius[0] + (Math.max(l, r) * borderAlign + borderGap)),
+      Math.max(0.0, radius[1] + (Math.max(t, b) * borderAlign + borderGap)),
+      Math.max(0.0, radius[2] + (Math.max(b, t) * borderAlign + borderGap)),
+      Math.max(0.0, radius[3] + (Math.max(l, r) * borderAlign + borderGap)),
+    ];
+
+    this.computed.innerBorderRadius = [
+      Math.max(0.0, this.computed.outerBorderRadius[0] - Math.max(l, r)),
+      Math.max(0.0, this.computed.outerBorderRadius[1] - Math.max(t, b)),
+      Math.max(0.0, this.computed.outerBorderRadius[2] - Math.max(b, t)),
+      Math.max(0.0, this.computed.outerBorderRadius[3] - Math.max(l, r)),
     ];
   },
   render(ctx, quad, renderContext) {
-    const computed = this.computed as ComputedValues;
+    const computed = this.computed as ComputedRoundedWithBorderValues;
     roundedRectWithBorder(
       ctx,
       quad.tx,
@@ -62,10 +104,18 @@ export const RoundedWithBorder: CanvasShaderType<
       quad.width,
       quad.height,
       computed.radius,
-      this.props!['border-w'] as Vec4,
-      computed.borderRadius,
+      this.props!['border-gap'] as number,
+      computed.outerX,
+      computed.outerY,
+      computed.outerW,
+      computed.outerH,
+      computed.outerBorderRadius,
+      computed.innerX,
+      computed.innerY,
+      computed.innerW,
+      computed.innerH,
+      computed.innerBorderRadius,
       computed.borderColor,
-      computed.borderAsym,
       renderContext,
     );
   },

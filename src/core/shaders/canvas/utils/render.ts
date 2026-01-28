@@ -48,55 +48,64 @@ export function roundedRectWithBorder(
   width: number,
   height: number,
   radius: Vec4,
-  borderWidth: Vec4,
-  borderRadius: Vec4,
+  borderGap: number,
+  outerX: number,
+  outerY: number,
+  outerW: number,
+  outerH: number,
+  outerBorderRadius: Vec4,
+  innerX: number,
+  innerY: number,
+  innerW: number,
+  innerH: number,
+  innerBorderRadius: Vec4,
   borderColor: string,
-  borderAsym: boolean,
   renderContext: () => void,
 ) {
-  if (borderAsym === false) {
-    const bWidth = borderWidth[0];
-    const bHalfWidth = bWidth * 0.5;
+  outerX += x;
+  outerY += y;
+  outerW += width;
+  outerH += height;
+
+  innerX += x;
+  innerY += y;
+  innerW += width;
+  innerH += height;
+
+  // no gap render strategy - to avoid artifacts between border and node
+  if (borderGap === 0) {
+    //draw outer border rounded rect
+    ctx.beginPath();
+    roundRect(ctx, outerX, outerY, outerW, outerH, outerBorderRadius);
+    ctx.fillStyle = borderColor;
+    ctx.fill();
+    ctx.closePath();
+
     const path = new Path2D();
-    roundRect(path, x, y, width, height, radius);
+    roundRect(path, innerX, innerY, innerW, innerH, innerBorderRadius as Vec4);
     ctx.clip(path);
-
     renderContext();
-
-    if (bWidth > 0) {
-      ctx.beginPath();
-      ctx.lineWidth = bWidth;
-      ctx.strokeStyle = borderColor;
-      roundRect(
-        ctx,
-        x + bHalfWidth,
-        y + bHalfWidth,
-        width - bWidth,
-        height - bWidth,
-        borderRadius,
-      );
-      ctx.stroke();
-    }
     return;
   }
 
-  ctx.beginPath();
-  roundRect(ctx, x, y, width, height, radius as Vec4);
-  ctx.fillStyle = borderColor;
-  ctx.fill();
-  const { 0: t, 1: r, 2: b, 3: l } = borderWidth as Vec4;
+  // with gap render strategy
 
+  //draw node content first
+  ctx.save();
   const path = new Path2D();
-  roundRect(
-    path,
-    x + l,
-    y + t,
-    width - (l + r),
-    height - (t + b),
-    borderRadius as Vec4,
-  );
+  roundRect(path, x, y, width, height, radius);
   ctx.clip(path);
   renderContext();
+  ctx.restore();
+
+  //draw border by clipping inner area from outer area
+  ctx.save();
+  const borderPath = new Path2D();
+  roundRect(borderPath, outerX, outerY, outerW, outerH, outerBorderRadius);
+  roundRect(borderPath, innerX, innerY, innerW, innerH, innerBorderRadius);
+  ctx.fillStyle = borderColor;
+  ctx.fill(borderPath, 'evenodd');
+  ctx.restore();
 }
 
 export function shadow(
