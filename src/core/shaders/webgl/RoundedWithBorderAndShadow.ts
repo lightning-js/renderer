@@ -112,8 +112,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         vec2 signDiff = sign(borderDiff);
         borderDiff = abs(borderDiff) - u_borderGap;
 
-        v_outerBorderUv = -signDiff * borderDiff * u_borderAlign;
-        v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff;
+        v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5;
+        v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
         v_outerBorderRadius = vec4(
           max(0.0, u_radius.x + max(borderTop * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap)),
