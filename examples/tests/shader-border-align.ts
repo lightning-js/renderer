@@ -58,6 +58,22 @@ export default async function test({
     parent: testRoot,
   });
 
+  const RedRect4 = renderer.createNode({
+    x: 1090,
+    y: 90,
+    w: 200,
+    h: 200,
+    color: 0xff0000ff,
+    shader: renderer.createShader('Border', {
+      left: 20,
+      top: 10,
+      bottom: 10,
+      gap: 5,
+      align: 1,
+    }),
+    parent: testRoot,
+  });
+
   const GreenRect = renderer.createNode({
     x: 90,
     y: 400,
