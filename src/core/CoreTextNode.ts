@@ -132,6 +132,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     let mountTranslateX = p.mountX * w;
     let mountTranslateY = p.mountY * h;
 
+    if (this._type === 'canvas') {
+      const renderInfo = this._renderInfo;
+      w = renderInfo.width;
+      h = renderInfo.height;
+      x -= renderInfo.offsetX || 0;
+      y -= renderInfo.offsetY || 0;
+    }
+
     let localTextTransform: Matrix3d | null = null;
 
     const tProps = this.textProps;
@@ -266,14 +274,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         // We do want the texture to load immediately
         this.texture.setRenderableOwner(this._id, true);
       }
+
+      this.props.w = result.canvasW as number;
+      this.props.h = result.canvasH as number;
     }
 
     this._cachedLayout = result.layout || null;
-    this.props.w = width;
-    this.props.h = height;
 
     // Handle SDF renderer (uses layout caching)
     if (textRendererType === 'sdf') {
+      this.props.w = width;
+      this.props.h = height;
       this.setRenderable(true);
       this.setUpdateType(UpdateType.Local);
     }

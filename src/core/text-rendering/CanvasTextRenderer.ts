@@ -144,11 +144,46 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     maxHeight,
   );
   const lineAmount = lines.length;
-  const canvasW = Math.ceil(effectiveWidth);
-  const canvasH = Math.ceil(effectiveHeight);
+
+  // Calculate shadow bounds to expand canvas
+  let shadowLeft = 0;
+  let shadowRight = 0;
+  let shadowTop = 0;
+  let shadowBottom = 0;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (props.shadow === true) {
+    const shadowOffsetX = props.shadowOffsetX || 0;
+    const shadowOffsetY = props.shadowOffsetY || 0;
+    const shadowBlur = props.shadowBlur || 0;
+
+    // Calculate shadow extents
+    shadowLeft = Math.max(0, -shadowOffsetX + shadowBlur);
+    shadowRight = Math.max(0, shadowOffsetX + shadowBlur);
+    shadowTop = Math.max(0, -shadowOffsetY + shadowBlur);
+    shadowBottom = Math.max(0, shadowOffsetY + shadowBlur);
+
+    // Displacement needed to account for negative offsets
+    offsetX = shadowLeft;
+    offsetY = shadowTop;
+  }
+
+  const canvasW = Math.ceil(effectiveWidth + shadowLeft + shadowRight);
+  const canvasH = Math.ceil(effectiveHeight + shadowTop + shadowBottom);
 
   canvas.width = canvasW;
   canvas.height = canvasH;
+
+  if (props.shadow === true) {
+    context.shadowColor = `rgba(${(props.shadowColor >> 16) & 0xff}, ${
+      (props.shadowColor >> 8) & 0xff
+    }, ${props.shadowColor & 0xff}, ${props.shadowAlpha})`;
+    context.shadowOffsetX = props.shadowOffsetX;
+    context.shadowOffsetY = props.shadowOffsetY;
+    context.shadowBlur = props.shadowBlur;
+  }
+
   context.fillStyle = 'white';
   context.font = font;
   context.textBaseline = 'hanging';
@@ -163,8 +198,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
-    let currentX = Math.ceil(line[3]);
-    const currentY = Math.ceil(line[4]);
+    let currentX = Math.ceil(line[3]) + offsetX;
+    const currentY = Math.ceil(line[4]) + offsetY;
     if (letterSpacing === 0) {
       context.fillText(textLine, currentX, currentY);
     } else {
@@ -195,6 +230,10 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
+    canvasW,
+    canvasH,
+    offsetX,
+    offsetY,
   };
 };
 

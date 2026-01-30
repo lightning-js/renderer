@@ -401,6 +401,10 @@ export interface TextRenderInfo {
   remainingLines?: number;
   imageData?: ImageData | null; // Image data for Canvas Text Renderer
   layout?: TextLayout; // Layout data for SDF renderer caching
+  offsetX?: number; // X displacement for shadow rendering
+  offsetY?: number; // Y displacement for shadow rendering
+  canvasW?: number; // Canvas width for Canvas Text Renderer
+  canvasH?: number; // Canvas height for Canvas Text Renderer
 }
 
 export interface TextRenderer {

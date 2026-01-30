@@ -37,6 +37,10 @@ import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
+import {
+  SdfShadow,
+  type SdfShadowShaderProps,
+} from '../shaders/webgl/SdfShadowShader.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
 const FLOATS_PER_VERTEX = 4;
@@ -46,6 +50,7 @@ const VERTICES_PER_GLYPH = 6;
 const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
+let sdfShadowShader: WebGlShaderNode | null = null;
 
 // Initialize the SDF text renderer
 const init = (stage: Stage): void => {
@@ -53,7 +58,13 @@ const init = (stage: Stage): void => {
 
   // Register SDF shader with the shader manager
   stage.shManager.registerShaderType('Sdf', Sdf);
+  stage.shManager.registerShaderType('SdfShadow', SdfShadow);
+
+  // Create a shared SDF shader node instance
   sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
+  sdfShadowShader = stage.shManager.createShader(
+    'SdfShadow',
+  ) as WebGlShaderNode;
 };
 
 const font: FontHandler = SdfFontHandler;
@@ -238,6 +249,41 @@ const renderQuads = (
     glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
   }
 
+  if (renderProps.shadow === true) {
+    console.log('Adding SDF shadow render op');
+    const shadowRenderOp = new WebGlRenderOp(
+      renderer as WebGlRenderer,
+      {
+        sdfShaderProps: {
+          transform: globalTransform,
+          color: mergeColorAlpha(color, worldAlpha),
+          size: layout.fontScale, // Use proper font scaling in shader
+          distanceRange: layout.distanceRange,
+          shadowColor: renderProps.shadowColor,
+          shadowBlur: renderProps.shadowBlur,
+          shadowOffsetX: renderProps.shadowOffsetX,
+          shadowOffsetY: renderProps.shadowOffsetY,
+        } satisfies SdfShadowShaderProps,
+        sdfBuffers: webGlBuffers,
+        shader: sdfShadowShader!,
+        alpha: worldAlpha,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+        clippingRect: renderProps.clippingRect as any,
+        height: layout.height,
+        width: layout.width,
+        rtt: false,
+        parentHasRenderTexture: renderProps.parentHasRenderTexture,
+      },
+      0,
+    );
+
+    // Add atlas texture and set quad count
+    shadowRenderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
+    shadowRenderOp.numQuads = layout.glyphs.length;
+
+    (renderer as WebGlRenderer).addRenderOp(shadowRenderOp);
+  }
+
   const renderOp = new WebGlRenderOp(
     renderer as WebGlRenderer,
     {
@@ -246,12 +292,6 @@ const renderQuads = (
         color: mergeColorAlpha(color, worldAlpha),
         size: layout.fontScale, // Use proper font scaling in shader
         distanceRange: layout.distanceRange,
-        shadow: renderProps.shadow,
-        shadowAlpha: renderProps.shadowAlpha,
-        shadowColor: renderProps.shadowColor,
-        shadowOffsetY: renderProps.shadowOffsetY,
-        shadowOffsetX: renderProps.shadowOffsetX,
-        shadowBlur: renderProps.shadowBlur,
       } satisfies SdfShaderProps,
       sdfBuffers: webGlBuffers,
       shader: sdfShader,

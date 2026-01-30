@@ -28,21 +28,39 @@ export default async function test({
   testRoot,
   snapshot,
 }: ExampleSettings) {
-  const RedRect = renderer.createTextNode({
+  //canvas text node with shadow
+  const textNode = renderer.createTextNode({
     x: 20,
     y: 20,
     w: 200,
     h: 200,
     color: 0xff0000ff,
-    text: 'This is a text node with shadow',
+    text: 'This is a canvas text node with shadow',
+    // fontFamily: 'Ubuntu',
+    fontSize: 54,
+    shadow: true,
+    shadowColor: 0x000000ff,
+    shadowOffsetX: -10,
+    shadowOffsetY: 10,
+    shadowBlur: 6,
+    parent: testRoot,
+  });
+
+  //sdf text node with shadow
+  const textNode2 = renderer.createTextNode({
+    x: 20,
+    y: 120,
+    w: 200,
+    h: 200,
+    color: 0xff0000ff,
+    text: 'This is a sdf text node with shadow',
     fontFamily: 'Ubuntu',
     fontSize: 54,
     shadow: true,
     shadowColor: 0x000000ff,
-    shadowAlpha: 1,
-    shadowOffsetX: 10,
+    shadowOffsetX: -10,
     shadowOffsetY: 10,
-    shadowBlur: 5,
+    shadowBlur: 2,
     parent: testRoot,
   });
 }
