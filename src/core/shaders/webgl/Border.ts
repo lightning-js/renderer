@@ -76,17 +76,25 @@ export const Border: WebGlShaderType<BorderProps> = {
 
       vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
       vec2 extraSize = borderSize * u_borderAlign;
-      vec2 gapSize = step(0.001, borderSize) * u_borderGap;
+      float gapLeft = step(0.001, borderLeft) * u_borderGap;
+      float gapRight = step(0.001, borderRight) * u_borderGap;
+      float gapTop = step(0.001, borderTop) * u_borderGap;
+      float gapBottom = step(0.001, borderBottom) * u_borderGap;
+      vec2 gapSize = vec2(gapLeft + gapRight, gapTop + gapBottom);
 
-      v_outerSize = (u_dimensions + gapSize * 2.0 + extraSize) * 0.5;
+      v_outerSize = (u_dimensions + gapSize + extraSize) * 0.5;
       v_innerSize = v_outerSize - borderSize * 0.5;
 
       // Use sign() to avoid branching
       vec2 borderDiff = vec2(borderRight - borderLeft, borderBottom - borderTop);
       vec2 signDiff = sign(borderDiff);
-      borderDiff = abs(borderDiff) - u_borderGap;
+      borderDiff = abs(borderDiff);
 
-      v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5;
+      vec2 gapDiff = vec2(gapRight - gapLeft, gapBottom - gapTop);
+      vec2 signGapDiff = sign(gapDiff);
+      gapDiff = abs(gapDiff);
+
+      v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5 - signGapDiff * gapDiff * 0.5;
       v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
       vec2 edgeOffsetExtra = step(u_dimensions * 0.5, v_outerSize) * edge * (extraSize + u_borderGap);

@@ -102,17 +102,25 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
 
         vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
         vec2 extraSize = borderSize * u_borderAlign;
-        vec2 gapSize = step(0.001, borderSize) * u_borderGap;
+        float gapLeft = step(0.001, borderLeft) * u_borderGap;
+        float gapRight = step(0.001, borderRight) * u_borderGap;
+        float gapTop = step(0.001, borderTop) * u_borderGap;
+        float gapBottom = step(0.001, borderBottom) * u_borderGap;
+        vec2 gapSize = vec2(gapLeft + gapRight, gapTop + gapBottom);
 
-        v_outerSize = u_dimensions + gapSize * 2.0 + extraSize;
-        v_innerSize = v_outerSize - borderSize;
+        v_outerSize = (u_dimensions + gapSize + extraSize) * 0.5;
+        v_innerSize = v_outerSize - borderSize * 0.5;
 
         // Use sign() to avoid branching
         vec2 borderDiff = vec2(borderRight - borderLeft, borderBottom - borderTop);
         vec2 signDiff = sign(borderDiff);
-        borderDiff = abs(borderDiff) - u_borderGap;
+        borderDiff = abs(borderDiff);
 
-        v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5;
+        vec2 gapDiff = vec2(gapRight - gapLeft, gapBottom - gapTop);
+        vec2 signGapDiff = sign(gapDiff);
+        gapDiff = abs(gapDiff);
+
+        v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5 - signGapDiff * gapDiff * 0.5;
         v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
         v_outerBorderRadius = vec4(
@@ -129,7 +137,7 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
           max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
         );
 
-        vec2 edgeOffsetExtra = step(u_dimensions, v_outerSize) * edge * (extraSize + u_borderGap);
+        vec2 edgeOffsetExtra = step(u_dimensions * 0.5, v_outerSize) * edge * (extraSize + u_borderGap);
         edgeOffset += edgeOffsetExtra;
 
         vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
@@ -210,8 +218,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         return;
       }
 
-      if(v_outerSize.x > u_dimensions.x || v_outerSize.y > u_dimensions.y) {
-        shadowAlpha = shadowBox(boxUv + v_outerBorderUv - u_shadow.xy, v_outerSize * 0.5 + u_shadow.w - v_edgeWidth, v_outerBorderRadius + u_shadow.z);
+      if(v_outerSize.x > v_halfDimensions.x || v_outerSize.y > v_halfDimensions.y) {
+        shadowAlpha = shadowBox(boxUv + v_outerBorderUv - u_shadow.xy, v_outerSize + u_shadow.w - v_edgeWidth, v_outerBorderRadius + u_shadow.z);
       }
       else {
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
@@ -219,8 +227,8 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
 
       nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
       nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
-      float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize * 0.5 - v_edgeWidth, v_outerBorderRadius);
-      float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize * 0.5 - v_edgeWidth, v_innerBorderRadius);
+      float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - v_edgeWidth, v_outerBorderRadius);
+      float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - v_edgeWidth, v_innerBorderRadius);
       float borderDist = max(-innerDist, outerDist);
       float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
       resultColor = mix(resultColor, u_shadowColor, shadowAlpha);
