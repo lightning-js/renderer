@@ -60,7 +60,7 @@ export default async function test({
     shadowColor: 0x000000ff,
     shadowOffsetX: -10,
     shadowOffsetY: 10,
-    shadowBlur: 2,
+    shadowBlur: 6,
     parent: testRoot,
   });
 }

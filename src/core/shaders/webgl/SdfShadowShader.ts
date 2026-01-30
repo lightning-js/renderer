@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-import { getNormalizedRgbaComponents } from '../../lib/utils';
-import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode';
-import { Sdf, type SdfShaderProps } from './SdfShader';
+import { getNormalizedRgbaComponents } from '../../lib/utils.js';
+import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
+import { Sdf, type SdfShaderProps } from './SdfShader.js';
 
 export type SdfShadowShaderProps = SdfShaderProps & {
   shadowColor: number;
@@ -87,9 +87,17 @@ export const SdfShadow: WebGlShaderType<SdfShadowShaderProps> = {
     # else
     precision mediump float;
     # endif
+    uniform vec4 u_color;
     uniform vec4 u_shadowColor;
     uniform sampler2D u_texture;
     uniform float u_shadowBlur;
+    uniform vec2 u_shadowOffset;
+
+    uniform vec2 u_resolution;
+    uniform mat3 u_transform;
+    uniform float u_pixelRatio;
+
+    uniform float u_size;
 
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
@@ -101,16 +109,15 @@ export const SdfShadow: WebGlShaderType<SdfShadowShaderProps> = {
     void main() {
       vec3 sample = texture2D(u_texture, v_texcoord).rgb;
       float sigDist = v_scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
+      float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
 
-      // Shadow extends outward from the edge with blur
-      // Similar to original shader's clamp(sigDist + 0.5, 0.0, 1.0) but extended
-      float blurRange = max(u_shadowBlur, 1.0);
-      float shadow = clamp((sigDist + blurRange) / blurRange, 0.0, 1.0);
-      float shadowAlpha = shadow * u_shadowColor.a;
+      //shadow effect
+      float shadowSigDist = v_scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5;
+      float shadowOpacity = clamp(shadowSigDist + 0.5, 0.0, 1.0) * u_shadowColor.a;
 
       // Build the final color.
       // IMPORTANT: We must premultiply the color by the alpha value before returning it.
-      gl_FragColor = vec4(u_shadowColor.rgb * shadowAlpha, shadowAlpha);
+      gl_FragColor = vec4(u_shadowColor.r * shadowOpacity, u_shadowColor.g * shadowOpacity, u_shadowColor.b * shadowOpacity, shadowOpacity);
     }
   `,
 };
