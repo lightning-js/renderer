@@ -52,7 +52,7 @@ export enum TextConstraint {
   'none' = 0,
   'width' = 1,
   'height' = 2,
-  'both' = 4,
+  'both' = 3,
 }
 
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
