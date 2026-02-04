@@ -102,6 +102,7 @@ export interface TextureData {
     | CompressedData
     | HTMLImageElement
     | Uint8Array
+    | WebGLTexture
     | null;
   /**
    * Premultiply alpha when uploading texture data to the GPU
