@@ -50,12 +50,14 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     varying vec2 v_textureCoords;
     varying vec2 v_nodeCoords;
 
+    varying float v_edgeWidth;
+    varying vec2 v_halfDimensions;
+
     void main() {
       vec2 screenSpace = vec2(2.0 / u_resolution.x,  -2.0 / u_resolution.y);
       vec2 outerEdge = clamp(a_nodeCoords * 2.0 - vec2(1.0), -1.0, 1.0);
 
       vec2 shadowEdge = outerEdge * ((u_shadow.w * 2.0)+ u_shadow.z) + u_shadow.xy;
-      vec2 normVertexPos = a_position * u_pixelRatio;
 
       vec2 vertexPos = (a_position + outerEdge + shadowEdge) * u_pixelRatio;
       gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
@@ -63,6 +65,9 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
       v_color = a_color;
       v_nodeCoords = a_nodeCoords + (screenSpace + shadowEdge) / (u_dimensions);
       v_textureCoords = a_textureCoords + (screenSpace + shadowEdge) / (u_dimensions);
+
+      v_halfDimensions = u_dimensions * 0.5;
+      v_edgeWidth = 1.0 / u_pixelRatio;
     }
   `,
   fragment: `
@@ -85,6 +90,9 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
     varying vec2 v_textureCoords;
     varying vec2 v_nodeCoords;
 
+    varying vec2 v_halfDimensions;
+    varying float v_edgeWidth;
+
     float box(vec2 p, vec2 s) {
       vec2 q = abs(p) - s;
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) + 2.0;
@@ -98,13 +106,11 @@ export const Shadow: WebGlShaderType<ShadowProps> = {
 
     void main() {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
-      vec2 halfDimensions = (u_dimensions * 0.5);
-
-      vec2 boxUv = v_nodeCoords.xy * u_dimensions - halfDimensions;
-      float boxDist = box(boxUv, halfDimensions);
+      vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
+      float boxDist = box(boxUv, v_halfDimensions - v_edgeWidth);
 
       float boxAlpha = 1.0 - smoothstep(0.0, u_pixelRatio, boxDist);
-      float shadowDist = shadowBox(boxUv - u_shadow.xy, halfDimensions + u_shadow.w, u_shadow.z);
+      float shadowDist = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_shadow.z);
 
       vec4 resColor = vec4(0.0);
       resColor = mix(resColor, u_color, shadowDist);

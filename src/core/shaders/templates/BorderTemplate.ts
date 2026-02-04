@@ -36,6 +36,16 @@ export interface BorderProps {
    */
   color: number;
   /**
+   * Alignment of the border
+   *
+   * @default 'inside'
+   */
+  align: number | 'inside' | 'center' | 'outside';
+  /**
+   * Gap between node and border baseline. Default is 0. and generally edge of node)
+   */
+  gap: number;
+  /**
    * Top width
    */
   top: number;
@@ -69,6 +79,26 @@ export function getBorderProps<P extends string>(
       },
     },
     [pf + 'color']: 0xffffffff,
+    [pf + 'align']: {
+      default: 0, //inside,
+      resolve(value) {
+        if (!isNaN(value)) {
+          return value as number;
+        }
+        if (typeof value === 'string') {
+          switch (value) {
+            case 'inside':
+              return 0;
+            case 'center':
+              return 0.5;
+            case 'outside':
+              return 1;
+          }
+        }
+        return this.default;
+      },
+    },
+    [pf + 'gap']: 0,
     [pf + 'top']: {
       default: 0,
       set(value, props) {
