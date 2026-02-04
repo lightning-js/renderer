@@ -96,15 +96,16 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
       (value) => value + props['shadow-blur'],
     ) as Vec4;
   },
-  render(ctx, quad, renderContext) {
-    const { tx, ty, width, height } = quad;
+  render(ctx, node, renderContext) {
+    const { tx, ty } = node.globalTransform!;
+    const { w, h } = node.props;
     const computed = this.computed as ComputedValues;
     render.shadow(
       ctx,
       tx + computed.outerX,
       ty + computed.outerY,
-      height + computed.outerH,
-      width + computed.outerW,
+      w + computed.outerW,
+      h + computed.outerH,
       computed.shadowColor,
       this.props!['shadow-projection'],
       computed.shadowRadius,
@@ -112,10 +113,10 @@ export const RoundedWithBorderAndShadow: CanvasShaderType<
     );
     render.roundedRectWithBorder(
       ctx,
-      quad.tx,
-      quad.ty,
-      quad.width,
-      quad.height,
+      tx,
+      ty,
+      w,
+      h,
       computed.radius,
       this.props!['border-gap'] as number,
       computed.outerX,

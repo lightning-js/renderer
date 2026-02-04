@@ -266,7 +266,7 @@ export class WebGlRenderer extends CoreRenderer {
       this.newRenderOp(node, i);
     }
 
-    let tx = node.renderTexture!;
+    let tx = (node.props.texture || this.stage.defaultTexture) as Texture;
     if (tx.type === TextureType.subTexture) {
       tx = (tx as SubTexture).parentTexture;
     }
@@ -280,7 +280,7 @@ export class WebGlRenderer extends CoreRenderer {
     }
 
     const rc = node.renderCoords!;
-    const tc = node.renderTextureCoords!;
+    const tc = node.textureCoords || this.defaultTextureCoords;
 
     const cTl = node.premultipliedColorTl;
     const cTr = node.premultipliedColorTr;
