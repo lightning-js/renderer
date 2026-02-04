@@ -1800,47 +1800,31 @@ export class CoreNode extends EventEmitter {
         return;
     }
 
-    const p = this.props;
-    const t = this.globalTransform!;
-    const coords = this.renderCoords;
-    const texture = p.texture || this.stage.defaultTexture;
-    const textureCoords =
-      this.textureCoords || this.stage.renderer.defaultTextureCoords;
+    const texture = this.renderTexture;
 
     // There is a race condition where the texture can be null
     // with RTT nodes. Adding this defensively to avoid errors.
-    if (texture && texture.state !== 'loaded') {
+    // Also check if we have a valid texture or default texture to render
+    if (!texture || texture.state !== 'loaded') {
       return;
     }
 
-    renderer.addQuad({
-      width: p.w,
-      height: p.h,
-      colorTl: this.premultipliedColorTl,
-      colorTr: this.premultipliedColorTr,
-      colorBl: this.premultipliedColorBl,
-      colorBr: this.premultipliedColorBr,
-      texture,
-      textureOptions: p.textureOptions,
-      textureCoords: textureCoords,
-      shader: p.shader as CoreShaderNode<any>,
-      alpha: this.worldAlpha,
-      clippingRect: this.clippingRect,
-      tx: t.tx,
-      ty: t.ty,
-      ta: t.ta,
-      tb: t.tb,
-      tc: t.tc,
-      td: t.td,
-      renderCoords: coords,
-      rtt: p.rtt,
-      zIndex: this.calcZIndex,
-      parentHasRenderTexture: this.parentHasRenderTexture,
-      framebufferDimensions: this.parentHasRenderTexture
-        ? this.parentFramebufferDimensions
-        : null,
-      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
-    });
+    renderer.addQuad(this);
+  }
+
+  get renderTexture(): Texture | null {
+    return this.props.texture || this.stage.defaultTexture;
+  }
+
+  get renderTextureCoords(): TextureCoords | undefined {
+    return this.textureCoords || this.stage.renderer.defaultTextureCoords;
+  }
+
+  get renderTime(): number | null {
+    if (this.hasShaderTimeFn === true) {
+      return this.getTimerValue();
+    }
+    return null;
   }
 
   getTimerValue(): number {

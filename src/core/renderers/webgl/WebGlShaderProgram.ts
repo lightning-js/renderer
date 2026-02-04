@@ -18,12 +18,12 @@
  */
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
-import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderOp } from './WebGlRenderOp.js';
 import type { WebGlRenderer } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
+import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -33,6 +33,7 @@ import {
   type UniformSet3Params,
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
+import { CoreNode } from '../../CoreNode.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
   protected program: WebGLProgram | null;
@@ -146,39 +147,38 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(
-    incomingQuad: QuadOptions,
-    currentRenderOp: WebGlRenderOp,
-  ): boolean {
+  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlRenderOp): boolean {
     if (this.lifecycle.canBatch !== undefined) {
-      return this.lifecycle.canBatch(incomingQuad, currentRenderOp);
+      return this.lifecycle.canBatch(node, currentRenderOp);
     }
 
+    const { renderTime, worldAlpha } = node;
+    const { w, h } = node.props;
+
     if (this.useTimeValue === true) {
-      if (incomingQuad.time !== currentRenderOp.time) {
+      if (renderTime !== currentRenderOp.time) {
         return false;
       }
     }
 
     if (this.useSystemAlpha === true) {
-      if (incomingQuad.alpha !== currentRenderOp.alpha) {
+      if (worldAlpha !== currentRenderOp.alpha) {
         return false;
       }
     }
 
     if (this.useSystemDimensions === true) {
-      if (
-        incomingQuad.width !== currentRenderOp.width ||
-        incomingQuad.height !== currentRenderOp.height
-      ) {
+      if (w !== currentRenderOp.width || h !== currentRenderOp.height) {
         return false;
       }
     }
     let shaderPropsA: Record<string, unknown> | undefined = undefined;
     let shaderPropsB: Record<string, unknown> | undefined = undefined;
 
-    if (incomingQuad.shader !== null) {
-      shaderPropsA = incomingQuad.shader.resolvedProps;
+    const shader = node.props.shader;
+
+    if (shader !== null) {
+      shaderPropsA = (shader as WebGlShaderNode).resolvedProps;
     }
 
     if (currentRenderOp.shader !== null) {
