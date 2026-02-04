@@ -17,44 +17,13 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from '../../common/CommonTypes.js';
 import type { CoreNode } from '../CoreNode.js';
-import type { TextureOptions } from '../CoreTextureManager.js';
 import type { Stage } from '../Stage.js';
 import type { ContextSpy } from '../lib/ContextSpy.js';
-import type { RenderCoords } from '../lib/RenderCoords.js';
-import type { RectWithValid } from '../lib/utils.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
 import type { Texture, TextureCoords } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
-
-export interface QuadOptions {
-  width: number;
-  height: number;
-  colorTl: number;
-  colorTr: number;
-  colorBl: number;
-  colorBr: number;
-  texture: Texture | null;
-  textureOptions: TextureOptions | null;
-  textureCoords: TextureCoords | undefined;
-  zIndex: number;
-  shader: CoreShaderNode | null;
-  alpha: number;
-  clippingRect: RectWithValid;
-  tx: number;
-  ty: number;
-  ta: number;
-  tb: number;
-  tc: number;
-  td: number;
-  renderCoords?: RenderCoords;
-  rtt: boolean;
-  parentHasRenderTexture: boolean;
-  framebufferDimensions: Dimensions | null;
-  time?: number | null;
-}
 
 export interface CoreRendererOptions {
   stage: Stage;

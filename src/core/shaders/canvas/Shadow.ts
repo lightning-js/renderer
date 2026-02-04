@@ -35,13 +35,15 @@ export const Shadow: CanvasShaderType<ShadowProps, ComputedShadowValues> = {
     const blur = this.props!['blur'];
     this.computed.shadowRadius = [blur, blur, blur, blur];
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
+    const { tx, ty } = node.globalTransform!;
+    const { w, h } = node.props;
     shadow(
       ctx,
-      quad.tx,
-      quad.ty,
-      quad.width,
-      quad.height,
+      tx,
+      ty,
+      w,
+      h,
       this.computed.shadowColor!,
       this.props!['projection'],
       this.computed.shadowRadius!,

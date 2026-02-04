@@ -20,11 +20,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
-import {
-  CoreRenderer,
-  type CoreRendererOptions,
-  type QuadOptions,
-} from '../CoreRenderer.js';
+import { CoreRenderer, type CoreRendererOptions } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
@@ -70,7 +66,7 @@ export class CanvasRenderer extends CoreRenderer {
     const ctx = this.context;
     const { tx, ty, ta, tb, tc, td } = node.globalTransform!;
     const clippingRect = node.clippingRect;
-    let texture = node.renderTexture;
+    let texture = (node.props.texture || this.stage.defaultTexture) as Texture;
     // The Canvas2D renderer only supports image textures, no textures are used for color blocks
     if (texture !== null) {
       const textureType = texture.type;
@@ -85,7 +81,7 @@ export class CanvasRenderer extends CoreRenderer {
     }
 
     const hasTransform = ta !== 1;
-    const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
+    const hasClipping = clippingRect.w !== 0 && clippingRect.h !== 0;
     const shader = node.props.shader;
     const hasShader = shader !== null;
 
@@ -100,8 +96,8 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasClipping === true) {
       const path = new Path2D();
-      const { x, y, width, height } = clippingRect;
-      path.rect(x, y, width, height);
+      const { x, y, w, h } = clippingRect;
+      path.rect(x, y, w, h);
       ctx.clip(path);
     }
 
@@ -122,40 +118,13 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasShader === true) {
       let renderContext: (() => void) | null = () => {
-        this.renderContext(node);
-      };
-      const quad: QuadOptions = {
-        width: node.props.w,
-        height: node.props.h,
-        colorTl: node.premultipliedColorTl,
-        colorTr: node.premultipliedColorTr,
-        colorBl: node.premultipliedColorBl,
-        colorBr: node.premultipliedColorBr,
-        texture: texture,
-        textureOptions: node.props.textureOptions,
-        textureCoords: node.renderTextureCoords,
-        zIndex: node.zIndex, // zIndex usage?
-        shader: shader,
-        alpha: node.worldAlpha,
-        clippingRect: clippingRect,
-        tx,
-        ty,
-        ta,
-        tb,
-        tc,
-        td,
-        renderCoords: node.renderCoords,
-        rtt: node.props.rtt,
-        parentHasRenderTexture: node.parentHasRenderTexture,
-        framebufferDimensions: node.parentHasRenderTexture
-          ? node.parentFramebufferDimensions
-          : null,
+        this.renderContext(node, texture);
       };
 
-      (shader as CanvasShaderNode).render(ctx, quad, renderContext);
+      (shader as CanvasShaderNode).render(ctx, node, renderContext);
       renderContext = null;
     } else {
-      this.renderContext(node);
+      this.renderContext(node, texture);
     }
 
     if (saveAndRestore) {
@@ -163,9 +132,8 @@ export class CanvasRenderer extends CoreRenderer {
     }
   }
 
-  renderContext(node: CoreNode) {
+  renderContext(node: CoreNode, texture: Texture) {
     const color = node.premultipliedColorTl;
-    const texture = node.renderTexture!;
     const textureType = texture.type;
     const tx = node.globalTransform!.tx;
     const ty = node.globalTransform!.ty;
