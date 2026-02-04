@@ -178,7 +178,7 @@ export class ImageWorkerManager {
   imageWorkersEnabled = true;
   messageManager: Record<number, MessageCallback> = {};
   workers: Worker[] = [];
-  workerIndex = 0;
+  workerLoad: number[] = [];
   nextId = 0;
 
   constructor(
@@ -189,14 +189,19 @@ export class ImageWorkerManager {
       numImageWorkers,
       createImageBitmapSupport,
     );
-    this.workers.forEach((worker) => {
-      worker.onmessage = this.handleMessage.bind(this);
+    this.workers.forEach((worker, index) => {
+      worker.onmessage = (event) => this.handleMessage(event, index);
     });
   }
 
-  private handleMessage(event: MessageEvent) {
+  private handleMessage(event: MessageEvent, workerIndex: number) {
     const { id, data, error } = event.data as ImageWorkerMessage;
     const msg = this.messageManager[id];
+
+    if (this.workerLoad[workerIndex]) {
+      this.workerLoad[workerIndex]--;
+    }
+
     if (msg) {
       const [resolve, reject] = msg;
       delete this.messageManager[id];
@@ -242,14 +247,30 @@ export class ImageWorkerManager {
     const workers: Worker[] = [];
     for (let i = 0; i < numWorkers; i++) {
       workers.push(new Worker(blobURL));
+      this.workerLoad.push(0);
     }
     return workers;
   }
 
-  private getNextWorker(): Worker | undefined {
-    const worker = this.workers[this.workerIndex];
-    this.workerIndex = (this.workerIndex + 1) % this.workers.length;
-    return worker;
+  private getNextWorkerIndex(): number {
+    if (this.workers.length === 0) return -1;
+
+    let minLoad = 99;
+    let workerIndex = 0;
+
+    for (let i = 0; i < this.workers.length; i++) {
+      const load = this.workerLoad[i] || 0;
+
+      if (load === 0) {
+        return i;
+      }
+
+      if (load < minLoad) {
+        minLoad = load;
+        workerIndex = i;
+      }
+    }
+    return workerIndex;
   }
 
   getImage(
@@ -265,9 +286,13 @@ export class ImageWorkerManager {
         if (this.workers) {
           const id = this.nextId++;
           this.messageManager[id] = [resolve, reject];
-          const nextWorker = this.getNextWorker();
-          if (nextWorker) {
-            nextWorker.postMessage({
+          const nextWorkerIndex = this.getNextWorkerIndex();
+
+          if (nextWorkerIndex !== -1) {
+            const worker = this.workers[nextWorkerIndex];
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            this.workerLoad[nextWorkerIndex]!++;
+            worker!.postMessage({
               id,
               src: src,
               premultiplyAlpha,
