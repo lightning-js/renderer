@@ -89,39 +89,35 @@ export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
     this.computed.innerW = outerW - l - r;
     this.computed.innerH = outerH - t - b;
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
     renderContext();
     const computed = this.computed as ComputedBorderValues;
+    const { tx, ty } = node.globalTransform!;
+    const { w, h } = node.props;
     ctx.strokeStyle = computed.borderColor!;
     if (computed.borderAsym === false && this.props!.w[0] > 0) {
       ctx.lineWidth = this.props!.w[0];
       ctx.beginPath();
       ctx.strokeRect(
-        quad.tx + computed.outerX,
-        quad.ty + computed.outerY,
-        quad.width + computed.outerW,
-        quad.height + computed.outerH,
+        tx + computed.outerX,
+        ty + computed.outerY,
+        w + computed.outerW,
+        h + computed.outerH,
       );
       return;
     }
 
-    // Pre-calculate common values
-    const tx = quad.tx;
-    const ty = quad.ty;
-    const width = quad.width;
-    const height = quad.height;
-
     // Calculate outer rectangle (including border)
     const outerX = tx + computed.outerX;
     const outerY = ty + computed.outerY;
-    const outerW = width + computed.outerW;
-    const outerH = height + computed.outerH;
+    const outerW = w + computed.outerW;
+    const outerH = h + computed.outerH;
 
     // Calculate inner rectangle (excluding border)
     const innerX = tx + computed.innerX;
     const innerY = ty + computed.innerY;
-    const innerW = width + computed.innerW;
-    const innerH = height + computed.innerH;
+    const innerW = w + computed.innerW;
+    const innerH = h + computed.innerH;
 
     // Use clip to subtract inner from outer
     ctx.save();

@@ -82,8 +82,8 @@ export function getRgbaString(color: RGBA) {
 export interface Rect {
   x: number;
   y: number;
-  width: number;
-  height: number;
+  w: number;
+  h: number;
 }
 
 export interface RectWithValid extends Rect {
@@ -159,15 +159,15 @@ export function convertBoundToRect(bound: Bound, out?: Rect): Rect {
   if (out) {
     out.x = bound.x1;
     out.y = bound.y1;
-    out.width = bound.x2 - bound.x1;
-    out.height = bound.y2 - bound.y1;
+    out.w = bound.x2 - bound.x1;
+    out.h = bound.y2 - bound.y1;
     return out;
   }
   return {
     x: bound.x1,
     y: bound.y1,
-    width: bound.x2 - bound.x1,
-    height: bound.y2 - bound.y1,
+    w: bound.x2 - bound.x1,
+    h: bound.y2 - bound.y1,
   };
 }
 
@@ -180,35 +180,35 @@ export function intersectRect<T extends Rect = Rect>(
 export function intersectRect(a: Rect, b: Rect, out?: Rect): Rect {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);
-  const width = Math.min(a.x + a.width, b.x + b.width) - x;
-  const height = Math.min(a.y + a.height, b.y + b.height) - y;
-  if (width > 0 && height > 0) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - x;
+  const h = Math.min(a.y + a.h, b.y + b.h) - y;
+  if (w > 0 && h > 0) {
     if (out) {
       out.x = x;
       out.y = y;
-      out.width = width;
-      out.height = height;
+      out.w = w;
+      out.h = h;
       return out;
     }
     return {
       x,
       y,
-      width,
-      height,
+      w,
+      h,
     };
   }
   if (out) {
     out.x = 0;
     out.y = 0;
-    out.width = 0;
-    out.height = 0;
+    out.w = 0;
+    out.h = 0;
     return out;
   }
   return {
     x: 0,
     y: 0,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
   };
 }
 
@@ -218,15 +218,15 @@ export function copyRect(a: Rect, out?: Rect): Rect {
   if (out) {
     out.x = a.x;
     out.y = a.y;
-    out.width = a.width;
-    out.height = a.height;
+    out.w = a.w;
+    out.h = a.h;
     return out;
   }
   return {
     x: a.x,
     y: a.y,
-    width: a.width,
-    height: a.height,
+    w: a.w,
+    h: a.h,
   };
 }
 
@@ -237,9 +237,7 @@ export function compareRect(a: Rect | null, b: Rect | null): boolean {
   if (a === null || b === null) {
     return false;
   }
-  return (
-    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
-  );
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 }
 
 export function boundInsideBound(bound1: Bound, bound2: Bound) {
@@ -269,7 +267,7 @@ export function isBoundPositive(bound: Bound): boolean {
 }
 
 export function isRectPositive(rect: Rect): boolean {
-  return rect.width > 0 && rect.height > 0;
+  return rect.w > 0 && rect.h > 0;
 }
 
 /**

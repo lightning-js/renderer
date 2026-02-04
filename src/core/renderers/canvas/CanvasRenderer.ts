@@ -20,11 +20,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
-import {
-  CoreRenderer,
-  type CoreRendererOptions,
-  type QuadOptions,
-} from '../CoreRenderer.js';
+import { CoreRenderer, type CoreRendererOptions } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
@@ -66,10 +62,11 @@ export class CanvasRenderer extends CoreRenderer {
     // noop
   }
 
-  addQuad(quad: QuadOptions): void {
+  addQuad(node: CoreNode): void {
     const ctx = this.context;
-    const { tx, ty, ta, tb, tc, td, clippingRect } = quad;
-    let texture = quad.texture;
+    const { tx, ty, ta, tb, tc, td } = node.globalTransform!;
+    const clippingRect = node.clippingRect;
+    let texture = (node.props.texture || this.stage.defaultTexture) as Texture;
     // The Canvas2D renderer only supports image textures, no textures are used for color blocks
     if (texture !== null) {
       const textureType = texture.type;
@@ -84,13 +81,13 @@ export class CanvasRenderer extends CoreRenderer {
     }
 
     const hasTransform = ta !== 1;
-    const hasClipping = clippingRect.width !== 0 && clippingRect.height !== 0;
-    const hasShader = quad.shader !== null;
+    const hasClipping = clippingRect.w !== 0 && clippingRect.h !== 0;
+    const shader = node.props.shader;
+    const hasShader = shader !== null;
 
     let saveAndRestore = hasTransform === true || hasClipping === true;
     if (hasShader === true) {
-      saveAndRestore =
-        saveAndRestore || (quad.shader as CanvasShaderNode).applySNR;
+      saveAndRestore = saveAndRestore || (shader as CanvasShaderNode).applySNR;
     }
 
     if (saveAndRestore) {
@@ -99,8 +96,8 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasClipping === true) {
       const path = new Path2D();
-      const { x, y, width, height } = clippingRect;
-      path.rect(x, y, width, height);
+      const { x, y, w, h } = clippingRect;
+      path.rect(x, y, w, h);
       ctx.clip(path);
     }
 
@@ -121,12 +118,13 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (hasShader === true) {
       let renderContext: (() => void) | null = () => {
-        this.renderContext(quad);
+        this.renderContext(node, texture);
       };
-      (quad.shader as CanvasShaderNode).render(ctx, quad, renderContext);
+
+      (shader as CanvasShaderNode).render(ctx, node, renderContext);
       renderContext = null;
     } else {
-      this.renderContext(quad);
+      this.renderContext(node, texture);
     }
 
     if (saveAndRestore) {
@@ -134,22 +132,20 @@ export class CanvasRenderer extends CoreRenderer {
     }
   }
 
-  renderContext(quad: QuadOptions) {
-    const color = quad.colorTl;
-    const texture = quad.texture!;
+  renderContext(node: CoreNode, texture: Texture) {
+    const color = node.premultipliedColorTl;
     const textureType = texture.type;
+    const tx = node.globalTransform!.tx;
+    const ty = node.globalTransform!.ty;
+    const width = node.props.w;
+    const height = node.props.h;
+
     if (textureType !== TextureType.color) {
       const tintColor = parseColor(color);
       if (textureType !== TextureType.subTexture) {
         const image = (texture.ctxTexture as CanvasTexture).getImage(tintColor);
-        this.context.globalAlpha = tintColor.a ?? quad.alpha;
-        this.context.drawImage(
-          image,
-          quad.tx,
-          quad.ty,
-          quad.width,
-          quad.height,
-        );
+        this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
+        this.context.drawImage(image, tx, ty, width, height);
         this.context.globalAlpha = 1;
         return;
       }
@@ -158,51 +154,47 @@ export class CanvasRenderer extends CoreRenderer {
       ).getImage(tintColor);
       const props = (texture as SubTexture).props;
 
-      this.context.globalAlpha = tintColor.a ?? quad.alpha;
+      this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
       this.context.drawImage(
         image,
         props.x,
         props.y,
         props.w,
         props.h,
-        quad.tx,
-        quad.ty,
-        quad.width,
-        quad.height,
+        tx,
+        ty,
+        width,
+        height,
       );
       this.context.globalAlpha = 1;
       return;
     }
     const hasGradient =
-      quad.colorTl !== quad.colorTr || quad.colorTl !== quad.colorBr;
+      node.premultipliedColorTl !== node.premultipliedColorTr ||
+      node.premultipliedColorTl !== node.premultipliedColorBr;
     if (hasGradient === true) {
-      let endX: number = quad.tx;
-      let endY: number = quad.ty;
+      let endX: number = tx;
+      let endY: number = ty;
       let endColor: number;
-      if (quad.colorTl === quad.colorTr) {
+      if (node.premultipliedColorTl === node.premultipliedColorTr) {
         // vertical
-        endX = quad.tx;
-        endY = quad.ty + quad.height;
-        endColor = quad.colorBr;
+        endX = tx;
+        endY = ty + height;
+        endColor = node.premultipliedColorBr;
       } else {
         // horizontal
-        endX = quad.tx + quad.width;
-        endY = quad.ty;
-        endColor = quad.colorTr;
+        endX = tx + width;
+        endY = ty;
+        endColor = node.premultipliedColorTr;
       }
-      const gradient = this.context.createLinearGradient(
-        quad.tx,
-        quad.ty,
-        endX,
-        endY,
-      );
+      const gradient = this.context.createLinearGradient(tx, ty, endX, endY);
       gradient.addColorStop(0, normalizeCanvasColor(color));
       gradient.addColorStop(1, normalizeCanvasColor(endColor));
       this.context.fillStyle = gradient;
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(tx, ty, width, height);
     } else {
       this.context.fillStyle = normalizeCanvasColor(color);
-      this.context.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      this.context.fillRect(tx, ty, width, height);
     }
   }
 

@@ -44,8 +44,9 @@ export const HolePunch: CanvasShaderType<
     ctx.save();
     renderContext();
     const { x, y, w, h } = this.props!;
+    const gt = quad.globalTransform!;
     ctx.beginPath();
-    roundRect(ctx, quad.tx + x, quad.ty + y, w, h, this.computed.radius!);
+    roundRect(ctx, gt.tx + x, gt.ty + y, w, h, this.computed.radius!);
     ctx.closePath();
     ctx.fillStyle = 'black';
     ctx.globalCompositeOperation = 'destination-out';

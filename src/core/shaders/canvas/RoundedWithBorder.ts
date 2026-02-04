@@ -95,14 +95,14 @@ export const RoundedWithBorder: CanvasShaderType<
       Math.max(0.0, this.computed.outerBorderRadius[3] - Math.max(l, r)),
     ];
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
     const computed = this.computed as ComputedRoundedWithBorderValues;
     roundedRectWithBorder(
       ctx,
-      quad.tx,
-      quad.ty,
-      quad.width,
-      quad.height,
+      node.globalTransform!.tx,
+      node.globalTransform!.ty,
+      node.props.w,
+      node.props.h,
       computed.radius,
       this.props!['border-gap'] as number,
       computed.outerX,

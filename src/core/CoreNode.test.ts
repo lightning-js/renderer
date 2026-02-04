@@ -67,8 +67,8 @@ describe('set color()', () => {
   const clippingRect = {
     x: 0,
     y: 0,
-    width: 200,
-    height: 200,
+    w: 200,
+    h: 200,
     valid: false,
   };
 
