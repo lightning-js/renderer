@@ -18,12 +18,11 @@
  */
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
-import type { QuadOptions } from '../CoreRenderer.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import type { WebGlRenderOp } from './WebGlRenderOp.js';
-import type { WebGlRenderer } from './WebGlRenderer.js';
+import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
+import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
 import {
   createProgram,
@@ -33,6 +32,7 @@ import {
   type UniformSet3Params,
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
+import { CoreNode } from '../../CoreNode.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
   protected program: WebGLProgram | null;
@@ -146,43 +146,43 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(
-    incomingQuad: QuadOptions,
-    currentRenderOp: WebGlRenderOp,
-  ): boolean {
+  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlRenderOp): boolean {
     if (this.lifecycle.canBatch !== undefined) {
-      return this.lifecycle.canBatch(incomingQuad, currentRenderOp);
+      return this.lifecycle.canBatch(node, currentRenderOp);
     }
 
+    const { time, worldAlpha, w, h } = node;
+
     if (this.useTimeValue === true) {
-      if (incomingQuad.time !== currentRenderOp.time) {
+      if (time !== currentRenderOp.time) {
         return false;
       }
     }
 
     if (this.useSystemAlpha === true) {
-      if (incomingQuad.alpha !== currentRenderOp.alpha) {
+      if (worldAlpha !== currentRenderOp.worldAlpha) {
         return false;
       }
     }
 
     if (this.useSystemDimensions === true) {
-      if (
-        incomingQuad.width !== currentRenderOp.width ||
-        incomingQuad.height !== currentRenderOp.height
-      ) {
+      if (w !== currentRenderOp.w || h !== currentRenderOp.h) {
         return false;
       }
     }
+
     let shaderPropsA: Record<string, unknown> | undefined = undefined;
     let shaderPropsB: Record<string, unknown> | undefined = undefined;
 
-    if (incomingQuad.shader !== null) {
-      shaderPropsA = incomingQuad.shader.resolvedProps;
+    const shader = node.props.shader;
+
+    if (shader !== null) {
+      shaderPropsA = (shader as WebGlShaderNode).resolvedProps;
     }
 
-    if (currentRenderOp.shader !== null) {
-      shaderPropsB = currentRenderOp.shader.resolvedProps;
+    const opShader = currentRenderOp.shader;
+    if (opShader !== null) {
+      shaderPropsB = (opShader as WebGlShaderNode).resolvedProps;
     }
 
     if (
@@ -204,10 +204,15 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   bindRenderOp(renderOp: WebGlRenderOp) {
-    this.bindBufferCollection(renderOp.buffers);
-    this.bindTextures(renderOp.textures);
+    const isCoreNode = renderOp.isCoreNode;
 
-    const { parentHasRenderTexture } = renderOp;
+    this.bindTextures(renderOp.renderOpTextures);
+    this.bindBufferCollection(renderOp.quadBufferCollection);
+
+    const parentHasRenderTexture = renderOp.parentHasRenderTexture;
+    const framebufferDimensions = isCoreNode
+      ? renderOp.parentFramebufferDimensions
+      : renderOp.framebufferDimensions;
 
     // Skip if the parent and current operation both have render textures
     if (renderOp.rtt === true && parentHasRenderTexture === true) {
@@ -216,8 +221,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     // Bind render texture framebuffer dimensions as resolution
     // if the parent has a render texture
-    if (parentHasRenderTexture === true) {
-      const { w, h } = renderOp.framebufferDimensions!;
+    if (parentHasRenderTexture === true && framebufferDimensions) {
+      const { w, h } = framebufferDimensions;
       // Force pixel ratio to 1.0 for render textures since they are always 1:1
       // the final render texture will be rendered to the screen with the correct pixel ratio
       this.glw.uniform1f('u_pixelRatio', 1.0);
@@ -225,7 +230,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       // Set resolution to the framebuffer dimensions
       this.glw.uniform2f('u_resolution', w, h);
     } else {
-      this.glw.uniform1f('u_pixelRatio', renderOp.renderer.stage.pixelRatio);
+      this.glw.uniform1f('u_pixelRatio', renderOp.stage.pixelRatio);
+
       this.glw.uniform2f(
         'u_resolution',
         this.glw.canvas.width,
@@ -234,42 +240,46 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     if (this.useTimeValue === true) {
-      this.glw.uniform1f('u_time', renderOp.time as number);
+      this.glw.uniform1f('u_time', renderOp.time);
     }
 
     if (this.useSystemAlpha === true) {
-      this.glw.uniform1f('u_alpha', renderOp.alpha);
+      this.glw.uniform1f('u_alpha', renderOp.worldAlpha);
     }
 
     if (this.useSystemDimensions === true) {
-      this.glw.uniform2f('u_dimensions', renderOp.width, renderOp.height);
+      this.glw.uniform2f('u_dimensions', renderOp.w, renderOp.h);
     }
 
     /**temporary fix to make sdf texts work */
-    if (renderOp.sdfShaderProps !== undefined) {
-      (renderOp.shader.shaderType as WebGlShaderType).onSdfBind?.call(
+    if (isCoreNode === false && renderOp.sdfShaderProps !== undefined) {
+      const opShader = renderOp.shader; // SdfRenderOp has .shader
+      (opShader.shaderType as WebGlShaderType).onSdfBind?.call(
         this.glw,
         renderOp.sdfShaderProps,
       );
       return;
     }
 
-    if (renderOp.shader.props !== undefined) {
+    const shader = renderOp.shader as WebGlShaderNode;
+    if (shader.props !== undefined) {
       /**
        * loop over all precalculated uniform types
        */
-      for (const key in renderOp.shader.uniforms.single) {
-        const { method, value } = renderOp.shader.uniforms.single[key]!;
+      const uniforms = shader.uniforms;
+
+      for (const key in uniforms.single) {
+        const { method, value } = uniforms.single[key]!;
         this.glw[method as keyof UniformSet1Param](key, value as never);
       }
 
-      for (const key in renderOp.shader.uniforms.vec2) {
-        const { method, value } = renderOp.shader.uniforms.vec2[key]!;
+      for (const key in uniforms.vec2) {
+        const { method, value } = uniforms.vec2[key]!;
         this.glw[method as keyof UniformSet2Params](key, value[0], value[1]);
       }
 
-      for (const key in renderOp.shader.uniforms.vec3) {
-        const { method, value } = renderOp.shader.uniforms.vec3[key]!;
+      for (const key in uniforms.vec3) {
+        const { method, value } = uniforms.vec3[key]!;
         this.glw[method as keyof UniformSet3Params](
           key,
           value[0],
@@ -278,8 +288,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         );
       }
 
-      for (const key in renderOp.shader.uniforms.vec4) {
-        const { method, value } = renderOp.shader.uniforms.vec4[key]!;
+      for (const key in uniforms.vec4) {
+        const { method, value } = uniforms.vec4[key]!;
         this.glw[method as keyof UniformSet4Params](
           key,
           value[0],

@@ -51,14 +51,16 @@ export const LinearGradient: CanvasShaderType<
       colors: this.props!.colors.map((value) => this.toColorString(value)),
     };
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
     renderContext();
     const computed = this.computed as ComputedLinearGradientValues;
+    const { tx, ty } = node.globalTransform!;
+    const { w, h } = node.props;
     const gradient = ctx.createLinearGradient(
-      quad.tx + computed.x0,
-      quad.ty + computed.y0,
-      quad.tx + computed.x1,
-      quad.ty + computed.y1,
+      tx + computed.x0,
+      ty + computed.y0,
+      tx + computed.x1,
+      ty + computed.y1,
     );
     const colors = computed.colors;
     const stops = this.props!.stops;
@@ -66,6 +68,6 @@ export const LinearGradient: CanvasShaderType<
       gradient.addColorStop(stops[i]!, colors[i]!);
     }
     ctx.fillStyle = gradient;
-    ctx.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+    ctx.fillRect(tx, ty, w, h);
   },
 };

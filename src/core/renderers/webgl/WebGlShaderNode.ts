@@ -2,7 +2,6 @@ import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import type { Stage } from '../../Stage.js';
-import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type {
   UniformCollection,
@@ -10,8 +9,7 @@ import type {
   Vec3,
   Vec4,
 } from './internal/ShaderUtils.js';
-import type { WebGlRenderer } from './WebGlRenderer.js';
-import type { WebGlRenderOp } from './WebGlRenderOp.js';
+import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
 export type ShaderSource<T> =
@@ -47,10 +45,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
      * This function is used to check if the shader can be reused based on quad info
      * @param props
      */
-    canBatch?: (
-      incomingQuad: QuadOptions,
-      currentRenderOp: WebGlRenderOp,
-    ) => boolean;
+    canBatch?: (node: CoreNode, currentRenderOp: WebGlRenderOp) => boolean;
     /**
      * extensions required for specific shader?
      */

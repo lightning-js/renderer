@@ -18,7 +18,6 @@
 import type { CoreNode } from '../../CoreNode.js';
 import { normalizeCanvasColor } from '../../lib/colorCache.js';
 import type { Stage } from '../../Stage.js';
-import type { QuadOptions } from '../CoreRenderer.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 
 export type CanvasShaderType<
@@ -28,7 +27,7 @@ export type CanvasShaderType<
   render: (
     this: CanvasShaderNode<T, C>,
     ctx: CanvasRenderingContext2D,
-    quad: QuadOptions,
+    node: CoreNode,
     renderContext: () => void,
   ) => void;
   update?: (this: CanvasShaderNode<T, C>, node: CoreNode) => void;

@@ -38,14 +38,14 @@ export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
       node.h,
     );
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
     const path = new Path2D();
     roundRect(
       path,
-      quad.tx,
-      quad.ty,
-      quad.width,
-      quad.height,
+      node.globalTransform!.tx,
+      node.globalTransform!.ty,
+      node.props.w,
+      node.props.h,
       this.computed.radius!,
     );
     ctx.clip(path);

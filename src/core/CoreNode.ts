@@ -23,6 +23,9 @@ import {
   mergeColorAlphaPremultiplied,
 } from '../utils.js';
 import type { TextureOptions } from './CoreTextureManager.js';
+import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
+import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
+import type { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
@@ -74,8 +77,8 @@ export enum CoreNodeRenderState {
 const NO_CLIPPING_RECT: RectWithValid = {
   x: 0,
   y: 0,
-  width: 0,
-  height: 0,
+  w: 0,
+  h: 0,
   valid: false,
 };
 
@@ -738,6 +741,12 @@ export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
+  public readonly isCoreNode = true as const;
+
+  // WebGL Render Op State
+  public renderOpBufferIdx: number = 0;
+  public numQuads: number = 0;
+  public renderOpTextures: WebGlCtxTexture[] = [];
 
   private hasShaderUpdater = false;
   public hasShaderTimeFn = false;
@@ -762,8 +771,8 @@ export class CoreNode extends EventEmitter {
   public clippingRect: RectWithValid = {
     x: 0,
     y: 0,
-    width: 0,
-    height: 0,
+    w: 0,
+    h: 0,
     valid: false,
   };
   public textureCoords?: TextureCoords;
@@ -794,6 +803,10 @@ export class CoreNode extends EventEmitter {
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
     const p = (this.props = {} as CoreNodeProps);
+
+    // Initialize the renderOpTextures array with a capacity of 16 (typical max textures)
+    this.renderOpTextures = [];
+
     //inital update type
     let initialUpdateType =
       UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState;
@@ -1740,8 +1753,8 @@ export class CoreNode extends EventEmitter {
     if (clipping === true && isRotated === false) {
       clippingRect.x = gt!.tx;
       clippingRect.y = gt!.ty;
-      clippingRect.width = this.props.w * gt!.ta;
-      clippingRect.height = this.props.h * gt!.td;
+      clippingRect.w = this.props.w * gt!.ta;
+      clippingRect.h = this.props.h * gt!.td;
       clippingRect.valid = true;
     } else {
       clippingRect.valid = false;
@@ -1800,47 +1813,27 @@ export class CoreNode extends EventEmitter {
         return;
     }
 
-    const p = this.props;
-    const t = this.globalTransform!;
-    const coords = this.renderCoords;
-    const texture = p.texture || this.stage.defaultTexture;
-    const textureCoords =
-      this.textureCoords || this.stage.renderer.defaultTextureCoords;
+    const texture = this.props.texture || this.stage.defaultTexture;
 
     // There is a race condition where the texture can be null
     // with RTT nodes. Adding this defensively to avoid errors.
-    if (texture && texture.state !== 'loaded') {
+    // Also check if we have a valid texture or default texture to render
+    if (!texture || texture.state !== 'loaded') {
       return;
     }
 
-    renderer.addQuad({
-      width: p.w,
-      height: p.h,
-      colorTl: this.premultipliedColorTl,
-      colorTr: this.premultipliedColorTr,
-      colorBl: this.premultipliedColorBl,
-      colorBr: this.premultipliedColorBr,
-      texture,
-      textureOptions: p.textureOptions,
-      textureCoords: textureCoords,
-      shader: p.shader as CoreShaderNode<any>,
-      alpha: this.worldAlpha,
-      clippingRect: this.clippingRect,
-      tx: t.tx,
-      ty: t.ty,
-      ta: t.ta,
-      tb: t.tb,
-      tc: t.tc,
-      td: t.td,
-      renderCoords: coords,
-      rtt: p.rtt,
-      zIndex: this.calcZIndex,
-      parentHasRenderTexture: this.parentHasRenderTexture,
-      framebufferDimensions: this.parentHasRenderTexture
-        ? this.parentFramebufferDimensions
-        : null,
-      time: this.hasShaderTimeFn === true ? this.getTimerValue() : null,
-    });
+    renderer.addQuad(this);
+  }
+
+  get quadBufferCollection(): BufferCollection {
+    return (this.stage.renderer as WebGlRenderer).quadBufferCollection;
+  }
+
+  get time(): number {
+    if (this.hasShaderTimeFn === true) {
+      return this.getTimerValue();
+    }
+    return 0;
   }
 
   getTimerValue(): number {
@@ -2621,12 +2614,12 @@ export class CoreNode extends EventEmitter {
   /**
    * Returns the framebuffer dimensions of the RTT parent
    */
-  get parentFramebufferDimensions(): Dimensions {
+  get parentFramebufferDimensions(): Dimensions | null {
     if (this.rttParent !== null) {
-      return this.rttParent.framebufferDimensions as Dimensions;
+      return this.rttParent.framebufferDimensions;
     }
-    this.rttParent = this.findParentRTTNode() as CoreNode;
-    return this.rttParent.framebufferDimensions as Dimensions;
+    this.rttParent = this.findParentRTTNode();
+    return this.rttParent ? this.rttParent.framebufferDimensions : null;
   }
 
   /**
@@ -2717,6 +2710,72 @@ export class CoreNode extends EventEmitter {
 
   flush() {
     // no-op
+  }
+
+  /**
+   * Add a texture to the current RenderOp.
+   *
+   * @param texture
+   * @returns Assigned Texture Index of the texture in the render op
+   */
+  addTexture(texture: WebGlCtxTexture): number {
+    const textures = this.renderOpTextures;
+    const length = textures.length;
+
+    for (let i = 0; i < length; i++) {
+      if (textures[i] === texture) {
+        return i;
+      }
+    }
+
+    if (length >= 1) {
+      return 0xffffffff;
+    }
+
+    textures.push(texture);
+    return length;
+  }
+
+  draw(renderer: WebGlRenderer) {
+    const { glw, options, stage } = renderer;
+    const shader = this.props.shader as any;
+
+    stage.shManager.useShader(shader.program);
+    shader.program.bindRenderOp(this);
+
+    // Clipping
+    if (this.clippingRect.valid === true) {
+      const pixelRatio = this.parentHasRenderTexture ? 1 : stage.pixelRatio;
+
+      const clipX = Math.round(this.clippingRect.x * pixelRatio);
+      const clipWidth = Math.round(this.clippingRect.w * pixelRatio);
+      const clipHeight = Math.round(this.clippingRect.h * pixelRatio);
+      let clipY = Math.round(
+        options.canvas.height - clipHeight - this.clippingRect.y * pixelRatio,
+      );
+      // if parent has render texture, we need to adjust the scissor rect
+      // to be relative to the parent's framebuffer
+      if (this.parentHasRenderTexture) {
+        const parentFramebufferDimensions = this.parentFramebufferDimensions;
+        clipY =
+          parentFramebufferDimensions !== null
+            ? parentFramebufferDimensions.h - this.props.h
+            : 0;
+      }
+
+      glw.setScissorTest(true);
+      glw.scissor(clipX, clipY, clipWidth, clipHeight);
+    } else {
+      glw.setScissorTest(false);
+    }
+
+    const quadIdx = (this.renderOpBufferIdx / 32) * 6 * 2;
+    glw.drawElements(
+      glw.TRIANGLES,
+      6 * this.numQuads,
+      glw.UNSIGNED_SHORT,
+      quadIdx,
+    );
   }
 
   //#endregion Properties

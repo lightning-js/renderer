@@ -56,12 +56,14 @@ export const RadialGradient: CanvasShaderType<
       colors: props.colors.map((value) => this.toColorString(value)),
     };
   },
-  render(ctx, quad, renderContext) {
+  render(ctx, node, renderContext) {
     renderContext();
     const { scaleX, scaleY, pivotX, pivotY, colors, size } = this
       .computed as ComputedRadialGradientValues;
-    let x = quad.tx + pivotX;
-    let y = quad.ty + pivotY;
+    const { tx, ty } = node.globalTransform!;
+    const { w, h } = node.props;
+    let x = tx + pivotX;
+    let y = ty + pivotY;
     const stops = this.props!.stops;
 
     if (scaleX === scaleY) {
@@ -72,7 +74,7 @@ export const RadialGradient: CanvasShaderType<
       }
 
       ctx.fillStyle = gradient;
-      ctx.fillRect(quad.tx, quad.ty, quad.width, quad.height);
+      ctx.fillRect(tx, ty, w, h);
       return;
     }
 
@@ -87,12 +89,7 @@ export const RadialGradient: CanvasShaderType<
     }
 
     ctx.fillStyle = gradient;
-    ctx.fillRect(
-      quad.tx / scaleX,
-      quad.ty / scaleY,
-      quad.width / scaleX,
-      quad.height / scaleY,
-    );
+    ctx.fillRect(tx / scaleX, ty / scaleY, w / scaleX, h / scaleY);
 
     ctx.restore();
   },
