@@ -773,10 +773,13 @@ export class Inspector {
     return this.createProxy(node, div);
   }
 
-  createTextNode(node: CoreNode): CoreTextNode {
-    const div = this.createDiv(node.id, node.props);
+  createTextNode(node: CoreTextNode): CoreTextNode {
+    // eslint-disable-next-line
+    // @ts-ignore - textProps is a private property and keeping it that way
+    // but we need it from the inspector to set the initial properties on the div element
+    const div = this.createDiv(node.id, node.textProps);
     (div as HTMLElement & { node: CoreNode }).node = node;
-    (node as CoreNode & { div: HTMLElement }).div = div;
+    (node as CoreTextNode & { div: HTMLElement }).div = div;
 
     return this.createProxy(node, div) as CoreTextNode;
   }
