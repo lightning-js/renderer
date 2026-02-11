@@ -23,6 +23,7 @@ import type { Dimensions } from '../../common/CommonTypes.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
 import type { Bound } from '../lib/utils.js';
+import type { TextureError } from '../TextureError.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -86,7 +87,10 @@ export interface CompressedData {
 /**
  * Event handler for when a Texture fails to load
  */
-export type TextureFailedEventHandler = (target: any, error: Error) => void;
+export type TextureFailedEventHandler = (
+  target: any,
+  error: TextureError,
+) => void;
 
 /**
  * TextureData that is used to populate a CoreContextTexture
@@ -205,7 +209,7 @@ export abstract class Texture extends EventEmitter {
     return this._dimensions;
   }
 
-  get error(): Error | null {
+  get error(): TextureError | null {
     return this._error;
   }
 
@@ -393,13 +397,13 @@ export abstract class Texture extends EventEmitter {
 
   public setState(
     state: TextureState,
-    errorOrDimensions?: Error | Dimensions,
+    errorOrDimensions?: TextureError | Dimensions,
   ): void {
     if (this.state === state) {
       return;
     }
 
-    let payload: Error | Dimensions | null = null;
+    let payload: TextureError | Dimensions | null = null;
     if (state === 'loaded') {
       if (
         errorOrDimensions !== undefined &&
@@ -413,7 +417,7 @@ export abstract class Texture extends EventEmitter {
 
       payload = this._dimensions;
     } else if (state === 'failed') {
-      this._error = errorOrDimensions as Error;
+      this._error = errorOrDimensions as TextureError;
       payload = this._error;
 
       // increment the retry count for the texture
