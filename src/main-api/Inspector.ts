@@ -11,6 +11,8 @@ import type {
 } from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
+import type { Texture } from '../core/textures/Texture.js';
+import { TextureType } from '../core/textures/Texture.js';
 
 /**
  * Inspector Options
@@ -204,6 +206,22 @@ const gradientColorPropertyMap = [
   'colorBr',
 ];
 
+const textureTypeNames: Record<number, string> = {
+  [TextureType.generic]: 'generic',
+  [TextureType.color]: 'color',
+  [TextureType.image]: 'image',
+  [TextureType.noise]: 'noise',
+  [TextureType.renderToTexture]: 'renderToTexture',
+  [TextureType.subTexture]: 'subTexture',
+};
+
+interface TextureMetrics {
+  previousState: string;
+  loadedCount: number;
+  failedCount: number;
+  freedCount: number;
+}
+
 const knownProperties = new Set<string>([
   ...Object.keys(stylePropertyMap),
   ...Object.keys(domPropertyMap),
@@ -223,6 +241,7 @@ export class Inspector {
   private width = 1920;
   private scaleX = 1;
   private scaleY = 1;
+  private textureMetrics = new Map<Texture, TextureMetrics>();
 
   // Performance monitoring for frequent setter calls
   private static setterCallCount = new Map<
@@ -788,6 +807,94 @@ export class Inspector {
     node: CoreNode | CoreTextNode,
     div: HTMLElement,
   ): CoreNode | CoreTextNode {
+    // Store texture event listeners for cleanup
+    const textureListeners = new Map<
+      Texture,
+      {
+        onLoaded: () => void;
+        onFailed: () => void;
+        onFreed: () => void;
+      }
+    >();
+
+    const coreNodeListeners = new Map<
+      CoreNode,
+      {
+        onLoaded: () => void;
+      }
+    >();
+
+    const setupCoreNodeListeners = (coreNode: CoreNode) => {
+      const onLoaded = () => {
+        this.updateTextNodeDimensions(div, coreNode as CoreTextNode);
+      };
+      coreNode.on('loaded', onLoaded);
+      coreNodeListeners.set(coreNode, { onLoaded });
+    };
+
+    // Helper function to setup texture event listeners
+    const setupTextureListeners = (texture: Texture | null) => {
+      // Clean up existing listeners first
+      textureListeners.forEach((listeners, oldTexture) => {
+        oldTexture.off('loaded', listeners.onLoaded);
+        oldTexture.off('failed', listeners.onFailed);
+        oldTexture.off('freed', listeners.onFreed);
+      });
+      textureListeners.clear();
+
+      // Setup new listeners if texture exists
+      if (texture) {
+        // Initialize metrics if not exists
+        if (!this.textureMetrics.has(texture)) {
+          this.textureMetrics.set(texture, {
+            previousState: texture.state,
+            loadedCount: 0,
+            failedCount: 0,
+            freedCount: 0,
+          });
+        }
+
+        const onLoaded = () => {
+          const metrics = this.textureMetrics.get(texture);
+          if (metrics) {
+            metrics.previousState =
+              metrics.previousState !== texture.state
+                ? metrics.previousState
+                : 'loading';
+            metrics.loadedCount++;
+          }
+          this.updateTextureAttributes(div, texture);
+        };
+        const onFailed = () => {
+          const metrics = this.textureMetrics.get(texture);
+          if (metrics) {
+            metrics.previousState =
+              metrics.previousState !== texture.state
+                ? metrics.previousState
+                : 'loading';
+            metrics.failedCount++;
+          }
+          this.updateTextureAttributes(div, texture);
+        };
+        const onFreed = () => {
+          const metrics = this.textureMetrics.get(texture);
+          if (metrics) {
+            metrics.previousState =
+              metrics.previousState !== texture.state
+                ? metrics.previousState
+                : texture.state;
+            metrics.freedCount++;
+          }
+          this.updateTextureAttributes(div, texture);
+        };
+
+        texture.on('loaded', onLoaded);
+        texture.on('failed', onFailed);
+        texture.on('freed', onFreed);
+
+        textureListeners.set(texture, { onLoaded, onFailed, onFreed });
+      }
+    };
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
       let originalProp = Object.getOwnPropertyDescriptor(node, property);
@@ -800,6 +907,10 @@ export class Inspector {
 
       if (originalProp === undefined) {
         return;
+      }
+
+      if (property === 'text') {
+        setupCoreNodeListeners(node);
       }
 
       Object.defineProperty(node, property, {
@@ -818,6 +929,15 @@ export class Inspector {
             value,
             node.props,
           );
+
+          // Setup texture event listeners if this is a texture property
+          if (property === 'texture') {
+            const textureValue =
+              value && typeof value === 'object' && 'state' in value
+                ? (value as Texture)
+                : null;
+            setupTextureListeners(textureValue);
+          }
         },
         configurable: true,
         enumerable: true,
@@ -827,6 +947,21 @@ export class Inspector {
     const originalDestroy = node.destroy;
     Object.defineProperty(node, 'destroy', {
       value: () => {
+        // Clean up texture event listeners and metrics
+        textureListeners.forEach((listeners, texture) => {
+          texture.off('loaded', listeners.onLoaded);
+          texture.off('failed', listeners.onFailed);
+          texture.off('freed', listeners.onFreed);
+          // Clean up metrics for this texture
+          this.textureMetrics.delete(texture);
+        });
+        textureListeners.clear();
+
+        coreNodeListeners.forEach((listeners, coreNode) => {
+          coreNode.off('loaded', listeners.onLoaded);
+        });
+        coreNodeListeners.clear();
+
         this.destroyNode(node.id);
         originalDestroy.call(node);
       },
@@ -854,6 +989,86 @@ export class Inspector {
     });
 
     return node;
+  }
+
+  updateTextNodeDimensions(div: HTMLElement, node: CoreTextNode) {
+    const textMetrics = node.renderInfo;
+    if (textMetrics) {
+      div.style.width = `${textMetrics.width}px`;
+      div.style.height = `${textMetrics.height}px`;
+    } else {
+      div.style.removeProperty('width');
+      div.style.removeProperty('height');
+    }
+  }
+
+  updateTextureAttributes(div: HTMLElement, texture: Texture) {
+    // Update texture state
+    div.setAttribute('data-texture-state', texture.state);
+
+    // Update texture type
+    div.setAttribute(
+      'data-texture-type',
+      textureTypeNames[texture.type] || 'unknown',
+    );
+
+    // Update texture dimensions if available
+    if (texture.dimensions) {
+      div.setAttribute('data-texture-width', String(texture.dimensions.w));
+      div.setAttribute('data-texture-height', String(texture.dimensions.h));
+    } else {
+      div.removeAttribute('data-texture-width');
+      div.removeAttribute('data-texture-height');
+    }
+
+    // Update renderable owners count
+    div.setAttribute(
+      'data-texture-owners',
+      String(texture.renderableOwners.length),
+    );
+
+    // Update retry count
+    div.setAttribute('data-texture-retry-count', String(texture.retryCount));
+
+    // Update max retry count if available
+    if (texture.maxRetryCount !== null) {
+      div.setAttribute(
+        'data-texture-max-retry-count',
+        String(texture.maxRetryCount),
+      );
+    } else {
+      div.removeAttribute('data-texture-max-retry-count');
+    }
+
+    // Update metrics if available
+    const metrics = this.textureMetrics.get(texture);
+    if (metrics) {
+      div.setAttribute('data-texture-previous-state', metrics.previousState);
+      div.setAttribute(
+        'data-texture-loaded-count',
+        String(metrics.loadedCount),
+      );
+      div.setAttribute(
+        'data-texture-failed-count',
+        String(metrics.failedCount),
+      );
+      div.setAttribute('data-texture-freed-count', String(metrics.freedCount));
+    } else {
+      div.removeAttribute('data-texture-previous-state');
+      div.removeAttribute('data-texture-loaded-count');
+      div.removeAttribute('data-texture-failed-count');
+      div.removeAttribute('data-texture-freed-count');
+    }
+
+    // Update error information if present
+    if (texture.error) {
+      div.setAttribute(
+        'data-texture-error',
+        texture.error.code || texture.error.message,
+      );
+    } else {
+      div.removeAttribute('data-texture-error');
+    }
   }
 
   public destroy() {
