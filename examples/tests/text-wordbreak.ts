@@ -35,8 +35,6 @@ const NODE_PROPS = {
   y: 0,
   color: 0x000000ff,
   text: `This is a long and Honorificabilitudinitatibus califragilisticexpialidocious Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu`,
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
   fontSize: 20,
   maxWidth: containerSize,
   wordBreak: 'overflow',
@@ -57,7 +55,6 @@ function generateWordBreakTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow(
@@ -73,13 +70,13 @@ function generateWordBreakTest(
             renderer.createTextNode({
               ...nodeProps,
               maxLines,
-              textRendererOverride: 'sdf',
+              fontFamily: 'SDF-Ubuntu',
             }),
             'Renderer: canvas',
             renderer.createTextNode({
               ...nodeProps,
               maxLines,
-              textRendererOverride: 'canvas',
+              fontFamily: 'Canvas-Ubuntu',
             }),
           ],
         );
@@ -90,7 +87,8 @@ function generateWordBreakTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow(
@@ -107,14 +105,14 @@ function generateWordBreakTest(
               ...nodeProps,
               maxLines,
               wordBreak: 'break-all',
-              textRendererOverride: 'sdf',
+              fontFamily: 'SDF-Ubuntu',
             }),
             'Renderer: canvas',
             renderer.createTextNode({
               ...nodeProps,
               maxLines,
               wordBreak: 'break-all',
-              textRendererOverride: 'canvas',
+              fontFamily: 'Canvas-Ubuntu',
             }),
           ],
         );
@@ -125,7 +123,6 @@ function generateWordBreakTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow(
@@ -142,14 +139,14 @@ function generateWordBreakTest(
               ...nodeProps,
               maxLines,
               wordBreak: 'break-word',
-              textRendererOverride: 'sdf',
+              fontFamily: 'SDF-Ubuntu',
             }),
             'Renderer: canvas',
             renderer.createTextNode({
               ...nodeProps,
               maxLines,
               wordBreak: 'break-word',
-              textRendererOverride: 'canvas',
+              fontFamily: 'Canvas-Ubuntu',
             }),
           ],
         );

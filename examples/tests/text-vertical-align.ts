@@ -51,8 +51,6 @@ export default async function test(settings: ExampleSettings) {
 
 const NODE_PROPS = {
   color: 0x000000ff,
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
   fontSize: 50,
   lineHeight: 70,
 } satisfies Partial<ITextNodeProps>;
@@ -94,7 +92,8 @@ function generateVerticalAlignTest(
           ...NODE_PROPS,
           text: 'txyz',
           contain: 'height',
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
           maxHeight: CONTAINER_SIZE,
         } satisfies Partial<ITextNodeProps>;
 
@@ -131,7 +130,8 @@ function generateVerticalAlignTest(
         const nodeProps = {
           ...NODE_PROPS,
           text: 'abcd\ntxyz',
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
           contain: 'height',
           maxHeight: CONTAINER_SIZE,
         } satisfies Partial<ITextNodeProps>;

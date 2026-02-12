@@ -59,9 +59,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     maxWidth: testRoot.w,
     text,
     fontSize,
-    fontFamily,
+    fontFamily: 'Canvas-Ubuntu',
     color: 0xff0000ff,
-    textRendererOverride: 'canvas',
     parent: testRoot,
   });
   const indexInfo = renderer.createTextNode({

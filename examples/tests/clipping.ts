@@ -443,10 +443,9 @@ export default async function test(settings: ExampleSettings) {
           w: SQUARE_SIZE,
           h: SQUARE_SIZE,
           parent,
-          fontFamily: 'Ubuntu',
+          fontFamily: 'Canvas-Ubuntu',
           fontSize: 40,
           color: 0x000000ff,
-          textRendererOverride: 'canvas',
           text: 'Canvas ancestor clipping',
         });
 
@@ -471,10 +470,9 @@ export default async function test(settings: ExampleSettings) {
           w: SQUARE_SIZE,
           h: SQUARE_SIZE,
           parent,
-          fontFamily: 'Ubuntu',
+          fontFamily: 'SDF-Ubuntu',
           fontSize: 40,
           color: 0x000000ff,
-          textRendererOverride: 'sdf',
           text: 'SDF ancestor clipping',
         });
 

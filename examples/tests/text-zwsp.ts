@@ -55,9 +55,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: yPos,
     maxWidth: testRoot.w,
     fontSize,
-    fontFamily,
+    fontFamily: 'Canvas-Ubuntu',
     color: 0xff0000ff,
-    textRendererOverride: 'canvas',
     parent: testRoot,
   });
 
@@ -65,7 +64,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: yPos,
     maxWidth: testRoot.w,
     fontSize,
-    fontFamily,
+    fontFamily: 'SDF-Ubuntu',
     color: 0x0000ff77,
     parent: testRoot,
     zIndex: 3,
@@ -75,7 +74,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 20,
     text: '1',
     parent: testRoot,

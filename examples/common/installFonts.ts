@@ -22,7 +22,7 @@ import { type Stage } from '@lightningjs/renderer';
 export async function installFonts(stage: Stage) {
   // Load Canvas fonts using the new unified API
   stage.loadFont('canvas', {
-    fontFamily: 'NotoSans',
+    fontFamily: 'Canvas-NotoSans',
     fontUrl: './fonts/NotoSans-Regular.ttf',
     metrics: {
       ascender: 1069,
@@ -33,7 +33,7 @@ export async function installFonts(stage: Stage) {
   });
 
   stage.loadFont('canvas', {
-    fontFamily: 'Ubuntu',
+    fontFamily: 'Canvas-Ubuntu',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
     metrics: {
       ascender: 776,
@@ -44,7 +44,7 @@ export async function installFonts(stage: Stage) {
   });
 
   stage.loadFont('canvas', {
-    fontFamily: 'Ubuntu-No-Metrics',
+    fontFamily: 'Canvas-Ubuntu-No-Metrics',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
   });
 
@@ -56,7 +56,7 @@ export async function installFonts(stage: Stage) {
   };
 
   stage.loadFont('canvas', {
-    fontFamily: 'Ubuntu-Modified-Metrics',
+    fontFamily: 'Canvas-Ubuntu-Modified-Metrics',
     fontUrl: './fonts/Ubuntu-Regular.ttf',
     metrics: ubuntuModifiedMetrics,
   });
@@ -64,7 +64,7 @@ export async function installFonts(stage: Stage) {
   // Load SDF fonts for WebGL renderer using the new unified API
   if (stage.renderer.mode === 'webgl') {
     stage.loadFont('sdf', {
-      fontFamily: 'NotoSans',
+      fontFamily: 'SDF-NotoSans',
       atlasUrl: './fonts/NotoSans-Regular.ssdf.png',
       atlasDataUrl: './fonts/NotoSans-Regular.ssdf.json',
       metrics: {
@@ -76,7 +76,7 @@ export async function installFonts(stage: Stage) {
     });
 
     stage.loadFont('sdf', {
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
       // Instead of supplying `metrics` this font will rely on the ones
@@ -84,14 +84,14 @@ export async function installFonts(stage: Stage) {
     });
 
     stage.loadFont('sdf', {
-      fontFamily: 'Ubuntu-Modified-Metrics',
+      fontFamily: 'SDF-Ubuntu-Modified-Metrics',
       atlasUrl: './fonts/Ubuntu-Regular.msdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.msdf.json',
       metrics: ubuntuModifiedMetrics,
     });
 
     stage.loadFont('sdf', {
-      fontFamily: 'Ubuntu-ssdf',
+      fontFamily: 'SDF-Ubuntu-ssdf',
       atlasUrl: './fonts/Ubuntu-Regular.ssdf.png',
       atlasDataUrl: './fonts/Ubuntu-Regular.ssdf.json',
       metrics: {

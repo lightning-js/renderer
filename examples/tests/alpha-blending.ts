@@ -332,12 +332,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 100% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 1,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -351,7 +350,6 @@ export default async function test(settings: ExampleSettings) {
       alpha: 0.5,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -360,12 +358,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 100% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 1,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -374,12 +371,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 50% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 0.5,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -390,12 +386,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 100% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 1,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -404,12 +399,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 50% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 0.5,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -418,12 +412,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 100% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 1,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -432,12 +425,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 50% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 0.5,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -447,7 +439,7 @@ export default async function test(settings: ExampleSettings) {
 
     const textureBlendingHeader = renderer.createTextNode({
       text: 'The textures below should have smooth edges',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,

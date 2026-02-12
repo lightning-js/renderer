@@ -17,9 +17,11 @@
  * limitations under the License.
  */
 
-import type { CoreTextNodeProps } from '../CoreTextNode.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type { Stage } from '../Stage.js';
+import type { CoreFont } from './CoreFont.js';
+import type { CoreFontManager } from './FontManager.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
@@ -348,24 +350,6 @@ export type MeasureTextFn = (
   letterSpacing: number,
 ) => number;
 
-export interface FontHandler {
-  init: (
-    c: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  ) => void;
-  type: 'canvas' | 'sdf';
-  isFontLoaded: (fontFamily: string) => boolean;
-  loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
-  waitingForFont: (fontFamily: string, CoreTextNode) => void;
-  stopWaitingForFont: (fontFamily: string, CoreTextNode) => void;
-  getFontFamilies: () => FontFamilyMap;
-  canRenderFont: (trProps: TrProps) => boolean;
-  getFontMetrics: (
-    fontFamily: string,
-    fontSize: number,
-  ) => NormalizedFontMetrics;
-  measureText: MeasureTextFn;
-}
-
 export interface TextRenderProps {
   fontFamily: string;
   fontSize: number;
@@ -392,17 +376,18 @@ export interface TextRenderInfo {
 
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
-  font: FontHandler;
-  renderText: (props: CoreTextNodeProps) => TextRenderInfo;
+  createFont: (settings: FontLoadOptions) => CoreFont | undefined;
+  renderText: (font: CoreFont, props: CoreTextNodeProps) => TextRenderInfo;
   // Updated to accept layout data and return vertex buffer for performance
   addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
     renderer: CoreRenderer,
+    font: CoreFont,
     layout: TextLayout,
     vertexBuffer: Float32Array,
     renderProps: TextRenderProps,
   ) => void;
-  init: (stage: Stage) => void;
+  init: (stage: Stage, fontManager: CoreFontManager) => void;
 }
 
 /**
