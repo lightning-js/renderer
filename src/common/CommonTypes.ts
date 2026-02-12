@@ -18,6 +18,7 @@
  */
 
 import type { CoreNodeRenderState } from '../core/CoreNode.js';
+import type { TextureError } from '../core/TextureError.js';
 
 /**
  * Types shared between Main Space and Core Space
@@ -71,7 +72,7 @@ export type NodeTextFailedPayload = {
  */
 export type NodeTextureFailedPayload = {
   type: 'texture';
-  error: Error;
+  error: TextureError;
 };
 
 /**
