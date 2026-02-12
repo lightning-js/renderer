@@ -155,7 +155,7 @@ export abstract class Texture extends EventEmitter {
    * `null`.
    */
   private _dimensions: Dimensions | null = null;
-  private _error: Error | null = null;
+  private _error: TextureError | null = null;
 
   // aggregate state
   public state: TextureState = 'initial';
