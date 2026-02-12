@@ -605,7 +605,7 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: settings.quadBufferSize!,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector !== null,
+      inspector: inspector as boolean,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
