@@ -149,23 +149,17 @@ export const Border: WebGlShaderType<BorderProps> = {
       vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
 
+      float nodeDist = box(boxUv, v_halfDimensions - v_edgeWidth);
+      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
+      resultColor = mix(resultColor, color, nodeAlpha);
+
       float outerDist = box(boxUv + v_outerBorderUv, v_outerSize - v_edgeWidth);
       float innerDist = box(boxUv + v_innerBorderUv, v_innerSize - v_edgeWidth);
 
-      if(u_borderGap == 0.0) {
-        resultColor = mix(resultColor, u_borderColor, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, outerDist));
-        resultColor = mix(resultColor, color, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, innerDist));
-        gl_FragColor = resultColor * u_alpha;
-        return;
-      }
-
-      float nodeDist = box(boxUv, v_halfDimensions - v_edgeWidth);
-      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
-
       float borderDist = max(-innerDist, outerDist);
-      float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
-      resultColor = mix(resultColor, color, nodeAlpha);
-      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
+      float borderAlpha = (1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist)) * u_borderColor.a;
+
+      resultColor = mix(resultColor, vec4(u_borderColor.rgb, 1.0), borderAlpha);
 
       gl_FragColor = resultColor * u_alpha;
     }
