@@ -1339,12 +1339,6 @@ export class CoreNode extends EventEmitter {
         childClippingRect = NO_CLIPPING_RECT;
       }
 
-      let childClippingRect = this.clippingRect;
-
-      if (this.rtt === true) {
-        childClippingRect = NO_CLIPPING_RECT;
-      }
-
       for (let i = 0, length = this.children.length; i < length; i++) {
         const child = this.children[i] as CoreNode;
 

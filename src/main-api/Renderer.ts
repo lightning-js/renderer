@@ -519,7 +519,6 @@ export class RendererMain extends EventEmitter {
   constructor(
     settings: Partial<RendererMainSettings>,
     target?: string | HTMLElement,
-    target?: string | HTMLElement,
   ) {
     super();
 
