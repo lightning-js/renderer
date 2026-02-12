@@ -139,7 +139,29 @@ export class LinearGradientEffect extends ShaderEffect {
   };
 
   static override onColorize = (props: LinearGradientEffectProps) => {
-    const colors = props.colors!.length || 1;
+    const colorsLen = props.colors?.length || 1;
+    const last = colorsLen - 1;
+
+    // Extract all colors and stops to local variables to avoid uniform array access issues
+    let localVars = '';
+    for (let i = 0; i < colorsLen; i++) {
+      localVars += `
+      vec4 color${i} = colors[${i}];
+      float stop${i} = stops[${i}];`;
+    }
+
+    // Generate unrolled conditional checks for each stop pair
+    let stopChecks = '';
+    for (let i = 0; i < last; i++) {
+      stopChecks += `
+      if(dist >= stop${i} && dist <= stop${i + 1}) {
+        float localDist = smoothstep(stop${i}, stop${i + 1}, dist);
+        vec4 colorOut = mix(color${i}, color${i + 1}, localDist);
+        return mix(maskColor, vec4(colorOut.rgb, 1.0), colorOut.a);
+      }
+`;
+    }
+
     return `
       float a = angle - (PI / 180.0 * 90.0);
       float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
@@ -147,30 +169,13 @@ export class LinearGradientEffect extends ShaderEffect {
       vec2 t = $calcPoint(lineDist * 0.5, a + PI);
       vec2 gradVec = t - f;
       float dist = dot(v_nodeCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
-
-      //return early if dist is lower or equal to first stop
-      if(dist <= stops[0]) {
-        return mix(maskColor, colors[0], clamp(colors[0].a, 0.0, 1.0));
+      ${localVars}
+      ${stopChecks}
+      //fallback: clamp to nearest color
+      if(dist < stop0) {
+        return mix(maskColor, vec4(color0.rgb, 1.0), color0.a);
       }
-      const int amount = ${colors};
-      const int last = amount - 1;
-
-      if(dist >= stops[last]) {
-        return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
-      }
-
-      for(int i = 0; i < last; i++) {
-        float left = stops[i];
-        float right = stops[i + 1];
-        if(dist >= left && dist <= right) {
-          float localDist = smoothstep(left, right, dist);
-          vec4 colorOut = mix(colors[i], colors[i + 1], localDist);
-          return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
-        }
-      }
-
-      //final fallback
-      return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
+      return mix(maskColor, vec4(color${last}.rgb, 1.0), color${last}.a);
     `;
   };
 }
