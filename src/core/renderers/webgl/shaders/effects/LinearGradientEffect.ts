@@ -131,9 +131,9 @@ export class LinearGradientEffect extends ShaderEffect {
   static ColorLoop = (amount: number): string => {
     let loop = '';
     for (let i = 2; i < amount; i++) {
-      loop += `colorOut = mix(colorOut, colors[${i}], clamp((dist - stops[${
-        i - 1
-      }]) / (stops[${i}] - stops[${i - 1}]), 0.0, 1.0));`;
+      loop += `
+      mixAmount = smoothstep(stops[${i - 1}], stops[${i}], dist);
+      colorOut = mix(colorOut, colors[${i}], mixAmount);`;
     }
     return loop;
   };
@@ -148,29 +148,11 @@ export class LinearGradientEffect extends ShaderEffect {
       vec2 gradVec = t - f;
       float dist = dot(v_nodeCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
 
-      //return early if dist is lower or equal to first stop
-      if(dist <= stops[0]) {
-        return mix(maskColor, colors[0], clamp(colors[0].a, 0.0, 1.0));
-      }
-      const int amount = ${colors};
-      const int last = amount - 1;
-
-      if(dist >= stops[last]) {
-        return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
-      }
-
-      for(int i = 0; i < last; i++) {
-        float left = stops[i];
-        float right = stops[i + 1];
-        if(dist >= left && dist <= right) {
-          float localDist = smoothstep(left, right, dist);
-          vec4 colorOut = mix(colors[i], colors[i + 1], localDist);
-          return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
-        }
-      }
-
-      //final fallback
-      return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
+      float stopCalc = smoothstep(stops[0], stops[1], dist);
+      vec4 colorOut = mix(colors[0], colors[1], stopCalc);
+      float mixAmount;
+      ${this.ColorLoop(colors)}
+      return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
     `;
   };
 }
