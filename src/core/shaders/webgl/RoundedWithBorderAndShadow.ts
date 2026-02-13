@@ -205,13 +205,11 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
-      float nodeDist;
-      float nodeAlpha;
+      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
       float shadowAlpha;
 
       if(v_borderZero == 1.0) {
-        nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-        nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
         resultColor = mix(resultColor, u_shadowColor, shadowAlpha);
         gl_FragColor = mix(resultColor, color, nodeAlpha) * u_alpha;
@@ -225,15 +223,13 @@ export const RoundedWithBorderAndShadow: WebGlShaderType<RoundedWithBorderAndSha
         shadowAlpha = shadowBox(boxUv - u_shadow.xy, v_halfDimensions + u_shadow.w - v_edgeWidth, u_radius + u_shadow.z);
       }
 
-      nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-      nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
       float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - v_edgeWidth, v_outerBorderRadius);
       float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - v_edgeWidth, v_innerBorderRadius);
       float borderDist = max(-innerDist, outerDist);
-      float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
+      float borderAlpha = (1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist)) * u_borderColor.a;
       resultColor = mix(resultColor, u_shadowColor, shadowAlpha);
       resultColor = mix(resultColor, color, nodeAlpha);
-      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
+      resultColor = mix(resultColor, vec4(u_borderColor.rgb, 1.0), borderAlpha);
       gl_FragColor = resultColor * u_alpha;
     }
   `,

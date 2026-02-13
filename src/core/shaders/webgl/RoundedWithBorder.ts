@@ -189,33 +189,22 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
 
-      float nodeDist;
-      float nodeAlpha;
+      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
+      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
+      resultColor = mix(resultColor, color, nodeAlpha);
 
       if(v_borderZero == 1.0) {
-        nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-        nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
-        gl_FragColor = mix(vec4(0.0), color, nodeAlpha) * u_alpha;
+        gl_FragColor = resultColor * u_alpha;
         return;
       }
 
       float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - v_edgeWidth, v_outerBorderRadius);
       float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - v_edgeWidth, v_innerBorderRadius);
 
-      if(u_borderGap == 0.0) {
-        resultColor = mix(resultColor, u_borderColor, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, outerDist));
-        resultColor = mix(resultColor, color, 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, innerDist));
-        gl_FragColor = resultColor * u_alpha;
-        return;
-      }
-
-      nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-      nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
       float borderDist = max(-innerDist, outerDist);
-      float borderAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist);
+      float borderAlpha = (1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist)) * u_borderColor.a;
 
-      resultColor = mix(vec4(0.0), color, nodeAlpha);
-      resultColor = mix(resultColor, u_borderColor, borderAlpha * u_borderColor.a);
+      resultColor = mix(resultColor, vec4(u_borderColor.rgb, 1.0), borderAlpha);
       gl_FragColor = resultColor * u_alpha;
     }
   `,
