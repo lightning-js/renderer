@@ -48,6 +48,11 @@ export {
   CoreTextureManager,
   type TextureMap,
 } from '../src/core/CoreTextureManager.js';
+export {
+  TextureError,
+  TextureErrorCode,
+  isTextureError,
+} from '../src/core/TextureError.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type { TimingFunction } from '../src/core/utils.js';
