@@ -157,7 +157,7 @@ export class LinearGradientEffect extends ShaderEffect {
       if(dist >= stop${i} && dist <= stop${i + 1}) {
         float localDist = smoothstep(stop${i}, stop${i + 1}, dist);
         vec4 colorOut = mix(color${i}, color${i + 1}, localDist);
-        return mix(maskColor, vec4(colorOut.rgb, 1.0), colorOut.a);
+        return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
       }
 `;
     }
@@ -173,9 +173,9 @@ export class LinearGradientEffect extends ShaderEffect {
       ${stopChecks}
       //fallback: clamp to nearest color
       if(dist < stop0) {
-        return mix(maskColor, vec4(color0.rgb, 1.0), color0.a);
+        return mix(maskColor, color0, clamp(color0.a, 0.0, 1.0));
       }
-      return mix(maskColor, vec4(color${last}.rgb, 1.0), color${last}.a);
+      return mix(maskColor, color${last}, clamp(color${last}.a, 0.0, 1.0));
     `;
   };
 }

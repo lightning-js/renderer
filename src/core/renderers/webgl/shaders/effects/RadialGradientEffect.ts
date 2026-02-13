@@ -173,7 +173,7 @@ export class RadialGradientEffect extends ShaderEffect {
       if(dist >= left${i} && dist <= right${i}) {
         float localDist = smoothstep(left${i}, right${i}, dist);
         vec4 colorOut = mix(colors[${i}], colors[${i + 1}], localDist);
-        return mix(maskColor, vec4(colorOut.rgb, 1.0), colorOut.a);
+        return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
       }
       `;
     }
@@ -187,13 +187,13 @@ export class RadialGradientEffect extends ShaderEffect {
       dist = clamp(dist, 0.0, 1.0);
       //return early if dist is lower or equal to first stop
       if(dist <= stops[0]) {
-        return mix(maskColor, vec4(colors[0].rgb, 1.0), colors[0].a);
+        return mix(maskColor, colors[0], clamp(colors[0].a, 0.0, 1.0));
       }
       const int amount = ${colorsLen};
       const int last = amount - 1;
 
       if(dist >= stops[${last}]) {
-        return mix(maskColor, vec4(colors[${last}].rgb, 1.0), colors[${last}].a);
+        return mix(maskColor, colors[${last}], clamp(colors[last].a, 0.0, 1.0));
       }
 
       ${stopChecks}
