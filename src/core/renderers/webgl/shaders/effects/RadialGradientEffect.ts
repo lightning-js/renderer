@@ -152,9 +152,9 @@ export class RadialGradientEffect extends ShaderEffect {
   static ColorLoop = (amount: number): string => {
     let loop = '';
     for (let i = 2; i < amount; i++) {
-      loop += `colorOut = mix(colorOut, colors[${i}], clamp((dist - stops[${
-        i - 1
-      }]) / (stops[${i}] - stops[${i - 1}]), 0.0, 1.0));`;
+      loop += `
+      mixAmount = smoothstep(stops[${i - 1}], stops[${i}], dist);
+      colorOut = mix(colorOut, colors[${i}], mixAmount);`;
     }
     return loop;
   };
@@ -167,8 +167,9 @@ export class RadialGradientEffect extends ShaderEffect {
 
       float dist = length((point - projection) / vec2(width, height));
 
-      float stopCalc = clamp((dist - stops[0]) / (stops[1] - stops[0]), 0.0, 1.0);
+      float stopCalc = smoothstep(stops[0], stops[1], dist);
       vec4 colorOut = mix(colors[0], colors[1], stopCalc);
+      float mixAmount;
       ${this.ColorLoop(colors)}
       return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
     `;
