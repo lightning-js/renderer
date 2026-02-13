@@ -167,30 +167,10 @@ export class RadialGradientEffect extends ShaderEffect {
 
       float dist = length((point - projection) / vec2(width, height));
 
-      dist = clamp(dist, 0.0, 1.0);
-      //return early if dist is lower or equal to first stop
-      if(dist <= stops[0]) {
-        return mix(maskColor, colors[0], clamp(colors[0].a, 0.0, 1.0));
-      }
-      const int amount = ${colors};
-      const int last = amount - 1;
-
-      if(dist >= stops[last]) {
-        return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
-      }
-
-      for(int i = 0; i < last; i++) {
-        float left = stops[i];
-        float right = stops[i + 1];
-        if(dist >= left && dist <= right) {
-          float localDist = smoothstep(left, right, dist);
-          vec4 colorOut = mix(colors[i], colors[i + 1], localDist);
-          return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
-        }
-      }
-
-      //final fallback
-      return mix(maskColor, colors[last], clamp(colors[last].a, 0.0, 1.0));
+      float stopCalc = clamp((dist - stops[0]) / (stops[1] - stops[0]), 0.0, 1.0);
+      vec4 colorOut = mix(colors[0], colors[1], stopCalc);
+      ${this.ColorLoop(colors)}
+      return mix(maskColor, colorOut, clamp(colorOut.a, 0.0, 1.0));
     `;
   };
 }
