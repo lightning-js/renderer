@@ -169,9 +169,6 @@ function calculateCanvasMetrics(
     (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0);
   const unitsPerEm = emHeight > 0 ? emHeight : ascender + descender;
 
-  console.log(
-    `Calculated metrics for font ${fontFamily} at size ${fontSize}: ascender=${ascender}, descender=${descender}, unitsPerEm=${unitsPerEm}`,
-  );
   return {
     ascender,
     descender: -descender,
