@@ -188,9 +188,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    console.log(
-      `Updating text node ${this._id}, layout generated: ${this._layoutGenerated}`,
-    );
     if (
       (this.textProps.forceLoad === true ||
         this.allowTextGeneration() === true) &&
