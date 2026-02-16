@@ -109,6 +109,15 @@ export class CanvasFont extends CoreFont {
       metrics,
       fontSize,
     );
+
+    console.log(
+      'normalized metrics for font',
+      this.family,
+      'at size',
+      fontSize,
+      'calculated as',
+      m,
+    );
     return m;
   }
 }
@@ -132,7 +141,15 @@ function calculateCanvasMetrics(
   // as it's browser support is limited and it also tends to produce higher than
   // expected values. It is instead HIGHLY RECOMMENDED that developers provide
   // explicit metrics in the font face definition.
-  measureContext.font = `normal ${fontSize}px Unknown, ${fontFamily}`;
+
+  // Ensure font is loaded by checking document.fonts
+  if (!document.fonts.check(`${fontSize}px ${fontFamily}`)) {
+    console.warn(
+      `Font ${fontFamily} may not be fully loaded yet when calculating metrics`,
+    );
+  }
+
+  measureContext.font = `${fontSize}px ${fontFamily}`;
 
   const metrics = measureContext.measureText(
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -150,7 +167,11 @@ function calculateCanvasMetrics(
 
   const emHeight =
     (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0);
-  const unitsPerEm = emHeight > 0 ? emHeight : fontSize;
+  const unitsPerEm = emHeight > 0 ? emHeight : ascender + descender;
+
+  console.log(
+    `Calculated metrics for font ${fontFamily} at size ${fontSize}: ascender=${ascender}, descender=${descender}, unitsPerEm=${unitsPerEm}`,
+  );
   return {
     ascender,
     descender: -descender,
