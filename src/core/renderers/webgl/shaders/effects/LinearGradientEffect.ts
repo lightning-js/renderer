@@ -141,12 +141,16 @@ export class LinearGradientEffect extends ShaderEffect {
   static override onColorize = (props: LinearGradientEffectProps) => {
     const colors = props.colors!.length || 1;
     return `
-      float a = angle - (PI / 180.0 * 90.0);
-      float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
-      vec2 f = $calcPoint(lineDist * 0.5, a);
-      vec2 t = $calcPoint(lineDist * 0.5, a + PI);
-      vec2 gradVec = t - f;
-      float dist = dot(v_nodeCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
+      float a = angle + (PI / 180.0 * 90.0);
+
+      vec2 normalizedPos = v_nodeCoordinate.xy;
+      vec2 center = vec2(0.5, 0.5);
+
+      float aspectRatio = u_dimensions.x / u_dimensions.y;
+      vec2 dir = vec2(cos(a), sin(a) / aspectRatio);
+
+      vec2 relativePos = normalizedPos - center;
+      float dist = dot(relativePos, dir) / dot(dir, dir) + 0.5;
 
       float stopCalc = smoothstep(stops[0], stops[1], dist);
       vec4 colorOut = mix(colors[0], colors[1], stopCalc);
