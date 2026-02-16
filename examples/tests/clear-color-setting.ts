@@ -54,7 +54,7 @@ function createTestCase(
       w: 400,
       h: 400,
       text: `Test passes if the background appears as ${colorName}`,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 50,
       x: renderer.settings.appWidth / 2,
       y: renderer.settings.appHeight / 2,

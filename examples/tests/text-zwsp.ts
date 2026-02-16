@@ -43,7 +43,7 @@ export async function automation(settings: ExampleSettings) {
  * @returns
  */
 export default async function test({ renderer, testRoot }: ExampleSettings) {
-  const fontFamily = 'Ubuntu';
+  const fontFamily = 'SDF-Ubuntu';
   const fontSize = 40;
   const yPos = 0;
   testRoot.w = 500;

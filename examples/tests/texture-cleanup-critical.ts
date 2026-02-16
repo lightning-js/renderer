@@ -52,7 +52,7 @@ export default async function ({
     y: 0,
     text: 'Critical Texture Memory Cleanup Test',
     parent: screen,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 60,
   });
 
@@ -65,7 +65,7 @@ export default async function ({
 See docs/ManualRegressionTests.md for more information.
     `,
     parent: screen,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 40,
   });
 

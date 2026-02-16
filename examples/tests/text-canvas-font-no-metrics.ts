@@ -43,8 +43,8 @@ export async function automation(settings: ExampleSettings) {
  * @returns
  */
 export default async function test({ renderer, testRoot }: ExampleSettings) {
-  const fontFamily = 'Ubuntu';
-  const fontFamilyNoMetrics = 'Ubuntu-No-Metrics';
+  const fontFamily = 'Canvas-Ubuntu';
+  const fontFamilyNoMetrics = 'Canvas-Ubuntu-No-Metrics';
 
   const text =
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
@@ -59,7 +59,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     maxWidth: testRoot.w,
     text,
     fontSize,
-    fontFamily: 'Canvas-Ubuntu',
+    fontFamily,
     color: 0xff0000ff,
     parent: testRoot,
   });
@@ -68,7 +68,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     y: testRoot.h,
     mount: 1,
     color: 0x000000ff,
-    fontFamily: 'Ubuntu',
+    fontFamily,
     fontSize: 20,
     text: '1',
     parent: testRoot,
