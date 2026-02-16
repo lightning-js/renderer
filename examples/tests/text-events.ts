@@ -57,7 +57,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       boxColor1: 0x9f6dffff,
       boxColor2: 0x00aaaaff,
       textColor: 0xffffffff,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       parent: testRoot,
     },
     renderer,

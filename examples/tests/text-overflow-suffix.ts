@@ -51,7 +51,7 @@ const NODE_PROPS = {
   maxWidth: 200,
   color: 0x000000ff,
   text: getLoremIpsum(100),
-  fontFamily: 'Ubuntu',
+  fontFamily: 'SDF-Ubuntu',
   fontSize: 20,
   lineHeight: 28,
 } satisfies Partial<ITextNodeProps>;

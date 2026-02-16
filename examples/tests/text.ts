@@ -29,7 +29,7 @@ import {
   saveStorage,
 } from '../common/LocalStorage.js';
 
-const FONT_FAMILY = 'Ubuntu';
+const FONT_FAMILY = 'SDF-Ubuntu';
 const HEADER_SIZE = 45;
 const FONT_SIZE = 40;
 

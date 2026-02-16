@@ -147,13 +147,14 @@ function calculateCanvasMetrics(
     metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? 0;
   const descender =
     metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? 0;
+
+  const emHeight =
+    (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0);
+  const unitsPerEm = emHeight > 0 ? emHeight : fontSize;
   return {
     ascender,
     descender: -descender,
-    lineGap:
-      (metrics.emHeightAscent ?? 0) +
-      (metrics.emHeightDescent ?? 0) -
-      (ascender + descender),
-    unitsPerEm: (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0),
+    lineGap: emHeight - (ascender + descender),
+    unitsPerEm,
   };
 }
