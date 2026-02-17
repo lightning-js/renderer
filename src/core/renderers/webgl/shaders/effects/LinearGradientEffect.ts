@@ -120,14 +120,6 @@ export class LinearGradientEffect extends ShaderEffect {
     },
   };
 
-  static override methods: Record<string, string> = {
-    calcPoint: `
-      vec2 function(float d, float angle) {
-        return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
-      }
-    `,
-  };
-
   static ColorLoop = (amount: number): string => {
     let loop = '';
     for (let i = 2; i < amount; i++) {
