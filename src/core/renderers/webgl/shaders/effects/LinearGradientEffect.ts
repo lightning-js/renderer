@@ -144,10 +144,10 @@ export class LinearGradientEffect extends ShaderEffect {
       float a = angle + (PI / 180.0 * 90.0);
       float aspectRatio = u_dimensions.x / u_dimensions.y;
 
-      float lineDist = abs(aspectRatio * cos(a)) + abs(sin(a));
+      vec2 gradDir = vec2(cos(a), sin(a));
+      float lineDist = abs(aspectRatio * gradDir.x) + abs(gradDir.y);
 
       vec2 pos = v_nodeCoordinate.xy * vec2(aspectRatio, 1.0) - vec2(aspectRatio * 0.5, 0.5);
-      vec2 gradDir = vec2(cos(a), sin(a));
       float dist = dot(pos, gradDir) / lineDist + 0.5;
 
       float stopCalc = smoothstep(stops[0], stops[1], dist);
