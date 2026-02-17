@@ -120,14 +120,6 @@ export class LinearGradientEffect extends ShaderEffect {
     },
   };
 
-  static override methods: Record<string, string> = {
-    calcPoint: `
-      vec2 function(float d, float angle) {
-        return d * vec2(cos(angle), sin(angle)) + (u_dimensions * 0.5);
-      }
-    `,
-  };
-
   static ColorLoop = (amount: number): string => {
     let loop = '';
     for (let i = 2; i < amount; i++) {
@@ -141,12 +133,14 @@ export class LinearGradientEffect extends ShaderEffect {
   static override onColorize = (props: LinearGradientEffectProps) => {
     const colors = props.colors!.length || 1;
     return `
-      float a = angle - (PI / 180.0 * 90.0);
-      float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
-      vec2 f = $calcPoint(lineDist * 0.5, a);
-      vec2 t = $calcPoint(lineDist * 0.5, a + PI);
-      vec2 gradVec = t - f;
-      float dist = dot(v_nodeCoordinate.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
+      float a = angle + (PI / 180.0 * 90.0);
+      float aspectRatio = u_dimensions.x / u_dimensions.y;
+
+      vec2 gradDir = vec2(cos(a), sin(a));
+      float lineDist = abs(aspectRatio * gradDir.x) + abs(gradDir.y);
+
+      vec2 pos = v_nodeCoordinate.xy * vec2(aspectRatio, 1.0) - vec2(aspectRatio * 0.5, 0.5);
+      float dist = dot(pos, gradDir) / lineDist + 0.5;
 
       float stopCalc = smoothstep(stops[0], stops[1], dist);
       vec4 colorOut = mix(colors[0], colors[1], stopCalc);
