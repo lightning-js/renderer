@@ -17,24 +17,12 @@
  * limitations under the License.
  */
 
-export const createImageBitmap = (
-  blob: ImageBitmapSource,
-  sxOrOptions?: number | ImageBitmapOptions,
-  sy?: number,
-  sw?: number,
-  sh?: number,
-  options?: ImageBitmapOptions,
-): Promise<ImageBitmap> => {
-  if (typeof sxOrOptions === 'number') {
-    return createImageBitmap(
-      blob,
-      sxOrOptions,
-      sy ?? 0,
-      sw ?? 0,
-      sh ?? 0,
-      options,
-    );
-  } else {
-    return createImageBitmap(blob, sxOrOptions);
-  }
-};
+export {
+  Platform,
+  type PlatformSettings,
+} from '../src/core/platforms/Platform.js';
+export { WebPlatform } from '../src/core/platforms/web/WebPlatform.js';
+
+// GL Context Wrappers
+export { GlContextWrapper } from '../src/core/platforms/GlContextWrapper.js';
+export { WebGlContextWrapper } from '../src/core/platforms/web/WebGlContextWrapper.js';
