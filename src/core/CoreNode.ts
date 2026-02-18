@@ -940,16 +940,6 @@ export class CoreNode extends EventEmitter {
     texture.on('failed', this.onTextureFailed);
     texture.on('freed', this.onTextureFreed);
 
-    // If the parent is a render texture, the initial texture status
-    // will be set to freed until the texture is processed by the
-    // Render RTT nodes. So we only need to listen fo changes and
-    // no need to check the texture.state until we restructure how
-    // textures are being processed.
-    if (this.parentHasRenderTexture) {
-      this.notifyParentRTTOfUpdate();
-      return;
-    }
-
     if (texture.state === 'loaded') {
       this.onTextureLoaded(texture, texture.dimensions!);
     } else if (texture.state === 'failed') {
