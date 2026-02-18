@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../../platforms/GlContextWrapper.js';
 
 export interface CoreWebGlParameters {
   MAX_RENDERBUFFER_SIZE: number;
@@ -36,9 +36,7 @@ export interface CoreWebGlParameters {
  * Get device specific webgl parameters
  * @param glw
  */
-export function getWebGlParameters(
-  glw: WebGlContextWrapper,
-): CoreWebGlParameters {
+export function getWebGlParameters(glw: GlContextWrapper): CoreWebGlParameters {
   const params: CoreWebGlParameters = {
     MAX_RENDERBUFFER_SIZE: 0,
     MAX_TEXTURE_SIZE: 0,
@@ -81,9 +79,7 @@ export interface CoreWebGlExtensions {
  * Get device webgl extensions
  * @param glw
  */
-export function getWebGlExtensions(
-  glw: WebGlContextWrapper,
-): CoreWebGlExtensions {
+export function getWebGlExtensions(glw: GlContextWrapper): CoreWebGlExtensions {
   const extensions: CoreWebGlExtensions = {
     ANGLE_instanced_arrays: null,
     WEBGL_compressed_texture_s3tc: null,
@@ -113,7 +109,7 @@ export function getWebGlExtensions(
  * @param glw
  * @param size
  */
-export function createIndexBuffer(glw: WebGlContextWrapper, size: number) {
+export function createIndexBuffer(glw: GlContextWrapper, size: number) {
   const maxQuads = ~~(size / 80);
   const indices = new Uint16Array(maxQuads * 6);
 

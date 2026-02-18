@@ -2,13 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 
-import { assertTruthy, isProductionEnvironment } from '../../utils.js';
 import type {
   Vec2,
   Vec3,
   Vec4,
-} from '../renderers/webgl/internal/ShaderUtils.js';
-import { isWebGl2 } from '../renderers/webgl/internal/WebGlUtils.js';
+} from '../../renderers/webgl/internal/ShaderUtils.js';
+import { isWebGl2 } from '../../renderers/webgl/internal/WebGlUtils.js';
+import { GlContextWrapper } from '../GlContextWrapper.js';
+import type { CompressedData } from '../../textures/Texture.js';
 
 /**
  * Optimized WebGL Context Wrapper
@@ -29,7 +30,7 @@ import { isWebGl2 } from '../renderers/webgl/internal/WebGlUtils.js';
  * A subset of GLenum constants are also exposed as properties on this class
  * for convenience.
  */
-export class WebGlContextWrapper {
+export class WebGlContextWrapper extends GlContextWrapper {
   //#region Cached WebGL State
   private activeTextureUnit = 0;
   private texture2dUnits: Array<WebGLTexture | null>;
@@ -97,6 +98,7 @@ export class WebGlContextWrapper {
   //#endregion WebGL Enums
 
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
+    super();
     // The following code extracts the current state of the WebGL context
     // to our local JavaScript cached version of it. This is so we can
     // avoid making WebGL calls if we don't need to.
@@ -1366,6 +1368,110 @@ export class WebGlContextWrapper {
       return { error, errorName, message };
     }
     return null;
+  }
+
+  /**
+   *
+   * Compressed Textures support
+   */
+  uploadKTX(texture: WebGLTexture, data: CompressedData) {
+    const { glInternalFormat, mipmaps, w: width, h: height, blockInfo } = data;
+    if (mipmaps === undefined) {
+      return;
+    }
+
+    this.bindTexture(texture);
+
+    const blockWidth = blockInfo.width;
+    const blockHeight = blockInfo.height;
+    let w = width;
+    let h = height;
+
+    for (let i = 0; i < mipmaps!.length; i++) {
+      let view = new Uint8Array(mipmaps![i]!);
+
+      const uploadW = Math.ceil(w / blockWidth) * blockWidth;
+      const uploadH = Math.ceil(h / blockHeight) * blockHeight;
+
+      const expectedBytes =
+        Math.ceil(w / blockWidth) *
+        Math.ceil(h / blockHeight) *
+        blockInfo.bytes;
+
+      if (view.byteLength < expectedBytes) {
+        const padded = new Uint8Array(expectedBytes);
+        padded.set(view);
+        view = padded;
+      }
+
+      this.compressedTexImage2D(i, glInternalFormat, uploadW, uploadH, 0, view);
+
+      w = Math.max(1, w >> 1);
+      h = Math.max(1, h >> 1);
+    }
+
+    this.texParameteri(this.TEXTURE_WRAP_S, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_WRAP_T, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_MAG_FILTER, this.LINEAR);
+    this.texParameteri(
+      this.TEXTURE_MIN_FILTER,
+      mipmaps!.length > 1 ? this.LINEAR_MIPMAP_LINEAR : this.LINEAR,
+    );
+  }
+
+  uploadPVR(texture: WebGLTexture, data: CompressedData) {
+    const { glInternalFormat, mipmaps, w: width, h: height } = data;
+    if (mipmaps === undefined) {
+      return;
+    }
+    this.bindTexture(texture);
+
+    let w = width;
+    let h = height;
+
+    for (let i = 0; i < mipmaps!.length; i++) {
+      this.compressedTexImage2D(
+        i,
+        glInternalFormat,
+        w,
+        h,
+        0,
+        new Uint8Array(mipmaps[i]!),
+      );
+
+      w = Math.max(1, w >> 1);
+      h = Math.max(1, h >> 1);
+    }
+
+    this.texParameteri(this.TEXTURE_WRAP_S, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_WRAP_T, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_MAG_FILTER, this.LINEAR);
+    this.texParameteri(
+      this.TEXTURE_MIN_FILTER,
+      mipmaps.length > 1 ? this.LINEAR_MIPMAP_LINEAR : this.LINEAR,
+    );
+  }
+
+  uploadASTC(texture: WebGLTexture, data: CompressedData) {
+    if (this.getExtension('WEBGL_compressed_texture_astc') === null) {
+      throw new Error('ASTC compressed textures not supported by this device');
+    }
+
+    this.bindTexture(texture);
+
+    const { glInternalFormat, mipmaps, w, h } = data;
+    if (mipmaps === undefined) {
+      return;
+    }
+
+    const view = new Uint8Array(mipmaps[0]!);
+
+    this.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
+    // ASTC textures MUST use no mipmaps unless stored
+    this.texParameteri(this.TEXTURE_WRAP_S, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_WRAP_T, this.CLAMP_TO_EDGE);
+    this.texParameteri(this.TEXTURE_MAG_FILTER, this.LINEAR);
+    this.texParameteri(this.TEXTURE_MIN_FILTER, this.LINEAR);
   }
 }
 

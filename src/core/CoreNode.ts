@@ -2737,7 +2737,8 @@ export class CoreNode extends EventEmitter {
   }
 
   draw(renderer: WebGlRenderer) {
-    const { glw, options, stage } = renderer;
+    const { glw, stage } = renderer;
+    const canvas = stage.platform!.canvas!;
     const shader = this.props.shader as any;
 
     stage.shManager.useShader(shader.program);
@@ -2751,7 +2752,7 @@ export class CoreNode extends EventEmitter {
       const clipWidth = Math.round(this.clippingRect.w * pixelRatio);
       const clipHeight = Math.round(this.clippingRect.h * pixelRatio);
       let clipY = Math.round(
-        options.canvas.height - clipHeight - this.clippingRect.y * pixelRatio,
+        canvas.height - clipHeight - this.clippingRect.y * pixelRatio,
       );
       // if parent has render texture, we need to adjust the scissor rect
       // to be relative to the parent's framebuffer

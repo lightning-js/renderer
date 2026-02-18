@@ -20,7 +20,7 @@
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import type { SubTexture } from '../../textures/SubTexture.js';
 import type { SubTextureProps } from '../../textures/SubTexture.js';
 import type { CompressedData } from '../../textures/Texture.js';
@@ -28,7 +28,7 @@ import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 
 export class WebGlCtxSubTexture extends WebGlCtxTexture {
   constructor(
-    glw: WebGlContextWrapper,
+    glw: GlContextWrapper,
     memManager: TextureMemoryManager,
     textureSource: SubTexture,
   ) {

@@ -17,20 +17,8 @@
  * limitations under the License.
  */
 
-import { assertTruthy } from '../../utils.js';
-import { type TextureData } from '../textures/Texture.js';
-
-/**
- * Tests if the given location is a SVG
- * @param url
- * @remarks
- * This function is used to determine if the given image url is a SVG
- * image
- * @returns
- */
-export function isSvgImage(url: string): boolean {
-  return /\.(svg)(\?.*)?$/.test(url);
-}
+import { assertTruthy } from '../../../../utils.js';
+import type { ImageResponse } from '../../../textures/ImageTexture.js';
 
 /**
  * Loads a SVG image
@@ -45,7 +33,7 @@ export const loadSvg = (
   sy: number | null,
   sw: number | null,
   sh: number | null,
-): Promise<TextureData> => {
+): Promise<ImageResponse> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');

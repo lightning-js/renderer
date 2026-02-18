@@ -1,5 +1,18 @@
-import { Platform } from '../Platform.js';
+import { Platform, type PlatformSettings } from '../Platform.js';
+import { ImageWorkerManager } from './lib/ImageWorker.js';
 import type { Stage } from '../../Stage.js';
+import {
+  dataURIToBlob,
+  isBase64Image,
+  convertUrlToAbsolute,
+  createWebGLContext,
+} from './lib/utils.js';
+
+import type { ImageResponse } from '../../textures/ImageTexture.js';
+import { loadSvg } from './lib/textureSvg.js';
+import { loadCompressedTexture } from './lib/textureCompression.js';
+import { WebGlContextWrapper } from './WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../GlContextWrapper.js';
 
 /**
  * make fontface add not show errors
@@ -9,13 +22,34 @@ interface FontFaceSetWithAdd extends FontFaceSet {
 }
 
 export class WebPlatform extends Platform {
+  private useImageWorker: boolean;
+  private imageWorkerManager: ImageWorkerManager | null = null;
+  private hasWorker = !!self.Worker;
+
+  constructor(settings: PlatformSettings = {}) {
+    super(settings);
+
+    const numImageWorkers = settings.numImageWorkers ?? 0;
+    this.useImageWorker = numImageWorkers > 0 && this.hasWorker;
+
+    if (this.useImageWorker === true) {
+      this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
+    }
+  }
+
   ////////////////////////
   // Platform-specific methods
   ////////////////////////
 
   override createCanvas(): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
-    return canvas;
+    this.canvas = document.createElement('canvas');
+    return this.canvas;
+  }
+
+  override createContext(): GlContextWrapper {
+    const gl = createWebGLContext(this.canvas!, this.settings.forceWebGL2);
+    this.glw = new WebGlContextWrapper(gl);
+    return this.glw;
   }
 
   override getElementById(id: string): HTMLElement | null {
@@ -97,30 +131,123 @@ export class WebPlatform extends Platform {
   }
 
   ////////////////////////
-  // ImageBitmap
+  // Image handling
   ////////////////////////
 
-  override createImageBitmap(
-    blob: ImageBitmapSource,
-    sxOrOptions?: number | ImageBitmapOptions,
-    sy?: number,
-    sw?: number,
-    sh?: number,
-    options?: ImageBitmapOptions,
-  ): Promise<ImageBitmap> {
-    if (typeof sxOrOptions === 'number') {
-      return createImageBitmap(
-        blob,
-        sxOrOptions,
-        sy ?? 0,
-        sw ?? 0,
-        sh ?? 0,
-        options,
-      );
-    } else {
-      return createImageBitmap(blob, sxOrOptions);
-    }
+  override fetch(url: string): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.responseType = '';
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState == XMLHttpRequest.DONE) {
+          // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
+          if (xhr.status === 0 || xhr.status === 200) {
+            resolve(xhr.response);
+          } else {
+            reject(xhr.statusText);
+          }
+        }
+      };
+      xhr.open('GET', url, true);
+      xhr.send(null);
+    });
   }
+
+  override async createImage(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+    sx: number | null,
+    sy: number | null,
+    sw: number | null,
+    sh: number | null,
+  ): Promise<ImageResponse> {
+    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
+
+    if (sw !== null && sh !== null) {
+      // createImageBitmap with crop
+      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
+        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        colorSpaceConversion: 'none',
+        imageOrientation: 'none',
+      });
+      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    }
+
+    // default createImageBitmap without crop but with options
+    const bitmap = await createImageBitmap(blob, {
+      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+      colorSpaceConversion: 'none',
+      imageOrientation: 'none',
+    });
+
+    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+  }
+
+  override async loadImage(
+    src: string,
+    premultiplyAlpha: boolean | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null,
+  ): Promise<ImageResponse> {
+    const isBase64 = isBase64Image(src);
+    const absoluteSrc = convertUrlToAbsolute(src);
+    const x = sx ?? null;
+    const y = sy ?? null;
+    const width = sw ?? null;
+    const height = sh ?? null;
+
+    // check if image worker is enabled
+    if (this.imageWorkerManager !== null && isBase64 === false) {
+      return this.imageWorkerManager.getImage(
+        absoluteSrc,
+        premultiplyAlpha,
+        x,
+        y,
+        width,
+        height,
+      );
+    }
+
+    // fallback to main thread loading
+    let blob: Blob;
+    if (isBase64Image(src) === true) {
+      blob = dataURIToBlob(src);
+    } else {
+      blob = await this.fetch(absoluteSrc);
+    }
+
+    return this.createImage(blob, premultiplyAlpha, x, y, width, height);
+  }
+
+  override async loadSvg(
+    src: string,
+    width: number | null,
+    height: number | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null,
+  ): Promise<ImageResponse> {
+    return loadSvg(
+      convertUrlToAbsolute(src),
+      width,
+      height,
+      sx ?? null,
+      sy ?? null,
+      sw ?? null,
+      sh ?? null,
+    );
+  }
+
+  override async loadCompressedTexture(src: string): Promise<ImageResponse> {
+    return loadCompressedTexture(convertUrlToAbsolute(src));
+  }
+
+  ////////////////////////
+  // Utilities
+  ////////////////////////
 
   getTimeStamp(): number {
     return performance ? performance.now() : Date.now();

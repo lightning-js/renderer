@@ -569,9 +569,15 @@ export class RendererMain extends EventEmitter {
       settings.platform.prototype instanceof Platform === true
     ) {
       // @ts-ignore - if Platform is a valid class, it will be used
-      platform = new settings.platform();
+      platform = new settings.platform({
+        numImageWorkers: settings.numImageWorkers,
+        forceWebGL2: settings.forceWebGL2,
+      });
     } else {
-      platform = new WebPlatform();
+      platform = new WebPlatform({
+        numImageWorkers: settings.numImageWorkers,
+        forceWebGL2: settings.forceWebGL2,
+      });
     }
 
     const canvas = settings.canvas || platform.createCanvas();
