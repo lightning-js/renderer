@@ -12,7 +12,7 @@
     "./webgl": "./dist/exports/webgl.js",
     "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js",
-    "./platform": "./dist/exports/platform.js"
+    "./platforms": "./dist/exports/platform.js"
   },
   "scripts": {
     "start": "cd examples && pnpm start",
