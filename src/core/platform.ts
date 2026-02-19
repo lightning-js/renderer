@@ -57,7 +57,7 @@ export const startLoop = (stage: Stage) => {
         setTimeout(() => requestAnimationFrame(runLoop), 16.666666666666668);
       }
 
-      if (!isIdle) {
+      if (isIdle === false) {
         stage.eventBus.emit('idle');
         isIdle = true;
       }
@@ -70,7 +70,11 @@ export const startLoop = (stage: Stage) => {
       return;
     }
 
-    isIdle = false;
+    if (isIdle === true) {
+      stage.eventBus.emit('active');
+      isIdle = false;
+    }
+
     stage.drawFrame();
     stage.flushFrameEvents();
 
