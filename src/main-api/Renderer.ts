@@ -573,18 +573,18 @@ export class RendererMain extends EventEmitter {
       forceWebGL2: settings.forceWebGL2,
     });
 
-    const canvas = settings.canvas || platform.createCanvas();
+    this.canvas = settings.canvas || platform.createCanvas();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
     // set main canvas reference and size
-    platform.canvas = canvas;
-    canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
-    canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+    platform.canvas = this.canvas;
+    this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    canvas.style.width = `${deviceLogicalWidth}px`;
-    canvas.style.height = `${deviceLogicalHeight}px`;
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
 
     // Initialize the stage
     this.stage = new Stage({
@@ -629,8 +629,8 @@ export class RendererMain extends EventEmitter {
         throw new Error('Could not find target element');
       }
 
-      targetEl.appendChild(canvas);
-    } else if (settings.canvas !== canvas) {
+      targetEl.appendChild(this.canvas);
+    } else if (settings.canvas !== this.canvas) {
       throw new Error(
         'New canvas element could not be appended to undefined target',
       );
@@ -638,7 +638,10 @@ export class RendererMain extends EventEmitter {
 
     // Initialize inspector (if enabled)
     if (inspector && isProductionEnvironment === false) {
-      this.inspector = new inspector(canvas, settings as RendererMainSettings);
+      this.inspector = new inspector(
+        this.canvas,
+        settings as RendererMainSettings,
+      );
     }
   }
 
