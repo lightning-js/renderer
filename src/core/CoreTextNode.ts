@@ -300,13 +300,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       if (rtt === false || this.parentRenderTexture !== renderer.activeRttNode)
         return;
     }
-    if (this.font === undefined) {
+    const font = this.font;
+    if (font === undefined) {
       console.warn('No font assigned to text node, cannot render');
       return;
     }
 
     // Canvas renderer: use standard texture rendering via CoreNode
-    if (this.font!.type === 'canvas') {
+    if (font.type === 'canvas') {
       super.renderQuads(renderer);
       return;
     }
@@ -317,15 +318,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     if (this._lastVertexBuffer === null) {
-      this._lastVertexBuffer = this.font.textRenderer.addQuads(
-        this._cachedLayout,
-      );
+      this._lastVertexBuffer = font.textRenderer.addQuads(this._cachedLayout);
     }
 
     const props = this.textProps;
-    this.font.textRenderer.renderQuads(
+    font.textRenderer.renderQuads(
       renderer,
-      this.font,
+      font,
       this._cachedLayout as TextLayout,
       this._lastVertexBuffer!,
       {
@@ -350,9 +349,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   override destroy(): void {
     if (this.font !== undefined) {
-      this.font.stopWaiting(this);
+      if (this._waitingForFont === true) {
+        this.font.stopWaiting(this);
+      }
       //remove font reference
-      delete this.font;
+      this.font = undefined;
     }
 
     // Clear cached layout and vertex buffer
