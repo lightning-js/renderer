@@ -58,7 +58,7 @@ export const startLoop = (stage: Stage) => {
       }
 
       if (isIdle === false) {
-        stage.eventBus.emit('idle');
+        stage.eventBus.emit('idle', true);
         isIdle = true;
       }
 
@@ -71,7 +71,7 @@ export const startLoop = (stage: Stage) => {
     }
 
     if (isIdle === true) {
-      stage.eventBus.emit('unidle');
+      stage.eventBus.emit('idle', false);
       isIdle = false;
     }
 
