@@ -29,6 +29,7 @@ import {
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
+import { WebPlatform } from '@lightningjs/renderer/platforms';
 import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
@@ -71,6 +72,10 @@ const appHeight = 1080;
 const defaultResolution = 720;
 const defaultPhysicalPixelRatio = 1;
 
+const platformMap = {
+  web: WebPlatform,
+};
+
 (async () => {
   // See README.md for details on the supported URL params
   const urlParams = new URLSearchParams(window.location.search);
@@ -91,6 +96,7 @@ const defaultPhysicalPixelRatio = 1;
   const textureProcessingLimit =
     Number(urlParams.get('textureProcessingLimit')) || 0;
   const globalTargetFPS = Number(urlParams.get('targetFPS')) || undefined;
+  const platform = urlParams.get('platform') || 'web';
 
   const physicalPixelRatio =
     Number(urlParams.get('ppr')) || defaultPhysicalPixelRatio;
@@ -105,6 +111,7 @@ const defaultPhysicalPixelRatio = 1;
     await runTest(
       test,
       renderMode,
+      platform,
       urlParams,
       showOverlay,
       showMemMonitor,
@@ -121,7 +128,7 @@ const defaultPhysicalPixelRatio = 1;
     return;
   }
   assertTruthy(automation);
-  await runAutomation(renderMode, test, logFps);
+  await runAutomation(renderMode, platform, test, logFps);
 })().catch((err) => {
   console.error(err);
 });
@@ -129,6 +136,7 @@ const defaultPhysicalPixelRatio = 1;
 async function runTest(
   test: string,
   renderMode: string,
+  platform: string,
   urlParams: URLSearchParams,
   showOverlay: boolean,
   showMemMonitor: boolean,
@@ -158,6 +166,7 @@ async function runTest(
 
   const { renderer, appElement } = await initRenderer(
     renderMode,
+    platform,
     logFps,
     enableContextSpy,
     logicalPixelRatio,
@@ -233,6 +242,7 @@ async function runTest(
 
 async function initRenderer(
   renderMode: string,
+  platform: string,
   logFps: boolean,
   enableContextSpy: boolean,
   logicalPixelRatio: number,
@@ -256,6 +266,7 @@ async function initRenderer(
       enableContextSpy,
       forceWebGL2,
       inspector,
+      platform: platformMap[platform] || WebPlatform,
       renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       textureProcessingTimeLimit: textureProcessingTimeLimit,
@@ -365,12 +376,14 @@ function wildcardMatch(string: string, wildcardString: string) {
 
 async function runAutomation(
   renderMode: string,
+  platform: string,
   filter: string | null,
   logFps: boolean,
 ) {
   const logicalPixelRatio = defaultResolution / appHeight;
   const { renderer, appElement } = await initRenderer(
     renderMode,
+    platform,
     logFps,
     false,
     logicalPixelRatio,
