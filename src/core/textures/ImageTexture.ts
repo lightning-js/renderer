@@ -168,7 +168,7 @@ export class ImageTexture extends Texture {
   }
 
   determineImageTypeAndLoadImage() {
-    const { src, premultiplyAlpha, type } = this.props;
+    const { src, premultiplyAlpha, type, w, h, sx, sy, sw, sh } = this.props;
     const platform = this.platform;
     const premultiply = premultiplyAlpha ?? true;
 
@@ -180,7 +180,7 @@ export class ImageTexture extends Texture {
 
     if (typeof src !== 'string') {
       if (src instanceof Blob) {
-        return platform.createImage(src, premultiply);
+        return platform.createImage(src, premultiply, sx, sy, sw, sh);
       }
 
       if (src instanceof ImageData) {
@@ -196,31 +196,15 @@ export class ImageTexture extends Texture {
     }
 
     if (type === 'regular') {
-      return platform.loadImage(src, premultiply);
+      return platform.loadImage(src, premultiply, sx, sy, sw, sh);
     }
 
     if (type === 'svg') {
-      return platform.loadSvg(
-        src,
-        this.props.w,
-        this.props.h,
-        this.props.sx,
-        this.props.sy,
-        this.props.sw,
-        this.props.sh,
-      );
+      return platform.loadSvg(src, w, h, sx, sy, sw, sh);
     }
 
     if (isSvgImage(src) === true) {
-      return platform.loadSvg(
-        src,
-        this.props.w,
-        this.props.h,
-        this.props.sx,
-        this.props.sy,
-        this.props.sw,
-        this.props.sh,
-      );
+      return platform.loadSvg(src, w, h, sx, sy, sw, sh);
     }
 
     if (type === 'compressed') {
@@ -232,7 +216,7 @@ export class ImageTexture extends Texture {
     }
 
     // default
-    return platform.loadImage(src, premultiply);
+    return platform.loadImage(src, premultiply, sx, sy, sw, sh);
   }
 
   /**
