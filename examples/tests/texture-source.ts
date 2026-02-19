@@ -37,7 +37,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const BEGIN_Y = FONT_SIZE;
 
   const header = renderer.createTextNode({
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     text: `PNG Source Test`,
     fontSize: FONT_SIZE,
     parent: testRoot,
@@ -97,7 +97,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     expectedHeight: number,
   ) {
     const textNode = renderer.createTextNode({
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       x: curX,
       text: '',
       fontSize: FONT_SIZE,

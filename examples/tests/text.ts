@@ -29,7 +29,7 @@ import {
   saveStorage,
 } from '../common/LocalStorage.js';
 
-const FONT_FAMILY = 'Ubuntu';
+const FONT_FAMILY = 'SDF-Ubuntu';
 const HEADER_SIZE = 45;
 const FONT_SIZE = 40;
 
@@ -350,24 +350,20 @@ const sdfOffsetY = 0;
 function getFontProps(fontType: string): {
   fontFamily: string;
   offsetY: number;
-  textRendererOverride: 'sdf' | 'canvas';
 } {
   if (fontType === 'msdf') {
     return {
-      fontFamily: `${FONT_FAMILY}`,
+      fontFamily: `SDF-${FONT_FAMILY}`,
       offsetY: sdfOffsetY,
-      textRendererOverride: 'sdf',
     };
   } else if (fontType === 'ssdf') {
     return {
-      fontFamily: `${FONT_FAMILY}-ssdf`,
+      fontFamily: `SDF-${FONT_FAMILY}-ssdf`,
       offsetY: sdfOffsetY,
-      textRendererOverride: 'sdf',
     };
   }
   return {
-    fontFamily: `${FONT_FAMILY}`,
+    fontFamily: `Canvas-${FONT_FAMILY}`,
     offsetY: 0,
-    textRendererOverride: 'canvas',
   };
 }

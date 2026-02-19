@@ -63,8 +63,7 @@ export default async function test(settings: ExampleSettings) {
 const commonTextProps = {
   mount: 0.5,
   text: 'Test passes if this text appears only as green',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'canvas',
+  fontFamily: 'Canvas-Ubuntu',
   fontSize: 50,
 } satisfies Partial<ITextNodeProps>;
 
@@ -79,8 +78,7 @@ function createTestCase(
       x: 0,
       y: 10,
       text: '',
-      fontFamily: 'Ubuntu',
-      textRendererOverride: 'sdf',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       parent: page,
     });
@@ -91,7 +89,7 @@ function createTestCase(
       color: 0xff0000ff,
       x: renderer.settings.appWidth / 2,
       y: renderer.settings.appHeight / 2,
-      textRendererOverride: textRenderer,
+      fontFamily: textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
       maxHeight,
       maxWidth,
       parent: page,
@@ -102,7 +100,7 @@ function createTestCase(
       color: 0x00ff00ff,
       x: -1000,
       y: -1000,
-      textRendererOverride: textRenderer,
+      fontFamily: textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
       maxHeight,
       maxWidth,
       parent: page,

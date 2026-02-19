@@ -41,7 +41,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: rttNode,
     fontSize: 48,
     color: 0xffffffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
   });
 
   renderer.createNode({

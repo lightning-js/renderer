@@ -54,8 +54,6 @@ const NODE_PROPS = {
   y: 100,
   color: 0x000000ff,
   text: 'xyz',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
   fontSize: 50,
 } satisfies Partial<ITextNodeProps>;
 
@@ -70,7 +68,8 @@ function generateScalingTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
@@ -142,7 +141,8 @@ function generateScalingTest(
           mount: 0.5,
           x: 100,
           y: 100,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
@@ -198,7 +198,8 @@ function generateScalingTest(
         const nodeProps = {
           ...NODE_PROPS,
           mount: 1,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({

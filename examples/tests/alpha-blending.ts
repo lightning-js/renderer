@@ -82,7 +82,7 @@ export default async function test(settings: ExampleSettings) {
   // Header text for both sides
   const leftHeader = renderer.createTextNode({
     text: 'WebGL -> Browser Alpha',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: HEADER_FONT_SIZE,
     color: 0xffffffff,
     contain: 'width',
@@ -94,7 +94,7 @@ export default async function test(settings: ExampleSettings) {
 
   const rightHeader = renderer.createTextNode({
     text: 'WebGL -> WebGL Alpha',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: HEADER_FONT_SIZE,
     color: 0xffffffff,
     contain: 'width',
@@ -106,7 +106,7 @@ export default async function test(settings: ExampleSettings) {
   });
 
   const pageNumberNode = renderer.createTextNode({
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 30,
     color: 0xffffffff,
     x: PADDING,
@@ -127,7 +127,7 @@ export default async function test(settings: ExampleSettings) {
     //// Alpha Prop vs RGBA Alpha Component Blending Test
     const alphaPropVsRGBAHeader = renderer.createTextNode({
       text: 'The rectangles below should appear the same',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,
@@ -168,7 +168,7 @@ export default async function test(settings: ExampleSettings) {
 
     const sameColorRectHeader = renderer.createTextNode({
       text: 'The rectangles below should appear invisible',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,
@@ -234,7 +234,7 @@ export default async function test(settings: ExampleSettings) {
 
     renderer.createTextNode({
       text: 'The texture rects below should appear invisible',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,
@@ -318,7 +318,7 @@ export default async function test(settings: ExampleSettings) {
 
     const sameColorTextHeader = renderer.createTextNode({
       text: 'The text below should appear invisible',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,
@@ -332,12 +332,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 100% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 1,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -346,12 +345,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 50% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 0.5,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -360,12 +358,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 100% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 1,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -374,12 +371,11 @@ export default async function test(settings: ExampleSettings) {
     // Canvas Text - Same Color - 50% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: CANVAS_TEXT,
-      fontFamily: 'NotoSans',
+      fontFamily: 'Canvas-NotoSans',
       fontSize: 30,
       alpha: 0.5,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'canvas',
       parent: sideContainer,
     });
 
@@ -390,12 +386,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 100% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 1,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -404,12 +399,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 50% alpha prop / 100% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 0.5,
       color: bgColor,
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -418,12 +412,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 100% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 1,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -432,12 +425,11 @@ export default async function test(settings: ExampleSettings) {
     // SDF Text - Same Color - 50% alpha prop / 50% alpha component
     renderer.createTextNode({
       text: SDF_TEXT,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       alpha: 0.5,
       color: mergeColorAlpha(bgColor, 0.5),
       y: curY,
-      textRendererOverride: 'sdf',
       parent: sideContainer,
     });
 
@@ -447,7 +439,7 @@ export default async function test(settings: ExampleSettings) {
 
     const textureBlendingHeader = renderer.createTextNode({
       text: 'The textures below should have smooth edges',
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       color: 0xffffffff,
       y: curY,

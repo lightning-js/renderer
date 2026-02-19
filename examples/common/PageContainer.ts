@@ -61,7 +61,7 @@ export class PageContainer extends Component {
     });
 
     this.titleNode = renderer.createTextNode({
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: TITLE_FONT_SIZE,
       x: PADDING,
       y: PADDING,
@@ -72,7 +72,7 @@ export class PageContainer extends Component {
     this.settings = settings;
 
     this.pageNumberNode = renderer.createTextNode({
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       fontSize: 30,
       x: PADDING,
       y: this.node.h - 30 - PADDING,

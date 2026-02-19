@@ -72,7 +72,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: rootRenderToTextureNode,
     x: 80,
     y: 540,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 40,
     text: 'RTT reflection demo',
   });

@@ -56,7 +56,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 0,
     text: 'Idle Texture Memory Cleanup Test',
     parent: testRoot,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 60,
     zIndex: 1,
   });
@@ -72,7 +72,7 @@ The Texture Memory Manager should perform Idle Texture Cleanup roughly every 5 s
 See docs/ManualRegressionTests.md for more information.
     `,
     parent: testRoot,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 40,
     zIndex: 1,
   });

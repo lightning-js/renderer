@@ -51,8 +51,6 @@ const BASE_NODE_PROPS = {
   y: 100,
   maxWidth: 200,
   color: 0x000000ff,
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
   fontSize: 20,
   lineHeight: 28,
 } satisfies Partial<ITextNodeProps>;
@@ -68,7 +66,8 @@ function generateMaxLinesTest(
         const nodeProps = {
           ...BASE_NODE_PROPS,
           text: 'Line1 Line1_Line1_Line1\nLine2 Line2____Line2\nLine 3\nLine 4',
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
@@ -124,7 +123,8 @@ function generateMaxLinesTest(
         const nodeProps = {
           ...BASE_NODE_PROPS,
           text: getLoremIpsum(100),
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({
