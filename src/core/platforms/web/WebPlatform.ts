@@ -128,7 +128,11 @@ export class WebPlatform extends Platform {
         return;
       }
 
-      isIdle = false;
+      if (isIdle === true) {
+        stage.eventBus.emit('active');
+        isIdle = false;
+      }
+
       stage.drawFrame();
       stage.flushFrameEvents();
 
