@@ -19,7 +19,7 @@
 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { isProductionEnvironment } from '../utils.js';
+import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage, type StageOptions } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
@@ -550,7 +550,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
-      platform: settings.platform || null,
+      platform: settings.platform || WebPlatform,
       maxRetryCount: settings.maxRetryCount ?? 5,
     };
 
@@ -562,30 +562,24 @@ export class RendererMain extends EventEmitter {
       inspector,
     } = settings as RendererMainSettings;
 
-    let platform;
-    if (
-      settings.platform !== undefined &&
-      settings.platform !== null &&
-      settings.platform.prototype instanceof Platform === true
-    ) {
-      // @ts-ignore - if Platform is a valid class, it will be used
-      platform = new settings.platform({
-        numImageWorkers: settings.numImageWorkers,
-        forceWebGL2: settings.forceWebGL2,
-      });
-    } else {
-      platform = new WebPlatform({
-        numImageWorkers: settings.numImageWorkers,
-        forceWebGL2: settings.forceWebGL2,
-      });
-    }
+    assertTruthy(
+      settings.platform,
+      'A platform implementation must be provided in settings.platform',
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const platform = new (settings.platform as any)({
+      numImageWorkers: settings.numImageWorkers,
+      forceWebGL2: settings.forceWebGL2,
+    });
 
     const canvas = settings.canvas || platform.createCanvas();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    this.canvas = canvas;
+    // set main canvas reference and size
+    platform.canvas = canvas;
     canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 

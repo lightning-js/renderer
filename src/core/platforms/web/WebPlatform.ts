@@ -61,8 +61,7 @@ export class WebPlatform extends Platform {
   ////////////////////////
 
   override createCanvas(): HTMLCanvasElement {
-    this.canvas = document.createElement('canvas');
-    return this.canvas;
+    return document.createElement('canvas');
   }
 
   override createContext(): GlContextWrapper {
