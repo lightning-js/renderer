@@ -159,13 +159,11 @@ export class Stage {
    */
   constructor(public options: StageOptions) {
     const {
-      canvas,
       clearColor,
       appWidth,
       appHeight,
       boundsMargin,
       enableContextSpy,
-      forceWebGL2,
       numImageWorkers,
       textureMemory,
       renderEngine,
@@ -195,12 +193,6 @@ export class Stage {
       maxRetryCount,
     });
 
-    // Wait for the Texture Manager to initialize
-    // once it does, request a render
-    this.txManager.on('initialized', () => {
-      this.requestRender();
-    });
-
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
     this.animationManager = new AnimationManager();
@@ -223,12 +215,7 @@ export class Stage {
     this.pixelRatio =
       options.devicePhysicalPixelRatio * options.deviceLogicalPixelRatio;
 
-    this.renderer = new renderEngine({
-      stage: this,
-      canvas,
-      contextSpy: this.contextSpy,
-      forceWebGL2,
-    });
+    this.renderer = new renderEngine(this);
 
     this.shManager = new CoreShaderManager(this);
 

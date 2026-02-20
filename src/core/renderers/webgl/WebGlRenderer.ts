@@ -17,12 +17,7 @@
  * limitations under the License.
  */
 
-import { createWebGLContext } from '../../../utils.js';
-import {
-  CoreRenderer,
-  type BufferInfo,
-  type CoreRendererOptions,
-} from '../CoreRenderer.js';
+import { CoreRenderer, type BufferInfo } from '../CoreRenderer.js';
 import type { SdfRenderOp } from './SdfRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
@@ -44,7 +39,6 @@ import { WebGlCtxSubTexture } from './WebGlCtxSubTexture.js';
 import { BufferCollection } from './internal/BufferCollection.js';
 import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
-import { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
@@ -52,8 +46,9 @@ import { Default } from '../../shaders/webgl/Default.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
-
-export type WebGlRendererOptions = CoreRendererOptions;
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
+import type { Platform } from '../../platforms/Platform.js';
+import type { Stage } from '../../Stage.js';
 
 interface CoreWebGlSystem {
   parameters: CoreWebGlParameters;
@@ -64,7 +59,7 @@ export type WebGlRenderOp = CoreNode | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  glw: WebGlContextWrapper;
+  glw: GlContextWrapper;
   system: CoreWebGlSystem;
 
   //// Persistent data
@@ -106,8 +101,8 @@ export class WebGlRenderer extends CoreRenderer {
    */
   public renderToTextureActive = false;
 
-  constructor(options: WebGlRendererOptions) {
-    super(options);
+  constructor(stage: Stage) {
+    super(stage);
 
     this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
     this.fQuadBuffer = new Float32Array(this.quadBuffer);
@@ -115,13 +110,11 @@ export class WebGlRenderer extends CoreRenderer {
 
     this.mode = 'webgl';
 
-    const gl = createWebGLContext(
-      options.canvas,
-      options.forceWebGL2,
-      options.contextSpy,
-    );
-    const glw = (this.glw = new WebGlContextWrapper(gl));
-    glw.viewport(0, 0, options.canvas.width, options.canvas.height);
+    const platform = this.stage.platform;
+    const canvas = platform.canvas!;
+
+    const glw = (this.glw = platform.createContext() as GlContextWrapper);
+    glw.viewport(0, 0, canvas.width, canvas.height);
 
     this.updateClearColor(this.stage.clearColor);
 

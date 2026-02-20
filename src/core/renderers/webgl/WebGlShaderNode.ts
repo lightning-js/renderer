@@ -1,6 +1,6 @@
 import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import type { Stage } from '../../Stage.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type {
@@ -40,7 +40,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
      *
      * @warning don't use this in your shader type
      */
-    onSdfBind?: (this: WebGlContextWrapper, props: T) => void;
+    onSdfBind?: (this: GlContextWrapper, props: T) => void;
     /**
      * This function is used to check if the shader can be reused based on quad info
      * @param props

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
@@ -44,7 +44,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
    */
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlRenderer;
-  protected glw: WebGlContextWrapper;
+  protected glw: GlContextWrapper;
   protected attributeLocations: string[];
   protected uniformLocations: Record<string, WebGLUniformLocation> | null;
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;

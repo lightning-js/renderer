@@ -19,9 +19,8 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import type { Texture } from '../../textures/Texture.js';
-import { uploadCompressedTexture } from '../../lib/textureCompression.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 import type { Bound } from '../../lib/utils.js';
@@ -53,7 +52,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
   };
 
   constructor(
-    protected glw: WebGlContextWrapper,
+    protected glw: GlContextWrapper,
     memManager: TextureMemoryManager,
     textureSource: Texture,
   ) {
@@ -239,7 +238,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       this.setTextureMemUse(TRANSPARENT_TEXTURE_DATA.byteLength);
     } else if ('mipmaps' in tdata && tdata.mipmaps) {
       const { mipmaps, type, blockInfo } = tdata;
-      uploadCompressedTexture[type]!(glw, this._nativeCtxTexture, tdata);
+      glw['upload' + type]!(this._nativeCtxTexture, tdata);
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {

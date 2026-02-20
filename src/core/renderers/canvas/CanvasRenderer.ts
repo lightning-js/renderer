@@ -20,11 +20,12 @@ import type { CoreNode } from '../../CoreNode.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
-import { CoreRenderer, type CoreRendererOptions } from '../CoreRenderer.js';
+import { CoreRenderer } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
 import { normalizeCanvasColor } from '../../lib/colorCache.js';
+import type { Stage } from '../../Stage.js';
 
 export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -34,11 +35,12 @@ export class CanvasRenderer extends CoreRenderer {
   public renderToTextureActive = false;
   activeRttNode: CoreNode | null = null;
 
-  constructor(options: CoreRendererOptions) {
-    super(options);
+  constructor(stage: Stage) {
+    super(stage);
 
     this.mode = 'canvas';
-    const { canvas } = options;
+    const platform = stage.platform!;
+    const canvas = platform.canvas!;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = this.stage.pixelRatio;

@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import { ImageWorkerManager } from './lib/ImageWorker.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
@@ -27,10 +26,6 @@ import { RenderTexture } from './textures/RenderTexture.js';
 import { Texture, TextureType } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import type { Stage } from './Stage.js';
-import {
-  validateCreateImageBitmap,
-  type CreateImageBitmapSupport,
-} from './lib/validateImageBitmap.js';
 import type { Platform } from './platforms/Platform.js';
 import { TextureError, TextureErrorCode } from './TextureError.js';
 
@@ -195,23 +190,11 @@ export class CoreTextureManager extends EventEmitter {
   txConstructors: Partial<TextureMap> = {};
 
   public maxRetryCount: number;
-  private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
-  private initialized = false;
   private stage: Stage;
-  private numImageWorkers: number;
 
   public platform: Platform;
 
-  imageWorkerManager: ImageWorkerManager | null = null;
-  hasCreateImageBitmap = false;
-  imageBitmapSupported = {
-    basic: false,
-    options: false,
-    full: false,
-  };
-
-  hasWorker = !!self.Worker;
   /**
    * Renderer that this texture manager is associated with
    *
@@ -235,35 +218,9 @@ export class CoreTextureManager extends EventEmitter {
   constructor(stage: Stage, settings: TextureManagerSettings) {
     super();
 
-    const { numImageWorkers, createImageBitmapSupport, maxRetryCount } =
-      settings;
-
     this.stage = stage;
     this.platform = stage.platform;
-    this.numImageWorkers = numImageWorkers;
-    this.maxRetryCount = maxRetryCount;
-
-    if (createImageBitmapSupport === 'auto') {
-      validateCreateImageBitmap(this.platform)
-        .then((result) => {
-          this.initialize(result);
-        })
-        .catch(() => {
-          console.warn(
-            '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-          );
-
-          // initialized without image worker manager and createImageBitmap
-          this.initialized = true;
-          this.emit('initialized');
-        });
-    } else {
-      this.initialize({
-        basic: createImageBitmapSupport === 'basic',
-        options: createImageBitmapSupport === 'options',
-        full: createImageBitmapSupport === 'full',
-      });
-    }
+    this.maxRetryCount = settings.maxRetryCount;
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
@@ -277,36 +234,6 @@ export class CoreTextureManager extends EventEmitter {
     textureClass: TextureMap[Type],
   ): void {
     this.txConstructors[textureType] = textureClass;
-  }
-
-  private initialize(support: CreateImageBitmapSupport) {
-    this.hasCreateImageBitmap =
-      support.basic || support.options || support.full;
-    this.imageBitmapSupported = support;
-
-    if (this.hasCreateImageBitmap === false) {
-      console.warn(
-        '[Lightning] createImageBitmap is not supported on this browser. ImageTexture will be slower.',
-      );
-    }
-
-    if (
-      this.hasCreateImageBitmap === true &&
-      this.hasWorker === true &&
-      this.numImageWorkers > 0
-    ) {
-      this.imageWorkerManager = new ImageWorkerManager(
-        this.numImageWorkers,
-        support,
-      );
-    } else {
-      console.warn(
-        '[Lightning] Imageworker is 0 or not supported on this browser. Image loading will be slower.',
-      );
-    }
-
-    this.initialized = true;
-    this.emit('initialized');
   }
 
   /**
@@ -368,12 +295,6 @@ export class CoreTextureManager extends EventEmitter {
 
     if (texture.state === 'loaded') {
       // if the texture is already loaded, just return
-      return;
-    }
-
-    // if we're not initialized, just queue the texture into the priority queue
-    if (this.initialized === false) {
-      this.priorityQueue.push(texture);
       return;
     }
 
@@ -465,28 +386,8 @@ export class CoreTextureManager extends EventEmitter {
    * @param maxProcessingTime - The maximum processing time in milliseconds
    */
   async processSome(maxProcessingTime: number): Promise<void> {
-    if (this.initialized === false) {
-      return;
-    }
-
     const platform = this.platform;
     const startTime = platform.getTimeStamp();
-
-    // Process priority queue
-    while (
-      this.priorityQueue.length > 0 &&
-      platform.getTimeStamp() - startTime < maxProcessingTime
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.priorityQueue.pop()!;
-      try {
-        await texture.getTextureData();
-        await this.uploadTexture(texture);
-      } catch (error) {
-        console.error('Failed to process priority texture:', error);
-        // Continue with next texture instead of stopping entire queue
-      }
-    }
 
     // Process uploads - await each upload to prevent GPU overload
     while (
@@ -505,7 +406,7 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   public hasUpdates(): boolean {
-    return this.uploadTextureQueue.length > 0 || this.priorityQueue.length > 0;
+    return this.uploadTextureQueue.length > 0;
   }
 
   /**

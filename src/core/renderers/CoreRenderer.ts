@@ -25,20 +25,12 @@ import type { Texture, TextureCoords } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';
 import type { CoreShaderType, CoreShaderNode } from './CoreShaderNode.js';
 
-export interface CoreRendererOptions {
-  stage: Stage;
-  canvas: HTMLCanvasElement | OffscreenCanvas;
-  contextSpy: ContextSpy | null;
-  forceWebGL2: boolean;
-}
-
 export interface BufferInfo {
   totalUsed: number;
   totalAvailable: number;
 }
 
 export abstract class CoreRenderer {
-  public options: CoreRendererOptions;
   public mode: 'webgl' | 'canvas' | undefined;
   defaultTextureCoords: TextureCoords | undefined = undefined;
   readonly stage: Stage;
@@ -46,9 +38,8 @@ export abstract class CoreRenderer {
   //// Core Managers
   rttNodes: CoreNode[] = [];
 
-  constructor(options: CoreRendererOptions) {
-    this.options = options;
-    this.stage = options.stage;
+  constructor(stage: Stage) {
+    this.stage = stage;
   }
 
   abstract reset(): void;

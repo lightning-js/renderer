@@ -19,7 +19,7 @@
 
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { TextureMemoryManager } from '../../TextureMemoryManager.js';
-import type { WebGlContextWrapper } from '../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import type { Bound } from '../../lib/utils.js';
 import type { RenderTexture } from '../../textures/RenderTexture.js';
 import { WebGlCtxTexture } from './WebGlCtxTexture.js';
@@ -37,7 +37,7 @@ export class WebGlCtxRenderTexture extends WebGlCtxTexture {
   };
 
   constructor(
-    glw: WebGlContextWrapper,
+    glw: GlContextWrapper,
     memManager: TextureMemoryManager,
     textureSource: RenderTexture,
   ) {
