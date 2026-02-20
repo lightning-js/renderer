@@ -31,6 +31,7 @@ import {
 
 import {
   WebPlatform,
+  WebPlatformChrome50,
   WebPlatformLegacy,
 } from '@lightningjs/renderer/platforms';
 import { Inspector } from '@lightningjs/renderer/inspector';
@@ -77,6 +78,7 @@ const defaultPhysicalPixelRatio = 1;
 
 const platformMap = {
   web: WebPlatform,
+  chrome50: WebPlatformChrome50,
   legacy: WebPlatformLegacy,
 };
 
