@@ -107,7 +107,7 @@ export interface ImageTextureProps {
 }
 
 export interface ImageResponse {
-  data: ImageBitmap | ImageData | CompressedImageData | null;
+  data: ImageBitmap | ImageData | CompressedImageData | HTMLImageElement | null;
   premultiplyAlpha: boolean | null;
 }
 

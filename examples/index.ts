@@ -29,7 +29,10 @@ import {
   CanvasTextRenderer,
 } from '@lightningjs/renderer/canvas';
 
-import { WebPlatform } from '@lightningjs/renderer/platforms';
+import {
+  WebPlatform,
+  WebPlatformLegacy,
+} from '@lightningjs/renderer/platforms';
 import { Inspector } from '@lightningjs/renderer/inspector';
 import { assertTruthy } from '@lightningjs/renderer/utils';
 
@@ -74,6 +77,7 @@ const defaultPhysicalPixelRatio = 1;
 
 const platformMap = {
   web: WebPlatform,
+  legacy: WebPlatformLegacy,
 };
 
 (async () => {

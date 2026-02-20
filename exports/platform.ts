@@ -22,6 +22,7 @@ export {
   type PlatformSettings,
 } from '../src/core/platforms/Platform.js';
 export { WebPlatform } from '../src/core/platforms/web/WebPlatform.js';
+export { WebPlatformLegacy } from '../src/core/platforms/web/WebPlatformLegacy.js';
 
 // GL Context Wrappers
 export { GlContextWrapper } from '../src/core/platforms/GlContextWrapper.js';
