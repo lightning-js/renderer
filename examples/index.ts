@@ -31,6 +31,7 @@ import {
 
 import {
   WebPlatform,
+  WebPlatformNext,
   WebPlatformChrome50,
   WebPlatformLegacy,
 } from '@lightningjs/renderer/platforms';
@@ -78,6 +79,7 @@ const defaultPhysicalPixelRatio = 1;
 
 const platformMap = {
   web: WebPlatform,
+  next: WebPlatformNext,
   chrome50: WebPlatformChrome50,
   legacy: WebPlatformLegacy,
 };

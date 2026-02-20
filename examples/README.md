@@ -43,7 +43,7 @@ pnpm watch
   - Either `main` or `threadx`
 - `platform` (string, default: "web")
   - Platform implementation to use
-  - Options: `web` (modern createImageBitmap with full options), `chrome50` (limited createImageBitmap, no options/cropping), `legacy` (HTMLImageElement, no createImageBitmap)
+  - Options: `web` (XMLHttpRequest + createImageBitmap with full options), `next` (Fetch API + createImageBitmap with full options), `chrome50` (limited createImageBitmap, no options/cropping), `legacy` (HTMLImageElement, no createImageBitmap)
 - `overlay` (boolean, default: "true")
   - Whether or not to show the text overlay in the bottom-right corner that
     displays the current test and driver being used.
