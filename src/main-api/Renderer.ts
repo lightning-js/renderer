@@ -571,15 +571,14 @@ export class RendererMain extends EventEmitter {
     const platform = new (settings.platform as any)({
       numImageWorkers: settings.numImageWorkers,
       forceWebGL2: settings.forceWebGL2,
+      canvas: settings.canvas,
     });
-
-    this.canvas = settings.canvas || platform.createCanvas();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    // set main canvas reference and size
-    platform.canvas = this.canvas;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access
+    this.canvas = platform.canvas! as HTMLCanvasElement;
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 

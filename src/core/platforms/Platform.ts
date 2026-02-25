@@ -20,6 +20,7 @@
 import { type Stage } from '../Stage.js';
 import type { WebGlContextWrapper } from './web/WebGlContextWrapper.js';
 import type { ImageResponse } from '../textures/ImageTexture.js';
+import type { GlContextWrapper } from './GlContextWrapper.js';
 
 /**
  * Settings for the Platform
@@ -36,12 +37,17 @@ export interface PlatformSettings {
    * @default false
    */
   forceWebGL2?: boolean;
+
+  /**
+   * Optional provided canvas element to use for rendering. If not provided, the platform will create its own canvas element.
+   */
+  canvas?: HTMLCanvasElement | null;
 }
 
 export abstract class Platform {
   public readonly settings: Required<PlatformSettings>;
 
-  public glw: WebGlContextWrapper | null = null;
+  public glw: GlContextWrapper | null = null;
   public canvas: HTMLCanvasElement | null = null;
 
   constructor(settings: PlatformSettings = {}) {
@@ -49,7 +55,15 @@ export abstract class Platform {
     this.settings = {
       numImageWorkers: settings.numImageWorkers ?? 2,
       forceWebGL2: settings.forceWebGL2 ?? false,
+      canvas: settings.canvas ?? null,
     };
+
+    // If a canvas was provided in the settings, use it. Otherwise, create a new one.
+    if (this.settings.canvas !== null) {
+      this.canvas = this.settings.canvas;
+    } else {
+      this.canvas = this.createCanvas();
+    }
   }
 
   /**
@@ -61,7 +75,7 @@ export abstract class Platform {
   /**
    * Create new rendering context (only for WebGL, Canvas does not require a context)
    */
-  abstract createContext(): void;
+  abstract createContext(): GlContextWrapper;
 
   /**
    * Get a DOM element by ID
