@@ -19,7 +19,7 @@
 
 import type { ExtractProps, TextureMap } from '../core/CoreTextureManager.js';
 import { EventEmitter } from '../common/EventEmitter.js';
-import { isProductionEnvironment } from '../utils.js';
+import { assertTruthy, isProductionEnvironment } from '../utils.js';
 import { Stage, type StageOptions } from '../core/Stage.js';
 import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type CoreTextNodeProps } from '../core/CoreTextNode.js';
@@ -550,7 +550,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
-      platform: settings.platform || null,
+      platform: settings.platform || WebPlatform,
       maxRetryCount: settings.maxRetryCount ?? 5,
     };
 
@@ -562,29 +562,28 @@ export class RendererMain extends EventEmitter {
       inspector,
     } = settings as RendererMainSettings;
 
-    let platform;
-    if (
-      settings.platform !== undefined &&
-      settings.platform !== null &&
-      settings.platform.prototype instanceof Platform === true
-    ) {
-      // @ts-ignore - if Platform is a valid class, it will be used
-      platform = new settings.platform();
-    } else {
-      platform = new WebPlatform();
-    }
+    assertTruthy(
+      settings.platform,
+      'A platform implementation must be provided in settings.platform',
+    );
 
-    const canvas = settings.canvas || platform.createCanvas();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const platform = new (settings.platform as any)({
+      numImageWorkers: settings.numImageWorkers,
+      forceWebGL2: settings.forceWebGL2,
+      canvas: settings.canvas,
+    });
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    this.canvas = canvas;
-    canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
-    canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access
+    this.canvas = platform.canvas! as HTMLCanvasElement;
+    this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
+    this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    canvas.style.width = `${deviceLogicalWidth}px`;
-    canvas.style.height = `${deviceLogicalHeight}px`;
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
 
     // Initialize the stage
     this.stage = new Stage({
@@ -629,8 +628,8 @@ export class RendererMain extends EventEmitter {
         throw new Error('Could not find target element');
       }
 
-      targetEl.appendChild(canvas);
-    } else if (settings.canvas !== canvas) {
+      targetEl.appendChild(this.canvas);
+    } else if (settings.canvas !== this.canvas) {
       throw new Error(
         'New canvas element could not be appended to undefined target',
       );
@@ -638,7 +637,10 @@ export class RendererMain extends EventEmitter {
 
     // Initialize inspector (if enabled)
     if (inspector && isProductionEnvironment === false) {
-      this.inspector = new inspector(canvas, settings as RendererMainSettings);
+      this.inspector = new inspector(
+        this.canvas,
+        settings as RendererMainSettings,
+      );
     }
   }
 

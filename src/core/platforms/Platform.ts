@@ -18,13 +18,64 @@
  */
 
 import { type Stage } from '../Stage.js';
+import type { WebGlContextWrapper } from './web/WebGlContextWrapper.js';
+import type { ImageResponse } from '../textures/ImageTexture.js';
+import type { GlContextWrapper } from './GlContextWrapper.js';
+
+/**
+ * Settings for the Platform
+ */
+export interface PlatformSettings {
+  /**
+   * Number of image workers to spawn for parallel image processing
+   * @default 2
+   */
+  numImageWorkers?: number;
+
+  /**
+   * Whether to force the use of WebGL2 (if supported by the platform) or WebGL1. By default, the platform will use WebGL2 if it is available, and fall back to WebGL1 if it is not.
+   * @default false
+   */
+  forceWebGL2?: boolean;
+
+  /**
+   * Optional provided canvas element to use for rendering. If not provided, the platform will create its own canvas element.
+   */
+  canvas?: HTMLCanvasElement | null;
+}
 
 export abstract class Platform {
+  public readonly settings: Required<PlatformSettings>;
+
+  public glw: GlContextWrapper | null = null;
+  public canvas: HTMLCanvasElement | null = null;
+
+  constructor(settings: PlatformSettings = {}) {
+    // Apply default settings
+    this.settings = {
+      numImageWorkers: settings.numImageWorkers ?? 2,
+      forceWebGL2: settings.forceWebGL2 ?? false,
+      canvas: settings.canvas ?? null,
+    };
+
+    // If a canvas was provided in the settings, use it. Otherwise, create a new one.
+    if (this.settings.canvas !== null) {
+      this.canvas = this.settings.canvas;
+    } else {
+      this.canvas = this.createCanvas();
+    }
+  }
+
   /**
    * Creates a new canvas element.
    * @returns The created HTMLCanvasElement.
    */
   abstract createCanvas(): HTMLCanvasElement;
+
+  /**
+   * Create new rendering context (only for WebGL, Canvas does not require a context)
+   */
+  abstract createContext(): GlContextWrapper;
 
   /**
    * Get a DOM element by ID
@@ -39,35 +90,77 @@ export abstract class Platform {
   abstract startLoop(stage: Stage): void;
 
   /**
-   * Abstracted createImageBitmap method.
-   * @param blob - The image source to create the ImageBitmap from.
-   * @param sxOrOptions - The source rectangle x coordinate or ImageBitmapOptions.
-   * @param sy - The source rectangle y coordinate.
-   * @param sw - The source rectangle width.
-   * @param sh - The source rectangle height.
-   * @param options - The ImageBitmapOptions.
-   * @returns A promise that resolves with the created ImageBitmap.
+   * Fetches a resource from the network.
+   * @param url - The URL of the resource to fetch.
+   * @returns A promise that resolves with the response.
    */
-  abstract createImageBitmap(blob: ImageBitmapSource): Promise<ImageBitmap>;
-  abstract createImageBitmap(
-    blob: ImageBitmapSource,
-    options: ImageBitmapOptions,
-  ): Promise<ImageBitmap>;
-  abstract createImageBitmap(
-    blob: ImageBitmapSource,
-    sx: number,
-    sy: number,
-    sw: number,
-    sh: number,
-  ): Promise<ImageBitmap>;
-  abstract createImageBitmap(
-    blob: ImageBitmapSource,
-    sx: number,
-    sy: number,
-    sw: number,
-    sh: number,
-    options: ImageBitmapOptions,
-  ): Promise<ImageBitmap>;
+  abstract fetch(url: string): Promise<unknown>;
+
+  /**
+   * Loads an image from a UR and returns it as an ImageBitmap or HTMLImageElement.
+   * @param src - The source URL or Blob of the image to load.
+   * @param premultiplyAlpha - Whether to premultiply alpha (if supported by the platform).
+   * @param sx - The x coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
+   * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
+   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   */
+  abstract loadImage(
+    src: string,
+    premultiplyAlpha: boolean | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null,
+  ): Promise<ImageResponse>;
+
+  /**
+   * Create an image out of a Blob
+   *
+   * @param blob - The Blob to create an image from
+   * @param premultiplyAlpha - Whether to premultiply alpha (if supported by the platform).
+   * @param sx - The x coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
+   * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
+   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   */
+  abstract createImage(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null,
+  ): Promise<ImageResponse>;
+
+  /**
+   * Loads an SVG image from a URL and returns it as an ImageBitmap or HTMLImageElement.
+   * @param src - The source URL of the SVG image to load.
+   * @param width - The width to render the SVG image.
+   * @param height - The height to render the SVG image.
+   * @param sx - The x coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+   * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
+   * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
+   */
+  abstract loadSvg(
+    src: string,
+    width: number | null,
+    height: number | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null,
+  ): Promise<ImageResponse>;
+
+  /**
+   * Loads a compressed texture from a URL and returns it as an ImageBitmap or HTMLImageElement.
+   * @param src - The source URL of the compressed texture to load.
+   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   */
+  abstract loadCompressedTexture(src: string): Promise<ImageResponse>;
 
   /**
    * Retrieves the current timestamp.

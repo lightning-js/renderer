@@ -16,26 +16,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { type CompressedData, type TextureData } from '../textures/Texture.js';
-import type { WebGlContextWrapper } from './WebGlContextWrapper.js';
+import { type CompressedData } from '../../../textures/Texture.js';
+import type { ImageResponse } from '../../../textures/ImageTexture.js';
+import type { TextureData } from '../../../textures/Texture.js';
+import type { WebGlContextWrapper } from '../WebGlContextWrapper.js';
 
 export type UploadCompressedTextureFunction = (
   glw: WebGlContextWrapper,
   texture: WebGLTexture,
   data: CompressedData,
 ) => void;
-
-/**
- * Tests if the given location is a compressed texture container
- * @param url
- * @remarks
- * This function is used to determine if the given image url is a compressed
- * and only supports the following extensions: .ktx and .pvr
- * @returns
- */
-export function isCompressedTextureContainer(src: string): boolean {
-  return /\.(ktx|pvr)$/.test(src);
-}
 
 const PVR_MAGIC = 0x03525650; // 'PVR3' in little-endian
 const PVR_TO_GL_INTERNAL_FORMAT: Record<string, number> = {
@@ -72,7 +62,7 @@ const KTX_IDENTIFIER = [
  */
 export const loadCompressedTexture = async (
   url: string,
-): Promise<TextureData> => {
+): Promise<ImageResponse> => {
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -133,7 +123,7 @@ function readUint24(view: DataView, offset: number) {
  * @param view
  * @returns
  */
-const loadASTC = async function (view: DataView): Promise<TextureData> {
+const loadASTC = async function (view: DataView): Promise<ImageResponse> {
   const blockX = view.getUint8(4);
   const blockY = view.getUint8(5);
   const sizeX = readUint24(view, 7);
@@ -173,37 +163,12 @@ const loadASTC = async function (view: DataView): Promise<TextureData> {
   };
 };
 
-const uploadASTC = function (
-  glw: WebGlContextWrapper,
-  texture: WebGLTexture,
-  data: CompressedData,
-) {
-  if (glw.getExtension('WEBGL_compressed_texture_astc') === null) {
-    throw new Error('ASTC compressed textures not supported by this device');
-  }
-
-  glw.bindTexture(texture);
-
-  const { glInternalFormat, mipmaps, w, h } = data;
-  if (mipmaps === undefined) {
-    return;
-  }
-
-  const view = new Uint8Array(mipmaps[0]!);
-
-  glw.compressedTexImage2D(0, glInternalFormat, w, h, 0, view);
-  // ASTC textures MUST use no mipmaps unless stored
-  glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-  glw.texParameteri(glw.TEXTURE_MIN_FILTER, glw.LINEAR);
-};
 /**
  * Loads a KTX texture container and returns the texture data
  * @param view
  * @returns
  */
-const loadKTX = async function (view: DataView): Promise<TextureData> {
+const loadKTX = async function (view: DataView): Promise<ImageResponse> {
   const endianness = view.getUint32(12, true);
   const littleEndian = endianness === 0x04030201;
   if (littleEndian === false && endianness !== 0x01020304) {
@@ -273,52 +238,6 @@ const loadKTX = async function (view: DataView): Promise<TextureData> {
   };
 };
 
-const uploadKTX = function (
-  glw: WebGlContextWrapper,
-  texture: WebGLTexture,
-  data: CompressedData,
-) {
-  const { glInternalFormat, mipmaps, w: width, h: height, blockInfo } = data;
-  if (mipmaps === undefined) {
-    return;
-  }
-  glw.bindTexture(texture);
-
-  const blockWidth = blockInfo.width;
-  const blockHeight = blockInfo.height;
-  let w = width;
-  let h = height;
-
-  for (let i = 0; i < mipmaps!.length; i++) {
-    let view = new Uint8Array(mipmaps![i]!);
-
-    const uploadW = Math.ceil(w / blockWidth) * blockWidth;
-    const uploadH = Math.ceil(h / blockHeight) * blockHeight;
-
-    const expectedBytes =
-      Math.ceil(w / blockWidth) * Math.ceil(h / blockHeight) * blockInfo.bytes;
-
-    if (view.byteLength < expectedBytes) {
-      const padded = new Uint8Array(expectedBytes);
-      padded.set(view);
-      view = padded;
-    }
-
-    glw.compressedTexImage2D(i, glInternalFormat, uploadW, uploadH, 0, view);
-
-    w = Math.max(1, w >> 1);
-    h = Math.max(1, h >> 1);
-  }
-
-  glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-  glw.texParameteri(
-    glw.TEXTURE_MIN_FILTER,
-    mipmaps!.length > 1 ? glw.LINEAR_MIPMAP_LINEAR : glw.LINEAR,
-  );
-};
-
 function pvrtcMipSize(width: number, height: number, bpp: 2 | 4) {
   const minW = bpp === 2 ? 16 : 8;
   const minH = 8;
@@ -327,7 +246,7 @@ function pvrtcMipSize(width: number, height: number, bpp: 2 | 4) {
   return (w * h * bpp) / 8;
 }
 
-const loadPVR = async function (view: DataView): Promise<TextureData> {
+const loadPVR = async function (view: DataView): Promise<ImageResponse> {
   const pixelFormatLow = view.getUint32(8, true);
   const internalFormat = PVR_TO_GL_INTERNAL_FORMAT[pixelFormatLow];
 
@@ -411,44 +330,16 @@ const loadPVR = async function (view: DataView): Promise<TextureData> {
   };
 };
 
-const uploadPVR = function (
-  glw: WebGlContextWrapper,
-  texture: WebGLTexture,
-  data: CompressedData,
-) {
-  const { glInternalFormat, mipmaps, w: width, h: height } = data;
-  if (mipmaps === undefined) {
-    return;
-  }
-  glw.bindTexture(texture);
+export interface CompressedImageData {
+  blockInfo: BlockInfo;
+  glInternalFormat: number;
+  mipmaps: ArrayBuffer[];
+  w: number;
+  h: number;
+  type: 'pvr' | 'ktx' | 'astc';
+}
 
-  let w = width;
-  let h = height;
-
-  for (let i = 0; i < mipmaps!.length; i++) {
-    glw.compressedTexImage2D(
-      i,
-      glInternalFormat,
-      w,
-      h,
-      0,
-      new Uint8Array(mipmaps[i]!),
-    );
-
-    w = Math.max(1, w >> 1);
-    h = Math.max(1, h >> 1);
-  }
-
-  glw.texParameteri(glw.TEXTURE_WRAP_S, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_WRAP_T, glw.CLAMP_TO_EDGE);
-  glw.texParameteri(glw.TEXTURE_MAG_FILTER, glw.LINEAR);
-  glw.texParameteri(
-    glw.TEXTURE_MIN_FILTER,
-    mipmaps.length > 1 ? glw.LINEAR_MIPMAP_LINEAR : glw.LINEAR,
-  );
-};
-
-type BlockInfo = {
+export type BlockInfo = {
   width: number;
   height: number;
   bytes: number;
@@ -498,13 +389,4 @@ export const blockInfoMap: { [key: number]: BlockInfo } = {
   0x93d4: BLOCK_10x10x16,
   0x93b5: BLOCK_12x12x16, // 12x12
   0x93d5: BLOCK_12x12x16,
-};
-
-export const uploadCompressedTexture: Record<
-  string,
-  UploadCompressedTextureFunction
-> = {
-  ktx: uploadKTX,
-  pvr: uploadPVR,
-  astc: uploadASTC,
 };

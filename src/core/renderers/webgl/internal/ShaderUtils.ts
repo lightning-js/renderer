@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { WebGlContextWrapper } from '../../../lib/WebGlContextWrapper.js';
+import type { GlContextWrapper } from '../../../platforms/GlContextWrapper.js';
 
 //#region Types
 export interface AttributeInfo {
@@ -178,7 +178,7 @@ export interface ShaderProgramSources {
 //#endregion Types
 
 export function createShader(
-  glw: WebGlContextWrapper,
+  glw: GlContextWrapper,
   type: number,
   source: string,
 ) {
@@ -204,7 +204,7 @@ export function createShader(
 }
 
 export function createProgram(
-  glw: WebGlContextWrapper,
+  glw: GlContextWrapper,
   vertexShader: WebGLShader,
   fragmentShader: WebGLShader,
 ) {

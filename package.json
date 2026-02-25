@@ -11,7 +11,8 @@
     "./canvas/shaders": "./dist/exports/canvas-shaders.js",
     "./webgl": "./dist/exports/webgl.js",
     "./webgl/shaders": "./dist/exports/webgl-shaders.js",
-    "./inspector": "./dist/exports/inspector.js"
+    "./inspector": "./dist/exports/inspector.js",
+    "./platforms": "./dist/exports/platform.js"
   },
   "scripts": {
     "start": "cd examples && pnpm start",
