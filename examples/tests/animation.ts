@@ -54,7 +54,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     x: 40,
     y: 40,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 40,
     text: '',
   });
@@ -63,7 +63,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     x: 40,
     y: 90,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 20,
     text: 'press left or right arrow key to change easing',
   });

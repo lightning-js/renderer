@@ -50,8 +50,7 @@ const NODE_PROPS = {
   mount: 0.5,
   color: 0x000000ff,
   text: 'abcd\ntxyz',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
+  fontFamily: 'SDF-Ubuntu',
   fontSize: 50,
 } satisfies Partial<ITextNodeProps>;
 
@@ -67,7 +66,8 @@ function generateLineHeightTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({

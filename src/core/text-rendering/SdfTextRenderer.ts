@@ -19,8 +19,9 @@
 
 import type { Stage } from '../Stage.js';
 import type {
-  FontHandler,
+  FontLoadOptions,
   TextLineStruct,
+  TextRenderer,
   TextRenderInfo,
   TextRenderProps,
 } from './TextRenderer.js';
@@ -37,6 +38,8 @@ import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout, GlyphLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
+import { SdfFont, type SdfFontProps } from './SdfFont.js';
+import type { CoreFont } from './CoreFont.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
 const FLOATS_PER_VERTEX = 4;
@@ -46,17 +49,16 @@ const VERTICES_PER_GLYPH = 6;
 const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
+let stage: Stage | null = null;
 
 // Initialize the SDF text renderer
-const init = (stage: Stage): void => {
-  SdfFontHandler.init();
+const init = (s: Stage): void => {
+  stage = s;
 
   // Register SDF shader with the shader manager
   stage.shManager.registerShaderType('Sdf', Sdf);
   sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
 };
-
-const font: FontHandler = SdfFontHandler;
 
 /**
  * SDF text renderer using MSDF/SDF fonts with WebGL
@@ -65,7 +67,10 @@ const font: FontHandler = SdfFontHandler;
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
+const renderText = (
+  font: SdfFont,
+  props: CoreTextNodeProps,
+): TextRenderInfo => {
   // Early return if no text
   if (props.text.length === 0) {
     return {
@@ -75,7 +80,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   }
 
   // Get font cache for this font family
-  const fontData = SdfFontHandler.getFontData(props.fontFamily);
+  const fontData = font.getData();
   if (fontData === undefined) {
     // Font not loaded, return empty result
     return {
@@ -85,7 +90,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   }
 
   // Calculate text layout and generate glyph data for caching
-  const layout = generateTextLayout(props, fontData);
+  const layout = generateTextLayout(props, font);
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
@@ -184,6 +189,7 @@ const addQuads = (layout?: TextLayout): Float32Array | null => {
  */
 const renderQuads = (
   renderer: CoreRenderer,
+  font: SdfFont,
   layout: TextLayout,
   vertexBuffer: Float32Array,
   renderProps: TextRenderProps,
@@ -193,7 +199,7 @@ const renderQuads = (
   const worldAlpha = renderProps.worldAlpha;
   const globalTransform = renderProps.globalTransform;
 
-  const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
+  const atlasTexture = font.getAtlas();
   if (atlasTexture === null) {
     console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
     return;
@@ -271,15 +277,15 @@ const renderQuads = (
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
-  fontCache: SdfFontHandler.SdfFont,
+  font: SdfFont,
 ): TextLayout => {
   const fontSize = props.fontSize;
   const fontFamily = props.fontFamily;
   const lineHeight = props.lineHeight;
-  const metrics = SdfFontHandler.getFontMetrics(fontFamily, fontSize);
+  const metrics = font.getMetrics(fontSize);
   const verticalAlign = props.verticalAlign;
 
-  const fontData = fontCache.data;
+  const fontData = font.getData();
   const commonFontData = fontData.common;
   const designFontSize = fontData.info.size;
 
@@ -301,7 +307,7 @@ const generateTextLayout = (
     effectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
-    SdfFontHandler.measureText,
+    font,
     metrics,
     props.text,
     props.textAlign,
@@ -339,7 +345,7 @@ const generateTextLayout = (
         continue;
       }
       // Get glyph data from font handler
-      const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+      const glyph = font.getGlyph(codepoint);
       if (glyph === null) {
         continue;
       }
@@ -348,11 +354,7 @@ const generateTextLayout = (
 
       // Add kerning if there's a previous character
       if (prevCodepoint !== 0) {
-        const kerning = SdfFontHandler.getKerning(
-          fontFamily,
-          prevCodepoint,
-          codepoint,
-        );
+        const kerning = font.getKerning(prevCodepoint, codepoint);
         advance += kerning;
       }
 
@@ -393,12 +395,20 @@ const generateTextLayout = (
   };
 };
 
+const createFont = (settings: FontLoadOptions): SdfFont | undefined => {
+  return new SdfFont(
+    SdfTextRenderer as unknown as TextRenderer,
+    settings as unknown as SdfFontProps,
+    stage!,
+  );
+};
+
 /**
  * SDF Text Renderer - implements TextRenderer interface
  */
 const SdfTextRenderer = {
   type,
-  font,
+  createFont,
   renderText,
   addQuads,
   renderQuads,

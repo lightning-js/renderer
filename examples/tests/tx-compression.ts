@@ -26,7 +26,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     color: 0xffffffff,
     alpha: 1.0,
     text: 'etc1 compression in .pvr',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 30,
     parent: testRoot,
   });
@@ -46,7 +46,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     color: 0xffffffff,
     alpha: 1.0,
     text: 's3tc compression in .ktx',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 30,
     parent: testRoot,
   });

@@ -19,25 +19,32 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
-import * as CanvasFontHandler from './CanvasFontHandler.js';
+import type {
+  FontLoadOptions,
+  FontMetrics,
+  TextLineStruct,
+  TextRenderer,
+  TextRenderInfo,
+} from './TextRenderer.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
+import { CanvasFont, type CanvasFontProps } from './CanvasFont.js';
+import type { CoreFontManager } from './FontManager.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
 const type = 'canvas' as const;
 
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
-let context:
+export let context:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D
   | null = null;
 
 // Separate canvas and context for text measurements
 let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
-let measureContext:
+export let measureContext:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D
   | null = null;
@@ -55,7 +62,7 @@ const layoutCache = new Map<
 >();
 
 // Initialize the Text Renderer
-const init = (stage: Stage): void => {
+const init = (stage: Stage, fontManager: CoreFontManager): void => {
   const dpr = stage.options.devicePhysicalPixelRatio;
 
   // Drawing canvas and context
@@ -82,7 +89,30 @@ const init = (stage: Stage): void => {
   measureCanvas.width = 1;
   measureCanvas.height = 1;
 
-  CanvasFontHandler.init(context, measureContext);
+  // Register the default 'sans-serif' font face
+  const defaultMetrics: FontMetrics = {
+    ascender: 800,
+    descender: -200,
+    lineGap: 200,
+    unitsPerEm: 1000,
+  };
+
+  fontManager.loadFont(type, {
+    fontFamily: 'sans-serif',
+    metrics: defaultMetrics,
+  });
+};
+
+const createFont = (settings: FontLoadOptions): CanvasFont | undefined => {
+  if (settings.fontFamily !== 'sans-serif' && settings.fontUrl === undefined) {
+    console.error('fontUrl is missing');
+    return;
+  }
+  return new CanvasFont(
+    CanvasTextRenderer as unknown as TextRenderer,
+    settings as unknown as CanvasFontProps,
+    measureContext!,
+  );
 };
 
 /**
@@ -92,7 +122,10 @@ const init = (stage: Stage): void => {
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
+const renderText = (
+  font: CanvasFont,
+  props: CoreTextNodeProps,
+): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
@@ -112,12 +145,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     wordBreak,
   } = props;
 
-  const font = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
+  const canvasFont = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
   // Get font metrics and calculate line height
-  measureContext.font = font;
+  measureContext.font = canvasFont;
   measureContext.textBaseline = 'hanging';
 
-  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
+  const metrics = font.getMetrics(fontSize);
 
   const letterSpacing = props.letterSpacing;
 
@@ -130,7 +163,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     effectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
-    CanvasFontHandler.measureText,
+    font,
     metrics,
     text,
     textAlign,
@@ -150,7 +183,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   canvas.width = canvasW;
   canvas.height = canvasH;
   context.fillStyle = 'white';
-  context.font = font;
+  context.font = canvasFont;
   context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
@@ -175,11 +208,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
           continue;
         }
         context.fillText(char, currentX, currentY);
-        currentX += CanvasFontHandler.measureText(
-          char,
-          fontFamily,
-          letterSpacing,
-        );
+        currentX += font.measureText(char, letterSpacing);
       }
     }
   }
@@ -244,7 +273,7 @@ const renderQuads = (): void => {
  */
 const CanvasTextRenderer = {
   type,
-  font: CanvasFontHandler,
+  createFont,
   renderText,
   addQuads,
   renderQuads,

@@ -51,8 +51,7 @@ const NODE_PROPS = {
   maxWidth: 200,
   color: 0x000000ff,
   text: getLoremIpsum(100),
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
+  fontFamily: 'SDF-Ubuntu',
   fontSize: 20,
   lineHeight: 28,
 } satisfies Partial<ITextNodeProps>;
@@ -67,7 +66,8 @@ function generateOverflowSuffixTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         const baselineNode = renderer.createTextNode({

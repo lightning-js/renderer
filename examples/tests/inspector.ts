@@ -87,7 +87,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 600,
     h: 100,
     text: 'Hello World',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 100,
     parent: bg,
     data: {
@@ -100,7 +100,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 80,
     h: 100,
     text: 'Boxes should turn green if the inspector is enabled',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 50,
     parent: bg,
   });
@@ -110,7 +110,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     y: 800,
     h: 100,
     text: 'Please make sure to run this test with ?inspector=true',
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 50,
     parent: bg,
   });

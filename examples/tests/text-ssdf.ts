@@ -26,7 +26,7 @@ export default async function test(settings: ExampleSettings) {
   renderer.createTextNode({
     text: 'SSDF',
     color: 0x000000ff,
-    fontFamily: 'Ubuntu-ssdf',
+    fontFamily: 'SDF-Ubuntu-ssdf',
     parent: testRoot,
     fontSize: 80,
     lineHeight: 80 * 1.2,
