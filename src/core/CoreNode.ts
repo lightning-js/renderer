@@ -1933,6 +1933,12 @@ export class CoreNode extends EventEmitter {
     children.push(node);
 
     if (min !== max || (zIndex !== min && zIndex !== max)) {
+      if (zIndex < min) {
+        this.zIndexMin = zIndex;
+      }
+      if (zIndex > max) {
+        this.zIndexMax = zIndex;
+      }
       this.zIndexSortList.push(node);
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
