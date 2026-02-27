@@ -73,11 +73,12 @@ export const incrementalRepositionByZIndex = (
 
     //binary search for correct insertion position
     let left = 0;
-    let right = nodes.length;
+    let right = currentIndex === nodes.length - 1 ? currentIndex : nodes.length;
 
     while (left < right) {
       const mid = (left + right) >>> 1;
-      if (nodes[mid]!.props.zIndex <= targetZIndex) {
+      const target = nodes[mid]!;
+      if (target.props.zIndex <= targetZIndex) {
         left = mid + 1;
       } else {
         right = mid;

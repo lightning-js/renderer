@@ -1893,8 +1893,6 @@ export class CoreNode extends EventEmitter {
     const inRttCluster =
       this.props.rtt === true || this.parentHasRenderTexture === true;
     const children = this.children;
-    const min = this.zIndexMin;
-    const max = this.zIndexMax;
     const zIndex = node.zIndex;
     const autosizeTarget = this.autosizer || this.parentAutosizer;
     let attachToAutosizer = autosizeTarget !== null;
@@ -1932,13 +1930,14 @@ export class CoreNode extends EventEmitter {
 
     children.push(node);
 
-    if (min !== max || (zIndex !== min && zIndex !== max)) {
-      if (zIndex < min) {
-        this.zIndexMin = zIndex;
-      }
-      if (zIndex > max) {
-        this.zIndexMax = zIndex;
-      }
+    if (zIndex < this.zIndexMin) {
+      this.zIndexMin = zIndex;
+    }
+    if (zIndex > this.zIndexMax) {
+      this.zIndexMax = zIndex;
+    }
+
+    if (this.zIndexMax !== this.zIndexMin) {
       this.zIndexSortList.push(node);
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
