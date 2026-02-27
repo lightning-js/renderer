@@ -81,19 +81,31 @@ export class WebPlatform extends Platform {
   override startLoop(stage: Stage): void {
     let isIdle = false;
     let lastFrameTime = 0;
+    const buffer = 4;
 
     const runLoop = (currentTime: number = 0) => {
       const targetFrameTime = stage.targetFrameTime;
 
-      // Check if we should throttle this frame
-      if (
-        targetFrameTime > 0 &&
-        currentTime - lastFrameTime < targetFrameTime
-      ) {
-        // Too early for next frame, schedule with setTimeout for precise timing
-        const delay = targetFrameTime - (currentTime - lastFrameTime);
-        setTimeout(() => requestAnimationFrame(runLoop), delay);
-        return;
+      if (targetFrameTime > 0) {
+        // Calculate elapsed time since the last frame
+        const elapsed = currentTime - lastFrameTime;
+
+        // If not enough time has passed, skip this frame
+        if (elapsed < targetFrameTime) {
+          const wait = targetFrameTime - elapsed;
+
+          if (wait > buffer) {
+            setTimeout(() => requestAnimationFrame(runLoop), wait - buffer);
+          } else {
+            requestAnimationFrame(runLoop);
+          }
+          return;
+        }
+
+        // Adjust lastFrameTime to maintain the target FPS
+        lastFrameTime = currentTime - (elapsed % targetFrameTime);
+      } else {
+        lastFrameTime = currentTime;
       }
 
       stage.updateFrameTime();
@@ -103,16 +115,13 @@ export class WebPlatform extends Platform {
         // We still need to calculate the fps else it looks like the app is frozen
         stage.calculateFps();
 
-        if (targetFrameTime > 0) {
-          // Use setTimeout for throttled idle frames
-          setTimeout(
-            () => requestAnimationFrame(runLoop),
-            Math.max(targetFrameTime, 16.666666666666668),
-          );
-        } else {
-          // Use standard idle timeout when not throttling
-          setTimeout(() => requestAnimationFrame(runLoop), 16.666666666666668);
-        }
+        // We use 15ms instead of 16.6ms to provide a safety buffer.
+        // This ensures we wake up slightly before the next frame to check for updates,
+        // preventing us from missing a frame due to timer variances.
+        setTimeout(
+          () => requestAnimationFrame(runLoop),
+          Math.max(targetFrameTime, 15),
+        );
 
         if (isIdle === false) {
           stage.shManager.cleanup();
@@ -138,12 +147,17 @@ export class WebPlatform extends Platform {
 
       // Schedule next frame
       if (targetFrameTime > 0) {
-        // Use setTimeout + rAF combination for precise FPS control
-        const nextFrameDelay = Math.max(
-          0,
-          targetFrameTime - (performance.now() - currentTime),
-        );
-        setTimeout(() => requestAnimationFrame(runLoop), nextFrameDelay);
+        const nextTarget = lastFrameTime + targetFrameTime;
+        const now = performance.now();
+        const wait = nextTarget - now;
+
+        // If we have a significant wait time, use setTimeout to yield to the browser.
+        // We subtract a small buffer (4ms) to ensure we wake up BEFORE the next frame.
+        if (wait > buffer) {
+          setTimeout(() => requestAnimationFrame(runLoop), wait - buffer);
+        } else {
+          requestAnimationFrame(runLoop);
+        }
       } else {
         // Use standard rAF when not throttling
         requestAnimationFrame(runLoop);
