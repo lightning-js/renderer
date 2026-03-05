@@ -344,6 +344,9 @@ export class Stage {
     this.txManager.frameTime = newFrameTime;
     this.txMemManager.frameTime = newFrameTime;
 
+    // Process texture retries with exponential backoff
+    this.txManager.processTextureRetries();
+
     // This event is emitted at the beginning of the frame (before any updates
     // or rendering), so no need to to use `stage.queueFrameEvent` here.
     this.eventBus.emit('frameTick', {

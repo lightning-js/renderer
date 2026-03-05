@@ -175,6 +175,23 @@ export abstract class Texture extends EventEmitter {
   public maxRetryCount: number;
 
   /**
+   * Frame time when the last retry attempt was made
+   *
+   * @remarks
+   * Used to implement exponential backoff for texture loading retries.
+   */
+  private lastRetryAttemptFrameTime = 0;
+
+  /**
+   * Base delay in milliseconds for exponential backoff retry strategy
+   *
+   * @remarks
+   * Actual delay = BASE_RETRY_DELAY * Math.pow(2, retryCount - 1)
+   * This ensures: 1st retry after 500ms, 2nd after 1s, 3rd after 2s, etc.
+   */
+  private static readonly BASE_RETRY_DELAY = 500; // milliseconds
+
+  /**
    * Timestamp when texture was created (for startup grace period)
    */
   private createdAt: number = Date.now();
@@ -284,6 +301,12 @@ export abstract class Texture extends EventEmitter {
       if (oldSize !== newSize && newSize === 1) {
         (this.renderable as boolean) = true;
         this.onChangeIsRenderable?.(true);
+
+        // If the texture previously failed and can still retry, re-enqueue it.
+        if (this.state === 'failed' && !this.hasExhaustedRetries()) {
+          this.txManager.addToRetryQueue(this);
+        }
+
         this.load();
       }
     } else {
@@ -296,17 +319,62 @@ export abstract class Texture extends EventEmitter {
         (this.renderable as boolean) = false;
         this.onChangeIsRenderable?.(false);
 
+        // Remove from retry queue when no nodes are using this texture.
+        this.txManager.removeFromRetryQueue(this);
+
         // note, not doing a cleanup here, cleanup is managed by the Stage/TextureMemoryManager
         // when it deems appropriate based on memory pressure
       }
     }
   }
 
+  /**
+   * Check if enough time has passed to attempt a retry using exponential backoff.
+   *
+   * @remarks
+   * Uses exponential backoff formula: BASE_DELAY * Math.pow(2, retryCount - 1)
+   * This keeps retry attempts throttled within the render loop without setTimeout.
+   * Frame time is obtained from txManager, which is updated by the renderer.
+   *
+   * @returns true if a retry should be attempted, false if still waiting
+   */
+  private canRetryNow(): boolean {
+    // First attempt always allowed
+    if (this.retryCount === 0) {
+      return true;
+    }
+
+    const currentFrameTime = this.txManager.frameTime;
+    const requiredDelayMs =
+      Texture.BASE_RETRY_DELAY * Math.pow(2, this.retryCount - 1);
+    const timeSinceLastAttempt =
+      currentFrameTime - this.lastRetryAttemptFrameTime;
+
+    return timeSinceLastAttempt >= requiredDelayMs;
+  }
+
   load(): void {
-    if (this.retryCount > this.maxRetryCount) {
-      // We've exceeded the max retry count, do not attempt to load again
+    // We've exceeded the max retry count, do not attempt to load again
+    if (this.hasExhaustedRetries() === true) {
       return;
     }
+
+    // Skip loading if no nodes are using this texture (out of bounds/not renderable)
+    if (this.renderableOwners.length === 0) {
+      this.txManager.removeFromRetryQueue(this);
+      return;
+    }
+
+    // Skip if already loading
+    if (this.state === 'loading') {
+      return;
+    }
+
+    // Check if we should wait longer before retrying
+    if (this.canRetryNow() === false) {
+      return;
+    }
+
     this.txManager.loadTexture(this);
   }
 
@@ -410,6 +478,9 @@ export abstract class Texture extends EventEmitter {
       }
 
       payload = this._dimensions;
+
+      // Remove from retry queue when successfully loaded
+      this.txManager.removeFromRetryQueue(this);
     } else if (state === 'failed') {
       this._error = errorOrDimensions as Error;
       payload = this._error;
@@ -418,6 +489,14 @@ export abstract class Texture extends EventEmitter {
       // this is used to compare against maxRetryCount, if set
       // to determine if we should try loading again
       this.retryCount += 1;
+
+      this.lastRetryAttemptFrameTime = this.txManager.frameTime;
+
+      if (!this.hasExhaustedRetries()) {
+        this.txManager.addToRetryQueue(this);
+      } else {
+        this.txManager.removeFromRetryQueue(this);
+      }
 
       queueMicrotask(() => {
         this.release();
@@ -434,6 +513,15 @@ export abstract class Texture extends EventEmitter {
     // emit the new state
     this.state = state;
     this.emit(state, payload);
+  }
+
+  /**
+   * Check if this texture has exhausted all retry attempts.
+   *
+   * @returns true if retries are exhausted, false otherwise
+   */
+  hasExhaustedRetries(): boolean {
+    return this.retryCount > 0 && this.retryCount >= this.maxRetryCount;
   }
 
   /**
