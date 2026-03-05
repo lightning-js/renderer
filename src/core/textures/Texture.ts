@@ -354,24 +354,19 @@ export abstract class Texture extends EventEmitter {
   }
 
   load(): void {
-    // We've exceeded the max retry count, do not attempt to load again
-    if (this.hasExhaustedRetries() === true) {
-      return;
-    }
-
-    // Skip loading if no nodes are using this texture (out of bounds/not renderable)
-    if (this.renderableOwners.length === 0) {
-      this.txManager.removeFromRetryQueue(this);
-      return;
-    }
-
-    // Skip if already loading
-    if (this.state === 'loading') {
-      return;
-    }
-
-    // Check if we should wait longer before retrying
-    if (this.canRetryNow() === false) {
+    if (
+      // We've exceeded the max retry count, do not attempt to load again
+      this.hasExhaustedRetries() === true ||
+      // Skip loading if no nodes are using this texture (out of bounds/not renderable)
+      this.renderableOwners.length === 0 ||
+      // Skip if already loading
+      this.state === 'loading' ||
+      // Check if we should wait longer before retrying
+      this.canRetryNow() === false
+    ) {
+      if (this.renderableOwners.length === 0) {
+        this.txManager.removeFromRetryQueue(this);
+      }
       return;
     }
 
