@@ -27,7 +27,6 @@ import type { TextureOptions } from './CoreTextureManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
-  TextureType,
   type Texture,
   type TextureFailedEventHandler,
   type TextureFreedEventHandler,
@@ -918,10 +917,7 @@ export class CoreNode extends EventEmitter {
     }
 
     // only emit failed outward if we've exhausted all retry attempts
-    if (
-      this.texture !== null &&
-      this.texture.retryCount > this.texture.maxRetryCount
-    ) {
+    if (this.texture !== null && this.texture.hasExhaustedRetries()) {
       this.emit('failed', {
         type: 'texture',
         error,
@@ -1473,8 +1469,8 @@ export class CoreNode extends EventEmitter {
     if (this.texture !== null) {
       // preemptive check for failed textures this will mark the current node as non-renderable
       // and will prevent further checks until the texture is reloaded or retry is reset on the texture
-      if (this.texture.retryCount > this.texture.maxRetryCount) {
-        // texture has failed to load, we cannot render
+      if (this.texture.hasExhaustedRetries()) {
+        // texture has failed to load after all retries, we cannot render
         this.updateTextureOwnership(false);
         this.setRenderable(false);
         return;

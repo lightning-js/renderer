@@ -197,6 +197,7 @@ export class CoreTextureManager extends EventEmitter {
   public maxRetryCount: number;
   private priorityQueue: Array<Texture> = [];
   private uploadTextureQueue: Array<Texture> = [];
+  private retryQueue: Set<Texture> = new Set();
   private initialized = false;
   private stage: Stage;
   private numImageWorkers: number;
@@ -313,6 +314,44 @@ export class CoreTextureManager extends EventEmitter {
   enqueueUploadTexture(texture: Texture): void {
     if (this.uploadTextureQueue.includes(texture) === false) {
       this.uploadTextureQueue.push(texture);
+    }
+  }
+
+  /**
+   * Add a texture to the retry queue
+   *
+   * @remarks
+   * Textures in the retry queue will have their `load()` method called
+   * automatically when their exponential backoff delay has elapsed.
+   *
+   * @param texture - The texture to add to retry queue
+   */
+  addToRetryQueue(texture: Texture): void {
+    this.retryQueue.add(texture);
+  }
+
+  /**
+   * Remove a texture from the retry queue
+   *
+   * @param texture - The texture to remove from retry queue
+   */
+  removeFromRetryQueue(texture: Texture): void {
+    this.retryQueue.delete(texture);
+  }
+
+  /**
+   * Process all textures in the retry queue
+   *
+   * @remarks
+   * Called every frame from Stage.updateFrameTime(). Checks each texture
+   * in the retry queue and calls load() if its exponential backoff delay
+   * has elapsed. Textures are automatically removed from the queue when
+   * they are successfully loaded or when they exhaust their retry attempts.
+   */
+  processTextureRetries(): void {
+    for (const texture of this.retryQueue) {
+      // load() will check canRetryNow() internally and only proceed if backoff has elapsed
+      texture.load();
     }
   }
 
