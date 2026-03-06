@@ -83,10 +83,12 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       v_outerSize = vec2(0.0);
 
       if(v_borderZero == 0.0) {
-        float borderTop = u_borderWidth.x;
-        float borderRight = u_borderWidth.y;
-        float borderBottom = u_borderWidth.z;
-        float borderLeft = u_borderWidth.w;
+        vec4 adjustedBorderWidth = u_borderWidth - 1.0 + clamp(u_borderWidth, -1.0, 1.0);
+
+        float borderTop = adjustedBorderWidth.x;
+        float borderRight = adjustedBorderWidth.y;
+        float borderBottom = adjustedBorderWidth.z;
+        float borderLeft = adjustedBorderWidth.w;
 
         v_outerBorderUv = vec2(0.0);
         v_innerBorderUv = vec2(0.0);
