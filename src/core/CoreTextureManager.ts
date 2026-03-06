@@ -260,7 +260,10 @@ export class CoreTextureManager extends EventEmitter {
     let texture: Texture | undefined;
     const TextureClass = this.txConstructors[textureType];
     if (!TextureClass) {
-      throw new Error(`Texture type "${textureType}" is not registered`);
+      throw new TextureError(
+        TextureErrorCode.TEXTURE_TYPE_NOT_REGISTERED,
+        `Texture type "${textureType}" is not registered`,
+      );
     }
     const resolvedProps = TextureClass.resolveDefaults(props as any);
     const cacheKey = TextureClass.makeCacheKey(resolvedProps as any);
@@ -339,7 +342,10 @@ export class CoreTextureManager extends EventEmitter {
       this.stage.txMemManager.criticalCleanupRequested === true
     ) {
       // we're at a critical memory threshold, don't upload textures
-      texture.setState('failed');
+      texture.setState(
+        'failed',
+        new TextureError(TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED),
+      );
       return;
     }
 
