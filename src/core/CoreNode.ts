@@ -1783,7 +1783,7 @@ export class CoreNode extends EventEmitter {
     }
 
     const parent = this.parent;
-    if (parent !== null) {
+    if (parent !== null && parent.destroyed === false) {
       parent.removeChild(this);
     }
 
