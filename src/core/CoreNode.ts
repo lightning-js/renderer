@@ -1900,9 +1900,9 @@ export class CoreNode extends EventEmitter {
         autosizeTarget.detach(node);
       }
     }
-    removeChild(node, this.children);
-
     const children = this.children;
+    removeChild(node, children);
+
     if (children.length === 0) {
       this.zIndexMin = 0;
       this.zIndexMax = 0;
