@@ -1911,9 +1911,18 @@ export class CoreNode extends EventEmitter {
     }
 
     const changedNodes = this.zIndexSortList;
-    for (let i = changedNodes.length - 1; i >= 0; i--) {
-      if (changedNodes[i] === node) {
-        changedNodes.splice(i, 1);
+    const changedCount = changedNodes.length;
+    if (changedCount !== 0) {
+      if (changedCount === 1) {
+        if (changedNodes[0] === node) {
+          changedNodes.length = 0;
+        }
+      } else {
+        for (let i = changedCount - 1; i >= 0; i--) {
+          if (changedNodes[i] === node) {
+            changedNodes.splice(i, 1);
+          }
+        }
       }
     }
 
