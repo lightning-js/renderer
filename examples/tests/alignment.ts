@@ -48,7 +48,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     x: 200,
     y: 1080 / 3 - 30,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 30,
     text: 'Shows a parent node with 4 aligned children',
   });
@@ -92,7 +92,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     x: 200,
     y: 1080 / 2 + 30,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 30,
     text: 'Shows a empty holder node, with a parent \nnode and 4 aligned children',
   });

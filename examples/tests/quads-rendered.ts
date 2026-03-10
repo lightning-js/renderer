@@ -46,7 +46,7 @@ export default async function test({
   });
 
   const quadsNode = renderer.createTextNode({
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 40,
     x: 20,
     y: 20,

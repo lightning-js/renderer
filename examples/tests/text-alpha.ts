@@ -35,8 +35,6 @@ const NODE_PROPS = {
   y: containerSize / 2,
   color: 0x000000ff,
   text: 'xyz',
-  fontFamily: 'Ubuntu',
-  textRendererOverride: 'sdf',
   fontSize: 50,
 } satisfies Partial<ITextNodeProps>;
 
@@ -72,7 +70,8 @@ function generateAlphaTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
@@ -102,7 +101,8 @@ function generateAlphaTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
@@ -129,7 +129,8 @@ function generateAlphaTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
@@ -158,7 +159,8 @@ function generateAlphaTest(
       content: async (rowNode) => {
         const nodeProps = {
           ...NODE_PROPS,
-          textRendererOverride: textRenderer,
+          fontFamily:
+            textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
         } satisfies Partial<ITextNodeProps>;
 
         return await constructTestRow({ renderer, rowNode, containerSize }, [
@@ -198,7 +200,7 @@ function createContainedTextNode(
   });
   renderer.createTextNode({
     ...NODE_PROPS,
-    textRendererOverride: textRenderer,
+    fontFamily: textRenderer === 'canvas' ? 'Canvas-Ubuntu' : 'SDF-Ubuntu',
     parent: container,
     // alpha: 0.50,
   });

@@ -66,6 +66,8 @@ export default async function test({
   testRoot.h = 250;
   testRoot.color = 0xffffffff;
 
+  const FONT_FAMILY = 'SDF-Ubuntu';
+
   const robot = renderer.createNode({
     x: 0,
     y: 0,
@@ -81,7 +83,7 @@ export default async function test({
     x: testRoot.w,
     y: testRoot.h,
     fontSize: 40,
-    fontFamily: 'Ubuntu',
+    fontFamily: FONT_FAMILY,
     parent: testRoot,
     color: 0x000000ff,
   });

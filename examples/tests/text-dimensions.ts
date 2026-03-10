@@ -62,8 +62,7 @@ export default async function test(settings: ExampleSettings) {
     h: 0,
     color: 0x000000ff,
     forceLoad: true,
-    fontFamily: 'Ubuntu',
-    textRendererOverride: 'sdf',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 50,
     text: '',
     parent: testRoot,
@@ -76,7 +75,7 @@ export default async function test(settings: ExampleSettings) {
     w: 0,
     h: 0,
     color: 0x000000ff,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     fontSize: 20,
     text: '1',
     parent: testRoot,
@@ -86,14 +85,14 @@ export default async function test(settings: ExampleSettings) {
   const mutations = [
     () => {
       text1.text = 'SDF';
-      text1.textRendererOverride = 'sdf';
+      text1.fontFamily = 'SDF-Ubuntu';
     },
     () => {
       text1.text = 'SDF\ngyqpj';
     },
     () => {
       text1.text = 'Canvas';
-      text1.textRendererOverride = 'canvas';
+      text1.fontFamily = 'Canvas-Ubuntu';
     },
     () => {
       text1.text = 'Canvas\ngyqpj';
@@ -101,17 +100,17 @@ export default async function test(settings: ExampleSettings) {
     () => {
       // Test one more time with SDF to make sure Canvas
       text1.text = 'SDF 2nd';
-      text1.textRendererOverride = 'sdf';
+      text1.fontFamily = 'SDF-Ubuntu';
     },
     () => {
       // Test when text ends with space for correct width
       text1.text = 'Canvas ';
-      text1.textRendererOverride = 'canvas';
+      text1.fontFamily = 'Canvas-Ubuntu';
     },
     () => {
       // Test when text ends with space for correct width
       text1.text = 'SDF ';
-      text1.textRendererOverride = 'sdf';
+      text1.fontFamily = 'SDF-Ubuntu';
     },
   ];
   /**

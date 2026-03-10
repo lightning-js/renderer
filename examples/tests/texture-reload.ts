@@ -62,7 +62,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   const nodes: INode[] = [];
 
   const header = renderer.createTextNode({
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     text: `Texture Reload Test`,
     fontSize: 45,
     parent: testRoot,
@@ -71,7 +71,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   });
 
   const finalStatus = renderer.createTextNode({
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     text: `Running...`,
     fontSize: 30,
     parent: testRoot,
@@ -316,7 +316,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     testNodeInstance.h = 128;
 
     renderer.createTextNode({
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       text: `${testIdx}. Test ${status} for: ${name}`,
       fontSize: 30,
       parent: testRoot,

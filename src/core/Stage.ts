@@ -28,11 +28,8 @@ import {
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { CoreShaderManager } from './CoreShaderManager.js';
 import {
-  type FontHandler,
   type FontLoadOptions,
-  type TextRenderer,
   type TextRenderers,
-  type TrProps,
 } from './text-rendering/TextRenderer.js';
 
 import { EventEmitter } from '../common/EventEmitter.js';
@@ -48,6 +45,7 @@ import {
 } from './TextureMemoryManager.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
+import { CoreFontManager } from './text-rendering/FontManager.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
@@ -94,8 +92,7 @@ export class Stage {
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
   public readonly txMemManager: TextureMemoryManager;
-  public readonly textRenderers: Record<string, TextRenderer> = {};
-  public readonly fontHandlers: Record<string, FontHandler> = {};
+  public readonly fontManager: CoreFontManager;
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
@@ -143,13 +140,6 @@ export class Stage {
   private numQuadsRendered = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
-
-  // Font resolve optimisation flags
-  private hasOnlyOneFontEngine: boolean;
-  private hasOnlyCanvasFontEngine: boolean;
-  private hasCanvasEngine: boolean;
-  private singleFontEngine: TextRenderer | null = null;
-  private singleFontHandler: FontHandler | null = null;
 
   // Debug data
   contextSpy: ContextSpy | null = null;
@@ -218,6 +208,7 @@ export class Stage {
     this.renderer = new renderEngine(this);
 
     this.shManager = new CoreShaderManager(this);
+    this.fontManager = new CoreFontManager(this, fontEngines);
 
     this.defShaderNode = this.renderer.getDefaultShaderNode();
     this.calculateTextureCoord = this.renderer.getTextureCoords !== undefined;
@@ -230,84 +221,7 @@ export class Stage {
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    // Create text renderers
-    this.hasOnlyOneFontEngine = fontEngines.length === 1;
-    this.hasOnlyCanvasFontEngine =
-      fontEngines.length === 1 && fontEngines[0]!.type === 'canvas';
-    this.hasCanvasEngine = false;
-    this.singleFontEngine = this.hasOnlyOneFontEngine
-      ? (fontEngines[0] as TextRenderer)
-      : null;
-    this.singleFontHandler = this.hasOnlyOneFontEngine
-      ? (fontEngines[0]?.font as FontHandler)
-      : null;
-
-    if (this.singleFontEngine === null) {
-      // Multiple font engines case
-      // Filter out incompatible engines first
-      const compatibleEngines = fontEngines.filter(
-        (fontEngine: TextRenderer) => {
-          const type = fontEngine.type;
-
-          if (type === 'sdf' && renderMode === 'canvas') {
-            console.warn(
-              'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
-            );
-            return false;
-          }
-
-          if (type === 'canvas') {
-            this.hasCanvasEngine = true;
-          }
-
-          return true;
-        },
-      );
-
-      // Sort engines: SDF first, Canvas last, others in between
-      const sortedEngines = compatibleEngines.sort(
-        (a: TextRenderer, b: TextRenderer) => {
-          if (a.type === 'sdf') return -1;
-          if (b.type === 'sdf') return 1;
-          if (a.type === 'canvas') return 1;
-          if (b.type === 'canvas') return -1;
-          return 0;
-        },
-      );
-
-      // Initialize engines in sorted order
-      sortedEngines.forEach((fontEngine: TextRenderer) => {
-        const type = fontEngine.type;
-
-        // Add to map for type-based access
-        this.textRenderers[type] = fontEngine;
-        this.textRenderers[type].init(this);
-
-        this.fontHandlers[type] = fontEngine.font;
-      });
-    } else {
-      // Single font engine case - initialize it directly
-      const fontEngine = this.singleFontEngine;
-      const type = fontEngine.type;
-
-      // Check compatibility
-      if (type === 'sdf' && renderMode === 'canvas') {
-        console.warn(
-          'MsdfTextRenderer is not compatible with Canvas renderer. Skipping...',
-        );
-      } else {
-        if (type === 'canvas') {
-          this.hasCanvasEngine = true;
-        }
-
-        // Add to map for type-based access
-        this.textRenderers[type] = fontEngine;
-        this.fontHandlers[type] = fontEngine.font;
-        this.textRenderers[type].init(this);
-      }
-    }
-
-    if (Object.keys(this.textRenderers).length === 0) {
+    if (fontEngines.length === 0) {
       console.warn('No text renderers available. Your text will not render.');
     }
 
@@ -603,66 +517,6 @@ export class Stage {
     this.renderRequested = true;
   }
 
-  /**
-   * Given a font name, and possible renderer override, return the best compatible text renderer.
-   *
-   * @remarks
-   * Will try to return a canvas renderer if no other suitable renderer can be resolved.
-   *
-   * @param fontFamily
-   * @param textRendererOverride
-   * @returns
-   */
-  resolveTextRenderer(
-    trProps: TrProps,
-    textRendererOverride: keyof TextRenderers | null = null,
-  ): TextRenderer | null {
-    // If we have an overide, return it
-    if (textRendererOverride !== null) {
-      const overrideKey = String(textRendererOverride);
-      if (this.textRenderers[overrideKey] === undefined) {
-        console.warn(`Text renderer override '${overrideKey}' not found.`);
-        return null;
-      }
-
-      return this.textRenderers[overrideKey];
-    }
-
-    // If we have only one font engine early return it
-    if (this.singleFontEngine !== null) {
-      // If we have only one font engine and its the canvas engine, we can just return it
-      if (this.hasOnlyCanvasFontEngine === true) {
-        return this.singleFontEngine;
-      }
-
-      // If we have only one font engine and it can render the font, return it
-      if (this.singleFontHandler?.canRenderFont(trProps) === true) {
-        return this.singleFontEngine;
-      }
-
-      // If we have only one font engine and it cannot render the font, return null
-      console.warn(`Text renderer cannot render font`, trProps);
-
-      return null;
-    }
-
-    // Multi font handling  - If we have multiple font engines, we need to resolve the best one
-
-    // First check SDF
-    if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
-      return this.textRenderers.sdf || null;
-    }
-
-    // If we have a canvas engine, we can return it (it can render all fonts)
-    if (this.hasCanvasEngine === true) {
-      return this.textRenderers.canvas || null;
-    }
-
-    // If we have no font engines, return null
-    console.warn('No text renderers available. Your text will not render.');
-    return null;
-  }
-
   createNode(props: Partial<CoreNodeProps>) {
     const resolvedProps = this.resolveNodeDefaults(props);
     return new CoreNode(this, resolvedProps);
@@ -672,7 +526,6 @@ export class Stage {
     const fontSize = props.fontSize || 16;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
       text: props.text || '',
-      textRendererOverride: props.textRendererOverride || null,
       fontSize,
       fontFamily: props.fontFamily || 'sans-serif',
       fontStyle: props.fontStyle || 'normal',
@@ -690,18 +543,7 @@ export class Stage {
       forceLoad: props.forceLoad || false,
     });
 
-    const resolvedTextRenderer = this.resolveTextRenderer(
-      resolvedProps,
-      resolvedProps.textRendererOverride as keyof TextRenderers | null,
-    );
-
-    if (!resolvedTextRenderer) {
-      throw new Error(
-        `No compatible text renderer found for ${resolvedProps.fontFamily}`,
-      );
-    }
-
-    return new CoreTextNode(this, resolvedProps, resolvedTextRenderer);
+    return new CoreTextNode(this, resolvedProps);
   }
 
   setBoundsMargin(value: number | [number, number, number, number]) {
@@ -911,17 +753,6 @@ export class Stage {
     rendererType: TextRenderers,
     options: FontLoadOptions,
   ): Promise<void> {
-    const rendererTypeKey = String(rendererType);
-    const fontHandler = this.fontHandlers[rendererTypeKey];
-
-    if (!fontHandler) {
-      throw new Error(
-        `Font handler for renderer type '${rendererTypeKey}' not found. Available types: ${Object.keys(
-          this.fontHandlers,
-        ).join(', ')}`,
-      );
-    }
-
-    return fontHandler.loadFont(this, options);
+    this.fontManager.loadFont(rendererType, options);
   }
 }
