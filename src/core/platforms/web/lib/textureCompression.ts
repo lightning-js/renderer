@@ -18,7 +18,6 @@
  */
 import { type CompressedData } from '../../../textures/Texture.js';
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
-import type { TextureData } from '../../../textures/Texture.js';
 import type { WebGlContextWrapper } from '../WebGlContextWrapper.js';
 
 export type UploadCompressedTextureFunction = (
@@ -157,7 +156,7 @@ const loadASTC = async function (view: DataView): Promise<ImageResponse> {
       mipmaps,
       w: sizeX,
       h: sizeY,
-      type: 'astc',
+      type: 'ASTC',
     },
     premultiplyAlpha: false,
   };
@@ -232,7 +231,7 @@ const loadKTX = async function (view: DataView): Promise<ImageResponse> {
       mipmaps,
       w: width,
       h: height,
-      type: 'ktx',
+      type: 'KTX',
     },
     premultiplyAlpha: false,
   };
@@ -324,7 +323,7 @@ const loadPVR = async function (view: DataView): Promise<ImageResponse> {
       mipmaps,
       w: width,
       h: height,
-      type: 'pvr',
+      type: 'PVR',
     },
     premultiplyAlpha: false,
   };
@@ -336,7 +335,7 @@ export interface CompressedImageData {
   mipmaps: ArrayBuffer[];
   w: number;
   h: number;
-  type: 'pvr' | 'ktx' | 'astc';
+  type: 'PVR' | 'KTX' | 'ASTC';
 }
 
 export type BlockInfo = {
