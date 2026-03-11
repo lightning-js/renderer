@@ -755,7 +755,6 @@ export class CoreNode extends EventEmitter {
   private zIndexMax = 0;
 
   public previousZIndex = -1;
-  public zIndexSortList: CoreNode[] = [];
 
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -1834,25 +1833,18 @@ export class CoreNode extends EventEmitter {
   }
 
   sortChildren() {
-    const changedCount = this.zIndexSortList.length;
-    if (changedCount === 0) {
-      return;
-    }
     const children = this.children;
     const n = children.length;
 
     if (n === 0) {
       this.zIndexMin = 0;
       this.zIndexMax = 0;
-      this.zIndexSortList.length = 0;
       return;
     }
 
     let firstZIndex = children[0]!.props.zIndex;
     let min = firstZIndex;
     let max = firstZIndex;
-    let prevZIndex = firstZIndex;
-    let isSorted = true;
 
     for (let i = 1; i < n; i++) {
       const zIndex = children[i]!.props.zIndex;
@@ -1861,10 +1853,6 @@ export class CoreNode extends EventEmitter {
       } else if (zIndex > max) {
         max = zIndex;
       }
-      if (prevZIndex > zIndex) {
-        isSorted = false;
-      }
-      prevZIndex = zIndex;
     }
 
     // update min and max zIndex
@@ -1873,21 +1861,9 @@ export class CoreNode extends EventEmitter {
 
     // if min and max are the same, no need to sort
     if (min === max) {
-      this.zIndexSortList.length = 0;
       return;
     }
-
-    // decide whether to use incremental sort or bucket sort
-    const useIncremental = changedCount <= 2 || changedCount < n * 0.05;
-
-    // when changed count is less than 2 or 5% of total children, use incremental sort
-    if (useIncremental === true && isSorted === true) {
-      incrementalRepositionByZIndex(this.zIndexSortList, children);
-    } else {
-      bucketSortByZIndex(children, min);
-    }
-
-    this.zIndexSortList.length = 0;
+    bucketSortByZIndex(children, min);
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
@@ -1906,43 +1882,12 @@ export class CoreNode extends EventEmitter {
     if (children.length === 0) {
       this.zIndexMin = 0;
       this.zIndexMax = 0;
-      this.zIndexSortList.length = 0;
       return;
-    }
-
-    const changedNodes = this.zIndexSortList;
-    const changedCount = changedNodes.length;
-    if (changedCount !== 0) {
-      if (changedCount === 1) {
-        if (changedNodes[0] === node) {
-          changedNodes.length = 0;
-        }
-      } else {
-        for (let i = changedCount - 1; i >= 0; i--) {
-          if (changedNodes[i] === node) {
-            changedNodes.splice(i, 1);
-          }
-        }
-      }
     }
 
     const removedZIndex = node.zIndex;
     if (removedZIndex === this.zIndexMin || removedZIndex === this.zIndexMax) {
-      let min = Infinity;
-      let max = -Infinity;
-
-      for (let i = 0; i < children.length; i++) {
-        const zIndex = children[i]!.zIndex;
-        if (zIndex < min) {
-          min = zIndex;
-        }
-        if (zIndex > max) {
-          max = zIndex;
-        }
-      }
-
-      this.zIndexMin = min;
-      this.zIndexMax = max;
+      this.setUpdateType(UpdateType.SortZIndexChildren);
     }
   }
 
@@ -1999,12 +1944,7 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    const previousSibling = children[children.length - 2];
-    const insertedOutOfOrder =
-      previousSibling !== undefined && previousSibling.zIndex > zIndex;
-
-    if (this.zIndexMax !== this.zIndexMin || insertedOutOfOrder === true) {
-      this.zIndexSortList.push(node);
+    if (this.zIndexMax !== this.zIndexMin) {
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
     this.setUpdateType(UpdateType.Children);
@@ -2460,8 +2400,11 @@ export class CoreNode extends EventEmitter {
     this.props.zIndex = sanitizedValue;
     const parent = this.parent;
     if (parent !== null) {
-      parent.zIndexSortList.push(this);
-      parent.setUpdateType(UpdateType.SortZIndexChildren);
+      const min = parent.zIndexMin;
+      const max = parent.zIndexMax;
+      if (min !== max || sanitizedValue < min || sanitizedValue > max) {
+        parent.setUpdateType(UpdateType.SortZIndexChildren);
+      }
     }
   }
 
