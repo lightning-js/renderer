@@ -69,20 +69,18 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     varying vec4 v_innerBorderRadius;
     varying vec4 v_outerBorderRadius;
     varying vec2 v_halfDimensions;
-    varying float v_edgeWidth;
-    varying float v_borderZero;
 
     void main() {
       vec2 vertexPos = a_position * u_pixelRatio;
       vec2 screenSpace = vec2(2.0 / u_resolution.x, -2.0 / u_resolution.y);
       vec2 edge = clamp(a_nodeCoords * 2.0 - vec2(1.0), -1.0, 1.0);
       vec2 edgeOffset = vec2(0.0);
+      float borderZero = 1.0 - step(0.001, dot(abs(u_borderWidth), vec4(1.0)));
 
-      v_borderZero = u_borderWidth == vec4(0.0) ? 1.0 : 0.0;
       v_innerSize = vec2(0.0);
       v_outerSize = vec2(0.0);
 
-      if(v_borderZero == 0.0) {
+      if(borderZero == 0.0) {
         vec4 adjustedBorderWidth = u_borderWidth - 1.0 + clamp(u_borderWidth, -1.0, 1.0);
 
         float borderTop = adjustedBorderWidth.x;
@@ -143,7 +141,6 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       v_textureCoords = a_textureCoords + (screenSpace + edgeOffset) / (u_dimensions);
 
       v_halfDimensions = u_dimensions * 0.5;
-      v_edgeWidth = 1.0 / u_pixelRatio;
     }
   `,
   fragment: `
@@ -176,8 +173,6 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
     varying vec4 v_innerBorderRadius;
     varying vec4 v_outerBorderRadius;
     varying vec2 v_halfDimensions;
-    varying float v_edgeWidth;
-    varying float v_borderZero;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
       r.xy = (p.x > 0.0) ? r.yz : r.xw;
@@ -190,21 +185,23 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       vec4 color = texture2D(u_texture, v_textureCoords) * v_color;
       vec4 resultColor = vec4(0.0);
       vec2 boxUv = v_nodeCoords.xy * u_dimensions - v_halfDimensions;
+      float borderZero = 1.0 - step(0.001, dot(abs(u_borderWidth), vec4(1.0)));
+      float edgeWidth = 1.0 / u_pixelRatio;
 
-      float nodeDist = roundedBox(boxUv, v_halfDimensions - v_edgeWidth, u_radius);
-      float nodeAlpha = 1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, nodeDist);
+      float nodeDist = roundedBox(boxUv, v_halfDimensions - edgeWidth, u_radius);
+      float nodeAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, nodeDist);
       resultColor = mix(resultColor, color, nodeAlpha);
 
-      if(v_borderZero == 1.0) {
+      if(borderZero == 1.0) {
         gl_FragColor = resultColor * u_alpha;
         return;
       }
 
-      float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - v_edgeWidth, v_outerBorderRadius);
-      float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - v_edgeWidth, v_innerBorderRadius);
+      float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - edgeWidth, v_outerBorderRadius);
+      float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - edgeWidth, v_innerBorderRadius);
 
       float borderDist = max(-innerDist, outerDist);
-      float borderAlpha = (1.0 - smoothstep(-0.5 * v_edgeWidth, 0.5 * v_edgeWidth, borderDist)) * u_borderColor.a;
+      float borderAlpha = (1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, borderDist)) * u_borderColor.a;
 
       resultColor = mix(resultColor, vec4(u_borderColor.rgb, 1.0), borderAlpha);
       gl_FragColor = resultColor * u_alpha;
