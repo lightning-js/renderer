@@ -1845,6 +1845,8 @@ export class CoreNode extends EventEmitter {
     let firstZIndex = children[0]!.props.zIndex;
     let min = firstZIndex;
     let max = firstZIndex;
+    let prevZIndex = firstZIndex;
+    let isSorted = true;
 
     for (let i = 1; i < n; i++) {
       const zIndex = children[i]!.props.zIndex;
@@ -1853,6 +1855,10 @@ export class CoreNode extends EventEmitter {
       } else if (zIndex > max) {
         max = zIndex;
       }
+      if (prevZIndex > zIndex) {
+        isSorted = false;
+      }
+      prevZIndex = zIndex;
     }
 
     // update min and max zIndex
@@ -1860,7 +1866,7 @@ export class CoreNode extends EventEmitter {
     this.zIndexMax = max;
 
     // if min and max are the same, no need to sort
-    if (min === max) {
+    if (min === max || isSorted === true) {
       return;
     }
     bucketSortByZIndex(children, min);
