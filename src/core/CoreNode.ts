@@ -61,11 +61,7 @@ import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
-import {
-  bucketSortByZIndex,
-  incrementalRepositionByZIndex,
-  removeChild,
-} from './lib/collectionUtils.js';
+import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
