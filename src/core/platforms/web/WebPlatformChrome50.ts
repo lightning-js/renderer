@@ -19,7 +19,6 @@
 
 import { WebPlatform } from './WebPlatform.js';
 import type { ImageResponse } from '../../textures/ImageTexture.js';
-import type { PlatformSettings } from '../Platform.js';
 import { ImageWorkerManager } from './lib/ImageWorker.js';
 
 /**
@@ -35,10 +34,6 @@ import { ImageWorkerManager } from './lib/ImageWorker.js';
  * - Image workers can still be used if enabled via settings
  */
 export class WebPlatformChrome50 extends WebPlatform {
-  constructor(settings: PlatformSettings = {}) {
-    super(settings);
-  }
-
   protected override createImageWorkerManager(
     numImageWorkers: number,
   ): ImageWorkerManager {

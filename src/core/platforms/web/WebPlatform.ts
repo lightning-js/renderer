@@ -166,13 +166,10 @@ export class WebPlatform extends Platform {
   // Image handling
   ////////////////////////
 
-  override fetch(
-    url: string,
-    responseType: XMLHttpRequestResponseType = '',
-  ): Promise<Blob> {
+  override fetch(url: string): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.responseType = responseType;
+      xhr.responseType = 'blob';
       xhr.onreadystatechange = function () {
         if (xhr.readyState == XMLHttpRequest.DONE) {
           // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
@@ -254,7 +251,7 @@ export class WebPlatform extends Platform {
     if (isBase64 === true) {
       blob = dataURIToBlob(src);
     } else {
-      blob = await this.fetch(absoluteSrc, 'blob');
+      blob = await this.fetch(absoluteSrc);
     }
 
     return this.createImage(blob, premultiplyAlpha, x, y, width, height);
