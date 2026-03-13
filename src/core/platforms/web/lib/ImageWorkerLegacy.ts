@@ -24,26 +24,6 @@ export function createImageWorkerLegacy() {
     return mimeType.indexOf('image/png') !== -1;
   }
 
-  function blobToDataUrl(blob: Blob): Promise<string> {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-
-      reader.onload = function () {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('Failed to convert blob to data URL.'));
-        }
-      };
-
-      reader.onerror = function () {
-        reject(new Error('Failed to read image blob.'));
-      };
-
-      reader.readAsDataURL(blob);
-    });
-  }
-
   function getImage(
     src: string,
     premultiplyAlpha: boolean | null,
@@ -51,7 +31,7 @@ export function createImageWorkerLegacy() {
     y: number | null,
     width: number | null,
     height: number | null,
-  ): Promise<{ data: string; premultiplyAlpha: boolean | null }> {
+  ): Promise<{ data: Blob; premultiplyAlpha: boolean | null }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', src, true);
@@ -74,13 +54,7 @@ export function createImageWorkerLegacy() {
             ? premultiplyAlpha
             : hasAlphaChannel(blob.type);
 
-        blobToDataUrl(blob)
-          .then(function (dataUrl) {
-            resolve({ data: dataUrl, premultiplyAlpha: withAlphaChannel });
-          })
-          .catch(function (error) {
-            reject(error);
-          });
+        resolve({ data: blob, premultiplyAlpha: withAlphaChannel });
       };
 
       xhr.onerror = function () {

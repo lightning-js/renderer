@@ -18,6 +18,7 @@
  */
 
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
+import { createImageWorkerLegacy } from './ImageWorkerLegacy.js';
 import { createImageWorkerNoOptions } from './ImageWorkerNoOptions.js';
 import { createImageWorker } from './ImageWorkerDefault.js';
 
@@ -28,14 +29,14 @@ type MessageCallback = [
 type ImageWorkerMode = 'default' | 'noOptions' | 'legacy';
 
 interface ImageWorkerLegacyResponse {
-  data: string;
+  data: Blob;
   premultiplyAlpha: boolean | null;
 }
 
 interface ImageWorkerMessage {
   id: number;
   src: string;
-  data: ImageResponse;
+  data: ImageResponse | ImageWorkerLegacyResponse;
   error: string;
   sx: number | null;
   sy: number | null;
@@ -60,6 +61,34 @@ export class ImageWorkerManager {
     });
   }
 
+  private isLegacyResponse(
+    data: ImageResponse | ImageWorkerLegacyResponse,
+  ): data is ImageWorkerLegacyResponse {
+    return data.data instanceof Blob;
+  }
+
+  private createImageFromBlob(
+    blob: Blob,
+    premultiplyAlpha: boolean | null,
+  ): Promise<ImageResponse> {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(blob);
+      const image = new Image();
+
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({ data: image, premultiplyAlpha });
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Image loading failed for legacy worker response.'));
+      };
+
+      image.src = objectUrl;
+    });
+  }
+
   private handleMessage(event: MessageEvent, workerIndex: number) {
     const { id, data, error } = event.data as ImageWorkerMessage;
     const msg = this.messageManager[id];
@@ -73,6 +102,10 @@ export class ImageWorkerManager {
       delete this.messageManager[id];
       if (error) {
         reject(new Error(error));
+      } else if (this.isLegacyResponse(data)) {
+        this.createImageFromBlob(data.data, data.premultiplyAlpha)
+          .then(resolve)
+          .catch(reject);
       } else {
         resolve(data);
       }
@@ -87,6 +120,8 @@ export class ImageWorkerManager {
 
     if (workerMode === 'noOptions') {
       workerFactory = createImageWorkerNoOptions;
+    } else if (workerMode === 'legacy') {
+      workerFactory = createImageWorkerLegacy;
     }
 
     let workerCode = `(${workerFactory.toString()})()`;
