@@ -19,6 +19,7 @@
 
 import { WebPlatform } from './WebPlatform.js';
 import type { ImageResponse } from '../../textures/ImageTexture.js';
+import { ImageWorkerManager } from './lib/ImageWorker.js';
 
 /**
  * Chrome 50 Web Platform implementation with limited createImageBitmap support
@@ -33,6 +34,12 @@ import type { ImageResponse } from '../../textures/ImageTexture.js';
  * - Image workers can still be used if enabled via settings
  */
 export class WebPlatformChrome50 extends WebPlatform {
+  protected override createImageWorkerManager(
+    numImageWorkers: number,
+  ): ImageWorkerManager {
+    return new ImageWorkerManager(numImageWorkers, 'noOptions');
+  }
+
   override async createImage(
     blob: Blob,
     premultiplyAlpha: boolean | null,

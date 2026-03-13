@@ -20,6 +20,7 @@
 import { WebPlatform } from './WebPlatform.js';
 import type { PlatformSettings } from '../Platform.js';
 import type { ImageResponse } from '../../textures/ImageTexture.js';
+import { ImageWorkerManager } from './lib/ImageWorker.js';
 import {
   isBase64Image,
   dataURIToBlob,
@@ -37,8 +38,13 @@ import {
  */
 export class WebPlatformLegacy extends WebPlatform {
   constructor(settings: PlatformSettings = {}) {
-    // Force image workers to be disabled in legacy mode
-    super({ ...settings, numImageWorkers: 0 });
+    super({ ...settings, numImageWorkers: settings.numImageWorkers ?? 0 });
+  }
+
+  protected override createImageWorkerManager(
+    numImageWorkers: number,
+  ): ImageWorkerManager {
+    return new ImageWorkerManager(numImageWorkers, 'legacy');
   }
 
   override async loadImage(
@@ -50,6 +56,11 @@ export class WebPlatformLegacy extends WebPlatform {
     sh?: number | null,
   ): Promise<ImageResponse> {
     const isBase64 = isBase64Image(src);
+
+    if (isBase64 === false && this.settings.numImageWorkers > 0) {
+      return super.loadImage(src, premultiplyAlpha, sx, sy, sw, sh);
+    }
+
     const absoluteSrc = convertUrlToAbsolute(src);
 
     // For base64 images, use blob conversion
