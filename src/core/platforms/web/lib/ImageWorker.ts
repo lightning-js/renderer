@@ -18,8 +18,19 @@
  */
 
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
+import { createImageWorkerNoOptions } from './ImageWorkerNoOptions.js';
+import { createImageWorker } from './ImageWorkerDefault.js';
 
-type MessageCallback = [(value: any) => void, (reason: any) => void];
+type MessageCallback = [
+  (value: ImageResponse) => void,
+  (reason: unknown) => void,
+];
+type ImageWorkerMode = 'default' | 'noOptions' | 'legacy';
+
+interface ImageWorkerLegacyResponse {
+  data: string;
+  premultiplyAlpha: boolean | null;
+}
 
 interface ImageWorkerMessage {
   id: number;
@@ -32,112 +43,6 @@ interface ImageWorkerMessage {
   sh: number | null;
 }
 
-/**
- * Note that, within the createImageWorker function, we must only use ES5 code to keep it ES5-valid after babelifying, as
- *  the converted code of this section is converted to a blob and used as the js of the web worker thread.
- *
- * The createImageWorker function is a web worker that fetches an image from a URL and returns an ImageBitmap object.
- * The eslint @typescript rule is disabled for the entire function because the function is converted to a blob and used as the
- * js of the web worker thread, so the typescript syntax is not valid in this context.
- */
-
-/* eslint-disable */
-function createImageWorker() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
-  function getImage(
-    src: string,
-    premultiplyAlpha: boolean | null,
-    x: number | null,
-    y: number | null,
-    width: number | null,
-    height: number | null,
-  ): Promise<ImageResponse> {
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.responseType = 'blob';
-
-      xhr.onload = function () {
-        // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
-        if (xhr.status !== 200 && xhr.status !== 0) {
-          return reject(
-            new Error(
-              `Image loading failed. HTTP status code: ${
-                xhr.status || 'N/A'
-              }. URL: ${src}`,
-            ),
-          );
-        }
-
-        var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
-
-        // createImageBitmap with crop and options
-        if (width !== null && height !== null) {
-          createImageBitmap(blob, x || 0, y || 0, width, height, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
-            .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
-            })
-            .catch(function (error) {
-              reject(error);
-            });
-          return;
-        } else {
-          createImageBitmap(blob, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
-            .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
-            })
-            .catch(function (error) {
-              reject(error);
-            });
-        }
-      };
-
-      xhr.onerror = function () {
-        reject(
-          new Error('Network error occurred while trying to fetch the image.'),
-        );
-      };
-
-      xhr.send();
-    });
-  }
-
-  self.onmessage = (event) => {
-    var src = event.data.src;
-    var id = event.data.id;
-    var premultiplyAlpha = event.data.premultiplyAlpha;
-    var x = event.data.sx;
-    var y = event.data.sy;
-    var width = event.data.sw;
-    var height = event.data.sh;
-
-    getImage(src, premultiplyAlpha, x, y, width, height)
-      .then(function (data) {
-        // @ts-ignore ts has wrong postMessage signature
-        self.postMessage({ id: id, src: src, data: data }, [data.data]);
-      })
-      .catch(function (error) {
-        self.postMessage({ id: id, src: src, error: error.message });
-      });
-  };
-}
-/* eslint-enable */
-
 export class ImageWorkerManager {
   imageWorkersEnabled = true;
   messageManager: Record<number, MessageCallback> = {};
@@ -145,8 +50,11 @@ export class ImageWorkerManager {
   workerLoad: number[] = [];
   nextId = 0;
 
-  constructor(numImageWorkers: number) {
-    this.workers = this.createWorkers(numImageWorkers);
+  constructor(
+    numImageWorkers: number,
+    workerMode: ImageWorkerMode = 'default',
+  ) {
+    this.workers = this.createWorkers(numImageWorkers, workerMode);
     this.workers.forEach((worker, index) => {
       worker.onmessage = (event) => this.handleMessage(event, index);
     });
@@ -171,8 +79,17 @@ export class ImageWorkerManager {
     }
   }
 
-  private createWorkers(numWorkers = 1): Worker[] {
-    let workerCode = `(${createImageWorker.toString()})()`;
+  private createWorkers(
+    numWorkers = 1,
+    workerMode: ImageWorkerMode = 'default',
+  ): Worker[] {
+    let workerFactory = createImageWorker;
+
+    if (workerMode === 'noOptions') {
+      workerFactory = createImageWorkerNoOptions;
+    }
+
+    let workerCode = `(${workerFactory.toString()})()`;
 
     workerCode = workerCode.replace('"use strict";', '');
     const blob: Blob = new Blob([workerCode], {
@@ -226,9 +143,15 @@ export class ImageWorkerManager {
 
           if (nextWorkerIndex !== -1) {
             const worker = this.workers[nextWorkerIndex];
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.workerLoad[nextWorkerIndex]!++;
-            worker!.postMessage({
+            if (worker === undefined) {
+              delete this.messageManager[id];
+              reject(new Error('No image worker available.'));
+              return;
+            }
+
+            this.workerLoad[nextWorkerIndex] =
+              (this.workerLoad[nextWorkerIndex] ?? 0) + 1;
+            worker.postMessage({
               id,
               src: src,
               premultiplyAlpha,

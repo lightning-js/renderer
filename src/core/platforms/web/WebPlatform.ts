@@ -37,7 +37,7 @@ import type { GlContextWrapper } from '../GlContextWrapper.js';
  * make fontface add not show errors
  */
 interface FontFaceSetWithAdd extends FontFaceSet {
-  add(font: FontFace): void;
+  add(font: FontFace): this;
 }
 
 export class WebPlatform extends Platform {
@@ -52,8 +52,14 @@ export class WebPlatform extends Platform {
     this.useImageWorker = numImageWorkers > 0 && this.hasWorker;
 
     if (this.useImageWorker === true) {
-      this.imageWorkerManager = new ImageWorkerManager(numImageWorkers);
+      this.imageWorkerManager = this.createImageWorkerManager(numImageWorkers);
     }
+  }
+
+  protected createImageWorkerManager(
+    numImageWorkers: number,
+  ): ImageWorkerManager {
+    return new ImageWorkerManager(numImageWorkers);
   }
 
   ////////////////////////
@@ -65,7 +71,11 @@ export class WebPlatform extends Platform {
   }
 
   override createContext(): GlContextWrapper {
-    const gl = createWebGLContext(this.canvas!, this.settings.forceWebGL2);
+    if (this.canvas === null) {
+      throw new Error('Canvas has not been created yet.');
+    }
+
+    const gl = createWebGLContext(this.canvas, this.settings.forceWebGL2);
     this.glw = new WebGlContextWrapper(gl);
     return this.glw;
   }
@@ -167,7 +177,11 @@ export class WebPlatform extends Platform {
         if (xhr.readyState == XMLHttpRequest.DONE) {
           // On most devices like WebOS and Tizen, the file protocol returns 0 while http(s) protocol returns 200
           if (xhr.status === 0 || xhr.status === 200) {
-            resolve(xhr.response);
+            if (xhr.response instanceof Blob) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error('Expected blob response while loading image.'));
+            }
           } else {
             reject(xhr.statusText);
           }
