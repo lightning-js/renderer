@@ -112,10 +112,6 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     const program = createProgram(glw, vertexShader, fragmentShader);
-    if (!program) {
-      throw new Error();
-    }
-
     this.program = program;
     this.attributeLocations = glw.getAttributeLocations(program);
 

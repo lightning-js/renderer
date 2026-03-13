@@ -221,9 +221,11 @@ export function createProgram(
     return program;
   }
 
-  console.warn(glw.getProgramInfoLog(program));
+  const infoLog =
+    glw.getProgramInfoLog(program) || 'Unknown program link error';
+  console.warn(infoLog);
   glw.deleteProgram(program);
-  return undefined;
+  throw new Error(`Unable to link shader program: ${infoLog}`);
 }
 
 export const DefaultVertexSource = `
