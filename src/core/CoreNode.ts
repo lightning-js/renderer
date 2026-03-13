@@ -895,7 +895,7 @@ export class CoreNode extends EventEmitter {
 
     // if the default texture isn't loaded yet, wait for it to load
     // this only happens when the node is created before the stage is ready
-    const dt = this.stage.defaultTexture;
+    const dt = stage.defaultTexture;
     if (dt !== null && dt.state !== 'loaded') {
       dt.once('loaded', () => this.setUpdateType(UpdateType.IsRenderable));
     }

@@ -104,24 +104,24 @@ export class WebGlRenderer extends CoreRenderer {
   constructor(stage: Stage) {
     super(stage);
 
-    this.quadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
+    this.quadBuffer = new ArrayBuffer(stage.options.quadBufferSize);
     this.fQuadBuffer = new Float32Array(this.quadBuffer);
     this.uiQuadBuffer = new Uint32Array(this.quadBuffer);
 
     this.mode = 'webgl';
 
-    const platform = this.stage.platform;
+    const platform = stage.platform;
     const canvas = platform.canvas!;
 
     const glw = (this.glw = platform.createContext() as GlContextWrapper);
     glw.viewport(0, 0, canvas.width, canvas.height);
 
-    this.updateClearColor(this.stage.clearColor);
+    this.updateClearColor(stage.clearColor);
 
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(glw, this.stage.bufferMemory);
+    createIndexBuffer(glw, stage.bufferMemory);
 
     this.system = {
       parameters: getWebGlParameters(this.glw),

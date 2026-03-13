@@ -91,14 +91,14 @@ export class SubTexture extends Texture {
     super(txManager);
     this.props = props;
 
-    assertTruthy(this.props.texture, 'SubTexture requires a parent texture');
+    assertTruthy(props.texture, 'SubTexture requires a parent texture');
     assertTruthy(
-      this.props.texture instanceof ImageTexture,
+      props.texture instanceof ImageTexture,
       'SubTexture requires an ImageTexture parent',
     );
 
     // Resolve parent texture from cache or fallback to provided texture
-    this.parentTexture = txManager.resolveParentTexture(this.props.texture);
+    this.parentTexture = txManager.resolveParentTexture(props.texture);
 
     if (this.renderableOwners.length > 0) {
       this.parentTexture.setRenderableOwner(this.subtextureId, true);
