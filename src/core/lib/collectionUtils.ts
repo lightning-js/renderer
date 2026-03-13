@@ -60,42 +60,6 @@ export const bucketSortByZIndex = (nodes: CoreNode[], min: number): void => {
   bucketIndices.length = 0;
 };
 
-export const incrementalRepositionByZIndex = (
-  changedNodes: CoreNode[],
-  nodes: CoreNode[],
-): void => {
-  for (let i = 0; i < changedNodes.length; i++) {
-    const node = changedNodes[i]!;
-    const currentIndex = findChildIndexById(node, nodes);
-    if (currentIndex === -1) continue;
-
-    const targetZIndex = node.props.zIndex;
-
-    //binary search for correct insertion position
-    let left = 0;
-    let right = currentIndex === nodes.length - 1 ? currentIndex : nodes.length;
-
-    while (left < right) {
-      const mid = (left + right) >>> 1;
-      const target = nodes[mid]!;
-      if (target.props.zIndex <= targetZIndex) {
-        left = mid + 1;
-      } else {
-        right = mid;
-      }
-    }
-
-    //adjust target position if it's after the current position
-    const targetIndex = left > currentIndex ? left - 1 : left;
-
-    //only reposition if target is different from current
-    if (targetIndex !== currentIndex) {
-      nodes.splice(currentIndex, 1);
-      nodes.splice(targetIndex, 0, node);
-    }
-  }
-};
-
 export const findChildIndexById = (
   node: CoreNode,
   children: CoreNode[],

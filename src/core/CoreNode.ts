@@ -61,11 +61,7 @@ import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
-import {
-  bucketSortByZIndex,
-  incrementalRepositionByZIndex,
-  removeChild,
-} from './lib/collectionUtils.js';
+import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
 
 export enum CoreNodeRenderState {
   Init = 0,
@@ -755,7 +751,6 @@ export class CoreNode extends EventEmitter {
   private zIndexMax = 0;
 
   public previousZIndex = -1;
-  public zIndexSortList: CoreNode[] = [];
 
   public updateType = UpdateType.All;
   public childUpdateType = UpdateType.None;
@@ -1834,22 +1829,32 @@ export class CoreNode extends EventEmitter {
   }
 
   sortChildren() {
-    const changedCount = this.zIndexSortList.length;
-    if (changedCount === 0) {
+    const children = this.children;
+    const n = children.length;
+
+    if (n === 0) {
+      this.zIndexMin = 0;
+      this.zIndexMax = 0;
       return;
     }
-    const children = this.children;
-    let min = Infinity;
-    let max = -Infinity;
-    // find min and max zIndex
-    for (let i = 0; i < children.length; i++) {
+
+    let firstZIndex = children[0]!.props.zIndex;
+    let min = firstZIndex;
+    let max = firstZIndex;
+    let prevZIndex = firstZIndex;
+    let isSorted = true;
+
+    for (let i = 1; i < n; i++) {
       const zIndex = children[i]!.props.zIndex;
       if (zIndex < min) {
         min = zIndex;
-      }
-      if (zIndex > max) {
+      } else if (zIndex > max) {
         max = zIndex;
       }
+      if (prevZIndex > zIndex) {
+        isSorted = false;
+      }
+      prevZIndex = zIndex;
     }
 
     // update min and max zIndex
@@ -1857,23 +1862,10 @@ export class CoreNode extends EventEmitter {
     this.zIndexMax = max;
 
     // if min and max are the same, no need to sort
-    if (min === max) {
+    if (min === max || isSorted === true) {
       return;
     }
-
-    const n = children.length;
-    // decide whether to use incremental sort or bucket sort
-    const useIncremental = changedCount <= 2 || changedCount < n * 0.05;
-
-    // when changed count is less than 2 or 5% of total children, use incremental sort
-    if (useIncremental === true) {
-      incrementalRepositionByZIndex(this.zIndexSortList, children);
-    } else {
-      bucketSortByZIndex(children, min);
-    }
-
-    this.zIndexSortList.length = 0;
-    this.zIndexSortList = [];
+    bucketSortByZIndex(children, min);
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
@@ -1886,7 +1878,19 @@ export class CoreNode extends EventEmitter {
         autosizeTarget.detach(node);
       }
     }
-    removeChild(node, this.children);
+    const children = this.children;
+    removeChild(node, children);
+
+    if (children.length === 0) {
+      this.zIndexMin = 0;
+      this.zIndexMax = 0;
+      return;
+    }
+
+    const removedZIndex = node.zIndex;
+    if (removedZIndex === this.zIndexMin || removedZIndex === this.zIndexMax) {
+      this.setUpdateType(UpdateType.SortZIndexChildren);
+    }
   }
 
   addChild(node: CoreNode, previousParent: CoreNode | null = null) {
@@ -1930,15 +1934,19 @@ export class CoreNode extends EventEmitter {
 
     children.push(node);
 
-    if (zIndex < this.zIndexMin) {
+    if (children.length === 1) {
       this.zIndexMin = zIndex;
-    }
-    if (zIndex > this.zIndexMax) {
       this.zIndexMax = zIndex;
+    } else {
+      if (zIndex < this.zIndexMin) {
+        this.zIndexMin = zIndex;
+      }
+      if (zIndex > this.zIndexMax) {
+        this.zIndexMax = zIndex;
+      }
     }
 
     if (this.zIndexMax !== this.zIndexMin) {
-      this.zIndexSortList.push(node);
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
     this.setUpdateType(UpdateType.Children);
@@ -2397,7 +2405,6 @@ export class CoreNode extends EventEmitter {
       const min = parent.zIndexMin;
       const max = parent.zIndexMax;
       if (min !== max || sanitizedValue < min || sanitizedValue > max) {
-        parent.zIndexSortList.push(this);
         parent.setUpdateType(UpdateType.SortZIndexChildren);
       }
     }

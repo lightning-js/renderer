@@ -60,7 +60,7 @@ export interface CompressedData {
   /**
    * Supported container types ('pvr' or 'ktx').
    */
-  type: 'pvr' | 'ktx' | 'astc';
+  type: 'PVR' | 'KTX' | 'ASTC';
 
   /**
    * The width of the compressed texture in pixels. Defaults to 0.
