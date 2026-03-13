@@ -202,7 +202,7 @@ export abstract class Texture extends EventEmitter {
 
   constructor(protected txManager: CoreTextureManager) {
     super();
-    this.maxRetryCount = this.txManager.maxRetryCount;
+    this.maxRetryCount = txManager.maxRetryCount;
   }
 
   get dimensions(): Dimensions | null {

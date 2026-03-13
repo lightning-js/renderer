@@ -227,7 +227,7 @@ export class MemMonitor extends Component {
       color: 0x000000ff,
     });
 
-    const payload = this.renderer.stage.txMemManager.getMemoryInfo();
+    const payload = renderer.stage.txMemManager.getMemoryInfo();
     const { criticalThreshold, targetThreshold } = payload;
     const targetFraction = targetThreshold / criticalThreshold;
     this.targetTick.y = BAR_HEIGHT - BAR_HEIGHT * targetFraction;

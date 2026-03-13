@@ -94,10 +94,10 @@ export class WebGlShaderNode<
         }
 
         if (prevKey.length > 0) {
-          this.stage.shManager.mutateShaderValueUsage(prevKey, -1);
+          stage.shManager.mutateShaderValueUsage(prevKey, -1);
         }
 
-        const values = this.stage.shManager.getShaderValues(
+        const values = stage.shManager.getShaderValues(
           this.valueKey,
         ) as unknown as UniformCollection;
         if (values !== undefined) {
@@ -112,7 +112,7 @@ export class WebGlShaderNode<
           vec4: {},
         };
         this.updater!(this.node as CoreNode);
-        this.stage.shManager.setShaderValues(
+        stage.shManager.setShaderValues(
           this.valueKey,
           this.uniforms as unknown as Record<string, unknown>,
         );
