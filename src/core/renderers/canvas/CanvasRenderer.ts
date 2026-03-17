@@ -43,8 +43,8 @@ export class CanvasRenderer extends CoreRenderer {
     const canvas = platform.canvas!;
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
-    this.pixelRatio = this.stage.pixelRatio;
-    this.clearColor = normalizeCanvasColor(this.stage.clearColor);
+    this.pixelRatio = stage.pixelRatio;
+    this.clearColor = normalizeCanvasColor(stage.clearColor);
   }
 
   reset(): void {

@@ -73,10 +73,10 @@ export class CanvasShaderNode<
         }
 
         if (prevKey.length > 0) {
-          this.stage.shManager.mutateShaderValueUsage(prevKey, -1);
+          stage.shManager.mutateShaderValueUsage(prevKey, -1);
         }
 
-        const computed = this.stage.shManager.getShaderValues(
+        const computed = stage.shManager.getShaderValues(
           this.valueKey,
         ) as Record<string, unknown>;
         if (computed !== undefined) {
@@ -84,7 +84,7 @@ export class CanvasShaderNode<
         }
         this.computed = {};
         this.updater!(this.node as CoreNode);
-        this.stage.shManager.setShaderValues(this.valueKey, this.computed);
+        stage.shManager.setShaderValues(this.valueKey, this.computed);
       };
     }
   }
