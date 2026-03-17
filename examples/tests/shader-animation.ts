@@ -55,7 +55,7 @@ export default async function test({
     x: testRoot.w - 90,
     y: 90,
     fontSize: 40,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     text: 'radius: 100',
     parent: testRoot,
     color: 0xffffffff,

@@ -24,10 +24,11 @@ import {
   breakWord,
   truncateLineEnd,
 } from '../TextLayoutEngine.js';
+import type { CoreFont } from '../CoreFont.js';
 
 // Mock font data for testing
 // Mock SdfFontHandler functions
-const mockGetGlyph = (_fontFamily: string, codepoint: number) => {
+const mockGetGlyph = (codepoint: number) => {
   // Mock glyph data - each character is 10 units wide for easy testing
   return {
     id: codepoint,
@@ -51,18 +52,14 @@ const mockGetKerning = () => {
 
 // Test-specific measureText function that mimics testMeasureText behavior
 // but works with our mocked getGlyph and getKerning functions
-const testMeasureText = (
-  text: string,
-  fontFamily: string,
-  letterSpacing: number,
-): number => {
+const testMeasureText = (text: string, letterSpacing: number): number => {
   if (text.length === 1) {
     const char = text.charAt(0);
     const codepoint = text.codePointAt(0);
     if (codepoint === undefined) return 0;
     if (char === '\u200B') return 0; // Zero-width space
 
-    const glyph = mockGetGlyph(fontFamily, codepoint);
+    const glyph = mockGetGlyph(codepoint);
     if (glyph === null) return 0;
     return glyph.xadvance + letterSpacing;
   }
@@ -78,7 +75,7 @@ const testMeasureText = (
       continue;
     }
 
-    const glyph = mockGetGlyph(fontFamily, codepoint);
+    const glyph = mockGetGlyph(codepoint);
     if (glyph === null) continue;
 
     let advance = glyph.xadvance;
@@ -96,26 +93,30 @@ const testMeasureText = (
   return width;
 };
 
+const font = {
+  measureText: testMeasureText,
+} as unknown as CoreFont;
+
 // Mock measureText function to replace the broken SDF implementation
 describe('SDF Text Utils', () => {
   describe('measureText', () => {
     it('should return correct width for basic text', () => {
-      const width = testMeasureText('hello', 'Arial', 0);
+      const width = font.measureText('hello', 0);
       expect(width).toBeCloseTo(50); // 5 chars * 10 xadvance
     });
 
     it('should return 0 width for empty text', () => {
-      const width = testMeasureText('', 'Arial', 0);
+      const width = font.measureText('', 0);
       expect(width).toBe(0);
     });
 
     it('should include letter spacing in width calculation', () => {
-      const width = testMeasureText('hello', 'Arial', 2);
+      const width = font.measureText('hello', 2);
       expect(width).toBeCloseTo(60); // 5 chars * (10 xadvance + 2 letterSpacing)
     });
 
     it('should skip zero-width spaces in width calculation', () => {
-      const width = testMeasureText('hel\u200Blo', 'Arial', 0);
+      const width = font.measureText('hel\u200Blo', 0);
       expect(width).toBeCloseTo(50); // Should be same as 'hello'
     });
   });
@@ -123,9 +124,8 @@ describe('SDF Text Utils', () => {
   describe('wrapLine', () => {
     it('should wrap text that exceeds max width', () => {
       const result = wrapLine(
-        testMeasureText, // Add measureText as first parameter
+        font, // Add measureText as first parameter
         'hello world test',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -143,9 +143,8 @@ describe('SDF Text Utils', () => {
 
     it('should handle single word that fits', () => {
       const result = wrapLine(
-        testMeasureText,
+        font,
         'hello',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -159,9 +158,8 @@ describe('SDF Text Utils', () => {
 
     it('should break long words', () => {
       const result = wrapLine(
-        testMeasureText,
+        font,
         'verylongwordthatdoesnotfit',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -180,9 +178,8 @@ describe('SDF Text Utils', () => {
     it('should handle ZWSP as word break opportunity', () => {
       // Test 1: ZWSP should provide break opportunity when needed
       const result1 = wrapLine(
-        testMeasureText,
+        font,
         'hello\u200Bworld test',
-        'Arial',
         100, // maxWidth (10 characters at 10 units each)
         0, // designLetterSpacing
         10, // spaceWidth
@@ -198,9 +195,8 @@ describe('SDF Text Utils', () => {
 
       // Test 2: ZWSP should NOT break when text fits on one line
       const result2 = wrapLine(
-        testMeasureText,
+        font,
         'hi\u200Bthere',
-        'Arial',
         200, // maxWidth
         0, // designLetterSpacing
         10, // spaceWidth
@@ -213,9 +209,8 @@ describe('SDF Text Utils', () => {
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
-        testMeasureText,
+        font,
         'verylongword\u200Bmore',
-        'Arial',
         100, // 10 characters max - forces break at ZWSP
         0,
         10, // spaceWidth
@@ -230,9 +225,8 @@ describe('SDF Text Utils', () => {
 
     it('should truncate with suffix when max lines reached', () => {
       const result = wrapLine(
-        testMeasureText,
+        font,
         'hello world test more and even more text that exceeds limits',
-        'Arial',
         200, // Wide enough to force multiple words on one line
         0,
         10, // spaceWidth
@@ -252,9 +246,8 @@ describe('SDF Text Utils', () => {
   describe('wrapText', () => {
     it('should wrap multiple lines', () => {
       const result = wrapText(
-        testMeasureText,
+        font,
         'line one\nline two that is longer',
-        'Arial',
         100,
         0,
         '',
@@ -267,9 +260,8 @@ describe('SDF Text Utils', () => {
 
     it('should handle empty lines', () => {
       const result = wrapText(
-        testMeasureText,
+        font,
         'line one\n\nline three',
-        'Arial',
         100,
         0,
         '',
@@ -281,9 +273,8 @@ describe('SDF Text Utils', () => {
 
     it('should respect max lines limit', () => {
       const result = wrapText(
-        testMeasureText,
+        font,
         'line one\\nline two\\nline three\\nline four',
-        'Arial',
         100,
         0,
         '',
@@ -298,8 +289,7 @@ describe('SDF Text Utils', () => {
   describe('truncateLineWithSuffix', () => {
     it('should truncate line and add suffix', () => {
       const result = truncateLineEnd(
-        testMeasureText,
-        'Arial',
+        font,
         0,
         'this is a very long line', //current line
         240, // current line width
@@ -314,8 +304,7 @@ describe('SDF Text Utils', () => {
 
     it('should return suffix if suffix is too long', () => {
       const result = truncateLineEnd(
-        testMeasureText,
-        'Arial',
+        font,
         0,
         'hello',
         50, // current line width
@@ -332,8 +321,7 @@ describe('SDF Text Utils', () => {
       // This is the expected behavior when used in overflow contexts where the suffix
       // indicates that content was truncated at the line limit.
       const result = truncateLineEnd(
-        testMeasureText,
-        'Arial',
+        font,
         0,
         'short',
         50, // 5 characters fit
@@ -349,10 +337,9 @@ describe('SDF Text Utils', () => {
   describe('breakLongWord', () => {
     it('should break word into multiple lines', () => {
       const result = breakWord(
-        testMeasureText,
+        font,
         'verylongword',
         'verylongword'.length * 10,
-        'Arial',
         0,
         [],
         '',
@@ -371,10 +358,9 @@ describe('SDF Text Utils', () => {
 
     it('should handle single character word', () => {
       const result = breakWord(
-        testMeasureText,
+        font,
         'a',
         10,
-        'Arial',
         0,
         [],
         '',
@@ -392,10 +378,9 @@ describe('SDF Text Utils', () => {
 
     it('should truncate with suffix when max lines reached', () => {
       const result = breakWord(
-        testMeasureText,
+        font,
         'verylongword',
         'verylongword'.length * 10,
-        'Arial',
         0,
         [],
         '',
@@ -417,9 +402,8 @@ describe('SDF Text Utils', () => {
       const text =
         'This is a test\u200Bwith zero-width\u200Bspaces that should wrap properly';
       const result = wrapText(
-        testMeasureText,
+        font,
         text,
-        'Arial',
         200, // 20 characters max per line
         0,
         '...',
@@ -435,9 +419,8 @@ describe('SDF Text Utils', () => {
     it('should handle mixed content with long words and ZWSP', () => {
       const text = 'Short\u200Bverylongwordthatmustbebroken\u200Bshort';
       const result = wrapText(
-        testMeasureText,
+        font,
         text,
-        'Arial',
         100, // 10 characters max per line
         0,
         '',

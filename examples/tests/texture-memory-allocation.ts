@@ -152,7 +152,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         autosize: true,
         parent: childNode,
         text: `Card ${id}`,
-        fontFamily: 'Ubuntu',
+        fontFamily: 'SDF-Ubuntu',
         fontSize: 20,
         color: 0xffffffff,
       });

@@ -57,7 +57,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       boxColor1: 0x9f6dffff,
       boxColor2: 0x00aaaaff,
       textColor: 0xffffffff,
-      fontFamily: 'Ubuntu',
+      fontFamily: 'SDF-Ubuntu',
       parent: testRoot,
     },
     renderer,
@@ -152,7 +152,6 @@ Uniting two lands, a powerful stream.`;
   const textFailedEventTest = renderer.createTextNode({
     y: 50,
     fontFamily: '$$SDF_FAILURE_TEST$$',
-    textRendererOverride: 'sdf',
     parent: testRoot,
     fontSize: 50,
   });
@@ -164,7 +163,7 @@ Uniting two lands, a powerful stream.`;
     // Nothing
   }
 
-  textFailedEventTest.fontFamily = 'Ubuntu';
+  textFailedEventTest.fontFamily = 'SDF-Ubuntu';
   if (textError) {
     textFailedEventTest.text = 'Failure Event Test Passed!';
     textFailedEventTest.color = 0x00ff00ff;

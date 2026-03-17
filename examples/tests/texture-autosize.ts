@@ -64,7 +64,7 @@ export default async function test(settings: ExampleSettings) {
     text: dimensionsMatch ? 'Autosize\nSuccess' : 'Autosize\nFailure',
     color: dimensionsMatch ? 0x00ff00ff : 0xff0000ff,
     fontSize: 50,
-    fontFamily: 'Ubuntu',
+    fontFamily: 'SDF-Ubuntu',
     parent: testRoot,
   });
 }

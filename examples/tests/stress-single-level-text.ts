@@ -48,8 +48,7 @@ export default async function ({
     const node = renderer.createTextNode({
       x: randomIntBetween(startMin, startMax),
       y: randomIntBetween(startMin, startMax),
-      fontFamily: 'Ubuntu',
-      textRendererOverride: 'sdf',
+      fontFamily: 'SDF-Ubuntu',
       text: 'Lightning 3.0',
       // contain: 'both',
       // w: 237,

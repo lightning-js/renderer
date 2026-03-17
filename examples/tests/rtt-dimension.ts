@@ -12,6 +12,7 @@ export async function automation(settings: ExampleSettings) {
 }
 
 export default async function test({ renderer, testRoot }: ExampleSettings) {
+  const fontFamily = 'SDF-Ubuntu';
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -51,7 +52,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: rttNode,
     fontSize: 48,
     color: 0xffffffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   renderer.createNode({
@@ -91,7 +92,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: rttNode2,
     fontSize: 22,
     color: 0xff00ffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   renderer.createNode({
@@ -131,7 +132,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: rttNode3,
     fontSize: 22,
     color: 0xff00ffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   renderer.createNode({
@@ -170,7 +171,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: nestedRTTNode1,
     fontSize: 22,
     color: 0xff00ffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   const rocko4 = renderer.createNode({
@@ -220,7 +221,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     fontSize: 22,
     color: 0xffffffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   renderer.createTextNode({
@@ -230,7 +231,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     fontSize: 22,
     color: 0xffffffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   renderer.createTextNode({
@@ -240,7 +241,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: node,
     fontSize: 22,
     color: 0xffffffff,
-    fontFamily: 'Ubuntu',
+    fontFamily: fontFamily,
   });
 
   let curPage = 0;
