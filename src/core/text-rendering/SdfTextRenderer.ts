@@ -277,7 +277,6 @@ const generateTextLayout = (
   const fontFamily = props.fontFamily;
   const lineHeight = props.lineHeight;
   const metrics = SdfFontHandler.getFontMetrics(fontFamily, fontSize);
-  const verticalAlign = props.verticalAlign;
 
   const fontData = fontCache.data;
   const commonFontData = fontData.common;
@@ -323,14 +322,12 @@ const generateTextLayout = (
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
-    const textLineLength = textLine.length;
-    let prevCodepoint = 0;
+    let prevGlyphId = 0;
     currentX = line[3];
     //convert Y coord to vertex value
     currentY = line[4] / fontScale;
 
-    for (let j = 0; j < textLineLength; j++) {
-      const char = textLine.charAt(j);
+    for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
         continue;
       }
@@ -343,18 +340,16 @@ const generateTextLayout = (
       if (glyph === null) {
         continue;
       }
-      // Calculate advance with kerning (in design units)
-      let advance = glyph.xadvance;
+      // Kerning offsets the current glyph relative to the previous glyph.
+      let kerning = 0;
 
       // Add kerning if there's a previous character
-      if (prevCodepoint !== 0) {
-        const kerning = SdfFontHandler.getKerning(
-          fontFamily,
-          prevCodepoint,
-          codepoint,
-        );
-        advance += kerning;
+      if (prevGlyphId !== 0) {
+        kerning = SdfFontHandler.getKerning(fontFamily, prevGlyphId, glyph.id);
       }
+
+      // Apply pair kerning before placing this glyph.
+      currentX += kerning;
 
       // Calculate glyph position and atlas coordinates (in design units)
       const glyphLayout: GlyphLayout = {
@@ -375,8 +370,8 @@ const generateTextLayout = (
       glyphs.push(glyphLayout);
 
       // Advance position with letter spacing (in design units)
-      currentX += advance + letterSpacing;
-      prevCodepoint = codepoint;
+      currentX += glyph.xadvance + letterSpacing;
+      prevGlyphId = glyph.id;
     }
     currentY += lineHeightPx;
   }
