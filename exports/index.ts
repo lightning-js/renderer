@@ -53,11 +53,13 @@ export {
   TextureErrorCode,
   isTextureError,
 } from '../src/core/TextureError.js';
+export type { TextRenderer } from '../src/core/text-rendering/TextRenderer.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type { TimingFunction } from '../src/core/utils.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
-export type { CoreNodeRenderState } from '../src/core/CoreNode.js';
+export { CoreNode, type CoreNodeProps, type CoreNodeRenderState } from '../src/core/CoreNode.js';
+export { CoreTextNode, type CoreTextNodeProps } from '../src/core/CoreTextNode.js';
 
 export * from '../src/core/renderers/CoreShaderNode.js';
 export * from '../src/core/shaders/templates/BorderTemplate.js';
