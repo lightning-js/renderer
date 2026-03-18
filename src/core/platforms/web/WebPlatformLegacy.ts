@@ -20,7 +20,8 @@
 import { WebPlatform } from './WebPlatform.js';
 import type { PlatformSettings } from '../Platform.js';
 import type { ImageResponse } from '../../textures/ImageTexture.js';
-import { ImageWorkerManager } from './lib/ImageWorker.js';
+import type { ImageWorkerFactory } from './lib/ImageWorker.js';
+import { createImageWorkerLegacy } from './lib/ImageWorkerLegacy.js';
 import {
   isBase64Image,
   dataURIToBlob,
@@ -41,10 +42,8 @@ export class WebPlatformLegacy extends WebPlatform {
     super({ ...settings, numImageWorkers: settings.numImageWorkers ?? 0 });
   }
 
-  protected override createImageWorkerManager(
-    numImageWorkers: number,
-  ): ImageWorkerManager {
-    return new ImageWorkerManager(numImageWorkers, 'legacy');
+  protected override getImageWorkerFactory(): ImageWorkerFactory {
+    return createImageWorkerLegacy;
   }
 
   override async loadImage(

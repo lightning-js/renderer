@@ -18,15 +18,13 @@
  */
 
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
-import { createImageWorkerLegacy } from './ImageWorkerLegacy.js';
-import { createImageWorkerNoOptions } from './ImageWorkerNoOptions.js';
-import { createImageWorker } from './ImageWorkerDefault.js';
+
+export type ImageWorkerFactory = () => void;
 
 type MessageCallback = [
   (value: ImageResponse) => void,
   (reason: unknown) => void,
 ];
-type ImageWorkerMode = 'default' | 'noOptions' | 'legacy';
 
 interface ImageWorkerLegacyResponse {
   data: Blob;
@@ -51,11 +49,8 @@ export class ImageWorkerManager {
   workerLoad: number[] = [];
   nextId = 0;
 
-  constructor(
-    numImageWorkers: number,
-    workerMode: ImageWorkerMode = 'default',
-  ) {
-    this.workers = this.createWorkers(numImageWorkers, workerMode);
+  constructor(numImageWorkers: number, workerFactory: ImageWorkerFactory) {
+    this.workers = this.createWorkers(numImageWorkers, workerFactory);
     this.workers.forEach((worker, index) => {
       worker.onmessage = (event) => this.handleMessage(event, index);
     });
@@ -114,16 +109,8 @@ export class ImageWorkerManager {
 
   private createWorkers(
     numWorkers = 1,
-    workerMode: ImageWorkerMode = 'default',
+    workerFactory: ImageWorkerFactory,
   ): Worker[] {
-    let workerFactory = createImageWorker;
-
-    if (workerMode === 'noOptions') {
-      workerFactory = createImageWorkerNoOptions;
-    } else if (workerMode === 'legacy') {
-      workerFactory = createImageWorkerLegacy;
-    }
-
     let workerCode = `(${workerFactory.toString()})()`;
 
     workerCode = workerCode.replace('"use strict";', '');

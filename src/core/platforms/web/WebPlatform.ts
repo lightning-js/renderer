@@ -18,7 +18,11 @@
  */
 
 import { Platform, type PlatformSettings } from '../Platform.js';
-import { ImageWorkerManager } from './lib/ImageWorker.js';
+import {
+  ImageWorkerManager,
+  type ImageWorkerFactory,
+} from './lib/ImageWorker.js';
+import { createImageWorker } from './lib/ImageWorkerDefault.js';
 import type { Stage } from '../../Stage.js';
 import {
   dataURIToBlob,
@@ -59,7 +63,14 @@ export class WebPlatform extends Platform {
   protected createImageWorkerManager(
     numImageWorkers: number,
   ): ImageWorkerManager {
-    return new ImageWorkerManager(numImageWorkers);
+    return new ImageWorkerManager(
+      numImageWorkers,
+      this.getImageWorkerFactory(),
+    );
+  }
+
+  protected getImageWorkerFactory(): ImageWorkerFactory {
+    return createImageWorker;
   }
 
   ////////////////////////
