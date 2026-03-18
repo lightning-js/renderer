@@ -550,22 +550,15 @@ export const measureText = (
   fontFamily: string,
   letterSpacing: number,
 ): number => {
-  if (text.length === 1) {
-    const char = text.charAt(0);
-    const codepoint = text.codePointAt(0);
-    if (codepoint === undefined) return 0;
-    if (hasZeroWidthSpace(char) === true) return 0;
+  if (text.length === 0) return 0;
 
-    const glyph = getGlyph(fontFamily, codepoint);
-    if (glyph === null) return 0;
-    return glyph.xadvance + letterSpacing;
-  }
   let width = 0;
-  let prevCodepoint = 0;
-  for (let i = 0; i < text.length; i++) {
-    const char = text.charAt(i);
-    const codepoint = text.codePointAt(i);
-    if (codepoint === undefined) continue;
+  let prevGlyphId = 0;
+  for (const char of text) {
+    const codepoint = char.codePointAt(0);
+    if (codepoint === undefined) {
+      continue;
+    }
 
     // Skip zero-width spaces in width calculations
     if (hasZeroWidthSpace(char)) {
@@ -578,13 +571,13 @@ export const measureText = (
     let advance = glyph.xadvance;
 
     // Add kerning if there's a previous character
-    if (prevCodepoint !== 0) {
-      const kerning = getKerning(fontFamily, prevCodepoint, codepoint);
+    if (prevGlyphId !== 0) {
+      const kerning = getKerning(fontFamily, prevGlyphId, glyph.id);
       advance += kerning;
     }
 
     width += advance + letterSpacing;
-    prevCodepoint = codepoint;
+    prevGlyphId = glyph.id;
   }
 
   return width;
