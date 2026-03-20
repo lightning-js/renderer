@@ -92,6 +92,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.textProps = props;
     this._containType = TextConstraint[props.contain];
 
+    if (
+      (props.forceLoad === true || props.parent !== null) &&
+      this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true
+    ) {
+      const resp = this.textRenderer.renderText(this.textProps);
+      this.handleRenderResult(resp);
+      this._layoutGenerated = true;
+    }
+
     this.setUpdateType(UpdateType.All);
   }
 
