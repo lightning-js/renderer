@@ -284,6 +284,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       }
     }
 
+    // Handle zero-dimension case (can happen with certain text inputs or font issues)
+    if (width === 0 || height === 0) {
+      this.emit('failed', {
+        type: 'text',
+        error: new Error('Text rendering failed, width or height zero'),
+      } satisfies NodeTextFailedPayload);
+      return;
+    }
+
     this._cachedLayout = result.layout || null;
     this.props.w = width;
     this.props.h = height;
