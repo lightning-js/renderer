@@ -77,6 +77,41 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
+  /**
+   * Only texts whose transform depends on measured dimensions need eager layout
+   * to avoid an initial position jump.
+   */
+  private requiresLayoutForInitialTransform(props: CoreTextNodeProps): boolean {
+    if (
+      props.mountX !== 0 ||
+      props.mountY !== 0 ||
+      props.pivotX !== 0 ||
+      props.pivotY !== 0
+    ) {
+      return true;
+    }
+
+    const containType = TextConstraint[props.contain];
+
+    if (
+      (containType & TextConstraint.width) !== 0 &&
+      props.maxWidth > 0 &&
+      props.textAlign !== 'left'
+    ) {
+      return true;
+    }
+
+    if (
+      (containType & TextConstraint.height) !== 0 &&
+      props.maxHeight > 0 &&
+      props.verticalAlign !== 'top'
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
   constructor(
     stage: Stage,
     props: CoreTextNodeProps,
@@ -93,6 +128,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._containType = TextConstraint[props.contain];
 
     if (
+      this.requiresLayoutForInitialTransform(props) === true &&
       (props.forceLoad === true || props.parent !== null) &&
       this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true
     ) {
