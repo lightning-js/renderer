@@ -78,38 +78,25 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _type: 'sdf' | 'canvas' = 'sdf'; // Default to SDF renderer
 
   /**
-   * Only texts whose transform depends on measured dimensions need eager layout
-   * to avoid an initial position jump.
+   * Only texts whose parent transform/layout depends on measured dimensions
+   * need eager layout to avoid an initial position jump.
    */
   private requiresLayoutForInitialTransform(props: CoreTextNodeProps): boolean {
+    const parent = props.parent;
+    if (parent === null) {
+      return false;
+    }
+
     if (
-      props.mountX !== 0 ||
-      props.mountY !== 0 ||
-      props.pivotX !== 0 ||
-      props.pivotY !== 0
+      parent.mountX !== 0 ||
+      parent.mountY !== 0 ||
+      parent.pivotX !== 0.5 ||
+      parent.pivotY !== 0.5
     ) {
       return true;
     }
 
-    const containType = TextConstraint[props.contain];
-
-    if (
-      (containType & TextConstraint.width) !== 0 &&
-      props.maxWidth > 0 &&
-      props.textAlign !== 'left'
-    ) {
-      return true;
-    }
-
-    if (
-      (containType & TextConstraint.height) !== 0 &&
-      props.maxHeight > 0 &&
-      props.verticalAlign !== 'top'
-    ) {
-      return true;
-    }
-
-    return false;
+    return parent.autosizer !== null || parent.parentAutosizer !== null;
   }
 
   constructor(
@@ -128,8 +115,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._containType = TextConstraint[props.contain];
 
     if (
-      this.requiresLayoutForInitialTransform(props) === true &&
       (props.forceLoad === true || props.parent !== null) &&
+      this.requiresLayoutForInitialTransform(props) === true &&
       this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true
     ) {
       const resp = this.textRenderer.renderText(this.textProps);
