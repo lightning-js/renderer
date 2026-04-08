@@ -241,7 +241,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
+    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
+
     if (
+      hasValidText === true &&
       (this.textProps.forceLoad === true ||
         this.allowTextGeneration() === true) &&
       this._layoutGenerated === false
@@ -257,6 +260,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
         this._waitingForFont = true;
       }
+    } else if (hasValidText === false) {
+      // If text is invalid, ensure node is not renderable
+      this.setRenderable(false);
+      this._layoutGenerated = false;
+      this._cachedLayout = null;
+      this._lastVertexBuffer = null;
     }
 
     // First run the standard CoreNode update
@@ -267,6 +276,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override is renderable check for SDF text nodes
    */
   override updateIsRenderable(): void {
+    // Guard: Text nodes are never renderable without valid text
+    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
+    if (hasValidText === false) {
+      this.setRenderable(false);
+      return;
+    }
+
     // SDF text nodes are always renderable if they have a valid layout
     if (this._type === 'canvas') {
       super.updateIsRenderable();
@@ -311,6 +327,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         // We do want the texture to load immediately
         this.texture.setRenderableOwner(this._id, true);
       }
+    }
+
+    // Handle zero-dimension case (can happen with certain text inputs or font issues)
+    if (width === 0 || height === 0) {
+      this.emit('failed', {
+        type: 'text',
+        error: new Error('Text rendering failed, width or height zero'),
+      } satisfies NodeTextFailedPayload);
+      return;
     }
 
     this._cachedLayout = result.layout || null;
@@ -461,8 +486,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set text(value: string) {
-    if (this.textProps.text !== value) {
-      this.textProps.text = value;
+    let normalizedValue = value;
+    if (value === undefined || value === null) {
+      normalizedValue = '';
+    } else if (typeof value !== 'string') {
+      normalizedValue = String(value);
+    }
+
+    if (this.textProps.text !== normalizedValue) {
+      this.textProps.text = normalizedValue;
       this._layoutGenerated = false;
       this.setUpdateType(UpdateType.Local);
     }
