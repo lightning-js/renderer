@@ -270,7 +270,7 @@ export class WebGlRenderer extends CoreRenderer {
 
     if (tidx === 0xffffffff) {
       this.newRenderOp(node, i);
-      tidx = this.curRenderOp!.addTexture(texture);
+      tidx = this.curRenderOp!.addTexture(ctx);
     }
 
     const rc = node.renderCoords!;
