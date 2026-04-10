@@ -264,8 +264,9 @@ export class WebGlRenderer extends CoreRenderer {
       tx = (tx as SubTexture).parentTexture;
     }
 
-    const texture = tx.ctxTexture as WebGlCtxTexture;
-    let tidx = this.curRenderOp!.addTexture(texture);
+    const ctx = tx.ctxTexture as WebGlCtxTexture | undefined;
+    if (ctx === undefined) return;
+    let tidx = this.curRenderOp!.addTexture(ctx);
 
     if (tidx === 0xffffffff) {
       this.newRenderOp(node, i);

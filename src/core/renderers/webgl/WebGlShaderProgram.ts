@@ -323,8 +323,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   bindTextures(textures: WebGlCtxTexture[]) {
+    const t = textures[0];
+    if (t === undefined) return;
     this.glw.activeTexture(0);
-    this.glw.bindTexture(textures[0]!.ctxTexture);
+    this.glw.bindTexture(t.ctxTexture);
   }
 
   attach(): void {
