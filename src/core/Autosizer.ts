@@ -44,8 +44,10 @@ const getFilteredChildren = (
   const filtered: CoreNode[] = [];
   while (children.length > 0) {
     const id = children.pop()!;
-    const child = childMap.get(id)!;
-    filtered.push(child);
+    const child = childMap.get(id);
+    if (child !== undefined) {
+      filtered.push(child);
+    }
   }
   return filtered;
 };
