@@ -302,11 +302,14 @@ export const loadFont = async (
   const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create loading promise
   const loadPromise = (async (): Promise<void> => {
-    // Load font JSON data via the platform's fetch abstraction so behaviour
-    // can be overridden per platform (XHR, Fetch API, custom loaders, etc.).
-    const blob = (await stage.platform.fetch(atlasDataUrl)) as Blob;
-    const fontData = JSON.parse(await blob.text()) as SdfFontData;
-    if (fontData === null || fontData.chars === undefined) {
+    // Load font JSON data
+    const response = await fetch(atlasDataUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to load font data: ${response.statusText}`);
+    }
+
+    const fontData = (await response.json()) as SdfFontData;
+    if (!fontData || !fontData.chars) {
       throw new Error('Invalid SDF font data format');
     }
 
