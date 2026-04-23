@@ -48,6 +48,9 @@ export const normalizeFontMetrics = (
 };
 
 export const validateText = (text: string) => {
+  if (typeof text !== 'string') {
+    return false;
+  }
   return text.length > 0 && text.split(/[ \u200B\n]+/g).length > 0;
 };
 
