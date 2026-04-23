@@ -191,6 +191,14 @@ export enum UpdateType {
    * Autosize update
    */
   Autosize = 8192,
+
+  /**
+   * TextChanged update
+   *
+   * @remarks only used in CoreTextNode to trigger text validation and layout recalculation when text changes.
+   */
+  TextChanged = 16384,
+
   /**
    * None
    */
@@ -199,7 +207,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 16383,
+  All = 32767,
 }
 
 /**

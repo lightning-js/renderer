@@ -47,6 +47,10 @@ export const normalizeFontMetrics = (
   };
 };
 
+export const validateText = (text: string) => {
+  return text.length > 0 && text.split(/[ \u200B\n]+/g).length > 0;
+};
+
 export const mapTextLayout = (
   measureText: MeasureTextFn,
   metrics: NormalizedFontMetrics,

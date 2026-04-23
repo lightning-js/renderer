@@ -40,6 +40,7 @@ import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
 import { Matrix3d } from './lib/Matrix3d.js';
+import { validateText } from './text-rendering/TextLayoutEngine.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
@@ -69,6 +70,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
+  private hasValidText = false;
 
   private _renderInfo: TextRenderInfo = {
     width: 0,
@@ -196,7 +198,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
+    let hasValidText = this.hasValidText;
+
+    if (this.updateType & UpdateType.TextChanged) {
+      this.hasValidText = hasValidText = validateText(this.textProps.text);
+    }
 
     if (
       hasValidText === true &&
@@ -232,8 +238,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   override updateIsRenderable(): void {
     // Guard: Text nodes are never renderable without valid text
-    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
-    if (hasValidText === false) {
+    if (this.hasValidText === false) {
       this.setRenderable(false);
       return;
     }
@@ -447,11 +452,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     } else if (typeof value !== 'string') {
       normalizedValue = String(value);
     }
-
     if (this.textProps.text !== normalizedValue) {
       this.textProps.text = normalizedValue;
       this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.TextChanged);
     }
   }
 
