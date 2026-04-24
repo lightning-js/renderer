@@ -145,6 +145,7 @@ export class WebPlatform extends Platform {
           stage.txMemManager.cleanup();
         }
 
+        stage.updateInteractiveNodes();
         stage.flushFrameEvents();
         return;
       }

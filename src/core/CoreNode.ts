@@ -2680,11 +2680,13 @@ export class CoreNode extends EventEmitter {
   }
 
   set interactive(value: boolean | undefined) {
+    if (this.props.interactive === value) {
+      return;
+    }
+
     this.props.interactive = value;
     // Update Stage's interactive Set
-    if (value === true) {
-      this.stage.interactiveNodes.add(this);
-    }
+    this.stage.hasInteractiveNodeChanges = true;
   }
 
   get interactive(): boolean | undefined {
