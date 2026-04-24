@@ -217,6 +217,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = true;
       }
     } else if (hasValidText === false) {
+      this.props.w = 0;
+      this.props.h = 0;
       // If text is invalid, ensure node is not renderable
       this.setRenderable(false);
       this._layoutGenerated = false;
