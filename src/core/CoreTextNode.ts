@@ -196,7 +196,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
+    const hasValidText =
+      typeof this.textProps.text === 'string' && this.textProps.text.length > 0;
 
     if (
       hasValidText === true &&
@@ -216,6 +217,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = true;
       }
     } else if (hasValidText === false) {
+      this.props.w = 0;
+      this.props.h = 0;
       // If text is invalid, ensure node is not renderable
       this.setRenderable(false);
       this._layoutGenerated = false;
@@ -232,7 +235,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   override updateIsRenderable(): void {
     // Guard: Text nodes are never renderable without valid text
-    const hasValidText = this.textProps.text && this.textProps.text.length > 0;
+    const hasValidText =
+      typeof this.textProps.text === 'string' && this.textProps.text.length > 0;
     if (hasValidText === false) {
       this.setRenderable(false);
       return;
