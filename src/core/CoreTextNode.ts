@@ -339,33 +339,24 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    if (this._lastVertexBuffer === null) {
-      this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
-    }
-
     const props = this.textProps;
-    this.textRenderer.renderQuads(
-      renderer,
-      this._cachedLayout as TextLayout,
-      this._lastVertexBuffer!,
-      {
-        fontFamily: this.textProps.fontFamily,
-        fontSize: props.fontSize,
-        color: this.props.color || 0xffffffff,
-        offsetY: props.offsetY,
-        worldAlpha: this.worldAlpha,
-        globalTransform: this.globalTransform!.getFloatArr(),
-        clippingRect: this.clippingRect,
-        width: this.props.w,
-        height: this.props.h,
-        parentHasRenderTexture: this.parentHasRenderTexture,
-        framebufferDimensions:
-          this.parentHasRenderTexture === true
-            ? this.parentFramebufferDimensions
-            : null,
-        stage: this.stage,
-      },
-    );
+    this.textRenderer.renderQuads(renderer, this._cachedLayout as TextLayout, {
+      fontFamily: this.textProps.fontFamily,
+      fontSize: props.fontSize,
+      color: this.props.color || 0xffffffff,
+      offsetY: props.offsetY,
+      worldAlpha: this.worldAlpha,
+      globalTransform: this.globalTransform!.getFloatArr(),
+      clippingRect: this.clippingRect,
+      width: this.props.w,
+      height: this.props.h,
+      parentHasRenderTexture: this.parentHasRenderTexture,
+      framebufferDimensions:
+        this.parentHasRenderTexture === true
+          ? this.parentFramebufferDimensions
+          : null,
+      stage: this.stage,
+    });
   }
 
   override destroy(): void {

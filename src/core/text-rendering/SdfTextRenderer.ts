@@ -57,6 +57,14 @@ const init = (stage: Stage): void => {
 };
 
 const font: FontHandler = SdfFontHandler;
+const layoutCache = new Map<string, TextLayout>();
+
+const getLayoutFromCache = (
+  props: CoreTextNodeProps,
+): TextLayout | undefined => {
+  const cacheKey = `${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.text}`;
+  return layoutCache.get(cacheKey);
+};
 
 /**
  * SDF text renderer using MSDF/SDF fonts with WebGL
@@ -74,6 +82,17 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     };
   }
 
+  let layout = getLayoutFromCache(props);
+  if (layout !== undefined) {
+    return {
+      remainingLines: 0,
+      hasRemainingText: false,
+      width: layout.width,
+      height: layout.height,
+      layout, // Cache layout for addQuads
+    };
+  }
+
   // Get font cache for this font family
   const fontData = SdfFontHandler.getFontData(props.fontFamily);
   if (fontData === undefined) {
@@ -85,7 +104,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   }
 
   // Calculate text layout and generate glyph data for caching
-  const layout = generateTextLayout(props, fontData);
+  layout = generateTextLayout(props, fontData);
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
@@ -98,100 +117,19 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 };
 
 /**
- * Add quads for rendering using cached layout data
- */
-const addQuads = (layout?: TextLayout): Float32Array | null => {
-  if (layout === undefined) {
-    return null; // No layout data available
-  }
-
-  const glyphs = layout.glyphs;
-  const glyphsLength = glyphs.length;
-
-  if (glyphsLength === 0) {
-    return null;
-  }
-
-  const vertexBuffer = new Float32Array(
-    glyphsLength * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
-  );
-
-  let bufferIndex = 0;
-  let glyphIndex = 0;
-
-  while (glyphIndex < glyphsLength) {
-    const glyph = glyphs[glyphIndex];
-    glyphIndex++;
-    if (glyph === undefined) {
-      continue;
-    }
-
-    const x1 = glyph.x;
-    const y1 = glyph.y;
-    const x2 = x1 + glyph.width;
-    const y2 = y1 + glyph.height;
-
-    const u1 = glyph.atlasX;
-    const v1 = glyph.atlasY;
-    const u2 = u1 + glyph.atlasWidth;
-    const v2 = v1 + glyph.atlasHeight;
-
-    // Triangle 1: Top-left, top-right, bottom-left
-    // Vertex 1: Top-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 2: Top-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 3: Bottom-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
-
-    // Triangle 2: Top-right, bottom-right, bottom-left
-    // Vertex 4: Top-right (duplicate)
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 5: Bottom-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v2;
-
-    // Vertex 6: Bottom-left (duplicate)
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
-  }
-
-  return vertexBuffer;
-};
-
-/**
  * Create and submit WebGL render operations for SDF text
  * This is called from CoreTextNode during rendering to add SDF text to the render pipeline
  */
 const renderQuads = (
   renderer: CoreRenderer,
   layout: TextLayout,
-  vertexBuffer: Float32Array,
   renderProps: TextRenderProps,
 ): void => {
   const fontFamily = renderProps.fontFamily;
   const color = renderProps.color;
   const worldAlpha = renderProps.worldAlpha;
   const globalTransform = renderProps.globalTransform;
+  const vertexBuffer = layout.vertexBuffer;
 
   const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
   if (atlasTexture === null) {
@@ -261,9 +199,73 @@ const renderQuads = (
 
   // Add atlas texture and set quad count
   renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
-  renderOp.numQuads = layout.glyphs.length;
+  renderOp.numQuads = layout.glyphCount;
 
   (renderer as WebGlRenderer).addRenderOp(renderOp);
+};
+
+const generateVertexBuffer = (glyphs: GlyphLayout[]): Float32Array => {
+  const vertexBuffer = new Float32Array(
+    glyphs.length * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
+  );
+
+  let bufferIndex = 0;
+  let glyphIndex = 0;
+
+  while (glyphIndex < glyphs.length) {
+    const glyph = glyphs[glyphIndex]!;
+    glyphIndex++;
+
+    const x1 = glyph.x;
+    const y1 = glyph.y;
+    const x2 = x1 + glyph.width;
+    const y2 = y1 + glyph.height;
+
+    const u1 = glyph.atlasX;
+    const v1 = glyph.atlasY;
+    const u2 = u1 + glyph.atlasWidth;
+    const v2 = v1 + glyph.atlasHeight;
+
+    // Triangle 1: Top-left, top-right, bottom-left
+    // Vertex 1: Top-left
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 2: Top-right
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 3: Bottom-left
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v2;
+
+    // Triangle 2: Top-right, bottom-right, bottom-left
+    // Vertex 4: Top-right (duplicate)
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y1;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v1;
+
+    // Vertex 5: Bottom-right
+    vertexBuffer[bufferIndex++] = x2;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u2;
+    vertexBuffer[bufferIndex++] = v2;
+
+    // Vertex 6: Bottom-left (duplicate)
+    vertexBuffer[bufferIndex++] = x1;
+    vertexBuffer[bufferIndex++] = y2;
+    vertexBuffer[bufferIndex++] = u1;
+    vertexBuffer[bufferIndex++] = v2;
+  }
+
+  return vertexBuffer;
 };
 
 /**
@@ -353,14 +355,10 @@ const generateTextLayout = (
 
       // Calculate glyph position and atlas coordinates (in design units)
       const glyphLayout: GlyphLayout = {
-        codepoint,
-        glyphId: glyph.id,
         x: currentX + glyph.xoffset,
         y: currentY + glyph.yoffset,
         width: glyph.width,
         height: glyph.height,
-        xOffset: glyph.xoffset,
-        yOffset: glyph.yoffset,
         atlasX: glyph.x / atlasWidth,
         atlasY: glyph.y / atlasHeight,
         atlasWidth: glyph.width / atlasWidth,
@@ -376,9 +374,12 @@ const generateTextLayout = (
     currentY += lineHeightPx;
   }
 
+  const vertexBuffer = generateVertexBuffer(glyphs);
+
   // Convert final dimensions to pixel space for the layout
   return {
-    glyphs,
+    vertexBuffer,
+    glyphCount: glyphs.length,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
     width: effectiveWidth * fontScale,
     height: effectiveHeight,
@@ -395,7 +396,6 @@ const SdfTextRenderer = {
   type,
   font,
   renderText,
-  addQuads,
   renderQuads,
   init,
 };

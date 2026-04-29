@@ -255,14 +255,6 @@ export interface TrProps extends TrFontProps {
  */
 export interface GlyphLayout {
   /**
-   * Unicode codepoint
-   */
-  codepoint: number;
-  /**
-   * Glyph ID in the font atlas
-   */
-  glyphId: number;
-  /**
    * X position relative to text origin
    */
   x: number;
@@ -279,14 +271,6 @@ export interface GlyphLayout {
    */
   height: number;
   /**
-   * X offset for glyph positioning
-   */
-  xOffset: number;
-  /**
-   * Y offset for glyph positioning
-   */
-  yOffset: number;
-  /**
    * Atlas texture coordinates (normalized 0-1)
    */
   atlasX: number;
@@ -302,7 +286,11 @@ export interface TextLayout {
   /**
    * Individual glyph layouts
    */
-  glyphs: GlyphLayout[];
+  vertexBuffer: Float32Array;
+  /**
+   * glyph count in layout
+   */
+  glyphCount: number;
   /**
    * Total text width
    */
@@ -394,12 +382,9 @@ export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (props: CoreTextNodeProps) => TextRenderInfo;
-  // Updated to accept layout data and return vertex buffer for performance
-  addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
     renderer: CoreRenderer,
     layout: TextLayout,
-    vertexBuffer: Float32Array,
     renderProps: TextRenderProps,
   ) => void;
   init: (stage: Stage) => void;
