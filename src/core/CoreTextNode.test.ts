@@ -311,17 +311,19 @@ describe('CoreTextNode', () => {
   });
 
   describe('updateRenderState – SDF buffer release on OutOfBounds', () => {
-    it('should call glw.deleteBuffer and clear _sdfBufferRef when transitioning to OutOfBounds', () => {
-      const deleteBuffer = vi.fn();
-      const stageWithGlw = mock<Stage>({
+    function makeStageWithDeleteBuffer(deleteBuffer: ReturnType<typeof vi.fn>) {
+      return mock<Stage>({
         strictBound: createBound(0, 0, 1920, 1080),
         preloadBound: createBound(0, 0, 1920, 1080),
         defaultTexture: { state: 'loaded' },
-        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
+        renderer: { deleteBuffer } as unknown as CoreRenderer,
       });
+    }
 
+    it('should call renderer.deleteBuffer and clear _sdfBufferRef when transitioning to OutOfBounds', () => {
+      const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
-        stageWithGlw,
+        makeStageWithDeleteBuffer(deleteBuffer),
         defaultTextProps,
         mockTextRenderer,
       );
@@ -338,17 +340,10 @@ describe('CoreTextNode', () => {
       expect((node as any)._lastVertexBuffer).toBeNull();
     });
 
-    it('should not call glw.deleteBuffer when _sdfBufferRef is already null', () => {
+    it('should not call renderer.deleteBuffer when _sdfBufferRef is already null', () => {
       const deleteBuffer = vi.fn();
-      const stageWithGlw = mock<Stage>({
-        strictBound: createBound(0, 0, 1920, 1080),
-        preloadBound: createBound(0, 0, 1920, 1080),
-        defaultTexture: { state: 'loaded' },
-        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
-      });
-
       const node = new CoreTextNode(
-        stageWithGlw,
+        makeStageWithDeleteBuffer(deleteBuffer),
         defaultTextProps,
         mockTextRenderer,
       );
@@ -361,15 +356,8 @@ describe('CoreTextNode', () => {
 
     it('should not release the buffer when transitioning to InBounds', () => {
       const deleteBuffer = vi.fn();
-      const stageWithGlw = mock<Stage>({
-        strictBound: createBound(0, 0, 1920, 1080),
-        preloadBound: createBound(0, 0, 1920, 1080),
-        defaultTexture: { state: 'loaded' },
-        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
-      });
-
       const node = new CoreTextNode(
-        stageWithGlw,
+        makeStageWithDeleteBuffer(deleteBuffer),
         defaultTextProps,
         mockTextRenderer,
       );
@@ -385,20 +373,13 @@ describe('CoreTextNode', () => {
 
     it('should not release the buffer for a canvas-type text node', () => {
       const deleteBuffer = vi.fn();
-      const stageWithGlw = mock<Stage>({
-        strictBound: createBound(0, 0, 1920, 1080),
-        preloadBound: createBound(0, 0, 1920, 1080),
-        defaultTexture: { state: 'loaded' },
-        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
-      });
-
       const canvasTextRenderer = {
         ...mockTextRenderer,
         type: 'canvas' as const,
       } as any;
 
       const node = new CoreTextNode(
-        stageWithGlw,
+        makeStageWithDeleteBuffer(deleteBuffer),
         defaultTextProps,
         canvasTextRenderer,
       );

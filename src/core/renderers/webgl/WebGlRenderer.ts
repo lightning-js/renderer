@@ -724,4 +724,8 @@ export class WebGlRenderer extends CoreRenderer {
       normalized: normalizedColor,
     };
   }
+
+  override deleteBuffer(buffer: WebGLBuffer): void {
+    this.glw.deleteBuffer(buffer);
+  }
 }

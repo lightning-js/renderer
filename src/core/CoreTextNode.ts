@@ -125,13 +125,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private releaseSdfBuffer(): void {
     const buf = this._sdfBufferRef.current;
     if (buf === null) return;
-    // Access glw through the stage renderer without importing WebGlRenderer.
-    const glw = (
-      this.stage.renderer as unknown as {
-        glw?: { deleteBuffer(b: WebGLBuffer): void };
-      }
-    ).glw;
-    glw?.deleteBuffer(buf);
+    this.stage.renderer.deleteBuffer(buf);
     this._sdfBufferRef.current = null;
   }
 
