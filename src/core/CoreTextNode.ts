@@ -19,6 +19,7 @@
 
 import type {
   FontHandler,
+  GlBufferRef,
   TextRenderer,
   TrProps,
   TextLayout,
@@ -66,9 +67,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
   private _lastVertexBuffer: Float32Array | null = null;
-  // Opaque ref box shared with SdfTextRenderer so the WebGLBuffer can be
+  // Typed ref box shared with SdfTextRenderer so the WebGLBuffer can be
   // created once and reused across frames instead of per-frame.
-  private _sdfBufferRef: { current: unknown } = { current: null };
+  private _sdfBufferRef: GlBufferRef = { current: null };
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -127,7 +128,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Access glw through the stage renderer without importing WebGlRenderer.
     const glw = (
       this.stage.renderer as unknown as {
-        glw?: { deleteBuffer(b: unknown): void };
+        glw?: { deleteBuffer(b: WebGLBuffer): void };
       }
     ).glw;
     glw?.deleteBuffer(buf);

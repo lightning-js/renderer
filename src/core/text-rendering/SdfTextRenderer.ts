@@ -206,7 +206,7 @@ const renderQuads = (
   // Reuse the cached WebGLBuffer if one was provided — avoids a createBuffer
   // call every frame on nodes whose text has not changed.
   const glBufferRef = renderProps.glBufferRef;
-  let webGlBuffer = glBufferRef?.current as WebGLBuffer | null | undefined;
+  let webGlBuffer: WebGLBuffer | null | undefined = glBufferRef?.current;
 
   if (webGlBuffer === undefined || webGlBuffer === null) {
     webGlBuffer = glw.createBuffer();
