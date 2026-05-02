@@ -396,6 +396,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     );
   }
 
+  override updateRenderState(renderState: CoreNodeRenderState): void {
+    super.updateRenderState(renderState);
+    if (
+      this._type === 'sdf' &&
+      renderState === CoreNodeRenderState.OutOfBounds
+    ) {
+      this.releaseSdfBuffer();
+      this._lastVertexBuffer = null;
+    }
+  }
+
   override destroy(): void {
     if (this._waitingForFont === true && this.fontHandler) {
       this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);

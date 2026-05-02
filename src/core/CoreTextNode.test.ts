@@ -19,6 +19,7 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
+import { CoreNodeRenderState } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
 import { mock } from 'vitest-mock-extended';
@@ -306,6 +307,107 @@ describe('CoreTextNode', () => {
       node.update(16, clippingRect);
 
       expect(node.isRenderable).toBe(false);
+    });
+  });
+
+  describe('updateRenderState – SDF buffer release on OutOfBounds', () => {
+    it('should call glw.deleteBuffer and clear _sdfBufferRef when transitioning to OutOfBounds', () => {
+      const deleteBuffer = vi.fn();
+      const stageWithGlw = mock<Stage>({
+        strictBound: createBound(0, 0, 1920, 1080),
+        preloadBound: createBound(0, 0, 1920, 1080),
+        defaultTexture: { state: 'loaded' },
+        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
+      });
+
+      const node = new CoreTextNode(
+        stageWithGlw,
+        defaultTextProps,
+        mockTextRenderer,
+      );
+
+      // Simulate a live WebGLBuffer sitting in the ref
+      const fakeBuffer = {};
+      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._lastVertexBuffer = new Float32Array(4);
+
+      node.updateRenderState(CoreNodeRenderState.OutOfBounds);
+
+      expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
+      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._lastVertexBuffer).toBeNull();
+    });
+
+    it('should not call glw.deleteBuffer when _sdfBufferRef is already null', () => {
+      const deleteBuffer = vi.fn();
+      const stageWithGlw = mock<Stage>({
+        strictBound: createBound(0, 0, 1920, 1080),
+        preloadBound: createBound(0, 0, 1920, 1080),
+        defaultTexture: { state: 'loaded' },
+        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
+      });
+
+      const node = new CoreTextNode(
+        stageWithGlw,
+        defaultTextProps,
+        mockTextRenderer,
+      );
+
+      // _sdfBufferRef.current is null by default
+      node.updateRenderState(CoreNodeRenderState.OutOfBounds);
+
+      expect(deleteBuffer).not.toHaveBeenCalled();
+    });
+
+    it('should not release the buffer when transitioning to InBounds', () => {
+      const deleteBuffer = vi.fn();
+      const stageWithGlw = mock<Stage>({
+        strictBound: createBound(0, 0, 1920, 1080),
+        preloadBound: createBound(0, 0, 1920, 1080),
+        defaultTexture: { state: 'loaded' },
+        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
+      });
+
+      const node = new CoreTextNode(
+        stageWithGlw,
+        defaultTextProps,
+        mockTextRenderer,
+      );
+
+      const fakeBuffer = {};
+      (node as any)._sdfBufferRef.current = fakeBuffer;
+
+      node.updateRenderState(CoreNodeRenderState.InBounds);
+
+      expect(deleteBuffer).not.toHaveBeenCalled();
+      expect((node as any)._sdfBufferRef.current).toBe(fakeBuffer);
+    });
+
+    it('should not release the buffer for a canvas-type text node', () => {
+      const deleteBuffer = vi.fn();
+      const stageWithGlw = mock<Stage>({
+        strictBound: createBound(0, 0, 1920, 1080),
+        preloadBound: createBound(0, 0, 1920, 1080),
+        defaultTexture: { state: 'loaded' },
+        renderer: { glw: { deleteBuffer } } as unknown as CoreRenderer,
+      });
+
+      const canvasTextRenderer = {
+        ...mockTextRenderer,
+        type: 'canvas' as const,
+      } as any;
+
+      const node = new CoreTextNode(
+        stageWithGlw,
+        defaultTextProps,
+        canvasTextRenderer,
+      );
+
+      (node as any)._sdfBufferRef.current = {};
+
+      node.updateRenderState(CoreNodeRenderState.OutOfBounds);
+
+      expect(deleteBuffer).not.toHaveBeenCalled();
     });
   });
 });
