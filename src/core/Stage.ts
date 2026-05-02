@@ -882,6 +882,30 @@ export class Stage {
     this.txMemManager.cleanup(full);
   }
 
+  /**
+   * Destroy the stage and release all resources.
+   *
+   * @remarks
+   * This method stops the render loop, destroys all nodes, releases all
+   * textures and GPU resources, and terminates any background workers.
+   */
+  destroy(): void {
+    // Stop the render loop and terminate workers
+    this.platform.stopLoop();
+
+    // Recursively destroy all nodes (includes CoreTextNode font/text cleanup)
+    this.root.destroy();
+
+    // Release all GPU-side texture memory
+    this.txMemManager.cleanup(true);
+
+    // Clear the texture caches
+    this.txManager.keyCache.clear();
+
+    // Release the GPU context (WebGL) or canvas resources
+    this.renderer.destroy();
+  }
+
   set clearColor(value: number) {
     this.renderer.updateClearColor(value);
     this.renderRequested = true;

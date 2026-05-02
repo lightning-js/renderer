@@ -724,4 +724,11 @@ export class WebGlRenderer extends CoreRenderer {
       normalized: normalizedColor,
     };
   }
+
+  override destroy(): void {
+    const loseCtx = this.glw.getExtension(
+      'WEBGL_lose_context',
+    ) as WEBGL_lose_context | null;
+    loseCtx?.loseContext();
+  }
 }
