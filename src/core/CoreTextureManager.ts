@@ -465,6 +465,20 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
+   * Destroy the CoreTextureManager and release all internal references.
+   *
+   * @remarks
+   * Clears the upload queue and key/inverse-key caches so that queued
+   * textures can be garbage-collected after a renderer teardown.
+   */
+  destroy(): void {
+    this.uploadTextureQueue = [];
+    this.keyCache.clear();
+    // inverseKeyCache is a WeakMap – entries will be GC'd automatically once
+    // the texture objects themselves are no longer referenced.
+  }
+
+  /**
    * Resolve a parent texture from the cache or fallback to the provided texture.
    *
    * @param texture - The provided texture to resolve.

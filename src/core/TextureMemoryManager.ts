@@ -415,4 +415,21 @@ export class TextureMemoryManager {
       this.setTextureMemUse = () => {};
     }
   }
+
+  /**
+   * Destroy the TextureMemoryManager and release all internal references.
+   *
+   * @remarks
+   * Clears the debug-logging interval (if active) and empties all internal
+   * texture tracking arrays so that held textures can be garbage-collected.
+   */
+  destroy(): void {
+    if (this.loggingID) {
+      clearInterval(this.loggingID);
+      this.loggingID = 0 as unknown as ReturnType<typeof setInterval>;
+    }
+    this.loadedTextures = [];
+    this.orphanedTextures = [];
+    this.memUsed = 0;
+  }
 }

@@ -896,11 +896,12 @@ export class Stage {
     // Recursively destroy all nodes (includes CoreTextNode font/text cleanup)
     this.root.destroy();
 
-    // Release all GPU-side texture memory
+    // Release all GPU-side texture memory and clear internal tracking arrays
     this.txMemManager.cleanup(true);
+    this.txMemManager.destroy();
 
-    // Clear the texture caches
-    this.txManager.keyCache.clear();
+    // Clear the texture upload queue and key caches
+    this.txManager.destroy();
 
     // Release the GPU context (WebGL) or canvas resources
     this.renderer.destroy();
