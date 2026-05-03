@@ -428,6 +428,13 @@ export class TextureMemoryManager {
       clearInterval(this.loggingID);
       this.loggingID = 0 as unknown as ReturnType<typeof setInterval>;
     }
+    // Free GPU resources for every loaded texture before clearing the array
+    for (let i = 0; i < this.loadedTextures.length; i++) {
+      const texture = this.loadedTextures[i];
+      if (texture !== null) {
+        this.destroyTexture(texture);
+      }
+    }
     this.loadedTextures = [];
     this.orphanedTextures = [];
     this.memUsed = 0;
