@@ -24,6 +24,7 @@ import {
 } from '../core/CoreNode.js';
 import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
+import type { AnimationSequenceSettings } from '../common/AnimationSequenceTypes.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
 
 /**
@@ -51,6 +52,7 @@ export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
     props: Partial<INodeAnimateProps<ShaderNode>>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
+  animationSequence(settings: AnimationSequenceSettings): IAnimationController;
   parent: INode | null;
 }
 
@@ -89,6 +91,7 @@ export interface ITextNode extends Omit<CoreTextNode, 'animate' | 'parent'> {
     props: Partial<INodeAnimateProps<CoreShaderNode>>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController;
+  animationSequence(settings: AnimationSequenceSettings): IAnimationController;
   parent: INode | null;
 }
 

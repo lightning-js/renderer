@@ -57,9 +57,23 @@ export type { TextRenderer } from '../src/core/text-rendering/TextRenderer.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
 export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
 export type { TimingFunction } from '../src/core/utils.js';
+export type {
+  AnimationKeyframeValue,
+  AnimationKeyframes,
+  AnimationAction,
+  AnimationSequenceStep,
+  AnimationSequenceSettings,
+} from '../src/common/AnimationSequenceTypes.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
-export { CoreNode, type CoreNodeProps, type CoreNodeRenderState } from '../src/core/CoreNode.js';
-export { CoreTextNode, type CoreTextNodeProps } from '../src/core/CoreTextNode.js';
+export {
+  CoreNode,
+  type CoreNodeProps,
+  type CoreNodeRenderState,
+} from '../src/core/CoreNode.js';
+export {
+  CoreTextNode,
+  type CoreTextNodeProps,
+} from '../src/core/CoreTextNode.js';
 
 export * from '../src/core/renderers/CoreShaderNode.js';
 export * from '../src/core/shaders/templates/BorderTemplate.js';
