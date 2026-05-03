@@ -203,20 +203,15 @@ const renderQuads = (
   const glw = (renderer as WebGlRenderer).glw;
   const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
 
-  // Reuse the cached WebGLBuffer if one was provided — avoids a createBuffer
-  // call every frame on nodes whose text has not changed.
-  const glBufferRef = renderProps.glBufferRef;
-  let webGlBuffer: WebGLBuffer | null | undefined = glBufferRef?.current;
-
-  if (webGlBuffer === undefined || webGlBuffer === null) {
-    webGlBuffer = glw.createBuffer();
-    if (webGlBuffer === null || webGlBuffer === undefined) {
-      console.warn('Failed to create WebGL buffer for SDF text');
-      return;
-    }
+  /**
+   * Wraps a WebGLBuffer in a BufferCollection with the standard SDF vertex
+   * layout, creates and submits an SdfRenderOp.  Called by both the cache-miss
+   * and cache-hit paths so attribute/op setup only exists in one place.
+   */
+  const buildAndSubmitRenderOp = (gpuBuffer: WebGLBuffer): void => {
     const webGlBuffers = new BufferCollection([
       {
-        buffer: webGlBuffer,
+        buffer: gpuBuffer,
         attributes: {
           a_position: {
             name: 'a_position',
@@ -237,13 +232,7 @@ const renderQuads = (
         },
       },
     ]);
-    const buffer = webGlBuffers.getBuffer('a_position');
-    if (buffer !== undefined) {
-      glw.arrayBufferData(buffer, vertexBuffer, glw.STATIC_DRAW as number);
-    }
-    if (glBufferRef !== undefined) {
-      glBufferRef.current = webGlBuffer;
-    }
+
     const renderOp = new SdfRenderOp(
       renderer as WebGlRenderer,
       sdfShader!,
@@ -264,63 +253,33 @@ const renderQuads = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       renderProps.framebufferDimensions as any,
     );
+
     renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
     renderOp.numQuads = layout.glyphs.length;
     (renderer as WebGlRenderer).addRenderOp(renderOp);
-    return;
+  };
+
+  // Reuse the cached WebGLBuffer if one was provided — avoids a createBuffer
+  // call every frame on nodes whose text has not changed.
+  const glBufferRef = renderProps.glBufferRef;
+  let webGlBuffer: WebGLBuffer | null | undefined = glBufferRef?.current;
+
+  if (webGlBuffer === undefined || webGlBuffer === null) {
+    // Cache miss: allocate a new buffer, upload vertex data, then cache it.
+    webGlBuffer = glw.createBuffer();
+    if (webGlBuffer === null || webGlBuffer === undefined) {
+      console.warn('Failed to create WebGL buffer for SDF text');
+      return;
+    }
+    // Upload vertex data directly into the new buffer.
+    glw.arrayBufferData(webGlBuffer, vertexBuffer, glw.STATIC_DRAW as number);
+    if (glBufferRef !== undefined) {
+      glBufferRef.current = webGlBuffer;
+    }
   }
 
-  // Cached buffer path — no upload needed, build a BufferCollection around
-  // the existing buffer and submit the render op directly.
-  const webGlBuffers = new BufferCollection([
-    {
-      buffer: webGlBuffer,
-      attributes: {
-        a_position: {
-          name: 'a_position',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 0,
-        },
-        a_textureCoords: {
-          name: 'a_textureCoords',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-        },
-      },
-    },
-  ]);
-
-  const renderOp = new SdfRenderOp(
-    renderer as WebGlRenderer,
-    sdfShader!,
-    {
-      transform: globalTransform,
-      color: mergeColorAlpha(color, worldAlpha),
-      size: layout.fontScale,
-      distanceRange: layout.distanceRange,
-    } satisfies SdfShaderProps,
-    webGlBuffers,
-    worldAlpha,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    renderProps.clippingRect as any,
-    layout.width,
-    layout.height,
-    false,
-    renderProps.parentHasRenderTexture,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    renderProps.framebufferDimensions as any,
-  );
-
-  renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
-  renderOp.numQuads = layout.glyphs.length;
-
-  (renderer as WebGlRenderer).addRenderOp(renderOp);
+  // Cache hit (or freshly allocated): build the render op and submit.
+  buildAndSubmitRenderOp(webGlBuffer);
 };
 
 /**
