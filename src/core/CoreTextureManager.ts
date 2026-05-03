@@ -289,8 +289,6 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
-    this.stage.txMemManager.removeFromOrphanedTextures(texture);
-
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures - they get loaded through their parent
       return;
