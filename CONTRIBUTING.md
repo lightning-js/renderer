@@ -97,7 +97,6 @@ All code contributions must include appropriate test coverage:
    - CI runs unit tests automatically
    - Visual regression tests run on all PRs
    - GitHub Actions validates your submission
-   - Copilot performs code review
 
 6. **Code Review**:
    - Address feedback from maintainers
@@ -107,6 +106,19 @@ All code contributions must include appropriate test coverage:
 ## Development Setup
 
 For detailed setup instructions, build commands, and development workflows, see [Getting Started](./docs/GETTING-STARTED.md).
+
+## GitHub Copilot Code Review
+
+All pull requests are automatically reviewed by GitHub Copilot. Copilot will review your code and leave comments with suggestions and feedback, guided by this project's [custom Copilot instructions](./.github/copilot-instructions.md).
+
+Copilot code review is configured via a **repository ruleset** (not a workflow file). To set it up or modify it:
+
+1. Go to **Settings** → **Rules** → **Rulesets**
+2. Open the active branch ruleset (or create a new one targeting your default branch)
+3. Under "Branch rules", enable **Automatically request Copilot code review**
+4. Optionally enable **Review new pushes** to re-review on each push
+
+> Copilot's reviews are informational ("Comment" type) and do not block merging.
 
 ## Questions or Need Help?
 

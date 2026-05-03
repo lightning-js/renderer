@@ -357,3 +357,30 @@ Look at these files for reference patterns:
 - Texture management - Resource pooling and caching
 
 Remember: This is a rendering engine for constrained environments. Every microsecond counts. When in doubt, optimize for performance over everything else.
+
+## Code Review Instructions
+
+When performing a code review on a pull request, enforce the following:
+
+### Flag as required changes
+
+- Any `forEach`, `map`, `filter`, `reduce`, or `find` calls in files under `src/core/` or in any render/update loop
+- Object literals (`{}`) created inside loops or functions called per-frame
+- Truthy/falsy checks on values that should use explicit `=== null`, `=== 0`, `=== false` etc.
+- Nesting depth beyond 3 levels — request flattening via early returns
+- Use of `delete` operator — request setting to `null` or `undefined` instead
+- JSDoc comments added to TypeScript code — request conversion to TypeScript types
+- `try/catch` inside hot paths — request pre-condition guards instead
+
+### Flag as missing test coverage
+
+- New `.ts` source files in `src/` without a corresponding `.test.ts` file
+- Bug fixes that don't include a regression test covering the fixed case
+- Any changes to shader code, rendering pipeline, layout logic, text rendering, animation, or visual output without an updated or new test in `examples/tests/`
+
+### Do NOT flag
+
+- Lack of input validation — zero safety checks is intentional policy
+- Terse variable names in tight loops
+- Direct typed array buffer manipulation
+- Missing error handling in internal utilities
