@@ -101,6 +101,7 @@ export class WebPlatform extends Platform {
   ////////////////////////
 
   override startLoop(stage: Stage): void {
+    this.stopped = false;
     let isIdle = false;
     let lastFrameTime = 0;
 
