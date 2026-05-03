@@ -32,54 +32,78 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
  * - Space: Manually trigger a single destroy+respawn cycle
  */
 
-const SUBJECTS = [
-  'The cat',
-  'A fox',
-  'The dog',
-  'One bird',
-  'The child',
-  'A wizard',
-  'The knight',
-  'Some rain',
-  'A storm',
-  'The river',
-];
+const createSentenceCorpus = () => ({
+  SUBJECTS: [
+    'The cat',
+    'A fox',
+    'The dog',
+    'One bird',
+    'The child',
+    'A wizard',
+    'The knight',
+    'Some rain',
+    'A storm',
+    'The river',
+  ],
+  VERBS: [
+    'quickly jumps',
+    'slowly walks',
+    'often dreams',
+    'silently runs',
+    'bravely fights',
+    'gently sings',
+    'barely moves',
+    'never sleeps',
+    'always listens',
+    'softly glows',
+  ],
+  COMPLEMENTS: [
+    'over mountains',
+    'through the forest',
+    'near the river',
+    'past the moon',
+    'beneath the stars',
+    'inside the cave',
+    'beyond the clouds',
+    'along the path',
+    'across the plains',
+    'under the bridge',
+  ],
+});
 
-const VERBS = [
-  'quickly jumps',
-  'slowly walks',
-  'often dreams',
-  'silently runs',
-  'bravely fights',
-  'gently sings',
-  'barely moves',
-  'never sleeps',
-  'always listens',
-  'softly glows',
-];
+const createLayoutConfig = () => {
+  const COLS = 4;
+  const APP_W = 1920;
+  const APP_H = 1080;
+  const FONT_SIZE = 26;
+  const LINE_H = 36;
+  const ROWS = Math.floor(APP_H / LINE_H);
 
-const COMPLEMENTS = [
-  'over mountains',
-  'through the forest',
-  'near the river',
-  'past the moon',
-  'beneath the stars',
-  'inside the cave',
-  'beyond the clouds',
-  'along the path',
-  'across the plains',
-  'under the bridge',
-];
+  return {
+    COLS,
+    APP_W,
+    APP_H,
+    COL_W: APP_W / COLS,
+    FONT_SIZE,
+    LINE_H,
+    ROWS,
+    TOTAL: COLS * ROWS,
+    CYCLE_INTERVAL_MS: 800,
+  };
+};
 
-const COLS = 4;
-const APP_W = 1920;
-const APP_H = 1080;
-const COL_W = APP_W / COLS;
-const FONT_SIZE = 26;
-const LINE_H = 36;
-const ROWS = Math.floor(APP_H / LINE_H);
-const TOTAL = COLS * ROWS;
-const CYCLE_INTERVAL_MS = 800;
+const { SUBJECTS, VERBS, COMPLEMENTS } = createSentenceCorpus();
+const {
+  COLS,
+  APP_W,
+  APP_H,
+  COL_W,
+  FONT_SIZE,
+  LINE_H,
+  ROWS,
+  TOTAL,
+  CYCLE_INTERVAL_MS,
+} = createLayoutConfig();
 
 /** @returns {string} */
 const randomSentence = () => {
