@@ -401,7 +401,7 @@ export class TextureMemoryManager {
     // Free GPU resources for every loaded texture before clearing the array
     for (let i = 0; i < this.loadedTextures.length; i++) {
       const texture = this.loadedTextures[i];
-      if (texture !== null) {
+      if (texture !== null && texture !== undefined) {
         this.destroyTexture(texture);
       }
     }
