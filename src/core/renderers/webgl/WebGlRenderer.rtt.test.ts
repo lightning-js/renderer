@@ -29,6 +29,7 @@ import { mock } from 'vitest-mock-extended';
 import {
   CoreNode,
   CoreNodeRenderState,
+  UpdateType,
   type CoreNodeProps,
 } from '../../CoreNode.js';
 import type { Stage } from '../../Stage.js';
@@ -427,5 +428,124 @@ describe('RTT — renderRTTNodes skip conditions', () => {
     node.worldAlpha = 1;
     node.renderState = CoreNodeRenderState.InBounds;
     expect(wouldRender(node, { state: 'loading' })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RTT_NOTIFY_MASK — gate on notifyParentRTTOfUpdate() inside update()
+//
+// The mask ensures RTT surfaces are re-rendered only when a visually relevant
+// UpdateType flag is present. Non-visual cascade flags (Children, RenderBounds,
+// RenderState, ParentRenderTexture, Autosize) must NOT trigger re-renders.
+// ---------------------------------------------------------------------------
+
+describe('RTT — RTT_NOTIFY_MASK gate in update()', () => {
+  // Minimal clipping rect required by CoreNode.update()
+  const clippingRect = { x: 0, y: 0, w: 1920, h: 1080, valid: false };
+
+  let stage: Stage;
+
+  // Builds a child node wired into an RTT parent so the
+  // `parentHasRenderTexture === true` branch in update() is reachable.
+  function makeRttChild() {
+    const rttParent = new CoreNode(stage, makeDefaultProps());
+    rttParent['props'].rtt = true;
+
+    const child = new CoreNode(stage, makeDefaultProps());
+    child.parent = rttParent;
+    child.parentHasRenderTexture = true;
+    child.rttParent = rttParent;
+    child.hasRTTupdates = false;
+
+    return { rttParent, child };
+  }
+
+  beforeEach(() => {
+    stage = makeStage();
+  });
+
+  it('fires notifyParentRTTOfUpdate for a visual flag (PremultipliedColors)', () => {
+    const { rttParent, child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+    rttParent.hasRTTupdates = false;
+
+    child.updateType = UpdateType.PremultipliedColors;
+    child.update(0, clippingRect);
+
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('fires notifyParentRTTOfUpdate for a visual flag (WorldAlpha)', () => {
+    const { child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+
+    child.updateType = UpdateType.WorldAlpha;
+    child.update(0, clippingRect);
+
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT fire notifyParentRTTOfUpdate for Children flag alone', () => {
+    const { child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+
+    // Children is not in RTT_NOTIFY_MASK and hasRTTupdates is false
+    child.updateType = UpdateType.Children;
+    child.hasRTTupdates = false;
+    child.update(0, clippingRect);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT fire notifyParentRTTOfUpdate for Autosize flag alone', () => {
+    const { child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+
+    child.updateType = UpdateType.Autosize;
+    child.hasRTTupdates = false;
+    child.update(0, clippingRect);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('fires notifyParentRTTOfUpdate when hasRTTupdates=true even for non-visual flag (Children)', () => {
+    const { child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+
+    // hasRTTupdates=true short-circuits the mask check
+    child.updateType = UpdateType.Children;
+    child.hasRTTupdates = true;
+    child.update(0, clippingRect);
+
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT fire notifyParentRTTOfUpdate when parentHasRenderTexture is false, even with visual flag', () => {
+    const { child } = makeRttChild();
+    const spy = vi.spyOn(
+      child as unknown as { notifyParentRTTOfUpdate(): void },
+      'notifyParentRTTOfUpdate',
+    );
+
+    child.parentHasRenderTexture = false;
+    child.updateType = UpdateType.PremultipliedColors;
+    child.update(0, clippingRect);
+
+    expect(spy).not.toHaveBeenCalled();
   });
 });
