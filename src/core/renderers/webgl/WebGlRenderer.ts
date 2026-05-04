@@ -476,15 +476,15 @@ export class WebGlRenderer extends CoreRenderer {
 
     // Build a one-shot index map so all lookups below are O(1) instead of O(n).
     const rttNodes = this.rttNodes;
-    const indexMap = new Map<CoreNode, number>();
+    const indexMap = new Map<number, number>();
     for (let i = 0; i < rttNodes.length; i++) {
-      indexMap.set(rttNodes[i]!, i);
+      indexMap.set(rttNodes[i]!.id, i);
     }
 
     // 1. Traverse upwards to ensure the node is placed before its RTT parent (if any).
     let currentNode: CoreNode = node;
-    while (currentNode.parent !== null && currentNode.parent !== undefined) {
-      const parentIndex = indexMap.get(currentNode.parent);
+    while (currentNode.parent !== null) {
+      const parentIndex = indexMap.get(currentNode.parent.id);
       if (parentIndex !== undefined) {
         insertIndex = parentIndex;
         break;
@@ -505,14 +505,14 @@ export class WebGlRenderer extends CoreRenderer {
   // Iterative DFS to find the highest rttNodes index among all RTT descendants of node.
   private findMaxChildRTTIndex(
     node: CoreNode,
-    indexMap: Map<CoreNode, number>,
+    indexMap: Map<number, number>,
   ): number {
     let maxIndex = -1;
     // Explicit stack avoids recursive arrow function allocation and call-stack growth.
     const stack: CoreNode[] = [node];
     while (stack.length !== 0) {
       const current = stack.pop()!;
-      const idx = indexMap.get(current);
+      const idx = indexMap.get(current.id);
       if (idx !== undefined && idx > maxIndex) {
         maxIndex = idx;
       }
