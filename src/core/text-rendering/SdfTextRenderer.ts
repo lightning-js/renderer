@@ -25,7 +25,7 @@ import type {
   TextRenderProps,
 } from './TextRenderer.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace } from './Utils.js';
+import { hasZeroWidthSpace, isSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -35,7 +35,7 @@ import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.j
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import { mergeColorAlpha } from '../../utils.js';
-import type { TextLayout, GlyphLayout } from './TextRenderer.js';
+import type { TextLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
@@ -204,70 +204,6 @@ const renderQuads = (
   (renderer as WebGlRenderer).addRenderOp(renderOp);
 };
 
-const generateVertexBuffer = (glyphs: GlyphLayout[]): Float32Array => {
-  const vertexBuffer = new Float32Array(
-    glyphs.length * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
-  );
-
-  let bufferIndex = 0;
-  let glyphIndex = 0;
-
-  while (glyphIndex < glyphs.length) {
-    const glyph = glyphs[glyphIndex]!;
-    glyphIndex++;
-
-    const x1 = glyph.x;
-    const y1 = glyph.y;
-    const x2 = x1 + glyph.width;
-    const y2 = y1 + glyph.height;
-
-    const u1 = glyph.atlasX;
-    const v1 = glyph.atlasY;
-    const u2 = u1 + glyph.atlasWidth;
-    const v2 = v1 + glyph.atlasHeight;
-
-    // Triangle 1: Top-left, top-right, bottom-left
-    // Vertex 1: Top-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 2: Top-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 3: Bottom-left
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
-
-    // Triangle 2: Top-right, bottom-right, bottom-left
-    // Vertex 4: Top-right (duplicate)
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y1;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v1;
-
-    // Vertex 5: Bottom-right
-    vertexBuffer[bufferIndex++] = x2;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u2;
-    vertexBuffer[bufferIndex++] = v2;
-
-    // Vertex 6: Bottom-left (duplicate)
-    vertexBuffer[bufferIndex++] = x1;
-    vertexBuffer[bufferIndex++] = y2;
-    vertexBuffer[bufferIndex++] = u1;
-    vertexBuffer[bufferIndex++] = v2;
-  }
-
-  return vertexBuffer;
-};
-
 /**
  * Generate complete text layout with glyph positioning for caching
  */
@@ -317,8 +253,23 @@ const generateTextLayout = (
   );
 
   const lineAmount = lines.length;
+  let bufferIndex = 0;
+  let glyphCount = 0;
+  // Count total glyphs (excluding spaces) for buffer allocation
+  for (let i = 0; i < lineAmount; i++) {
+    const textLine = (lines[i] as TextLineStruct)[0];
+    for (const char of textLine) {
+      if (isSpace(char) === true) {
+        continue;
+      }
+      glyphCount++;
+    }
+  }
 
-  const glyphs: GlyphLayout[] = [];
+  const vertexBuffer = new Float32Array(
+    glyphCount * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
+  );
+
   let currentX = 0;
   let currentY = 0;
   for (let i = 0; i < lineAmount; i++) {
@@ -353,19 +304,52 @@ const generateTextLayout = (
       // Apply pair kerning before placing this glyph.
       currentX += kerning;
 
-      // Calculate glyph position and atlas coordinates (in design units)
-      const glyphLayout: GlyphLayout = {
-        x: currentX + glyph.xoffset,
-        y: currentY + glyph.yoffset,
-        width: glyph.width,
-        height: glyph.height,
-        atlasX: glyph.x / atlasWidth,
-        atlasY: glyph.y / atlasHeight,
-        atlasWidth: glyph.width / atlasWidth,
-        atlasHeight: glyph.height / atlasHeight,
-      };
+      const x1 = currentX + glyph.xoffset;
+      const y1 = currentY + glyph.yoffset;
+      const x2 = x1 + glyph.width;
+      const y2 = y1 + glyph.height;
+      const u1 = glyph.x / atlasWidth;
+      const v1 = glyph.y / atlasHeight;
+      const u2 = u1 + glyph.width / atlasWidth;
+      const v2 = v1 + glyph.height / atlasHeight;
 
-      glyphs.push(glyphLayout);
+      // Triangle 1: Top-left, top-right, bottom-left
+      // Vertex 1: Top-left
+      vertexBuffer[bufferIndex++] = x1;
+      vertexBuffer[bufferIndex++] = y1;
+      vertexBuffer[bufferIndex++] = u1;
+      vertexBuffer[bufferIndex++] = v1;
+
+      // Vertex 2: Top-right
+      vertexBuffer[bufferIndex++] = x2;
+      vertexBuffer[bufferIndex++] = y1;
+      vertexBuffer[bufferIndex++] = u2;
+      vertexBuffer[bufferIndex++] = v1;
+
+      // Vertex 3: Bottom-left
+      vertexBuffer[bufferIndex++] = x1;
+      vertexBuffer[bufferIndex++] = y2;
+      vertexBuffer[bufferIndex++] = u1;
+      vertexBuffer[bufferIndex++] = v2;
+
+      // Triangle 2: Top-right, bottom-right, bottom-left
+      // Vertex 4: Top-right (duplicate)
+      vertexBuffer[bufferIndex++] = x2;
+      vertexBuffer[bufferIndex++] = y1;
+      vertexBuffer[bufferIndex++] = u2;
+      vertexBuffer[bufferIndex++] = v1;
+
+      // Vertex 5: Bottom-right
+      vertexBuffer[bufferIndex++] = x2;
+      vertexBuffer[bufferIndex++] = y2;
+      vertexBuffer[bufferIndex++] = u2;
+      vertexBuffer[bufferIndex++] = v2;
+
+      // Vertex 6: Bottom-left (duplicate)
+      vertexBuffer[bufferIndex++] = x1;
+      vertexBuffer[bufferIndex++] = y2;
+      vertexBuffer[bufferIndex++] = u1;
+      vertexBuffer[bufferIndex++] = v2;
 
       // Advance position with letter spacing (in design units)
       currentX += glyph.xadvance + letterSpacing;
@@ -374,12 +358,10 @@ const generateTextLayout = (
     currentY += lineHeightPx;
   }
 
-  const vertexBuffer = generateVertexBuffer(glyphs);
-
   // Convert final dimensions to pixel space for the layout
   return {
     vertexBuffer,
-    glyphCount: glyphs.length,
+    glyphCount,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
     width: effectiveWidth * fontScale,
     height: effectiveHeight,
