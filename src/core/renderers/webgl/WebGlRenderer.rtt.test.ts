@@ -36,6 +36,7 @@ import type { CoreRenderer } from '../CoreRenderer.js';
 import { createBound } from '../../lib/utils.js';
 import type { TextureOptions } from '../../CoreTextureManager.js';
 import { Texture } from '../../textures/Texture.js';
+import { WebGlRenderer } from './WebGlRenderer.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,60 +97,21 @@ const makeStage = (): Stage =>
   });
 
 // ---------------------------------------------------------------------------
-// RTT ordering tests — exercised via insertRTTNodeInOrder logic by calling
-// the public renderToTexture() entry point on a minimal renderer stub.
-//
-// Because WebGlRenderer requires a real WebGL context we test the ordering
-// logic in isolation by duplicating it in a lightweight stub that only
-// carries the rttNodes array and the two private methods under test.
+// RTT ordering tests — exercised via renderToTexture() on a real
+// WebGlRenderer instance created with Object.create so no GL context is needed.
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal in-process replica of the insertRTTNodeInOrder / findMaxChildRTTIndex
- * logic so we can unit-test ordering without a GL context.
+ * Creates a minimal WebGlRenderer instance with only `rttNodes` initialised.
+ * Object.create skips the constructor so no GL context is required.
+ * insertRTTNodeInOrder / findMaxChildRTTIndex / renderToTexture only access
+ * `this.rttNodes`, so this stub is sufficient to exercise the real production
+ * code paths.
  */
-class RttNodeOrderer {
-  public rttNodes: CoreNode[] = [];
-
-  renderToTexture(node: CoreNode) {
-    for (let i = 0; i < this.rttNodes.length; i++) {
-      if (this.rttNodes[i] === node) return;
-    }
-    this.insertRTTNodeInOrder(node);
-  }
-
-  private insertRTTNodeInOrder(node: CoreNode) {
-    let insertIndex = this.rttNodes.length;
-
-    let currentNode: CoreNode = node;
-    while (currentNode) {
-      if (currentNode.parent === null) break;
-      const parentIndex = this.rttNodes.indexOf(currentNode.parent);
-      if (parentIndex !== -1) {
-        insertIndex = parentIndex;
-        break;
-      }
-      currentNode = currentNode.parent;
-    }
-
-    const maxChildIndex = this.findMaxChildRTTIndex(node);
-    if (maxChildIndex !== -1) {
-      insertIndex = Math.max(insertIndex, maxChildIndex + 1);
-    }
-
-    this.rttNodes.splice(insertIndex, 0, node);
-  }
-
-  private findMaxChildRTTIndex(node: CoreNode): number {
-    let maxIndex = -1;
-    const traverseChildren = (cur: CoreNode) => {
-      const idx = this.rttNodes.indexOf(cur);
-      if (idx !== -1) maxIndex = Math.max(maxIndex, idx);
-      for (const child of cur.children) traverseChildren(child as CoreNode);
-    };
-    traverseChildren(node);
-    return maxIndex;
-  }
+function makeOrderer(): WebGlRenderer {
+  const r = Object.create(WebGlRenderer.prototype) as WebGlRenderer;
+  r.rttNodes = [];
+  return r;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,11 +120,11 @@ class RttNodeOrderer {
 
 describe('RTT — rttNodes insertion ordering', () => {
   let stage: Stage;
-  let orderer: RttNodeOrderer;
+  let orderer: WebGlRenderer;
 
   beforeEach(() => {
     stage = makeStage();
-    orderer = new RttNodeOrderer();
+    orderer = makeOrderer();
   });
 
   it('adds a single RTT node to an empty list', () => {
@@ -227,7 +189,7 @@ describe('RTT — rttNodes insertion ordering', () => {
     expect(pIdx).toBeLessThan(gpIdx);
   });
 
-  it('handles two sibling RTT nodes (order between siblings is stable)', () => {
+  it('inserts sibling RTT nodes in insertion order (a before b)', () => {
     const root = new CoreNode(stage, makeDefaultProps());
     const a = new CoreNode(stage, makeDefaultProps());
     const b = new CoreNode(stage, makeDefaultProps());
@@ -237,10 +199,12 @@ describe('RTT — rttNodes insertion ordering', () => {
     orderer.renderToTexture(a);
     orderer.renderToTexture(b);
 
-    // Both must be registered
-    expect(orderer.rttNodes.includes(a)).toBe(true);
-    expect(orderer.rttNodes.includes(b)).toBe(true);
     expect(orderer.rttNodes.length).toBe(2);
+    // Siblings have no ordering constraint relative to each other, so the
+    // expected behaviour is that insertion order is preserved.
+    expect(orderer.rttNodes.indexOf(a)).toBeLessThan(
+      orderer.rttNodes.indexOf(b),
+    );
   });
 });
 
