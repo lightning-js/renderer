@@ -533,7 +533,7 @@ export class RendererMain extends EventEmitter {
       boundsMargin: settings.boundsMargin || 0,
       deviceLogicalPixelRatio: settings.deviceLogicalPixelRatio || 1,
       devicePhysicalPixelRatio:
-        settings.devicePhysicalPixelRatio || window.devicePixelRatio || 1,
+        settings.devicePhysicalPixelRatio || this.windowDevicePixelRatio() || 1,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
       enableClear: settings.enableClear ?? true,
@@ -582,8 +582,10 @@ export class RendererMain extends EventEmitter {
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    this.canvas.style.width = `${deviceLogicalWidth}px`;
-    this.canvas.style.height = `${deviceLogicalHeight}px`;
+    if (this.canvas.style) {
+      this.canvas.style.width = `${deviceLogicalWidth}px`;
+      this.canvas.style.height = `${deviceLogicalHeight}px`;
+    }
 
     // Initialize the stage
     this.stage = new Stage({
@@ -1026,5 +1028,9 @@ export class RendererMain extends EventEmitter {
   set targetFPS(fps: number) {
     this.stage.options.targetFPS = fps > 0 ? fps : 0;
     this.stage.updateTargetFrameTime();
+  }
+
+  private windowDevicePixelRatio() {
+    return typeof window !== "undefined" ? window.devicePixelRatio : undefined;
   }
 }
