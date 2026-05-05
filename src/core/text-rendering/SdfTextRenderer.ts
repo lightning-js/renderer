@@ -261,25 +261,22 @@ const renderQuads = (
 
   // Reuse the cached WebGLBuffer if one was provided — avoids a createBuffer
   // call every frame on nodes whose text has not changed.
-  const glBufferRef = renderProps.glBufferRef;
-  let webGlBuffer: WebGLBuffer | null | undefined = glBufferRef?.current;
+  let glBufferRef: WebGLBuffer | null | undefined = renderProps.glBufferRef;
 
-  if (webGlBuffer === undefined || webGlBuffer === null) {
+  if (glBufferRef === null) {
     // Cache miss: allocate a new buffer, upload vertex data, then cache it.
-    webGlBuffer = glw.createBuffer();
-    if (webGlBuffer === null || webGlBuffer === undefined) {
+    glBufferRef = glw.createBuffer() as WebGLBuffer | null | undefined;
+    if (glBufferRef === null || glBufferRef === undefined) {
       console.warn('Failed to create WebGL buffer for SDF text');
       return;
     }
     // Upload vertex data directly into the new buffer.
-    glw.arrayBufferData(webGlBuffer, vertexBuffer, glw.STATIC_DRAW as number);
-    if (glBufferRef !== undefined) {
-      glBufferRef.current = webGlBuffer;
-    }
+    glw.arrayBufferData(glBufferRef, vertexBuffer, glw.STATIC_DRAW as number);
+    renderProps.glBufferRef = glBufferRef;
   }
 
   // Cache hit (or freshly allocated): build the render op and submit.
-  buildAndSubmitRenderOp(webGlBuffer);
+  buildAndSubmitRenderOp(glBufferRef);
 };
 
 /**

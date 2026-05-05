@@ -386,15 +386,8 @@ export interface TextRenderProps {
    * back. CoreTextNode owns the ref and is responsible for calling
    * deleteBuffer when the buffer is no longer needed.
    */
-  glBufferRef?: GlBufferRef;
+  glBufferRef: WebGLBuffer | null;
 }
-
-/**
- * Mutable ref box that carries a cached {@link WebGLBuffer} between frames.
- * `null` means no buffer has been allocated yet (or it has been released).
- * Owned by CoreTextNode; written by SdfTextRenderer.
- */
-export type GlBufferRef = { current: WebGLBuffer | null };
 
 export interface TextRenderInfo {
   width: number;
