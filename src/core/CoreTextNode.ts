@@ -65,7 +65,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
-  private _lastVertexBuffer: Float32Array | null = null;
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -208,7 +207,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
-        this._lastVertexBuffer = null; // Invalidate last vertex buffer
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
@@ -223,7 +221,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(false);
       this._layoutGenerated = false;
       this._cachedLayout = null;
-      this._lastVertexBuffer = null;
     }
 
     // First run the standard CoreNode update
@@ -370,7 +367,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Clear cached layout and vertex buffer
     this._cachedLayout = null;
-    this._lastVertexBuffer = null;
 
     this.fontHandler = null!; // Clear reference to avoid memory leaks
     this.textRenderer = null!; // Clear reference to avoid memory leaks
