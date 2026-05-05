@@ -330,13 +330,13 @@ describe('CoreTextNode', () => {
 
       // Simulate a live WebGLBuffer sitting in the ref
       const fakeBuffer = {};
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBufferRef = fakeBuffer;
       (node as any)._lastVertexBuffer = new Float32Array(4);
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBufferRef).toBeNull();
       expect((node as any)._lastVertexBuffer).toBeNull();
     });
 
@@ -363,12 +363,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {};
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBufferRef = fakeBuffer;
 
       node.updateRenderState(CoreNodeRenderState.InBounds);
 
       expect(deleteBuffer).not.toHaveBeenCalled();
-      expect((node as any)._sdfBufferRef.current).toBe(fakeBuffer);
+      expect((node as any)._sdfBufferRef).toBe(fakeBuffer);
     });
 
     it('should not release the buffer for a canvas-type text node', () => {
@@ -384,7 +384,7 @@ describe('CoreTextNode', () => {
         canvasTextRenderer,
       );
 
-      (node as any)._sdfBufferRef.current = {};
+      (node as any)._sdfBufferRef = {};
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
@@ -403,12 +403,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBufferRef = fakeBuffer;
 
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBufferRef).toBeNull();
     });
 
     it('should call renderer.deleteBuffer again on each subsequent layout regeneration', () => {
@@ -426,12 +426,12 @@ describe('CoreTextNode', () => {
       // Trigger a second layout pass by invalidating the layout
       node.fontSize = 24;
       const secondBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = secondBuffer;
+      (node as any)._sdfBufferRef = secondBuffer;
 
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(secondBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBufferRef).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer when buffer is already null at regeneration time', () => {
@@ -462,14 +462,14 @@ describe('CoreTextNode', () => {
 
       // Prime the node with a cached buffer
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBufferRef = fakeBuffer;
       (node as any)._layoutGenerated = true;
 
       node.text = '';
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBufferRef).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer when text is invalid and buffer is already null', () => {
@@ -515,12 +515,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBufferRef = fakeBuffer;
 
       node.destroy();
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBufferRef).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer on destroy when buffer is already null', () => {

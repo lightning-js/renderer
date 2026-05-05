@@ -19,7 +19,6 @@
 
 import type {
   FontHandler,
-  GlBufferRef,
   TextRenderer,
   TrProps,
   TextLayout,
@@ -69,7 +68,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _lastVertexBuffer: Float32Array | null = null;
   // Typed ref box shared with SdfTextRenderer so the WebGLBuffer can be
   // created once and reused across frames instead of per-frame.
-  private _sdfBufferRef: GlBufferRef = { current: null };
+  private _sdfBufferRef: WebGLBuffer | null = null;
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -123,10 +122,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Safe to call from destroy() or on text change.
    */
   private releaseSdfBuffer(): void {
-    const buf = this._sdfBufferRef.current;
+    const buf = this._sdfBufferRef;
     if (buf === null) return;
     this.stage.renderer.deleteBuffer(buf);
-    this._sdfBufferRef.current = null;
+    this._sdfBufferRef = null;
   }
 
   allowTextGeneration() {
