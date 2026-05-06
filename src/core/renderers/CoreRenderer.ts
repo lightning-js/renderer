@@ -68,4 +68,13 @@ export abstract class CoreRenderer {
   abstract updateViewport(): void;
   abstract updateClearColor(color: number): void;
   getTextureCoords?(node: CoreNode): TextureCoords | undefined;
+
+  /**
+   * Delete a GPU buffer previously allocated by this renderer.
+   * No-op for renderers that do not use WebGL buffers (e.g. Canvas).
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deleteBuffer(_buffer: WebGLBuffer): void {
+    // no-op default — overridden by WebGlRenderer
+  }
 }
