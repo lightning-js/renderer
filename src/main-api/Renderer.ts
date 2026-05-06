@@ -1031,6 +1031,30 @@ export class RendererMain extends EventEmitter {
   }
 
   private windowDevicePixelRatio() {
-    return typeof window !== "undefined" ? window.devicePixelRatio : undefined;
+    return typeof window !== 'undefined' ? window.devicePixelRatio : undefined;
+  }
+
+  /**
+   * Close and destroy the renderer, releasing all resources.
+   *
+   * @remarks
+   * This method performs a full teardown of the renderer:
+   * - Stops the platform render loop
+   * - Destroys all scene nodes (including text node font resources)
+   * - Releases all texture memory and GPU resources
+   * - Terminates image worker threads
+   * - Removes the canvas element from the target div
+   * - Destroys the inspector if active
+   */
+  close(): void {
+    // Destroy the inspector first
+    this.inspector?.destroy();
+    this.inspector = null;
+
+    // Destroy the stage (stops loop, destroys nodes, releases textures/GPU)
+    this.stage.destroy();
+
+    // Remove the canvas from the DOM
+    this.canvas.remove();
   }
 }

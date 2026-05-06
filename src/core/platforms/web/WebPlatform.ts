@@ -48,6 +48,7 @@ export class WebPlatform extends Platform {
   private useImageWorker: boolean;
   private imageWorkerManager: ImageWorkerManager | null = null;
   private hasWorker = !!self.Worker;
+  private stopped = false;
 
   constructor(settings: PlatformSettings = {}) {
     super(settings);
@@ -100,10 +101,12 @@ export class WebPlatform extends Platform {
   ////////////////////////
 
   override startLoop(stage: Stage): void {
+    this.stopped = false;
     let isIdle = false;
     let lastFrameTime = 0;
 
     const runLoop = (currentTime: number = 0) => {
+      if (this.stopped) return;
       const targetFrameTime = stage.targetFrameTime;
 
       // Check if we should throttle this frame
@@ -171,6 +174,16 @@ export class WebPlatform extends Platform {
       }
     };
     requestAnimationFrame(runLoop);
+  }
+
+  override stopLoop(): void {
+    this.stopped = true;
+    if (this.imageWorkerManager !== null) {
+      for (const worker of this.imageWorkerManager.workers) {
+        worker.terminate();
+      }
+      this.imageWorkerManager = null;
+    }
   }
 
   ////////////////////////

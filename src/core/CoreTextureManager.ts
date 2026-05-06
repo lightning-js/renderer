@@ -289,8 +289,6 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
-    this.stage.txMemManager.removeFromOrphanedTextures(texture);
-
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures - they get loaded through their parent
       return;
@@ -462,6 +460,20 @@ export class CoreTextureManager extends EventEmitter {
     if (uploadIndex !== -1) {
       this.uploadTextureQueue.splice(uploadIndex, 1);
     }
+  }
+
+  /**
+   * Destroy the CoreTextureManager and release all internal references.
+   *
+   * @remarks
+   * Clears the upload queue and key/inverse-key caches so that queued
+   * textures can be garbage-collected after a renderer teardown.
+   */
+  destroy(): void {
+    this.uploadTextureQueue = [];
+    this.keyCache.clear();
+    // inverseKeyCache is a WeakMap – entries will be GC'd automatically once
+    // the texture objects themselves are no longer referenced.
   }
 
   /**

@@ -90,6 +90,11 @@ export abstract class Platform {
   abstract startLoop(stage: Stage): void;
 
   /**
+   * Stops the main rendering loop and releases platform resources.
+   */
+  abstract stopLoop(): void;
+
+  /**
    * Fetches a resource from the network.
    * @param url - The URL of the resource to fetch.
    * @returns A promise that resolves with the response.

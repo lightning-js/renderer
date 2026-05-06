@@ -67,6 +67,7 @@ export abstract class CoreRenderer {
   abstract getQuadCount(): number | null;
   abstract updateViewport(): void;
   abstract updateClearColor(color: number): void;
+  abstract destroy(): void;
   getTextureCoords?(node: CoreNode): TextureCoords | undefined;
 
   /**

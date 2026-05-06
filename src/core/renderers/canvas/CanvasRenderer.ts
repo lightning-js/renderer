@@ -255,4 +255,10 @@ export class CanvasRenderer extends CoreRenderer {
   getDefaultShaderNode() {
     return null;
   }
+
+  override destroy(): void {
+    // Release canvas 2D context by resizing canvas to 0
+    this.canvas.width = 0;
+    this.canvas.height = 0;
+  }
 }

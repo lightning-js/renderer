@@ -724,6 +724,13 @@ export class WebGlRenderer extends CoreRenderer {
     };
   }
 
+  override destroy(): void {
+    const loseCtx = this.glw.getExtension(
+      'WEBGL_lose_context',
+    ) as WEBGL_lose_context | null;
+    loseCtx?.loseContext();
+  }
+  
   override deleteBuffer(buffer: WebGLBuffer): void {
     this.glw.deleteBuffer(buffer);
   }
