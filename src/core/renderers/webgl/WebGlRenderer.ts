@@ -474,28 +474,27 @@ export class WebGlRenderer extends CoreRenderer {
   private insertRTTNodeInOrder(node: CoreNode) {
     let insertIndex = this.rttNodes.length; // Default to the end of the array
 
+    // Build a one-shot index map so all lookups below are O(1) instead of O(n).
+    const rttNodes = this.rttNodes;
+    const indexMap = new Map<number, number>();
+    for (let i = 0; i < rttNodes.length; i++) {
+      indexMap.set(rttNodes[i]!.id, i);
+    }
+
     // 1. Traverse upwards to ensure the node is placed before its RTT parent (if any).
     let currentNode: CoreNode = node;
-    while (currentNode) {
-      if (!currentNode.parent) {
-        break;
-      }
-
-      const parentIndex = this.rttNodes.indexOf(currentNode.parent);
-      if (parentIndex !== -1) {
-        // Found an RTT parent in the list; set insertIndex to place node before the parent
+    while (currentNode.parent !== null) {
+      const parentIndex = indexMap.get(currentNode.parent.id);
+      if (parentIndex !== undefined) {
         insertIndex = parentIndex;
         break;
       }
-
       currentNode = currentNode.parent;
     }
 
     // 2. Traverse downwards to ensure the node is placed after any RTT children.
-    // Look through each child recursively to see if any are already in rttNodes.
-    const maxChildIndex = this.findMaxChildRTTIndex(node);
+    const maxChildIndex = this.findMaxChildRTTIndex(node, indexMap);
     if (maxChildIndex !== -1) {
-      // Adjust insertIndex to be after the last child RTT node
       insertIndex = Math.max(insertIndex, maxChildIndex + 1);
     }
 
@@ -503,25 +502,25 @@ export class WebGlRenderer extends CoreRenderer {
     this.rttNodes.splice(insertIndex, 0, node);
   }
 
-  // Helper function to find the highest index of any RTT children of a node within rttNodes
-  private findMaxChildRTTIndex(node: CoreNode): number {
+  // Iterative DFS to find the highest rttNodes index among all RTT descendants of node.
+  private findMaxChildRTTIndex(
+    node: CoreNode,
+    indexMap: Map<number, number>,
+  ): number {
     let maxIndex = -1;
-
-    const traverseChildren = (currentNode: CoreNode) => {
-      const currentIndex = this.rttNodes.indexOf(currentNode);
-      if (currentIndex !== -1) {
-        maxIndex = Math.max(maxIndex, currentIndex);
+    // Explicit stack avoids recursive arrow function allocation and call-stack growth.
+    const stack: CoreNode[] = [node];
+    while (stack.length !== 0) {
+      const current = stack.pop()!;
+      const idx = indexMap.get(current.id);
+      if (idx !== undefined && idx > maxIndex) {
+        maxIndex = idx;
       }
-
-      // Recursively check all children of the current node
-      for (const child of currentNode.children) {
-        traverseChildren(child);
+      const children = current.children;
+      for (let i = 0; i < children.length; i++) {
+        stack.push(children[i]!);
       }
-    };
-
-    // Start traversal directly with the provided node
-    traverseChildren(node);
-
+    }
     return maxIndex;
   }
 

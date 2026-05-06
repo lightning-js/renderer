@@ -203,6 +203,26 @@ export enum UpdateType {
 }
 
 /**
+ * Bitmask of UpdateType flags that represent a visually significant change
+ * within a node. Used to gate notifyParentRTTOfUpdate() so that RTT surfaces
+ * are only marked dirty when something actually visible changed, rather than
+ * on every update() cycle that merely propagates child traversal.
+ *
+ * Excluded flags (non-visual cascade/bookkeeping):
+ *   Children, RenderBounds, RenderState, ParentRenderTexture, Autosize
+ */
+const RTT_NOTIFY_MASK =
+  UpdateType.Local |
+  UpdateType.Global |
+  UpdateType.Clipping |
+  UpdateType.SortZIndexChildren |
+  UpdateType.PremultipliedColors |
+  UpdateType.WorldAlpha |
+  UpdateType.IsRenderable |
+  UpdateType.RenderTexture |
+  UpdateType.RecalcUniforms;
+
+/**
  * A custom data map which can be stored on an CoreNode
  *
  * @remarks
@@ -1345,10 +1365,15 @@ export class CoreNode extends EventEmitter {
       }
     }
 
-    // If the node has an RTT parent and requires a texture re-render, inform the RTT parent
-    // if (this.parentHasRenderTexture && updateType & UpdateType.RenderTexture) {
-    // @TODO have a more scoped down updateType for RTT updates
-    if (parentHasRenderTexture === true) {
+    // If the node has an RTT parent and a visually relevant change occurred (or a
+    // nested RTT child already flagged this node via hasRTTupdates), notify the
+    // nearest RTT ancestor so it re-renders its surface.
+    // Guarded by RTT_NOTIFY_MASK to avoid redundant notifications on frames where
+    // only child-traversal bookkeeping flags (Children, RenderBounds, etc.) are set.
+    if (
+      parentHasRenderTexture === true &&
+      (this.hasRTTupdates === true || (updateType & RTT_NOTIFY_MASK) !== 0)
+    ) {
       this.notifyParentRTTOfUpdate();
     }
 
