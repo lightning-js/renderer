@@ -731,4 +731,8 @@ export class WebGlRenderer extends CoreRenderer {
     ) as WEBGL_lose_context | null;
     loseCtx?.loseContext();
   }
+  
+  override deleteBuffer(buffer: WebGLBuffer): void {
+    this.glw.deleteBuffer(buffer);
+  }
 }

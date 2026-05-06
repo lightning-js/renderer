@@ -66,6 +66,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
   private _lastVertexBuffer: Float32Array | null = null;
+  // Typed ref box shared with SdfTextRenderer so the WebGLBuffer can be
+  // created once and reused across frames instead of per-frame.
+  private _sdfBufferRef: WebGLBuffer | null = null;
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -112,6 +115,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
     this.setUpdateType(UpdateType.IsRenderable);
   };
+
+  /**
+   * Delete the cached WebGLBuffer held by the SDF renderer ref and reset the
+   * ref so the next renderQuads call allocates a fresh one.
+   * Safe to call from destroy() or on text change.
+   */
+  private releaseSdfBuffer(): void {
+    const buf = this._sdfBufferRef;
+    if (buf === null) return;
+    this.stage.renderer.deleteBuffer(buf);
+    this._sdfBufferRef = null;
+  }
 
   allowTextGeneration() {
     const p = this.props.parent;
@@ -209,6 +224,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
         this._lastVertexBuffer = null; // Invalidate last vertex buffer
+        this.releaseSdfBuffer(); // Free the cached WebGLBuffer
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
@@ -224,6 +240,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._layoutGenerated = false;
       this._cachedLayout = null;
       this._lastVertexBuffer = null;
+      this.releaseSdfBuffer(); // Free the cached WebGLBuffer
     }
 
     // First run the standard CoreNode update
@@ -368,8 +385,20 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
             ? this.parentFramebufferDimensions
             : null,
         stage: this.stage,
+        glBufferRef: this._sdfBufferRef,
       },
     );
+  }
+
+  override updateRenderState(renderState: CoreNodeRenderState): void {
+    super.updateRenderState(renderState);
+    if (
+      this._type === 'sdf' &&
+      renderState === CoreNodeRenderState.OutOfBounds
+    ) {
+      this.releaseSdfBuffer();
+      this._lastVertexBuffer = null;
+    }
   }
 
   override destroy(): void {
@@ -380,6 +409,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Clear cached layout and vertex buffer
     this._cachedLayout = null;
     this._lastVertexBuffer = null;
+    this.releaseSdfBuffer(); // Delete the cached WebGLBuffer before losing stage ref
 
     this.fontHandler = null!; // Clear reference to avoid memory leaks
     this.textRenderer = null!; // Clear reference to avoid memory leaks

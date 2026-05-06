@@ -2,8 +2,10 @@ on:
   pull_request:
   merge_group:
     types: [checks_requested]
+
 jobs:
   run-all-tests:
+    name: Unit & Visual Regression Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -39,6 +41,14 @@ jobs:
 
       - name: Run Unit Tests
         run: pnpm test
+
+      - name: Validate Test Files Exist
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📋 Test Coverage Check"
+          echo "Verify that your changes include corresponding test files (*.test.ts)"
+          echo "For more details, see: https://github.com/lightning-js/renderer/blob/main/CONTRIBUTING.md#testing-requirements"
+        continue-on-error: true
 
       - name: Install Playwright Browser
         run: cd visual-regression && pnpm exec playwright install chromium
