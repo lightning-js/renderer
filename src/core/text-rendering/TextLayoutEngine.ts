@@ -330,8 +330,18 @@ export const wrapLine = (
 
         if (remainingWord.length > 0) {
           if (word.length === 0) {
-            // No progress possible — cannot fit any character, avoid infinite loop
-            break;
+            if (overflowSuffix.length > 0) {
+              word = overflowSuffix;
+              wordWidth = overflowWidth;
+            } else {
+              word = remainingWord.charAt(0);
+              if (word.length === 0) {
+                break;
+              }
+              wordWidth = measureText(word, fontFamily, letterSpacing);
+            }
+            remainingWord = '';
+            remainingLines = 0;
           }
           pendingWord = remainingWord;
         }
