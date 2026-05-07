@@ -306,32 +306,28 @@ export const wrapLine = (
       //if first word doesn't fit on empty line
       if (wordWidth > maxWidth) {
         remainingLines--;
-        let lineTruncated = false;
         const isLastLine = remainingLines === 0;
+        let lineTruncated = isLastLine;
         //truncate word to fit
-        [word, remainingWord, wordWidth] =
-          isLastLine === true
-            ? truncateWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-                overflowSuffix,
-                overflowWidth,
-              )
-            : splitWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-              );
-        if (isLastLine === true) {
-          lineTruncated = true;
-        }
+        [word, remainingWord, wordWidth] = isLastLine
+          ? truncateWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+              overflowSuffix,
+              overflowWidth,
+            )
+          : splitWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+            );
 
         if (remainingWord.length > 0) {
           if (word.length === 0) {
