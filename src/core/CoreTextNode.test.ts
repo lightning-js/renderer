@@ -331,13 +331,11 @@ describe('CoreTextNode', () => {
       // Simulate a live WebGLBuffer sitting in the ref
       const fakeBuffer = {};
       (node as any)._sdfBufferRef = fakeBuffer;
-      (node as any)._lastVertexBuffer = new Float32Array(4);
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
       expect((node as any)._sdfBufferRef).toBeNull();
-      expect((node as any)._lastVertexBuffer).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer when _sdfBufferRef is already null', () => {
@@ -486,7 +484,7 @@ describe('CoreTextNode', () => {
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
 
-    it('should also clear _lastVertexBuffer when text becomes invalid', () => {
+    it('should also clear _cachedLayout when text becomes invalid', () => {
       const deleteBuffer = vi.fn();
       const props = { ...defaultTextProps, text: 'Hello', forceLoad: true };
       const node = new CoreTextNode(
@@ -495,13 +493,13 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      (node as any)._lastVertexBuffer = new Float32Array(4);
+      (node as any)._cachedLayout = {};
       (node as any)._layoutGenerated = true;
 
       node.text = '';
       node.update(16, clippingRect);
 
-      expect((node as any)._lastVertexBuffer).toBeNull();
+      expect((node as any)._cachedLayout).toBeNull();
     });
   });
 
@@ -537,16 +535,14 @@ describe('CoreTextNode', () => {
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
 
-    it('should clear _cachedLayout and _lastVertexBuffer on destroy', () => {
+    it('should clear _cachedLayout on destroy', () => {
       const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
 
-      (node as any)._cachedLayout = { glyphs: [] };
-      (node as any)._lastVertexBuffer = new Float32Array(4);
+      (node as any)._cachedLayout = {};
 
       node.destroy();
 
       expect((node as any)._cachedLayout).toBeNull();
-      expect((node as any)._lastVertexBuffer).toBeNull();
     });
   });
 });
