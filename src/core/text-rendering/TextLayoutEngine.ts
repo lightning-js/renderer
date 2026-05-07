@@ -227,7 +227,9 @@ export const wrapText = (
         : [[['', 0, false, 0, 0]], remainingLines, i < lines.length - 1];
 
     remainingLines--;
-    wrappedLines.push(...wrappedLine);
+    for (let j = 0; j < wrappedLine.length; j++) {
+      wrappedLines.push(wrappedLine[j]!);
+    }
 
     if (hasMaxLines === true && remainingLines <= 0) {
       const lastLine = wrappedLines[wrappedLines.length - 1]!;
@@ -278,10 +280,25 @@ export const wrapLine = (
   let hasRemainingText = true;
 
   const wrapFn = getWrapStrategy(wordBreak);
-  while (words.length > 0 && remainingLines > 0) {
-    let word = words.shift()!;
-    let wordWidth = measureText(word, fontFamily, letterSpacing);
+  let wordIdx = 0;
+  let spaceIdx = 0;
+  let pendingWord = '';
+
+  while (
+    (pendingWord.length > 0 || wordIdx < words.length) &&
+    remainingLines > 0
+  ) {
+    let word: string;
+    let wordWidth: number;
     let remainingWord = '';
+
+    if (pendingWord.length > 0) {
+      word = pendingWord;
+      pendingWord = '';
+    } else {
+      word = words[wordIdx++]!;
+    }
+    wordWidth = measureText(word, fontFamily, letterSpacing);
 
     //handle first word of new line separately to avoid empty line issues
     if (currentLineWidth === 0) {
@@ -312,7 +329,11 @@ export const wrapLine = (
               );
 
         if (remainingWord.length > 0) {
-          words.unshift(remainingWord);
+          if (word.length === 0) {
+            // No progress possible — cannot fit any character, avoid infinite loop
+            break;
+          }
+          pendingWord = remainingWord;
         }
         // first word doesn't fit on an empty line
         wrappedLines.push([word, wordWidth, false, 0, 0]);
@@ -326,7 +347,7 @@ export const wrapLine = (
       }
       continue;
     }
-    const space = spaces.shift() || '';
+    const space = spaces[spaceIdx++] || '';
     // For width calculation, treat ZWSP as having 0 width but regular space functionality
     const effectiveSpaceWidth = space === '\u200B' ? 0 : spaceWidth;
     const totalWidth = currentLineWidth + effectiveSpaceWidth + wordWidth;
@@ -367,7 +388,7 @@ export const wrapLine = (
     );
 
     if (remainingWord.length > 0) {
-      words.unshift(remainingWord);
+      pendingWord = remainingWord;
     }
   }
 
