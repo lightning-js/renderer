@@ -222,6 +222,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
+        this.releaseSdfBuffer(); // Free the cached WebGLBuffer
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
@@ -236,6 +237,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(false);
       this._layoutGenerated = false;
       this._cachedLayout = null;
+      this.releaseSdfBuffer(); // Free the cached WebGLBuffer
     }
 
     // First run the standard CoreNode update
@@ -351,7 +353,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // Early return if no cached data
-    if (!this._cachedLayout) {
+    if (this._cachedLayout === undefined) {
       return;
     }
 
