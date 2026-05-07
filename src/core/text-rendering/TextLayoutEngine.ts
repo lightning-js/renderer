@@ -306,27 +306,28 @@ export const wrapLine = (
       //if first word doesn't fit on empty line
       if (wordWidth > maxWidth) {
         remainingLines--;
+        const isLastLine = remainingLines === 0;
+        let lineTruncated = isLastLine;
         //truncate word to fit
-        [word, remainingWord, wordWidth] =
-          remainingLines === 0
-            ? truncateWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-                overflowSuffix,
-                overflowWidth,
-              )
-            : splitWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-              );
+        [word, remainingWord, wordWidth] = isLastLine
+          ? truncateWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+              overflowSuffix,
+              overflowWidth,
+            )
+          : splitWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+            );
 
         if (remainingWord.length > 0) {
           if (word.length === 0) {
@@ -342,11 +343,12 @@ export const wrapLine = (
             }
             remainingWord = '';
             remainingLines = 0;
+            lineTruncated = true;
           }
           pendingWord = remainingWord;
         }
         // first word doesn't fit on an empty line
-        wrappedLines.push([word, wordWidth, false, 0, 0]);
+        wrappedLines.push([word, wordWidth, lineTruncated, 0, 0]);
       } else if (wordWidth + spaceWidth >= maxWidth) {
         remainingLines--;
         // word with space doesn't fit, but word itself fits - put on new line
