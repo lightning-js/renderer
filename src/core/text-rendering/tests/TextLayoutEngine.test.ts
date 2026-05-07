@@ -264,6 +264,7 @@ describe('SDF Text Utils', () => {
 
       expect(result[0]).toHaveLength(1);
       expect(result[0][0]?.[0]).toBe('...');
+      expect(result[0][0]?.[2]).toBe(true);
       expect(result[1]).toBe(0);
     });
   });
