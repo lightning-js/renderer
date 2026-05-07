@@ -353,7 +353,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // Early return if no cached data
-    if (this._cachedLayout === undefined) {
+    if (this._cachedLayout === null) {
       return;
     }
 
