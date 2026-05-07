@@ -116,7 +116,6 @@ export interface MemoryInfo {
 export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: (Texture | null)[] = [];
-  private orphanedTextures: Texture[] = [];
   private criticalThreshold: number = 124e6;
   private targetThreshold: number = 0.5;
   private cleanupInterval: number = 5000;
@@ -143,35 +142,6 @@ export class TextureMemoryManager {
 
   constructor(private stage: Stage, settings: TextureMemoryManagerSettings) {
     this.updateSettings(settings);
-  }
-
-  /**
-   * Add a texture to the orphaned textures list
-   *
-   * @param texture - The texture to add to the orphaned textures list
-   */
-  addToOrphanedTextures(texture: Texture) {
-    // if the texture is already in the orphaned textures list add it at the end
-    if (this.orphanedTextures.includes(texture)) {
-      this.removeFromOrphanedTextures(texture);
-    }
-
-    // If the texture can be cleaned up, add it to the orphaned textures list
-    if (texture.preventCleanup === false) {
-      this.orphanedTextures.push(texture);
-    }
-  }
-
-  /**
-   * Remove a texture from the orphaned textures list
-   *
-   * @param texture - The texture to remove from the orphaned textures list
-   */
-  removeFromOrphanedTextures(texture: Texture) {
-    const index = this.orphanedTextures.indexOf(texture);
-    if (index !== -1) {
-      this.orphanedTextures.splice(index, 1);
-    }
   }
 
   /**
@@ -414,5 +384,28 @@ export class TextureMemoryManager {
     if (criticalThreshold === 0) {
       this.setTextureMemUse = () => {};
     }
+  }
+
+  /**
+   * Destroy the TextureMemoryManager and release all internal references.
+   *
+   * @remarks
+   * Clears the debug-logging interval (if active) and empties all internal
+   * texture tracking arrays so that held textures can be garbage-collected.
+   */
+  destroy(): void {
+    if (this.loggingID) {
+      clearInterval(this.loggingID);
+      this.loggingID = 0 as unknown as ReturnType<typeof setInterval>;
+    }
+    // Free GPU resources for every loaded texture before clearing the array
+    for (let i = 0; i < this.loadedTextures.length; i++) {
+      const texture = this.loadedTextures[i];
+      if (texture !== null && texture !== undefined) {
+        this.destroyTexture(texture);
+      }
+    }
+    this.loadedTextures = [];
+    this.memUsed = 0;
   }
 }
