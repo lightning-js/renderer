@@ -905,7 +905,7 @@ export class Stage {
     // Release the GPU context (WebGL) or canvas resources
     this.renderer.destroy();
 
-    // Clear text renderers and font handlers
+    // Clear text renderer caches
     for (const key in this.textRenderers) {
       this.textRenderers[key]!.clearCache();
     }

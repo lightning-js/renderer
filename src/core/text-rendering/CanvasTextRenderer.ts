@@ -19,14 +19,10 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type {
-  TextLayout,
-  TextLineStruct,
-  TextRenderInfo,
-} from './TextRenderer.js';
+import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace } from './Utils.js';
+import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
@@ -47,14 +43,7 @@ let measureContext:
   | null = null;
 
 // Cache for text layout calculations
-const layoutCache = new Map<string, TextLayout>();
-
-const getLayoutFromCache = (
-  props: CoreTextNodeProps,
-): TextRenderInfo | undefined => {
-  const cacheKey = `${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.text}`;
-  return layoutCache.get(cacheKey);
-};
+const layoutCache = new Map<string, TextRenderInfo>();
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
@@ -98,8 +87,9 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
+  const cacheKey = getLayoutCacheKey(props);
 
-  let layout = getLayoutFromCache(props);
+  let layout = layoutCache.get(cacheKey);
   if (layout !== undefined) {
     return layout;
   }
@@ -196,13 +186,15 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   if (canvas.width > 0 && canvas.height > 0) {
     imageData = context.getImageData(0, 0, canvasW, canvasH);
   }
-  return {
+  const renderInfo = {
     imageData,
     width: effectiveWidth,
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
   };
+  layoutCache.set(cacheKey, renderInfo);
+  return renderInfo;
 };
 
 /**

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import type { NormalizedFontMetrics } from './TextRenderer.js';
+import type { CoreTextNodeProps } from '../CoreTextNode.js';
 
 const invisibleChars = /[\u200B\u200C\u200D\uFEFF\u00AD\u2060]/g;
 
@@ -96,4 +96,8 @@ export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
   }
   final.pop();
   return final.filter((word) => word != '');
+}
+
+export function getLayoutCacheKey(props: CoreTextNodeProps): string {
+  return `${props.text}-${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.wordBreak}-${props.maxLines}-${props.overflowSuffix}`;
 }

@@ -25,7 +25,7 @@ import type {
   TextRenderProps,
 } from './TextRenderer.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace } from './Utils.js';
+import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -59,13 +59,6 @@ const init = (stage: Stage): void => {
 const font: FontHandler = SdfFontHandler;
 const layoutCache = new Map<string, TextLayout>();
 
-const getLayoutFromCache = (
-  props: CoreTextNodeProps,
-): TextLayout | undefined => {
-  const cacheKey = `${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.text}`;
-  return layoutCache.get(cacheKey);
-};
-
 /**
  * SDF text renderer using MSDF/SDF fonts with WebGL
  *
@@ -82,7 +75,9 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     };
   }
 
-  let layout = getLayoutFromCache(props);
+  const cacheKey = getLayoutCacheKey(props);
+
+  let layout = layoutCache.get(cacheKey);
   if (layout !== undefined) {
     return {
       width: layout.width,
@@ -105,6 +100,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   // Calculate text layout and generate glyph data for caching
   layout = generateTextLayout(props, fontData);
+  layoutCache.set(cacheKey, layout);
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {

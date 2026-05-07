@@ -284,7 +284,7 @@ export interface GlyphLayout {
  */
 export interface TextLayout {
   /**
-   * Individual glyph layouts
+   * vertices for rendering quads in WebGL
    */
   vertexBuffer: Float32Array;
   /**
@@ -315,8 +315,13 @@ export interface TextLayout {
    * distanceRange used
    */
   distanceRange: number;
-
+  /**
+   * number of lines that exceeded maxHeight and were truncated
+   */
   remainingLines: number;
+  /**
+   * Whether there is remaining text that exceeded maxHeight and was truncated
+   */
   hasRemainingText: boolean;
 }
 
