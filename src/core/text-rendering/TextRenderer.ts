@@ -376,13 +376,13 @@ export interface TextRenderProps {
   framebufferDimensions: unknown;
   stage: Stage;
   /**
-   * Opaque mutable ref used by the SDF renderer to cache the underlying
-   * WebGLBuffer across frames. The SDF renderer reads the current value,
-   * reuses it if present, otherwise creates a new buffer and writes it
-   * back. CoreTextNode owns the ref and is responsible for calling
+   * Mutable wrapper ref used by the SDF renderer to cache the underlying
+   * WebGLBuffer across frames. The SDF renderer reads and writes the
+   * `.current` property so the node's ref box is updated in-place.
+   * CoreTextNode owns the ref and is responsible for calling
    * deleteBuffer when the buffer is no longer needed.
    */
-  glBufferRef: WebGLBuffer | null;
+  glBufferRef: { current: WebGLBuffer | null };
 }
 
 export interface TextRenderInfo {

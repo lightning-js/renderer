@@ -65,9 +65,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
-  // Typed ref box shared with SdfTextRenderer so the WebGLBuffer can be
-  // created once and reused across frames instead of per-frame.
-  private _sdfBufferRef: WebGLBuffer | null = null;
+  // Mutable ref box shared with SdfTextRenderer so the renderer can write the
+  // created WebGLBuffer back into it, allowing reuse across frames.
+  private _sdfBufferRef: { current: WebGLBuffer | null } = { current: null };
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -121,10 +121,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Safe to call from destroy() or on text change.
    */
   private releaseSdfBuffer(): void {
-    const buf = this._sdfBufferRef;
+    const buf = this._sdfBufferRef.current;
     if (buf === null) return;
     this.stage.renderer.deleteBuffer(buf);
-    this._sdfBufferRef = null;
+    this._sdfBufferRef.current = null;
   }
 
   allowTextGeneration() {
