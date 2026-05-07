@@ -25,7 +25,7 @@ import type {
   TextRenderProps,
 } from './TextRenderer.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace, isSpace } from './Utils.js';
+import { hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
@@ -85,10 +85,10 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   let layout = getLayoutFromCache(props);
   if (layout !== undefined) {
     return {
-      remainingLines: 0,
-      hasRemainingText: false,
       width: layout.width,
       height: layout.height,
+      remainingLines: layout.remainingLines,
+      hasRemainingText: layout.hasRemainingText,
       layout, // Cache layout for addQuads
     };
   }
@@ -108,10 +108,10 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   // For SDF renderer, ImageData is null since we render via WebGL
   return {
-    remainingLines: 0,
-    hasRemainingText: false,
     width: layout.width,
     height: layout.height,
+    remainingLines: layout.remainingLines,
+    hasRemainingText: layout.hasRemainingText,
     layout, // Cache layout for addQuads
   };
 };
@@ -272,7 +272,11 @@ const generateTextLayout = (
   for (let i = 0; i < lineAmount; i++) {
     const textLine = (lines[i] as TextLineStruct)[0];
     for (const char of textLine) {
-      if (isSpace(char) === true) {
+      if (hasZeroWidthSpace(char) === true) {
+        continue;
+      }
+      const codepoint = char.codePointAt(0);
+      if (codepoint === undefined) {
         continue;
       }
       glyphCount++;
@@ -381,7 +385,13 @@ const generateTextLayout = (
     fontScale: fontScale,
     lineHeight: lineHeightPx,
     fontFamily,
+    remainingLines,
+    hasRemainingText,
   };
+};
+
+const clearCache = (): void => {
+  layoutCache.clear();
 };
 
 /**
@@ -393,6 +403,7 @@ const SdfTextRenderer = {
   renderText,
   renderQuads,
   init,
+  clearCache,
 };
 
 export default SdfTextRenderer;

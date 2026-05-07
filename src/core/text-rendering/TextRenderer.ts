@@ -315,6 +315,9 @@ export interface TextLayout {
    * distanceRange used
    */
   distanceRange: number;
+
+  remainingLines: number;
+  hasRemainingText: boolean;
 }
 
 export interface FontLoadOptions {
@@ -396,6 +399,7 @@ export interface TextRenderer {
     renderProps: TextRenderProps,
   ) => void;
   init: (stage: Stage) => void;
+  clearCache: () => void;
 }
 
 /**

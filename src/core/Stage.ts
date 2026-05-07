@@ -904,6 +904,11 @@ export class Stage {
 
     // Release the GPU context (WebGL) or canvas resources
     this.renderer.destroy();
+
+    // Clear text renderers and font handlers
+    for (const key in this.textRenderers) {
+      this.textRenderers[key]!.clearCache();
+    }
   }
 
   set clearColor(value: number) {

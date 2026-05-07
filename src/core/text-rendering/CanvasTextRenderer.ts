@@ -19,7 +19,11 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
+import type {
+  TextLayout,
+  TextLineStruct,
+  TextRenderInfo,
+} from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { hasZeroWidthSpace } from './Utils.js';
@@ -43,16 +47,14 @@ let measureContext:
   | null = null;
 
 // Cache for text layout calculations
-const layoutCache = new Map<
-  string,
-  {
-    lines: string[];
-    lineWidths: number[];
-    maxLineWidth: number;
-    remainingText: string;
-    moreTextLines: boolean;
-  }
->();
+const layoutCache = new Map<string, TextLayout>();
+
+const getLayoutFromCache = (
+  props: CoreTextNodeProps,
+): TextRenderInfo | undefined => {
+  const cacheKey = `${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.text}`;
+  return layoutCache.get(cacheKey);
+};
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
@@ -96,6 +98,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
+
+  let layout = getLayoutFromCache(props);
+  if (layout !== undefined) {
+    return layout;
+  }
   // Extract already normalized properties
   const {
     text,
@@ -199,36 +206,10 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 };
 
 /**
- * Generate a cache key for text layout calculations
- */
-function generateLayoutCacheKey(
-  text: string,
-  fontFamily: string,
-  fontSize: number,
-  fontStyle: string,
-  wordWrap: boolean,
-  wordWrapWidth: number,
-  letterSpacing: number,
-  maxLines: number,
-  overflowSuffix: string,
-): string {
-  return `${text}-${fontFamily}-${fontSize}-${fontStyle}-${wordWrap}-${wordWrapWidth}-${letterSpacing}-${maxLines}-${overflowSuffix}`;
-}
-
-/**
  * Clear layout cache for memory management
  */
-const clearLayoutCache = (): void => {
+const clearCache = (): void => {
   layoutCache.clear();
-};
-
-/**
- * Add quads for rendering (Canvas doesn't use quads)
- */
-const addQuads = (): Float32Array | null => {
-  // Canvas renderer doesn't use quad-based rendering
-  // Return null for interface compatibility
-  return null;
 };
 
 /**
@@ -246,10 +227,9 @@ const CanvasTextRenderer = {
   type,
   font: CanvasFontHandler,
   renderText,
-  addQuads,
   renderQuads,
   init,
-  clearLayoutCache,
+  clearCache,
 };
 
 export default CanvasTextRenderer;
