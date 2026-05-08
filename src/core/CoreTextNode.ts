@@ -65,10 +65,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   // SDF layout caching for performance
   private _cachedLayout: TextLayout | null = null;
-  private _lastVertexBuffer: Float32Array | null = null;
-  // Typed ref box shared with SdfTextRenderer so the WebGLBuffer can be
-  // created once and reused across frames instead of per-frame.
-  private _sdfBufferRef: WebGLBuffer | null = null;
+  // Mutable ref box shared with SdfTextRenderer so the renderer can write the
+  // created WebGLBuffer back into it, allowing reuse across frames.
+  private _sdfBufferRef: { current: WebGLBuffer | null } = { current: null };
 
   // Text renderer properties - stored directly on the node
   private textProps: CoreTextNodeProps;
@@ -122,10 +121,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Safe to call from destroy() or on text change.
    */
   private releaseSdfBuffer(): void {
-    const buf = this._sdfBufferRef;
+    const buf = this._sdfBufferRef.current;
     if (buf === null) return;
     this.stage.renderer.deleteBuffer(buf);
-    this._sdfBufferRef = null;
+    this._sdfBufferRef.current = null;
   }
 
   allowTextGeneration() {
@@ -223,7 +222,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
         this._waitingForFont = false;
         this._cachedLayout = null; // Invalidate cached layout
-        this._lastVertexBuffer = null; // Invalidate last vertex buffer
         this.releaseSdfBuffer(); // Free the cached WebGLBuffer
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
@@ -239,7 +237,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(false);
       this._layoutGenerated = false;
       this._cachedLayout = null;
-      this._lastVertexBuffer = null;
       this.releaseSdfBuffer(); // Free the cached WebGLBuffer
     }
 
@@ -356,38 +353,29 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
 
     // Early return if no cached data
-    if (!this._cachedLayout) {
+    if (this._cachedLayout === null) {
       return;
     }
 
-    if (this._lastVertexBuffer === null) {
-      this._lastVertexBuffer = this.textRenderer.addQuads(this._cachedLayout);
-    }
-
     const props = this.textProps;
-    this.textRenderer.renderQuads(
-      renderer,
-      this._cachedLayout as TextLayout,
-      this._lastVertexBuffer!,
-      {
-        fontFamily: this.textProps.fontFamily,
-        fontSize: props.fontSize,
-        color: this.props.color || 0xffffffff,
-        offsetY: props.offsetY,
-        worldAlpha: this.worldAlpha,
-        globalTransform: this.globalTransform!.getFloatArr(),
-        clippingRect: this.clippingRect,
-        width: this.props.w,
-        height: this.props.h,
-        parentHasRenderTexture: this.parentHasRenderTexture,
-        framebufferDimensions:
-          this.parentHasRenderTexture === true
-            ? this.parentFramebufferDimensions
-            : null,
-        stage: this.stage,
-        glBufferRef: this._sdfBufferRef,
-      },
-    );
+    this.textRenderer.renderQuads(renderer, this._cachedLayout as TextLayout, {
+      fontFamily: this.textProps.fontFamily,
+      fontSize: props.fontSize,
+      color: this.props.color || 0xffffffff,
+      offsetY: props.offsetY,
+      worldAlpha: this.worldAlpha,
+      globalTransform: this.globalTransform!.getFloatArr(),
+      clippingRect: this.clippingRect,
+      width: this.props.w,
+      height: this.props.h,
+      parentHasRenderTexture: this.parentHasRenderTexture,
+      framebufferDimensions:
+        this.parentHasRenderTexture === true
+          ? this.parentFramebufferDimensions
+          : null,
+      stage: this.stage,
+      glBufferRef: this._sdfBufferRef,
+    });
   }
 
   override updateRenderState(renderState: CoreNodeRenderState): void {
@@ -397,7 +385,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       renderState === CoreNodeRenderState.OutOfBounds
     ) {
       this.releaseSdfBuffer();
-      this._lastVertexBuffer = null;
     }
   }
 
@@ -408,7 +395,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Clear cached layout and vertex buffer
     this._cachedLayout = null;
-    this._lastVertexBuffer = null;
     this.releaseSdfBuffer(); // Delete the cached WebGLBuffer before losing stage ref
 
     this.fontHandler = null!; // Clear reference to avoid memory leaks

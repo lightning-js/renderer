@@ -22,7 +22,7 @@ import type { Stage } from '../Stage.js';
 import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace } from './Utils.js';
+import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
@@ -43,16 +43,7 @@ let measureContext:
   | null = null;
 
 // Cache for text layout calculations
-const layoutCache = new Map<
-  string,
-  {
-    lines: string[];
-    lineWidths: number[];
-    maxLineWidth: number;
-    remainingText: string;
-    moreTextLines: boolean;
-  }
->();
+const layoutCache = new Map<string, TextRenderInfo>();
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
@@ -96,6 +87,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
+  const cacheKey = getLayoutCacheKey(props);
+
+  let layout = layoutCache.get(cacheKey);
+  if (layout !== undefined) {
+    return layout;
+  }
   // Extract already normalized properties
   const {
     text,
@@ -189,46 +186,22 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   if (canvas.width > 0 && canvas.height > 0) {
     imageData = context.getImageData(0, 0, canvasW, canvasH);
   }
-  return {
+  const renderInfo = {
     imageData,
     width: effectiveWidth,
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
   };
+  layoutCache.set(cacheKey, renderInfo);
+  return renderInfo;
 };
-
-/**
- * Generate a cache key for text layout calculations
- */
-function generateLayoutCacheKey(
-  text: string,
-  fontFamily: string,
-  fontSize: number,
-  fontStyle: string,
-  wordWrap: boolean,
-  wordWrapWidth: number,
-  letterSpacing: number,
-  maxLines: number,
-  overflowSuffix: string,
-): string {
-  return `${text}-${fontFamily}-${fontSize}-${fontStyle}-${wordWrap}-${wordWrapWidth}-${letterSpacing}-${maxLines}-${overflowSuffix}`;
-}
 
 /**
  * Clear layout cache for memory management
  */
-const clearLayoutCache = (): void => {
+const clearCache = (): void => {
   layoutCache.clear();
-};
-
-/**
- * Add quads for rendering (Canvas doesn't use quads)
- */
-const addQuads = (): Float32Array | null => {
-  // Canvas renderer doesn't use quad-based rendering
-  // Return null for interface compatibility
-  return null;
 };
 
 /**
@@ -246,10 +219,9 @@ const CanvasTextRenderer = {
   type,
   font: CanvasFontHandler,
   renderText,
-  addQuads,
   renderQuads,
   init,
-  clearLayoutCache,
+  clearCache,
 };
 
 export default CanvasTextRenderer;

@@ -255,14 +255,6 @@ export interface TrProps extends TrFontProps {
  */
 export interface GlyphLayout {
   /**
-   * Unicode codepoint
-   */
-  codepoint: number;
-  /**
-   * Glyph ID in the font atlas
-   */
-  glyphId: number;
-  /**
    * X position relative to text origin
    */
   x: number;
@@ -279,14 +271,6 @@ export interface GlyphLayout {
    */
   height: number;
   /**
-   * X offset for glyph positioning
-   */
-  xOffset: number;
-  /**
-   * Y offset for glyph positioning
-   */
-  yOffset: number;
-  /**
    * Atlas texture coordinates (normalized 0-1)
    */
   atlasX: number;
@@ -300,9 +284,13 @@ export interface GlyphLayout {
  */
 export interface TextLayout {
   /**
-   * Individual glyph layouts
+   * vertices for rendering quads in WebGL
    */
-  glyphs: GlyphLayout[];
+  vertexBuffer: Float32Array;
+  /**
+   * glyph count in layout
+   */
+  glyphCount: number;
   /**
    * Total text width
    */
@@ -327,6 +315,14 @@ export interface TextLayout {
    * distanceRange used
    */
   distanceRange: number;
+  /**
+   * number of lines that exceeded maxHeight and were truncated
+   */
+  remainingLines: number;
+  /**
+   * Whether there is remaining text that exceeded maxHeight and was truncated
+   */
+  hasRemainingText: boolean;
 }
 
 export interface FontLoadOptions {
@@ -380,13 +376,13 @@ export interface TextRenderProps {
   framebufferDimensions: unknown;
   stage: Stage;
   /**
-   * Opaque mutable ref used by the SDF renderer to cache the underlying
-   * WebGLBuffer across frames. The SDF renderer reads the current value,
-   * reuses it if present, otherwise creates a new buffer and writes it
-   * back. CoreTextNode owns the ref and is responsible for calling
+   * Mutable wrapper ref used by the SDF renderer to cache the underlying
+   * WebGLBuffer across frames. The SDF renderer reads and writes the
+   * `.current` property so the node's ref box is updated in-place.
+   * CoreTextNode owns the ref and is responsible for calling
    * deleteBuffer when the buffer is no longer needed.
    */
-  glBufferRef: WebGLBuffer | null;
+  glBufferRef: { current: WebGLBuffer | null };
 }
 
 export interface TextRenderInfo {
@@ -402,15 +398,13 @@ export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (props: CoreTextNodeProps) => TextRenderInfo;
-  // Updated to accept layout data and return vertex buffer for performance
-  addQuads: (layout?: TextLayout) => Float32Array | null;
   renderQuads: (
     renderer: CoreRenderer,
     layout: TextLayout,
-    vertexBuffer: Float32Array,
     renderProps: TextRenderProps,
   ) => void;
   init: (stage: Stage) => void;
+  clearCache: () => void;
 }
 
 /**
