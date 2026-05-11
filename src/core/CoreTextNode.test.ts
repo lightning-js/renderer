@@ -320,7 +320,7 @@ describe('CoreTextNode', () => {
   }
 
   describe('updateRenderState – SDF buffer release on OutOfBounds', () => {
-    it('should call renderer.deleteBuffer and clear _sdfBufferRef when transitioning to OutOfBounds', () => {
+    it('should call renderer.deleteBuffer and clear _sdfBuffer when transitioning to OutOfBounds', () => {
       const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
         makeStageWithDeleteBuffer(deleteBuffer),
@@ -330,15 +330,15 @@ describe('CoreTextNode', () => {
 
       // Simulate a live WebGLBuffer sitting in the ref
       const fakeBuffer = {};
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBuffer = fakeBuffer;
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBuffer).toBeNull();
     });
 
-    it('should not call renderer.deleteBuffer when _sdfBufferRef is already null', () => {
+    it('should not call renderer.deleteBuffer when _sdfBuffer is already null', () => {
       const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
         makeStageWithDeleteBuffer(deleteBuffer),
@@ -361,12 +361,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {};
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBuffer = fakeBuffer;
 
       node.updateRenderState(CoreNodeRenderState.InBounds);
 
       expect(deleteBuffer).not.toHaveBeenCalled();
-      expect((node as any)._sdfBufferRef.current).toBe(fakeBuffer);
+      expect((node as any)._sdfBuffer).toBe(fakeBuffer);
     });
 
     it('should not release the buffer for a canvas-type text node', () => {
@@ -382,7 +382,7 @@ describe('CoreTextNode', () => {
         canvasTextRenderer,
       );
 
-      (node as any)._sdfBufferRef.current = {};
+      (node as any)._sdfBuffer = {};
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
@@ -401,12 +401,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBuffer = fakeBuffer;
 
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBuffer).toBeNull();
     });
 
     it('should call renderer.deleteBuffer again on each subsequent layout regeneration', () => {
@@ -424,12 +424,12 @@ describe('CoreTextNode', () => {
       // Trigger a second layout pass by invalidating the layout
       node.fontSize = 24;
       const secondBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = secondBuffer;
+      (node as any)._sdfBuffer = secondBuffer;
 
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(secondBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBuffer).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer when buffer is already null at regeneration time', () => {
@@ -441,7 +441,7 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      // _sdfBufferRef.current is null by default
+      // _sdfBuffer is null by default
       node.update(16, clippingRect);
 
       expect(deleteBuffer).not.toHaveBeenCalled();
@@ -460,14 +460,14 @@ describe('CoreTextNode', () => {
 
       // Prime the node with a cached buffer
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBuffer = fakeBuffer;
       (node as any)._layoutGenerated = true;
 
       node.text = '';
       node.update(16, clippingRect);
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBuffer).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer when text is invalid and buffer is already null', () => {
@@ -484,7 +484,7 @@ describe('CoreTextNode', () => {
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
 
-    it('should also clear _cachedLayout when text becomes invalid', () => {
+    it('should also clear _renderInfo when text becomes invalid', () => {
       const deleteBuffer = vi.fn();
       const props = { ...defaultTextProps, text: 'Hello', forceLoad: true };
       const node = new CoreTextNode(
@@ -493,13 +493,13 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      (node as any)._cachedLayout = {};
+      (node as any)._renderInfo = {};
       (node as any)._layoutGenerated = true;
 
       node.text = '';
       node.update(16, clippingRect);
 
-      expect((node as any)._cachedLayout).toBeNull();
+      expect((node as any)._renderInfo).toBeNull();
     });
   });
 
@@ -513,12 +513,12 @@ describe('CoreTextNode', () => {
       );
 
       const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBufferRef.current = fakeBuffer;
+      (node as any)._sdfBuffer = fakeBuffer;
 
       node.destroy();
 
       expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBufferRef.current).toBeNull();
+      expect((node as any)._sdfBuffer).toBeNull();
     });
 
     it('should not call renderer.deleteBuffer on destroy when buffer is already null', () => {
@@ -529,20 +529,20 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      // _sdfBufferRef.current is null by default
+      // _sdfBuffer is null by default
       node.destroy();
 
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
 
-    it('should clear _cachedLayout on destroy', () => {
+    it('should clear _renderInfo on destroy', () => {
       const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
 
-      (node as any)._cachedLayout = {};
+      (node as any)._renderInfo = {};
 
       node.destroy();
 
-      expect((node as any)._cachedLayout).toBeNull();
+      expect((node as any)._renderInfo).toBeNull();
     });
   });
 });
