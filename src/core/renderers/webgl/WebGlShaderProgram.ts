@@ -202,12 +202,11 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   bindRenderOp(renderOp: WebGlRenderOp) {
-    const isCoreNode = renderOp.isCoreNode;
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
 
     const parentHasRenderTexture = renderOp.parentHasRenderTexture;
-    const framebufferDimensions = isCoreNode
+    const framebufferDimensions = renderOp.isCoreNode
       ? renderOp.parentFramebufferDimensions
       : renderOp.framebufferDimensions;
 
@@ -249,10 +248,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     /**temporary fix to make sdf texts work */
-    if (
-      isCoreNode === false &&
-      (renderOp as CoreTextNode).sdfShaderProps !== null
-    ) {
+    if (renderOp.isSdfRenderOp === true) {
       const opShader = renderOp.shader!; // SdfRenderOp has .shader
       (opShader.shaderType as WebGlShaderType<SdfShaderProps>).onSdfBind?.call(
         this.glw,
