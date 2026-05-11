@@ -64,12 +64,7 @@ const renderInfoCache = new Map<string, SdfRenderInfo>();
  * @param props - Text rendering properties
  * @returns Object containing ImageData and dimensions
  */
-const renderText = (props: CoreTextNodeProps): TextRenderInfo | null => {
-  // Early return if no text
-  if (props.text.length === 0) {
-    return null;
-  }
-
+const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   const cacheKey = getLayoutCacheKey(props);
 
   let renderInfo = renderInfoCache.get(cacheKey);
@@ -77,15 +72,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo | null => {
     return renderInfo;
   }
 
-  // Get font cache for this font family
-  const fontData = SdfFontHandler.getFontData(props.fontFamily);
-  if (fontData === undefined) {
-    // Font not loaded, return empty result
-    return null;
-  }
-
   // Calculate text layout and generate glyph data for caching
-  const layout = generateTextLayout(props, fontData);
+  const layout = generateTextLayout(
+    props,
+    SdfFontHandler.getFontData(props.fontFamily)!,
+  );
   renderInfo = {
     type,
     layout,
