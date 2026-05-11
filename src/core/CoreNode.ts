@@ -2541,6 +2541,10 @@ export class CoreNode extends EventEmitter {
     return this.props.shader;
   }
 
+  get isSdfRenderOp(): boolean {
+    return false;
+  }
+
   set shader(shader: CoreShaderNode<any> | null) {
     if (this.props.shader === shader) {
       return;
