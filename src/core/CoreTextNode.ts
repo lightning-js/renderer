@@ -42,7 +42,7 @@ import { Matrix3d } from './lib/Matrix3d.js';
 import { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
 import type { SdfShaderProps } from './shaders/webgl/SdfShader.js';
 import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
-import type { WebGlCtxTexture } from '../../exports/webgl.js';
+import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
 import { mergeColorAlpha } from '../utils.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
