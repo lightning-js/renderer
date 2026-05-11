@@ -18,7 +18,6 @@
  */
 
 import { CoreRenderer, type BufferInfo } from '../CoreRenderer.js';
-import type { SdfRenderOp } from './SdfRenderOp.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
@@ -47,15 +46,15 @@ import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
 import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
-import type { Platform } from '../../platforms/Platform.js';
 import type { Stage } from '../../Stage.js';
+import type { CoreTextNode } from '../../CoreTextNode.js';
 
 interface CoreWebGlSystem {
   parameters: CoreWebGlParameters;
   extensions: CoreWebGlExtensions;
 }
 
-export type WebGlRenderOp = CoreNode | SdfRenderOp;
+export type WebGlRenderOp = CoreNode | CoreTextNode;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data

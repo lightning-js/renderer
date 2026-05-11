@@ -757,7 +757,7 @@ export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
-  public readonly isCoreNode = true as const;
+  public readonly isCoreNode: boolean = true as const;
 
   // WebGL Render Op State
   public renderOpBufferIdx: number = 0;

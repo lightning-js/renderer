@@ -33,6 +33,8 @@ import {
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
 import { CoreNode } from '../../CoreNode.js';
+import type { CoreTextNode } from '../../CoreTextNode.js';
+import type { SdfShaderProps } from '../../shaders/webgl/SdfShader.js';
 
 export class WebGlShaderProgram implements CoreShaderProgram {
   protected program: WebGLProgram | null;
@@ -201,7 +203,6 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   bindRenderOp(renderOp: WebGlRenderOp) {
     const isCoreNode = renderOp.isCoreNode;
-
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
 
@@ -248,11 +249,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     /**temporary fix to make sdf texts work */
-    if (isCoreNode === false && renderOp.sdfShaderProps !== undefined) {
-      const opShader = renderOp.shader; // SdfRenderOp has .shader
-      (opShader.shaderType as WebGlShaderType).onSdfBind?.call(
+    if (
+      isCoreNode === false &&
+      (renderOp as CoreTextNode).sdfShaderProps !== null
+    ) {
+      const opShader = renderOp.shader!; // SdfRenderOp has .shader
+      (opShader.shaderType as WebGlShaderType<SdfShaderProps>).onSdfBind?.call(
         this.glw,
-        renderOp.sdfShaderProps,
+        (renderOp as CoreTextNode).sdfShaderProps,
       );
       return;
     }
