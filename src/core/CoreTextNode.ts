@@ -60,7 +60,6 @@ export enum TextConstraint {
 }
 
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
-  public override readonly isCoreNode: boolean = false as const;
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
@@ -459,6 +458,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   get sdfShaderProps(): SdfShaderProps {
     return this._sdfShaderProps as SdfShaderProps;
+  }
+
+  override get isSdfRenderOp(): boolean {
+    return this.textRenderer.type === 'sdf';
   }
 
   override draw(renderer: WebGlRenderer) {
