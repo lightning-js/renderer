@@ -139,14 +139,12 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
       uniform2f,
     };
 
-    Object.assign(program, {
-      bindTextures,
-      bindBufferCollection,
-      glw,
-      useTimeValue: false,
-      useSystemAlpha: false,
-      useSystemDimensions: false,
-    });
+    (program as any).bindTextures = bindTextures;
+    (program as any).bindBufferCollection = bindBufferCollection;
+    (program as any).glw = glw;
+    (program as any).useTimeValue = false;
+    (program as any).useSystemAlpha = false;
+    (program as any).useSystemDimensions = false;
 
     return {
       program,
