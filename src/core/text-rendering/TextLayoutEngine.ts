@@ -227,7 +227,9 @@ export const wrapText = (
         : [[['', 0, false, 0, 0]], remainingLines, i < lines.length - 1];
 
     remainingLines--;
-    wrappedLines.push(...wrappedLine);
+    for (let j = 0; j < wrappedLine.length; j++) {
+      wrappedLines.push(wrappedLine[j]!);
+    }
 
     if (hasMaxLines === true && remainingLines <= 0) {
       const lastLine = wrappedLines[wrappedLines.length - 1]!;
@@ -278,10 +280,25 @@ export const wrapLine = (
   let hasRemainingText = true;
 
   const wrapFn = getWrapStrategy(wordBreak);
-  while (words.length > 0 && remainingLines > 0) {
-    let word = words.shift()!;
-    let wordWidth = measureText(word, fontFamily, letterSpacing);
+  let wordIdx = 0;
+  let spaceIdx = 0;
+  let pendingWord = '';
+
+  while (
+    (pendingWord.length > 0 || wordIdx < words.length) &&
+    remainingLines > 0
+  ) {
+    let word: string;
+    let wordWidth: number;
     let remainingWord = '';
+
+    if (pendingWord.length > 0) {
+      word = pendingWord;
+      pendingWord = '';
+    } else {
+      word = words[wordIdx++]!;
+    }
+    wordWidth = measureText(word, fontFamily, letterSpacing);
 
     //handle first word of new line separately to avoid empty line issues
     if (currentLineWidth === 0) {
@@ -289,33 +306,49 @@ export const wrapLine = (
       //if first word doesn't fit on empty line
       if (wordWidth > maxWidth) {
         remainingLines--;
+        const isLastLine = remainingLines === 0;
+        let lineTruncated = isLastLine;
         //truncate word to fit
-        [word, remainingWord, wordWidth] =
-          remainingLines === 0
-            ? truncateWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-                overflowSuffix,
-                overflowWidth,
-              )
-            : splitWord(
-                measureText,
-                word,
-                wordWidth,
-                maxWidth,
-                fontFamily,
-                letterSpacing,
-              );
+        [word, remainingWord, wordWidth] = isLastLine
+          ? truncateWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+              overflowSuffix,
+              overflowWidth,
+            )
+          : splitWord(
+              measureText,
+              word,
+              wordWidth,
+              maxWidth,
+              fontFamily,
+              letterSpacing,
+            );
 
         if (remainingWord.length > 0) {
-          words.unshift(remainingWord);
+          if (word.length === 0) {
+            if (overflowSuffix.length > 0) {
+              word = overflowSuffix;
+              wordWidth = overflowWidth;
+            } else {
+              word = remainingWord.charAt(0);
+              if (word.length === 0) {
+                break;
+              }
+              wordWidth = measureText(word, fontFamily, letterSpacing);
+            }
+            remainingWord = '';
+            remainingLines = 0;
+            lineTruncated = true;
+          }
+          pendingWord = remainingWord;
         }
         // first word doesn't fit on an empty line
-        wrappedLines.push([word, wordWidth, false, 0, 0]);
+        wrappedLines.push([word, wordWidth, lineTruncated, 0, 0]);
       } else if (wordWidth + spaceWidth >= maxWidth) {
         remainingLines--;
         // word with space doesn't fit, but word itself fits - put on new line
@@ -326,7 +359,7 @@ export const wrapLine = (
       }
       continue;
     }
-    const space = spaces.shift() || '';
+    const space = spaces[spaceIdx++] || '';
     // For width calculation, treat ZWSP as having 0 width but regular space functionality
     const effectiveSpaceWidth = space === '\u200B' ? 0 : spaceWidth;
     const totalWidth = currentLineWidth + effectiveSpaceWidth + wordWidth;
@@ -367,7 +400,7 @@ export const wrapLine = (
     );
 
     if (remainingWord.length > 0) {
-      words.unshift(remainingWord);
+      pendingWord = remainingWord;
     }
   }
 

@@ -247,6 +247,26 @@ describe('SDF Text Utils', () => {
       expect(result[0].length).toBeGreaterThan(1);
       expect(result[0][0]?.[0]).toBe('hello world test');
     });
+
+    it('should return non-empty output when maxWidth is smaller than glyph and suffix width', () => {
+      const result = wrapLine(
+        testMeasureText,
+        'hello',
+        'Arial',
+        5,
+        0,
+        10,
+        '...',
+        30,
+        'break-word',
+        1,
+      );
+
+      expect(result[0]).toHaveLength(1);
+      expect(result[0][0]?.[0]).toBe('...');
+      expect(result[0][0]?.[2]).toBe(true);
+      expect(result[1]).toBe(0);
+    });
   });
 
   describe('wrapText', () => {
