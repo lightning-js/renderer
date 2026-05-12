@@ -757,7 +757,7 @@ export class CoreNode extends EventEmitter {
   readonly children: CoreNode[] = [];
   protected _id: number = getNewId();
   readonly props: CoreNodeProps;
-  public readonly isCoreNode = true as const;
+  public readonly isCoreNode: boolean = true as const;
 
   // WebGL Render Op State
   public renderOpBufferIdx: number = 0;
@@ -2539,6 +2539,10 @@ export class CoreNode extends EventEmitter {
 
   get shader(): CoreShaderNode<any> | null {
     return this.props.shader;
+  }
+
+  get isSdfRenderOp(): boolean {
+    return false;
   }
 
   set shader(shader: CoreShaderNode<any> | null) {

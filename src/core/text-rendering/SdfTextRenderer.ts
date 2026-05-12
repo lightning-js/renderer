@@ -20,23 +20,19 @@
 import type { Stage } from '../Stage.js';
 import type {
   FontHandler,
+  SdfRenderInfo,
   TextLineStruct,
   TextRenderInfo,
-  TextRenderProps,
 } from './TextRenderer.js';
-import type { CoreTextNodeProps } from '../CoreTextNode.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
-import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
-import { SdfRenderOp } from '../renderers/webgl/SdfRenderOp.js';
-import { Sdf, type SdfShaderProps } from '../shaders/webgl/SdfShader.js';
-import { BufferCollection } from '../renderers/webgl/internal/BufferCollection.js';
-import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
+import { Sdf } from '../shaders/webgl/SdfShader.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
-import { mergeColorAlpha } from '../../utils.js';
 import type { TextLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
+import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 
 // Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
 const FLOATS_PER_VERTEX = 4;
@@ -46,6 +42,7 @@ const VERTICES_PER_GLYPH = 6;
 const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
+let renderer: WebGlRenderer | null = null;
 
 // Initialize the SDF text renderer
 const init = (stage: Stage): void => {
@@ -54,10 +51,11 @@ const init = (stage: Stage): void => {
   // Register SDF shader with the shader manager
   stage.shManager.registerShaderType('Sdf', Sdf);
   sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
+  renderer = stage.renderer as WebGlRenderer;
 };
 
 const font: FontHandler = SdfFontHandler;
-const layoutCache = new Map<string, TextLayout>();
+const renderInfoCache = new Map<string, SdfRenderInfo>();
 
 /**
  * SDF text renderer using MSDF/SDF fonts with WebGL
@@ -67,151 +65,41 @@ const layoutCache = new Map<string, TextLayout>();
  * @returns Object containing ImageData and dimensions
  */
 const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
-  // Early return if no text
-  if (props.text.length === 0) {
-    return {
-      width: 0,
-      height: 0,
-    };
-  }
-
   const cacheKey = getLayoutCacheKey(props);
 
-  let layout = layoutCache.get(cacheKey);
-  if (layout !== undefined) {
-    return {
-      width: layout.width,
-      height: layout.height,
-      remainingLines: layout.remainingLines,
-      hasRemainingText: layout.hasRemainingText,
-      layout, // Cache layout for addQuads
-    };
-  }
-
-  // Get font cache for this font family
-  const fontData = SdfFontHandler.getFontData(props.fontFamily);
-  if (fontData === undefined) {
-    // Font not loaded, return empty result
-    return {
-      width: 0,
-      height: 0,
-    };
+  let renderInfo = renderInfoCache.get(cacheKey);
+  if (renderInfo !== undefined) {
+    return renderInfo;
   }
 
   // Calculate text layout and generate glyph data for caching
-  layout = generateTextLayout(props, fontData);
-  layoutCache.set(cacheKey, layout);
-
-  // For SDF renderer, ImageData is null since we render via WebGL
-  return {
+  const layout = generateTextLayout(
+    props,
+    SdfFontHandler.getFontData(props.fontFamily)!,
+  );
+  renderInfo = {
+    type,
+    layout,
     width: layout.width,
     height: layout.height,
     remainingLines: layout.remainingLines,
     hasRemainingText: layout.hasRemainingText,
-    layout, // Cache layout for addQuads
-  };
+    atlasTexture: SdfFontHandler.getAtlas(props.fontFamily)!
+      .ctxTexture as WebGlCtxTexture,
+  } as SdfRenderInfo;
+  renderInfoCache.set(cacheKey, renderInfo);
+
+  // For SDF renderer, ImageData is null since we render via WebGL
+  return renderInfo;
 };
 
 /**
  * Create and submit WebGL render operations for SDF text
  * This is called from CoreTextNode during rendering to add SDF text to the render pipeline
  */
-const renderQuads = (
-  renderer: CoreRenderer,
-  layout: TextLayout,
-  renderProps: TextRenderProps,
-): void => {
-  const fontFamily = renderProps.fontFamily;
-  const color = renderProps.color;
-  const worldAlpha = renderProps.worldAlpha;
-  const globalTransform = renderProps.globalTransform;
-  const vertexBuffer = layout.vertexBuffer;
-
-  const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
-  if (atlasTexture === null) {
-    console.warn(`SDF atlas texture not found for font: ${fontFamily}`);
-    return;
-  }
-
-  // We can safely assume this is a WebGL renderer else this wouldn't be called
-  const glw = (renderer as WebGlRenderer).glw;
-  const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-
-  /**
-   * Wraps a WebGLBuffer in a BufferCollection with the standard SDF vertex
-   * layout, creates and submits an SdfRenderOp.  Called by both the cache-miss
-   * and cache-hit paths so attribute/op setup only exists in one place.
-   */
-  const buildAndSubmitRenderOp = (gpuBuffer: WebGLBuffer): void => {
-    const webGlBuffers = new BufferCollection([
-      {
-        buffer: gpuBuffer,
-        attributes: {
-          a_position: {
-            name: 'a_position',
-            size: 2,
-            type: glw.FLOAT as number,
-            normalized: false,
-            stride,
-            offset: 0,
-          },
-          a_textureCoords: {
-            name: 'a_textureCoords',
-            size: 2,
-            type: glw.FLOAT as number,
-            normalized: false,
-            stride,
-            offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-          },
-        },
-      },
-    ]);
-
-    const renderOp = new SdfRenderOp(
-      renderer as WebGlRenderer,
-      sdfShader!,
-      {
-        transform: globalTransform,
-        color: mergeColorAlpha(color, worldAlpha),
-        size: layout.fontScale,
-        distanceRange: layout.distanceRange,
-      } satisfies SdfShaderProps,
-      webGlBuffers,
-      worldAlpha,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      renderProps.clippingRect as any,
-      layout.width,
-      layout.height,
-      false,
-      renderProps.parentHasRenderTexture,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      renderProps.framebufferDimensions as any,
-    );
-
-    renderOp.addTexture(atlasTexture.ctxTexture as WebGlCtxTexture);
-    renderOp.numQuads = layout.glyphCount;
-    (renderer as WebGlRenderer).addRenderOp(renderOp);
-  };
-
-  // Reuse the cached WebGLBuffer if one was provided — avoids a createBuffer
-  // call every frame on nodes whose text has not changed.
-  const glBufferRefBox = renderProps.glBufferRef;
-
-  if (glBufferRefBox.current === null) {
-    // Cache miss: allocate a new buffer, upload vertex data, then cache it.
-    const newBuffer = glw.createBuffer() as WebGLBuffer | null;
-    if (newBuffer === null) {
-      console.warn('Failed to create WebGL buffer for SDF text');
-      return;
-    }
-    // Upload vertex data directly into the new buffer.
-    glw.arrayBufferData(newBuffer, vertexBuffer, glw.STATIC_DRAW as number);
-    // Write back into the ref box so the owning node can reuse it next frame.
-    glBufferRefBox.current = newBuffer;
-  }
-
-  // Cache hit (or freshly allocated): build the render op and submit.
-  buildAndSubmitRenderOp(glBufferRefBox.current);
+const renderQuads = (textNode: CoreTextNode): void => {
+  textNode.props.shader = sdfShader;
+  renderer!.addRenderOp(textNode);
 };
 
 /**
@@ -388,7 +276,7 @@ const generateTextLayout = (
 };
 
 const clearCache = (): void => {
-  layoutCache.clear();
+  renderInfoCache.clear();
 };
 
 /**

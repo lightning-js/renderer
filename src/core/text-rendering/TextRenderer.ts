@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import type { CoreRenderer } from '../renderers/CoreRenderer.js';
+import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
+import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { Stage } from '../Stage.js';
 
 // Text baseline and vertical align types
@@ -385,24 +385,31 @@ export interface TextRenderProps {
   glBufferRef: { current: WebGLBuffer | null };
 }
 
-export interface TextRenderInfo {
+export interface RenderInfo {
   width: number;
   height: number;
-  hasRemainingText?: boolean;
-  remainingLines?: number;
-  imageData?: ImageData | null; // Image data for Canvas Text Renderer
-  layout?: TextLayout; // Layout data for SDF renderer caching
+  hasRemainingText: boolean;
+  remainingLines: number;
 }
+
+export type SdfRenderInfo = RenderInfo & {
+  type: 'sdf';
+  layout: TextLayout;
+  atlasTexture: WebGlCtxTexture;
+};
+
+export type CanvasRenderInfo = RenderInfo & {
+  type: 'canvas';
+  imageData: ImageData;
+};
+
+export type TextRenderInfo = SdfRenderInfo | CanvasRenderInfo;
 
 export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (props: CoreTextNodeProps) => TextRenderInfo;
-  renderQuads: (
-    renderer: CoreRenderer,
-    layout: TextLayout,
-    renderProps: TextRenderProps,
-  ) => void;
+  renderQuads: (textNode: CoreTextNode) => void;
   init: (stage: Stage) => void;
   clearCache: () => void;
 }

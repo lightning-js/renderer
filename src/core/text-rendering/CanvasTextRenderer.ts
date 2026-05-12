@@ -19,7 +19,11 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
-import type { TextLineStruct, TextRenderInfo } from './TextRenderer.js';
+import type {
+  CanvasRenderInfo,
+  TextLineStruct,
+  TextRenderInfo,
+} from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
@@ -43,7 +47,7 @@ let measureContext:
   | null = null;
 
 // Cache for text layout calculations
-const layoutCache = new Map<string, TextRenderInfo>();
+const renderInfoCache = new Map<string, CanvasRenderInfo>();
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
@@ -89,7 +93,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(measureContext, 'Canvas measureContext is not available');
   const cacheKey = getLayoutCacheKey(props);
 
-  let layout = layoutCache.get(cacheKey);
+  let layout = renderInfoCache.get(cacheKey);
   if (layout !== undefined) {
     return layout;
   }
@@ -187,13 +191,14 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     imageData = context.getImageData(0, 0, canvasW, canvasH);
   }
   const renderInfo = {
+    type,
     imageData,
     width: effectiveWidth,
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
-  };
-  layoutCache.set(cacheKey, renderInfo);
+  } as CanvasRenderInfo;
+  renderInfoCache.set(cacheKey, renderInfo);
   return renderInfo;
 };
 
@@ -201,7 +206,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
  * Clear layout cache for memory management
  */
 const clearCache = (): void => {
-  layoutCache.clear();
+  renderInfoCache.clear();
 };
 
 /**
