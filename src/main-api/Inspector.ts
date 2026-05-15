@@ -897,16 +897,16 @@ export class Inspector {
     };
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
-      let originalProp = Object.getOwnPropertyDescriptor(node, property);
+      let proto: CoreNode | ObjectConstructor | null = node;
+      let originalProp: PropertyDescriptor | undefined | null = Object.getOwnPropertyDescriptor(proto, property);
 
-      if (originalProp === undefined) {
-        // Search the prototype chain for the property descriptor
-        const proto = Object.getPrototypeOf(node) as CoreNode | CoreTextNode;
-        originalProp = Object.getOwnPropertyDescriptor(proto, property);
-      }
-
-      if (originalProp === undefined) {
-        return;
+      // Search the prototype chain for the property descriptor
+      while(originalProp === undefined) {
+          proto = Object.getPrototypeOf(proto) as ObjectConstructor;
+          if (proto === null) {
+            return;
+          }
+          originalProp = Object.getOwnPropertyDescriptor(proto, property);
       }
 
       if (property === 'text') {
