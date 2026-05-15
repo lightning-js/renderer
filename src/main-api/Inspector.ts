@@ -740,12 +740,13 @@ export class Inspector {
   }
 
   createDiv(
-    id: number,
+    node: CoreNode,
     properties: CoreNodeProps | CoreTextNodeProps,
   ): HTMLElement {
     const div = document.createElement('div');
     div.style.position = 'absolute';
-    div.id = id.toString();
+    div.id = node.id.toString();
+    div.setAttribute('type', node.constructor.name);
 
     // set initial properties
     for (const key in properties) {
@@ -780,7 +781,7 @@ export class Inspector {
   }
 
   createNode(node: CoreNode): CoreNode {
-    const div = this.createDiv(node.id, node.props);
+    const div = this.createDiv(node, node.props);
     (div as HTMLElement & { node: CoreNode }).node = node;
     (node as CoreNode & { div: HTMLElement }).div = div;
 
@@ -796,7 +797,7 @@ export class Inspector {
     // eslint-disable-next-line
     // @ts-ignore - textProps is a private property and keeping it that way
     // but we need it from the inspector to set the initial properties on the div element
-    const div = this.createDiv(node.id, node.textProps);
+    const div = this.createDiv(node, node.textProps);
     (div as HTMLElement & { node: CoreNode }).node = node;
     (node as CoreTextNode & { div: HTMLElement }).div = div;
 
