@@ -1101,7 +1101,7 @@ export class Inspector {
     value: any,
     props: CoreNodeProps | CoreTextNodeProps,
   ) {
-    if (this.root === null || value === undefined || value === null) {
+    if (this.root === null || value === undefined) {
       return;
     }
 
@@ -1109,17 +1109,18 @@ export class Inspector {
      * Special case for parent property
      */
     if (property === 'parent') {
-      const parentId: number = value.id;
-
-      // only way to detect if the parent is the root node
-      // if you are reading this and have a better way, please let me know
-      if (parentId === 1) {
-        this.root.appendChild(div);
-        return;
+      if (value) {
+        const parentId: number = value.id;
+        // only way to detect if the parent is the root node
+        // if you are reading this and have a better way, please let me know
+        if (parentId === 1) {
+            this.root.appendChild(div);
+            return;
+        }
+        value.div.appendChild(div);
+      } else {
+        div.parentNode?.removeChild(div);
       }
-
-      const parent = document.getElementById(parentId.toString());
-      parent?.appendChild(div);
       return;
     }
 
