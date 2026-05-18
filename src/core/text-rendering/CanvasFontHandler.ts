@@ -149,7 +149,7 @@ export const init = (
   }
 
   context = c;
-  measureContext = mc ?? c;
+  measureContext = mc || c;
 
   // Register the default 'sans-serif' font face
   const defaultMetrics: FontMetrics = {
