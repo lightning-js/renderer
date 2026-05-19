@@ -57,6 +57,12 @@ import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
+import {
+  createFrameCounter,
+  setFpsInterval,
+  setFrameBuckets,
+  type FrameCounter,
+} from './lib/fps.js';
 
 export type StageOptions = Omit<
   RendererMainSettings,
@@ -65,6 +71,7 @@ export type StageOptions = Omit<
   textureMemory: TextureMemoryManagerSettings;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   fpsUpdateInterval: number;
+  fpsBuckets?: number[];
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
   inspector: boolean;
@@ -136,6 +143,8 @@ export class Stage {
   lastFrameTime = 0;
   currentFrameTime = 0;
   elapsedTime = 0;
+  currentFrameCounter: FrameCounter | null = null;
+
   private timedNodes: CoreNode[] = [];
   private clrColor = 0x00000000;
   private fpsNumFrames = 0;
@@ -197,6 +206,12 @@ export class Stage {
 
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+
+    // Set initial frame buckets and FPS update interval for FPS tracking
+    if (options.fpsBuckets) {
+      setFrameBuckets(options.fpsBuckets);
+    }
+    setFpsInterval(options.fpsUpdateInterval);
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -382,9 +397,8 @@ export class Stage {
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.elapsedTime = newFrameTime - this.startTime;
-    this.deltaTime = !this.lastFrameTime
-      ? 100 / 6
-      : newFrameTime - this.lastFrameTime;
+    this.deltaTime =
+      this.lastFrameTime === 0 ? 100 / 6 : newFrameTime - this.lastFrameTime;
     this.txManager.frameTime = newFrameTime;
     this.txMemManager.frameTime = newFrameTime;
 
@@ -542,21 +556,38 @@ export class Stage {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
     const { fpsUpdateInterval } = this.options;
-    if (fpsUpdateInterval) {
-      this.fpsNumFrames++;
-      this.fpsElapsedTime += this.deltaTime;
-      if (this.fpsElapsedTime >= fpsUpdateInterval) {
-        const fps = Math.round(
-          (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
-        );
-        this.fpsNumFrames = 0;
-        this.fpsElapsedTime = 0;
+    if (fpsUpdateInterval > 0) {
+      let frameCounter = this.currentFrameCounter;
+      const eleapsed = this.elapsedTime;
+      if (frameCounter !== null && frameCounter.end < eleapsed) {
         this.queueFrameEvent('fpsUpdate', {
-          fps,
+          fps: frameCounter.averageFps,
           contextSpyData: this.contextSpy?.getData() ?? null,
+          frameCounter: frameCounter,
         } satisfies FpsUpdatePayload);
         this.contextSpy?.reset();
+        frameCounter = this.currentFrameCounter = createFrameCounter(eleapsed);
       }
+
+      if (frameCounter === null) {
+        frameCounter = this.currentFrameCounter = createFrameCounter(eleapsed);
+      }
+
+      frameCounter.increment(this.deltaTime);
+      // this.fpsNumFrames++;
+      // this.fpsElapsedTime += this.deltaTime;
+      // if (this.fpsElapsedTime >= fpsUpdateInterval) {
+      //   const fps = Math.round(
+      //     (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
+      //   );
+      //   this.fpsNumFrames = 0;
+      //   this.fpsElapsedTime = 0;
+      //   this.queueFrameEvent('fpsUpdate', {
+      //     fps,
+      //     contextSpyData: this.contextSpy?.getData() ?? null,
+      //   } satisfies FpsUpdatePayload);
+      //   this.contextSpy?.reset();
+      // }
     }
   }
 
