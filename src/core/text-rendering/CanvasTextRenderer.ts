@@ -21,6 +21,7 @@ import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
 import type {
   CanvasRenderInfo,
+  FontHandler,
   TextLineStruct,
   TextRenderInfo,
 } from './TextRenderer.js';
@@ -32,6 +33,7 @@ import { mapTextLayout } from './TextLayoutEngine.js';
 const MAX_TEXTURE_DIMENSION = 4096;
 
 const type = 'canvas' as const;
+const font: FontHandler = CanvasFontHandler;
 
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let context:
@@ -222,7 +224,7 @@ const renderQuads = (): void => {
  */
 const CanvasTextRenderer = {
   type,
-  font: CanvasFontHandler,
+  font,
   renderText,
   renderQuads,
   init,
