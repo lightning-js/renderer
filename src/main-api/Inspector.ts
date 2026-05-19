@@ -740,12 +740,13 @@ export class Inspector {
   }
 
   createDiv(
-    id: number,
+    node: CoreNode,
     properties: CoreNodeProps | CoreTextNodeProps,
   ): HTMLElement {
     const div = document.createElement('div');
     div.style.position = 'absolute';
-    div.id = id.toString();
+    div.id = node.id.toString();
+    div.setAttribute('type', node.constructor.name);
 
     // set initial properties
     for (const key in properties) {
@@ -780,7 +781,7 @@ export class Inspector {
   }
 
   createNode(node: CoreNode): CoreNode {
-    const div = this.createDiv(node.id, node.props);
+    const div = this.createDiv(node, node.props);
     (div as HTMLElement & { node: CoreNode }).node = node;
     (node as CoreNode & { div: HTMLElement }).div = div;
 
@@ -796,7 +797,7 @@ export class Inspector {
     // eslint-disable-next-line
     // @ts-ignore - textProps is a private property and keeping it that way
     // but we need it from the inspector to set the initial properties on the div element
-    const div = this.createDiv(node.id, node.textProps);
+    const div = this.createDiv(node, node.textProps);
     (div as HTMLElement & { node: CoreNode }).node = node;
     (node as CoreTextNode & { div: HTMLElement }).div = div;
 
@@ -897,16 +898,16 @@ export class Inspector {
     };
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
-      let originalProp = Object.getOwnPropertyDescriptor(node, property);
+      let proto: CoreNode | ObjectConstructor | null = node;
+      let originalProp: PropertyDescriptor | undefined | null = Object.getOwnPropertyDescriptor(proto, property);
 
-      if (originalProp === undefined) {
-        // Search the prototype chain for the property descriptor
-        const proto = Object.getPrototypeOf(node) as CoreNode | CoreTextNode;
-        originalProp = Object.getOwnPropertyDescriptor(proto, property);
-      }
-
-      if (originalProp === undefined) {
-        return;
+      // Search the prototype chain for the property descriptor
+      while(originalProp === undefined) {
+          proto = Object.getPrototypeOf(proto) as ObjectConstructor;
+          if (proto === null) {
+            return;
+          }
+          originalProp = Object.getOwnPropertyDescriptor(proto, property);
       }
 
       if (property === 'text') {
@@ -1101,7 +1102,7 @@ export class Inspector {
     value: any,
     props: CoreNodeProps | CoreTextNodeProps,
   ) {
-    if (this.root === null || value === undefined || value === null) {
+    if (this.root === null || value === undefined) {
       return;
     }
 
@@ -1109,17 +1110,16 @@ export class Inspector {
      * Special case for parent property
      */
     if (property === 'parent') {
-      const parentId: number = value.id;
-
-      // only way to detect if the parent is the root node
-      // if you are reading this and have a better way, please let me know
-      if (parentId === 1) {
-        this.root.appendChild(div);
-        return;
+      if (value) {
+        // detect if the parent is the root node
+        if (value.id === value.stage.root.id) {
+          this.root.appendChild(div);
+        } else {
+          value.div.appendChild(div);
+        }
+      } else {
+        div.parentNode?.removeChild(div);
       }
-
-      const parent = document.getElementById(parentId.toString());
-      parent?.appendChild(div);
       return;
     }
 
