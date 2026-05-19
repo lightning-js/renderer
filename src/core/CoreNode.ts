@@ -2550,14 +2550,14 @@ export class CoreNode extends EventEmitter {
       return;
     }
     if (shader === null) {
-      this.hasShaderUpdater = false;
+      this.hasShaderUpdater = this.hasShaderTimeFn = false;
       this.props.shader = this.stage.defShaderNode;
       this.setUpdateType(UpdateType.IsRenderable);
       return;
     }
+    this.hasShaderUpdater = shader.update !== undefined;
+    this.hasShaderTimeFn = shader.time !== undefined;
     if (shader.shaderKey !== 'default') {
-      this.hasShaderUpdater = shader.update !== undefined;
-      this.hasShaderTimeFn = shader.time !== undefined;
       shader.attachNode(this);
     }
 

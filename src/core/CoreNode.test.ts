@@ -26,7 +26,7 @@ import { type TextureOptions } from './CoreTextureManager.js';
 import { createBound } from './lib/utils.js';
 import { ImageTexture } from './textures/ImageTexture.js';
 
-describe('set color()', () => {
+describe('CoreNode', () => {
   const defaultProps: CoreNodeProps = {
     alpha: 0,
     autosize: false,
