@@ -1111,14 +1111,12 @@ export class Inspector {
      */
     if (property === 'parent') {
       if (value) {
-        const parentId: number = value.id;
-        // only way to detect if the parent is the root node
-        // if you are reading this and have a better way, please let me know
-        if (parentId === 1) {
-            this.root.appendChild(div);
-            return;
+        // detect if the parent is the root node
+        if (value.id === value.stage.root.id) {
+          this.root.appendChild(div);
+        } else {
+          value.div.appendChild(div);
         }
-        value.div.appendChild(div);
       } else {
         div.parentNode?.removeChild(div);
       }
