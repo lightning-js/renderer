@@ -19,14 +19,23 @@
 
 import { CoreAnimation } from './CoreAnimation.js';
 
-export class AnimationManager {
-  activeAnimations: Set<CoreAnimation> = new Set();
+/**
+ * Minimal interface required by AnimationManager.
+ * Both CoreAnimation and CoreAnimationSequenceController's internal runners
+ * implement this interface.
+ */
+export interface IAnimatable {
+  update(dt: number): void;
+}
 
-  registerAnimation(animation: CoreAnimation) {
+export class AnimationManager {
+  activeAnimations: Set<IAnimatable> = new Set();
+
+  registerAnimation(animation: IAnimatable) {
     this.activeAnimations.add(animation);
   }
 
-  unregisterAnimation(animation: CoreAnimation) {
+  unregisterAnimation(animation: IAnimatable) {
     this.activeAnimations.delete(animation);
   }
 
@@ -36,3 +45,7 @@ export class AnimationManager {
     });
   }
 }
+
+// Keep backward-compat type alias so existing code compiled against
+// CoreAnimation stays working.
+export type { CoreAnimation };

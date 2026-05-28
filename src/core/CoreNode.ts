@@ -59,6 +59,8 @@ import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
 import { CoreAnimation } from './animations/CoreAnimation.js';
 import { CoreAnimationController } from './animations/CoreAnimationController.js';
+import { CoreAnimationSequenceController } from './animations/CoreAnimationSequenceController.js';
+import type { AnimationSequenceSettings } from '../common/AnimationSequenceTypes.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
 import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
@@ -2737,6 +2739,14 @@ export class CoreNode extends EventEmitter {
     );
 
     return controller;
+  }
+
+  animationSequence(settings: AnimationSequenceSettings): IAnimationController {
+    return new CoreAnimationSequenceController(
+      this.stage.animationManager,
+      this,
+      settings,
+    );
   }
 
   flush() {
