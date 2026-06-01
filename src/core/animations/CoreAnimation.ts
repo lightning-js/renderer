@@ -50,7 +50,7 @@ type PropValuesMap = {
 let animationIdCounter = 0;
 
 export class CoreAnimation extends EventEmitter {
-  public readonly id: number = ++animationIdCounter | 0;
+  public readonly id: number = ++animationIdCounter;
   public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
