@@ -108,11 +108,13 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
         // animateRot.start();
 
-        animateY.on('stopped', () => {
-          animateY.off('stopped', () => {});
+        const onStopped = () => {
+          animateY.off('stopped', onStopped);
           this.launch(false, null, Y_START);
           this.animations = [];
-        });
+        };
+
+        animateY.on('stopped', onStopped);
 
         this.animations = [animateY, animateX /*, animateRot*/];
       },
