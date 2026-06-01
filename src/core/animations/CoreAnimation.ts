@@ -76,7 +76,7 @@ export class CoreAnimation extends EventEmitter {
           start:
             (node[
               key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
-            ] as number) || 0,
+            ] as number) ?? 0,
           target: props[
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
