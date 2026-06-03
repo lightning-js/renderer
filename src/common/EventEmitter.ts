@@ -17,19 +17,17 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IEventEmitter } from './IEventEmitter.js';
 
+export type EventListener = (target: any, data: any) => void;
 /**
  * EventEmitter base class
  */
 export class EventEmitter implements IEventEmitter {
-  private eventListeners: { [eventName: string]: any } = {};
+  protected eventListeners: { [eventName: string]: EventListener[] } = {};
 
-  on(event: string, listener: (target: any, data: any) => void): void {
+  on(event: string, listener: EventListener): void {
     let listeners = this.eventListeners[event];
     if (!listeners) {
       listeners = [];
@@ -38,7 +36,7 @@ export class EventEmitter implements IEventEmitter {
     this.eventListeners[event] = listeners;
   }
 
-  off(event: string, listener?: (target: any, data: any) => void): void {
+  off(event: string, listener?: EventListener): void {
     const listeners = this.eventListeners[event];
     if (!listeners) {
       return;
@@ -53,7 +51,7 @@ export class EventEmitter implements IEventEmitter {
     }
   }
 
-  once(event: string, listener: (target: any, data: any) => void): void {
+  once(event: string, listener: EventListener): void {
     const onceListener = (target: any, data: any) => {
       this.off(event, onceListener);
       listener(target, data);

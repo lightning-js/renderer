@@ -158,11 +158,21 @@ export class CoreAnimationController
     this.emit('animating', this);
   }
 
-  private onTick(
-    this: CoreAnimationController,
-    _animation: CoreAnimation,
-    data: AnimationTickPayload,
-  ): void {
-    this.emit('tick', data);
+  /**
+   * manually override the tick event to emit the progress of the animation as well
+   * we are first checking if there are any listeners for the tick event. this avoid unnecessary object creation.
+   * @param this
+   * @returns
+   */
+  private onTick(this: CoreAnimationController): void {
+    const listeners = this.eventListeners['tick'];
+    if (listeners === undefined) {
+      return;
+    }
+    [...listeners].forEach((listener) => {
+      listener(this, {
+        progress: this.animation['progress'],
+      });
+    });
   }
 }

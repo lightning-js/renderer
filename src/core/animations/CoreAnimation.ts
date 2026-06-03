@@ -296,7 +296,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     if (this.progress < 1) {
-      this.emit('tick', { progress: this.progress });
+      this.emit('tick');
     }
 
     if (this.progress === 1) {
