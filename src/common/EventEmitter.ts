@@ -64,7 +64,7 @@ export class EventEmitter implements IEventEmitter {
     if (!listeners) {
       return;
     }
-    [...listeners].forEach((listener) => {
+    listeners.forEach((listener) => {
       listener(this, data);
     });
   }
