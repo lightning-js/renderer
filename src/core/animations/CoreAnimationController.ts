@@ -23,7 +23,6 @@ import type {
 } from '../../common/IAnimationController.js';
 import type { AnimationManager } from './AnimationManager.js';
 import type { CoreAnimation } from './CoreAnimation.js';
-import { assertTruthy } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 import type { AnimationTickPayload } from '../../common/CommonTypes.js';
 

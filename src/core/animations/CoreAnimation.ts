@@ -68,32 +68,30 @@ export class CoreAnimation extends EventEmitter {
 
     for (const key in props) {
       if (key !== 'shaderProps') {
-        if (this.propValuesMap.props === null) {
-          this.propValuesMap.props = { keys: [], values: [] };
+        if (this.propValuesMap['props'] === null) {
+          this.propValuesMap['props'] = { keys: [], values: [] };
         }
-        this.propValuesMap.props.keys.push(key);
-        this.propValuesMap.props.values.push({
+        this.propValuesMap['props']!['keys'].push(key);
+        this.propValuesMap['props']!['values'].push({
           start:
-            (node[
-              key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
-            ] as number) ?? 0,
+            node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
           target: props[
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
           isColor: key.indexOf('color') !== -1,
         });
       } else if (key === 'shaderProps' && node.shader !== null) {
-        this.propValuesMap.shaderProps = { keys: [], values: [] };
-        for (const spKey in props.shaderProps) {
-          let start = node.shader.props![spKey];
+        this.propValuesMap['shaderProps'] = { keys: [], values: [] };
+        for (const key in props.shaderProps) {
+          let start = node.shader.props![key];
           if (Array.isArray(start) === true) {
             start = start[0];
           }
-          this.propValuesMap.shaderProps.keys.push(spKey);
-          this.propValuesMap.shaderProps.values.push({
+          this.propValuesMap['shaderProps']!['keys'].push(key);
+          this.propValuesMap['shaderProps']!['values'].push({
             start,
-            target: props.shaderProps[spKey] as number,
-            isColor: spKey.indexOf('color') !== -1,
+            target: props.shaderProps[key] as number,
+            isColor: key.indexOf('color') !== -1,
           });
         }
       }
@@ -132,16 +130,16 @@ export class CoreAnimation extends EventEmitter {
 
   restore() {
     this.reset();
-    if (this.propValuesMap.props !== null) {
+    if (this.propValuesMap['props'] !== null) {
       this.restoreValues(
         this.node as unknown as Record<string, number>,
-        this.propValuesMap.props,
+        this.propValuesMap['props'],
       );
     }
-    if (this.propValuesMap.shaderProps !== null) {
+    if (this.propValuesMap['shaderProps'] !== null) {
       this.restoreValues(
         this.node.shader!.props as Record<string, number>,
-        this.propValuesMap.shaderProps,
+        this.propValuesMap['shaderProps'],
       );
     }
   }
@@ -160,11 +158,11 @@ export class CoreAnimation extends EventEmitter {
   reverse() {
     this.progress = 0;
 
-    if (this.propValuesMap.props !== null) {
-      this.reverseValues(this.propValuesMap.props);
+    if (this.propValuesMap['props'] !== null) {
+      this.reverseValues(this.propValuesMap['props']);
     }
-    if (this.propValuesMap.shaderProps !== null) {
-      this.reverseValues(this.propValuesMap.shaderProps);
+    if (this.propValuesMap['shaderProps'] !== null) {
+      this.reverseValues(this.propValuesMap['shaderProps']);
     }
 
     // restore stop method if we are not looping
@@ -282,17 +280,17 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (this.propValuesMap.props !== null) {
+    if (this.propValuesMap['props'] !== null) {
       this.updateValues(
         this.node as unknown as Record<string, number>,
-        this.propValuesMap.props,
+        this.propValuesMap['props'],
         easing,
       );
     }
-    if (this.propValuesMap.shaderProps !== null) {
+    if (this.propValuesMap['shaderProps'] !== null) {
       this.updateValues(
         this.node.shader!.props as Record<string, number>,
-        this.propValuesMap.shaderProps,
+        this.propValuesMap['shaderProps'],
         easing,
       );
     }
