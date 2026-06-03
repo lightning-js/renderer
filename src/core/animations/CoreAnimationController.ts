@@ -169,7 +169,7 @@ export class CoreAnimationController
     if (listeners === undefined) {
       return;
     }
-    [...listeners].forEach((listener) => {
+    listeners.forEach((listener) => {
       listener(this, {
         progress: this.animation['progress'],
       });
