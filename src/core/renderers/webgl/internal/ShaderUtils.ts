@@ -42,6 +42,7 @@ export type Vec4 = [number, number, number, number];
 export type UniformValue = SingleValue | Vec2 | Vec3 | Vec4;
 
 export interface UniformCollection {
+  hasStoredUniforms: boolean;
   single: Record<string, Uniform<SingleValue>>;
   vec2: Record<string, Uniform<Vec2>>;
   vec3: Record<string, Uniform<Vec3>>;
