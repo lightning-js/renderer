@@ -239,6 +239,11 @@ export interface RendererRuntimeSettings {
   fpsUpdateInterval: number;
 
   /**
+   * Boundaries for FPS buckets in the FPS update event payload
+   */
+  fpsBoundaries?: number[];
+
+  /**
    * Clears the render buffer on reset
    *
    * @remarks
@@ -536,6 +541,7 @@ export class RendererMain extends EventEmitter {
         settings.devicePhysicalPixelRatio || this.windowDevicePixelRatio() || 1,
       clearColor: settings.clearColor ?? 0x00000000,
       fpsUpdateInterval: settings.fpsUpdateInterval || 0,
+      fpsBoundaries: settings.fpsBoundaries,
       enableClear: settings.enableClear ?? true,
       targetFPS: settings.targetFPS || 0,
       numImageWorkers:
@@ -599,6 +605,7 @@ export class RendererMain extends EventEmitter {
       enableContextSpy: settings.enableContextSpy!,
       forceWebGL2: settings.forceWebGL2!,
       fpsUpdateInterval: settings.fpsUpdateInterval!,
+      fpsBoundaries: settings.fpsBoundaries,
       enableClear: settings.enableClear!,
       numImageWorkers: settings.numImageWorkers!,
       renderEngine: settings.renderEngine!,
@@ -949,6 +956,14 @@ export class RendererMain extends EventEmitter {
         stageOptions.deviceLogicalPixelRatio,
       );
       needDimensionsUpdate = true;
+    }
+
+    if (options.fpsUpdateInterval !== undefined) {
+      this.stage.updateFpsUpdateInterval(options.fpsUpdateInterval);
+    }
+
+    if (options.fpsBoundaries !== undefined) {
+      this.stage.updateFpsBoundaries(options.fpsBoundaries);
     }
 
     if (options.boundsMargin !== undefined) {

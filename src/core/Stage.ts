@@ -581,6 +581,18 @@ export class Stage {
     }
   }
 
+  updateFpsUpdateInterval(newInterval: number) {
+    setFpsInterval(newInterval);
+    // Reset current frame counter to start new interval
+    this.currentFrameCounter = null;
+  }
+
+  updateFpsBoundaries(newBoundaries: number[]) {
+    setFrameBuckets(newBoundaries);
+    // Reset current frame counter to start new interval with new boundaries
+    this.currentFrameCounter = null;
+  }
+
   calculateQuads() {
     const quads = this.renderer.getQuadCount();
     if (quads && quads !== this.numQuadsRendered) {
