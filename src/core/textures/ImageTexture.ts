@@ -143,6 +143,24 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
+    // Compressed textures are not supported by the Canvas2D renderer.
+    // Fail fast here before incurring a network fetch or binary decode.
+    if (this.txManager.renderer?.mode === 'canvas') {
+      const { src, type } = this.props;
+      if (
+        type === 'compressed' ||
+        (typeof src === 'string' && isCompressedTextureContainer(src) === true)
+      ) {
+        const err = new Error(
+          `ImageTexture: Compressed textures are not supported in Canvas2D render mode (src: ${String(
+            src,
+          )})`,
+        );
+        this.setState('failed', err);
+        return { data: null };
+      }
+    }
+
     let resp: TextureData;
     try {
       resp = await this.determineImageTypeAndLoadImage();
