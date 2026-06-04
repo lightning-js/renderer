@@ -71,7 +71,7 @@ export type StageOptions = Omit<
   textureMemory: TextureMemoryManagerSettings;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   fpsUpdateInterval: number;
-  fpsBuckets?: number[];
+  fpsBoundaries?: number[];
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
   inspector: boolean;
@@ -147,8 +147,6 @@ export class Stage {
 
   private timedNodes: CoreNode[] = [];
   private clrColor = 0x00000000;
-  private fpsNumFrames = 0;
-  private fpsElapsedTime = 0;
   private numQuadsRendered = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
@@ -208,8 +206,8 @@ export class Stage {
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     // Set initial frame buckets and FPS update interval for FPS tracking
-    if (options.fpsBuckets) {
-      setFrameBuckets(options.fpsBuckets);
+    if (options.fpsBoundaries) {
+      setFrameBuckets(options.fpsBoundaries);
     }
     setFpsInterval(options.fpsUpdateInterval);
 
@@ -563,7 +561,13 @@ export class Stage {
         this.queueFrameEvent('fpsUpdate', {
           fps: frameCounter.averageFps,
           contextSpyData: this.contextSpy?.getData() ?? null,
-          frameCounter: frameCounter,
+          frameCount: {
+            //only make a copy of the boundaries array since it's read-only and we want to prevent mutation from outside
+            boundaries: ([] as number[]).concat(frameCounter.boundaries),
+            //count and total are not mutated inside the renderer anymore so no copy is necessary
+            count: frameCounter.count,
+            total: frameCounter.total,
+          },
         } satisfies FpsUpdatePayload);
         this.contextSpy?.reset();
         frameCounter = this.currentFrameCounter = createFrameCounter(eleapsed);
@@ -574,20 +578,6 @@ export class Stage {
       }
 
       frameCounter.increment(this.deltaTime);
-      // this.fpsNumFrames++;
-      // this.fpsElapsedTime += this.deltaTime;
-      // if (this.fpsElapsedTime >= fpsUpdateInterval) {
-      //   const fps = Math.round(
-      //     (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
-      //   );
-      //   this.fpsNumFrames = 0;
-      //   this.fpsElapsedTime = 0;
-      //   this.queueFrameEvent('fpsUpdate', {
-      //     fps,
-      //     contextSpyData: this.contextSpy?.getData() ?? null,
-      //   } satisfies FpsUpdatePayload);
-      //   this.contextSpy?.reset();
-      // }
     }
   }
 
