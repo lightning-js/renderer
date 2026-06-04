@@ -252,6 +252,11 @@ export abstract class Texture extends EventEmitter {
       return false;
     }
 
+    // Don't cleanup a texture that is in the process of loading
+    if (this.state === 'loading') {
+      return false;
+    }
+
     // Don't cleanup if not renderable
     if (this.renderable === true) {
       return false;
@@ -353,6 +358,7 @@ export abstract class Texture extends EventEmitter {
    */
   free(): void {
     this.ctxTexture?.free();
+    this.ctxTexture = undefined;
   }
 
   /**

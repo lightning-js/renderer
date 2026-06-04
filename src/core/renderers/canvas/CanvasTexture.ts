@@ -36,10 +36,23 @@ export class CanvasTexture extends CoreContextTexture {
     | undefined;
 
   async load(): Promise<void> {
+    // Capture textureData synchronously before any await - a pending
+    // freeTextureDataTask microtask could null textureSource.textureData
+    // during the first async suspension, causing onLoadRequest to fail.
+    const textureData = this.textureSource.textureData;
+    assertTruthy(textureData?.data, 'Texture data is null before load');
+
     this.textureSource.setState('loading');
 
     try {
-      const size = await this.onLoadRequest();
+      const size = await this.onLoadRequest(textureData.data);
+
+      // Guard against the texture being freed while the load was in flight
+      if (this.textureSource.state === 'freed') {
+        this.image = undefined;
+        return;
+      }
+
       this.textureSource.setState('loaded', size);
       this.textureSource.freeTextureData();
       this.updateMemSize();
@@ -82,9 +95,11 @@ export class CanvasTexture extends CoreContextTexture {
 
   getImage(
     color: IParsedColor,
-  ): ImageBitmap | HTMLCanvasElement | HTMLImageElement {
+  ): ImageBitmap | HTMLCanvasElement | HTMLImageElement | null {
     const image = this.image;
-    assertTruthy(image, 'Attempt to get unloaded image texture');
+    if (image === undefined) {
+      return null;
+    }
 
     if (color.isWhite) {
       if (this.tintCache) {
@@ -133,10 +148,9 @@ export class CanvasTexture extends CoreContextTexture {
     return canvas;
   }
 
-  private async onLoadRequest(): Promise<Dimensions> {
-    assertTruthy(this.textureSource?.textureData?.data, 'Texture data is null');
-    const { data } = this.textureSource.textureData;
-
+  private async onLoadRequest(
+    data: NonNullable<NonNullable<Texture['textureData']>['data']>,
+  ): Promise<Dimensions> {
     // TODO: canvas from text renderer should be able to provide the canvas directly
     // instead of having to re-draw it into a new canvas...
     if (data instanceof ImageData) {
@@ -144,7 +158,7 @@ export class CanvasTexture extends CoreContextTexture {
       canvas.width = data.width;
       canvas.height = data.height;
       const ctx = canvas.getContext('2d');
-      if (ctx) ctx.putImageData(data, 0, 0);
+      if (ctx !== null) ctx.putImageData(data, 0, 0);
       this.image = canvas;
       return { w: data.width, h: data.height };
     } else if (
