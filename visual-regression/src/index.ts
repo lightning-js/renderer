@@ -115,7 +115,7 @@ const argv = yargs(hideBin(process.argv))
     renderMode: {
       type: 'string',
       alias: 'r',
-      default: 'webgl',
+      default: runtimeEnv === 'ci' ? 'all' : 'webgl',
       choices: ['webgl', 'canvas', 'all'],
       description:
         'Renderer mode to test ("webgl", "canvas", or "all" for both)',
