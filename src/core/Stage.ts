@@ -60,7 +60,7 @@ import type { RendererMainSettings } from '../main-api/Renderer.js';
 import {
   createFrameCounter,
   setFpsInterval,
-  setFrameBuckets,
+  setFpsBoundaries,
   type FrameCounter,
 } from './lib/fps.js';
 
@@ -207,7 +207,7 @@ export class Stage {
 
     // Set initial frame buckets and FPS update interval for FPS tracking
     if (options.fpsBoundaries) {
-      setFrameBuckets(options.fpsBoundaries);
+      setFpsBoundaries(options.fpsBoundaries);
     }
     setFpsInterval(options.fpsUpdateInterval);
 
@@ -588,7 +588,7 @@ export class Stage {
   }
 
   updateFpsBoundaries(newBoundaries: number[]) {
-    setFrameBuckets(newBoundaries);
+    setFpsBoundaries(newBoundaries);
     // Reset current frame counter to start new interval with new boundaries
     this.currentFrameCounter = null;
   }
