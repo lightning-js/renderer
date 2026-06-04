@@ -124,12 +124,24 @@ export class WebGlShaderNode<
     }
   }
 
-  updateUniformUsage() {
-    this.uniforms['hasStoredUniforms'] =
-      Object.keys(this.uniforms.single).length > 0 ||
-      Object.keys(this.uniforms.vec2).length > 0 ||
-      Object.keys(this.uniforms.vec3).length > 0 ||
-      Object.keys(this.uniforms.vec4).length > 0;
+  updateUniformUsage(): void {
+    for (const _ in this.uniforms.single) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec2) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec3) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec4) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    this.uniforms.hasStoredUniforms = false;
   }
 
   /**
