@@ -21,6 +21,7 @@ import type { Dimensions } from '../../../common/CommonTypes.js';
 import { assertTruthy } from '../../../utils.js';
 import { formatRgba, type IParsedColor } from '../../lib/colorParser.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
+import type { Texture } from '../../textures/Texture.js';
 
 export class CanvasTexture extends CoreContextTexture {
   protected image:
