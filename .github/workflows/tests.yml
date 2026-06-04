@@ -54,7 +54,7 @@ jobs:
         run: cd visual-regression && pnpm exec playwright install chromium
 
       - name: Run Visual Regression Tests
-        run: pnpm run test:visual --color
+        run: pnpm run test:visual --color -- --renderMode all
         env:
           RUNTIME_ENV: ci
 
@@ -63,4 +63,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: failed-results
-          path: visual-regression/failed-results/
+          path: |
+            visual-regression/failed-results/
