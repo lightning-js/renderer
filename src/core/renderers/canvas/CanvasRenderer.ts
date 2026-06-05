@@ -83,7 +83,19 @@ export class CanvasRenderer extends CoreRenderer {
     }
 
     const hasTransform = ta !== 1;
-    const hasClipping = clippingRect.w !== 0 && clippingRect.h !== 0;
+    const clippingValid = clippingRect.valid === true;
+
+    // If the clipping rect is valid but zero-area, the node is fully clipped — skip rendering
+    if (
+      clippingValid === true &&
+      clippingRect.w === 0 &&
+      clippingRect.h === 0
+    ) {
+      return;
+    }
+
+    const hasClipping =
+      clippingValid === true && clippingRect.w !== 0 && clippingRect.h !== 0;
     const shader = node.props.shader;
     const hasShader = shader !== null;
 
