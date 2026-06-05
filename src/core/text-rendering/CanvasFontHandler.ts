@@ -103,11 +103,10 @@ export const loadFont = async (
 
   const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create and store the loading promise
-  const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
-    .load()
+  const loadPromise = stage.platform
+    .loadFontFace(fontFamily, fontUrl!)
     .then((loadedFont) => {
-      stage.platform.addFont(loadedFont);
-      processFontData(fontFamily, loadedFont, metrics);
+      processFontData(fontFamily, loadedFont ?? undefined, metrics);
       fontLoadPromises.delete(fontFamily);
       for (let key in nwff) {
         nwff[key]!.setUpdateType(UpdateType.Local);

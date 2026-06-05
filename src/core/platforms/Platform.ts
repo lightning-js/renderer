@@ -178,4 +178,24 @@ export abstract class Platform {
    * @param font - The FontFace to add
    */
   abstract addFont(font: FontFace): void;
+
+  /**
+   * Loads a font by URL and registers it for use with canvas rendering.
+   *
+   * @remarks
+   * Platform implementations may override this to use a browser-compatible
+   * font loading strategy. The default implementation (in {@link WebPlatform})
+   * uses the `FontFace` JavaScript API. Legacy platforms should override this
+   * to use CSS `@font-face` injection, which is supported by all browsers.
+   *
+   * @param fontFamily - The CSS font-family name to register the font under
+   * @param fontUrl - The URL of the font file (e.g. `.ttf`, `.woff`, `.woff2`)
+   * @returns A promise that resolves with the loaded `FontFace` object, or
+   * `null` if the platform used an alternative loading strategy (e.g. CSS
+   * injection) that does not produce a `FontFace` instance.
+   */
+  abstract loadFontFace(
+    fontFamily: string,
+    fontUrl: string,
+  ): Promise<FontFace | null>;
 }
