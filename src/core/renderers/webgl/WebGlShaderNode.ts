@@ -62,6 +62,7 @@ export class WebGlShaderNode<
     undefined;
   private valueKey: string = '';
   uniforms: UniformCollection = {
+    hasStoredUniforms: false,
     single: {},
     vec2: {},
     vec3: {},
@@ -83,6 +84,7 @@ export class WebGlShaderNode<
       this.update = () => {
         if (this.props === undefined) {
           this.updater!(this.node as CoreNode, this.props);
+          this.updateUniformUsage();
           return;
         }
 
@@ -106,18 +108,40 @@ export class WebGlShaderNode<
         }
         //create empty uniform collection when calculating new values
         this.uniforms = {
+          hasStoredUniforms: false,
           single: {},
           vec2: {},
           vec3: {},
           vec4: {},
         };
         this.updater!(this.node as CoreNode);
+        this.updateUniformUsage();
         stage.shManager.setShaderValues(
           this.valueKey,
           this.uniforms as unknown as Record<string, unknown>,
         );
       };
     }
+  }
+
+  updateUniformUsage(): void {
+    for (const _ in this.uniforms.single) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec2) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec3) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    for (const _ in this.uniforms.vec4) {
+      this.uniforms.hasStoredUniforms = true;
+      return;
+    }
+    this.uniforms.hasStoredUniforms = false;
   }
 
   /**

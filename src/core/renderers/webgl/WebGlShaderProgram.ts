@@ -258,12 +258,12 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     const shader = renderOp.shader as WebGlShaderNode;
-    if (shader.props !== undefined) {
+    const uniforms = shader.uniforms;
+
+    if (uniforms.hasStoredUniforms === true) {
       /**
        * loop over all precalculated uniform types
        */
-      const uniforms = shader.uniforms;
-
       for (const key in uniforms.single) {
         const { method, value } = uniforms.single[key]!;
         this.glw[method as keyof UniformSet1Param](key, value as never);

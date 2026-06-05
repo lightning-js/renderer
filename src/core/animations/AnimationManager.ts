@@ -20,19 +20,19 @@
 import { CoreAnimation } from './CoreAnimation.js';
 
 export class AnimationManager {
-  activeAnimations: Set<CoreAnimation> = new Set();
+  activeAnimations: Map<number, CoreAnimation> = new Map();
 
   registerAnimation(animation: CoreAnimation) {
-    this.activeAnimations.add(animation);
+    this.activeAnimations.set(animation.id, animation);
   }
 
   unregisterAnimation(animation: CoreAnimation) {
-    this.activeAnimations.delete(animation);
+    this.activeAnimations.delete(animation.id);
   }
 
   update(dt: number) {
-    this.activeAnimations.forEach((animation) => {
+    for (const animation of this.activeAnimations.values()) {
       animation.update(dt);
-    });
+    }
   }
 }

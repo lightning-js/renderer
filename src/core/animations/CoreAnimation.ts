@@ -34,17 +34,30 @@ export interface AnimationSettings {
 type PropValues = {
   start: number;
   target: number;
+  isColor: boolean;
 };
-type PropValuesMap = Record<string, Record<string, PropValues>>;
+
+type PropGroup = {
+  keys: string[];
+  values: PropValues[];
+};
+
+type PropValuesMap = {
+  props: PropGroup | null;
+  shaderProps: PropGroup | null;
+};
+
+let animationIdCounter = 0;
 
 export class CoreAnimation extends EventEmitter {
+  public readonly id: number = ++animationIdCounter;
   public settings: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
   private timingFunction: TimingFunction;
 
-  propValuesMap: PropValuesMap = {};
+  propValuesMap: PropValuesMap = { props: null, shaderProps: null };
 
   constructor(
     private node: CoreNode,
@@ -55,27 +68,31 @@ export class CoreAnimation extends EventEmitter {
 
     for (const key in props) {
       if (key !== 'shaderProps') {
-        if (this.propValuesMap['props'] === undefined) {
-          this.propValuesMap['props'] = {};
+        if (this.propValuesMap['props'] === null) {
+          this.propValuesMap['props'] = { keys: [], values: [] };
         }
-        this.propValuesMap['props'][key] = {
+        this.propValuesMap['props']!['keys'].push(key);
+        this.propValuesMap['props']!['values'].push({
           start:
             node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
           target: props[
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
-        };
+          isColor: key.indexOf('color') !== -1,
+        });
       } else if (key === 'shaderProps' && node.shader !== null) {
-        this.propValuesMap['shaderProps'] = {};
+        this.propValuesMap['shaderProps'] = { keys: [], values: [] };
         for (const key in props.shaderProps) {
           let start = node.shader.props![key];
           if (Array.isArray(start) === true) {
             start = start[0];
           }
-          this.propValuesMap['shaderProps'][key] = {
+          this.propValuesMap['shaderProps']!['keys'].push(key);
+          this.propValuesMap['shaderProps']!['values'].push({
             start,
             target: props.shaderProps[key] as number,
-          };
+            isColor: key.indexOf('color') !== -1,
+          });
         }
       }
     }
@@ -102,28 +119,24 @@ export class CoreAnimation extends EventEmitter {
     this.update(0);
   }
 
-  private restoreValues(
-    target: Record<string, number>,
-    valueMap: Record<string, PropValues>,
-  ) {
-    const entries = Object.entries(valueMap);
-    const eLength = entries.length;
-
-    for (let i = 0; i < eLength; i++) {
-      const [key, value] = entries[i]!;
-      target[key] = value.start;
+  private restoreValues(target: Record<string, number>, group: PropGroup) {
+    const keys = group.keys;
+    const values = group.values;
+    const length = keys.length;
+    for (let i = 0; i < length; i++) {
+      target[keys[i]!] = values[i]!.start;
     }
   }
 
   restore() {
     this.reset();
-    if (this.propValuesMap['props'] !== undefined) {
+    if (this.propValuesMap['props'] !== null) {
       this.restoreValues(
         this.node as unknown as Record<string, number>,
         this.propValuesMap['props'],
       );
     }
-    if (this.propValuesMap['shaderProps'] !== undefined) {
+    if (this.propValuesMap['shaderProps'] !== null) {
       this.restoreValues(
         this.node.shader!.props as Record<string, number>,
         this.propValuesMap['shaderProps'],
@@ -131,26 +144,24 @@ export class CoreAnimation extends EventEmitter {
     }
   }
 
-  private reverseValues(valueMap: Record<string, PropValues>) {
-    const entries = Object.entries(valueMap);
-    const eLength = entries.length;
-
-    for (let i = 0; i < eLength; i++) {
-      const [key, value] = entries[i]!;
-      valueMap[key] = {
-        start: value.target,
-        target: value.start,
-      };
+  private reverseValues(group: PropGroup) {
+    const values = group.values;
+    const length = values.length;
+    for (let i = 0; i < length; i++) {
+      const value = values[i]!;
+      const tmp = value.start;
+      value.start = value.target;
+      value.target = tmp;
     }
   }
 
   reverse() {
     this.progress = 0;
 
-    if (this.propValuesMap['props'] !== undefined) {
+    if (this.propValuesMap['props'] !== null) {
       this.reverseValues(this.propValuesMap['props']);
     }
-    if (this.propValuesMap['shaderProps'] !== undefined) {
+    if (this.propValuesMap['shaderProps'] !== null) {
       this.reverseValues(this.propValuesMap['shaderProps']);
     }
 
@@ -165,7 +176,7 @@ export class CoreAnimation extends EventEmitter {
   }
 
   updateValue(
-    propName: string,
+    isColor: boolean,
     propValue: number,
     startValue: number,
     easing: string | TimingFunction | undefined,
@@ -178,7 +189,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     const endValue = propValue;
-    if (propName.indexOf('color') !== -1) {
+    if (isColor === true) {
       if (startValue === endValue) {
         return startValue;
       }
@@ -199,15 +210,20 @@ export class CoreAnimation extends EventEmitter {
 
   private updateValues(
     target: Record<string, number>,
-    valueMap: Record<string, PropValues>,
+    group: PropGroup,
     easing: string | TimingFunction | undefined,
   ) {
-    const entries = Object.entries(valueMap);
-    const eLength = entries.length;
-
-    for (let i = 0; i < eLength; i++) {
-      const [key, value] = entries[i]!;
-      target[key] = this.updateValue(key, value.target, value.start, easing);
+    const keys = group.keys;
+    const values = group.values;
+    const length = keys.length;
+    for (let i = 0; i < length; i++) {
+      const value = values[i]!;
+      target[keys[i]!] = this.updateValue(
+        value.isColor,
+        value.target,
+        value.start,
+        easing,
+      );
     }
   }
 
@@ -264,14 +280,14 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (this.propValuesMap['props'] !== undefined) {
+    if (this.propValuesMap['props'] !== null) {
       this.updateValues(
         this.node as unknown as Record<string, number>,
         this.propValuesMap['props'],
         easing,
       );
     }
-    if (this.propValuesMap['shaderProps'] !== undefined) {
+    if (this.propValuesMap['shaderProps'] !== null) {
       this.updateValues(
         this.node.shader!.props as Record<string, number>,
         this.propValuesMap['shaderProps'],
@@ -280,7 +296,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     if (this.progress < 1) {
-      this.emit('tick', { progress: this.progress });
+      this.emit('tick');
     }
 
     if (this.progress === 1) {

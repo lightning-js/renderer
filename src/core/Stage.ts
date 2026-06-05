@@ -224,6 +224,17 @@ export class Stage {
 
     const renderMode = this.renderer.mode || 'webgl';
 
+    // Canvas2D textures are plain JS heap objects managed by the browser GC.
+    // Threshold-based upload blocking makes no sense for JS heap — disable it
+    // by setting criticalThreshold to 0 while keeping the eviction machinery.
+    if (renderMode === 'canvas') {
+      this.txMemManager.updateSettings({
+        ...textureMemory,
+        criticalThreshold: 0,
+        doNotExceedCriticalThreshold: false,
+      });
+    }
+
     this.createDefaultTexture();
     setPremultiplyMode(renderMode);
 
