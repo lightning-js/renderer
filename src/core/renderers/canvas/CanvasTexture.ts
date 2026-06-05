@@ -137,6 +137,15 @@ export class CanvasTexture extends CoreContextTexture {
     assertTruthy(this.textureSource?.textureData?.data, 'Texture data is null');
     const { data } = this.textureSource.textureData;
 
+    // CompressedData objects (KTX, PVR, ASTC) carry GPU-format mipmap buffers
+    // that cannot be decoded by Canvas2D. Reject explicitly rather than falling
+    // through silently and leaving this.image unassigned.
+    if (typeof data === 'object' && 'mipmaps' in data) {
+      throw new Error(
+        'CanvasTexture: Compressed texture data is not supported in Canvas2D render mode',
+      );
+    }
+
     // TODO: canvas from text renderer should be able to provide the canvas directly
     // instead of having to re-draw it into a new canvas...
     if (data instanceof ImageData) {
