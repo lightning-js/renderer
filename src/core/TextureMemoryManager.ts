@@ -177,7 +177,7 @@ export class TextureMemoryManager {
       }
     }
 
-    if (this.memUsed > this.criticalThreshold) {
+    if (this.criticalThreshold > 0 && this.memUsed > this.criticalThreshold) {
       this.criticalCleanupRequested = true;
     }
   }
@@ -185,13 +185,14 @@ export class TextureMemoryManager {
   checkCleanup() {
     return (
       this.criticalCleanupRequested ||
-      (this.memUsed > this.targetThreshold &&
+      (this.criticalThreshold > 0 &&
+        this.memUsed > this.targetThreshold &&
         this.frameTime - this.lastCleanupTime >= this.cleanupInterval)
     );
   }
 
   checkCriticalCleanup() {
-    return this.memUsed > this.criticalThreshold;
+    return this.criticalThreshold > 0 && this.memUsed > this.criticalThreshold;
   }
 
   /**
