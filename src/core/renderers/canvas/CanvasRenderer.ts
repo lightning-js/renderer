@@ -158,6 +158,9 @@ export class CanvasRenderer extends CoreRenderer {
       const tintColor = parseColor(color);
       if (textureType !== TextureType.subTexture) {
         const image = (texture.ctxTexture as CanvasTexture).getImage(tintColor);
+        if (image === null) {
+          return;
+        }
         this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
         this.context.drawImage(image, tx, ty, width, height);
         this.context.globalAlpha = 1;
@@ -166,6 +169,9 @@ export class CanvasRenderer extends CoreRenderer {
       const image = (
         (texture as SubTexture).parentTexture.ctxTexture as CanvasTexture
       ).getImage(tintColor);
+      if (image === null) {
+        return;
+      }
       const props = (texture as SubTexture).props;
 
       this.context.globalAlpha = tintColor.a ?? node.worldAlpha;
