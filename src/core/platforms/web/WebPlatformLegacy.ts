@@ -147,4 +147,55 @@ export class WebPlatformLegacy extends WebPlatform {
       `Compressed textures are not supported in legacy mode. Attempted to load: ${src}`,
     );
   }
+
+  /**
+   * Load a font using CSS `@font-face` injection.
+   *
+   * @remarks
+   * The `FontFace` JavaScript constructor used by {@link WebPlatform} relies on
+   * the CSS Font Loading API. While the API is nominally present on Chrome 35+,
+   * embedded/legacy browsers (QtWebKit, older WPEWebKit builds, some set-top-box
+   * browsers) either lack the API entirely or silently drop fonts loaded this way
+   * before they reach the canvas 2D rasteriser.
+   *
+   * Injecting a `<style>` block with an `@font-face` rule is the universally
+   * supported alternative: every browser that renders text supports it.  When
+   * `document.fonts.load()` is available we also trigger an eager load so that
+   * the font is available immediately rather than on first paint.
+   */
+  override async loadFontFace(
+    fontFamily: string,
+    fontUrl: string,
+  ): Promise<FontFace | null> {
+    // Determine the format hint so old browsers know how to decode the file.
+    const lower = fontUrl.toLowerCase();
+    const formatHint = lower.endsWith('.ttf')
+      ? " format('truetype')"
+      : lower.endsWith('.woff2')
+      ? " format('woff2')"
+      : lower.endsWith('.woff')
+      ? " format('woff')"
+      : lower.endsWith('.otf')
+      ? " format('opentype')"
+      : '';
+
+    const style = document.createElement('style');
+    style.textContent = `@font-face { font-family: '${fontFamily}'; src: url('${fontUrl}')${formatHint}; }`;
+    document.head.appendChild(style);
+
+    // Eagerly trigger font loading when the CSS Font Loading API is available
+    // so callers can await full availability.  On browsers that lack the API
+    // the font will be loaded lazily by the layout engine on first use.
+    if (
+      typeof document.fonts !== 'undefined' &&
+      typeof document.fonts.load === 'function'
+    ) {
+      await document.fonts.load(`16px '${fontFamily}'`).catch(() => {
+        // Swallow load errors – the @font-face rule is already injected and
+        // the browser will retry when the font is actually needed.
+      });
+    }
+
+    return null;
+  }
 }

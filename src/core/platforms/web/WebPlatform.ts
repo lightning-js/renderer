@@ -316,4 +316,13 @@ export class WebPlatform extends Platform {
   override addFont(font: FontFace): void {
     (document.fonts as FontFaceSetWithAdd).add(font);
   }
+
+  override async loadFontFace(
+    fontFamily: string,
+    fontUrl: string,
+  ): Promise<FontFace | null> {
+    const font = await new FontFace(fontFamily, `url(${fontUrl})`).load();
+    this.addFont(font);
+    return font;
+  }
 }
