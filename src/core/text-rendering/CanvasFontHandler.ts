@@ -101,7 +101,12 @@ export const loadFont = async (
     return existingPromise;
   }
 
-  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
+  // Preserve any nodes that pre-registered before loadFont() was called
+  // (race: waitingForFont() called before loadFont() for this family)
+  if (nodesWaitingForFont[fontFamily] === undefined) {
+    nodesWaitingForFont[fontFamily] = [];
+  }
+  const nwff: CoreTextNode[] = nodesWaitingForFont[fontFamily]!;
   // Create and store the loading promise
   const loadPromise = new FontFace(fontFamily, `url(${fontUrl})`)
     .load()
@@ -180,7 +185,9 @@ export const isFontLoaded = (fontFamily: string): boolean => {
  */
 export const waitingForFont = (fontFamily: string, node: CoreTextNode) => {
   if (nodesWaitingForFont[fontFamily] === undefined) {
-    return;
+    // loadFont() has not been called yet for this family; create the entry now
+    // so the node is already registered when loadFont() runs later.
+    nodesWaitingForFont[fontFamily] = [];
   }
   nodesWaitingForFont[fontFamily]![node.id] = node;
 };

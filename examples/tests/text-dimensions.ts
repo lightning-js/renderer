@@ -33,6 +33,10 @@ export async function automation(settings: ExampleSettings) {
  * when using SDF and Canvas text renderers and that switching between on
  * a single node them works.
  *
+ * Canvas mutations always run first so the test is usable in both canvas and
+ * webgl render modes. SDF mutations are appended only when running in webgl
+ * mode (SDF font atlases are not loaded in canvas mode).
+ *
  * Use the 'right arrow' key to advance to the next test.
  *
  * @param settings
@@ -40,6 +44,8 @@ export async function automation(settings: ExampleSettings) {
  */
 export default async function test(settings: ExampleSettings) {
   const { renderer, testRoot } = settings;
+
+  const isWebGL = renderer.stage.renderer.mode === 'webgl';
 
   // Set a smaller snapshot area
   testRoot.w = 200;
@@ -63,7 +69,7 @@ export default async function test(settings: ExampleSettings) {
     color: 0x000000ff,
     forceLoad: true,
     fontFamily: 'Ubuntu',
-    textRendererOverride: 'sdf',
+    textRendererOverride: 'canvas',
     fontSize: 50,
     text: '',
     parent: testRoot,
@@ -83,14 +89,9 @@ export default async function test(settings: ExampleSettings) {
   });
 
   let i = 0;
-  const mutations = [
-    () => {
-      text1.text = 'SDF';
-      text1.textRendererOverride = 'sdf';
-    },
-    () => {
-      text1.text = 'SDF\ngyqpj';
-    },
+
+  // Canvas mutations run in both render modes (Ubuntu canvas font is always loaded)
+  const canvasMutations = [
     () => {
       text1.text = 'Canvas';
       text1.textRendererOverride = 'canvas';
@@ -99,21 +100,36 @@ export default async function test(settings: ExampleSettings) {
       text1.text = 'Canvas\ngyqpj';
     },
     () => {
-      // Test one more time with SDF to make sure Canvas
-      text1.text = 'SDF 2nd';
-      text1.textRendererOverride = 'sdf';
-    },
-    () => {
-      // Test when text ends with space for correct width
+      // Test that trailing space is included in the reported width
       text1.text = 'Canvas ';
-      text1.textRendererOverride = 'canvas';
-    },
-    () => {
-      // Test when text ends with space for correct width
-      text1.text = 'SDF ';
-      text1.textRendererOverride = 'sdf';
     },
   ];
+
+  // SDF mutations only run when the webgl render engine is active and the
+  // Ubuntu SDF atlas has been loaded by installFonts
+  const sdfMutations = isWebGL
+    ? [
+        () => {
+          text1.text = 'SDF';
+          text1.textRendererOverride = 'sdf';
+        },
+        () => {
+          text1.text = 'SDF\ngyqpj';
+        },
+        () => {
+          // Switch back to canvas after SDF to verify the node resets cleanly
+          text1.text = 'Canvas 2nd';
+          text1.textRendererOverride = 'canvas';
+        },
+        () => {
+          // Test that trailing space is included in the reported width
+          text1.text = 'SDF ';
+          text1.textRendererOverride = 'sdf';
+        },
+      ]
+    : [];
+
+  const mutations = [...canvasMutations, ...sdfMutations];
   /**
    * Run the next mutation in the list
    *
