@@ -230,7 +230,11 @@ export class WebPlatform extends Platform {
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
-      return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+      return {
+        data: bitmap,
+        premultiplyAlpha: hasAlphaChannel,
+        premultiplied: true,
+      };
     }
 
     // default createImageBitmap without crop but with options
@@ -240,7 +244,11 @@ export class WebPlatform extends Platform {
       imageOrientation: 'none',
     });
 
-    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    return {
+      data: bitmap,
+      premultiplyAlpha: hasAlphaChannel,
+      premultiplied: true,
+    };
   }
 
   override async loadImage(

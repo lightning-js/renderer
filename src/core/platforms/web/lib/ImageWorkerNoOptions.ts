@@ -36,7 +36,11 @@ export function createImageWorkerNoOptions() {
     y: number | null,
     width: number | null,
     height: number | null,
-  ): Promise<{ data: ImageBitmap; premultiplyAlpha: boolean | null }> {
+  ): Promise<{
+    data: ImageBitmap;
+    premultiplyAlpha: boolean | null;
+    premultiplied: boolean;
+  }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', src, true);
@@ -61,7 +65,14 @@ export function createImageWorkerNoOptions() {
 
         createImageBitmap(blob)
           .then(function (data) {
-            resolve({ data, premultiplyAlpha: withAlphaChannel });
+            // No premultiplyAlpha option was passed so the browser decides.
+            // Mark premultiplied: false so the upload path sets
+            // UNPACK_PREMULTIPLY_ALPHA_WEBGL = true for PNG images.
+            resolve({
+              data,
+              premultiplyAlpha: withAlphaChannel,
+              premultiplied: false,
+            });
           })
           .catch(function (error) {
             reject(error);

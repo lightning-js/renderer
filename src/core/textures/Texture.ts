@@ -113,6 +113,27 @@ export interface TextureData {
    * @defaultValue `false`
    */
   premultiplyAlpha?: boolean | null;
+  /**
+   * Whether the pixel data is already premultiplied (e.g. produced by
+   * `createImageBitmap` with `premultiplyAlpha: 'premultiply'`).
+   *
+   * @remarks
+   * This flag is only meaningful for `ImageBitmap` data sources. When `true`,
+   * `UNPACK_PREMULTIPLY_ALPHA_WEBGL` is set to `false` at upload time to
+   * prevent double-premultiplication. When `false`, the flag is set to `true`
+   * so the WebGL driver premultiplies during the CPU→GPU copy (same path as
+   * `HTMLImageElement`). When `undefined`, behaviour falls back to the legacy
+   * assumption that all `ImageBitmap` sources are already premultiplied.
+   *
+   * Platforms that call `createImageBitmap` **without** the
+   * `premultiplyAlpha: 'premultiply'` option (e.g. `WebPlatformChrome50`)
+   * must set this to `false`, otherwise the renderer composites straight-alpha
+   * pixels against a `blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` equation and
+   * produces incorrect results on older WPEWebKit.
+   *
+   * @defaultValue `undefined` (treated as `true` for `ImageBitmap` sources)
+   */
+  premultiplied?: boolean;
 }
 /**
  * TextureCoords generally numbers between 0 - 1

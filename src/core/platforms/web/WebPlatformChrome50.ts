@@ -58,6 +58,14 @@ export class WebPlatformChrome50 extends WebPlatform {
     // No options or cropping parameters supported
     const bitmap = await createImageBitmap(blob);
 
-    return { data: bitmap, premultiplyAlpha: hasAlphaChannel };
+    // The bitmap was created without a premultiplyAlpha option so the browser
+    // decides whether to premultiply. On older WPEWebKit the default is
+    // straight alpha, so we mark premultiplied: false here to signal
+    // that UNPACK_PREMULTIPLY_ALPHA_WEBGL should be set at upload time.
+    return {
+      data: bitmap,
+      premultiplyAlpha: hasAlphaChannel,
+      premultiplied: false,
+    };
   }
 }
