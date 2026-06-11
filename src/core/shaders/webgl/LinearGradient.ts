@@ -95,8 +95,10 @@ export const LinearGradient: WebGlShaderType<LinearGradientProps> = {
       float lineDist = abs(u_dimensions.x * cos(a)) + abs(u_dimensions.y * sin(a));
       vec2 f = calcPoint(lineDist * 0.5, a);
       vec2 t = calcPoint(lineDist * 0.5, a + PI);
-      vec2 gradVec = t - f;
-      float dist = dot(v_textureCoords.xy * u_dimensions - f, gradVec) / dot(gradVec, gradVec);
+      // Scale to avoid mediump float overflow on platforms without highp
+      float s = max(u_dimensions.x, u_dimensions.y);
+      vec2 gradVec = (t - f) / s;
+      float dist = dot((v_textureCoords.xy * u_dimensions - f) / s, gradVec) / dot(gradVec, gradVec);
       vec4 colorOut = getGradientColor(dist);
       vec3 blendedRGB = mix(color.rgb, colorOut.rgb, clamp(colorOut.a, 0.0, 1.0));
       gl_FragColor = vec4(blendedRGB, color.a);
