@@ -699,6 +699,7 @@ export class Stage {
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
       forceLoad: props.forceLoad || false,
+      richText: props.richText ?? false,
     });
 
     const resolvedTextRenderer = this.resolveTextRenderer(

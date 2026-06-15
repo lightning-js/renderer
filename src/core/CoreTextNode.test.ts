@@ -85,6 +85,7 @@ describe('CoreTextNode', () => {
     // CoreTextNodeProps specific
     textRendererOverride: null,
     forceLoad: false,
+    richText: false,
   };
 
   const clippingRect = {
@@ -656,6 +657,66 @@ describe('CoreTextNode', () => {
       expect(setScissorTest).toHaveBeenCalledWith(true);
       expect(scissor).toHaveBeenCalledWith(10, 155, 30, 40);
       expect(drawArrays).toHaveBeenCalledWith(4, 0, 12);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // richText property
+  // -------------------------------------------------------------------------
+
+  describe('richText property', () => {
+    let node: CoreTextNode;
+
+    beforeEach(() => {
+      node = new CoreTextNode(stage, { ...defaultTextProps }, mockTextRenderer);
+      // Start each test with a clean update state
+      node.update(0, stage as any);
+    });
+
+    it('defaults to false', () => {
+      const fresh = new CoreTextNode(
+        stage,
+        { ...defaultTextProps },
+        mockTextRenderer,
+      );
+      expect(fresh.richText).toBe(false);
+    });
+
+    it('getter returns the stored value after being set to true', () => {
+      node.richText = true;
+      expect(node.richText).toBe(true);
+    });
+
+    it('getter returns false after being set back to false', () => {
+      node.richText = true;
+      node.richText = false;
+      expect(node.richText).toBe(false);
+    });
+
+    it('setter marks layout as stale when value changes to true', () => {
+      node['_layoutGenerated'] = true;
+      node.richText = true;
+      expect(node['_layoutGenerated']).toBe(false);
+    });
+
+    it('setter marks layout as stale when value changes back to false', () => {
+      node.richText = true;
+      node['_layoutGenerated'] = true;
+      node.richText = false;
+      expect(node['_layoutGenerated']).toBe(false);
+    });
+
+    it('setter does not mark layout as stale when value is unchanged (false → false)', () => {
+      node['_layoutGenerated'] = true;
+      node.richText = false;
+      expect(node['_layoutGenerated']).toBe(true);
+    });
+
+    it('setter does not mark layout as stale when value is unchanged (true → true)', () => {
+      node.richText = true;
+      node['_layoutGenerated'] = true;
+      node.richText = true;
+      expect(node['_layoutGenerated']).toBe(true);
     });
   });
 });

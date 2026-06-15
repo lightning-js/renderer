@@ -99,5 +99,5 @@ export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
 }
 
 export function getLayoutCacheKey(props: CoreTextNodeProps): string {
-  return `${props.text}-${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.wordBreak}-${props.maxLines}-${props.overflowSuffix}`;
+  return `${props.text}-${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.wordBreak}-${props.maxLines}-${props.overflowSuffix}-${props.richText}`;
 }
