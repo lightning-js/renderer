@@ -65,7 +65,11 @@ export function createImageWorker() {
             imageOrientation: 'none',
           })
             .then(function (data) {
-              resolve({ data, premultiplyAlpha: premultiplyAlpha });
+              resolve({
+                data,
+                premultiplyAlpha: withAlphaChannel,
+                premultiplied: true,
+              });
             })
             .catch(function (error) {
               reject(error);
@@ -79,7 +83,11 @@ export function createImageWorker() {
           imageOrientation: 'none',
         })
           .then(function (data) {
-            resolve({ data, premultiplyAlpha: premultiplyAlpha });
+            resolve({
+              data,
+              premultiplyAlpha: withAlphaChannel,
+              premultiplied: true,
+            });
           })
           .catch(function (error) {
             reject(error);
