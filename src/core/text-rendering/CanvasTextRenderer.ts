@@ -189,8 +189,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // we walk through layout lines. curSpanIdx advances monotonically with
     // strippedPos (spans are sorted by start, no backward scan is needed).
     //
-    // Note: layout (mapTextLayout) used the base font metrics, so bold text
-    // may render slightly wider than its measured width — acceptable for MVP.
+    // Option A fix: measureContext.font is kept in sync with context.font
+    // (see the activeFont guard below) so currentX advances by the correct
+    // bold/italic glyph width rather than the base-font width.
+    // Layout wrapping (mapTextLayout) still uses the base font; a span-aware
+    // closure will be added in a follow-up to fix wrap-point accuracy.
     // -------------------------------------------------------------------------
     const spanCount = _richTextResult.spanCount;
     const spans = _richTextResult.spans;
@@ -254,6 +257,9 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
           if (spanFont !== activeFont) {
             context.font = spanFont;
+            // Option A: keep measureContext in sync so CanvasFontHandler.measureText
+            // uses the correct bold/italic metrics when advancing currentX.
+            measureContext.font = spanFont;
             activeFont = spanFont;
           }
 
