@@ -29,6 +29,8 @@ import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
+import { parseRichText, ParseResult } from './RichTextParser.js';
+import { normalizeCanvasColor } from '../lib/colorCache.js';
 
 const MAX_TEXTURE_DIMENSION = 4096;
 
@@ -50,6 +52,10 @@ let measureContext:
 
 // Cache for text layout calculations
 const renderInfoCache = new Map<string, CanvasRenderInfo>();
+
+// Pre-allocated rich text parse result — reused across renderText calls.
+// Safe because renderText is synchronous and JS is single-threaded.
+const _richTextResult = new ParseResult();
 
 // Initialize the Text Renderer
 const init = (stage: Stage): void => {
@@ -113,11 +119,23 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     maxWidth,
     maxHeight,
     wordBreak,
+    richText,
+    color,
   } = props;
 
-  const font = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
+  // When richText is enabled, parse BB-code tags from text and use the
+  // stripped plain text for layout. The parse result is stored in the
+  // module-level singleton (safe — renderText is synchronous).
+  let layoutText = text;
+  if (richText === true) {
+    parseRichText(text, _richTextResult);
+    layoutText = _richTextResult.stripped;
+  }
+
+  // Rename to baseFont to avoid shadowing the module-level FontHandler
+  const baseFont = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
   // Get font metrics and calculate line height
-  measureContext.font = font;
+  measureContext.font = baseFont;
   measureContext.textBaseline = 'hanging';
 
   const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
@@ -135,7 +153,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   ] = mapTextLayout(
     CanvasFontHandler.measureText,
     metrics,
-    text,
+    layoutText,
     textAlign,
     fontFamily,
     lineHeight,
@@ -153,7 +171,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   canvas.width = canvasW;
   canvas.height = canvasH;
   context.fillStyle = 'white';
-  context.font = font;
+  context.font = baseFont;
   context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
@@ -163,26 +181,146 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     context.globalAlpha = 1.0;
   }
 
-  for (let i = 0; i < lineAmount; i++) {
-    const line = lines[i] as TextLineStruct;
-    const textLine = line[0];
-    let currentX = Math.ceil(line[3]);
-    const currentY = Math.ceil(line[4]);
-    if (letterSpacing === 0) {
-      context.fillText(textLine, currentX, currentY);
-    } else {
-      const textLineLength = textLine.length;
-      for (let j = 0; j < textLineLength; j++) {
-        const char = textLine.charAt(j);
-        if (hasZeroWidthSpace(char) === true) {
-          continue;
+  if (richText === true) {
+    // -------------------------------------------------------------------------
+    // Rich text draw path — segment-by-segment with per-span font and color.
+    //
+    // strippedPos tracks the absolute character position in stripped text as
+    // we walk through layout lines. curSpanIdx advances monotonically with
+    // strippedPos (spans are sorted by start, no backward scan is needed).
+    //
+    // Note: layout (mapTextLayout) used the base font metrics, so bold text
+    // may render slightly wider than its measured width — acceptable for MVP.
+    // -------------------------------------------------------------------------
+    const spanCount = _richTextResult.spanCount;
+    const spans = _richTextResult.spans;
+
+    // CSS color string for uncolored spans — inherits the node's text color.
+    // normalizeCanvasColor caches the string, so no allocation in hot path.
+    const nodeColor = normalizeCanvasColor(color, true);
+
+    let strippedPos = 0;
+    let curSpanIdx = 0;
+    let activeFont = baseFont;
+    let activeFillStyle = nodeColor;
+
+    // Prime the context with the node color; individual segments may override.
+    context.fillStyle = activeFillStyle;
+
+    for (let i = 0; i < lineAmount; i++) {
+      const line = lines[i] as TextLineStruct;
+      const textLine = line[0];
+      const lineLen = textLine.length;
+      let currentX = Math.ceil(line[3]);
+      const currentY = Math.ceil(line[4]);
+
+      // Advance span pointer to cover strippedPos (first char of this line).
+      while (
+        curSpanIdx < spanCount - 1 &&
+        strippedPos >= spans[curSpanIdx]!.end
+      ) {
+        curSpanIdx++;
+      }
+
+      let segStartJ = 0;
+      let segSpanIdx = curSpanIdx;
+
+      // Iterate one past the line end so the final segment is always flushed.
+      for (let j = 1; j <= lineLen; j++) {
+        // Determine the span index for character at (strippedPos + j).
+        // At end-of-line (j === lineLen) we force a flush without advancing.
+        let nextSpanIdx = segSpanIdx;
+        if (j < lineLen) {
+          while (
+            nextSpanIdx < spanCount - 1 &&
+            strippedPos + j >= spans[nextSpanIdx]!.end
+          ) {
+            nextSpanIdx++;
+          }
+          curSpanIdx = nextSpanIdx;
         }
-        context.fillText(char, currentX, currentY);
-        currentX += CanvasFontHandler.measureText(
-          char,
-          fontFamily,
-          letterSpacing,
-        );
+
+        if (j === lineLen || nextSpanIdx !== segSpanIdx) {
+          // Flush segment [segStartJ, j) with the style from spans[segSpanIdx].
+          const span = spans[segSpanIdx]!;
+
+          // Build the CSS font string for this segment.
+          // Bold/italic from the span override the node-level fontStyle.
+          const spanStyle = span.italic === true ? 'italic' : fontStyle;
+          const spanFont =
+            span.bold === true
+              ? `${spanStyle} bold ${fontSize}px Unknown, ${fontFamily}`
+              : `${spanStyle} ${fontSize}px Unknown, ${fontFamily}`;
+
+          if (spanFont !== activeFont) {
+            context.font = spanFont;
+            activeFont = spanFont;
+          }
+
+          // Colored span uses span.color; uncolored span inherits node color.
+          const spanFillStyle =
+            span.color !== 0
+              ? normalizeCanvasColor(span.color, true)
+              : nodeColor;
+
+          if (spanFillStyle !== activeFillStyle) {
+            context.fillStyle = spanFillStyle;
+            activeFillStyle = spanFillStyle;
+          }
+
+          if (letterSpacing === 0) {
+            const segment = textLine.substring(segStartJ, j);
+            context.fillText(segment, currentX, currentY);
+            currentX += CanvasFontHandler.measureText(segment, fontFamily, 0);
+          } else {
+            for (let k = segStartJ; k < j; k++) {
+              const char = textLine.charAt(k);
+              if (hasZeroWidthSpace(char) === false) {
+                context.fillText(char, currentX, currentY);
+              }
+              currentX += CanvasFontHandler.measureText(
+                char,
+                fontFamily,
+                letterSpacing,
+              );
+            }
+          }
+
+          segStartJ = j;
+          segSpanIdx = nextSpanIdx;
+        }
+      }
+
+      // Advance strippedPos past this line's characters plus the line-break
+      // character (space consumed by wrapText, or \n for explicit newlines)
+      // that separates layout lines. The final line has no trailing break.
+      strippedPos += lineLen + (i < lineAmount - 1 ? 1 : 0);
+    }
+  } else {
+    // -------------------------------------------------------------------------
+    // Plain text draw path — unchanged from original implementation.
+    // -------------------------------------------------------------------------
+    for (let i = 0; i < lineAmount; i++) {
+      const line = lines[i] as TextLineStruct;
+      const textLine = line[0];
+      let currentX = Math.ceil(line[3]);
+      const currentY = Math.ceil(line[4]);
+      if (letterSpacing === 0) {
+        context.fillText(textLine, currentX, currentY);
+      } else {
+        const textLineLength = textLine.length;
+        for (let j = 0; j < textLineLength; j++) {
+          const char = textLine.charAt(j);
+          if (hasZeroWidthSpace(char) === true) {
+            continue;
+          }
+          context.fillText(char, currentX, currentY);
+          currentX += CanvasFontHandler.measureText(
+            char,
+            fontFamily,
+            letterSpacing,
+          );
+        }
       }
     }
   }
