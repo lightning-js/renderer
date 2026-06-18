@@ -292,13 +292,14 @@ const generateTextLayout = (
       glyphCount++;
       if (richText === true) {
         // Advance span cursor past any spans that ended before this position.
+        // curSpanIdx is always < spanCount after the loop; non-null assertions are safe.
         while (
           curSpanIdx < _richTextResult.spanCount - 1 &&
-          strippedPos >= _richTextResult.spans[curSpanIdx].end
+          strippedPos >= _richTextResult.spans[curSpanIdx]!.end
         ) {
           curSpanIdx++;
         }
-        const span = _richTextResult.spans[curSpanIdx];
+        const span = _richTextResult.spans[curSpanIdx]!;
         if (span.underline === true) decoQuadCount++;
         if (span.strikethrough === true) decoQuadCount++;
         strippedPos++;
@@ -358,11 +359,11 @@ const generateTextLayout = (
       if (richText === true) {
         while (
           curSpanIdx < _richTextResult.spanCount - 1 &&
-          strippedPos >= _richTextResult.spans[curSpanIdx].end
+          strippedPos >= _richTextResult.spans[curSpanIdx]!.end
         ) {
           curSpanIdx++;
         }
-        const span = _richTextResult.spans[curSpanIdx];
+        const span = _richTextResult.spans[curSpanIdx]!;
         packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
         spanUnderline = span.underline;
         spanStrikethrough = span.strikethrough;
