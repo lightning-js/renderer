@@ -160,7 +160,7 @@ async function dockerCiMode(): Promise<number> {
     -v /work/.pnpm-store \
     -v /work/examples/node_modules \
     -v /work/visual-regression/node_modules \
-    -w /work/ -it visual-regression:latest \
+    -w /work/ -i visual-regression:latest \
     /bin/bash -c ${`pnpm install && RUNTIME_ENV=ci pnpm test:visual ${commandLineStr}`}
   `;
   await childProc;
