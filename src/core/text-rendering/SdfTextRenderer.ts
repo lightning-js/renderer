@@ -35,10 +35,15 @@ import { mapTextLayout } from './TextLayoutEngine.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
 
-// Each glyph requires 6 vertices (2 triangles) with 5 floats each (x, y, u, v, packed_color)
-const FLOATS_PER_VERTEX = 5;
+// Each glyph/deco quad requires 6 vertices with 6 floats each
+// (x, y, u, v, packed_color, style)
+const FLOATS_PER_VERTEX = 6;
 const VERTICES_PER_GLYPH = 6;
-const FLOATS_PER_QUAD = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX; // 30
+const FLOATS_PER_QUAD = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX; // 36
+
+// Horizontal shear factor for fake italic: tan(14°).
+// Applied to glyph and decoration vertices in design-unit space.
+const ITALIC_SHEAR = Math.tan((14 * Math.PI) / 180);
 
 // White (0xFFFFFFFF as 0xRRGGBBAA) packed little-endian: all UNSIGNED_BYTE channels = 255 → 1.0
 // When v_color = vec4(1,1,1,1) the span color has no effect; u_color passes through unchanged.
@@ -131,6 +136,9 @@ const renderQuads = (textNode: CoreTextNode): void => {
  * Uses u = -1.0 as a UV sentinel so the fragment shader branches to solid fill
  * instead of the SDF glyph path (v_texcoord.x < 0.0).
  *
+ * `shear1` / `shear2` are the x-deltas to add at y1 / y2 respectively for
+ * italic lean; pass 0 for both when the span is not italic.
+ *
  * All positions are in design-unit space (shader scales by u_size = fontScale).
  */
 const _writeDecoQuad = (
@@ -142,45 +150,53 @@ const _writeDecoQuad = (
   y1: number,
   y2: number,
   color: number,
+  shear1: number,
+  shear2: number,
 ): number => {
   // Triangle 1: TL, TR, BL
-  vb[di] = x1;
+  vb[di] = x1 + shear1;
   vb[di + 1] = y1;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
-  vb[di] = x2;
+  vb[di + 5] = 0.0;
+  di += 6;
+  vb[di] = x2 + shear1;
   vb[di + 1] = y1;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
-  vb[di] = x1;
+  vb[di + 5] = 0.0;
+  di += 6;
+  vb[di] = x1 + shear2;
   vb[di + 1] = y2;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
+  vb[di + 5] = 0.0;
+  di += 6;
   // Triangle 2: TR, BR, BL
-  vb[di] = x2;
+  vb[di] = x2 + shear1;
   vb[di + 1] = y1;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
-  vb[di] = x2;
+  vb[di + 5] = 0.0;
+  di += 6;
+  vb[di] = x2 + shear2;
   vb[di + 1] = y2;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
-  vb[di] = x1;
+  vb[di + 5] = 0.0;
+  di += 6;
+  vb[di] = x1 + shear2;
   vb[di + 1] = y2;
   vb[di + 2] = -1.0;
   vb[di + 3] = 0.0;
   u32[di + 4] = color;
-  di += 5;
+  vb[di + 5] = 0.0;
+  di += 6;
   return di;
 };
 
@@ -316,7 +332,7 @@ const generateTextLayout = (
   const u32Buffer = new Uint32Array(vertexBuffer.buffer);
 
   // Write cursors (float indices into vertexBuffer / u32Buffer).
-  let gi = 0; // glyph region: 0 … glyphCount*30-1
+  let gi = 0; // glyph region: 0 … glyphCount*36-1
   let di = glyphCount * FLOATS_PER_QUAD; // deco region: starts after all glyph quads
 
   // Reset rich-text tracking for pass 2.
@@ -334,6 +350,8 @@ const generateTextLayout = (
     currentX = line[3];
     // Convert pixel Y coordinate to design-unit space.
     currentY = line[4] / fontScale;
+    // Alphabetic baseline in design-unit space for this line (used for italic shear).
+    const baseline = currentY + base;
 
     for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
@@ -351,10 +369,12 @@ const generateTextLayout = (
         continue;
       }
 
-      // --- Determine per-vertex color ---
+      // --- Determine per-vertex color and style ---
       let packedColor = _PACKED_WHITE;
       let spanUnderline = false;
       let spanStrikethrough = false;
+      let spanBold = false;
+      let spanItalic = false;
 
       if (richText === true) {
         while (
@@ -367,6 +387,8 @@ const generateTextLayout = (
         packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
         spanUnderline = span.underline;
         spanStrikethrough = span.strikethrough;
+        spanBold = span.bold;
+        spanItalic = span.italic;
       }
 
       // --- Kerning ---
@@ -394,45 +416,61 @@ const generateTextLayout = (
       const decoX1 = currentX;
       const advance = glyph.xadvance + letterSpacing;
 
-      // --- Write 6 glyph vertices (x, y, u, v; packed color via u32 view) ---
+      // --- Italic horizontal shear: delta-x per vertex at y1 / y2 ---
+      // shear = (baseline_y - vertex_y) * tan(14°)
+      // Positive at y < baseline (above baseline → lean right at top).
+      // Negative at y > baseline (below baseline → lean left at bottom).
+      const shearTop = spanItalic ? (baseline - y1) * ITALIC_SHEAR : 0;
+      const shearBot = spanItalic ? (baseline - y2) * ITALIC_SHEAR : 0;
+
+      // Bold style flag passed to fragment shader for SDF threshold shift.
+      const style = spanBold ? 1.0 : 0.0;
+
+      // --- Write 6 glyph vertices (x, y, u, v, packed_color, style) ---
       // Triangle 1: TL, TR, BL
-      vertexBuffer[gi] = x1;
+      vertexBuffer[gi] = x1 + shearTop;
       vertexBuffer[gi + 1] = y1;
       vertexBuffer[gi + 2] = u1;
       vertexBuffer[gi + 3] = v1;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
-      vertexBuffer[gi] = x2;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
+      vertexBuffer[gi] = x2 + shearTop;
       vertexBuffer[gi + 1] = y1;
       vertexBuffer[gi + 2] = u2;
       vertexBuffer[gi + 3] = v1;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
-      vertexBuffer[gi] = x1;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
+      vertexBuffer[gi] = x1 + shearBot;
       vertexBuffer[gi + 1] = y2;
       vertexBuffer[gi + 2] = u1;
       vertexBuffer[gi + 3] = v2;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
       // Triangle 2: TR, BR, BL
-      vertexBuffer[gi] = x2;
+      vertexBuffer[gi] = x2 + shearTop;
       vertexBuffer[gi + 1] = y1;
       vertexBuffer[gi + 2] = u2;
       vertexBuffer[gi + 3] = v1;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
-      vertexBuffer[gi] = x2;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
+      vertexBuffer[gi] = x2 + shearBot;
       vertexBuffer[gi + 1] = y2;
       vertexBuffer[gi + 2] = u2;
       vertexBuffer[gi + 3] = v2;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
-      vertexBuffer[gi] = x1;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
+      vertexBuffer[gi] = x1 + shearBot;
       vertexBuffer[gi + 1] = y2;
       vertexBuffer[gi + 2] = u1;
       vertexBuffer[gi + 3] = v2;
       u32Buffer[gi + 4] = packedColor;
-      gi += 5;
+      vertexBuffer[gi + 5] = style;
+      gi += 6;
 
       // Advance the glyph cursor.
       currentX += advance;
@@ -441,6 +479,9 @@ const generateTextLayout = (
       // --- Write decoration quads (richText only) ---
       if (spanUnderline === true) {
         const dy1 = currentY + decoUnderlineOffset;
+        const dy2 = dy1 + decoThickness;
+        const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
+        const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
         di = _writeDecoQuad(
           vertexBuffer,
           u32Buffer,
@@ -448,12 +489,17 @@ const generateTextLayout = (
           decoX1,
           decoX1 + advance,
           dy1,
-          dy1 + decoThickness,
+          dy2,
           packedColor,
+          dShear1,
+          dShear2,
         );
       }
       if (spanStrikethrough === true) {
         const dy1 = currentY + decoStrikeOffset;
+        const dy2 = dy1 + decoThickness;
+        const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
+        const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
         di = _writeDecoQuad(
           vertexBuffer,
           u32Buffer,
@@ -461,8 +507,10 @@ const generateTextLayout = (
           decoX1,
           decoX1 + advance,
           dy1,
-          dy1 + decoThickness,
+          dy2,
           packedColor,
+          dShear1,
+          dShear2,
         );
       }
 
