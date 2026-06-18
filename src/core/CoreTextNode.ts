@@ -728,6 +728,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
+  get richText(): boolean {
+    return this.textProps.richText;
+  }
+
+  set richText(value: boolean) {
+    if (this.textProps.richText !== value) {
+      this.textProps.richText = value;
+      this._layoutGenerated = false;
+      this.setUpdateType(UpdateType.Local);
+    }
+  }
+
   get renderInfo(): TextRenderInfo | null {
     return this._renderInfo;
   }

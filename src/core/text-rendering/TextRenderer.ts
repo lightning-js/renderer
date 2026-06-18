@@ -248,6 +248,31 @@ export interface TrProps extends TrFontProps {
    * @default 'none'
    */
   contain: 'width' | 'height' | 'both' | 'none';
+
+  /**
+   * Enable BB-code rich text parsing for this text node.
+   *
+   * @remarks
+   *
+   * When `true`, the {@link text} string is parsed for BB-code tags before
+   * layout and rendering. Supported tags:
+   *
+   * - `[b]…[/b]` — bold
+   * - `[i]…[/i]` — italic
+   * - `[u]…[/u]` — underline
+   * - `[s]…[/s]` — strikethrough
+   * - `[color=0xRRGGBBAA]…[/color]` — inline color (must use the renderer's
+   *   internal `0xRRGGBBAA` hex format, e.g. `[color=0xff0000ff]`)
+   *
+   * Unrecognised or malformed tags are emitted as literal text. Mis-nested
+   * closing tags implicitly close any intervening open tags.
+   *
+   * When `false` (the default), the `text` string is rendered as-is with no
+   * tag parsing.
+   *
+   * @default false
+   */
+  richText: boolean;
 }
 
 /**

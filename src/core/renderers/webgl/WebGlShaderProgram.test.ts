@@ -90,6 +90,7 @@ const makeTextProps = (): CoreTextNodeProps => ({
   wordBreak: 'break-word',
   textRendererOverride: null,
   forceLoad: false,
+  richText: false,
 });
 
 const makeSdfTextRenderer = (): TextRenderer =>
