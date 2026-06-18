@@ -33,10 +33,19 @@ import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import type { TextLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
+import { parseRichText, ParseResult } from './RichTextParser.js';
 
-// Each glyph requires 6 vertices (2 triangles) with 4 floats each (x, y, u, v)
-const FLOATS_PER_VERTEX = 4;
+// Each glyph requires 6 vertices (2 triangles) with 5 floats each (x, y, u, v, packed_color)
+const FLOATS_PER_VERTEX = 5;
 const VERTICES_PER_GLYPH = 6;
+const FLOATS_PER_QUAD = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX; // 30
+
+// White (0xFFFFFFFF as 0xRRGGBBAA) packed little-endian: all UNSIGNED_BYTE channels = 255 → 1.0
+// When v_color = vec4(1,1,1,1) the span color has no effect; u_color passes through unchanged.
+const _PACKED_WHITE = 0xffffffff;
+
+// Module-level ParseResult singleton — safe because generateTextLayout is synchronous.
+const _richTextResult = new ParseResult();
 
 // Type definition to match interface
 const type = 'sdf' as const;
@@ -58,11 +67,25 @@ const font: FontHandler = SdfFontHandler;
 const renderInfoCache = new Map<string, SdfRenderInfo>();
 
 /**
+ * Convert a 0xRRGGBBAA color to a little-endian uint32 suitable for an
+ * UNSIGNED_BYTE normalized vec4 attribute.
+ *
+ * Memory layout (little-endian): byte 0 = R, byte 1 = G, byte 2 = B, byte 3 = A.
+ * WebGL reads a_color[0..3] as (R/255, G/255, B/255, A/255).
+ */
+const _packColor = (rgba: number): number => {
+  const r = (rgba >>> 24) & 0xff;
+  const g = (rgba >>> 16) & 0xff;
+  const b = (rgba >>> 8) & 0xff;
+  const a = rgba & 0xff;
+  return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+};
+
+/**
  * SDF text renderer using MSDF/SDF fonts with WebGL
  *
- * @param stage - Stage instance for font resolution
  * @param props - Text rendering properties
- * @returns Object containing ImageData and dimensions
+ * @returns TextRenderInfo (cached after first call per unique layout key)
  */
 const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   const cacheKey = getLayoutCacheKey(props);
@@ -94,8 +117,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 };
 
 /**
- * Create and submit WebGL render operations for SDF text
- * This is called from CoreTextNode during rendering to add SDF text to the render pipeline
+ * Create and submit WebGL render operations for SDF text.
+ * Called from CoreTextNode during rendering.
  */
 const renderQuads = (textNode: CoreTextNode): void => {
   textNode.props.shader = sdfShader;
@@ -103,7 +126,72 @@ const renderQuads = (textNode: CoreTextNode): void => {
 };
 
 /**
- * Generate complete text layout with glyph positioning for caching
+ * Write 6 vertices for a solid-fill decoration rect (underline or strikethrough).
+ *
+ * Uses u = -1.0 as a UV sentinel so the fragment shader branches to solid fill
+ * instead of the SDF glyph path (v_texcoord.x < 0.0).
+ *
+ * All positions are in design-unit space (shader scales by u_size = fontScale).
+ */
+const _writeDecoQuad = (
+  vb: Float32Array,
+  u32: Uint32Array,
+  di: number,
+  x1: number,
+  x2: number,
+  y1: number,
+  y2: number,
+  color: number,
+): number => {
+  // Triangle 1: TL, TR, BL
+  vb[di] = x1;
+  vb[di + 1] = y1;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  vb[di] = x2;
+  vb[di + 1] = y1;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  vb[di] = x1;
+  vb[di + 1] = y2;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  // Triangle 2: TR, BR, BL
+  vb[di] = x2;
+  vb[di + 1] = y1;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  vb[di] = x2;
+  vb[di + 1] = y2;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  vb[di] = x1;
+  vb[di + 1] = y2;
+  vb[di + 2] = -1.0;
+  vb[di + 3] = 0.0;
+  u32[di + 4] = color;
+  di += 5;
+  return di;
+};
+
+/**
+ * Generate complete text layout with glyph positioning for caching.
+ *
+ * Two-pass approach:
+ *   Pass 1 — count exact glyphs (calling getGlyph to avoid degenerate quads) and
+ *             decoration quads needed by richText spans.
+ *   Pass 2 — write all glyph vertices then all decoration vertices into a single
+ *             pre-allocated Float32Array / Uint32Array view pair.
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
@@ -121,12 +209,20 @@ const generateTextLayout = (
   const atlasWidth = commonFontData.scaleW;
   const atlasHeight = commonFontData.scaleH;
 
-  // Calculate the pixel scale from design units to pixels
+  // Pixel scale from design units to rendered pixels.
   const fontScale = fontSize / designFontSize;
   const letterSpacing = props.letterSpacing / fontScale;
-
   const maxWidth = props.maxWidth / fontScale;
   const maxHeight = props.maxHeight;
+
+  // --- Rich text: parse BB-code and use stripped text for layout ---
+  const richText = props.richText === true;
+  let layoutText = props.text;
+  if (richText === true) {
+    parseRichText(props.text, _richTextResult);
+    layoutText = _richTextResult.stripped;
+  }
+
   const [
     lines,
     remainingLines,
@@ -138,7 +234,7 @@ const generateTextLayout = (
   ] = mapTextLayout(
     SdfFontHandler.measureText,
     metrics,
-    props.text,
+    layoutText,
     props.textAlign,
     fontFamily,
     lineHeight,
@@ -150,120 +246,234 @@ const generateTextLayout = (
     maxHeight,
   );
 
+  // Suppress unused-variable warning for bareLineHeight (consumed by mapTextLayout tuple).
+  void bareLineHeight;
+
+  // --- Pre-compute decoration offsets in design-unit space ---
+  // commonFontData.base is the BMFont "base" value: the y-distance from the top of the
+  // character cell to the alphabetic baseline, expressed in design units.  Using it
+  // directly is more accurate than deriving the baseline from metrics.ascender, which
+  // comes from a different metrics source and can be off by several design units.
+  const base = commonFontData.base;
+  const decoThickness = Math.max(1, Math.round(fontSize / 20)) / fontScale;
+  // Underline: 10 % of fontSize below the alphabetic baseline.
+  const decoUnderlineOffset =
+    base + Math.max(1 / fontScale, Math.round(fontSize * 0.1) / fontScale);
+  // Strikethrough: 75 % of base from the line top ≈ visual midpoint of lowercase letters.
+  const decoStrikeOffset = Math.round(base * 0.75);
+
   const lineAmount = lines.length;
-  let bufferIndex = 0;
+
+  // --- PASS 1: count exact glyphs and decoration quads ---
+  // getGlyph is called here (not just in pass 2) so the buffer is sized exactly,
+  // preventing degenerate zero-position triangles at the tail.
   let glyphCount = 0;
-  // Count total glyphs (excluding spaces) for buffer allocation
+  let decoQuadCount = 0;
+  let strippedPos = 0;
+  let curSpanIdx = 0;
+
   for (let i = 0; i < lineAmount; i++) {
     const textLine = (lines[i] as TextLineStruct)[0];
     for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
+        if (richText === true) strippedPos++;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
+        if (richText === true) strippedPos++;
+        continue;
+      }
+      const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+      if (glyph === null) {
+        if (richText === true) strippedPos++;
         continue;
       }
       glyphCount++;
+      if (richText === true) {
+        // Advance span cursor past any spans that ended before this position.
+        while (
+          curSpanIdx < _richTextResult.spanCount - 1 &&
+          strippedPos >= _richTextResult.spans[curSpanIdx].end
+        ) {
+          curSpanIdx++;
+        }
+        const span = _richTextResult.spans[curSpanIdx];
+        if (span.underline === true) decoQuadCount++;
+        if (span.strikethrough === true) decoQuadCount++;
+        strippedPos++;
+      }
     }
   }
 
-  const vertexBuffer = new Float32Array(
-    glyphCount * VERTICES_PER_GLYPH * FLOATS_PER_VERTEX,
-  );
+  const totalQuadCount = glyphCount + decoQuadCount;
 
+  // --- Single allocation for the entire vertex payload ---
+  // Layout: [glyph quads (glyphCount × 6 × 5)] [deco quads (decoQuadCount × 6 × 5)]
+  const vertexBuffer = new Float32Array(totalQuadCount * FLOATS_PER_QUAD);
+  // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 4 of each vertex.
+  const u32Buffer = new Uint32Array(vertexBuffer.buffer);
+
+  // Write cursors (float indices into vertexBuffer / u32Buffer).
+  let gi = 0; // glyph region: 0 … glyphCount*30-1
+  let di = glyphCount * FLOATS_PER_QUAD; // deco region: starts after all glyph quads
+
+  // Reset rich-text tracking for pass 2.
+  strippedPos = 0;
+  curSpanIdx = 0;
+
+  // --- PASS 2: write vertices ---
   let currentX = 0;
   let currentY = 0;
+
   for (let i = 0; i < lineAmount; i++) {
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
     let prevGlyphId = 0;
     currentX = line[3];
-    //convert Y coord to vertex value
+    // Convert pixel Y coordinate to design-unit space.
     currentY = line[4] / fontScale;
 
     for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
+        if (richText === true) strippedPos++;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
+        if (richText === true) strippedPos++;
         continue;
       }
-      // Get glyph data from font handler
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
+        if (richText === true) strippedPos++;
         continue;
       }
-      // Kerning offsets the current glyph relative to the previous glyph.
-      let kerning = 0;
 
-      // Add kerning if there's a previous character
-      if (prevGlyphId !== 0) {
-        kerning = SdfFontHandler.getKerning(fontFamily, prevGlyphId, glyph.id);
+      // --- Determine per-vertex color ---
+      let packedColor = _PACKED_WHITE;
+      let spanUnderline = false;
+      let spanStrikethrough = false;
+
+      if (richText === true) {
+        while (
+          curSpanIdx < _richTextResult.spanCount - 1 &&
+          strippedPos >= _richTextResult.spans[curSpanIdx].end
+        ) {
+          curSpanIdx++;
+        }
+        const span = _richTextResult.spans[curSpanIdx];
+        packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
+        spanUnderline = span.underline;
+        spanStrikethrough = span.strikethrough;
       }
 
-      // Apply pair kerning before placing this glyph.
-      currentX += kerning;
+      // --- Kerning ---
+      if (prevGlyphId !== 0) {
+        currentX += SdfFontHandler.getKerning(
+          fontFamily,
+          prevGlyphId,
+          glyph.id,
+        );
+      }
 
+      // Glyph bounding box in design units.
       const x1 = currentX + glyph.xoffset;
       const y1 = currentY + glyph.yoffset;
       const x2 = x1 + glyph.width;
       const y2 = y1 + glyph.height;
+
+      // Atlas UV coordinates.
       const u1 = glyph.x / atlasWidth;
       const v1 = glyph.y / atlasHeight;
       const u2 = u1 + glyph.width / atlasWidth;
       const v2 = v1 + glyph.height / atlasHeight;
 
-      // Triangle 1: Top-left, top-right, bottom-left
-      // Vertex 1: Top-left
-      vertexBuffer[bufferIndex++] = x1;
-      vertexBuffer[bufferIndex++] = y1;
-      vertexBuffer[bufferIndex++] = u1;
-      vertexBuffer[bufferIndex++] = v1;
+      // Capture decoration X extents before advancing currentX.
+      const decoX1 = currentX;
+      const advance = glyph.xadvance + letterSpacing;
 
-      // Vertex 2: Top-right
-      vertexBuffer[bufferIndex++] = x2;
-      vertexBuffer[bufferIndex++] = y1;
-      vertexBuffer[bufferIndex++] = u2;
-      vertexBuffer[bufferIndex++] = v1;
+      // --- Write 6 glyph vertices (x, y, u, v; packed color via u32 view) ---
+      // Triangle 1: TL, TR, BL
+      vertexBuffer[gi] = x1;
+      vertexBuffer[gi + 1] = y1;
+      vertexBuffer[gi + 2] = u1;
+      vertexBuffer[gi + 3] = v1;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
+      vertexBuffer[gi] = x2;
+      vertexBuffer[gi + 1] = y1;
+      vertexBuffer[gi + 2] = u2;
+      vertexBuffer[gi + 3] = v1;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
+      vertexBuffer[gi] = x1;
+      vertexBuffer[gi + 1] = y2;
+      vertexBuffer[gi + 2] = u1;
+      vertexBuffer[gi + 3] = v2;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
+      // Triangle 2: TR, BR, BL
+      vertexBuffer[gi] = x2;
+      vertexBuffer[gi + 1] = y1;
+      vertexBuffer[gi + 2] = u2;
+      vertexBuffer[gi + 3] = v1;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
+      vertexBuffer[gi] = x2;
+      vertexBuffer[gi + 1] = y2;
+      vertexBuffer[gi + 2] = u2;
+      vertexBuffer[gi + 3] = v2;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
+      vertexBuffer[gi] = x1;
+      vertexBuffer[gi + 1] = y2;
+      vertexBuffer[gi + 2] = u1;
+      vertexBuffer[gi + 3] = v2;
+      u32Buffer[gi + 4] = packedColor;
+      gi += 5;
 
-      // Vertex 3: Bottom-left
-      vertexBuffer[bufferIndex++] = x1;
-      vertexBuffer[bufferIndex++] = y2;
-      vertexBuffer[bufferIndex++] = u1;
-      vertexBuffer[bufferIndex++] = v2;
-
-      // Triangle 2: Top-right, bottom-right, bottom-left
-      // Vertex 4: Top-right (duplicate)
-      vertexBuffer[bufferIndex++] = x2;
-      vertexBuffer[bufferIndex++] = y1;
-      vertexBuffer[bufferIndex++] = u2;
-      vertexBuffer[bufferIndex++] = v1;
-
-      // Vertex 5: Bottom-right
-      vertexBuffer[bufferIndex++] = x2;
-      vertexBuffer[bufferIndex++] = y2;
-      vertexBuffer[bufferIndex++] = u2;
-      vertexBuffer[bufferIndex++] = v2;
-
-      // Vertex 6: Bottom-left (duplicate)
-      vertexBuffer[bufferIndex++] = x1;
-      vertexBuffer[bufferIndex++] = y2;
-      vertexBuffer[bufferIndex++] = u1;
-      vertexBuffer[bufferIndex++] = v2;
-
-      // Advance position with letter spacing (in design units)
-      currentX += glyph.xadvance + letterSpacing;
+      // Advance the glyph cursor.
+      currentX += advance;
       prevGlyphId = glyph.id;
+
+      // --- Write decoration quads (richText only) ---
+      if (spanUnderline === true) {
+        const dy1 = currentY + decoUnderlineOffset;
+        di = _writeDecoQuad(
+          vertexBuffer,
+          u32Buffer,
+          di,
+          decoX1,
+          decoX1 + advance,
+          dy1,
+          dy1 + decoThickness,
+          packedColor,
+        );
+      }
+      if (spanStrikethrough === true) {
+        const dy1 = currentY + decoStrikeOffset;
+        di = _writeDecoQuad(
+          vertexBuffer,
+          u32Buffer,
+          di,
+          decoX1,
+          decoX1 + advance,
+          dy1,
+          dy1 + decoThickness,
+          packedColor,
+        );
+      }
+
+      if (richText === true) strippedPos++;
     }
-    currentY += lineHeightPx;
   }
 
-  // Convert final dimensions to pixel space for the layout
+  // Convert final dimensions to pixel space for the layout.
   return {
     vertexBuffer,
     glyphCount,
+    totalQuadCount,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
     width: effectiveWidth * fontScale,
     height: effectiveHeight,

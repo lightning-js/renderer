@@ -326,7 +326,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.props.h = height;
       this.setUpdateType(UpdateType.Local);
       this.setRenderable(true);
-      this.numQuads = layout.glyphCount;
+      this.numQuads = layout.totalQuadCount;
 
       this._sdfShaderProps = {
         size: layout.fontScale,
@@ -396,7 +396,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
               size: 2,
               type: glw.FLOAT as number,
               normalized: false,
-              stride: 4 * Float32Array.BYTES_PER_ELEMENT,
+              stride: 5 * Float32Array.BYTES_PER_ELEMENT,
               offset: 0,
             },
             a_textureCoords: {
@@ -404,8 +404,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
               size: 2,
               type: glw.FLOAT as number,
               normalized: false,
-              stride: 4 * Float32Array.BYTES_PER_ELEMENT,
+              stride: 5 * Float32Array.BYTES_PER_ELEMENT,
               offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+            },
+            a_color: {
+              name: 'a_color',
+              size: 4,
+              type: glw.UNSIGNED_BYTE as number,
+              normalized: true,
+              stride: 5 * Float32Array.BYTES_PER_ELEMENT,
+              offset: 4 * Float32Array.BYTES_PER_ELEMENT,
             },
           },
         },
