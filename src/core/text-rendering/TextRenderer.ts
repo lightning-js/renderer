@@ -264,11 +264,23 @@ export interface TrProps extends TrFontProps {
    * - `[color=0xRRGGBBAA]…[/color]` — inline color (must use the renderer's
    *   internal `0xRRGGBBAA` hex format, e.g. `[color=0xff0000ff]`)
    *
-   * Unrecognised or malformed tags are emitted as literal text. Mis-nested
-   * closing tags implicitly close any intervening open tags.
+   * Tags are nestable and may be combined freely. Unrecognised or malformed
+   * tags are emitted as literal text. Mis-nested closing tags implicitly close
+   * any intervening open tags.
    *
    * When `false` (the default), the `text` string is rendered as-is with no
-   * tag parsing.
+   * tag parsing, and there is no performance overhead.
+   *
+   * ### Renderer differences
+   *
+   * **Canvas renderer** — bold and italic use the CSS `bold`/`italic` font
+   * keywords; a matching font face must be registered for best results.
+   *
+   * **SDF renderer** — bold is a per-vertex SDF threshold shift (fake bold,
+   * no extra atlas required); italic is a layout-time vertex shear of tan(14°)
+   * relative to the alphabetic baseline (fake italic, no extra atlas required).
+   *
+   * @see {@link https://github.com/lightning-js/renderer/blob/main/docs/rich-text.md | Rich Text docs}
    *
    * @default false
    */
