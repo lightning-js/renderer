@@ -73,6 +73,8 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     attribute vec2 a_textureCoords;
     // Per-vertex span color (UNSIGNED_BYTE normalized). White = no override.
     attribute vec4 a_color;
+    // Per-vertex style flag: 0.0 = normal, 1.0 = bold.
+    attribute float a_style;
 
     uniform vec2 u_resolution;
     uniform mat3 u_transform;
@@ -83,6 +85,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
     varying vec4 v_color;
+    varying float v_style;
 
     void main() {
       vec2 scrolledPosition = a_position * u_size;
@@ -95,6 +98,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
       v_texcoord = a_textureCoords;
       v_scaledDistRange = u_distanceRange * u_pixelRatio;
       v_color = a_color;
+      v_style = a_style;
     }
   `,
   fragment: `
@@ -109,6 +113,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
     varying vec4 v_color;
+    varying float v_style;
 
     float median(float r, float g, float b) {
         return clamp(b, min(r, g), max(r, g));
@@ -122,9 +127,12 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
             gl_FragColor = vec4(fc.rgb * fc.a, fc.a);
         } else {
             vec3 s = texture2D(u_texture, v_texcoord).rgb;
-            float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - 0.5);
+            // Bold shifts the SDF threshold down by 0.05, expanding glyph edges.
+            // v_style: 0.0 = normal, 1.0 = bold.
+            float threshold = 0.5 - v_style * 0.05;
+            float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - threshold);
             // u_color carries node tint + worldAlpha; v_color carries span color override.
-            float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a * v_color.a;
+            float opacity = clamp(sigDist + threshold, 0.0, 1.0) * u_color.a * v_color.a;
             vec3 col = u_color.rgb * v_color.rgb;
             // IMPORTANT: premultiply before returning.
             gl_FragColor = vec4(col * opacity, opacity);
