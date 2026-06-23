@@ -317,6 +317,11 @@ export interface TextLayout {
    */
   glyphCount: number;
   /**
+   * Total quad count (glyphs + decoration rects).
+   * Drives the drawArrays call; equals glyphCount for non-richText.
+   */
+  totalQuadCount: number;
+  /**
    * Total text width
    */
   width: number;

@@ -71,6 +71,8 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
     // It will receive data from a buffer
     attribute vec2 a_position;
     attribute vec2 a_textureCoords;
+    // Per-vertex span color (UNSIGNED_BYTE normalized). White = no override.
+    attribute vec4 a_color;
 
     uniform vec2 u_resolution;
     uniform mat3 u_transform;
@@ -80,6 +82,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
+    varying vec4 v_color;
 
     void main() {
       vec2 scrolledPosition = a_position * u_size;
@@ -91,6 +94,7 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
       gl_Position = vec4(screenSpace, 0.0, 1.0);
       v_texcoord = a_textureCoords;
       v_scaledDistRange = u_distanceRange * u_pixelRatio;
+      v_color = a_color;
     }
   `,
   fragment: `
@@ -104,19 +108,27 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
+    varying vec4 v_color;
 
     float median(float r, float g, float b) {
         return clamp(b, min(r, g), max(r, g));
     }
 
     void main() {
-        vec3 sample = texture2D(u_texture, v_texcoord).rgb;
-        float sigDist = v_scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
-        float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
-
-        // Build the final color.
-        // IMPORTANT: We must premultiply the color by the alpha value before returning it.
-        gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
+        // Decoration quads use u = -1.0 as a sentinel for solid-fill (no SDF lookup).
+        if (v_texcoord.x < 0.0) {
+            vec4 fc = u_color * v_color;
+            // Output premultiplied alpha.
+            gl_FragColor = vec4(fc.rgb * fc.a, fc.a);
+        } else {
+            vec3 s = texture2D(u_texture, v_texcoord).rgb;
+            float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - 0.5);
+            // u_color carries node tint + worldAlpha; v_color carries span color override.
+            float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a * v_color.a;
+            vec3 col = u_color.rgb * v_color.rgb;
+            // IMPORTANT: premultiply before returning.
+            gl_FragColor = vec4(col * opacity, opacity);
+        }
     }
   `,
 };
