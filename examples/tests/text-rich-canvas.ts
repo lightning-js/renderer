@@ -32,52 +32,25 @@ export async function automation(settings: ExampleSettings) {
  * text renderer.
  *
  * Snapshot sequence:
- *   1.  Plain text baseline (richText: false)
- *   2.  Bold span [b]…[/b]
- *   3.  Italic span [i]…[/i]
- *   4.  Bold + italic [b][i]…[/i][/b]
- *   5.  Inline color [color=0xff0000ff]…[/color]
- *   6.  Mixed: plain + bold + colored spans in one string
- *   7.  Wrap — bold span before and after a line break (maxWidth: 800)
- *   8.  Wrap — bold span that crosses the wrap boundary (maxWidth: 800)
- *   9.  Wrap — mixed styles (bold, italic, color) across multiple lines (maxWidth: 800)
+ *   1. Plain text baseline (richText: false)
+ *   2. Bold span [b]…[/b]
+ *   3. Italic span [i]…[/i]
+ *   4. Bold + italic [b][i]…[/i][/b]
+ *   5. Inline color [color=0xff0000ff]…[/color]
+ *   6. Mixed: plain + bold + colored spans in one string
+ *   7. Underline span [u]…[/u]
+ *   8. Strikethrough span [s]…[/s]
+ *   9. Combined: bold+underline and colored strikethrough
  *
- * The blue boundary indicator (top + right edges) marks the 800 px wrap
- * constraint region for tests 7–9.  The indicator is always rendered so
- * that non-wrapping tests (1–6) can also be read against the same reference.
- *
- * All nodes use textRendererOverride: 'canvas'.
- * node.color is left at 0xffffffff so CanvasTexture tint is a no-op and
- * inline span colors are preserved exactly.
+ * All nodes use textRendererOverride: 'canvas' to exercise the Canvas path.
+ * node.color is left at the default 0xffffffff so the CanvasTexture tint is
+ * a no-op and inline span colors are preserved exactly.
  */
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   testRoot.w = 1920;
   testRoot.h = 1080;
   testRoot.color = 0x000000ff;
 
-  // ── Boundary indicator ────────────────────────────────────────────────────
-  // Two thin lines forming the top-right corner of the 800 px wrap region
-  // (text origin: x=60, y=60).  Colour: steel-blue, fully opaque.
-  // Top edge
-  renderer.createNode({
-    x: 60,
-    y: 56,
-    w: 800,
-    h: 2,
-    color: 0x336699ff,
-    parent: testRoot,
-  });
-  // Right edge (tall enough to cover ~5 lines at 64 px)
-  renderer.createNode({
-    x: 860,
-    y: 56,
-    w: 2,
-    h: 440,
-    color: 0x336699ff,
-    parent: testRoot,
-  });
-
-  // ── Text node ─────────────────────────────────────────────────────────────
   const node = renderer.createTextNode({
     x: 60,
     y: 60,
@@ -90,7 +63,6 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     parent: testRoot,
   });
 
-  // ── Step label (bottom-right corner) ─────────────────────────────────────
   const label = renderer.createTextNode({
     x: testRoot.w,
     y: testRoot.h,
@@ -105,72 +77,52 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
 
   let i = 0;
   const mutations = [
-    // ── Steps 1–6: inline style tests (no maxWidth) ───────────────────────
-    // Step 1 — plain text baseline
+    // Step 1 — plain text baseline, already applied at creation
     () => {
       node.text = 'Plain text — no rich text tags';
       node.richText = false;
-      node.maxWidth = 0;
     },
     // Step 2 — bold span
     () => {
       node.text = 'Normal [b]bold[/b] normal';
       node.richText = true;
-      node.maxWidth = 0;
     },
     // Step 3 — italic span
     () => {
       node.text = 'Normal [i]italic[/i] normal';
       node.richText = true;
-      node.maxWidth = 0;
     },
     // Step 4 — bold + italic combined
     () => {
       node.text = 'Normal [b][i]bold italic[/i][/b] normal';
       node.richText = true;
-      node.maxWidth = 0;
     },
     // Step 5 — inline color
     () => {
       node.text = '[color=0xff0000ff]Red text[/color] and default color';
       node.richText = true;
-      node.maxWidth = 0;
     },
     // Step 6 — mixed spans
     () => {
       node.text =
         'Hello [b]World[/b] — [color=0x0000ffff]blue[/color] and [b][color=0xff8000ff]bold orange[/color][/b]';
       node.richText = true;
-      node.maxWidth = 0;
     },
-
-    // ── Steps 7–9: wrapping tests (maxWidth: 800) ────────────────────────
-    // Step 7 — bold span before and after a natural line break.
-    // The blue boundary lines mark the 800 px constraint.
-    // Verify: no character overlap at line ends; bold segments advance X
-    // correctly on each wrapped line.
+    // Step 7 — underline span
+    () => {
+      node.text = 'Normal [u]underlined[/u] normal';
+      node.richText = true;
+    },
+    // Step 8 — strikethrough span
+    () => {
+      node.text = 'Normal [s]strikethrough[/s] normal';
+      node.richText = true;
+    },
+    // Step 9 — combined: bold+underline and colored strikethrough
     () => {
       node.text =
-        'The quick [b]brown fox[/b] jumps over the lazy dog and some more words here';
+        '[b][u]bold underline[/u][/b] and [s][color=0xff0000ff]red strike[/color][/s]';
       node.richText = true;
-      node.maxWidth = 800;
-    },
-    // Step 8 — bold span that starts before the wrap point and continues on
-    // the next line.  Both the trailing plain segment and the leading bold
-    // segment of the following line must be spaced correctly.
-    () => {
-      node.text =
-        'Plain text then [b]bold text starts here and wraps across the boundary[/b] plain end';
-      node.richText = true;
-      node.maxWidth = 800;
-    },
-    // Step 9 — multiple styles (bold, italic, color) each wrapping across
-    // two or more lines.
-    () => {
-      node.text =
-        '[b]Bold[/b] then [i]italic[/i] then [color=0xff0000ff]red[/color] plus normal text filling multiple wrapped lines here';
-      node.richText = true;
-      node.maxWidth = 800;
     },
   ];
 

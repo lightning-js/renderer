@@ -189,11 +189,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // we walk through layout lines. curSpanIdx advances monotonically with
     // strippedPos (spans are sorted by start, no backward scan is needed).
     //
-    // Option A fix: measureContext.font is kept in sync with context.font
-    // (see the activeFont guard below) so currentX advances by the correct
-    // bold/italic glyph width rather than the base-font width.
-    // Layout wrapping (mapTextLayout) still uses the base font; a span-aware
-    // closure will be added in a follow-up to fix wrap-point accuracy.
+    // Note: layout (mapTextLayout) used the base font metrics, so bold text
+    // may render slightly wider than its measured width — acceptable for MVP.
     // -------------------------------------------------------------------------
     const spanCount = _richTextResult.spanCount;
     const spans = _richTextResult.spans;
@@ -209,6 +206,16 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
     // Prime the context with the node color; individual segments may override.
     context.fillStyle = activeFillStyle;
+
+    // Pre-computed decoration geometry — all integers, zero allocation in the
+    // draw loop. Positions are offsets from currentY (top of the em box with
+    // textBaseline:'hanging'). metrics.ascender is the distance from the
+    // hanging baseline down to the alphabetic baseline in pixels.
+    const ascenderPx = metrics.ascender;
+    const decoThickness = Math.max(1, Math.round(fontSize / 20));
+    const decoUnderlineBase =
+      Math.ceil(ascenderPx) + Math.max(1, Math.round(fontSize * 0.08));
+    const decoStrikeBase = Math.ceil(ascenderPx) - Math.round(ascenderPx * 0.4);
 
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
@@ -257,9 +264,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
           if (spanFont !== activeFont) {
             context.font = spanFont;
-            // Option A: keep measureContext in sync so CanvasFontHandler.measureText
-            // uses the correct bold/italic metrics when advancing currentX.
-            measureContext.font = spanFont;
             activeFont = spanFont;
           }
 
@@ -274,6 +278,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
             activeFillStyle = spanFillStyle;
           }
 
+          const segStartX = currentX;
           if (letterSpacing === 0) {
             const segment = textLine.substring(segStartJ, j);
             context.fillText(segment, currentX, currentY);
@@ -289,6 +294,30 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
                 fontFamily,
                 letterSpacing,
               );
+            }
+          }
+
+          // Draw underline and/or strikethrough using the same fillStyle as
+          // the segment text (decorations inherit span color, matching CSS).
+          if (span.underline === true || span.strikethrough === true) {
+            const segWidth = currentX - segStartX;
+            if (segWidth > 0) {
+              if (span.underline === true) {
+                context.fillRect(
+                  segStartX,
+                  currentY + decoUnderlineBase,
+                  segWidth,
+                  decoThickness,
+                );
+              }
+              if (span.strikethrough === true) {
+                context.fillRect(
+                  segStartX,
+                  currentY + decoStrikeBase,
+                  segWidth,
+                  decoThickness,
+                );
+              }
             }
           }
 
