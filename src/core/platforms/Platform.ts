@@ -18,7 +18,6 @@
  */
 
 import { type Stage } from '../Stage.js';
-import type { WebGlContextWrapper } from './web/WebGlContextWrapper.js';
 import type { ImageResponse } from '../textures/ImageTexture.js';
 import type { GlContextWrapper } from './GlContextWrapper.js';
 

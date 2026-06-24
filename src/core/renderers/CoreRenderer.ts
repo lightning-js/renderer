@@ -19,7 +19,6 @@
 
 import type { CoreNode } from '../CoreNode.js';
 import type { Stage } from '../Stage.js';
-import type { ContextSpy } from '../lib/ContextSpy.js';
 import type { CoreShaderProgram } from './CoreShaderProgram.js';
 import type { Texture, TextureCoords } from '../textures/Texture.js';
 import { CoreContextTexture } from './CoreContextTexture.js';

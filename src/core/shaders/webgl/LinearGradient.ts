@@ -20,7 +20,6 @@ import {
   LinearGradientTemplate,
   type LinearGradientProps,
 } from '../templates/LinearGradientTemplate.js';
-import { genGradientColors } from '../../renderers/webgl/internal/ShaderUtils.js';
 import type { WebGlRenderer } from '../../renderers/webgl/WebGlRenderer.js';
 import type { WebGlShaderType } from '../../renderers/webgl/WebGlShaderNode.js';
 
