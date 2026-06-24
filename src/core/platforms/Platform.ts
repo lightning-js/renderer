@@ -45,7 +45,8 @@ export interface PlatformSettings {
 }
 
 export abstract class Platform {
-  public readonly settings: Required<PlatformSettings>;
+  public readonly settings: PlatformSettings &
+    Required<Pick<PlatformSettings, 'numImageWorkers' | 'forceWebGL2'>>;
 
   public glw: GlContextWrapper | null = null;
   public canvas: HTMLCanvasElement | null = null;
@@ -55,15 +56,10 @@ export abstract class Platform {
     this.settings = {
       numImageWorkers: settings.numImageWorkers ?? 2,
       forceWebGL2: settings.forceWebGL2 ?? false,
-      canvas: settings.canvas ?? null,
     };
 
     // If a canvas was provided in the settings, use it. Otherwise, create a new one.
-    if (this.settings.canvas !== null) {
-      this.canvas = this.settings.canvas;
-    } else {
-      this.canvas = this.createCanvas();
-    }
+    this.canvas = settings.canvas || this.createCanvas();
   }
 
   /**

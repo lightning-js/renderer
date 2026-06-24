@@ -536,18 +536,13 @@ export class RendererMain extends EventEmitter {
       'A platform implementation must be provided in settings.platform',
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const platform = new (settings.platform as any)({
-      numImageWorkers: settings.numImageWorkers,
-      forceWebGL2: settings.forceWebGL2,
-      canvas: settings.canvas,
-    });
+    const platform = new (settings.platform as typeof WebPlatform)(settings);
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access
-    this.canvas = platform.canvas! as HTMLCanvasElement;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.canvas = platform.canvas!;
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
