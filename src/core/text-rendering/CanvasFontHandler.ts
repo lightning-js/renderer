@@ -258,9 +258,7 @@ export const measureText = (
  * @param fontSize
  * @returns
  */
-export function calculateFontMetrics(
-  fontFamily: string,
-): FontMetrics {
+export function calculateFontMetrics(fontFamily: string): FontMetrics {
   // If the font face doesn't have metrics defined, we fallback to using the
   // browser's measureText method to calculate take a best guess at the font
   // actual font's metrics.
