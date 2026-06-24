@@ -143,8 +143,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     lines,
     remainingLines,
     hasRemainingText,
-    bareLineHeight,
-    lineHeightPx,
+    _bareLineHeight,
+    _lineHeightPx,
     effectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(

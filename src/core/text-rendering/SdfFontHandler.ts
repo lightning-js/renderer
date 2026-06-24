@@ -412,7 +412,7 @@ export const getFontFamilies = (): FontFamilyMap => {
  * Initialize the SDF font handler
  */
 export const init = (
-  c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  _c?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): void => {
   if (initialized === true) {
     return;

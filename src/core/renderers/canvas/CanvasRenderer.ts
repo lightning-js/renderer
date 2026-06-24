@@ -226,7 +226,7 @@ export class CanvasRenderer extends CoreRenderer {
     return new CanvasShaderNode(shaderKey, shaderType, this.stage, props);
   }
 
-  createShaderProgram(shaderConfig) {
+  createShaderProgram(_shaderConfig) {
     return null;
   }
 
@@ -242,11 +242,11 @@ export class CanvasRenderer extends CoreRenderer {
     // noop
   }
 
-  removeRTTNode(node: CoreNode): void {
+  removeRTTNode(_node: CoreNode): void {
     // noop
   }
 
-  renderToTexture(node: CoreNode): void {
+  renderToTexture(_node: CoreNode): void {
     // noop
   }
   getBufferInfo(): null {

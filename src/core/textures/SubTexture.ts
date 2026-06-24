@@ -154,7 +154,7 @@ export class SubTexture extends Texture {
 
   override async getTextureSource(): Promise<TextureData> {
     // Check if parent texture is loaded
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       resolve({
         data: this.props,
       });

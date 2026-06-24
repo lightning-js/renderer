@@ -79,6 +79,7 @@ export interface SupportedSetUniforms {
     | 'uniform4i';
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type SupportSetUniforms =
   | 'uniform2fv'
   | 'uniform2iv'
