@@ -47,6 +47,7 @@ export * from '../src/common/CommonTypes.js';
 export {
   CoreTextureManager,
   type TextureMap,
+  type TextureOptions,
 } from '../src/core/CoreTextureManager.js';
 export {
   TextureError,
