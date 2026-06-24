@@ -58,7 +58,6 @@ export interface TextureManagerDebugInfo {
 }
 
 export interface TextureManagerSettings {
-  numImageWorkers: number;
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   maxRetryCount: number;
 }
