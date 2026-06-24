@@ -42,6 +42,16 @@ export interface PlatformSettings {
    * Optional provided canvas element to use for rendering. If not provided, the platform will create its own canvas element.
    */
   canvas?: HTMLCanvasElement | null;
+
+  /**
+   * Request Animation Frame Error Callback
+   *
+   * @remarks
+   * If the render loop throws an error, this callback will be called.
+   *
+   * @param error The error that was thrown
+   */
+  handleLoopError?: (error: unknown) => void;
 }
 
 export abstract class Platform {
