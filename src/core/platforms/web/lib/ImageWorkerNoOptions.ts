@@ -32,10 +32,6 @@ export function createImageWorkerNoOptions() {
   function getImage(
     src: string,
     premultiplyAlpha: boolean | null,
-    x: number | null,
-    y: number | null,
-    width: number | null,
-    height: number | null,
   ): Promise<{
     data: ImageBitmap;
     premultiplyAlpha: boolean | null;
@@ -93,12 +89,8 @@ export function createImageWorkerNoOptions() {
     var src = event.data.src;
     var id = event.data.id;
     var premultiplyAlpha = event.data.premultiplyAlpha;
-    var x = event.data.sx;
-    var y = event.data.sy;
-    var width = event.data.sw;
-    var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha, x, y, width, height)
+    getImage(src, premultiplyAlpha)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);

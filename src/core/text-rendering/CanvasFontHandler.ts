@@ -207,7 +207,7 @@ export const getFontMetrics = (
   }
   let metrics = fontCache.get(fontFamily)!.metrics;
   if (metrics === undefined) {
-    metrics = calculateFontMetrics(fontFamily, fontSize);
+    metrics = calculateFontMetrics(fontFamily);
   }
   return processFontMetrics(fontFamily, fontSize, metrics);
 };
@@ -260,7 +260,6 @@ export const measureText = (
  */
 export function calculateFontMetrics(
   fontFamily: string,
-  fontSize: number,
 ): FontMetrics {
   // If the font face doesn't have metrics defined, we fallback to using the
   // browser's measureText method to calculate take a best guess at the font
