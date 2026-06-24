@@ -195,6 +195,7 @@ const domPropertyMap: { [key: string]: string } = {
   id: 'test-id',
 };
 
+/**
 const gradientColorPropertyMap = [
   'colorTop',
   'colorBottom',
@@ -205,6 +206,7 @@ const gradientColorPropertyMap = [
   'colorBl',
   'colorBr',
 ];
+*/
 
 const textureTypeNames: Record<number, string> = {
   [TextureType.generic]: 'generic',

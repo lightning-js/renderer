@@ -32,8 +32,6 @@ import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
 
-const MAX_TEXTURE_DIMENSION = 4096;
-
 const type = 'canvas' as const;
 const font: FontHandler = CanvasFontHandler;
 
@@ -114,7 +112,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     textAlign,
     maxLines,
     lineHeight,
-    verticalAlign,
     overflowSuffix,
     maxWidth,
     maxHeight,

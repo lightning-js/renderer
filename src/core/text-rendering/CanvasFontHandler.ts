@@ -55,7 +55,6 @@ const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(
 const fontCache = new Map<string, CanvasFont>();
 
 let initialized = false;
-let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 let measureContext:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D;
@@ -147,7 +146,6 @@ export const init = (
     );
   }
 
-  context = c;
   measureContext = mc || c;
 
   // Register the default 'sans-serif' font face

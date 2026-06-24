@@ -461,7 +461,6 @@ export class Stage {
    */
   drawFrame() {
     const { renderer, renderRequested, root } = this;
-    const txMemManager = this.txMemManager;
 
     // Update tree if needed
     if (root.updateType !== 0) {
