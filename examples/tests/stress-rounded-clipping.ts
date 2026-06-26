@@ -37,9 +37,13 @@
  *    An outer rounded-clip row scrolls while each cell contains an inner
  *    rounded-clip thumbnail that zooms in/out.  Tests nested stencil ref
  *    counting (outer ref + inner ref per cell).
+ *
+ * Controls:
+ *   LEFT / RIGHT  — switch scene
+ *   SPACE         — toggle rounded clipping on/off (compare stencil cost)
  */
 
-import type { INode } from '@lightningjs/renderer';
+import type { INode, ITextNode } from '@lightningjs/renderer';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 import robotImg from '../assets/robot/robot.png';
 
@@ -54,6 +58,15 @@ const SCENE_DURATION_MS = 6000;
 const randomBetween = (lo: number, hi: number) =>
   lo + Math.random() * (hi - lo);
 
+/**
+ * A clipping node tracked for the toggle.
+ * `radius` is the clipRadius when clipping is on (0 = plain scissor).
+ */
+interface ClipNode {
+  node: INode;
+  radius: number;
+}
+
 export default async function test({
   renderer,
   testRoot,
@@ -66,6 +79,24 @@ export default async function test({
     color: 0xff0f172aff,
     parent: testRoot,
   });
+
+  // ── all clipping nodes — populated while building scenes ─────────────────
+  const clipNodes: ClipNode[] = [];
+  let clippingEnabled = true;
+
+  // Helper: create a clipping node and register it for the toggle.
+  const makeClipNode = (
+    props: Parameters<typeof renderer.createNode>[0],
+    radius: number,
+  ): INode => {
+    const node = renderer.createNode({
+      ...props,
+      clipping: true,
+      clipRadius: radius,
+    });
+    clipNodes.push({ node, radius });
+    return node;
+  };
 
   // ── scene roots (only one visible at a time) ─────────────────────────────
   const scenes: INode[] = [];
@@ -94,7 +125,8 @@ export default async function test({
     const colW = Math.floor((W - PADDING * (COLS + 1)) / COLS);
     const rowH = CARD_H + PADDING;
     const listH = ROWS * rowH;
-    // viewport — clips the list
+
+    // viewport — plain scissor, not part of the toggle
     const viewport = renderer.createNode({
       x: PADDING,
       y: PADDING,
@@ -114,17 +146,17 @@ export default async function test({
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const hue = Math.floor((col / COLS) * 360);
-        const card = renderer.createNode({
-          x: col * (colW + PADDING),
-          y: row * rowH,
-          w: colW,
-          h: CARD_H,
-          color: hslToArgb(hue, 55, 30),
-          clipping: true,
-          clipRadius: CARD_RADIUS,
-          parent: list,
-        });
-        // overflowing image child
+        const card = makeClipNode(
+          {
+            x: col * (colW + PADDING),
+            y: row * rowH,
+            w: colW,
+            h: CARD_H,
+            color: hslToArgb(hue, 55, 30),
+            parent: list,
+          },
+          CARD_RADIUS,
+        );
         renderer.createNode({
           mount: 0.5,
           x: colW / 2,
@@ -137,7 +169,6 @@ export default async function test({
       }
     }
 
-    // scroll the list up/down continuously
     list
       .animate(
         { y: -(listH - (H - PADDING * 2)) },
@@ -159,16 +190,17 @@ export default async function test({
     const NUM_CARDS = 20 * perfMultiplier;
     for (let i = 0; i < NUM_CARDS; i++) {
       const hue = Math.floor((i / NUM_CARDS) * 360);
-      const card = renderer.createNode({
-        x: randomBetween(0, W - CARD_W),
-        y: randomBetween(0, H - CARD_H),
-        w: CARD_W,
-        h: CARD_H,
-        color: hslToArgb(hue, 60, 35),
-        clipping: true,
-        clipRadius: CARD_RADIUS,
-        parent: scene1,
-      });
+      const card = makeClipNode(
+        {
+          x: randomBetween(0, W - CARD_W),
+          y: randomBetween(0, H - CARD_H),
+          w: CARD_W,
+          h: CARD_H,
+          color: hslToArgb(hue, 60, 35),
+          parent: scene1,
+        },
+        CARD_RADIUS,
+      );
       renderer.createNode({
         mount: 0.5,
         x: CARD_W / 2,
@@ -179,7 +211,6 @@ export default async function test({
         parent: card,
       });
 
-      // randomised bounce animation
       const destX = randomBetween(0, W - CARD_W);
       const destY = randomBetween(0, H - CARD_H);
       const dur = randomBetween(1500, 4000);
@@ -199,7 +230,6 @@ export default async function test({
 
   // ────────────────────────────────────────────────────────────────────────
   // Scene 2 — Nested rounded clips
-  //   outer row scrolls horizontally; each cell has an inner clip that zooms
   // ────────────────────────────────────────────────────────────────────────
   const scene2 = makeScene();
   {
@@ -211,14 +241,13 @@ export default async function test({
     const NUM_CELLS = Math.max(4, 8 * perfMultiplier);
     const rowW = NUM_CELLS * (OUTER_W + PADDING);
 
-    // outer clip — masks the scrolling row
+    // outer viewport — plain scissor, not part of the toggle
     const rowViewport = renderer.createNode({
       x: 0,
       y: (H - OUTER_H) / 2,
       w: W,
       h: OUTER_H,
       clipping: true,
-      clipRadius: 0,
       parent: scene2,
     });
 
@@ -232,27 +261,30 @@ export default async function test({
 
     for (let i = 0; i < NUM_CELLS; i++) {
       const hue = Math.floor((i / NUM_CELLS) * 360);
-      // outer cell — rounded clip
-      const cell = renderer.createNode({
-        x: i * (OUTER_W + PADDING) + PADDING,
-        y: PADDING,
-        w: OUTER_W,
-        h: OUTER_H,
-        color: hslToArgb(hue, 40, 20),
-        clipping: true,
-        clipRadius: CARD_RADIUS,
-        parent: row,
-      });
-      // inner thumbnail — nested rounded clip
-      const thumb = renderer.createNode({
-        x: PADDING,
-        y: PADDING,
-        w: THUMB_W,
-        h: THUMB_H,
-        clipping: true,
-        clipRadius: THUMB_RADIUS,
-        parent: cell,
-      });
+
+      const cell = makeClipNode(
+        {
+          x: i * (OUTER_W + PADDING) + PADDING,
+          y: PADDING,
+          w: OUTER_W,
+          h: OUTER_H,
+          color: hslToArgb(hue, 40, 20),
+          parent: row,
+        },
+        CARD_RADIUS,
+      );
+
+      const thumb = makeClipNode(
+        {
+          x: PADDING,
+          y: PADDING,
+          w: THUMB_W,
+          h: THUMB_H,
+          parent: cell,
+        },
+        THUMB_RADIUS,
+      );
+
       renderer.createNode({
         mount: 0.5,
         x: THUMB_W / 2,
@@ -263,7 +295,6 @@ export default async function test({
         parent: thumb,
       });
 
-      // inner zoom animation — different phase per cell
       const zoomDur = randomBetween(800, 1800);
       const zoomScale = randomBetween(1.1, 1.6);
       thumb
@@ -280,7 +311,6 @@ export default async function test({
         .start();
     }
 
-    // scroll the row
     row
       .animate(
         { x: -(rowW - W) },
@@ -294,7 +324,36 @@ export default async function test({
       .start();
   }
 
-  // ── scene switcher ───────────────────────────────────────────────────────
+  // ── HUD label (top-right corner) ─────────────────────────────────────────
+  const hudLabel: ITextNode = renderer.createTextNode({
+    x: W - PADDING,
+    y: PADDING,
+    mountX: 1,
+    color: 0xffffffff,
+    fontSize: 32,
+    fontFamily: 'Ubuntu',
+    text: '[SPACE] Clipping: ON  |  [◄►] Scene',
+    parent: testRoot, // on top of everything
+  });
+
+  const updateHud = () => {
+    hudLabel.text = `[SPACE] Clipping: ${
+      clippingEnabled ? 'ON ' : 'OFF'
+    }  |  [◄►] Scene`;
+  };
+
+  // ── clipping toggle ───────────────────────────────────────────────────────
+  const toggleClipping = () => {
+    clippingEnabled = !clippingEnabled;
+    for (let i = 0; i < clipNodes.length; i++) {
+      const entry = clipNodes[i]!;
+      entry.node.clipping = clippingEnabled;
+      entry.node.clipRadius = clippingEnabled ? entry.radius : 0;
+    }
+    updateHud();
+  };
+
+  // ── scene switcher ────────────────────────────────────────────────────────
   const showScene = (idx: number) => {
     for (let i = 0; i < scenes.length; i++) {
       scenes[i]!.alpha = i === idx ? 1 : 0;
@@ -304,28 +363,31 @@ export default async function test({
 
   showScene(0);
 
-  // auto-cycle
   let cycleTimer = setInterval(() => {
     showScene((activeScene + 1) % scenes.length);
   }, SCENE_DURATION_MS);
 
-  // keyboard switching
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') {
-      clearInterval(cycleTimer);
-      showScene((activeScene + 1) % scenes.length);
-      cycleTimer = setInterval(
-        () => showScene((activeScene + 1) % scenes.length),
-        SCENE_DURATION_MS,
-      );
-    } else if (e.key === 'ArrowLeft') {
-      clearInterval(cycleTimer);
-      showScene((activeScene + scenes.length - 1) % scenes.length);
-      cycleTimer = setInterval(
-        () => showScene((activeScene + 1) % scenes.length),
-        SCENE_DURATION_MS,
-      );
+    if (e.key === ' ') {
+      toggleClipping();
+      return;
     }
+
+    let next = activeScene;
+    if (e.key === 'ArrowRight') {
+      next = (activeScene + 1) % scenes.length;
+    } else if (e.key === 'ArrowLeft') {
+      next = (activeScene + scenes.length - 1) % scenes.length;
+    } else {
+      return;
+    }
+
+    clearInterval(cycleTimer);
+    showScene(next);
+    cycleTimer = setInterval(
+      () => showScene((activeScene + 1) % scenes.length),
+      SCENE_DURATION_MS,
+    );
   });
 }
 
