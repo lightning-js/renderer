@@ -113,6 +113,11 @@ export class WebGlRenderer extends CoreRenderer {
   stencilClipProgram: WebGlShaderProgram | null = null;
   stencilDepth: number = 0;
 
+  //// Dedicated VBO for the stencil write-pass quad.
+  //// Completely separate from quadBufferCollection so the main quad buffer is
+  //// never overwritten during a stencil pass — eliminates the O(N) restore uploads.
+  private stencilQuadBufferCollection: BufferCollection | null = null;
+
   //// Pre-allocated pool of StencilClipRenderOp sentinels (avoids per-frame heap allocation)
   private stencilOpPool: StencilClipRenderOp[] = [];
   private stencilOpPoolIdx: number = 0;
@@ -214,6 +219,36 @@ export class WebGlRenderer extends CoreRenderer {
             type: glw.FLOAT,
             normalized: false,
             stride,
+            offset: 6 * Float32Array.BYTES_PER_ELEMENT,
+          },
+        },
+      },
+    ]);
+
+    // Allocate a dedicated DYNAMIC_DRAW VBO for the stencil write-pass quad.
+    // This is a fixed 32-float (128-byte) buffer that is written once per
+    // stencil region and never touches the main quad buffer.
+    const stencilBuf = glw.createBuffer();
+    const stencilStride = 8 * Float32Array.BYTES_PER_ELEMENT;
+    glw.arrayBufferData(stencilBuf, new Float32Array(32), glw.DYNAMIC_DRAW);
+    this.stencilQuadBufferCollection = new BufferCollection([
+      {
+        buffer: stencilBuf!,
+        attributes: {
+          a_position: {
+            name: 'a_position',
+            size: 2,
+            type: glw.FLOAT,
+            normalized: false,
+            stride: stencilStride,
+            offset: 0,
+          },
+          a_nodeCoords: {
+            name: 'a_nodeCoords',
+            size: 2,
+            type: glw.FLOAT,
+            normalized: false,
+            stride: stencilStride,
             offset: 6 * Float32Array.BYTES_PER_ELEMENT,
           },
         },
@@ -383,6 +418,7 @@ export class WebGlRenderer extends CoreRenderer {
     curRenderOp.renderOpBufferIdx = bufferIdx;
     curRenderOp.numQuads = 0;
     curRenderOp.renderOpTextures.length = 0;
+    curRenderOp.stencilDepth = this.stencilDepth;
 
     this.curRenderOp = curRenderOp;
     this.renderOps.push(curRenderOp);
@@ -399,6 +435,12 @@ export class WebGlRenderer extends CoreRenderer {
       return false;
     }
     if (curRenderOp instanceof StencilClipRenderOp) {
+      return false;
+    }
+
+    // Nodes at different stencil depths must not be batched — the GPU stencil
+    // test state differs between inside and outside a stencil clip region.
+    if (curRenderOp.stencilDepth !== this.stencilDepth) {
       return false;
     }
 
@@ -477,11 +519,8 @@ export class WebGlRenderer extends CoreRenderer {
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
       if (op instanceof StencilClipRenderOp) {
-        // Restore the quad buffer before/after stencil passes so normal draws work
         if (op.kind === 0) {
           this.drawStencilBegin(op);
-          // Re-upload the main quad buffer after the stencil scratch overwrote it
-          glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
         } else {
           this.drawStencilEnd(op);
         }
@@ -850,9 +889,8 @@ export class WebGlRenderer extends CoreRenderer {
     op.kind = 1;
     op.stencilRef = this.stencilDepth;
     this.stencilDepth--;
-
-    // Break current render-op batch so the sentinel lands at the right position
-    this.curRenderOp = null;
+    // Do NOT null curRenderOp here — stencil state is restored to the pre-region
+    // state by drawStencilEnd, so nodes after this sentinel can batch normally.
     this.renderOps.push(op);
   }
 
@@ -864,11 +902,11 @@ export class WebGlRenderer extends CoreRenderer {
     const glw = this.glw;
     const program = this.getStencilClipProgram();
 
-    // Activate the stencil clip shader via the shader manager (handles useProgram + uniforms setup)
-    this.stage.shManager.useShader(program);
-
-    // Bind the shared quad buffer collection (attributes: a_position, a_nodeCoords)
-    program.bindBufferCollection(this.quadBufferCollection);
+    // Activate the stencil shader directly — bypassing shManager's detach/attach
+    // cycle so we don't disable the scene shader's vertex attrib arrays.  After
+    // the pass we null shManager.attachedShader so the next CoreNode.draw() does
+    // a proper attach() at cost of exactly one gl.useProgram (the same as before).
+    program.bindForStencil(this.stencilQuadBufferCollection!);
 
     // Set uniforms
     if (op.parentHasRenderTexture === true && op.parentFramebufferH !== 0) {
@@ -893,18 +931,10 @@ export class WebGlRenderer extends CoreRenderer {
     // Disable color writes during stencil pass
     glw.colorMask(false, false, false, false);
 
-    // Draw the stencil mask quad — reuse the node's own quad from the buffer.
-    // The stencil clip node itself is always one quad at the start of the buffer
-    // for its render op. We locate it via the buffer index stored on the node.
-    // Since the begin sentinel is inserted before the children, the clip node's
-    // own quad was already written to the buffer by addQuad. We find it by
-    // walking backwards through renderOps to the preceding CoreNode.
-    // However: the clip node itself may not be renderable (no texture). Instead
-    // we emit a synthetic 1-quad draw using the scissor rect geometry directly.
-    // We build a minimal 32-float quad (4 vertices × 8 floats) in a scratch buffer.
+    // Build the stencil quad in the scratch buffer and upload to the dedicated
+    // stencil VBO.  The main quad buffer is never touched.
     const f = this._stencilScratchF;
     const u = this._stencilScratchU;
-    // Screen-space position: top-left, top-right, bottom-left, bottom-right
     const x1 = op.x / op.pixelRatio;
     const y1 =
       op.canvasHeight / op.pixelRatio -
@@ -950,8 +980,9 @@ export class WebGlRenderer extends CoreRenderer {
     f[30] = 1;
     f[31] = 1;
 
-    const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
-    glw.arrayBufferData(buffer, this._stencilScratchF, glw.DYNAMIC_DRAW);
+    const stencilBuf =
+      this.stencilQuadBufferCollection!.getBuffer('a_position') || null;
+    glw.arrayBufferData(stencilBuf, this._stencilScratchF, glw.DYNAMIC_DRAW);
 
     glw.drawElements(glw.TRIANGLES, 6, glw.UNSIGNED_SHORT, 0);
 
@@ -961,6 +992,10 @@ export class WebGlRenderer extends CoreRenderer {
     glw.stencilMask(0x00);
     glw.stencilFunc(glw.EQUAL, op.stencilRef, 0xff);
     glw.stencilOp(glw.KEEP, glw.KEEP, glw.KEEP);
+
+    // Invalidate shManager so the next CoreNode.draw() triggers a full attach()
+    // on the scene shader (one gl.useProgram) — this re-binds the main VBO.
+    this.stage.shManager.releaseShader();
   }
 
   /**

@@ -185,4 +185,15 @@ export class CoreShaderManager {
     }
     this.attachedShader = shader;
   }
+
+  /**
+   * Mark no shader as currently attached.
+   *
+   * Used after a transient GPU pass (e.g. stencil write) that activates a
+   * shader outside the normal useShader flow, so the next useShader() call
+   * performs a full attach() instead of a no-op.
+   */
+  releaseShader(): void {
+    this.attachedShader = null;
+  }
 }

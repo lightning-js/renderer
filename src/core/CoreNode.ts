@@ -781,6 +781,7 @@ export class CoreNode extends EventEmitter {
   public renderOpBufferIdx: number = 0;
   public numQuads: number = 0;
   public renderOpTextures: WebGlCtxTexture[] = [];
+  public stencilDepth: number = 0;
 
   private hasShaderUpdater = false;
   public hasShaderTimeFn = false;

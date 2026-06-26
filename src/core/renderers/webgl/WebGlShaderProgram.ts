@@ -343,6 +343,22 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
+  /**
+   * Activate this program and bind a buffer collection without going through
+   * the shader manager's detach/attach cycle. Used exclusively by the stencil
+   * write pass so it does not disrupt the currently attached scene shader.
+   *
+   * The caller is responsible for restoring `shManager.attachedShader` to null
+   * after the pass so the next real draw triggers a full re-attach.
+   */
+  bindForStencil(bufferCollection: BufferCollection): void {
+    if (this.isDestroyed === true) {
+      return;
+    }
+    this.glw.useProgram(this.program, this.uniformLocations!);
+    this.bindBufferCollection(bufferCollection);
+  }
+
   detach(): void {
     this.disableAttributes();
   }
