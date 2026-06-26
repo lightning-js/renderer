@@ -36,6 +36,7 @@ describe('CoreTextNode', () => {
     autosize: false,
     boundsMargin: null,
     clipping: false,
+    clipRadius: 0,
     color: 0xffffffff,
     colorBl: 0xffffffff,
     colorBottom: 0xffffffff,
@@ -94,6 +95,7 @@ describe('CoreTextNode', () => {
     w: 200,
     h: 200,
     valid: true,
+    clipRadius: 0,
   };
 
   beforeEach(() => {
@@ -637,7 +639,14 @@ describe('CoreTextNode', () => {
 
       node.props.shader = shader as any;
       node.numQuads = 2;
-      node.clippingRect = { x: 10, y: 20, w: 30, h: 40, valid: true };
+      node.clippingRect = {
+        x: 10,
+        y: 20,
+        w: 30,
+        h: 40,
+        valid: true,
+        clipRadius: 0,
+      };
       node.parentHasRenderTexture = true;
       node.rttParent = { framebufferDimensions: { w: 320, h: 180 } } as any;
       node.props.h = 25;

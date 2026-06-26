@@ -332,6 +332,7 @@ export class Stage {
       autosize: false,
       boundsMargin: null,
       clipping: false,
+      clipRadius: 0,
       color: 0x00000000,
       colorTop: 0x00000000,
       colorBottom: 0x00000000,
@@ -584,7 +585,18 @@ export class Stage {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer);
 
-    // If the node is renderable and has a loaded texture, render it
+    // Detect whether this node establishes a rounded stencil clip region.
+    // clipRadius === 0 falls through to the plain scissor path unchanged.
+    // beginRoundedClip / endRoundedClip are no-ops on non-WebGL renderers.
+    const cr = node.clippingRect;
+    const hasRoundedClip = cr.valid === true && cr.clipRadius > 0;
+
+    if (hasRoundedClip === true) {
+      this.renderer.beginRoundedClip(node);
+    }
+
+    // Render this node's own quad after the stencil mask is armed (when
+    // applicable) so the container itself is also clipped to the rounded shape.
     if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
     }
@@ -604,6 +616,10 @@ export class Stage {
       }
 
       this.addQuads(child);
+    }
+
+    if (hasRoundedClip === true) {
+      this.renderer.endRoundedClip(node);
     }
   }
 
@@ -848,6 +864,7 @@ export class Stage {
       autosize: props.autosize ?? false,
       boundsMargin: props.boundsMargin ?? null,
       clipping: props.clipping ?? false,
+      clipRadius: props.clipRadius ?? 0,
       color,
       colorTop,
       colorBottom,

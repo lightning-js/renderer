@@ -80,6 +80,14 @@ export abstract class GlContextWrapper {
   abstract readonly COLOR_ATTACHMENT0: number;
   abstract readonly INVALID_ENUM: number;
   abstract readonly INVALID_OPERATION: number;
+  abstract readonly STENCIL_TEST: number;
+  abstract readonly ALWAYS: number;
+  abstract readonly EQUAL: number;
+  abstract readonly KEEP: number;
+  abstract readonly REPLACE: number;
+  abstract readonly INCR: number;
+  abstract readonly DECR: number;
+  abstract readonly STENCIL_BUFFER_BIT: number;
   //#endregion GL Constants
 
   //#region Texture Management
@@ -134,6 +142,20 @@ export abstract class GlContextWrapper {
   abstract setBlend(blend: boolean): void;
   abstract blendFunc(src: GLenum, dst: GLenum): void;
   //#endregion Scissor & Blend
+
+  //#region Stencil (WebGL rounded corner clipping)
+  abstract setStencilTest(enable: boolean): void;
+  abstract stencilFunc(func: GLenum, ref: GLint, mask: GLuint): void;
+  abstract stencilOp(fail: GLenum, zfail: GLenum, zpass: GLenum): void;
+  abstract stencilMask(mask: GLuint): void;
+  abstract clearStencil(s: GLint): void;
+  abstract colorMask(
+    r: GLboolean,
+    g: GLboolean,
+    b: GLboolean,
+    a: GLboolean,
+  ): void;
+  //#endregion Stencil
 
   //#region Buffer Management
   abstract createBuffer(): any;

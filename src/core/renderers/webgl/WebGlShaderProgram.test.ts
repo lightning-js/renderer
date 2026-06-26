@@ -43,6 +43,7 @@ const makeTextProps = (): CoreTextNodeProps => ({
   autosize: false,
   boundsMargin: null,
   clipping: false,
+  clipRadius: 0,
   color: 0xffffffff,
   colorBl: 0xffffffff,
   colorBottom: 0xffffffff,

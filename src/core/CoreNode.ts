@@ -76,6 +76,7 @@ const NO_CLIPPING_RECT: RectWithValid = {
   w: 0,
   h: 0,
   valid: false,
+  clipRadius: 0,
 };
 
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
@@ -341,6 +342,23 @@ export interface CoreNodeProps {
    * @default `false`
    */
   clipping: boolean;
+  /**
+   * Rounded corner radius for clipping (WebGL only).
+   *
+   * @remarks
+   * When set to a value greater than 0 and `clipping` is `true`, children are
+   * clipped to a rounded rectangle instead of a sharp rectangle. The stencil
+   * buffer is used to achieve this — the scissor test still provides the coarse
+   * axis-aligned bounds for performance, and the stencil pass applies the
+   * rounded corners.
+   *
+   * Has no effect on the Canvas renderer.
+   * Has no effect when `clipping` is `false`.
+   * Has no effect when the node is rotated.
+   *
+   * @default `0`
+   */
+  clipRadius: number;
   /**
    * The color of the Node.
    *
@@ -789,6 +807,7 @@ export class CoreNode extends EventEmitter {
     w: 0,
     h: 0,
     valid: false,
+    clipRadius: 0,
   };
   public textureCoords?: TextureCoords;
   public updateShaderUniforms: boolean = false;
@@ -834,6 +853,7 @@ export class CoreNode extends EventEmitter {
     p.alpha = props.alpha;
     p.autosize = props.autosize;
     p.clipping = props.clipping;
+    p.clipRadius = props.clipRadius;
 
     p.color = props.color;
     p.colorTop = props.colorTop;
@@ -1765,17 +1785,24 @@ export class CoreNode extends EventEmitter {
       clippingRect.y = gt!.ty;
       clippingRect.w = this.props.w * gt!.ta;
       clippingRect.h = this.props.h * gt!.td;
+      clippingRect.clipRadius = props.clipRadius;
       clippingRect.valid = true;
     } else {
       clippingRect.valid = false;
+      clippingRect.clipRadius = 0;
     }
 
     if (parentClippingRect.valid === true && clippingRect.valid === true) {
-      // Intersect parent clipping rect with node clipping rect
+      // Intersect parent clipping rect with node clipping rect.
+      // clipRadius from this node overrides — children of this node use
+      // this node's own clipRadius, not the ancestor's.
+      const ownRadius = clippingRect.clipRadius;
       intersectRect(parentClippingRect, clippingRect, clippingRect);
+      clippingRect.clipRadius = ownRadius;
     } else if (parentClippingRect.valid === true) {
-      // Copy parent clipping rect
+      // Copy parent clipping rect — no local clip, inherit parent's
       copyRect(parentClippingRect, clippingRect);
+      clippingRect.clipRadius = parentClippingRect.clipRadius;
       clippingRect.valid = true;
     }
   }
@@ -2281,6 +2308,20 @@ export class CoreNode extends EventEmitter {
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
     this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+  }
+
+  get clipRadius(): number {
+    return this.props.clipRadius;
+  }
+
+  set clipRadius(value: number) {
+    if (this.props.clipRadius !== value) {
+      this.props.clipRadius = value;
+      this.setUpdateType(
+        UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
+      );
+      this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+    }
   }
 
   get color(): number {

@@ -42,6 +42,7 @@ import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
+import { StencilClip } from '../../shaders/webgl/StencilClip.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { Dimensions } from '../../../common/CommonTypes.js';
@@ -54,7 +55,31 @@ interface CoreWebGlSystem {
   extensions: CoreWebGlExtensions;
 }
 
-export type WebGlRenderOp = CoreNode | CoreTextNode;
+/**
+ * Pre-allocated sentinel op inserted into the renderOps array to bracket the
+ * child quads of a node that uses rounded-corner stencil clipping.
+ *
+ * `kind === 0` = begin stencil write pass (before children)
+ * `kind === 1` = end stencil region (after children)
+ *
+ * Objects are reused from a pool on WebGlRenderer — never heap-allocated per frame.
+ */
+export class StencilClipRenderOp {
+  kind: 0 | 1 = 0;
+  x: number = 0;
+  y: number = 0;
+  w: number = 0;
+  h: number = 0;
+  clipRadius: number = 0;
+  pixelRatio: number = 1;
+  canvasHeight: number = 0;
+  parentHasRenderTexture: boolean = false;
+  parentFramebufferH: number = 0;
+  stencilRef: number = 0;
+}
+
+export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
+export type WebGlRenderOp = WebGlNodeRenderOp | StencilClipRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -83,6 +108,25 @@ export class WebGlRenderer extends CoreRenderer {
   //// Default Shader
   defaultShaderNode: WebGlShaderNode | null = null;
   quadBufferCollection: BufferCollection;
+
+  //// Stencil clip program (compiled once, reused every frame)
+  stencilClipProgram: WebGlShaderProgram | null = null;
+  stencilDepth: number = 0;
+
+  //// Pre-allocated pool of StencilClipRenderOp sentinels (avoids per-frame heap allocation)
+  private stencilOpPool: StencilClipRenderOp[] = [];
+  private stencilOpPoolIdx: number = 0;
+
+  //// Scratch buffer for the single-quad stencil geometry (4 vertices × 8 floats = 32 floats)
+  private readonly _stencilScratchBuffer: ArrayBuffer = new ArrayBuffer(
+    32 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  private readonly _stencilScratchF: Float32Array = new Float32Array(
+    this._stencilScratchBuffer,
+  );
+  private readonly _stencilScratchU: Uint32Array = new Uint32Array(
+    this._stencilScratchBuffer,
+  );
 
   clearColor: WebGlColor = {
     raw: 0x00000000,
@@ -182,7 +226,10 @@ export class WebGlRenderer extends CoreRenderer {
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.renderOps.length = 0;
+    this.stencilOpPoolIdx = 0;
+    this.stencilDepth = 0;
     glw.setScissorTest(false);
+    glw.setStencilTest(false);
     if (this.stage.options.enableClear !== false) {
       glw.clear();
     }
@@ -265,11 +312,11 @@ export class WebGlRenderer extends CoreRenderer {
 
     const ctx = tx.ctxTexture as WebGlCtxTexture | undefined;
     if (ctx === undefined) return;
-    let tidx = this.curRenderOp!.addTexture(ctx);
+    let tidx = (this.curRenderOp as WebGlNodeRenderOp).addTexture(ctx);
 
     if (tidx === 0xffffffff) {
       this.newRenderOp(node, i);
-      tidx = this.curRenderOp!.addTexture(ctx);
+      tidx = (this.curRenderOp as WebGlNodeRenderOp).addTexture(ctx);
     }
 
     const rc = node.renderCoords!;
@@ -320,7 +367,7 @@ export class WebGlRenderer extends CoreRenderer {
     f[i + 30] = 1;
     f[i + 31] = 1;
 
-    this.curRenderOp!.numQuads++;
+    (this.curRenderOp as WebGlNodeRenderOp).numQuads++;
     this.curBufferIdx = i + 32;
   }
 
@@ -349,6 +396,9 @@ export class WebGlRenderer extends CoreRenderer {
   reuseRenderOp(node: CoreNode): boolean {
     const curRenderOp = this.curRenderOp;
     if (curRenderOp === null) {
+      return false;
+    }
+    if (curRenderOp instanceof StencilClipRenderOp) {
       return false;
     }
 
@@ -425,7 +475,19 @@ export class WebGlRenderer extends CoreRenderer {
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
-      this.renderOps[i]!.draw(this);
+      const op = this.renderOps[i]!;
+      if (op instanceof StencilClipRenderOp) {
+        // Restore the quad buffer before/after stencil passes so normal draws work
+        if (op.kind === 0) {
+          this.drawStencilBegin(op);
+          // Re-upload the main quad buffer after the stencil scratch overwrote it
+          glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+        } else {
+          this.drawStencilEnd(op);
+        }
+      } else {
+        op.draw(this);
+      }
     }
 
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
@@ -721,6 +783,202 @@ export class WebGlRenderer extends CoreRenderer {
       raw: color,
       normalized: normalizedColor,
     };
+  }
+
+  /**
+   * Lazily compiles the StencilClip shader program (once per renderer lifetime).
+   */
+  private getStencilClipProgram(): WebGlShaderProgram {
+    if (this.stencilClipProgram !== null) {
+      return this.stencilClipProgram;
+    }
+    this.stencilClipProgram = new WebGlShaderProgram(this, StencilClip, {});
+    return this.stencilClipProgram;
+  }
+
+  /**
+   * Returns a pre-allocated StencilClipRenderOp from the pool, growing the pool
+   * if necessary. Pool objects are never GC'd between frames.
+   */
+  private allocStencilOp(): StencilClipRenderOp {
+    const pool = this.stencilOpPool;
+    const idx = this.stencilOpPoolIdx;
+    if (idx >= pool.length) {
+      pool.push(new StencilClipRenderOp());
+    }
+    this.stencilOpPoolIdx = idx + 1;
+    return pool[idx]!;
+  }
+
+  /**
+   * Inserts a "begin rounded clip" sentinel into renderOps for the given node.
+   * Called by Stage.addQuads before processing a rounded-clip node's children.
+   */
+  override beginRoundedClip(node: CoreNode) {
+    const cr = node.clippingRect;
+    const pixelRatio = node.parentHasRenderTexture ? 1 : this.stage.pixelRatio;
+    const canvas = this.stage.platform!.canvas!;
+
+    this.stencilDepth++;
+    const op = this.allocStencilOp();
+    op.kind = 0;
+    op.x = Math.round(cr.x * pixelRatio);
+    op.w = Math.round(cr.w * pixelRatio);
+    op.h = Math.round(cr.h * pixelRatio);
+    op.y = Math.round(canvas.height - op.h - cr.y * pixelRatio);
+    op.clipRadius = cr.clipRadius * pixelRatio;
+    op.pixelRatio = pixelRatio;
+    op.canvasHeight = canvas.height;
+    op.parentHasRenderTexture = node.parentHasRenderTexture;
+    op.parentFramebufferH =
+      node.parentHasRenderTexture && node.parentFramebufferDimensions !== null
+        ? node.parentFramebufferDimensions.h
+        : 0;
+    op.stencilRef = this.stencilDepth;
+
+    // Break current render-op batch so the stencil sentinel lands at the right position
+    this.curRenderOp = null;
+    this.renderOps.push(op);
+  }
+
+  /**
+   * Inserts an "end rounded clip" sentinel into renderOps for the given node.
+   * Called by Stage.addQuads after processing a rounded-clip node's children.
+   */
+  override endRoundedClip(node: CoreNode) {
+    const op = this.allocStencilOp();
+    op.kind = 1;
+    op.stencilRef = this.stencilDepth;
+    this.stencilDepth--;
+
+    // Break current render-op batch so the sentinel lands at the right position
+    this.curRenderOp = null;
+    this.renderOps.push(op);
+  }
+
+  /**
+   * Executes the stencil write pass for a begin-rounded-clip sentinel.
+   * Sets stencil test so subsequent draws are masked to the rounded region.
+   */
+  private drawStencilBegin(op: StencilClipRenderOp) {
+    const glw = this.glw;
+    const program = this.getStencilClipProgram();
+
+    // Activate the stencil clip shader via the shader manager (handles useProgram + uniforms setup)
+    this.stage.shManager.useShader(program);
+
+    // Bind the shared quad buffer collection (attributes: a_position, a_nodeCoords)
+    program.bindBufferCollection(this.quadBufferCollection);
+
+    // Set uniforms
+    if (op.parentHasRenderTexture === true && op.parentFramebufferH !== 0) {
+      glw.uniform1f('u_pixelRatio', 1.0);
+      glw.uniform2f('u_resolution', op.w, op.parentFramebufferH);
+    } else {
+      glw.uniform1f('u_pixelRatio', op.pixelRatio);
+      glw.uniform2f('u_resolution', glw.canvas.width, glw.canvas.height);
+    }
+    glw.uniform2f('u_dimensions', op.w / op.pixelRatio, op.h / op.pixelRatio);
+    glw.uniform1f('u_radius', op.clipRadius / op.pixelRatio);
+
+    // Scissor: coarse bounds for the stencil write region
+    glw.setScissorTest(true);
+    glw.scissor(op.x, op.y, op.w, op.h);
+
+    // Stencil write pass: draw rounded rect shape, write stencilRef to stencil buffer
+    glw.setStencilTest(true);
+    glw.stencilMask(0xff);
+    glw.stencilFunc(glw.ALWAYS, op.stencilRef, 0xff);
+    glw.stencilOp(glw.KEEP, glw.KEEP, glw.REPLACE);
+    // Disable color writes during stencil pass
+    glw.colorMask(false, false, false, false);
+
+    // Draw the stencil mask quad — reuse the node's own quad from the buffer.
+    // The stencil clip node itself is always one quad at the start of the buffer
+    // for its render op. We locate it via the buffer index stored on the node.
+    // Since the begin sentinel is inserted before the children, the clip node's
+    // own quad was already written to the buffer by addQuad. We find it by
+    // walking backwards through renderOps to the preceding CoreNode.
+    // However: the clip node itself may not be renderable (no texture). Instead
+    // we emit a synthetic 1-quad draw using the scissor rect geometry directly.
+    // We build a minimal 32-float quad (4 vertices × 8 floats) in a scratch buffer.
+    const f = this._stencilScratchF;
+    const u = this._stencilScratchU;
+    // Screen-space position: top-left, top-right, bottom-left, bottom-right
+    const x1 = op.x / op.pixelRatio;
+    const y1 =
+      op.canvasHeight / op.pixelRatio -
+      op.y / op.pixelRatio -
+      op.h / op.pixelRatio;
+    const x2 = x1 + op.w / op.pixelRatio;
+    const y2 = y1 + op.h / op.pixelRatio;
+    const white = 0xffffffff;
+    // Upper-Left
+    f[0] = x1;
+    f[1] = y1;
+    f[2] = 0;
+    f[3] = 0;
+    u[4] = white;
+    f[5] = 0;
+    f[6] = 0;
+    f[7] = 0;
+    // Upper-Right
+    f[8] = x2;
+    f[9] = y1;
+    f[10] = 1;
+    f[11] = 0;
+    u[12] = white;
+    f[13] = 0;
+    f[14] = 1;
+    f[15] = 0;
+    // Lower-Left
+    f[16] = x1;
+    f[17] = y2;
+    f[18] = 0;
+    f[19] = 1;
+    u[20] = white;
+    f[21] = 0;
+    f[22] = 0;
+    f[23] = 1;
+    // Lower-Right
+    f[24] = x2;
+    f[25] = y2;
+    f[26] = 1;
+    f[27] = 1;
+    u[28] = white;
+    f[29] = 0;
+    f[30] = 1;
+    f[31] = 1;
+
+    const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
+    glw.arrayBufferData(buffer, this._stencilScratchF, glw.DYNAMIC_DRAW);
+
+    glw.drawElements(glw.TRIANGLES, 6, glw.UNSIGNED_SHORT, 0);
+
+    // Restore color writes
+    glw.colorMask(true, true, true, true);
+    // Set stencil to EQUAL so only pixels inside the rounded shape pass
+    glw.stencilMask(0x00);
+    glw.stencilFunc(glw.EQUAL, op.stencilRef, 0xff);
+    glw.stencilOp(glw.KEEP, glw.KEEP, glw.KEEP);
+  }
+
+  /**
+   * Tears down the stencil state after the rounded-clip subtree has been drawn.
+   */
+  private drawStencilEnd(op: StencilClipRenderOp) {
+    const glw = this.glw;
+    if (op.stencilRef <= 1) {
+      // Top-level stencil region: disable stencil test entirely
+      glw.setStencilTest(false);
+      glw.stencilMask(0xff);
+    } else {
+      // Nested stencil: restore to outer stencil ref level
+      glw.stencilMask(0xff);
+      glw.stencilFunc(glw.EQUAL, op.stencilRef - 1, 0xff);
+      glw.stencilOp(glw.KEEP, glw.KEEP, glw.KEEP);
+      glw.stencilMask(0x00);
+    }
   }
 
   override destroy(): void {

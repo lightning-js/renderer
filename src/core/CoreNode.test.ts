@@ -32,6 +32,7 @@ describe('CoreNode', () => {
     autosize: false,
     boundsMargin: null,
     clipping: false,
+    clipRadius: 0,
     color: 0,
     colorBl: 0,
     colorBottom: 0,
@@ -70,6 +71,7 @@ describe('CoreNode', () => {
     w: 200,
     h: 200,
     valid: false,
+    clipRadius: 0,
   };
 
   const stage = mock<Stage>({
@@ -246,6 +248,134 @@ describe('CoreNode', () => {
       node.update(2, clippingRect);
       expect(node.isRenderable).toBe(false);
       expect(eventCallback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('clipRadius', () => {
+    it('defaults to 0', () => {
+      const node = new CoreNode(stage, defaultProps);
+      expect(node.clipRadius).toBe(0);
+    });
+
+    it('setter stores value in props', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.clipRadius = 20;
+      expect(node.clipRadius).toBe(20);
+    });
+
+    it('setter is a no-op when value is unchanged', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.clipRadius = 10;
+      node.updateType = 0;
+      node.clipRadius = 10;
+      expect(node.updateType).toBe(0);
+    });
+
+    it('setter schedules UpdateType.Clipping when value changes', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.updateType = 0;
+      node.clipRadius = 15;
+      expect(node.updateType & UpdateType.Clipping).not.toBe(0);
+    });
+
+    it('calculateClippingRect stores clipRadius on clippingRect when clipping is active', () => {
+      const node = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: true,
+        clipRadius: 12,
+        scaleX: 1,
+        scaleY: 1,
+        w: 100,
+        h: 100,
+        alpha: 1,
+      });
+      node.update(0, clippingRect);
+      expect(node.clippingRect.valid).toBe(true);
+      expect(node.clippingRect.clipRadius).toBe(12);
+    });
+
+    it('calculateClippingRect sets clipRadius to 0 when clipping is false', () => {
+      const node = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: false,
+        clipRadius: 12,
+        w: 100,
+        h: 100,
+        alpha: 1,
+      });
+      node.update(0, clippingRect);
+      expect(node.clippingRect.valid).toBe(false);
+      expect(node.clippingRect.clipRadius).toBe(0);
+    });
+
+    it('calculateClippingRect child inherits parent clipRadius when it has no own clipping', () => {
+      const parent = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: true,
+        clipRadius: 8,
+        scaleX: 1,
+        scaleY: 1,
+        w: 200,
+        h: 200,
+        alpha: 1,
+      });
+      const child = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: false,
+        scaleX: 1,
+        scaleY: 1,
+        w: 50,
+        h: 50,
+        alpha: 1,
+        parent,
+      });
+      parent.update(0, clippingRect);
+      expect(child.clippingRect.valid).toBe(true);
+      expect(child.clippingRect.clipRadius).toBe(8);
+    });
+
+    it('calculateClippingRect child clipping overrides parent clipRadius', () => {
+      const parent = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: true,
+        clipRadius: 8,
+        scaleX: 1,
+        scaleY: 1,
+        w: 200,
+        h: 200,
+        alpha: 1,
+      });
+      const child = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: true,
+        clipRadius: 20,
+        scaleX: 1,
+        scaleY: 1,
+        w: 100,
+        h: 100,
+        alpha: 1,
+        parent,
+      });
+      parent.update(0, clippingRect);
+      expect(child.clippingRect.valid).toBe(true);
+      expect(child.clippingRect.clipRadius).toBe(20);
+    });
+
+    it('calculateClippingRect disables clipping when node is rotated even if clipRadius > 0', () => {
+      const node = new CoreNode(stage, {
+        ...defaultProps,
+        clipping: true,
+        clipRadius: 10,
+        rotation: Math.PI / 4,
+        scaleX: 1,
+        scaleY: 1,
+        w: 100,
+        h: 100,
+        alpha: 1,
+      });
+      node.update(0, clippingRect);
+      expect(node.clippingRect.valid).toBe(false);
+      expect(node.clippingRect.clipRadius).toBe(0);
     });
   });
 
