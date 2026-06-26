@@ -1539,8 +1539,13 @@ export class CoreNode extends EventEmitter {
       return;
     }
 
-    // if we're out of bounds, we're done
-    if (boundInsideBound(this.renderBound, this.strictBound) === false) {
+    // Only skip creating local clip bounds when the node is completely outside
+    // the preload zone (not just outside the strict viewport).  Using strictBound
+    // here caused a preload regression: a clipping parent that had entered the
+    // preload zone (InBounds) would not narrow strictBound for its children,
+    // so children used the full-stage preloadBound and never got preloaded
+    // until the parent reached the viewport itself.
+    if (boundInsideBound(this.renderBound, this.preloadBound!) === false) {
       return;
     }
 
@@ -1800,6 +1805,14 @@ export class CoreNode extends EventEmitter {
       const ownRadius = clippingRect.clipRadius;
       intersectRect(parentClippingRect, clippingRect, clippingRect);
       clippingRect.clipRadius = ownRadius;
+      // intersectRect writes {0,0,0,0} when the rects don't overlap but does
+      // not touch the valid flag.  An empty intersection means nothing is
+      // visible — mark the rect invalid so children are not clipped to a
+      // zero-area region and the stencil pass is skipped.
+      if (clippingRect.w <= 0 || clippingRect.h <= 0) {
+        clippingRect.valid = false;
+        clippingRect.clipRadius = 0;
+      }
     } else if (parentClippingRect.valid === true) {
       // Copy parent clipping rect — no local clip, inherit parent's
       copyRect(parentClippingRect, clippingRect);

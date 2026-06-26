@@ -585,11 +585,13 @@ export class Stage {
   addQuads(node: CoreNode) {
     assertTruthy(this.renderer);
 
-    // Detect whether this node establishes a rounded stencil clip region.
-    // clipRadius === 0 falls through to the plain scissor path unchanged.
-    // beginRoundedClip / endRoundedClip are no-ops on non-WebGL renderers.
-    const cr = node.clippingRect;
-    const hasRoundedClip = cr.valid === true && cr.clipRadius > 0;
+    // Only arm the stencil when this node itself declares the clip region.
+    // Children inherit clippingRect (including clipRadius) from their parent,
+    // but they must NOT emit their own begin/end — doing so would re-draw the
+    // stencil mask at an ever-incrementing depth for every descendant, which
+    // is redundant and causes stencilDepth to overflow on deep trees.
+    const hasRoundedClip =
+      node.props.clipping === true && node.props.clipRadius > 0;
 
     if (hasRoundedClip === true) {
       this.renderer.beginRoundedClip(node);
