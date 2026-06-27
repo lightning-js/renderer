@@ -80,59 +80,60 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       v_innerSize = vec2(0.0);
       v_outerSize = vec2(0.0);
 
-      if(borderZero == 0.0) {
-        vec4 adjustedBorderWidth = u_borderWidth - 1.0 + clamp(u_borderWidth, -1.0, 1.0);
+      // Compute all border values unconditionally — edgeOffset is masked by
+      // (1.0 - borderZero) so geometry is unaffected when no border is present.
+      vec4 adjustedBorderWidth = u_borderWidth - 1.0 + clamp(u_borderWidth, -1.0, 1.0);
 
-        float borderTop = adjustedBorderWidth.x;
-        float borderRight = adjustedBorderWidth.y;
-        float borderBottom = adjustedBorderWidth.z;
-        float borderLeft = adjustedBorderWidth.w;
+      float borderTop = adjustedBorderWidth.x;
+      float borderRight = adjustedBorderWidth.y;
+      float borderBottom = adjustedBorderWidth.z;
+      float borderLeft = adjustedBorderWidth.w;
 
-        v_outerBorderUv = vec2(0.0);
-        v_innerBorderUv = vec2(0.0);
+      v_outerBorderUv = vec2(0.0);
+      v_innerBorderUv = vec2(0.0);
 
-        vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
-        vec2 extraSize = borderSize * u_borderAlign;
-        float gapLeft = step(0.001, borderLeft) * u_borderGap;
-        float gapRight = step(0.001, borderRight) * u_borderGap;
-        float gapTop = step(0.001, borderTop) * u_borderGap;
-        float gapBottom = step(0.001, borderBottom) * u_borderGap;
-        vec2 gapSize = vec2(gapLeft + gapRight, gapTop + gapBottom);
+      vec2 borderSize = vec2(borderRight + borderLeft, borderTop + borderBottom);
+      vec2 extraSize = borderSize * u_borderAlign;
+      float gapLeft = step(0.001, borderLeft) * u_borderGap;
+      float gapRight = step(0.001, borderRight) * u_borderGap;
+      float gapTop = step(0.001, borderTop) * u_borderGap;
+      float gapBottom = step(0.001, borderBottom) * u_borderGap;
+      vec2 gapSize = vec2(gapLeft + gapRight, gapTop + gapBottom);
 
-        v_outerSize = (u_dimensions + gapSize + extraSize) * 0.5;
-        v_innerSize = v_outerSize - borderSize * 0.5;
+      v_outerSize = (u_dimensions + gapSize + extraSize) * 0.5;
+      v_innerSize = v_outerSize - borderSize * 0.5;
 
-        // Use sign() to avoid branching
-        vec2 borderDiff = vec2(borderRight - borderLeft, borderBottom - borderTop);
-        vec2 signDiff = sign(borderDiff);
-        borderDiff = abs(borderDiff);
+      // Use sign() to avoid branching
+      vec2 borderDiff = vec2(borderRight - borderLeft, borderBottom - borderTop);
+      vec2 signDiff = sign(borderDiff);
+      borderDiff = abs(borderDiff);
 
-        vec2 gapDiff = vec2(gapRight - gapLeft, gapBottom - gapTop);
-        vec2 signGapDiff = sign(gapDiff);
-        gapDiff = abs(gapDiff);
+      vec2 gapDiff = vec2(gapRight - gapLeft, gapBottom - gapTop);
+      vec2 signGapDiff = sign(gapDiff);
+      gapDiff = abs(gapDiff);
 
-        v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5 - signGapDiff * gapDiff * 0.5;
-        v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
+      v_outerBorderUv = -signDiff * borderDiff * u_borderAlign * 0.5 - signGapDiff * gapDiff * 0.5;
+      v_innerBorderUv = v_outerBorderUv + signDiff * borderDiff * 0.5;
 
-        v_outerBorderRadius = vec4(
-          max(0.0, u_radius.x + max(borderTop * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap)),
-          max(0.0, u_radius.y + max(borderTop * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
-          max(0.0, u_radius.z + max(borderBottom * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
-          max(0.0, u_radius.w + max(borderBottom * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap))
-        );
+      v_outerBorderRadius = vec4(
+        max(0.0, u_radius.x + max(borderTop * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap)),
+        max(0.0, u_radius.y + max(borderTop * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
+        max(0.0, u_radius.z + max(borderBottom * u_borderAlign + u_borderGap, borderRight * u_borderAlign + u_borderGap)),
+        max(0.0, u_radius.w + max(borderBottom * u_borderAlign + u_borderGap, borderLeft * u_borderAlign + u_borderGap))
+      );
 
-        v_innerBorderRadius = vec4(
-          max(0.0, v_outerBorderRadius.x - max(borderTop, borderLeft)),
-          max(0.0, v_outerBorderRadius.y - max(borderTop, borderRight)),
-          max(0.0, v_outerBorderRadius.z - max(borderBottom, borderRight)),
-          max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
-        );
+      v_innerBorderRadius = vec4(
+        max(0.0, v_outerBorderRadius.x - max(borderTop, borderLeft)),
+        max(0.0, v_outerBorderRadius.y - max(borderTop, borderRight)),
+        max(0.0, v_outerBorderRadius.z - max(borderBottom, borderRight)),
+        max(0.0, v_outerBorderRadius.w - max(borderBottom, borderLeft))
+      );
 
-        vec2 edgeOffsetExtra = step(u_dimensions * 0.5, v_outerSize) * edge * (extraSize + u_borderGap);
-        edgeOffset = edgeOffsetExtra;
+      vec2 edgeOffsetExtra = step(u_dimensions * 0.5, v_outerSize) * edge * (extraSize + u_borderGap);
+      // Mask edgeOffset to zero when no border — replaces the if(borderZero == 0.0) block.
+      edgeOffset = edgeOffsetExtra * (1.0 - borderZero);
 
-        vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
-      }
+      vertexPos = (a_position + edge + edgeOffset) * u_pixelRatio;
 
       gl_Position = vec4(vertexPos.x * screenSpace.x - 1.0, -sign(screenSpace.y) * (vertexPos.y * -abs(screenSpace.y)) + 1.0, 0.0, 1.0);
 
@@ -192,16 +193,13 @@ export const RoundedWithBorder: WebGlShaderType<RoundedWithBorderProps> = {
       float nodeAlpha = 1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, nodeDist);
       resultColor = mix(resultColor, color, nodeAlpha);
 
-      if(borderZero == 1.0) {
-        gl_FragColor = resultColor * u_alpha;
-        return;
-      }
-
       float outerDist = roundedBox(boxUv + v_outerBorderUv, v_outerSize - edgeWidth, v_outerBorderRadius);
       float innerDist = roundedBox(boxUv + v_innerBorderUv, v_innerSize - edgeWidth, v_innerBorderRadius);
 
       float borderDist = max(-innerDist, outerDist);
-      float borderAlpha = (1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, borderDist)) * u_borderColor.a;
+      // Multiply by (1.0 - borderZero) to zero out border contribution when no border
+      // is present — replaces the if(borderZero == 1.0) early return.
+      float borderAlpha = (1.0 - smoothstep(-0.5 * edgeWidth, 0.5 * edgeWidth, borderDist)) * u_borderColor.a * (1.0 - borderZero);
 
       resultColor = mix(resultColor, vec4(u_borderColor.rgb, 1.0), borderAlpha);
       gl_FragColor = resultColor * u_alpha;
