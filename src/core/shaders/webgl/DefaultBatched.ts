@@ -92,8 +92,30 @@ export const DefaultBatched: WebGlShaderType = {
   fragment(renderer) {
     const textureUnits =
       renderer.system.parameters.MAX_VERTEX_TEXTURE_IMAGE_UNITS;
+
+    // Declare each sampler as an individual uniform.
+    // GLSL ES 1.0 does not permit indexing a sampler array with a non-constant
+    // expression — doing so is undefined behavior and silently breaks on Mali 400
+    // drivers. Individual uniforms indexed via a compile-time-unrolled if/else
+    // chain is the correct GLSL ES 1.0 pattern.
+    //
+    // NOTE: when the CPU-side multi-texture path is activated, bind each unit with:
+    //   gl.uniform1i(gl.getUniformLocation(program, `u_texture_${i}`), i)
+    // rather than the array form uniform1iv('u_textures[0]', [...]).
+    const samplerDeclarations = Array.from(Array(textureUnits).keys())
+      .map((i) => `uniform sampler2D u_texture_${i};`)
+      .join('\n      ');
+
+    const ifElseChain = Array.from(Array(textureUnits).keys())
+      .map(
+        (i) => `
+        ${i !== 0 ? 'else ' : ''}if (idx == ${i}) {
+          return texture2D(u_texture_${i}, uv);
+        }`,
+      )
+      .join('');
+
     return `
-    #define txUnits ${textureUnits}
       # ifdef GL_FRAGMENT_PRECISION_HIGH
       precision highp float;
       # else
@@ -101,28 +123,20 @@ export const DefaultBatched: WebGlShaderType = {
       # endif
 
       uniform vec2 u_resolution;
-      uniform sampler2D u_image;
-      uniform sampler2D u_textures[txUnits];
+      ${samplerDeclarations}
 
       varying vec4 v_color;
       varying vec2 v_textureCoords;
       varying float v_textureIndex;
 
-      vec4 sampleFromTexture(sampler2D textures[${textureUnits}], int idx, vec2 uv) {
-        ${Array.from(Array(textureUnits).keys())
-          .map(
-            (idx) => `
-          ${idx !== 0 ? 'else ' : ''}if (idx == ${idx}) {
-            return texture2D(textures[${idx}], uv);
-          }
-        `,
-          )
-          .join('')}
-        return texture2D(textures[0], uv);
+      vec4 sampleFromTexture(int idx, vec2 uv) {
+        ${ifElseChain}
+        // Safe fallback — idx should always match one of the above branches.
+        return vec4(0.0);
       }
 
       void main(){
-        gl_FragColor = vec4(v_color) * sampleFromTexture(u_textures, int(v_textureIndex), v_textureCoords);
+        gl_FragColor = vec4(v_color) * sampleFromTexture(int(v_textureIndex), v_textureCoords);
       }
     `;
   },
