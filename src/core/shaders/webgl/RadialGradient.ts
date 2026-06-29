@@ -73,25 +73,12 @@ export const RadialGradient: WebGlShaderType<RadialGradientProps> = {
 
       vec4 getGradientColor(float dist) {
         dist = clamp(dist, 0.0, 1.0);
-
-        if(dist <= u_stops[0]) {
-          return u_colors[0];
-        }
-
-        if(dist >= u_stops[LAST_STOP]) {
-          return u_colors[LAST_STOP];
-        }
-
+        vec4 color = u_colors[0];
         for(int i = 0; i < LAST_STOP; i++) {
-          float left = u_stops[i];
-          float right = u_stops[i + 1];
-          if(dist >= left && dist <= right) {
-            float lDist = smoothstep(left, right, dist);
-            return mix(u_colors[i], u_colors[i + 1], lDist);
-          }
+          float t = smoothstep(u_stops[i], u_stops[i + 1], dist);
+          color = mix(color, mix(u_colors[i], u_colors[i + 1], t), step(u_stops[i], dist));
         }
-
-        return u_colors[LAST_STOP];
+        return color;
       }
 
       void main() {
