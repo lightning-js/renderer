@@ -48,6 +48,7 @@ const makeDefaultProps = (): CoreNodeProps => ({
   autosize: false,
   boundsMargin: null,
   clipping: false,
+  clipRadius: 0,
   color: 0xffffffff,
   colorBl: 0xffffffff,
   colorBottom: 0xffffffff,
@@ -441,7 +442,14 @@ describe('RTT — renderRTTNodes skip conditions', () => {
 
 describe('RTT — RTT_NOTIFY_MASK gate in update()', () => {
   // Minimal clipping rect required by CoreNode.update()
-  const clippingRect = { x: 0, y: 0, w: 1920, h: 1080, valid: false };
+  const clippingRect = {
+    x: 0,
+    y: 0,
+    w: 1920,
+    h: 1080,
+    valid: false,
+    clipRadius: 0,
+  };
 
   let stage: Stage;
 

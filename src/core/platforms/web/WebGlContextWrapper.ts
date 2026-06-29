@@ -62,6 +62,18 @@ export class WebGlContextWrapper extends GlContextWrapper {
   private scissorY: number;
   private scissorWidth: number;
   private scissorHeight: number;
+  private stencilTestEnabled: boolean;
+  private stencilFuncMode: number;
+  private stencilFuncRef: number;
+  private stencilFuncMask: number;
+  private stencilOpFail: number;
+  private stencilOpZFail: number;
+  private stencilOpZPass: number;
+  private stencilMaskValue: number;
+  private colorMaskR: boolean;
+  private colorMaskG: boolean;
+  private colorMaskB: boolean;
+  private colorMaskA: boolean;
   private blendEnabled;
   private blendSrcRgb: number;
   private blendDstRgb: number;
@@ -114,6 +126,14 @@ export class WebGlContextWrapper extends GlContextWrapper {
   public readonly COLOR_ATTACHMENT0;
   public readonly INVALID_ENUM: number;
   public readonly INVALID_OPERATION: number;
+  public readonly STENCIL_TEST: number;
+  public readonly ALWAYS: number;
+  public readonly EQUAL: number;
+  public readonly KEEP: number;
+  public readonly REPLACE: number;
+  public readonly INCR: number;
+  public readonly DECR: number;
+  public readonly STENCIL_BUFFER_BIT: number;
   //#endregion WebGL Enums
 
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
@@ -150,6 +170,26 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.scissorY = scissorBox[1];
     this.scissorWidth = scissorBox[2];
     this.scissorHeight = scissorBox[3];
+
+    this.stencilTestEnabled = gl.isEnabled(gl.STENCIL_TEST);
+    this.stencilFuncMode = gl.getParameter(gl.STENCIL_FUNC) as number;
+    this.stencilFuncRef = gl.getParameter(gl.STENCIL_REF) as number;
+    this.stencilFuncMask = gl.getParameter(gl.STENCIL_VALUE_MASK) as number;
+    this.stencilOpFail = gl.getParameter(gl.STENCIL_FAIL) as number;
+    this.stencilOpZFail = gl.getParameter(gl.STENCIL_PASS_DEPTH_FAIL) as number;
+    this.stencilOpZPass = gl.getParameter(gl.STENCIL_PASS_DEPTH_PASS) as number;
+    this.stencilMaskValue = gl.getParameter(gl.STENCIL_WRITEMASK) as number;
+
+    const colorMaskArr = gl.getParameter(gl.COLOR_WRITEMASK) as [
+      boolean,
+      boolean,
+      boolean,
+      boolean,
+    ];
+    this.colorMaskR = colorMaskArr[0];
+    this.colorMaskG = colorMaskArr[1];
+    this.colorMaskB = colorMaskArr[2];
+    this.colorMaskA = colorMaskArr[3];
 
     this.blendEnabled = gl.isEnabled(gl.BLEND);
     this.blendSrcRgb = gl.getParameter(gl.BLEND_SRC_RGB) as number;
@@ -210,6 +250,14 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.COLOR_ATTACHMENT0 = gl.COLOR_ATTACHMENT0;
     this.INVALID_ENUM = gl.INVALID_ENUM;
     this.INVALID_OPERATION = gl.INVALID_OPERATION;
+    this.STENCIL_TEST = gl.STENCIL_TEST;
+    this.ALWAYS = gl.ALWAYS;
+    this.EQUAL = gl.EQUAL;
+    this.KEEP = gl.KEEP;
+    this.REPLACE = gl.REPLACE;
+    this.INCR = gl.INCR;
+    this.DECR = gl.DECR;
+    this.STENCIL_BUFFER_BIT = gl.STENCIL_BUFFER_BIT;
   }
   /**
    * Returns true if the WebGL context is WebGL2
@@ -533,6 +581,71 @@ export class WebGlContextWrapper extends GlContextWrapper {
       this.gl.disable(this.gl.BLEND);
     }
     this.blendEnabled = blend;
+  }
+
+  setStencilTest(enable: boolean) {
+    if (enable === this.stencilTestEnabled) {
+      return;
+    }
+    if (enable === true) {
+      this.gl.enable(this.gl.STENCIL_TEST);
+    } else {
+      this.gl.disable(this.gl.STENCIL_TEST);
+    }
+    this.stencilTestEnabled = enable;
+  }
+
+  stencilFunc(func: GLenum, ref: GLint, mask: GLuint) {
+    if (
+      func !== this.stencilFuncMode ||
+      ref !== this.stencilFuncRef ||
+      mask !== this.stencilFuncMask
+    ) {
+      this.gl.stencilFunc(func, ref, mask);
+      this.stencilFuncMode = func;
+      this.stencilFuncRef = ref;
+      this.stencilFuncMask = mask;
+    }
+  }
+
+  stencilOp(fail: GLenum, zfail: GLenum, zpass: GLenum) {
+    if (
+      fail !== this.stencilOpFail ||
+      zfail !== this.stencilOpZFail ||
+      zpass !== this.stencilOpZPass
+    ) {
+      this.gl.stencilOp(fail, zfail, zpass);
+      this.stencilOpFail = fail;
+      this.stencilOpZFail = zfail;
+      this.stencilOpZPass = zpass;
+    }
+  }
+
+  stencilMask(mask: GLuint) {
+    if (mask !== this.stencilMaskValue) {
+      this.gl.stencilMask(mask);
+      this.stencilMaskValue = mask;
+    }
+  }
+
+  clearStencil(s: GLint) {
+    this.gl.clearStencil(s);
+    this.gl.clear(this.gl.STENCIL_BUFFER_BIT);
+  }
+
+  colorMask(r: GLboolean, g: GLboolean, b: GLboolean, a: GLboolean) {
+    if (
+      r !== this.colorMaskR ||
+      g !== this.colorMaskG ||
+      b !== this.colorMaskB ||
+      a !== this.colorMaskA
+    ) {
+      this.gl.colorMask(r, g, b, a);
+      this.colorMaskR = r;
+      this.colorMaskG = g;
+      this.colorMaskB = b;
+      this.colorMaskA = a;
+    }
   }
 
   /**

@@ -78,4 +78,22 @@ export abstract class CoreRenderer {
   deleteBuffer(_buffer: WebGLBuffer): void {
     // no-op default — overridden by WebGlRenderer
   }
+
+  /**
+   * Insert a begin-rounded-clip sentinel into the render op list before a
+   * node's children are added. No-op on non-WebGL renderers.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  beginRoundedClip(_node: CoreNode): void {
+    // no-op default — overridden by WebGlRenderer
+  }
+
+  /**
+   * Insert an end-rounded-clip sentinel after a node's children have been
+   * added. No-op on non-WebGL renderers.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  endRoundedClip(_node: CoreNode): void {
+    // no-op default — overridden by WebGlRenderer
+  }
 }

@@ -43,6 +43,7 @@ const makeTextProps = (): CoreTextNodeProps => ({
   autosize: false,
   boundsMargin: null,
   clipping: false,
+  clipRadius: 0,
   color: 0xffffffff,
   colorBl: 0xffffffff,
   colorBottom: 0xffffffff,
@@ -262,7 +263,9 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
 describe('WebGlRenderer.canReuseRenderOp', () => {
   it('reuses SDF text render ops with matching parent RTT dimensions', () => {
     const renderer = Object.create(WebGlRenderer.prototype) as WebGlRenderer;
+    renderer.stencilDepth = 0;
     const node = makeSdfTextNode();
+    node.stencilDepth = 0;
 
     node.props.shader = {
       shaderKey: 'default',

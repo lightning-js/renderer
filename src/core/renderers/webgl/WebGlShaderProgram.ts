@@ -20,7 +20,11 @@ import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
+import type {
+  WebGlRenderer,
+  WebGlNodeRenderOp,
+  WebGlRenderOp,
+} from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
@@ -144,7 +148,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlRenderOp): boolean {
+  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlNodeRenderOp): boolean {
     if (this.lifecycle.canBatch !== undefined) {
       return this.lifecycle.canBatch(node, currentRenderOp);
     }
@@ -201,7 +205,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     return true;
   }
 
-  bindRenderOp(renderOp: WebGlRenderOp) {
+  bindRenderOp(renderOp: WebGlNodeRenderOp) {
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
 
@@ -337,6 +341,22 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     if (this.glw.isWebGl2() && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
+  }
+
+  /**
+   * Activate this program and bind a buffer collection without going through
+   * the shader manager's detach/attach cycle. Used exclusively by the stencil
+   * write pass so it does not disrupt the currently attached scene shader.
+   *
+   * The caller is responsible for restoring `shManager.attachedShader` to null
+   * after the pass so the next real draw triggers a full re-attach.
+   */
+  bindForStencil(bufferCollection: BufferCollection): void {
+    if (this.isDestroyed === true) {
+      return;
+    }
+    this.glw.useProgram(this.program, this.uniformLocations!);
+    this.bindBufferCollection(bufferCollection);
   }
 
   detach(): void {

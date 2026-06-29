@@ -86,6 +86,11 @@ export interface Rect {
 
 export interface RectWithValid extends Rect {
   valid: boolean;
+  /**
+   * Radius for rounded corner clipping (WebGL only).
+   * 0 = rectangular scissor clipping (default).
+   */
+  clipRadius: number;
 }
 
 export interface Bound {
@@ -235,7 +240,12 @@ export function compareRect(a: Rect | null, b: Rect | null): boolean {
   if (a === null || b === null) {
     return false;
   }
-  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+  if (a.x !== b.x || a.y !== b.y || a.w !== b.w || a.h !== b.h) {
+    return false;
+  }
+  const aRadius = (a as RectWithValid).clipRadius ?? 0;
+  const bRadius = (b as RectWithValid).clipRadius ?? 0;
+  return aRadius === bRadius;
 }
 
 export function boundInsideBound(bound1: Bound, bound2: Bound) {
