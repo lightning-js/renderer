@@ -91,8 +91,10 @@ export const Rounded: WebGlShaderType<RoundedProps> = {
     varying vec2 v_nodeCoords;
 
     float roundedBox(vec2 p, vec2 s, vec4 r) {
-      r.xy = (p.x > 0.0) ? r.yz : r.xw;
-      r.x = (p.y > 0.0) ? r.y : r.x;
+      float sx = step(0.0, p.x);
+      float sy = step(0.0, p.y);
+      r.xy = mix(r.xw, r.yz, sx);
+      r.x = mix(r.x, r.y, sy);
       vec2 q = abs(p) - s + r.x;
       return (min(max(q.x, q.y), 0.0) + length(max(q, 0.0))) - r.x;
     }
