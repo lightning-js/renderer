@@ -939,10 +939,10 @@ export class WebGlContextWrapper extends GlContextWrapper {
   }
 
   /**
-   * Sets the value of a vec3 uniform variable.
+   * Sets the value of a vec2 uniform variable.
    *
    * @param location - The location of the uniform variable.
-   * @param v - array of 4 numbers.
+   * @param v - array of 2 numbers.
    */
   uniform2fa(location: string, value: Vec2) {
     this.gl.uniform2f(
@@ -999,7 +999,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * Sets the value of a vec3 uniform variable.
    *
    * @param location - The location of the uniform variable.
-   * @param v - array of 4 numbers.
+   * @param v - array of 3 numbers.
    */
   uniform3fa(location: string, value: Vec3) {
     this.gl.uniform3f(
@@ -1132,9 +1132,9 @@ export class WebGlContextWrapper extends GlContextWrapper {
   }
 
   /**
-   * Sets the value of a mat2 uniform variable.
+   * Sets the value of a mat3 uniform variable.
    * @param location - The location of the uniform variable.
-   * @param value - The array of mat2 values to set.
+   * @param value - The array of mat3 values to set.
    */
   uniformMatrix3fv(location: string, value: Float32Array) {
     this.gl.uniformMatrix3fv(
