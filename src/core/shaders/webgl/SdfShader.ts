@@ -121,22 +121,30 @@ export const Sdf: WebGlShaderType<SdfShaderProps> = {
 
     void main() {
         // Decoration quads use u = -1.0 as a sentinel for solid-fill (no SDF lookup).
-        if (v_texcoord.x < 0.0) {
-            vec4 fc = u_color * v_color;
-            // Output premultiplied alpha.
-            gl_FragColor = vec4(fc.rgb * fc.a, fc.a);
-        } else {
-            vec3 s = texture2D(u_texture, v_texcoord).rgb;
-            // Bold shifts the SDF threshold down by 0.05, expanding glyph edges.
-            // v_style: 0.0 = normal, 1.0 = bold.
-            float threshold = 0.5 - v_style * 0.05;
-            float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - threshold);
-            // u_color carries node tint + worldAlpha; v_color carries span color override.
-            float opacity = clamp(sigDist + threshold, 0.0, 1.0) * u_color.a * v_color.a;
-            vec3 col = u_color.rgb * v_color.rgb;
-            // IMPORTANT: premultiply before returning.
-            gl_FragColor = vec4(col * opacity, opacity);
-        }
+        // step(0.5, -u): 1.0 when u <= -0.5 — safely catches only the -1.0 sentinel.
+        // Cannot use step(0.0, -u) because that also catches u = 0.0, which is a
+        // valid atlas coordinate for any glyph packed at the left edge of the atlas.
+        float isSolid = step(0.5, -v_texcoord.x);
+
+        // SDF path — runs unconditionally; result is masked out for solid quads via
+        // mix() below. Sampling with u = -1.0 is safe: the atlas uses CLAMP_TO_EDGE
+        // so it returns the leftmost texel column, but the result is zeroed by mix().
+        vec3 s = texture2D(u_texture, v_texcoord).rgb;
+        // Bold shifts the SDF threshold down by 0.05, expanding glyph edges.
+        // v_style: 0.0 = normal, 1.0 = bold.
+        float threshold = 0.5 - v_style * 0.05;
+        float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - threshold);
+        // u_color carries node tint + worldAlpha; v_color carries span color override.
+        float opacity = clamp(sigDist + threshold, 0.0, 1.0) * u_color.a * v_color.a;
+        vec3 col = u_color.rgb * v_color.rgb;
+        // IMPORTANT: premultiply before returning.
+        vec4 sdfResult = vec4(col * opacity, opacity);
+
+        // Solid fill path — premultiplied alpha.
+        vec4 fc = u_color * v_color;
+        vec4 solidResult = vec4(fc.rgb * fc.a, fc.a);
+
+        gl_FragColor = mix(sdfResult, solidResult, isSolid);
     }
   `,
 };
