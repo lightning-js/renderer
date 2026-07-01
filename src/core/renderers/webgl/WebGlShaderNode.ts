@@ -149,11 +149,19 @@ export class WebGlShaderNode<
    * @param location
    * @param value
    */
-  uniformRGBA(location: string, value: number) {
-    this.uniform4fv(
-      location,
-      new Float32Array(getNormalizedRgbaComponents(value)),
-    );
+  uniformRGBA(
+    location: string,
+    value: number,
+    premultiplyAlpha: boolean = false,
+  ) {
+    const rgba = getNormalizedRgbaComponents(value);
+    if (premultiplyAlpha === false || rgba[3] === 1) {
+      this.uniform4fa(location, rgba);
+      return;
+    }
+
+    const a = rgba[3];
+    this.uniform4fa(location, [rgba[0] * a, rgba[1] * a, rgba[2] * a, a]);
   }
 
   /**
