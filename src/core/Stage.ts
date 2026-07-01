@@ -206,7 +206,7 @@ export class Stage {
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     // Set initial frame buckets and FPS update interval for FPS tracking
-    if (options.fpsBoundaries) {
+    if (options.fpsBoundaries !== undefined) {
       setFpsBoundaries(options.fpsBoundaries);
     }
     setFpsInterval(options.fpsUpdateInterval);
