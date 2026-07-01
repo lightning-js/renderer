@@ -556,8 +556,15 @@ export class Stage {
     const { fpsUpdateInterval } = this.options;
     if (fpsUpdateInterval > 0) {
       let frameCounter = this.currentFrameCounter;
-      const eleapsed = this.elapsedTime;
-      if (frameCounter !== null && frameCounter.end < eleapsed) {
+      const elapsed = this.elapsedTime;
+
+      if (frameCounter === null) {
+        frameCounter = this.currentFrameCounter = createFrameCounter(elapsed);
+      }
+
+      frameCounter.increment(this.deltaTime);
+
+      if (frameCounter.end <= elapsed) {
         this.queueFrameEvent('fpsUpdate', {
           fps: frameCounter.averageFps,
           contextSpyData: this.contextSpy?.getData() ?? null,
@@ -570,14 +577,8 @@ export class Stage {
           },
         } satisfies FpsUpdatePayload);
         this.contextSpy?.reset();
-        frameCounter = this.currentFrameCounter = createFrameCounter(eleapsed);
+        this.currentFrameCounter = null;
       }
-
-      if (frameCounter === null) {
-        frameCounter = this.currentFrameCounter = createFrameCounter(eleapsed);
-      }
-
-      frameCounter.increment(this.deltaTime);
     }
   }
 

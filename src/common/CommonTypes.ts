@@ -139,7 +139,7 @@ export type NodeRenderStateEventHandler = (
 export interface FpsUpdatePayload {
   fps: number;
   contextSpyData: Record<string, number> | null;
-  frameCount: FrameCount;
+  frameCount?: FrameCount;
 }
 
 /**

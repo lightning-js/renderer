@@ -53,7 +53,7 @@ export type FrameCounter = FrameCount & {
   get averageFps(): number;
 };
 
-let boundaries = [20, 40, 60, 80, 100];
+let fpsBoundaries = [20, 40, 60, 80, 100];
 let fpsInterval = 1000; // 1 second
 
 const frameCounter: FrameCounter = {
@@ -64,6 +64,7 @@ const frameCounter: FrameCounter = {
   count: {},
   increment(frameDelta: number) {
     this.total++;
+    const boundaries = this.boundaries;
     for (let i = 0; i < boundaries.length; i++) {
       const bucket = boundaries[i] as number;
       if (frameDelta <= bucket) {
@@ -81,7 +82,7 @@ const frameCounter: FrameCounter = {
 
 export function setFpsBoundaries(newBoundaries: number[]) {
   //sort buckets in ascending order just in case
-  boundaries = newBoundaries.sort((a, b) => a - b);
+  fpsBoundaries = newBoundaries.sort((a, b) => a - b);
 }
 
 export function setFpsInterval(newInterval: number) {
@@ -90,12 +91,14 @@ export function setFpsInterval(newInterval: number) {
 
 export function createFrameCounter(frameTime: number): FrameCounter {
   const counter = Object.create(frameCounter) as FrameCounter;
-  counter.boundaries = boundaries;
+  counter.boundaries = fpsBoundaries;
   counter.start = frameTime;
   counter.end = frameTime + fpsInterval;
+  counter.total = 0;
+  counter.count = Object.create(null) as Record<number | string, number>;
   //fill frames with 0 for each bucket
-  for (let i = 0; i < boundaries.length; i++) {
-    const bucket = boundaries[i] as number;
+  for (let i = 0; i < fpsBoundaries.length; i++) {
+    const bucket = fpsBoundaries[i] as number;
     counter.count[bucket] = 0;
   }
   counter.count['overflow'] = 0;
