@@ -54,16 +54,15 @@ import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
-import type { Platform } from './platforms/Platform.js';
+import type { Platform, PlatformSettings } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
 
 export type StageOptions = Omit<
   RendererMainSettings,
-  'inspector' | 'platform' | 'maxRetryCount'
+  'inspector' | 'platform' | 'maxRetryCount' | keyof PlatformSettings
 > & {
   textureMemory: TextureMemoryManagerSettings;
-  canvas: HTMLCanvasElement | OffscreenCanvas;
   fpsUpdateInterval: number;
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
@@ -164,7 +163,6 @@ export class Stage {
       appHeight,
       boundsMargin,
       enableContextSpy,
-      numImageWorkers,
       textureMemory,
       renderEngine,
       fontEngines,
@@ -188,7 +186,6 @@ export class Stage {
     this.targetFrameTime = options.targetFPS > 0 ? 1000 / options.targetFPS : 0;
 
     this.txManager = new CoreTextureManager(this, {
-      numImageWorkers,
       createImageBitmapSupport,
       maxRetryCount,
     });
