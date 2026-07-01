@@ -566,7 +566,9 @@ export class Stage {
 
       if (frameCounter.end <= elapsed) {
         this.queueFrameEvent('fpsUpdate', {
-          fps: frameCounter.averageFps,
+          fps: Math.round(
+            (frameCounter.total / (elapsed - frameCounter.start)) * 1000,
+          ),
           contextSpyData: this.contextSpy?.getData() ?? null,
           frameCount: {
             //only make a copy of the boundaries array since it's read-only and we want to prevent mutation from outside
