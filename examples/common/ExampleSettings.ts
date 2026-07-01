@@ -41,6 +41,13 @@ export interface SnapshotOptions {
     w: number;
     h: number;
   };
+  /**
+   * Maximum number of pixels allowed to differ before the snapshot is
+   * considered a failure. Defaults to 10 to absorb sub-pixel rounding
+   * differences across platforms (e.g. macOS vs Linux headless Chromium).
+   * Set to 0 to require a pixel-perfect match.
+   */
+  maxDiffPixels?: number;
 }
 
 export interface ExampleSettings {
