@@ -148,6 +148,7 @@ export class WebGlShaderNode<
    * Sets the value of a RGBA variable
    * @param location
    * @param value
+   * @param premultiplyAlpha
    */
   uniformRGBA(
     location: string,
