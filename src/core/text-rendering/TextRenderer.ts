@@ -334,6 +334,11 @@ export interface TextLayout {
    */
   totalQuadCount: number;
   /**
+   * Whether this layout was generated for richText mode.
+   * Determines the vertex format: false = 4 floats/vertex (plain), true = 6 floats/vertex (rich).
+   */
+  richText: boolean;
+  /**
    * Total text width
    */
   width: number;

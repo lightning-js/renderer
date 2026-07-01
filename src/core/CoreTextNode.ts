@@ -387,43 +387,65 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         glw.STATIC_DRAW,
       );
 
+      // Select vertex format based on whether richText was used for this layout.
+      // Plain (richText=false): 4 floats/vertex — x, y, u, v.
+      // Rich  (richText=true):  6 floats/vertex — x, y, u, v, packed_color, style.
+      const isRich = this._renderInfo.layout.richText === true;
+      const floatsPerVertex = isRich ? 6 : 4;
+      const stride = floatsPerVertex * Float32Array.BYTES_PER_ELEMENT;
+
+      const attributes: Record<
+        string,
+        {
+          name: string;
+          size: number;
+          type: number;
+          normalized: boolean;
+          stride: number;
+          offset: number;
+        }
+      > = {
+        a_position: {
+          name: 'a_position',
+          size: 2,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 0,
+        },
+        a_textureCoords: {
+          name: 'a_textureCoords',
+          size: 2,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+        },
+      };
+
+      if (isRich) {
+        attributes['a_color'] = {
+          name: 'a_color',
+          size: 4,
+          type: glw.UNSIGNED_BYTE as number,
+          normalized: true,
+          stride,
+          offset: 4 * Float32Array.BYTES_PER_ELEMENT,
+        };
+        attributes['a_style'] = {
+          name: 'a_style',
+          size: 1,
+          type: glw.FLOAT as number,
+          normalized: false,
+          stride,
+          offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+        };
+      }
+
       this._sdfQuadCollection = new BufferCollection([
         {
           buffer: this._sdfBuffer,
-          attributes: {
-            a_position: {
-              name: 'a_position',
-              size: 2,
-              type: glw.FLOAT as number,
-              normalized: false,
-              stride: 6 * Float32Array.BYTES_PER_ELEMENT,
-              offset: 0,
-            },
-            a_textureCoords: {
-              name: 'a_textureCoords',
-              size: 2,
-              type: glw.FLOAT as number,
-              normalized: false,
-              stride: 6 * Float32Array.BYTES_PER_ELEMENT,
-              offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-            },
-            a_color: {
-              name: 'a_color',
-              size: 4,
-              type: glw.UNSIGNED_BYTE as number,
-              normalized: true,
-              stride: 6 * Float32Array.BYTES_PER_ELEMENT,
-              offset: 4 * Float32Array.BYTES_PER_ELEMENT,
-            },
-            a_style: {
-              name: 'a_style',
-              size: 1,
-              type: glw.FLOAT as number,
-              normalized: false,
-              stride: 6 * Float32Array.BYTES_PER_ELEMENT,
-              offset: 5 * Float32Array.BYTES_PER_ELEMENT,
-            },
-          },
+          attributes,
         },
       ]);
     }

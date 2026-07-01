@@ -28,18 +28,20 @@ import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
-import { Sdf } from '../shaders/webgl/SdfShader.js';
+import { Sdf, SdfPlain } from '../shaders/webgl/SdfShader.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
 import type { TextLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
 
-// Each glyph/deco quad requires 6 vertices with 6 floats each
-// (x, y, u, v, packed_color, style)
-const FLOATS_PER_VERTEX = 6;
+// Plain (non-richText) layout: x, y, u, v — matches v3.0.6 format
+const FLOATS_PER_VERTEX_PLAIN = 4;
+// Rich-text layout: x, y, u, v, packed_color, style
+const FLOATS_PER_VERTEX_RICH = 6;
 const VERTICES_PER_GLYPH = 6;
-const FLOATS_PER_QUAD = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX; // 36
+const FLOATS_PER_QUAD_PLAIN = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX_PLAIN; // 24
+const FLOATS_PER_QUAD_RICH = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX_RICH; // 36
 
 // Horizontal shear factor for fake italic: tan(14°).
 // Applied to glyph and decoration vertices in design-unit space.
@@ -56,15 +58,18 @@ const _richTextResult = new ParseResult();
 const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
+let sdfPlainShader: WebGlShaderNode | null = null;
 let renderer: WebGlRenderer | null = null;
 
 // Initialize the SDF text renderer
 const init = (stage: Stage): void => {
   SdfFontHandler.init();
 
-  // Register SDF shader with the shader manager
+  // Register both SDF shader variants with the shader manager
   stage.shManager.registerShaderType('Sdf', Sdf);
+  stage.shManager.registerShaderType('SdfPlain', SdfPlain);
   sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
+  sdfPlainShader = stage.shManager.createShader('SdfPlain') as WebGlShaderNode;
   renderer = stage.renderer as WebGlRenderer;
 };
 
@@ -126,7 +131,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
  * Called from CoreTextNode during rendering.
  */
 const renderQuads = (textNode: CoreTextNode): void => {
-  textNode.props.shader = sdfShader;
+  // Select the correct shader variant based on richText mode.
+  // sdfPlainShader uses a 4-float-per-vertex VBO (no a_color / a_style attributes).
+  // sdfShader uses a 6-float-per-vertex VBO with per-span color and style.
+  textNode.props.shader =
+    textNode.textProps.richText === true ? sdfShader : sdfPlainShader;
   renderer!.addRenderOp(textNode);
 };
 
@@ -280,9 +289,107 @@ const generateTextLayout = (
 
   const lineAmount = lines.length;
 
-  // --- PASS 1: count exact glyphs and decoration quads ---
-  // getGlyph is called here (not just in pass 2) so the buffer is sized exactly,
-  // preventing degenerate zero-position triangles at the tail.
+  if (richText === false) {
+    // --- PLAIN PATH (richText=false): 4 floats/vertex, single counting pass ---
+    // Pass 1: count glyphs (calling getGlyph to skip null entries, matching rich pass 1 behaviour)
+    let glyphCount = 0;
+    for (let i = 0; i < lineAmount; i++) {
+      const textLine = (lines[i] as TextLineStruct)[0];
+      for (const char of textLine) {
+        if (hasZeroWidthSpace(char) === true) continue;
+        const codepoint = char.codePointAt(0);
+        if (codepoint === undefined) continue;
+        if (SdfFontHandler.getGlyph(fontFamily, codepoint) === null) continue;
+        glyphCount++;
+      }
+    }
+
+    const vertexBuffer = new Float32Array(glyphCount * FLOATS_PER_QUAD_PLAIN);
+    let bi = 0;
+    let currentX = 0;
+    let currentY = 0;
+
+    for (let i = 0; i < lineAmount; i++) {
+      const line = lines[i] as TextLineStruct;
+      const textLine = line[0];
+      let prevGlyphId = 0;
+      currentX = line[3];
+      currentY = line[4] / fontScale;
+
+      for (const char of textLine) {
+        if (hasZeroWidthSpace(char) === true) continue;
+        const codepoint = char.codePointAt(0);
+        if (codepoint === undefined) continue;
+        const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+        if (glyph === null) continue;
+
+        if (prevGlyphId !== 0) {
+          currentX += SdfFontHandler.getKerning(
+            fontFamily,
+            prevGlyphId,
+            glyph.id,
+          );
+        }
+
+        const x1 = currentX + glyph.xoffset;
+        const y1 = currentY + glyph.yoffset;
+        const x2 = x1 + glyph.width;
+        const y2 = y1 + glyph.height;
+
+        const u1 = glyph.x / atlasWidth;
+        const v1 = glyph.y / atlasHeight;
+        const u2 = u1 + glyph.width / atlasWidth;
+        const v2 = v1 + glyph.height / atlasHeight;
+
+        // Triangle 1: TL, TR, BL
+        vertexBuffer[bi++] = x1;
+        vertexBuffer[bi++] = y1;
+        vertexBuffer[bi++] = u1;
+        vertexBuffer[bi++] = v1;
+        vertexBuffer[bi++] = x2;
+        vertexBuffer[bi++] = y1;
+        vertexBuffer[bi++] = u2;
+        vertexBuffer[bi++] = v1;
+        vertexBuffer[bi++] = x1;
+        vertexBuffer[bi++] = y2;
+        vertexBuffer[bi++] = u1;
+        vertexBuffer[bi++] = v2;
+        // Triangle 2: TR, BR, BL
+        vertexBuffer[bi++] = x2;
+        vertexBuffer[bi++] = y1;
+        vertexBuffer[bi++] = u2;
+        vertexBuffer[bi++] = v1;
+        vertexBuffer[bi++] = x2;
+        vertexBuffer[bi++] = y2;
+        vertexBuffer[bi++] = u2;
+        vertexBuffer[bi++] = v2;
+        vertexBuffer[bi++] = x1;
+        vertexBuffer[bi++] = y2;
+        vertexBuffer[bi++] = u1;
+        vertexBuffer[bi++] = v2;
+
+        currentX += glyph.xadvance + letterSpacing;
+        prevGlyphId = glyph.id;
+      }
+    }
+
+    return {
+      vertexBuffer,
+      glyphCount,
+      totalQuadCount: glyphCount,
+      richText: false,
+      distanceRange: fontScale * fontData.distanceField.distanceRange,
+      width: effectiveWidth * fontScale,
+      height: effectiveHeight,
+      fontScale: fontScale,
+      lineHeight: lineHeightPx,
+      fontFamily,
+      remainingLines,
+      hasRemainingText,
+    };
+  }
+
+  // --- RICH PATH (richText=true): 6 floats/vertex, two-pass ---
   let glyphCount = 0;
   let decoQuadCount = 0;
   let strippedPos = 0;
@@ -292,48 +399,46 @@ const generateTextLayout = (
     const textLine = (lines[i] as TextLineStruct)[0];
     for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
       glyphCount++;
-      if (richText === true) {
-        // Advance span cursor past any spans that ended before this position.
-        // curSpanIdx is always < spanCount after the loop; non-null assertions are safe.
-        while (
-          curSpanIdx < _richTextResult.spanCount - 1 &&
-          strippedPos >= _richTextResult.spans[curSpanIdx]!.end
-        ) {
-          curSpanIdx++;
-        }
-        const span = _richTextResult.spans[curSpanIdx]!;
-        if (span.underline === true) decoQuadCount++;
-        if (span.strikethrough === true) decoQuadCount++;
-        strippedPos++;
+      // Advance span cursor past any spans that ended before this position.
+      // curSpanIdx is always < spanCount after the loop; non-null assertions are safe.
+      while (
+        curSpanIdx < _richTextResult.spanCount - 1 &&
+        strippedPos >= _richTextResult.spans[curSpanIdx]!.end
+      ) {
+        curSpanIdx++;
       }
+      const span = _richTextResult.spans[curSpanIdx]!;
+      if (span.underline === true) decoQuadCount++;
+      if (span.strikethrough === true) decoQuadCount++;
+      strippedPos++;
     }
   }
 
   const totalQuadCount = glyphCount + decoQuadCount;
 
   // --- Single allocation for the entire vertex payload ---
-  // Layout: [glyph quads (glyphCount × 6 × 5)] [deco quads (decoQuadCount × 6 × 5)]
-  const vertexBuffer = new Float32Array(totalQuadCount * FLOATS_PER_QUAD);
+  // Layout: [glyph quads (glyphCount × 36)] [deco quads (decoQuadCount × 36)]
+  const vertexBuffer = new Float32Array(totalQuadCount * FLOATS_PER_QUAD_RICH);
   // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 4 of each vertex.
   const u32Buffer = new Uint32Array(vertexBuffer.buffer);
 
   // Write cursors (float indices into vertexBuffer / u32Buffer).
   let gi = 0; // glyph region: 0 … glyphCount*36-1
-  let di = glyphCount * FLOATS_PER_QUAD; // deco region: starts after all glyph quads
+  let di = glyphCount * FLOATS_PER_QUAD_RICH; // deco region: starts after all glyph quads
 
   // Reset rich-text tracking for pass 2.
   strippedPos = 0;
@@ -355,17 +460,17 @@ const generateTextLayout = (
 
     for (const char of textLine) {
       if (hasZeroWidthSpace(char) === true) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
-        if (richText === true) strippedPos++;
+        strippedPos++;
         continue;
       }
 
@@ -376,20 +481,18 @@ const generateTextLayout = (
       let spanBold = false;
       let spanItalic = false;
 
-      if (richText === true) {
-        while (
-          curSpanIdx < _richTextResult.spanCount - 1 &&
-          strippedPos >= _richTextResult.spans[curSpanIdx]!.end
-        ) {
-          curSpanIdx++;
-        }
-        const span = _richTextResult.spans[curSpanIdx]!;
-        packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
-        spanUnderline = span.underline;
-        spanStrikethrough = span.strikethrough;
-        spanBold = span.bold;
-        spanItalic = span.italic;
+      while (
+        curSpanIdx < _richTextResult.spanCount - 1 &&
+        strippedPos >= _richTextResult.spans[curSpanIdx]!.end
+      ) {
+        curSpanIdx++;
       }
+      const span = _richTextResult.spans[curSpanIdx]!;
+      packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
+      spanUnderline = span.underline;
+      spanStrikethrough = span.strikethrough;
+      spanBold = span.bold;
+      spanItalic = span.italic;
 
       // --- Kerning ---
       if (prevGlyphId !== 0) {
@@ -523,6 +626,7 @@ const generateTextLayout = (
     vertexBuffer,
     glyphCount,
     totalQuadCount,
+    richText: true,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
     width: effectiveWidth * fontScale,
     height: effectiveHeight,

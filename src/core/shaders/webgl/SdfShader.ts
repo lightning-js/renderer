@@ -48,6 +48,84 @@ export interface SdfShaderProps {
  * ends up being a performance bottleneck we can always look at ways to
  * remove it.
  */
+/**
+ * Plain SDF shader — no per-vertex color or style attributes.
+ *
+ * Used when richText=false (the default). Matches the v3.0.6 vertex format
+ * (4 floats/vertex: x, y, u, v) and the original simple fragment path with
+ * no solid-fill branch. This keeps the VBO 33% smaller and the fragment
+ * shader minimal for all ordinary text nodes.
+ */
+export const SdfPlain: WebGlShaderType<SdfShaderProps> = {
+  props: {
+    transform: IDENTITY_MATRIX_3x3,
+    color: 0xffffffff,
+    size: 16,
+    distanceRange: 1.0,
+  },
+  onSdfBind(props) {
+    this.uniformMatrix3fv('u_transform', props.transform);
+    this.uniform4fa('u_color', getNormalizedRgbaComponents(props.color));
+    this.uniform1f('u_size', props.size);
+    this.uniform1f('u_distanceRange', props.distanceRange);
+  },
+  vertex: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+    attribute vec2 a_position;
+    attribute vec2 a_textureCoords;
+
+    uniform vec2 u_resolution;
+    uniform mat3 u_transform;
+    uniform float u_pixelRatio;
+    uniform float u_size;
+    uniform float u_distanceRange;
+
+    varying vec2 v_texcoord;
+    varying float v_scaledDistRange;
+
+    void main() {
+      vec2 scrolledPosition = a_position * u_size;
+      vec2 transformedPosition = (u_transform * vec3(scrolledPosition, 1)).xy;
+
+      // Calculate screen space with pixel ratio
+      vec2 screenSpace = (transformedPosition * u_pixelRatio / u_resolution * 2.0 - 1.0) * vec2(1, -1);
+
+      gl_Position = vec4(screenSpace, 0.0, 1.0);
+      v_texcoord = a_textureCoords;
+      v_scaledDistRange = u_distanceRange * u_pixelRatio;
+    }
+  `,
+  fragment: `
+    # ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    # else
+    precision mediump float;
+    # endif
+    uniform vec4 u_color;
+    uniform sampler2D u_texture;
+
+    varying vec2 v_texcoord;
+    varying float v_scaledDistRange;
+
+    float median(float r, float g, float b) {
+        return clamp(b, min(r, g), max(r, g));
+    }
+
+    void main() {
+        vec3 sample = texture2D(u_texture, v_texcoord).rgb;
+        float sigDist = v_scaledDistRange * (median(sample.r, sample.g, sample.b) - 0.5);
+        float opacity = clamp(sigDist + 0.5, 0.0, 1.0) * u_color.a;
+
+        // IMPORTANT: We must premultiply the color by the alpha value before returning it.
+        gl_FragColor = vec4(u_color.r * opacity, u_color.g * opacity, u_color.b * opacity, opacity);
+    }
+  `,
+};
+
 export const Sdf: WebGlShaderType<SdfShaderProps> = {
   props: {
     transform: IDENTITY_MATRIX_3x3,
