@@ -239,10 +239,9 @@ export interface RendererRuntimeSettings {
   fpsUpdateInterval: number;
 
   /**
-   * Boundaries for FPS buckets in the FPS update event payload
+   * Frame time bucket boundaries (in milliseconds) included in the `fpsUpdate` event payload.
    */
   fpsBoundaries?: number[];
-
   /**
    * Clears the render buffer on reset
    *
