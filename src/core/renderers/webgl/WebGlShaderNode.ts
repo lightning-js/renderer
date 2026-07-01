@@ -125,7 +125,6 @@ export class WebGlShaderNode<
   }
 
   updateUniformUsage(): void {
-    /* eslint-disable @typescript-eslint/no-unused-vars */
     for (const _ in this.uniforms.single) {
       this.uniforms.hasStoredUniforms = true;
       return;
@@ -142,7 +141,6 @@ export class WebGlShaderNode<
       this.uniforms.hasStoredUniforms = true;
       return;
     }
-    /* eslint-enable @typescript-eslint/no-unused-vars */
     this.uniforms.hasStoredUniforms = false;
   }
 
