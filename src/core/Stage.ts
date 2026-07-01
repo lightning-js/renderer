@@ -589,6 +589,7 @@ export class Stage {
   }
 
   updateFpsBoundaries(newBoundaries: number[]) {
+    this.options.fpsBoundaries = newBoundaries;
     setFpsBoundaries(newBoundaries);
     // Reset current frame counter to start new interval with new boundaries
     this.currentFrameCounter = null;
