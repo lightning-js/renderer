@@ -195,6 +195,7 @@ const domPropertyMap: { [key: string]: string } = {
   id: 'test-id',
 };
 
+/**
 const gradientColorPropertyMap = [
   'colorTop',
   'colorBottom',
@@ -205,6 +206,7 @@ const gradientColorPropertyMap = [
   'colorBl',
   'colorBr',
 ];
+*/
 
 const textureTypeNames: Record<number, string> = {
   [TextureType.generic]: 'generic',
@@ -794,9 +796,6 @@ export class Inspector {
   }
 
   createTextNode(node: CoreTextNode): CoreTextNode {
-    // eslint-disable-next-line
-    // @ts-ignore - textProps is a private property and keeping it that way
-    // but we need it from the inspector to set the initial properties on the div element
     const div = this.createDiv(node, node.textProps);
     (div as HTMLElement & { node: CoreNode }).node = node;
     (node as CoreTextNode & { div: HTMLElement }).div = div;

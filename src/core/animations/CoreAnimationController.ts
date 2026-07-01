@@ -24,7 +24,6 @@ import type {
 import type { AnimationManager } from './AnimationManager.js';
 import type { CoreAnimation } from './CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
-import type { AnimationTickPayload } from '../../common/CommonTypes.js';
 
 export class CoreAnimationController
   extends EventEmitter

@@ -79,28 +79,6 @@ export interface SupportedSetUniforms {
     | 'uniform4i';
 }
 
-type SupportSetUniforms =
-  | 'uniform2fv'
-  | 'uniform2iv'
-  | 'uniform3fv'
-  | 'uniform3iv'
-  | 'uniform4fv'
-  | 'uniform4iv'
-  | 'uniformMatrix2fv'
-  | 'uniformMatrix3fv'
-  | 'uniformMatrix4fv'
-  | 'uniform1f'
-  | 'uniform1fv'
-  | 'uniform1i'
-  | 'uniform1iv'
-  | 'uniform3fv'
-  | 'uniform2f'
-  | 'uniform2i'
-  | 'uniform3f'
-  | 'uniform3i'
-  | 'uniform4f'
-  | 'uniform4i';
-
 export interface ShaderOptions {
   shaderSources?: ShaderProgramSources;
   supportsIndexedTextures?: boolean;

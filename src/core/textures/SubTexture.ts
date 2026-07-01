@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-import type { Dimensions } from '../../common/CommonTypes.js';
 import { assertTruthy } from '../../utils.js';
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { ImageTexture } from './ImageTexture.js';
@@ -27,7 +26,6 @@ import {
   type TextureData,
   type TextureFailedEventHandler,
   type TextureLoadedEventHandler,
-  type TextureState,
 } from './Texture.js';
 
 let subTextureId = 0;
@@ -156,7 +154,7 @@ export class SubTexture extends Texture {
 
   override async getTextureSource(): Promise<TextureData> {
     // Check if parent texture is loaded
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
       resolve({
         data: this.props,
       });

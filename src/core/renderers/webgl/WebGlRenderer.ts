@@ -508,7 +508,7 @@ export class WebGlRenderer extends CoreRenderer {
    *
    * @param surface
    */
-  render(surface: 'screen' | CoreContextTexture = 'screen'): void {
+  render(_surface: 'screen' | CoreContextTexture = 'screen'): void {
     const { glw, quadBuffer } = this;
 
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);

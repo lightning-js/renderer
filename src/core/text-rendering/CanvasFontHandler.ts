@@ -55,7 +55,6 @@ const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(
 const fontCache = new Map<string, CanvasFont>();
 
 let initialized = false;
-let context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 let measureContext:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D;
@@ -147,7 +146,6 @@ export const init = (
     );
   }
 
-  context = c;
   measureContext = mc || c;
 
   // Register the default 'sans-serif' font face
@@ -209,7 +207,7 @@ export const getFontMetrics = (
   }
   let metrics = fontCache.get(fontFamily)!.metrics;
   if (metrics === undefined) {
-    metrics = calculateFontMetrics(fontFamily, fontSize);
+    metrics = calculateFontMetrics(fontFamily);
   }
   return processFontMetrics(fontFamily, fontSize, metrics);
 };
@@ -260,10 +258,7 @@ export const measureText = (
  * @param fontSize
  * @returns
  */
-export function calculateFontMetrics(
-  fontFamily: string,
-  fontSize: number,
-): FontMetrics {
+export function calculateFontMetrics(fontFamily: string): FontMetrics {
   // If the font face doesn't have metrics defined, we fallback to using the
   // browser's measureText method to calculate take a best guess at the font
   // actual font's metrics.
