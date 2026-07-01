@@ -161,7 +161,10 @@ export class WebGlShaderNode<
     }
 
     const a = rgba[3];
-    this.uniform4fa(location, [rgba[0] * a, rgba[1] * a, rgba[2] * a, a]);
+    rgba[0] *= a;
+    rgba[1] *= a;
+    rgba[2] *= a;
+    this.uniform4fa(location, rgba);
   }
 
   /**
