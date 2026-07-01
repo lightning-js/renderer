@@ -57,6 +57,12 @@ import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform, PlatformSettings } from './platforms/Platform.js';
 import type { WebPlatform } from './platforms/web/WebPlatform.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
+import {
+  createFrameCounter,
+  setFpsInterval,
+  setFpsBoundaries,
+  type FrameCounter,
+} from './lib/fps.js';
 
 export type StageOptions = Omit<
   RendererMainSettings,
@@ -64,6 +70,7 @@ export type StageOptions = Omit<
 > & {
   textureMemory: TextureMemoryManagerSettings;
   fpsUpdateInterval: number;
+  fpsBoundaries?: number[];
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
   inspector: boolean;
@@ -135,10 +142,10 @@ export class Stage {
   lastFrameTime = 0;
   currentFrameTime = 0;
   elapsedTime = 0;
+  currentFrameCounter: FrameCounter | null = null;
+
   private timedNodes: CoreNode[] = [];
   private clrColor = 0x00000000;
-  private fpsNumFrames = 0;
-  private fpsElapsedTime = 0;
   private numQuadsRendered = 0;
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
@@ -194,6 +201,12 @@ export class Stage {
 
     this.animationManager = new AnimationManager();
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
+
+    // Set initial frame buckets and FPS update interval for FPS tracking
+    if (options.fpsBoundaries !== undefined) {
+      setFpsBoundaries(options.fpsBoundaries);
+    }
+    setFpsInterval(options.fpsUpdateInterval);
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];
     if (boundsMargin) {
@@ -391,9 +404,8 @@ export class Stage {
     this.lastFrameTime = this.currentFrameTime;
     this.currentFrameTime = newFrameTime;
     this.elapsedTime = newFrameTime - this.startTime;
-    this.deltaTime = !this.lastFrameTime
-      ? 100 / 6
-      : newFrameTime - this.lastFrameTime;
+    this.deltaTime =
+      this.lastFrameTime === 0 ? 100 / 6 : newFrameTime - this.lastFrameTime;
     this.txManager.frameTime = newFrameTime;
     this.txMemManager.frameTime = newFrameTime;
 
@@ -550,22 +562,48 @@ export class Stage {
     // If there's an FPS update interval, emit the FPS update event
     // when the specified interval has elapsed.
     const { fpsUpdateInterval } = this.options;
-    if (fpsUpdateInterval) {
-      this.fpsNumFrames++;
-      this.fpsElapsedTime += this.deltaTime;
-      if (this.fpsElapsedTime >= fpsUpdateInterval) {
-        const fps = Math.round(
-          (this.fpsNumFrames * 1000) / this.fpsElapsedTime,
-        );
-        this.fpsNumFrames = 0;
-        this.fpsElapsedTime = 0;
+    if (fpsUpdateInterval > 0) {
+      let frameCounter = this.currentFrameCounter;
+      const elapsed = this.elapsedTime;
+
+      if (frameCounter === null) {
+        frameCounter = this.currentFrameCounter = createFrameCounter(elapsed);
+      }
+
+      frameCounter.increment(this.deltaTime);
+
+      if (frameCounter.end <= elapsed) {
         this.queueFrameEvent('fpsUpdate', {
-          fps,
+          fps: Math.round(
+            (frameCounter.total / (elapsed - frameCounter.start)) * 1000,
+          ),
           contextSpyData: this.contextSpy?.getData() ?? null,
+          frameCount: {
+            //only make a copy of the boundaries array since it's read-only and we want to prevent mutation from outside
+            boundaries: ([] as number[]).concat(frameCounter.boundaries),
+            //count and total are not mutated inside the renderer anymore so no copy is necessary
+            count: frameCounter.count,
+            total: frameCounter.total,
+          },
         } satisfies FpsUpdatePayload);
         this.contextSpy?.reset();
+        this.currentFrameCounter = null;
       }
     }
+  }
+
+  updateFpsUpdateInterval(newInterval: number) {
+    this.options.fpsUpdateInterval = newInterval;
+    setFpsInterval(newInterval);
+    // Reset current frame counter to start new interval
+    this.currentFrameCounter = null;
+  }
+
+  updateFpsBoundaries(newBoundaries: number[]) {
+    this.options.fpsBoundaries = newBoundaries;
+    setFpsBoundaries(newBoundaries);
+    // Reset current frame counter to start new interval with new boundaries
+    this.currentFrameCounter = null;
   }
 
   calculateQuads() {
