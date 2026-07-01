@@ -583,6 +583,7 @@ export class Stage {
   }
 
   updateFpsUpdateInterval(newInterval: number) {
+    this.options.fpsUpdateInterval = newInterval;
     setFpsInterval(newInterval);
     // Reset current frame counter to start new interval
     this.currentFrameCounter = null;
