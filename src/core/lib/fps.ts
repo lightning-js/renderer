@@ -81,8 +81,8 @@ const frameCounter: FrameCounter = {
 };
 
 export function setFpsBoundaries(newBoundaries: number[]) {
-  //sort buckets in ascending order just in case
-  fpsBoundaries = newBoundaries.sort((a, b) => a - b);
+  // sort buckets in ascending order just in case
+  fpsBoundaries = newBoundaries.slice().sort((a, b) => a - b);
 }
 
 export function setFpsInterval(newInterval: number) {
