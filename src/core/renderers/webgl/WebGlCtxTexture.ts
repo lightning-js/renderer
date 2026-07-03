@@ -194,13 +194,17 @@ export class WebGlCtxTexture extends CoreContextTexture {
     const memoryPadding = 1.1; // Add padding to account for GPU Padding
     const isImageBitmap =
       typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap;
+    const isHTMLCanvas =
+      typeof HTMLCanvasElement !== 'undefined' &&
+      tdata instanceof HTMLCanvasElement;
 
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
       isImageBitmap ||
+      isHTMLCanvas ||
       tdata instanceof ImageData ||
-      // not using typeof HTMLI mageElement due to web worker
+      // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(tdata) === true
     ) {
       w = tdata.width;

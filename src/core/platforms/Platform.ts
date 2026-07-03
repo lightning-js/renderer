@@ -58,14 +58,14 @@ export abstract class Platform {
     };
 
     // If a canvas was provided in the settings, use it. Otherwise, create a new one.
-    this.canvas = settings.canvas || this.createCanvas();
+    this.canvas = settings.canvas || document.createElement('canvas');
   }
 
   /**
-   * Creates a new canvas element.
-   * @returns The created HTMLCanvasElement.
+   * Creates a new canvas.
+   * @returns The created HTMLCanvasElement or OffscreenCanvas.
    */
-  abstract createCanvas(): HTMLCanvasElement;
+  abstract createCanvas(): HTMLCanvasElement | OffscreenCanvas;
 
   /**
    * Create new rendering context (only for WebGL, Canvas does not require a context)

@@ -102,6 +102,7 @@ export interface TextureData {
   data:
     | ImageBitmap
     | ImageData
+    | HTMLCanvasElement
     | SubTextureProps
     | CompressedData
     | HTMLImageElement
