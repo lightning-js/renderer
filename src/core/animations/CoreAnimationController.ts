@@ -29,7 +29,7 @@ export class CoreAnimationController
   extends EventEmitter
   implements IAnimationController
 {
-  stoppedPromise: Promise<void>;
+  stoppedPromise: Promise<void> | null = null;
   /**
    * If this is null, then the animation is in a finished / stopped state.
    */
@@ -42,8 +42,6 @@ export class CoreAnimationController
   ) {
     super();
     this.state = 'stopped';
-    // Initial stopped promise is resolved (since the animation is stopped)
-    this.stoppedPromise = Promise.resolve();
 
     // Bind event handlers
     this.onAnimating = this.onAnimating.bind(this);
@@ -54,7 +52,7 @@ export class CoreAnimationController
 
   start(): IAnimationController {
     if (this.state !== 'running' && this.state !== 'scheduled') {
-      this.makeStoppedPromise();
+      this.stoppedPromise = null;
       this.registerAnimation();
       this.state = 'scheduled';
     }
@@ -89,6 +87,16 @@ export class CoreAnimationController
   }
 
   waitUntilStopped(): Promise<void> {
+    // If already stopped, return a resolved promise without caching it
+    if (this.state === 'stopped') {
+      return Promise.resolve();
+    }
+    // Lazily create the stopped promise only when someone actually awaits it
+    if (this.stoppedPromise === null) {
+      this.stoppedPromise = new Promise((resolve) => {
+        this.stoppedResolve = resolve;
+      });
+    }
     return this.stoppedPromise;
   }
 
@@ -110,14 +118,6 @@ export class CoreAnimationController
     this.animation.off('animating', this.onAnimating);
     this.animation.off('tick', this.onTick);
     this.animation.off('destroy', this.onDestroy);
-  }
-
-  private makeStoppedPromise(): void {
-    if (this.stoppedResolve === null) {
-      this.stoppedPromise = new Promise((resolve) => {
-        this.stoppedResolve = resolve;
-      });
-    }
   }
 
   private onDestroy(this: CoreAnimationController): void {
