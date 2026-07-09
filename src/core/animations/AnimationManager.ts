@@ -20,19 +20,29 @@
 import { CoreAnimation } from './CoreAnimation.js';
 
 export class AnimationManager {
-  activeAnimations: Map<number, CoreAnimation> = new Map();
+  private activeAnimations: CoreAnimation[] = [];
 
   registerAnimation(animation: CoreAnimation) {
-    this.activeAnimations.set(animation.id, animation);
+    this.activeAnimations.push(animation);
   }
 
   unregisterAnimation(animation: CoreAnimation) {
-    this.activeAnimations.delete(animation.id);
+    const animations = this.activeAnimations;
+    const index = animations.indexOf(animation);
+    if (index >= 0) {
+      // Swap-remove: replace with last element and pop for O(1) removal
+      const last = animations.length - 1;
+      if (index !== last) {
+        animations[index] = animations[last]!;
+      }
+      animations.pop();
+    }
   }
 
   update(dt: number) {
-    for (const animation of this.activeAnimations.values()) {
-      animation.update(dt);
+    const animations = this.activeAnimations;
+    for (let i = 0, len = animations.length; i < len; i++) {
+      animations[i]!.update(dt);
     }
   }
 }

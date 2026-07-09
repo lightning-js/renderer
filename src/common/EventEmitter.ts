@@ -64,9 +64,9 @@ export class EventEmitter implements IEventEmitter {
     if (!listeners) {
       return;
     }
-    listeners.forEach((listener) => {
-      listener(this, data);
-    });
+    for (let i = 0, len = listeners.length; i < len; i++) {
+      listeners[i]!(this, data);
+    }
   }
 
   removeAllListeners() {
