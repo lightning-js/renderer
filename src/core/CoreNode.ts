@@ -57,8 +57,6 @@ import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
 import type { AnimationSettings } from './animations/CoreAnimation.js';
 import type { IAnimationController } from '../common/IAnimationController.js';
-import { CoreAnimation } from './animations/CoreAnimation.js';
-import { CoreAnimationController } from './animations/CoreAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
 import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
@@ -2784,14 +2782,7 @@ export class CoreNode extends EventEmitter {
     props: Partial<CoreNodeAnimateProps>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
-    const animation = new CoreAnimation(this, props, settings);
-
-    const controller = new CoreAnimationController(
-      this.stage.animationManager,
-      animation,
-    );
-
-    return controller;
+    return this.stage.animationManager.createAnimation(this, props, settings);
   }
 
   flush() {

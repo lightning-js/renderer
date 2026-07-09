@@ -50,21 +50,35 @@ type PropValuesMap = {
 let animationIdCounter = 0;
 
 export class CoreAnimation extends EventEmitter {
-  public readonly id: number = ++animationIdCounter;
-  public settings: AnimationSettings;
+  public id: number = 0;
+  public settings!: AnimationSettings;
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
-  private timingFunction: TimingFunction;
+  private timingFunction!: TimingFunction;
+  private node!: CoreNode;
 
   propValuesMap: PropValuesMap = { props: null, shaderProps: null };
 
-  constructor(
-    private node: CoreNode,
-    private props: Partial<CoreNodeAnimateProps>,
-    settings: Partial<AnimationSettings>,
-  ) {
+  constructor() {
     super();
+  }
+
+  /**
+   * Initialize (or reinitialize) this animation with new parameters.
+   * Called both on first use and when recycled from the pool.
+   */
+  init(
+    node: CoreNode,
+    props: Partial<CoreNodeAnimateProps>,
+    settings: Partial<AnimationSettings>,
+  ): void {
+    this.id = ++animationIdCounter;
+    this.node = node;
+    this.progress = 0;
+    this.propValuesMap.props = null;
+    this.propValuesMap.shaderProps = null;
+    this.removeAllListeners();
 
     for (const key in props) {
       if (key !== 'shaderProps') {
