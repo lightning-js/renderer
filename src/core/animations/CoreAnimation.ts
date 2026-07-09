@@ -47,7 +47,11 @@ let animationIdCounter = 0;
 
 export class CoreAnimation extends EventEmitter {
   public id: number = 0;
-  public settings!: AnimationSettings;
+  public duration!: number;
+  public easing!: string | TimingFunction;
+  public loop!: boolean;
+  public repeat!: number;
+  public stopMethod!: 'reverse' | 'reset' | false;
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
@@ -120,23 +124,20 @@ export class CoreAnimation extends EventEmitter {
 
     const easing = settings.easing || 'linear';
     const delay = settings.delay ?? 0;
-    this.settings = {
-      duration: settings.duration ?? 0,
-      delay,
-      easing,
-      loop: settings.loop ?? false,
-      repeat: settings.repeat ?? 0,
-      stopMethod: settings.stopMethod ?? false,
-    };
+    this.duration = settings.duration ?? 0;
+    this.delay = delay;
+    this.easing = easing;
+    this.loop = settings.loop ?? false;
+    this.repeat = settings.repeat ?? 0;
+    this.stopMethod = settings.stopMethod ?? false;
     this.timingFunction =
       typeof easing === 'string' ? getTimingFunction(easing) : easing;
     this.delayFor = delay;
-    this.delay = delay;
   }
 
   reset() {
     this.progress = 0;
-    this.delayFor = this.settings.delay || 0;
+    this.delayFor = this.delay || 0;
     this.update(0);
   }
 
@@ -187,8 +188,8 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // restore stop method if we are not looping
-    if (!this.settings.loop) {
-      this.settings.stopMethod = false;
+    if (!this.loop) {
+      this.stopMethod = false;
     }
   }
 
@@ -250,7 +251,7 @@ export class CoreAnimation extends EventEmitter {
   }
 
   update(dt: number) {
-    const { duration, loop, easing, stopMethod } = this.settings;
+    const { duration, loop, easing, stopMethod } = this;
     const { delayFor } = this;
 
     if (this.node.destroyed) {

@@ -148,7 +148,7 @@ export class CoreAnimationController
 
   private onFinished = (): void => {
     // If the animation is looping, then we need to restart it.
-    const { loop, stopMethod } = this.animation.settings;
+    const { loop, stopMethod } = this.animation;
 
     if (stopMethod === 'reverse') {
       this.animation.reverse();
