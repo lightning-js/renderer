@@ -20,11 +20,7 @@ import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import type {
-  WebGlRenderer,
-  WebGlNodeRenderOp,
-  WebGlRenderOp,
-} from './WebGlRenderer.js';
+import type { WebGlRenderer, WebGlNodeRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
@@ -50,7 +46,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
    */
   protected vao: WebGLVertexArrayObject | undefined;
   protected renderer: WebGlRenderer;
-  protected glw: GlContextWrapper;
+  glw: GlContextWrapper;
   protected attributeLocations: string[];
   protected uniformLocations: Record<string, WebGLUniformLocation> | null;
   protected lifecycle: Pick<WebGlShaderType, 'update' | 'canBatch'>;
@@ -263,6 +259,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     const shader = renderOp.shader as WebGlShaderNode;
     const uniforms = shader.uniforms;
+
+    shader.beforeDraw();
 
     if (uniforms.hasStoredUniforms === true) {
       /**
