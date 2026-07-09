@@ -31,15 +31,11 @@ export interface AnimationSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
-type PropValues = {
-  start: number;
-  target: number;
-  isColor: boolean;
-};
-
 type PropGroup = {
   keys: string[];
-  values: PropValues[];
+  starts: number[];
+  targets: number[];
+  isColor: boolean[];
 };
 
 type PropValuesMap = {
@@ -69,30 +65,41 @@ export class CoreAnimation extends EventEmitter {
     for (const key in props) {
       if (key !== 'shaderProps') {
         if (this.propValuesMap['props'] === null) {
-          this.propValuesMap['props'] = { keys: [], values: [] };
+          this.propValuesMap['props'] = {
+            keys: [],
+            starts: [],
+            targets: [],
+            isColor: [],
+          };
         }
-        this.propValuesMap['props']!['keys'].push(key);
-        this.propValuesMap['props']!['values'].push({
-          start:
-            node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
-          target: props[
+        const group = this.propValuesMap['props']!;
+        group.keys.push(key);
+        group.starts.push(
+          node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
+        );
+        group.targets.push(
+          props[
             key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
           ] as number,
-          isColor: key.indexOf('color') !== -1,
-        });
+        );
+        group.isColor.push(key.indexOf('color') !== -1);
       } else if (key === 'shaderProps' && node.shader !== null) {
-        this.propValuesMap['shaderProps'] = { keys: [], values: [] };
+        this.propValuesMap['shaderProps'] = {
+          keys: [],
+          starts: [],
+          targets: [],
+          isColor: [],
+        };
+        const group = this.propValuesMap['shaderProps']!;
         for (const key in props.shaderProps) {
           let start = node.shader.props![key];
           if (Array.isArray(start) === true) {
             start = start[0];
           }
-          this.propValuesMap['shaderProps']!['keys'].push(key);
-          this.propValuesMap['shaderProps']!['values'].push({
-            start,
-            target: props.shaderProps[key] as number,
-            isColor: key.indexOf('color') !== -1,
-          });
+          group.keys.push(key);
+          group.starts.push(start);
+          group.targets.push(props.shaderProps[key] as number);
+          group.isColor.push(key.indexOf('color') !== -1);
         }
       }
     }
@@ -121,10 +128,10 @@ export class CoreAnimation extends EventEmitter {
 
   private restoreValues(target: Record<string, number>, group: PropGroup) {
     const keys = group.keys;
-    const values = group.values;
+    const starts = group.starts;
     const length = keys.length;
     for (let i = 0; i < length; i++) {
-      target[keys[i]!] = values[i]!.start;
+      target[keys[i]!] = starts[i]!;
     }
   }
 
@@ -145,13 +152,13 @@ export class CoreAnimation extends EventEmitter {
   }
 
   private reverseValues(group: PropGroup) {
-    const values = group.values;
-    const length = values.length;
+    const starts = group.starts;
+    const targets = group.targets;
+    const length = starts.length;
     for (let i = 0; i < length; i++) {
-      const value = values[i]!;
-      const tmp = value.start;
-      value.start = value.target;
-      value.target = tmp;
+      const tmp = starts[i]!;
+      starts[i] = targets[i]!;
+      targets[i] = tmp;
     }
   }
 
@@ -214,14 +221,15 @@ export class CoreAnimation extends EventEmitter {
     easing: string | TimingFunction | undefined,
   ) {
     const keys = group.keys;
-    const values = group.values;
+    const starts = group.starts;
+    const targets = group.targets;
+    const isColor = group.isColor;
     const length = keys.length;
     for (let i = 0; i < length; i++) {
-      const value = values[i]!;
       target[keys[i]!] = this.updateValue(
-        value.isColor,
-        value.target,
-        value.start,
+        isColor[i]!,
+        targets[i]!,
+        starts[i]!,
         easing,
       );
     }
