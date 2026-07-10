@@ -53,8 +53,10 @@ export class CoreAnimation extends EventEmitter {
   public loop!: boolean;
   public repeat!: number;
   public stopMethod!: 'reverse' | 'reset' | false;
-  // Cached at init() time -- avoids string comparison in the per-frame hot path
-  private isLinear = true;
+  // Cached at init() time -- avoids re-computation in the per-frame hot path
+  private hasEasing = false;
+  // Reciprocal of duration -- stored so update() multiplies instead of divides
+  private invDuration = 0;
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
@@ -153,7 +155,10 @@ export class CoreAnimation extends EventEmitter {
 
     const easing = settings.easing || 'linear';
     const delay = settings.delay ?? 0;
-    this.duration = settings.duration ?? 0;
+    const duration = settings.duration ?? 0;
+    this.duration = duration;
+    // Pre-compute reciprocal to replace per-frame division with multiplication
+    this.invDuration = duration > 0 ? 1 / duration : 0;
     this.delay = delay;
     this.easing = easing;
     this.loop = settings.loop ?? false;
@@ -161,7 +166,8 @@ export class CoreAnimation extends EventEmitter {
     this.stopMethod = settings.stopMethod ?? false;
     this.timingFunction =
       typeof easing === 'string' ? getTimingFunction(easing) : easing;
-    this.isLinear = easing === 'linear';
+    // Explicit bool -- avoids string comparison on every updateValue() call
+    this.hasEasing = easing !== 'linear';
     this.delayFor = delay;
   }
 
@@ -218,51 +224,66 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // restore stop method if we are not looping
-    if (!this.loop) {
+    if (this.loop === false) {
       this.stopMethod = false;
     }
   }
 
-  private applyEasing(p: number, s: number, e: number): number {
-    return this.timingFunction(p) * (e - s) + s;
-  }
-
-  updateValue(isColor: boolean, propValue: number, startValue: number): number {
-    if (this.progress === 1) {
+  /**
+   * Interpolate a single property value given the current progress.
+   * progress is passed as a parameter so callers can cache it in a local,
+   * avoiding repeated this.progress reads (which box floats in V8).
+   */
+  updateValue(
+    isColor: boolean,
+    propValue: number,
+    startValue: number,
+    progress: number,
+  ): number {
+    if (progress === 1) {
       return propValue;
     }
-    if (this.progress === 0) {
+    if (progress === 0) {
       return startValue;
     }
 
-    const endValue = propValue;
     if (isColor === true) {
-      if (startValue === endValue) {
+      if (startValue === propValue) {
         return startValue;
       }
-
-      if (!this.isLinear) {
-        const easingProgressValue =
-          this.timingFunction(this.progress) || this.progress;
-        return mergeColorProgress(startValue, endValue, easingProgressValue);
+      if (this.hasEasing === true) {
+        const p = this.timingFunction(progress) || progress;
+        return mergeColorProgress(startValue, propValue, p);
       }
-      return mergeColorProgress(startValue, endValue, this.progress);
+      return mergeColorProgress(startValue, propValue, progress);
     }
 
-    if (!this.isLinear) {
-      return this.applyEasing(this.progress, startValue, endValue);
+    if (this.hasEasing === true) {
+      // Inlined applyEasing: this.timingFunction(p) * (e - s) + s
+      return (
+        this.timingFunction(progress) * (propValue - startValue) + startValue
+      );
     }
-    return startValue + (endValue - startValue) * this.progress;
+    return startValue + (propValue - startValue) * progress;
   }
 
-  private updateValues(target: Record<string, number>, group: PropGroup) {
+  private updateValues(
+    target: Record<string, number>,
+    group: PropGroup,
+    progress: number,
+  ) {
     const keys = group.keys;
     const starts = group.starts;
     const targets = group.targets;
     const isColor = group.isColor;
     const length = group.length;
     for (let i = 0; i < length; i++) {
-      target[keys[i]!] = this.updateValue(isColor[i]!, targets[i]!, starts[i]!);
+      target[keys[i]!] = this.updateValue(
+        isColor[i]!,
+        targets[i]!,
+        starts[i]!,
+        progress,
+      );
     }
   }
 
@@ -271,7 +292,6 @@ export class CoreAnimation extends EventEmitter {
     const { delayFor } = this;
 
     if (this.node.destroyed) {
-      // cleanup
       this.emit('destroyed');
       return;
     }
@@ -295,31 +315,35 @@ export class CoreAnimation extends EventEmitter {
     }
 
     if (duration === 0) {
-      // No duration, we are done.
       this.emit('finished');
       return;
     }
 
-    if (this.progress === 0) {
-      // Progress is 0, we are starting the post-delay part of the animation.
+    // Read progress once into a local -- avoids repeated this.progress reads
+    // which cause V8 to box the float value on each access to the object property.
+    let progress = this.progress;
+
+    if (progress === 0) {
       this.emit('animating');
     }
 
-    this.progress += dt / duration;
+    // Multiply by pre-computed reciprocal -- avoids per-frame float division
+    progress += dt * this.invDuration;
 
-    if (this.progress > 1) {
-      this.progress = loop ? 0 : 1;
+    if (progress > 1) {
+      progress = loop === true ? 0 : 1;
       this.delayFor = this.delay;
-      if (stopMethod) {
-        // If there's a stop method emit finished so the stop method can be applied.
-        // TODO: We should probably reevaluate how stopMethod is implemented as currently
-        // stop method 'reset' does not work when looping.
+      if (stopMethod !== false) {
+        this.progress = progress;
         this.emit('finished');
         return;
       }
     }
 
-    // Extract to locals to avoid repeated bracket-string lookups in the hot path
+    // Write back once
+    this.progress = progress;
+
+    // Extract to locals to avoid repeated property lookups in the hot path
     const propsGroup = this.propValuesMap.props;
     const shaderGroup = this.propValuesMap.shaderProps;
 
@@ -327,20 +351,22 @@ export class CoreAnimation extends EventEmitter {
       this.updateValues(
         this.node as unknown as Record<string, number>,
         propsGroup,
+        progress,
       );
     }
     if (shaderGroup !== null) {
       this.updateValues(
         this.node.shader!.props as Record<string, number>,
         shaderGroup,
+        progress,
       );
     }
 
-    if (this.progress < 1) {
+    if (progress < 1) {
       this.emit('tick');
     }
 
-    if (this.progress === 1) {
+    if (progress === 1) {
       this.emit('finished');
     }
   }
