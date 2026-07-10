@@ -63,8 +63,8 @@ export class CoreAnimationController
     this.state = 'stopped';
     this.stoppedPromise = null;
     this.stoppedResolve = null;
-    // Clear in-place to preserve pre-allocated arrays (zero alloc)
-    this.clearListeners(CoreAnimationController.EVENTS);
+    // NOTE: listener arrays are already cleared by releaseToPool() before
+    // this is called. No need to clearListeners() here again.
   }
 
   start(): IAnimationController {

@@ -62,6 +62,9 @@ export class CoreAnimation extends EventEmitter {
   private delay = 0;
   private timingFunction!: TimingFunction;
   private node!: CoreNode;
+  // Index into AnimationManager.activeAnimations -- kept in sync on every
+  // register/swap-remove so unregisterAnimation() is O(1) with no indexOf scan.
+  public activeIndex = -1;
 
   // Persistent PropGroup instances -- reused across pool recycles to avoid
   // allocating new arrays each time. length tracks how many entries are active.
@@ -112,11 +115,11 @@ export class CoreAnimation extends EventEmitter {
     this.id = ++animationIdCounter;
     this.node = node;
     this.progress = 0;
+    this.activeIndex = -1;
     this.propValuesMap.props = null;
     this.propValuesMap.shaderProps = null;
-    // Clear listener arrays in-place (zero alloc) -- keeps arrays alive so
-    // the next registerAnimation() on() calls don't need to allocate new [].
-    this.clearListeners(CoreAnimation.EVENTS);
+    // NOTE: listener arrays are already cleared by releaseToPool() before
+    // this is called. No need to clearListeners() here again.
 
     // Reset persistent group lengths (reuse existing arrays, no new allocations)
     this.propsGroup.length = 0;

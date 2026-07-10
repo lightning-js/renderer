@@ -38,26 +38,37 @@ export class AnimationManager {
   private controllerPool: CoreAnimationController[] = [];
 
   registerAnimation(animation: CoreAnimation) {
+    animation.activeIndex = this.activeAnimations.length;
     this.activeAnimations.push(animation);
   }
 
   unregisterAnimation(animation: CoreAnimation) {
-    const animations = this.activeAnimations;
-    const index = animations.indexOf(animation);
-    if (index >= 0) {
-      // Swap-remove: O(1), order doesn't matter for the update loop
-      animations[index] = animations[animations.length - 1]!;
-      animations.pop();
+    const index = animation.activeIndex;
+    if (index === -1) {
+      return;
     }
+    const animations = this.activeAnimations;
+    const last = animations.length - 1;
+    if (index !== last) {
+      // Swap with the last element and update its index
+      const swap = animations[last]!;
+      animations[index] = swap;
+      swap.activeIndex = index;
+    }
+    animations.pop();
+    animation.activeIndex = -1;
   }
 
   update(dt: number) {
     const animations = this.activeAnimations;
-    // Iterate backwards: safe when animation.update() finishes and triggers
-    // unregisterAnimation() (swap-remove). A swap-remove at index i only
-    // affects elements at index >= i, which a backwards loop has already visited.
+    // Iterate backwards. With activeIndex tracking, if a sibling stop() during
+    // a completion event swap-removes an already-visited element into index i,
+    // we check activeIndex >= 0 before updating to avoid double-processing.
     for (let i = animations.length - 1; i >= 0; i--) {
-      animations[i]!.update(dt);
+      const anim = animations[i]!;
+      if (anim.activeIndex >= 0) {
+        anim.update(dt);
+      }
     }
   }
 
