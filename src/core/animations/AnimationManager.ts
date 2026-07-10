@@ -51,8 +51,11 @@ export class AnimationManager {
 
   update(dt: number) {
     const animations = this.activeAnimations;
-    for (let i = 0, len = animations.length; i < len; i++) {
-      animations[i]!.update(dt);
+    // Snapshot to handle animations that unregister during iteration
+    // (e.g., when an animation finishes and calls unregisterAnimation/splice)
+    const snapshot = animations.slice();
+    for (let i = 0, len = snapshot.length; i < len; i++) {
+      snapshot[i]!.update(dt);
     }
   }
 
