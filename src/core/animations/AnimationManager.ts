@@ -30,12 +30,7 @@ export class AnimationManager {
     const animations = this.activeAnimations;
     const index = animations.indexOf(animation);
     if (index >= 0) {
-      // Swap-remove: replace with last element and pop for O(1) removal
-      const last = animations.length - 1;
-      if (index !== last) {
-        animations[index] = animations[last]!;
-      }
-      animations.pop();
+      animations.splice(index, 1);
     }
   }
 
