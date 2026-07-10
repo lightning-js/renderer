@@ -38,9 +38,19 @@ export class CoreAnimationController
   private manager!: AnimationManager;
   private animation!: CoreAnimation;
 
+  // Pre-allocated tick payload -- reused every frame to avoid per-frame {} allocation
+  private readonly tickPayload: { progress: number } = { progress: 0 };
+
+  // Fixed set of event names this controller emits -- used for zero-alloc clearListeners()
+  static readonly EVENTS = ['stopped', 'animating'] as const;
+
   constructor() {
     super();
     this.state = 'stopped';
+    // Pre-allocate listener arrays for the known events so on() never needs to
+    // allocate a new [] when the controller is reused after a pool recycle.
+    this.eventListeners['stopped'] = [];
+    this.eventListeners['animating'] = [];
   }
 
   /**
@@ -53,7 +63,8 @@ export class CoreAnimationController
     this.state = 'stopped';
     this.stoppedPromise = null;
     this.stoppedResolve = null;
-    this.removeAllListeners();
+    // Clear in-place to preserve pre-allocated arrays (zero alloc)
+    this.clearListeners(CoreAnimationController.EVENTS);
   }
 
   start(): IAnimationController {
@@ -200,13 +211,13 @@ export class CoreAnimationController
    */
   private onTick = (): void => {
     const listeners = this.eventListeners['tick'];
-    if (listeners === undefined) {
+    if (listeners === undefined || listeners.length === 0) {
       return;
     }
-    listeners.forEach((listener) => {
-      listener(this, {
-        progress: this.animation['progress'],
-      });
-    });
+    // Mutate pre-allocated payload to avoid per-frame {} allocation
+    this.tickPayload.progress = this.animation['progress'];
+    for (let i = listeners.length - 1; i >= 0; i--) {
+      listeners[i]!(this, this.tickPayload);
+    }
   };
 }

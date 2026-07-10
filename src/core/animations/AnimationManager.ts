@@ -101,9 +101,11 @@ export class AnimationManager {
     animation: CoreAnimation,
     controller: CoreAnimationController,
   ): void {
-    animation.removeAllListeners();
+    // Clear in-place using known event names -- preserves pre-allocated listener
+    // arrays so the next registerAnimation() doesn't need to allocate new [].
+    animation.clearListeners(CoreAnimation.EVENTS);
     this.animationPool.push(animation);
-    controller.removeAllListeners();
+    controller.clearListeners(CoreAnimationController.EVENTS);
     this.controllerPool.push(controller);
   }
 }

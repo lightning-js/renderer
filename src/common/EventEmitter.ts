@@ -31,9 +31,9 @@ export class EventEmitter implements IEventEmitter {
     let listeners = this.eventListeners[event];
     if (!listeners) {
       listeners = [];
+      this.eventListeners[event] = listeners;
     }
     listeners.push(listener);
-    this.eventListeners[event] = listeners;
   }
 
   off(event: string, listener?: EventListener): void {
@@ -77,6 +77,23 @@ export class EventEmitter implements IEventEmitter {
     const listeners = this.eventListeners;
     for (const key in listeners) {
       delete listeners[key];
+    }
+  }
+
+  /**
+   * Clear all listeners for the given event names by setting their array
+   * length to 0, WITHOUT deleting the keys. This keeps the eventListeners
+   * object in V8's fast-properties mode and avoids re-allocating the arrays
+   * on the next on() call. Use this for objects with a known fixed set of
+   * event names (e.g. CoreAnimation, CoreAnimationController).
+   */
+  clearListeners(events: readonly string[]): void {
+    const map = this.eventListeners;
+    for (let i = 0; i < events.length; i++) {
+      const arr = map[events[i]!];
+      if (arr !== undefined) {
+        arr.length = 0;
+      }
     }
   }
 }

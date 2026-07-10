@@ -115,12 +115,13 @@ export default async function ({
         const onStopped = () => {
           animateY.off('stopped', onStopped);
           this.launch(false, null, Y_START);
-          this.animations = [];
+          this.animations.length = 0;
         };
 
         animateY.on('stopped', onStopped);
 
-        this.animations = [animateY, animateX /*, animateRot*/];
+        this.animations.length = 0;
+        this.animations.push(animateY, animateX /*, animateRot*/);
       },
     };
     setTimeout(() => {

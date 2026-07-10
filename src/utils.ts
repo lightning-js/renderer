@@ -66,15 +66,16 @@ export function mergeColorProgress(
   rgba2: number,
   p: number,
 ): number {
-  const r1 = Math.trunc(rgba1 >>> 24);
-  const g1 = Math.trunc((rgba1 >>> 16) & 0xff);
-  const b1 = Math.trunc((rgba1 >>> 8) & 0xff);
-  const a1 = Math.trunc(rgba1 & 0xff);
+  // >>> and & 0xff already produce unsigned integers -- Math.trunc is redundant
+  const r1 = rgba1 >>> 24;
+  const g1 = (rgba1 >>> 16) & 0xff;
+  const b1 = (rgba1 >>> 8) & 0xff;
+  const a1 = rgba1 & 0xff;
 
-  const r2 = Math.trunc(rgba2 >>> 24);
-  const g2 = Math.trunc((rgba2 >>> 16) & 0xff);
-  const b2 = Math.trunc((rgba2 >>> 8) & 0xff);
-  const a2 = Math.trunc(rgba2 & 0xff);
+  const r2 = rgba2 >>> 24;
+  const g2 = (rgba2 >>> 16) & 0xff;
+  const b2 = (rgba2 >>> 8) & 0xff;
+  const a2 = rgba2 & 0xff;
 
   const r = Math.round(r2 * p + r1 * (1 - p));
   const g = Math.round(g2 * p + g1 * (1 - p));

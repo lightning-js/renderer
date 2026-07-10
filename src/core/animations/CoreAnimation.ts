@@ -53,6 +53,8 @@ export class CoreAnimation extends EventEmitter {
   public loop!: boolean;
   public repeat!: number;
   public stopMethod!: 'reverse' | 'reset' | false;
+  // Cached at init() time -- avoids string comparison in the per-frame hot path
+  private isLinear = true;
   private progress = 0;
   private delayFor = 0;
   private delay = 0;
@@ -76,10 +78,24 @@ export class CoreAnimation extends EventEmitter {
     length: 0,
   };
 
+  // Fixed set of event names this animation emits -- used for zero-alloc clearListeners()
+  static readonly EVENTS = [
+    'finished',
+    'animating',
+    'tick',
+    'destroyed',
+  ] as const;
+
   propValuesMap: PropValuesMap = { props: null, shaderProps: null };
 
   constructor() {
     super();
+    // Pre-allocate listener arrays for the known events so on() never needs to
+    // allocate a new [] when the animation is registered after a pool recycle.
+    this.eventListeners['finished'] = [];
+    this.eventListeners['animating'] = [];
+    this.eventListeners['tick'] = [];
+    this.eventListeners['destroyed'] = [];
   }
 
   /**
@@ -96,7 +112,9 @@ export class CoreAnimation extends EventEmitter {
     this.progress = 0;
     this.propValuesMap.props = null;
     this.propValuesMap.shaderProps = null;
-    this.removeAllListeners();
+    // Clear listener arrays in-place (zero alloc) -- keeps arrays alive so
+    // the next registerAnimation() on() calls don't need to allocate new [].
+    this.clearListeners(CoreAnimation.EVENTS);
 
     // Reset persistent group lengths (reuse existing arrays, no new allocations)
     this.propsGroup.length = 0;
@@ -143,6 +161,7 @@ export class CoreAnimation extends EventEmitter {
     this.stopMethod = settings.stopMethod ?? false;
     this.timingFunction =
       typeof easing === 'string' ? getTimingFunction(easing) : easing;
+    this.isLinear = easing === 'linear';
     this.delayFor = delay;
   }
 
@@ -208,12 +227,7 @@ export class CoreAnimation extends EventEmitter {
     return this.timingFunction(p) * (e - s) + s;
   }
 
-  updateValue(
-    isColor: boolean,
-    propValue: number,
-    startValue: number,
-    easing: string | TimingFunction | undefined,
-  ): number {
+  updateValue(isColor: boolean, propValue: number, startValue: number): number {
     if (this.progress === 1) {
       return propValue;
     }
@@ -227,7 +241,7 @@ export class CoreAnimation extends EventEmitter {
         return startValue;
       }
 
-      if (easing && easing !== 'linear') {
+      if (!this.isLinear) {
         const easingProgressValue =
           this.timingFunction(this.progress) || this.progress;
         return mergeColorProgress(startValue, endValue, easingProgressValue);
@@ -235,34 +249,25 @@ export class CoreAnimation extends EventEmitter {
       return mergeColorProgress(startValue, endValue, this.progress);
     }
 
-    if (easing && easing !== 'linear') {
+    if (!this.isLinear) {
       return this.applyEasing(this.progress, startValue, endValue);
     }
     return startValue + (endValue - startValue) * this.progress;
   }
 
-  private updateValues(
-    target: Record<string, number>,
-    group: PropGroup,
-    easing: string | TimingFunction | undefined,
-  ) {
+  private updateValues(target: Record<string, number>, group: PropGroup) {
     const keys = group.keys;
     const starts = group.starts;
     const targets = group.targets;
     const isColor = group.isColor;
     const length = group.length;
     for (let i = 0; i < length; i++) {
-      target[keys[i]!] = this.updateValue(
-        isColor[i]!,
-        targets[i]!,
-        starts[i]!,
-        easing,
-      );
+      target[keys[i]!] = this.updateValue(isColor[i]!, targets[i]!, starts[i]!);
     }
   }
 
   update(dt: number) {
-    const { duration, loop, easing, stopMethod } = this;
+    const { duration, loop, stopMethod } = this;
     const { delayFor } = this;
 
     if (this.node.destroyed) {
@@ -314,18 +319,20 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (this.propValuesMap['props'] !== null) {
+    // Extract to locals to avoid repeated bracket-string lookups in the hot path
+    const propsGroup = this.propValuesMap.props;
+    const shaderGroup = this.propValuesMap.shaderProps;
+
+    if (propsGroup !== null) {
       this.updateValues(
         this.node as unknown as Record<string, number>,
-        this.propValuesMap['props'],
-        easing,
+        propsGroup,
       );
     }
-    if (this.propValuesMap['shaderProps'] !== null) {
+    if (shaderGroup !== null) {
       this.updateValues(
         this.node.shader!.props as Record<string, number>,
-        this.propValuesMap['shaderProps'],
-        easing,
+        shaderGroup,
       );
     }
 
