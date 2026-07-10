@@ -41,12 +41,6 @@ export class CoreAnimationController
   constructor() {
     super();
     this.state = 'stopped';
-
-    // Bind event handlers
-    this.onAnimating = this.onAnimating.bind(this);
-    this.onFinished = this.onFinished.bind(this);
-    this.onTick = this.onTick.bind(this);
-    this.onDestroy = this.onDestroy.bind(this);
   }
 
   /**
@@ -57,7 +51,7 @@ export class CoreAnimationController
     this.manager = manager;
     this.animation = animation;
     this.state = 'stopped';
-    this.stoppedPromise = Promise.resolve();
+    this.stoppedPromise = null;
     this.stoppedResolve = null;
     this.removeAllListeners();
   }
@@ -140,7 +134,7 @@ export class CoreAnimationController
     this.animation.off('destroyed', this.onDestroy);
   }
 
-  private onDestroy(this: CoreAnimationController): void {
+  private onDestroy = (): void => {
     this.unregisterAnimation();
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
@@ -150,9 +144,9 @@ export class CoreAnimationController
     this.state = 'stopped';
     // Release to pool after all user listeners have been notified
     this.manager.releaseToPool(this.animation, this);
-  }
+  };
 
-  private onFinished(this: CoreAnimationController): void {
+  private onFinished = (): void => {
     // If the animation is looping, then we need to restart it.
     const { loop, stopMethod } = this.animation.settings;
 
@@ -178,20 +172,18 @@ export class CoreAnimationController
     this.state = 'stopped';
     // Release to pool after all user listeners have been notified
     this.manager.releaseToPool(this.animation, this);
-  }
+  };
 
-  private onAnimating(this: CoreAnimationController): void {
+  private onAnimating = (): void => {
     this.state = 'running';
     this.emit('animating', this);
-  }
+  };
 
   /**
    * manually override the tick event to emit the progress of the animation as well
    * we are first checking if there are any listeners for the tick event. this avoid unnecessary object creation.
-   * @param this
-   * @returns
    */
-  private onTick(this: CoreAnimationController): void {
+  private onTick = (): void => {
     const listeners = this.eventListeners['tick'];
     if (listeners === undefined) {
       return;
@@ -201,5 +193,5 @@ export class CoreAnimationController
         progress: this.animation['progress'],
       });
     });
-  }
+  };
 }
