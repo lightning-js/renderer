@@ -179,13 +179,26 @@ describe('CoreAnimationController', () => {
 
     it('should work without waitUntilStopped() being called (fire-and-forget)', () => {
       const controller = new CoreAnimationController(manager, animation);
+      const stoppedHandler = vi.fn();
+      controller.on('stopped', stoppedHandler);
       controller.start();
       // No waitUntilStopped() call -- fire and forget
       expect(controller.stoppedResolve).toBeNull();
 
-      // stop should not throw
+      // stop should not throw and should still emit 'stopped'
       controller.stop();
       expect(controller.state).toBe('stopped');
+      expect(stoppedHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not emit stopped when already in stopped state', () => {
+      const controller = new CoreAnimationController(manager, animation);
+      const stoppedHandler = vi.fn();
+      controller.on('stopped', stoppedHandler);
+
+      // Controller starts in 'stopped' state, calling stop() should be a no-op
+      controller.stop();
+      expect(stoppedHandler).not.toHaveBeenCalled();
     });
 
     it('should reset animation when stop is called with reset=true', () => {

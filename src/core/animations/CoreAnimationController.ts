@@ -60,12 +60,15 @@ export class CoreAnimationController
   }
 
   stop(reset = true): IAnimationController {
+    if (this.state === 'stopped') {
+      return this;
+    }
     this.unregisterAnimation();
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
       this.stoppedResolve = null;
-      this.emit('stopped', this);
     }
+    this.emit('stopped', this);
     if (reset === true) {
       this.animation.reset();
     }
