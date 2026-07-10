@@ -45,17 +45,19 @@ export class AnimationManager {
     const animations = this.activeAnimations;
     const index = animations.indexOf(animation);
     if (index >= 0) {
-      animations.splice(index, 1);
+      // Swap-remove: O(1), order doesn't matter for the update loop
+      animations[index] = animations[animations.length - 1]!;
+      animations.pop();
     }
   }
 
   update(dt: number) {
     const animations = this.activeAnimations;
-    // Snapshot to handle animations that unregister during iteration
-    // (e.g., when an animation finishes and calls unregisterAnimation/splice)
-    const snapshot = animations.slice();
-    for (let i = 0, len = snapshot.length; i < len; i++) {
-      snapshot[i]!.update(dt);
+    // Iterate backwards: safe when animation.update() finishes and triggers
+    // unregisterAnimation() (swap-remove). A swap-remove at index i only
+    // affects elements at index >= i, which a backwards loop has already visited.
+    for (let i = animations.length - 1; i >= 0; i--) {
+      animations[i]!.update(dt);
     }
   }
 

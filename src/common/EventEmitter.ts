@@ -64,10 +64,11 @@ export class EventEmitter implements IEventEmitter {
     if (!listeners) {
       return;
     }
-    // Snapshot to handle listeners that remove themselves via once()/off()
-    const snapshot = listeners.slice();
-    for (let i = 0, len = snapshot.length; i < len; i++) {
-      snapshot[i]!(this, data);
+    // Iterate backwards: safe when once()/off() splice() during emission since
+    // removals only shift elements at higher indices (already visited).
+    // Zero allocations vs the previous listeners.slice() snapshot approach.
+    for (let i = listeners.length - 1; i >= 0; i--) {
+      listeners[i]!(this, data);
     }
   }
 
