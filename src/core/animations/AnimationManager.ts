@@ -23,7 +23,7 @@ import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 
 export class AnimationManager {
-  activeAnimations: Map<number, CoreAnimation> = new Map();
+  private activeAnimations: CoreAnimation[] = [];
 
   /**
    * Pool of reusable CoreAnimation instances.
@@ -38,16 +38,21 @@ export class AnimationManager {
   private controllerPool: CoreAnimationController[] = [];
 
   registerAnimation(animation: CoreAnimation) {
-    this.activeAnimations.set(animation.id, animation);
+    this.activeAnimations.push(animation);
   }
 
   unregisterAnimation(animation: CoreAnimation) {
-    this.activeAnimations.delete(animation.id);
+    const animations = this.activeAnimations;
+    const index = animations.indexOf(animation);
+    if (index >= 0) {
+      animations.splice(index, 1);
+    }
   }
 
   update(dt: number) {
-    for (const animation of this.activeAnimations.values()) {
-      animation.update(dt);
+    const animations = this.activeAnimations;
+    for (let i = 0, len = animations.length; i < len; i++) {
+      animations[i]!.update(dt);
     }
   }
 

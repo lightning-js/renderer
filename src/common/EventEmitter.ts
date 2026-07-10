@@ -64,9 +64,11 @@ export class EventEmitter implements IEventEmitter {
     if (!listeners) {
       return;
     }
-    listeners.forEach((listener) => {
-      listener(this, data);
-    });
+    // Snapshot to handle listeners that remove themselves via once()/off()
+    const snapshot = listeners.slice();
+    for (let i = 0, len = snapshot.length; i < len; i++) {
+      snapshot[i]!(this, data);
+    }
   }
 
   removeAllListeners() {
