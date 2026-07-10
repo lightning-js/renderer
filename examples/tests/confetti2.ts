@@ -18,22 +18,24 @@
  */
 
 /**
- * Confetti 2 — continuous spawn stress test
+ * Confetti 2 — continuous animation spawn stress test
  *
- * Unlike confetti.ts which recycles a fixed set of nodes, this test
- * continuously creates brand-new nodes, animates them, and destroys them
- * on completion. This stresses the full animation lifecycle:
+ * Unlike confetti.ts which recycles a fixed pool of nodes with the same
+ * animations, this test keeps nodes alive but continuously creates fresh
+ * animations on them. Each cycle: stop existing animations, spawn 3 new
+ * ones on the same node, repeat when done.
  *
- *   - Node creation + destruction every cycle
- *   - Animation controller + animation init on every spawn
- *   - Pool warm-up and steady-state recycling under constant churn
- *   - No long-lived node state — every particle is ephemeral
+ * This isolates the animation spawn/recycle cost specifically:
+ * - No node create/destroy overhead
+ * - Constant createAnimation() churn even with a warm pool
+ * - 3 concurrent animations per node (Y/X/rotation)
+ * - Each animation cycle is independent: fresh props, fresh controllers
  *
- * A new wave of WAVE_SIZE particles is fired every WAVE_INTERVAL_MS,
- * overlapping with the previous wave still in flight. Use ?multiplier=N
- * to scale the wave size.
+ * Use ?multiplier=N to scale the number of nodes (50 * N).
  */
 
+import type { IAnimationController } from '../../dist/exports/index.js';
+import type { INode } from '../../dist/src/main-api/INode.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 const SHAPE_1 =
@@ -48,87 +50,103 @@ const COLORS = [0x3c91efff, 0x847effff, 0x00a75eff, 0xf1604bff, 0xc4defaff];
 
 const Y_START = -40;
 const Y_END = 1600;
-// How many new particles to spawn per wave
-const WAVE_SIZE = 50;
-// How often to fire a new wave (ms) -- overlaps with previous wave in flight
-const WAVE_INTERVAL_MS = 500;
-// Duration range for each particle (ms)
+const NODES = 50;
 const DURATION_MIN_MS = 2000;
 const DURATION_MAX_MS = 4000;
+
+type Particle = {
+  node: INode;
+  animateY: IAnimationController | null;
+  animateX: IAnimationController | null;
+  animateRot: IAnimationController | null;
+  launch(): void;
+};
 
 export default async function ({
   renderer,
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
-  const waveSize = WAVE_SIZE * perfMultiplier;
+  const nodeCount = NODES * perfMultiplier;
 
   /**
-   * Spawn a single ephemeral particle: create node, animate it falling,
-   * then destroy both the node and the controller on completion.
+   * Create a persistent node and continuously re-spawn fresh animations on it.
+   * The node itself never changes parent or gets destroyed -- only the
+   * animations are created fresh each cycle, stressing createAnimation().
    */
-  function spawnParticle() {
+  function createParticle(): Particle {
     const size = 11 + Math.random() * 25;
-    const startX = Math.random() * 1920;
-    const endX = startX + (Math.random() - 0.5) * 80;
-    const durationMs =
-      DURATION_MIN_MS +
-      Math.floor(Math.random() * (DURATION_MAX_MS - DURATION_MIN_MS));
 
     const node = renderer.createNode({
-      x: startX,
+      x: Math.random() * 1920,
       y: Y_START,
       w: size,
       h: size,
-      rotation: Math.random() * Math.PI * 2,
       color: COLORS[Math.floor(Math.random() * COLORS.length)]!,
       src: SHAPES[Math.floor(Math.random() * SHAPES.length)]!,
       parent: testRoot,
     });
 
-    // Animate Y -- linear fall
-    const animateY = node.animate(
-      { y: Y_END },
-      { duration: durationMs, easing: 'linear' },
-    );
+    const particle: Particle = {
+      node,
+      animateY: null,
+      animateX: null,
+      animateRot: null,
 
-    // Animate X -- cubic-bezier drift
-    const animateX = node.animate(
-      { x: endX },
-      { duration: durationMs, easing: 'cubic-bezier(0,0,0.4,1)' },
-    );
+      launch() {
+        const n = this.node;
+        const durationMs =
+          DURATION_MIN_MS +
+          Math.floor(Math.random() * (DURATION_MAX_MS - DURATION_MIN_MS));
 
-    // Animate rotation
-    const animateRot = node.animate(
-      { rotation: Math.random() * Math.PI * 4 },
-      { duration: durationMs, easing: 'ease-out' },
-    );
+        const startX = Math.random() * 1920;
+        const endX = startX + (Math.random() - 0.5) * 80;
+        const startRot = Math.random() * Math.PI * 2;
 
-    animateY.start();
-    animateX.start();
-    animateRot.start();
+        // Reset node to start position for new cycle
+        n.x = startX;
+        n.y = Y_START;
+        n.rotation = startRot;
+        n.color = COLORS[Math.floor(Math.random() * COLORS.length)]!;
+        n.src = SHAPES[Math.floor(Math.random() * SHAPES.length)]!;
 
-    // When Y finishes: stop siblings and destroy node -- tests the full
-    // create-animate-destroy path continuously with no node reuse
-    animateY.on('stopped', () => {
-      animateX.stop();
-      animateRot.stop();
-      node.parent = null;
-      node.destroy();
-    });
+        // Create 3 brand-new animation controllers each cycle --
+        // this is the key difference from confetti.ts which reuses
+        // the same controllers indefinitely via the relaunch pattern.
+        this.animateY = n.animate(
+          { y: Y_END },
+          { duration: durationMs, easing: 'linear' },
+        );
+        this.animateX = n.animate(
+          { x: endX },
+          { duration: durationMs, easing: 'cubic-bezier(0,0,0.4,1)' },
+        );
+        this.animateRot = n.animate(
+          { rotation: startRot + Math.random() * Math.PI * 4 },
+          { duration: durationMs, easing: 'ease-out' },
+        );
+
+        this.animateY.start();
+        this.animateX.start();
+        this.animateRot.start();
+
+        // When Y finishes, stop the siblings and immediately re-launch --
+        // keeps the node fully animated at all times with fresh controllers
+        this.animateY.on('stopped', () => {
+          this.animateX!.stop();
+          this.animateRot!.stop();
+          this.launch();
+        });
+      },
+    };
+
+    return particle;
   }
 
-  /**
-   * Fire a wave of particles, staggered by 1 frame each to avoid
-   * creating all nodes in the same frame.
-   */
-  function fireWave() {
-    for (let i = 0; i < waveSize; i++) {
-      setTimeout(spawnParticle, i * (WAVE_INTERVAL_MS / waveSize));
-    }
+  // Create all nodes upfront with a small stagger to spread the initial
+  // wave of animation starts across frames
+  for (let i = 0; i < nodeCount; i++) {
+    const particle = createParticle();
+    setTimeout(() => particle.launch(), i * 10);
   }
-
-  // Fire the first wave immediately, then repeat on interval
-  fireWave();
-  setInterval(fireWave, WAVE_INTERVAL_MS);
 }
