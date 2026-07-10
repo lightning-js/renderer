@@ -35,11 +35,10 @@ export class CoreAnimationController
    */
   stoppedResolve: (() => void) | null = null;
   state: AnimationControllerState;
+  private manager!: AnimationManager;
+  private animation!: CoreAnimation;
 
-  constructor(
-    private manager: AnimationManager,
-    private animation: CoreAnimation,
-  ) {
+  constructor() {
     super();
     this.state = 'stopped';
     // Initial stopped promise is resolved (since the animation is stopped)
@@ -50,6 +49,19 @@ export class CoreAnimationController
     this.onFinished = this.onFinished.bind(this);
     this.onTick = this.onTick.bind(this);
     this.onDestroy = this.onDestroy.bind(this);
+  }
+
+  /**
+   * Initialize (or reinitialize) this controller with new dependencies.
+   * Called both on first use and when recycled from the pool.
+   */
+  init(manager: AnimationManager, animation: CoreAnimation): void {
+    this.manager = manager;
+    this.animation = animation;
+    this.state = 'stopped';
+    this.stoppedPromise = Promise.resolve();
+    this.stoppedResolve = null;
+    this.removeAllListeners();
   }
 
   start(): IAnimationController {
@@ -73,6 +85,8 @@ export class CoreAnimationController
     }
 
     this.state = 'stopped';
+    // Release to pool after all user listeners have been notified
+    this.manager.releaseToPool(this.animation, this);
     return this;
   }
 
@@ -122,7 +136,14 @@ export class CoreAnimationController
 
   private onDestroy(this: CoreAnimationController): void {
     this.unregisterAnimation();
+    if (this.stoppedResolve !== null) {
+      this.stoppedResolve();
+      this.stoppedResolve = null;
+    }
+    this.emit('stopped', this);
     this.state = 'stopped';
+    // Release to pool after all user listeners have been notified
+    this.manager.releaseToPool(this.animation, this);
   }
 
   private onFinished(this: CoreAnimationController): void {
@@ -150,6 +171,8 @@ export class CoreAnimationController
 
     this.emit('stopped', this);
     this.state = 'stopped';
+    // Release to pool after all user listeners have been notified
+    this.manager.releaseToPool(this.animation, this);
   }
 
   private onAnimating(this: CoreAnimationController): void {

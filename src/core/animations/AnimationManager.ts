@@ -17,10 +17,25 @@
  * limitations under the License.
  */
 
-import { CoreAnimation } from './CoreAnimation.js';
+import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
+import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
+import { CoreAnimationController } from './CoreAnimationController.js';
+import type { IAnimationController } from '../../common/IAnimationController.js';
 
 export class AnimationManager {
   activeAnimations: Map<number, CoreAnimation> = new Map();
+
+  /**
+   * Pool of reusable CoreAnimation instances.
+   * Animations are returned to the pool when they finish or are stopped.
+   */
+  private animationPool: CoreAnimation[] = [];
+
+  /**
+   * Pool of reusable CoreAnimationController instances.
+   * Controllers are returned to the pool alongside their animation.
+   */
+  private controllerPool: CoreAnimationController[] = [];
 
   registerAnimation(animation: CoreAnimation) {
     this.activeAnimations.set(animation.id, animation);
@@ -34,5 +49,51 @@ export class AnimationManager {
     for (const animation of this.activeAnimations.values()) {
       animation.update(dt);
     }
+  }
+
+  /**
+   * Create an animation controller, reusing pooled objects when available.
+   * Objects are returned to the pool when the controller reaches a terminal
+   * state (stopped via finish, manual stop, or node destruction).
+   */
+  createAnimation(
+    node: CoreNode,
+    props: Partial<CoreNodeAnimateProps>,
+    settings: Partial<AnimationSettings>,
+  ): IAnimationController {
+    // Get or create animation
+    let animation: CoreAnimation;
+    if (this.animationPool.length > 0) {
+      animation = this.animationPool.pop()!;
+    } else {
+      animation = new CoreAnimation();
+    }
+    animation.init(node, props, settings);
+
+    // Get or create controller
+    let controller: CoreAnimationController;
+    if (this.controllerPool.length > 0) {
+      controller = this.controllerPool.pop()!;
+    } else {
+      controller = new CoreAnimationController();
+    }
+    controller.init(this, animation);
+
+    return controller;
+  }
+
+  /**
+   * Return an animation and its controller to the pool for reuse.
+   * Called by CoreAnimationController when it reaches a terminal state
+   * (after all user event listeners have been notified).
+   */
+  releaseToPool(
+    animation: CoreAnimation,
+    controller: CoreAnimationController,
+  ): void {
+    animation.removeAllListeners();
+    this.animationPool.push(animation);
+    controller.removeAllListeners();
+    this.controllerPool.push(controller);
   }
 }
