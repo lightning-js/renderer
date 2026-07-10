@@ -108,7 +108,10 @@ export class CoreAnimationController
 
   private registerAnimation(): void {
     // Hook up event listeners
-    this.animation.once('finished', this.onFinished);
+    // Use on() instead of once() for 'finished' to avoid allocating a
+    // wrapper closure. The listener is removed via unregisterAnimation()
+    // when the animation stops, or stays registered across reverse cycles.
+    this.animation.on('finished', this.onFinished);
     this.animation.on('animating', this.onAnimating);
     this.animation.on('tick', this.onTick);
     this.animation.on('destroyed', this.onDestroy);
@@ -123,7 +126,7 @@ export class CoreAnimationController
     this.animation.off('finished', this.onFinished);
     this.animation.off('animating', this.onAnimating);
     this.animation.off('tick', this.onTick);
-    this.animation.off('destroy', this.onDestroy);
+    this.animation.off('destroyed', this.onDestroy);
   }
 
   private makeStoppedPromise(): void {
@@ -151,7 +154,6 @@ export class CoreAnimationController
     const { loop, stopMethod } = this.animation.settings;
 
     if (stopMethod === 'reverse') {
-      this.animation.once('finished', this.onFinished);
       this.animation.reverse();
       return;
     }
