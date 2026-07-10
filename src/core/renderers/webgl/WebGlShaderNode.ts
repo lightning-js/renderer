@@ -10,6 +10,7 @@ import type {
   Vec3,
   Vec4,
 } from './internal/ShaderUtils.js';
+import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
@@ -153,27 +154,13 @@ export class WebGlShaderNode<
       this.additionalTextureCount +
       (this.node as CoreNode).renderOpTextures.length;
     this.uniform1i(location, targetId);
+    this.additionalTextureCount++;
 
     if (texture.state === 'loaded') {
       glw.activeTexture(targetId);
-      // @ts-ignore
-      const nativeTexture = texture.ctxTexture!
-        .ctxTexture as WebGLTexture | null;
-
-      console.log(
-        'nativeTexture',
-        nativeTexture,
-        'targetId',
-        targetId,
-        'location',
-        location,
-        'texture',
-        texture,
-      );
+      const nativeTexture = (texture.ctxTexture as WebGlCtxTexture).ctxTexture;
       glw.bindTexture(nativeTexture as WebGLTexture | null);
     }
-
-    this.additionalTextureCount++;
   }
 
   updateUniformUsage(): void {

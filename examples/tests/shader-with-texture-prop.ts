@@ -128,8 +128,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   const watermark = renderer.createTexture('ImageTexture', {
     src: premium,
   });
-
-  watermark.setRenderableOwner('shader-with-texture-prop', true);
+  watermark.preventCleanup = true;
+  watermark.load();
 
   renderer.createNode({
     autosize: true,
