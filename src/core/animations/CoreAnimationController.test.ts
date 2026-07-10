@@ -34,14 +34,12 @@ function createMockAnimation(
   const emitter = new EventEmitter();
   const animation = Object.assign(emitter, {
     id: 1,
-    settings: {
-      duration: 1000,
-      delay: 0,
-      easing: 'linear',
-      loop: false,
-      repeat: 0,
-      stopMethod: false as const,
-    },
+    duration: 1000,
+    delay: 0,
+    easing: 'linear',
+    loop: false,
+    repeat: 0,
+    stopMethod: false as const,
     progress: 0,
     propValuesMap: { props: null, shaderProps: null },
     reset: vi.fn(),
@@ -275,14 +273,7 @@ describe('CoreAnimationController', () => {
 
     it('should handle stopMethod reverse by re-registering finished listener', () => {
       const animationWithReverse = createMockAnimation({
-        settings: {
-          duration: 1000,
-          delay: 0,
-          easing: 'linear',
-          loop: false,
-          repeat: 0,
-          stopMethod: 'reverse',
-        },
+        stopMethod: 'reverse' as const,
       });
 
       const controller = createController(manager, animationWithReverse);
@@ -296,14 +287,7 @@ describe('CoreAnimationController', () => {
 
     it('should not resolve promise when looping', () => {
       const loopingAnimation = createMockAnimation({
-        settings: {
-          duration: 1000,
-          delay: 0,
-          easing: 'linear',
-          loop: true,
-          repeat: 0,
-          stopMethod: false,
-        },
+        loop: true,
       });
 
       const controller = createController(manager, loopingAnimation);
