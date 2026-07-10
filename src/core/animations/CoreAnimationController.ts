@@ -63,8 +63,9 @@ export class CoreAnimationController
     this.state = 'stopped';
     this.stoppedPromise = null;
     this.stoppedResolve = null;
-    // NOTE: listener arrays are already cleared by releaseToPool() before
-    // this is called. No need to clearListeners() here again.
+    // Clear any stale user listeners from the previous use. Near-zero cost
+    // when arrays are already empty (the common case after releaseToPool).
+    this.clearListeners(CoreAnimationController.EVENTS);
   }
 
   start(): IAnimationController {

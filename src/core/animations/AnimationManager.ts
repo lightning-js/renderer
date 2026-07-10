@@ -112,11 +112,11 @@ export class AnimationManager {
     animation: CoreAnimation,
     controller: CoreAnimationController,
   ): void {
-    // Clear in-place using known event names -- preserves pre-allocated listener
-    // arrays so the next registerAnimation() doesn't need to allocate new [].
-    animation.clearListeners(CoreAnimation.EVENTS);
+    // Do NOT clearListeners here -- init() clears lazily on next reuse.
+    // By the time releaseToPool() fires, unregisterAnimation() has already
+    // emptied all listener arrays via off(). Moving clearListeners to init()
+    // keeps this hot path (inside the rAF completion chain) as cheap as possible.
     this.animationPool.push(animation);
-    controller.clearListeners(CoreAnimationController.EVENTS);
     this.controllerPool.push(controller);
   }
 }

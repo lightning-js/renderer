@@ -61,7 +61,7 @@ export class EventEmitter implements IEventEmitter {
 
   emit(event: string, data?: any): void {
     const listeners = this.eventListeners[event];
-    if (!listeners) {
+    if (listeners === undefined || listeners.length === 0) {
       return;
     }
     // Iterate backwards: safe when once()/off() splice() during emission since
@@ -86,12 +86,16 @@ export class EventEmitter implements IEventEmitter {
    * object in V8's fast-properties mode and avoids re-allocating the arrays
    * on the next on() call. Use this for objects with a known fixed set of
    * event names (e.g. CoreAnimation, CoreAnimationController).
+   *
+   * Only writes arr.length = 0 when the array is non-empty -- skips the write
+   * (and the write barrier on old-gen objects) when already empty, which is
+   * the common case after unregisterAnimation() has removed all listeners.
    */
   clearListeners(events: readonly string[]): void {
     const map = this.eventListeners;
     for (let i = 0; i < events.length; i++) {
       const arr = map[events[i]!];
-      if (arr !== undefined) {
+      if (arr !== undefined && arr.length > 0) {
         arr.length = 0;
       }
     }

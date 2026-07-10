@@ -118,8 +118,10 @@ export class CoreAnimation extends EventEmitter {
     this.activeIndex = -1;
     this.propValuesMap.props = null;
     this.propValuesMap.shaderProps = null;
-    // NOTE: listener arrays are already cleared by releaseToPool() before
-    // this is called. No need to clearListeners() here again.
+    // Clear any stale listeners from the previous use. With the arr.length > 0
+    // guard in clearListeners(), this is a near-zero cost read of 4 array lengths
+    // when unregisterAnimation() has already emptied them (the common case).
+    this.clearListeners(CoreAnimation.EVENTS);
 
     // Reset persistent group lengths (reuse existing arrays, no new allocations)
     this.propsGroup.length = 0;
@@ -177,7 +179,23 @@ export class CoreAnimation extends EventEmitter {
   reset() {
     this.progress = 0;
     this.delayFor = this.delay || 0;
-    this.update(0);
+    // Write start values directly rather than calling update(0), which would
+    // run the full update pipeline (dirty marking, event emissions) for no gain.
+    // Identical visible behaviour -- node properties snap to start values.
+    const propsGroup = this.propValuesMap.props;
+    const shaderGroup = this.propValuesMap.shaderProps;
+    if (propsGroup !== null) {
+      this.restoreValues(
+        this.node as unknown as Record<string, number>,
+        propsGroup,
+      );
+    }
+    if (shaderGroup !== null) {
+      this.restoreValues(
+        this.node.shader!.props as Record<string, number>,
+        shaderGroup,
+      );
+    }
   }
 
   private restoreValues(target: Record<string, number>, group: PropGroup) {
@@ -190,19 +208,8 @@ export class CoreAnimation extends EventEmitter {
   }
 
   restore() {
+    // reset() already writes start values back to node properties
     this.reset();
-    if (this.propValuesMap['props'] !== null) {
-      this.restoreValues(
-        this.node as unknown as Record<string, number>,
-        this.propValuesMap['props'],
-      );
-    }
-    if (this.propValuesMap['shaderProps'] !== null) {
-      this.restoreValues(
-        this.node.shader!.props as Record<string, number>,
-        this.propValuesMap['shaderProps'],
-      );
-    }
   }
 
   private reverseValues(group: PropGroup) {
