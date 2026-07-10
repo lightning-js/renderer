@@ -105,6 +105,11 @@ export class Stage {
   public preloadBound: Bound;
   public readonly defaultTexture: Texture | null = null;
   public pixelRatio: number;
+  // Pre-allocated frameTick payload -- reused every frame to avoid per-frame {} allocation
+  private readonly frameTickPayload: { time: number; delta: number } = {
+    time: 0,
+    delta: 0,
+  };
   public readonly bufferMemory: number = 2e6;
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
@@ -399,10 +404,9 @@ export class Stage {
 
     // This event is emitted at the beginning of the frame (before any updates
     // or rendering), so no need to to use `stage.queueFrameEvent` here.
-    this.eventBus.emit('frameTick', {
-      time: this.currentFrameTime,
-      delta: this.deltaTime,
-    });
+    this.frameTickPayload.time = this.currentFrameTime;
+    this.frameTickPayload.delta = this.deltaTime;
+    this.eventBus.emit('frameTick', this.frameTickPayload);
   }
 
   /**

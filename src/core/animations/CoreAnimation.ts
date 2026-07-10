@@ -36,6 +36,7 @@ type PropGroup = {
   starts: number[];
   targets: number[];
   isColor: boolean[];
+  length: number;
 };
 
 type PropValuesMap = {
@@ -57,6 +58,23 @@ export class CoreAnimation extends EventEmitter {
   private delay = 0;
   private timingFunction!: TimingFunction;
   private node!: CoreNode;
+
+  // Persistent PropGroup instances -- reused across pool recycles to avoid
+  // allocating new arrays each time. length tracks how many entries are active.
+  private propsGroup: PropGroup = {
+    keys: [],
+    starts: [],
+    targets: [],
+    isColor: [],
+    length: 0,
+  };
+  private shaderPropsGroup: PropGroup = {
+    keys: [],
+    starts: [],
+    targets: [],
+    isColor: [],
+    length: 0,
+  };
 
   propValuesMap: PropValuesMap = { props: null, shaderProps: null };
 
@@ -80,44 +98,37 @@ export class CoreAnimation extends EventEmitter {
     this.propValuesMap.shaderProps = null;
     this.removeAllListeners();
 
+    // Reset persistent group lengths (reuse existing arrays, no new allocations)
+    this.propsGroup.length = 0;
+    this.shaderPropsGroup.length = 0;
+
     for (const key in props) {
       if (key !== 'shaderProps') {
         if (this.propValuesMap['props'] === null) {
-          this.propValuesMap['props'] = {
-            keys: [],
-            starts: [],
-            targets: [],
-            isColor: [],
-          };
+          this.propValuesMap['props'] = this.propsGroup;
         }
-        const group = this.propValuesMap['props']!;
-        group.keys.push(key);
-        group.starts.push(
-          node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0,
-        );
-        group.targets.push(
-          props[
-            key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
-          ] as number,
-        );
-        group.isColor.push(key.indexOf('color') !== -1);
+        const group = this.propsGroup;
+        const i = group.length++;
+        group.keys[i] = key;
+        group.starts[i] =
+          node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0;
+        group.targets[i] = props[
+          key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
+        ] as number;
+        group.isColor[i] = key.indexOf('color') !== -1;
       } else if (key === 'shaderProps' && node.shader !== null) {
-        this.propValuesMap['shaderProps'] = {
-          keys: [],
-          starts: [],
-          targets: [],
-          isColor: [],
-        };
-        const group = this.propValuesMap['shaderProps']!;
+        this.propValuesMap['shaderProps'] = this.shaderPropsGroup;
+        const group = this.shaderPropsGroup;
         for (const key in props.shaderProps) {
           let start = node.shader.props![key];
           if (Array.isArray(start) === true) {
             start = start[0];
           }
-          group.keys.push(key);
-          group.starts.push(start);
-          group.targets.push(props.shaderProps[key] as number);
-          group.isColor.push(key.indexOf('color') !== -1);
+          const i = group.length++;
+          group.keys[i] = key;
+          group.starts[i] = start;
+          group.targets[i] = props.shaderProps[key] as number;
+          group.isColor[i] = key.indexOf('color') !== -1;
         }
       }
     }
@@ -144,7 +155,7 @@ export class CoreAnimation extends EventEmitter {
   private restoreValues(target: Record<string, number>, group: PropGroup) {
     const keys = group.keys;
     const starts = group.starts;
-    const length = keys.length;
+    const length = group.length;
     for (let i = 0; i < length; i++) {
       target[keys[i]!] = starts[i]!;
     }
@@ -169,7 +180,7 @@ export class CoreAnimation extends EventEmitter {
   private reverseValues(group: PropGroup) {
     const starts = group.starts;
     const targets = group.targets;
-    const length = starts.length;
+    const length = group.length;
     for (let i = 0; i < length; i++) {
       const tmp = starts[i]!;
       starts[i] = targets[i]!;
@@ -216,7 +227,7 @@ export class CoreAnimation extends EventEmitter {
         return startValue;
       }
 
-      if (easing) {
+      if (easing && easing !== 'linear') {
         const easingProgressValue =
           this.timingFunction(this.progress) || this.progress;
         return mergeColorProgress(startValue, endValue, easingProgressValue);
@@ -224,7 +235,7 @@ export class CoreAnimation extends EventEmitter {
       return mergeColorProgress(startValue, endValue, this.progress);
     }
 
-    if (easing) {
+    if (easing && easing !== 'linear') {
       return this.applyEasing(this.progress, startValue, endValue);
     }
     return startValue + (endValue - startValue) * this.progress;
@@ -239,7 +250,7 @@ export class CoreAnimation extends EventEmitter {
     const starts = group.starts;
     const targets = group.targets;
     const isColor = group.isColor;
-    const length = keys.length;
+    const length = group.length;
     for (let i = 0; i < length; i++) {
       target[keys[i]!] = this.updateValue(
         isColor[i]!,
@@ -256,12 +267,12 @@ export class CoreAnimation extends EventEmitter {
 
     if (this.node.destroyed) {
       // cleanup
-      this.emit('destroyed', {});
+      this.emit('destroyed');
       return;
     }
 
     if (duration === 0 && delayFor === 0) {
-      this.emit('finished', {});
+      this.emit('finished');
       return;
     }
 
@@ -280,13 +291,13 @@ export class CoreAnimation extends EventEmitter {
 
     if (duration === 0) {
       // No duration, we are done.
-      this.emit('finished', {});
+      this.emit('finished');
       return;
     }
 
     if (this.progress === 0) {
       // Progress is 0, we are starting the post-delay part of the animation.
-      this.emit('animating', {});
+      this.emit('animating');
     }
 
     this.progress += dt / duration;
@@ -298,7 +309,7 @@ export class CoreAnimation extends EventEmitter {
         // If there's a stop method emit finished so the stop method can be applied.
         // TODO: We should probably reevaluate how stopMethod is implemented as currently
         // stop method 'reset' does not work when looping.
-        this.emit('finished', {});
+        this.emit('finished');
         return;
       }
     }
@@ -323,7 +334,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     if (this.progress === 1) {
-      this.emit('finished', {});
+      this.emit('finished');
     }
   }
 }

@@ -73,6 +73,10 @@ export class EventEmitter implements IEventEmitter {
   }
 
   removeAllListeners() {
-    this.eventListeners = {};
+    // Clear in place to avoid allocating a new {} object.
+    const listeners = this.eventListeners;
+    for (const key in listeners) {
+      delete listeners[key];
+    }
   }
 }
