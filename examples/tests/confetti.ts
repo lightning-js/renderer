@@ -2,6 +2,8 @@ import type { IAnimationController } from '../../dist/exports/index.js';
 import type { INode } from '../../dist/src/main-api/INode.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
+import { animate, utils } from 'animejs';
+
 const SHAPE_1 =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAEjSURBVHgBnZO9TgJBFIXvbEllQqsJNrTaSmVhqdHKViyplCewsTXhDcAnkBcwUkm52tqwJrYmVLTDOXAWJsPfhJN8e/fuzD2TmblrFsl7fw66YOSXyvWtZpuEwQPw5nfrKaxzZTFCDrjCBLyDIfjXvDo4Aw3lPefcfWjQRWiq4CUojEWjFqiANkw6jntG8qGVn7cUlzqVyRgcZ3jcaWCYUEx9gR/AbTczOVKflq5c8SQ0+LN0lXNrWfCxYnuIBoXeDy1d5dxvGrwqaVi6LhQHNOgpYaPUE4qvQBUU6IN+hkeBpK3Blow26RZc6n3ZiRQaqoPwoJT3zKviafNwj2Rc1fisC1fsYfIY/YWxRurchdwaE3bYDbi2ebexZX9BH6sO4vlTUbSnqsTgwTgAAAAASUVORK5CYII=';
 const SHAPE_2 =
@@ -73,28 +75,44 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         node.color = COLORS[Math.floor(Math.random() * COLORS.length)]!;
         node.src = SHAPES[Math.floor(Math.random() * SHAPES.length)]!;
 
-        const animateY = node.animate(
-          {
-            y: Y_END,
-          },
-          {
-            duration: durationMs,
-            easing: 'linear',
-          },
-        );
+        // const animateY = node.animate(
+        //   {
+        //     y: Y_END,
+        //   },
+        //   {
+        //     duration: durationMs,
+        //     easing: 'linear',
+        //   },
+        // );
 
-        animateY.start();
-        const animateX = node.animate(
-          {
-            x: endX,
-          },
-          {
-            duration: durationMs,
-            easing: 'cubic-bezier(0,0,0.4,1)',
-          },
-        );
+        // animateY.start();
+        // const animateX = node.animate(
+        //   {
+        //     x: endX,
+        //   },
+        //   {
+        //     duration: durationMs,
+        //     easing: 'cubic-bezier(0,0,0.4,1)',
+        //   },
+        // );
 
-        animateX.start();
+        // animateX.start();
+
+        animate(node, {
+          x: {
+            to: endX,
+            duration: durationMs,
+            ease: 'cubic-bezier(0,0,0.4,1)',
+          },
+          y: {
+            to: Y_END,
+            duration: durationMs,
+            ease: 'linear',
+          },
+          onComplete: () => {
+            this.launch(false, null, Y_START);
+          },
+        });
 
         // const animateRot = node.animate(
         //   {
@@ -108,15 +126,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
         // animateRot.start();
 
-        const onStopped = () => {
-          animateY.off('stopped', onStopped);
-          this.launch(false, null, Y_START);
-          this.animations = [];
-        };
+        // const onStopped = () => {
+        //   animateY.off('stopped', onStopped);
+        //   this.launch(false, null, Y_START);
+        //   this.animations = [];
+        // };
 
-        animateY.on('stopped', onStopped);
+        // animateY.on('stopped', onStopped);
 
-        this.animations = [animateY, animateX /*, animateRot*/];
+        // this.animations = [animateY, animateX /*, animateRot*/];
       },
     };
     setTimeout(() => {

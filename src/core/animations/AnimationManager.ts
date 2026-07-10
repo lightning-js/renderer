@@ -22,6 +22,8 @@ import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
 import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 
+import { engine } from 'animejs';
+
 export class AnimationManager {
   private activeAnimations: CoreAnimation[] = [];
 
@@ -36,6 +38,10 @@ export class AnimationManager {
    * Controllers are returned to the pool alongside their animation.
    */
   private controllerPool: CoreAnimationController[] = [];
+
+  constructor() {
+    engine.useDefaultMainLoop = false;
+  }
 
   registerAnimation(animation: CoreAnimation) {
     this.activeAnimations.push(animation);
@@ -54,6 +60,7 @@ export class AnimationManager {
     for (let i = 0, len = animations.length; i < len; i++) {
       animations[i]!.update(dt);
     }
+    engine.update();
   }
 
   /**
