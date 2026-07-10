@@ -58,6 +58,15 @@ describe('CoreAnimationController', () => {
   let manager: AnimationManager;
   let animation: CoreAnimation;
 
+  function createController(
+    mgr?: AnimationManager,
+    anim?: CoreAnimation,
+  ): CoreAnimationController {
+    const controller = new CoreAnimationController();
+    controller.init(mgr ?? manager, anim ?? animation);
+    return controller;
+  }
+
   beforeEach(() => {
     manager = mock<AnimationManager>();
     animation = createMockAnimation();
@@ -65,26 +74,26 @@ describe('CoreAnimationController', () => {
 
   describe('constructor', () => {
     it('should initialize in stopped state', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       expect(controller.state).toBe('stopped');
     });
   });
 
   describe('lazy promise creation', () => {
     it('should not allocate a promise on construction', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       expect(controller.stoppedPromise).toBeNull();
     });
 
     it('should not allocate a promise on start()', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       expect(controller.stoppedPromise).toBeNull();
       expect(controller.stoppedResolve).toBeNull();
     });
 
     it('should return a resolved promise from waitUntilStopped() when already stopped', async () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       // state is 'stopped' by default
       const promise = controller.waitUntilStopped();
       expect(promise).toBeInstanceOf(Promise);
@@ -94,7 +103,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should lazily create a promise when waitUntilStopped() is called on a running animation', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       expect(controller.stoppedPromise).toBeNull();
 
@@ -105,7 +114,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should return the same promise on repeated waitUntilStopped() calls', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
 
       const promise1 = controller.waitUntilStopped();
@@ -114,7 +123,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should reset the cached promise on a new start() cycle', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       const promise1 = controller.waitUntilStopped();
       controller.stop();
@@ -129,19 +138,19 @@ describe('CoreAnimationController', () => {
 
   describe('start()', () => {
     it('should transition to scheduled state', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       expect(controller.state).toBe('scheduled');
     });
 
     it('should register the animation with the manager', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       expect(manager.registerAnimation).toHaveBeenCalledWith(animation);
     });
 
     it('should not re-register if already running', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
 
       // Simulate the animation emitting 'animating' to move to 'running'
@@ -156,7 +165,7 @@ describe('CoreAnimationController', () => {
 
   describe('stop()', () => {
     it('should resolve the promise when stopped manually', async () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       const promise = controller.waitUntilStopped();
 
@@ -166,7 +175,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should emit stopped event when promise exists', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       const stoppedHandler = vi.fn();
       controller.on('stopped', stoppedHandler);
 
@@ -178,7 +187,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should work without waitUntilStopped() being called (fire-and-forget)', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       const stoppedHandler = vi.fn();
       controller.on('stopped', stoppedHandler);
       controller.start();
@@ -192,7 +201,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should not emit stopped when already in stopped state', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       const stoppedHandler = vi.fn();
       controller.on('stopped', stoppedHandler);
 
@@ -202,7 +211,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should reset animation when stop is called with reset=true', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       controller.stop(true);
       expect(animation.reset).toHaveBeenCalled();
@@ -211,14 +220,14 @@ describe('CoreAnimationController', () => {
 
   describe('pause()', () => {
     it('should transition to paused state', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       controller.pause();
       expect(controller.state).toBe('paused');
     });
 
     it('should unregister the animation from the manager', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       controller.pause();
       expect(manager.unregisterAnimation).toHaveBeenCalledWith(animation);
@@ -227,14 +236,14 @@ describe('CoreAnimationController', () => {
 
   describe('animation lifecycle events', () => {
     it('should transition to running when animation emits animating', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       animation.emit('animating', {});
       expect(controller.state).toBe('running');
     });
 
     it('should resolve promise when animation finishes naturally', async () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       const promise = controller.waitUntilStopped();
 
@@ -244,7 +253,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should emit stopped event when animation finishes naturally', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       const stoppedHandler = vi.fn();
       controller.on('stopped', stoppedHandler);
 
@@ -254,7 +263,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should handle finish without waitUntilStopped (fire-and-forget)', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       // No waitUntilStopped() call
 
@@ -276,10 +285,7 @@ describe('CoreAnimationController', () => {
         },
       });
 
-      const controller = new CoreAnimationController(
-        manager,
-        animationWithReverse,
-      );
+      const controller = createController(manager, animationWithReverse);
       controller.start();
       animationWithReverse.emit('finished', {});
 
@@ -300,7 +306,7 @@ describe('CoreAnimationController', () => {
         },
       });
 
-      const controller = new CoreAnimationController(manager, loopingAnimation);
+      const controller = createController(manager, loopingAnimation);
       controller.start();
       // Call waitUntilStopped to trigger lazy promise creation
       controller.waitUntilStopped();
@@ -314,7 +320,7 @@ describe('CoreAnimationController', () => {
     });
 
     it('should transition to stopped on destroy', () => {
-      const controller = new CoreAnimationController(manager, animation);
+      const controller = createController();
       controller.start();
       animation.emit('destroyed', {});
       expect(controller.state).toBe('stopped');
