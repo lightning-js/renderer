@@ -12,8 +12,6 @@ const SHAPE_3 =
 const SHAPES = [SHAPE_1, SHAPE_2, SHAPE_3];
 const COLORS = [0x3c91efff, 0x847effff, 0x00a75eff, 0xf1604bff, 0xc4defaff];
 
-const POOL_SIZE = 160;
-const BURST_COUNT = 30;
 const Y_START = -40;
 const Y_END = 1600;
 
@@ -23,7 +21,13 @@ type Particle = {
   animations: IAnimationController[];
   launch(isBurst: boolean, side: 'left' | 'right' | null, startY: number): void;
 };
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  testRoot,
+  perfMultiplier,
+}: ExampleSettings) {
+  const POOL_SIZE = 160 * perfMultiplier;
+  const BURST_COUNT = 30 * perfMultiplier;
   function createParticle(
     isBurst: boolean,
     side: 'left' | 'right' | null,
@@ -111,12 +115,13 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         const onStopped = () => {
           animateY.off('stopped', onStopped);
           this.launch(false, null, Y_START);
-          this.animations = [];
+          this.animations.length = 0;
         };
 
         animateY.on('stopped', onStopped);
 
-        this.animations = [animateY, animateX /*, animateRot*/];
+        this.animations.length = 0;
+        this.animations.push(animateY, animateX /*, animateRot*/);
       },
     };
     setTimeout(() => {

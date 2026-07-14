@@ -38,21 +38,37 @@ export class AnimationManager {
   private controllerPool: CoreAnimationController[] = [];
 
   registerAnimation(animation: CoreAnimation) {
+    animation.activeIndex = this.activeAnimations.length;
     this.activeAnimations.push(animation);
   }
 
   unregisterAnimation(animation: CoreAnimation) {
-    const animations = this.activeAnimations;
-    const index = animations.indexOf(animation);
-    if (index >= 0) {
-      animations.splice(index, 1);
+    const index = animation.activeIndex;
+    if (index === -1) {
+      return;
     }
+    const animations = this.activeAnimations;
+    const last = animations.length - 1;
+    if (index !== last) {
+      // Swap with the last element and update its index
+      const swap = animations[last]!;
+      animations[index] = swap;
+      swap.activeIndex = index;
+    }
+    animations.pop();
+    animation.activeIndex = -1;
   }
 
   update(dt: number) {
     const animations = this.activeAnimations;
-    for (let i = 0, len = animations.length; i < len; i++) {
-      animations[i]!.update(dt);
+    // Iterate backwards. With activeIndex tracking, if a sibling stop() during
+    // a completion event swap-removes an already-visited element into index i,
+    // we check activeIndex >= 0 before updating to avoid double-processing.
+    for (let i = animations.length - 1; i >= 0; i--) {
+      const anim = animations[i]!;
+      if (anim.activeIndex >= 0) {
+        anim.update(dt);
+      }
     }
   }
 
@@ -96,9 +112,11 @@ export class AnimationManager {
     animation: CoreAnimation,
     controller: CoreAnimationController,
   ): void {
-    animation.removeAllListeners();
+    // Do NOT clearListeners here -- init() clears lazily on next reuse.
+    // By the time releaseToPool() fires, unregisterAnimation() has already
+    // emptied all listener arrays via off(). Moving clearListeners to init()
+    // keeps this hot path (inside the rAF completion chain) as cheap as possible.
     this.animationPool.push(animation);
-    controller.removeAllListeners();
     this.controllerPool.push(controller);
   }
 }

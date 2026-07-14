@@ -31,9 +31,9 @@ export class EventEmitter implements IEventEmitter {
     let listeners = this.eventListeners[event];
     if (!listeners) {
       listeners = [];
+      this.eventListeners[event] = listeners;
     }
     listeners.push(listener);
-    this.eventListeners[event] = listeners;
   }
 
   off(event: string, listener?: EventListener): void {
@@ -61,17 +61,43 @@ export class EventEmitter implements IEventEmitter {
 
   emit(event: string, data?: any): void {
     const listeners = this.eventListeners[event];
-    if (!listeners) {
+    if (listeners === undefined || listeners.length === 0) {
       return;
     }
-    // Snapshot to handle listeners that remove themselves via once()/off()
-    const snapshot = listeners.slice();
-    for (let i = 0, len = snapshot.length; i < len; i++) {
-      snapshot[i]!(this, data);
+    // Iterate backwards: safe when once()/off() splice() during emission since
+    // removals only shift elements at higher indices (already visited).
+    // Zero allocations vs the previous listeners.slice() snapshot approach.
+    for (let i = listeners.length - 1; i >= 0; i--) {
+      listeners[i]!(this, data);
     }
   }
 
   removeAllListeners() {
-    this.eventListeners = {};
+    // Clear in place to avoid allocating a new {} object.
+    const listeners = this.eventListeners;
+    for (const key in listeners) {
+      delete listeners[key];
+    }
+  }
+
+  /**
+   * Clear all listeners for the given event names by setting their array
+   * length to 0, WITHOUT deleting the keys. This keeps the eventListeners
+   * object in V8's fast-properties mode and avoids re-allocating the arrays
+   * on the next on() call. Use this for objects with a known fixed set of
+   * event names (e.g. CoreAnimation, CoreAnimationController).
+   *
+   * Only writes arr.length = 0 when the array is non-empty -- skips the write
+   * (and the write barrier on old-gen objects) when already empty, which is
+   * the common case after unregisterAnimation() has removed all listeners.
+   */
+  clearListeners(events: readonly string[]): void {
+    const map = this.eventListeners;
+    for (let i = 0; i < events.length; i++) {
+      const arr = map[events[i]!];
+      if (arr !== undefined && arr.length > 0) {
+        arr.length = 0;
+      }
+    }
   }
 }

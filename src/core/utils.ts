@@ -90,7 +90,7 @@ const getTimingBezier = (
       // Cubic bezier derivative.
       cbxd = t * (t * (3 * xa) + 2 * xb) + xc;
 
-      if (cbxd > 1e-10 && cbxd < 1e-10) {
+      if (cbxd > -1e-10 && cbxd < 1e-10) {
         // Problematic. Fall back to binary search method.
         break;
       }

@@ -38,9 +38,19 @@ export class CoreAnimationController
   private manager!: AnimationManager;
   private animation!: CoreAnimation;
 
+  // Pre-allocated tick payload -- reused every frame to avoid per-frame {} allocation
+  private readonly tickPayload: { progress: number } = { progress: 0 };
+
+  // Fixed set of event names this controller emits -- used for zero-alloc clearListeners()
+  static readonly EVENTS = ['stopped', 'animating'] as const;
+
   constructor() {
     super();
     this.state = 'stopped';
+    // Pre-allocate listener arrays for the known events so on() never needs to
+    // allocate a new [] when the controller is reused after a pool recycle.
+    this.eventListeners['stopped'] = [];
+    this.eventListeners['animating'] = [];
   }
 
   /**
@@ -53,7 +63,9 @@ export class CoreAnimationController
     this.state = 'stopped';
     this.stoppedPromise = null;
     this.stoppedResolve = null;
-    this.removeAllListeners();
+    // Clear any stale user listeners from the previous use. Near-zero cost
+    // when arrays are already empty (the common case after releaseToPool).
+    this.clearListeners(CoreAnimationController.EVENTS);
   }
 
   start(): IAnimationController {
@@ -70,18 +82,26 @@ export class CoreAnimationController
       return this;
     }
     this.unregisterAnimation();
+
+    // Capture refs before emit -- the user's stopped callback may synchronously
+    // call createAnimation() which recycles these objects from the pool.
+    // Releasing AFTER emit with captured refs prevents corrupting the recycled objects.
+    const animation = this.animation;
+    const manager = this.manager;
+
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
       this.stoppedResolve = null;
     }
-    this.emit('stopped', this);
-    if (reset === true) {
-      this.animation.reset();
-    }
 
     this.state = 'stopped';
-    // Release to pool after all user listeners have been notified
-    this.manager.releaseToPool(this.animation, this);
+    this.emit('stopped', this);
+
+    if (reset === true) {
+      animation.reset();
+    }
+
+    manager.releaseToPool(animation, this);
     return this;
   }
 
@@ -136,18 +156,22 @@ export class CoreAnimationController
 
   private onDestroy = (): void => {
     this.unregisterAnimation();
+
+    // Capture refs before emit -- same race condition guard as stop()/onFinished()
+    const animation = this.animation;
+    const manager = this.manager;
+
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
       this.stoppedResolve = null;
     }
-    this.emit('stopped', this);
+
     this.state = 'stopped';
-    // Release to pool after all user listeners have been notified
-    this.manager.releaseToPool(this.animation, this);
+    this.emit('stopped', this);
+    manager.releaseToPool(animation, this);
   };
 
   private onFinished = (): void => {
-    // If the animation is looping, then we need to restart it.
     const { loop, stopMethod } = this.animation;
 
     if (stopMethod === 'reverse') {
@@ -159,19 +183,22 @@ export class CoreAnimationController
       return;
     }
 
-    // unregister animation
     this.unregisterAnimation();
 
-    // resolve promise
+    // Capture refs before emit -- the user's stopped callback may synchronously
+    // call createAnimation() which recycles these objects from the pool.
+    // Releasing AFTER emit with captured refs prevents corrupting the recycled objects.
+    const animation = this.animation;
+    const manager = this.manager;
+
     if (this.stoppedResolve !== null) {
       this.stoppedResolve();
       this.stoppedResolve = null;
     }
 
-    this.emit('stopped', this);
     this.state = 'stopped';
-    // Release to pool after all user listeners have been notified
-    this.manager.releaseToPool(this.animation, this);
+    this.emit('stopped', this);
+    manager.releaseToPool(animation, this);
   };
 
   private onAnimating = (): void => {
@@ -185,13 +212,13 @@ export class CoreAnimationController
    */
   private onTick = (): void => {
     const listeners = this.eventListeners['tick'];
-    if (listeners === undefined) {
+    if (listeners === undefined || listeners.length === 0) {
       return;
     }
-    listeners.forEach((listener) => {
-      listener(this, {
-        progress: this.animation['progress'],
-      });
-    });
+    // Mutate pre-allocated payload to avoid per-frame {} allocation
+    this.tickPayload.progress = this.animation['progress'];
+    for (let i = listeners.length - 1; i >= 0; i--) {
+      listeners[i]!(this, this.tickPayload);
+    }
   };
 }
