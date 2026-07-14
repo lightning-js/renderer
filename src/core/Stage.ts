@@ -98,7 +98,9 @@ export class Stage {
   public readonly shManager: CoreShaderManager;
   public readonly renderer: CoreRenderer;
   public readonly root: CoreNode;
-  public readonly interactiveNodes: Set<CoreNode> = new Set();
+  public readonly interactiveNodes: CoreNode[] = [];
+  public hasInteractiveNodeChanges = false;
+
   public boundsMargin: [number, number, number, number];
   public readonly defShaderNode: CoreShaderNode | null = null;
   public strictBound: Bound;
@@ -409,6 +411,33 @@ export class Stage {
     this.eventBus.emit('frameTick', this.frameTickPayload);
   }
 
+  updateInteractiveNodes() {
+    if (this.hasInteractiveNodeChanges === false) {
+      return;
+    }
+
+    this.interactiveNodes.length = 0;
+
+    this.findInteractiveNodes(this.root);
+
+    this.hasInteractiveNodeChanges = false;
+  }
+
+  findInteractiveNodes(node: CoreNode) {
+    if (node.interactive === true && node.isRenderable === true) {
+      this.interactiveNodes.push(node);
+    }
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+      if (child === undefined) {
+        continue;
+      }
+      if (child.renderState === CoreNodeRenderState.InViewport) {
+        this.findInteractiveNodes(child);
+      }
+    }
+  }
+
   /**
    * Create default PixelTexture
    */
@@ -488,12 +517,14 @@ export class Stage {
       renderer.renderRTTNodes();
     }
 
+    this.interactiveNodes.length = 0;
     // Fill quads buffer
     this.addQuads(this.root);
 
     // Perform render pass
     renderer.render();
 
+    this.hasInteractiveNodeChanges = false;
     this.calculateFps();
     this.calculateQuads();
 
@@ -601,6 +632,13 @@ export class Stage {
     // applicable) so the container itself is also clipped to the rounded shape.
     if (node.isRenderable === true) {
       node.renderQuads(this.renderer);
+
+      if (
+        node.interactive === true &&
+        node.renderState === CoreNodeRenderState.InViewport
+      ) {
+        this.interactiveNodes.push(node);
+      }
     }
 
     for (let i = 0; i < node.children.length; i++) {
@@ -763,10 +801,8 @@ export class Stage {
     const x = data.x / this.options.deviceLogicalPixelRatio;
     const y = data.y / this.options.deviceLogicalPixelRatio;
     const nodes: CoreNode[] = [];
+
     for (const node of this.interactiveNodes) {
-      if (node.isRenderable === false) {
-        continue;
-      }
       if (pointInBound(x, y, node.renderBound!) === true) {
         nodes.push(node);
       }
