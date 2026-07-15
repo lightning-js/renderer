@@ -25,6 +25,7 @@ import type { Platform } from '../core/platforms/Platform.js';
 import type { Inspector } from './Inspector.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
+import type { AnimationManager } from '../core/animations/AnimationManager.js';
 
 // Mock isProductionEnvironment so the Inspector gets initialized
 vi.mock('../utils.js', async (importOriginal) => {
@@ -74,12 +75,17 @@ function makeRenderer(
   }> = {},
 ) {
   const MockPlatform = makeMockPlatform();
+  const MockAnimationManager = vi.fn(() => ({
+    update: vi.fn(),
+    animateNode: vi.fn(),
+  })) as unknown as new () => AnimationManager;
   return new RendererMain(
     {
       appWidth: 1920,
       appHeight: 1080,
       inspector: extra.inspector ?? false,
       platform: MockPlatform as unknown as typeof Platform,
+      animationManager: MockAnimationManager,
       renderEngine: {} as unknown as
         | typeof CanvasRenderer
         | typeof WebGlRenderer,
