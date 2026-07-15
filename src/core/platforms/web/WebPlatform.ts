@@ -83,7 +83,10 @@ export class WebPlatform extends Platform {
   }
 
   override createOffscreenCanvas() {
-    return new OffscreenCanvas(1, 1);
+    if (typeof OffscreenCanvas !== 'undefined') {
+      return new OffscreenCanvas(0, 0);
+    }
+    return null;
   }
 
   override createContext(): GlContextWrapper {
