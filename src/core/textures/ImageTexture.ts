@@ -27,15 +27,21 @@ import type { CompressedImageData } from '../platforms/web/lib/textureCompressio
  */
 export interface ImageTextureProps {
   /**
-   * Source URL or ImageData for the image to be used as a texture.
+   * Source URL or image source for the image to be used as a texture.
    *
    * @remarks
-   * The ImageData type is currently only supported internally. End users should
-   * only set this property to a URL string.
+   * The ImageData, ImageBitmap, and HTMLCanvasElement types are currently only
+   * supported internally. End users should only set this property to a URL string.
    *
    * @default ''
    */
-  src?: string | Blob | ImageData | (() => ImageData | null);
+  src?:
+    | string
+    | Blob
+    | ImageData
+    | ImageBitmap
+    | HTMLCanvasElement
+    | (() => ImageData | ImageBitmap | HTMLCanvasElement | null);
   /**
    * Whether to premultiply the alpha channel into the color channels of the
    * image.
@@ -218,14 +224,9 @@ export class ImageTexture extends Texture {
         return platform.createImage(src, premultiply, sx, sy, sw, sh);
       }
 
-      if (src instanceof ImageData) {
-        return {
-          data: src,
-          premultiplyAlpha,
-        };
-      }
+      // ImageData, ImageBitmap, or HTMLCanvasElement
       return {
-        data: src(),
+        data: typeof src === 'function' ? src() : src,
         premultiplyAlpha,
       };
     }

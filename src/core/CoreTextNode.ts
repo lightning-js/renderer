@@ -295,7 +295,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
       this.texture = this.stage.txManager.createTexture('ImageTexture', {
         premultiplyAlpha: true,
-        src: result.imageData as ImageData,
+        src: result.imageData,
       });
 
       this.props.w = width;
