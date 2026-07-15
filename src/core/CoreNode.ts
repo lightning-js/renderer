@@ -55,8 +55,6 @@ import {
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
-import type { AnimationSettings } from './animations/CoreAnimation.js';
-import type { IAnimationController } from '../common/IAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
 import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
@@ -832,10 +830,15 @@ export class CoreNode extends EventEmitter {
   parentAutosizer: Autosizer | null = null;
 
   public destroyed = false;
+  public animate: (
+    props: Record<string, any>,
+    settings?: Record<string, any>,
+  ) => any;
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
     const p = (this.props = {} as CoreNodeProps);
+    this.animate = stage.animationManager.animateNode;
 
     // Initialize the renderOpTextures array with a capacity of 16 (typical max textures)
     this.renderOpTextures = [];
@@ -2776,13 +2779,6 @@ export class CoreNode extends EventEmitter {
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
-  }
-
-  animate(
-    props: Partial<CoreNodeAnimateProps>,
-    settings: Partial<AnimationSettings>,
-  ): IAnimationController {
-    return this.stage.animationManager.createAnimation(this, props, settings);
   }
 
   flush() {

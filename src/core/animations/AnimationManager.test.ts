@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { AnimationManager } from './AnimationManager.js';
+import { CoreAnimationManager as AnimationManager } from './AnimationManager.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 
@@ -48,16 +48,8 @@ describe('AnimationManager', () => {
       const manager = new AnimationManager();
       const node = createMockNode();
 
-      const controller1 = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 1000 },
-      );
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller1 = manager.animate(node, { x: 100 }, { duration: 1000 });
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       // Should be different controller instances
       expect(controller1).not.toBe(controller2);
@@ -68,11 +60,7 @@ describe('AnimationManager', () => {
       const node = createMockNode();
 
       // Create and start an animation
-      const controller1 = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 1000 },
-      );
+      const controller1 = manager.animate(node, { x: 100 }, { duration: 1000 });
       controller1.start();
 
       // Stop it -- should release to pool
@@ -80,11 +68,7 @@ describe('AnimationManager', () => {
 
       // Pool should now have objects
       // Create another animation -- should reuse from pool
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       // The controller instance should be reused (same object reference)
       expect(controller2).toBe(controller1);
@@ -95,20 +79,12 @@ describe('AnimationManager', () => {
       const node = createMockNode();
 
       // Create, start, and stop
-      const controller1 = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 500 },
-      );
+      const controller1 = manager.animate(node, { x: 100 }, { duration: 500 });
       controller1.start();
       controller1.stop();
 
       // Reuse from pool with different props
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       // Should be stopped state (reinitialized)
       expect(controller2.state).toBe('stopped');
@@ -123,11 +99,7 @@ describe('AnimationManager', () => {
       const node = createMockNode();
 
       // Create and add a user listener
-      const controller1 = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 1000 },
-      );
+      const controller1 = manager.animate(node, { x: 100 }, { duration: 1000 });
       const stoppedSpy = vi.fn();
       controller1.on('stopped', stoppedSpy);
       controller1.start();
@@ -137,11 +109,7 @@ describe('AnimationManager', () => {
       expect(stoppedSpy).toHaveBeenCalledTimes(1);
 
       // Reuse from pool
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       // Old listener should not fire on the recycled controller
       const newStoppedSpy = vi.fn();
@@ -158,22 +126,14 @@ describe('AnimationManager', () => {
       const manager = new AnimationManager();
       const node = createMockNode();
 
-      const controller = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 0 },
-      );
+      const controller = manager.animate(node, { x: 100 }, { duration: 0 });
       controller.start();
 
       // Duration is 0 so animation finishes immediately on first update
       manager.update(0);
 
       // Create another -- should reuse from pool
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       expect(controller2).toBe(controller);
     });
@@ -182,11 +142,7 @@ describe('AnimationManager', () => {
       const manager = new AnimationManager();
       const node = createMockNode();
 
-      const controller = manager.createAnimation(
-        node,
-        { x: 100 },
-        { duration: 1000 },
-      );
+      const controller = manager.animate(node, { x: 100 }, { duration: 1000 });
       controller.start();
 
       // Simulate node destruction
@@ -194,11 +150,7 @@ describe('AnimationManager', () => {
       manager.update(16);
 
       // Create another -- should reuse from pool
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       expect(controller2).toBe(controller);
     });
@@ -207,7 +159,7 @@ describe('AnimationManager', () => {
       const manager = new AnimationManager();
       const node = createMockNode();
 
-      const controller = manager.createAnimation(
+      const controller = manager.animate(
         node,
         { x: 100 },
         { duration: 100, loop: true },
@@ -218,11 +170,7 @@ describe('AnimationManager', () => {
       manager.update(200);
 
       // Create another -- should NOT reuse the looping controller
-      const controller2 = manager.createAnimation(
-        node,
-        { y: 200 },
-        { duration: 1000 },
-      );
+      const controller2 = manager.animate(node, { y: 200 }, { duration: 1000 });
 
       expect(controller2).not.toBe(controller);
     });
@@ -232,22 +180,18 @@ describe('AnimationManager', () => {
       const node = createMockNode();
 
       // Cycle 1
-      const c1 = manager.createAnimation(node, { x: 100 }, { duration: 1000 });
+      const c1 = manager.animate(node, { x: 100 }, { duration: 1000 });
       c1.start();
       c1.stop();
 
       // Cycle 2 -- reuses c1
-      const c2 = manager.createAnimation(node, { y: 200 }, { duration: 1000 });
+      const c2 = manager.animate(node, { y: 200 }, { duration: 1000 });
       expect(c2).toBe(c1);
       c2.start();
       c2.stop();
 
       // Cycle 3 -- reuses again
-      const c3 = manager.createAnimation(
-        node,
-        { alpha: 0 },
-        { duration: 1000 },
-      );
+      const c3 = manager.animate(node, { alpha: 0 }, { duration: 1000 });
       expect(c3).toBe(c1);
     });
 
@@ -258,11 +202,7 @@ describe('AnimationManager', () => {
       // Create 3 concurrent animations
       const controllers: IAnimationController[] = [];
       for (let i = 0; i < 3; i++) {
-        const c = manager.createAnimation(
-          node,
-          { x: i * 100 },
-          { duration: 1000 },
-        );
+        const c = manager.animate(node, { x: i * 100 }, { duration: 1000 });
         c.start();
         controllers.push(c);
       }
@@ -279,9 +219,7 @@ describe('AnimationManager', () => {
       // Create 3 more -- should all reuse from pool
       const reused: IAnimationController[] = [];
       for (let i = 0; i < 3; i++) {
-        reused.push(
-          manager.createAnimation(node, { y: i * 100 }, { duration: 1000 }),
-        );
+        reused.push(manager.animate(node, { y: i * 100 }, { duration: 1000 }));
       }
 
       // Each should be one of the original controllers (pool is LIFO)

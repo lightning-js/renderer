@@ -16,15 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { IAnimationController } from '../common/IAnimationController.js';
 import {
   CoreNode,
   type CoreNodeAnimateProps,
   type CoreNodeProps,
 } from '../core/CoreNode.js';
 import type { CoreTextNode, CoreTextNodeProps } from '../core/CoreTextNode.js';
-import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
 import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
+import type { AnimationManager } from '../core/animations/AnimationManager.js';
 
 /**
  * A visual Node in the Renderer scene graph.
@@ -44,14 +43,13 @@ import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
  * Users of the Renderer API, should generally interact with INode objects
  * instead of CoreNode objects.
  */
-export interface INode<ShaderNode extends CoreShaderNode = CoreShaderNode>
-  extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
+export interface INode<
+  A extends AnimationManager,
+  ShaderNode extends CoreShaderNode = CoreShaderNode,
+> extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
   shader: ShaderNode;
-  animate(
-    props: Partial<INodeAnimateProps<ShaderNode>>,
-    settings: Partial<AnimationSettings>,
-  ): IAnimationController;
-  parent: INode | null;
+  animate: A['animateNode'];
+  parent: INode<A> | null;
 }
 
 /**
@@ -66,10 +64,12 @@ export interface INodeAnimateProps<
 /**
  * Properties used to create a new Node
  */
-export interface INodeProps<ShNode extends CoreShaderNode = CoreShaderNode>
-  extends Omit<CoreNodeProps, 'shader' | 'parent'> {
+export interface INodeProps<
+  A extends AnimationManager,
+  ShNode extends CoreShaderNode = CoreShaderNode,
+> extends Omit<CoreNodeProps, 'shader' | 'parent'> {
   shader: ShNode;
-  parent: INode | null;
+  parent: INode<A> | null;
 }
 
 /**
@@ -84,17 +84,16 @@ export interface INodeProps<ShNode extends CoreShaderNode = CoreShaderNode>
  * Users of the Renderer API, should generally interact with ITextNode objects
  * instead of CoreTextNode objects.
  */
-export interface ITextNode extends Omit<CoreTextNode, 'animate' | 'parent'> {
-  animate(
-    props: Partial<INodeAnimateProps<CoreShaderNode>>,
-    settings: Partial<AnimationSettings>,
-  ): IAnimationController;
-  parent: INode | null;
+export interface ITextNode<A extends AnimationManager>
+  extends Omit<CoreTextNode, 'animate' | 'parent'> {
+  animate: A['animateNode'];
+  parent: INode<A> | null;
 }
 
 /**
  * Properties used to create a new Text Node
  */
-export interface ITextNodeProps extends Omit<CoreTextNodeProps, 'parent'> {
-  parent: INode | null;
+export interface ITextNodeProps<A extends AnimationManager>
+  extends Omit<CoreTextNodeProps, 'parent'> {
+  parent: INode<A> | null;
 }

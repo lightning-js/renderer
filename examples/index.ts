@@ -47,6 +47,7 @@ import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
 import { setupMathRandom } from './common/setupMathRandom.js';
 import { installShaders } from './common/installShaders.js';
+import { CoreAnimationManager } from '../dist/src/core/animations/AnimationManager.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -276,6 +277,7 @@ async function initRenderer(
       inspector,
       platform: platformMap[platform] || WebPlatform,
       renderEngine: renderMode === 'webgl' ? WebGlRenderer : CanvasRenderer,
+      animationManager: CoreAnimationManager,
       fontEngines: [SdfTextRenderer, CanvasTextRenderer],
       textureProcessingTimeLimit: textureProcessingTimeLimit,
       ...customSettings,
@@ -304,7 +306,7 @@ async function initRenderer(
   let fpsSamplesLeft = fpsSampleCount;
   renderer.on(
     'fpsUpdate',
-    (target: RendererMain, fpsData: FpsUpdatePayload) => {
+    (target: RendererMain<CoreAnimationManager>, fpsData: FpsUpdatePayload) => {
       const captureSample = fpsSampleIndex >= fpsSampleSkipCount;
       if (captureSample) {
         samples.add('fps', fpsData.fps);
@@ -489,7 +491,7 @@ async function runAutomation(
   }
 }
 
-function waitForRendererIdle(renderer: RendererMain) {
+function waitForRendererIdle(renderer: RendererMain<CoreAnimationManager>) {
   return new Promise<void>((resolve) => {
     let timeout: NodeJS.Timeout | undefined;
     const startTimeout = () => {

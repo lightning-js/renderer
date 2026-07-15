@@ -18,7 +18,7 @@
  */
 
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
-import { AnimationManager } from './animations/AnimationManager.js';
+import { type AnimationManager } from './animations/AnimationManager.js';
 import {
   UpdateType,
   CoreNode,
@@ -59,13 +59,18 @@ import type { WebPlatform } from './platforms/web/WebPlatform.js';
 import type { RendererMainSettings } from '../main-api/Renderer.js';
 
 export type StageOptions = Omit<
-  RendererMainSettings,
-  'inspector' | 'platform' | 'maxRetryCount' | keyof PlatformSettings
+  RendererMainSettings<AnimationManager>,
+  | 'inspector'
+  | 'platform'
+  | 'maxRetryCount'
+  | 'animationManager'
+  | keyof PlatformSettings
 > & {
   textureMemory: TextureMemoryManagerSettings;
   fpsUpdateInterval: number;
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
+  animationManager: AnimationManager;
   inspector: boolean;
   maxRetryCount: number;
   enableClear: boolean;
@@ -197,7 +202,7 @@ export class Stage {
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
-    this.animationManager = new AnimationManager();
+    this.animationManager = options.animationManager;
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     let bm = [0, 0, 0, 0] as [number, number, number, number];

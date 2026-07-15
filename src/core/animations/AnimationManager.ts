@@ -22,7 +22,35 @@ import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
 import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 
-export class AnimationManager {
+export interface AnimationManager {
+  /**
+   * function that updates all active animations, called by the stage on each frame
+   *
+   * @param dt delta time
+   */
+  update(dt: number): void;
+  /**
+   * Animate a target object with the given properties and settings. This function is used to create an animation controller for the target object.
+   * @param target any object
+   * @param props any object
+   * @param settings optional object
+   */
+  animate(
+    target: Record<string, any>,
+    props: Record<string, any>,
+    settings?: Record<string, any>,
+  ): any;
+  /**
+   * This function is bound to the CoreNode instance and is used to animate the a CoreNode specifically
+   *
+   * @param this - The node to animate
+   * @param props The properties to animate
+   * @param settings Optional animation settings
+   */
+  animateNode(props: Record<string, any>, settings?: Record<string, any>): any;
+}
+
+export class CoreAnimationManager implements AnimationManager {
   private activeAnimations: CoreAnimation[] = [];
 
   /**
@@ -77,7 +105,7 @@ export class AnimationManager {
    * Objects are returned to the pool when the controller reaches a terminal
    * state (stopped via finish, manual stop, or node destruction).
    */
-  createAnimation(
+  animate(
     node: CoreNode,
     props: Partial<CoreNodeAnimateProps>,
     settings: Partial<AnimationSettings>,
@@ -119,4 +147,24 @@ export class AnimationManager {
     this.animationPool.push(animation);
     this.controllerPool.push(controller);
   }
+
+  /**
+   * Animate a node, this function is bound to the CoreNode instance and is used to animate the a CoreNode specifically
+   *
+   * @param this - The node to animate
+   * @param props - The animation properties
+   * @param settings - The animation settings
+   * @returns The animation controller
+   */
+  animateNode = function (
+    this: CoreNode,
+    props: Partial<CoreNodeAnimateProps>,
+    settings: Partial<AnimationSettings>,
+  ): IAnimationController {
+    return this.stage.animationManager.animate(
+      this,
+      props,
+      settings,
+    ) as IAnimationController;
+  };
 }

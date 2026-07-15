@@ -19,7 +19,7 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { CoreAnimationController } from './CoreAnimationController.js';
-import { AnimationManager } from './AnimationManager.js';
+import { CoreAnimationManager as AnimationManager } from './AnimationManager.js';
 import { CoreAnimation } from './CoreAnimation.js';
 import { mock } from 'vitest-mock-extended';
 import { EventEmitter } from '../../common/EventEmitter.js';
