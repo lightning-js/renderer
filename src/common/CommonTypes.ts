@@ -18,6 +18,7 @@
  */
 
 import type { CoreNodeRenderState } from '../core/CoreNode.js';
+import type { FrameCount } from '../core/lib/fps.js';
 import type { TextureError } from '../core/TextureError.js';
 
 /**
@@ -138,6 +139,7 @@ export type NodeRenderStateEventHandler = (
 export interface FpsUpdatePayload {
   fps: number;
   contextSpyData: Record<string, number> | null;
+  frameCount: FrameCount;
 }
 
 /**
