@@ -79,6 +79,10 @@ export class WebPlatform extends Platform {
   ////////////////////////
 
   override createCanvas() {
+    return document.createElement('canvas');
+  }
+
+  override createOffscreenCanvas() {
     if (typeof OffscreenCanvas !== 'undefined') {
       return new OffscreenCanvas(0, 0);
     }

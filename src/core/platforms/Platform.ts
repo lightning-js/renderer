@@ -63,9 +63,11 @@ export abstract class Platform {
 
   /**
    * Creates a new canvas.
-   * @returns The created HTMLCanvasElement or OffscreenCanvas.
+   * @returns The created HTMLCanvasElement.
    */
-  abstract createCanvas(): HTMLCanvasElement | OffscreenCanvas;
+  abstract createCanvas(): HTMLCanvasElement;
+
+  abstract createOffscreenCanvas(): OffscreenCanvas | HTMLCanvasElement;
 
   /**
    * Create new rendering context (only for WebGL, Canvas does not require a context)

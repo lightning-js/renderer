@@ -65,10 +65,12 @@ const init = (_stage: Stage): void => {
   const dpr = stage.options.devicePhysicalPixelRatio;
 
   // Drawing canvas and context
-  canvas = stage.platform.createCanvas();
+  canvas = stage.platform.createOffscreenCanvas();
   isOffscreen =
     typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
-  context = canvas.getContext('2d');
+  context = canvas.getContext('2d') as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D;
   assertTruthy(context, '.getContext(2d) failed');
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
