@@ -58,7 +58,7 @@ export abstract class Platform {
     };
 
     // If a canvas was provided in the settings, use it. Otherwise, create a new one.
-    this.canvas = settings.canvas || document.createElement('canvas');
+    this.canvas = settings.canvas || this.createCanvas();
   }
 
   /**
