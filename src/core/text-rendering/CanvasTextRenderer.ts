@@ -66,11 +66,13 @@ const init = (_stage: Stage): void => {
 
   // Drawing canvas and context
   canvas = stage.platform.createOffscreenCanvas();
-  isOffscreen =
-    typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
-  if (canvas === null) {
+  if (canvas !== null) {
+    isOffscreen = true;
+  } else {
+    isOffscreen = false;
     canvas = stage.platform.createCanvas();
   }
+
   context = canvas.getContext('2d') as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
