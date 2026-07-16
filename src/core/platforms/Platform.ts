@@ -62,7 +62,7 @@ export abstract class Platform {
   }
 
   /**
-   * Creates a new canvas.
+   * Creates a new canvas element.
    * @returns The created HTMLCanvasElement.
    */
   abstract createCanvas(): HTMLCanvasElement;
