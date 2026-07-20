@@ -2,6 +2,7 @@ import type { CoreNode } from '../../CoreNode.js';
 import { getNormalizedRgbaComponents } from '../../lib/utils.js';
 import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import type { Stage } from '../../Stage.js';
+import type { Texture } from '../../textures/Texture.js';
 import { CoreShaderNode, type CoreShaderType } from '../CoreShaderNode.js';
 import type {
   UniformCollection,
@@ -9,6 +10,7 @@ import type {
   Vec3,
   Vec4,
 } from './internal/ShaderUtils.js';
+import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
@@ -36,6 +38,14 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
     update?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
 
     /**
+     * This function is called before the draw call, here you can update the uniforms you use in the fragment / vertex shader.
+     * This function can be used to bind additional textures to the shader, or update uniforms that are not part of the props.
+     * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
+     * @param props The props of the shader node.
+     */
+    beforeDraw?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
+
+    /**
      * only used for SDF shader, will be removed in the future.
      *
      * @warning don't use this in your shader type
@@ -60,7 +70,10 @@ export class WebGlShaderNode<
   readonly program: WebGlShaderProgram;
   private updater: ((node: CoreNode, props?: Props) => void) | undefined =
     undefined;
+  private beforeDrawFn: ((node: CoreNode, props: Props) => void) | undefined =
+    undefined;
   private valueKey: string = '';
+  private additionalTextureCount: number = 0;
   uniforms: UniformCollection = {
     hasStoredUniforms: false,
     single: {},
@@ -121,6 +134,36 @@ export class WebGlShaderNode<
           this.uniforms as unknown as Record<string, unknown>,
         );
       };
+    }
+    if (config.beforeDraw !== undefined) {
+      this.beforeDrawFn = config.beforeDraw;
+      this.beforeDraw = () => {
+        this.additionalTextureCount = 0;
+        this.beforeDrawFn!(this.node as CoreNode, this.props as Props);
+      };
+    }
+  }
+
+  // beforeDraw() {
+  //   if (this.beforeDrawFn !== undefined) {
+  //     // reset additional texture count before each draw call, so that the shader node can bind additional textures if needed
+  //     this.additionalTextureCount = 0;
+  //     this.beforeDrawFn(this.node as CoreNode, this.props as Props);
+  //   }
+  // }
+
+  bindTexture(location: string, texture: Texture) {
+    const glw = this.program.glw;
+    const targetId =
+      this.additionalTextureCount +
+      (this.node as CoreNode).renderOpTextures.length;
+    this.uniform1i(location, targetId);
+    this.additionalTextureCount++;
+
+    if (texture.state === 'loaded') {
+      glw.activeTexture(targetId);
+      const nativeTexture = (texture.ctxTexture as WebGlCtxTexture).ctxTexture;
+      glw.bindTexture(nativeTexture as WebGLTexture | null);
     }
   }
 
