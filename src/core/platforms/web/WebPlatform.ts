@@ -78,8 +78,15 @@ export class WebPlatform extends Platform {
   // Platform-specific methods
   ////////////////////////
 
-  override createCanvas(): HTMLCanvasElement {
+  override createCanvas() {
     return document.createElement('canvas');
+  }
+
+  override createOffscreenCanvas() {
+    if (typeof OffscreenCanvas !== 'undefined') {
+      return new OffscreenCanvas(0, 0);
+    }
+    return null;
   }
 
   override createContext(): GlContextWrapper {

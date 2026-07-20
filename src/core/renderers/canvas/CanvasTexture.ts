@@ -152,8 +152,6 @@ export class CanvasTexture extends CoreContextTexture {
   private async onLoadRequest(
     data: NonNullable<NonNullable<Texture['textureData']>['data']>,
   ): Promise<Dimensions> {
-    // TODO: canvas from text renderer should be able to provide the canvas directly
-    // instead of having to re-draw it into a new canvas...
     if (data instanceof ImageData) {
       const canvas = document.createElement('canvas');
       canvas.width = data.width;
@@ -164,6 +162,8 @@ export class CanvasTexture extends CoreContextTexture {
       return { w: data.width, h: data.height };
     } else if (
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+      (typeof HTMLCanvasElement !== 'undefined' &&
+        data instanceof HTMLCanvasElement) ||
       data instanceof HTMLImageElement
     ) {
       this.image = data;

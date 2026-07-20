@@ -35,11 +35,15 @@ import { normalizeCanvasColor } from '../lib/colorCache.js';
 const type = 'canvas' as const;
 const font: FontHandler = CanvasFontHandler;
 
+let stage: Stage | null = null;
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let context:
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D
   | null = null;
+
+// Whether the drawing canvas is an OffscreenCanvas (supports transferToImageBitmap)
+let isOffscreen = false;
 
 // Separate canvas and context for text measurements
 let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
@@ -56,26 +60,32 @@ const renderInfoCache = new Map<string, CanvasRenderInfo>();
 const _richTextResult = new ParseResult();
 
 // Initialize the Text Renderer
-const init = (stage: Stage): void => {
+const init = (_stage: Stage): void => {
+  stage = _stage;
   const dpr = stage.options.devicePhysicalPixelRatio;
 
   // Drawing canvas and context
-  canvas = stage.platform.createCanvas() as HTMLCanvasElement | OffscreenCanvas;
-  context = canvas.getContext('2d', { willReadFrequently: true }) as
+  canvas = stage.platform.createOffscreenCanvas();
+  if (canvas !== null) {
+    isOffscreen = true;
+  } else {
+    isOffscreen = false;
+    canvas = stage.platform.createCanvas();
+  }
+
+  context = canvas.getContext('2d') as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
+  assertTruthy(context, '.getContext(2d) failed');
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
   context.textRendering = 'optimizeSpeed';
 
   // Separate measuring canvas and context
-  measureCanvas = stage.platform.createCanvas() as
-    | HTMLCanvasElement
-    | OffscreenCanvas;
-  measureContext = measureCanvas.getContext('2d') as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D;
-
+  measureCanvas = stage.platform.createCanvas();
+  assertTruthy(measureCanvas, 'createCanvas returned null');
+  measureContext = measureCanvas.getContext('2d');
+  assertTruthy(measureContext, '.getContext(2d) failed');
   measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
   measureContext.textRendering = 'optimizeSpeed';
 
@@ -165,8 +175,21 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   const canvasW = Math.ceil(effectiveWidth);
   const canvasH = Math.ceil(effectiveHeight);
 
-  canvas.width = canvasW;
-  canvas.height = canvasH;
+  // For OffscreenCanvas we reuse the shared canvas and snapshot via
+  // transferToImageBitmap at the end. For HTMLCanvasElement we allocate a
+  // fresh canvas per text node so it can be passed directly as the texture
+  // source — no pixel readback or intermediate copy needed.
+  let drawCanvas: HTMLCanvasElement | OffscreenCanvas;
+  if (isOffscreen) {
+    drawCanvas = canvas;
+  } else {
+    assertTruthy(stage, 'Stage is not available');
+    drawCanvas = stage.platform.createCanvas();
+    context = drawCanvas.getContext('2d') as CanvasRenderingContext2D;
+  }
+
+  drawCanvas.width = canvasW;
+  drawCanvas.height = canvasH;
   context.fillStyle = 'white';
   context.font = baseFont;
   context.textBaseline = 'hanging';
@@ -357,10 +380,26 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     }
   }
 
-  // Extract image data
-  let imageData: ImageData | null = null;
-  if (canvas.width > 0 && canvas.height > 0) {
-    imageData = context.getImageData(0, 0, canvasW, canvasH);
+  // Capture the rendered text as a texture source.
+  // OffscreenCanvas: transferToImageBitmap detaches the backing bitmap
+  //   synchronously (zero-copy). The shared canvas gets a fresh empty bitmap.
+  // HTMLCanvasElement: drawCanvas was allocated specifically for this text
+  //   node, so it can be passed directly — no copy needed.
+  let imageData: ImageBitmap | HTMLCanvasElement | null = null;
+  if (drawCanvas.width > 0 && drawCanvas.height > 0) {
+    if (isOffscreen) {
+      assertTruthy(
+        drawCanvas instanceof OffscreenCanvas,
+        'drawCanvas is not an OffscreenCanvas',
+      );
+      imageData = drawCanvas.transferToImageBitmap();
+    } else {
+      assertTruthy(
+        drawCanvas instanceof HTMLCanvasElement,
+        'drawCanvas is not an HTMLCanvasElement',
+      );
+      imageData = drawCanvas;
+    }
   }
   const renderInfo = {
     type,
