@@ -39,7 +39,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
 
     /**
      * This function is called before the draw call, here you can update the uniforms you use in the fragment / vertex shader.
-     * This fucntion can be used to bind additional textures to the shader, or update uniforms that are not part of the props.
+     * This function can be used to bind additional textures to the shader, or update uniforms that are not part of the props.
      * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
      * @param props The props of the shader node.
      */
