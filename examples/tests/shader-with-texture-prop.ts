@@ -29,7 +29,7 @@ const WatermarkShader: WebGlShaderType<ShaderProps> = {
     textureAlpha: 1,
     texture: null as unknown as Texture,
   },
-  beforeDraw(node) {
+  beforeDraw() {
     this.bindTexture('u_watermark', this.props!.texture);
     this.uniform1f('u_imageHeight', 48);
   },
@@ -107,9 +107,13 @@ const WatermarkShader: WebGlShaderType<ShaderProps> = {
     vec4 roundedRectangleWithWatermark(vec4 radius, float imageAlpha) {
       float p = sdRoundBox(v_nodeCoords, u_dimensions, radius);
       vec2 scaledResolution = v_nodeCoords * u_dimensions / u_imageHeight;
+      float inBoundsX = step(0.0, scaledResolution.x) * (1.0 - step(1.0, scaledResolution.x));
+      float inBoundsY = step(0.0, scaledResolution.y) * (1.0 - step(1.0, scaledResolution.y));
+      float watermarkMask = inBoundsX * inBoundsY;
 
       vec4 watermarkColor = texture2D(u_watermark, scaledResolution);
       watermarkColor = mix(watermarkColor, vec4(watermarkColor.rgb, 0.0), imageAlpha);
+      watermarkColor = vec4(watermarkColor.rgb, watermarkColor.a * watermarkMask);
 
       return mix(texture2D(u_texture, v_textureCoords), watermarkColor, watermarkColor.a) * v_color * p;
     }

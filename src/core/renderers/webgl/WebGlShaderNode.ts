@@ -43,7 +43,7 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
      * @param node WebGlContextWrapper with utilities to update uniforms, and other actions.
      * @param props The props of the shader node.
      */
-    beforeDraw?: (this: WebGlShaderNode<T>, node: CoreNode, props: T) => void;
+    beforeDraw?: (this: WebGlShaderNode<T>, node: CoreNode) => void;
 
     /**
      * only used for SDF shader, will be removed in the future.
@@ -137,16 +137,20 @@ export class WebGlShaderNode<
     }
     if (config.beforeDraw !== undefined) {
       this.beforeDrawFn = config.beforeDraw;
+      this.beforeDraw = () => {
+        this.additionalTextureCount = 0;
+        this.beforeDrawFn!(this.node as CoreNode, this.props as Props);
+      };
     }
   }
 
-  beforeDraw() {
-    if (this.beforeDrawFn !== undefined) {
-      // reset additional texture count before each draw call, so that the shader node can bind additional textures if needed
-      this.additionalTextureCount = 0;
-      this.beforeDrawFn(this.node as CoreNode, this.props as Props);
-    }
-  }
+  // beforeDraw() {
+  //   if (this.beforeDrawFn !== undefined) {
+  //     // reset additional texture count before each draw call, so that the shader node can bind additional textures if needed
+  //     this.additionalTextureCount = 0;
+  //     this.beforeDrawFn(this.node as CoreNode, this.props as Props);
+  //   }
+  // }
 
   bindTexture(location: string, texture: Texture) {
     const glw = this.program.glw;

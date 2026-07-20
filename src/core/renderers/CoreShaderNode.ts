@@ -96,6 +96,7 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   protected node: CoreNode | null = null;
   readonly time: CoreShaderType['time'] = undefined;
   update: (() => void) | undefined = undefined;
+  beforeDraw: (() => void) | undefined = undefined;
   private _valueKeyCache = '';
   private _valueKeyDirty = true;
   private _lastW = 0;

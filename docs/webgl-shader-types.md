@@ -161,6 +161,25 @@ You can also get information about the node during the update function:
 }
 ```
 
+## beforeDraw
+
+The beforeDraw property is an `optional` property. And is generally used for binding extra texture just before draw.
+Of course it's also possible to push additional uniforms unrelated to textures.
+
+> Note: Currently textures have to be loaded/unloaded manually otherwise they won't be bound.
+
+```js
+{
+  beforeDraw(node) {
+    this.bindTexture('extraTexture', this.props.extraTexture);
+  },
+  fragment: `
+    //fragment header code..
+    uniform sampler2D extraTexture;
+  `
+}
+```
+
 ## canBatch
 
 Generally the Renderer checks if the `Quad` that is supposed to be drawn can use the current shader with the loaded uniforms, we call this a `batch check`.

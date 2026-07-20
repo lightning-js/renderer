@@ -260,7 +260,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     const shader = renderOp.shader as WebGlShaderNode;
     const uniforms = shader.uniforms;
 
-    shader.beforeDraw();
+    if (shader.beforeDraw !== undefined) {
+      shader.beforeDraw();
+    }
 
     if (uniforms.hasStoredUniforms === true) {
       /**
