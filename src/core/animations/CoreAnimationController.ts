@@ -21,7 +21,7 @@ import type {
   AnimationControllerState,
   IAnimationController,
 } from '../../common/IAnimationController.js';
-import type { AnimationManager } from './AnimationManager.js';
+import type { CoreAnimationManager } from './AnimationManager.js';
 import type { CoreAnimation } from './CoreAnimation.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
 
@@ -35,7 +35,7 @@ export class CoreAnimationController
    */
   stoppedResolve: (() => void) | null = null;
   state: AnimationControllerState;
-  private manager!: AnimationManager;
+  private manager!: CoreAnimationManager;
   private animation!: CoreAnimation;
 
   // Pre-allocated tick payload -- reused every frame to avoid per-frame {} allocation
@@ -57,7 +57,7 @@ export class CoreAnimationController
    * Initialize (or reinitialize) this controller with new dependencies.
    * Called both on first use and when recycled from the pool.
    */
-  init(manager: AnimationManager, animation: CoreAnimation): void {
+  init(manager: CoreAnimationManager, animation: CoreAnimation): void {
     this.manager = manager;
     this.animation = animation;
     this.state = 'stopped';

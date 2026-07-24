@@ -13,6 +13,7 @@ import { isProductionEnvironment } from '../utils.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Texture } from '../core/textures/Texture.js';
 import { TextureType } from '../core/textures/Texture.js';
+import type { AnimationManager } from '../core/animations/AnimationManager.js';
 
 /**
  * Inspector Options
@@ -290,7 +291,10 @@ export class Inspector {
   // Animation stats printing timer
   private animationStatsTimer: number | null = null;
 
-  constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    settings: RendererMainSettings<AnimationManager>,
+  ) {
     if (isProductionEnvironment === true) return;
 
     if (!settings) {
@@ -898,15 +902,16 @@ export class Inspector {
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
       let proto: CoreNode | ObjectConstructor | null = node;
-      let originalProp: PropertyDescriptor | undefined | null = Object.getOwnPropertyDescriptor(proto, property);
+      let originalProp: PropertyDescriptor | undefined | null =
+        Object.getOwnPropertyDescriptor(proto, property);
 
       // Search the prototype chain for the property descriptor
-      while(originalProp === undefined) {
-          proto = Object.getPrototypeOf(proto) as ObjectConstructor;
-          if (proto === null) {
-            return;
-          }
-          originalProp = Object.getOwnPropertyDescriptor(proto, property);
+      while (originalProp === undefined) {
+        proto = Object.getPrototypeOf(proto) as ObjectConstructor;
+        if (proto === null) {
+          return;
+        }
+        originalProp = Object.getOwnPropertyDescriptor(proto, property);
       }
 
       if (property === 'text') {

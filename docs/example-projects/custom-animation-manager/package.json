@@ -1,0 +1,24 @@
+{
+  "name": "renderer-custom-animation-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "vite --open --host",
+    "build": "tsc && vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jeffrey Boeve",
+  "license": "ISC",
+  "dependencies": {
+    "@lightningjs/renderer": "link:../../..",
+    "animejs": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

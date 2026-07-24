@@ -37,6 +37,7 @@ import type {
 } from '../core/CoreShaderManager.js';
 import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
 import { Platform, type PlatformSettings } from '../core/platforms/Platform.js';
+import type { AnimationManager } from '../core/animations/AnimationManager.js';
 
 /**
  * FPS Update Event Data
@@ -304,126 +305,137 @@ export interface RendererRuntimeSettings {
 /**
  * Configuration settings for {@link RendererMain}
  */
-export type RendererMainSettings = RendererRuntimeSettings &
-  Required<PlatformSettings> & {
-    /**
-     * Include context call (i.e. WebGL) information in FPS updates
-     *
-     * @remarks
-     * When enabled the number of calls to each context method over the
-     * `fpsUpdateInterval` will be included in the FPS update payload's
-     * `contextSpyData` property.
-     *
-     * Enabling the context spy has a serious impact on performance so only use it
-     * when you need to extract context call information.
-     *
-     * @defaultValue `false` (disabled)
-     */
-    enableContextSpy: boolean;
+export type RendererMainSettings<A extends AnimationManager> =
+  RendererRuntimeSettings &
+    Required<PlatformSettings> & {
+      /**
+       * Include context call (i.e. WebGL) information in FPS updates
+       *
+       * @remarks
+       * When enabled the number of calls to each context method over the
+       * `fpsUpdateInterval` will be included in the FPS update payload's
+       * `contextSpyData` property.
+       *
+       * Enabling the context spy has a serious impact on performance so only use it
+       * when you need to extract context call information.
+       *
+       * @defaultValue `false` (disabled)
+       */
+      enableContextSpy: boolean;
 
-    /**
-     * Renderer Engine
-     *
-     * @remarks
-     * The renderer engine to use. Spawns a WebGL or Canvas renderer.
-     * WebGL is more performant and supports more features. Canvas is
-     * supported on most platforms.
-     *
-     * Note: When using CanvasCoreRenderer you can only use
-     * CanvasTextRenderer. The WebGLCoreRenderer supports
-     * both CanvasTextRenderer and SdfTextRenderer for Text Rendering.
-     *
-     */
-    renderEngine: typeof CanvasRenderer | typeof WebGlRenderer;
+      /**
+       * Renderer Engine
+       *
+       * @remarks
+       * The renderer engine to use. Spawns a WebGL or Canvas renderer.
+       * WebGL is more performant and supports more features. Canvas is
+       * supported on most platforms.
+       *
+       * Note: When using CanvasCoreRenderer you can only use
+       * CanvasTextRenderer. The WebGLCoreRenderer supports
+       * both CanvasTextRenderer and SdfTextRenderer for Text Rendering.
+       *
+       */
+      renderEngine: typeof CanvasRenderer | typeof WebGlRenderer;
 
-    /**
-     * Quad buffer size in bytes
-     *
-     * @defaultValue 4 * 1024 * 1024
-     */
-    quadBufferSize: number;
+      /**
+       * Quad buffer size in bytes
+       *
+       * @defaultValue 4 * 1024 * 1024
+       */
+      quadBufferSize: number;
 
-    /**
-     * Font Engines
-     *
-     * @remarks
-     * The font engines to use for text rendering. CanvasTextRenderer is supported
-     * on all platforms. SdfTextRenderer is a more performant renderer.
-     * When using `renderEngine=CanvasCoreRenderer` you can only use `CanvasTextRenderer`.
-     * The `renderEngine=WebGLCoreRenderer` supports both `CanvasTextRenderer` and `SdfTextRenderer`.
-     *
-     * This setting is used to enable tree shaking of unused font engines. Please
-     * import your font engine(s) as follows:
-     * ```
-     * import { CanvasTextRenderer } from '@lightning/renderer/canvas';
-     * import { SdfTextRenderer } from '@lightning/renderer/webgl';
-     * ```
-     *
-     * If both CanvasTextRenderer and SdfTextRenderer are provided, the first renderer
-     * provided will be asked first if it can render the font. If it cannot render the
-     * font, the next renderer will be asked. If no renderer can render the font, the
-     * text will not be rendered.
-     *
-     * **Note** that if you have fonts available in both engines the second font engine
-     * will not be used. This is because the first font engine will always be asked first.
-     *
-     * @defaultValue '[]'
-     *
-     *
-     */
-    fontEngines: TextRenderer[];
+      /**
+       * Font Engines
+       *
+       * @remarks
+       * The font engines to use for text rendering. CanvasTextRenderer is supported
+       * on all platforms. SdfTextRenderer is a more performant renderer.
+       * When using `renderEngine=CanvasCoreRenderer` you can only use `CanvasTextRenderer`.
+       * The `renderEngine=WebGLCoreRenderer` supports both `CanvasTextRenderer` and `SdfTextRenderer`.
+       *
+       * This setting is used to enable tree shaking of unused font engines. Please
+       * import your font engine(s) as follows:
+       * ```
+       * import { CanvasTextRenderer } from '@lightning/renderer/canvas';
+       * import { SdfTextRenderer } from '@lightning/renderer/webgl';
+       * ```
+       *
+       * If both CanvasTextRenderer and SdfTextRenderer are provided, the first renderer
+       * provided will be asked first if it can render the font. If it cannot render the
+       * font, the next renderer will be asked. If no renderer can render the font, the
+       * text will not be rendered.
+       *
+       * **Note** that if you have fonts available in both engines the second font engine
+       * will not be used. This is because the first font engine will always be asked first.
+       *
+       * @defaultValue '[]'
+       *
+       *
+       */
+      fontEngines: TextRenderer[];
 
-    /**
-     * createImageBitmap support for the runtime
-     *
-     * @remarks
-     * This is used to determine if and which version of the createImageBitmap API
-     * is supported by the runtime. This is used to determine if the renderer can
-     * use createImageBitmap to load images.
-     *
-     * Options supported
-     * - Auto - Automatically determine the supported version
-     * - Basic - Supports createImageBitmap(image)
-     * - Options - Supports createImageBitmap(image, options)
-     * - Full - Supports createImageBitmap(image, sx, sy, sw, sh, options)
-     *
-     * Note with auto detection, the renderer will attempt to use the most advanced
-     * version of the API available. If the API is not available, the renderer will
-     * fall back to the next available version.
-     *
-     * This will affect startup performance as the renderer will need to determine
-     * the supported version of the API.
-     *
-     * @defaultValue `full`
-     */
-    createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
+      /**
+       * createImageBitmap support for the runtime
+       *
+       * @remarks
+       * This is used to determine if and which version of the createImageBitmap API
+       * is supported by the runtime. This is used to determine if the renderer can
+       * use createImageBitmap to load images.
+       *
+       * Options supported
+       * - Auto - Automatically determine the supported version
+       * - Basic - Supports createImageBitmap(image)
+       * - Options - Supports createImageBitmap(image, options)
+       * - Full - Supports createImageBitmap(image, sx, sy, sw, sh, options)
+       *
+       * Note with auto detection, the renderer will attempt to use the most advanced
+       * version of the API available. If the API is not available, the renderer will
+       * fall back to the next available version.
+       *
+       * This will affect startup performance as the renderer will need to determine
+       * the supported version of the API.
+       *
+       * @defaultValue `full`
+       */
+      createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
 
-    /**
-     * Provide an alternative platform abstraction layer
-     *
-     * @remarks
-     * By default the Lightning 3 renderer will load a webplatform, assuming it runs
-     * inside a web browsr. However for special cases there might be a need to provide
-     * an abstracted platform layer to run on non-web or non-standard JS engines
-     *
-     * @defaultValue `null`
-     */
-    platform: typeof Platform | null;
+      /**
+       * Provide an alternative platform abstraction layer
+       *
+       * @remarks
+       * By default the Lightning 3 renderer will load a webplatform, assuming it runs
+       * inside a web browsr. However for special cases there might be a need to provide
+       * an abstracted platform layer to run on non-web or non-standard JS engines
+       *
+       * @defaultValue `null`
+       */
+      platform: typeof Platform | null;
 
-    /**
-     * Number of times to retry loading a failed texture
-     *
-     * @remarks
-     * When a texture fails to load, Lightning will retry up to this many times
-     * before permanently giving up. Each retry will clear the texture ownership
-     * and then re-establish it to trigger a new load attempt.
-     *
-     * Set to null to disable retries. Set to 0 to always try once and never retry.
-     * This is typically only used on ImageTexture instances.
-     *
-     */
-    maxRetryCount?: number;
-  };
+      /**
+       * Provide a custom animation manager implementation
+       *
+       * @remarks
+       * This allows you to supply your own animation manager that conforms to the AnimationManager interface.
+       *
+       * @defaultValue `null`
+       */
+      animationManager: (new () => A) | null;
+
+      /**
+       * Number of times to retry loading a failed texture
+       *
+       * @remarks
+       * When a texture fails to load, Lightning will retry up to this many times
+       * before permanently giving up. Each retry will clear the texture ownership
+       * and then re-establish it to trigger a new load attempt.
+       *
+       * Set to null to disable retries. Set to 0 to always try once and never retry.
+       * This is typically only used on ImageTexture instances.
+       *
+       */
+      maxRetryCount?: number;
+    };
 
 /**
  * The Renderer Main API
@@ -476,8 +488,10 @@ export type RendererMainSettings = RendererRuntimeSettings &
  * @fires RendererMain#criticalCleanup
  * @fires RendererMain#criticalCleanupFailed
  */
-export class RendererMain extends EventEmitter {
-  readonly root: INode;
+export class RendererMain<
+  A extends AnimationManager = AnimationManager,
+> extends EventEmitter {
+  readonly root: INode<A>;
   readonly canvas: HTMLCanvasElement;
   readonly stage: Stage;
   private inspector: Inspector | null = null;
@@ -490,7 +504,7 @@ export class RendererMain extends EventEmitter {
    * @param driver Core Driver to use
    */
   constructor(
-    settings: Partial<RendererMainSettings>,
+    settings: Partial<RendererMainSettings<A>>,
     target?: string | HTMLElement,
   ) {
     super();
@@ -525,6 +539,7 @@ export class RendererMain extends EventEmitter {
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || WebPlatform,
+      animationManager: settings.animationManager || null,
       maxRetryCount: settings.maxRetryCount ?? 5,
     };
 
@@ -534,7 +549,7 @@ export class RendererMain extends EventEmitter {
       deviceLogicalPixelRatio,
       devicePhysicalPixelRatio,
       inspector,
-    } = settings as RendererMainSettings;
+    } = settings as RendererMainSettings<A>;
 
     assertTruthy(
       settings.platform,
@@ -542,6 +557,13 @@ export class RendererMain extends EventEmitter {
     );
 
     const platform = new (settings.platform as typeof WebPlatform)(settings);
+
+    assertTruthy(
+      settings.animationManager,
+      'An animation manager must be provided in settings.animationManager',
+    );
+
+    const animationManager = new settings.animationManager();
 
     const deviceLogicalWidth = appWidth * deviceLogicalPixelRatio;
     const deviceLogicalHeight = appHeight * deviceLogicalPixelRatio;
@@ -578,11 +600,12 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
+      animationManager: animationManager,
       maxRetryCount: settings.maxRetryCount ?? 5,
     });
 
     // Extract the root node
-    this.root = this.stage.root as unknown as INode;
+    this.root = this.stage.root as unknown as INode<A>;
 
     // Get the target element and attach the canvas to it
     if (target) {
@@ -608,7 +631,7 @@ export class RendererMain extends EventEmitter {
     if (inspector && isProductionEnvironment === false) {
       this.inspector = new inspector(
         this.canvas,
-        settings as RendererMainSettings,
+        settings as RendererMainSettings<A>,
       );
     }
   }
@@ -667,15 +690,15 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   createNode<ShNode extends CoreShaderNode<any>>(
-    props: Partial<INodeProps<ShNode>>,
-  ): INode<ShNode> {
+    props: Partial<INodeProps<A, ShNode>>,
+  ): INode<A, ShNode> {
     const node = this.stage.createNode(props as Partial<CoreNodeProps>);
 
     if (this.inspector) {
-      return this.inspector.createNode(node) as unknown as INode<ShNode>;
+      return this.inspector.createNode(node) as unknown as INode<A, ShNode>;
     }
 
-    return node as unknown as INode<ShNode>;
+    return node as unknown as INode<A, ShNode>;
   }
 
   /**
@@ -692,14 +715,14 @@ export class RendererMain extends EventEmitter {
    * @param props
    * @returns
    */
-  createTextNode(props: Partial<ITextNodeProps>): ITextNode {
+  createTextNode(props: Partial<ITextNodeProps<A>>): ITextNode<A> {
     const textNode = this.stage.createTextNode(props as CoreTextNodeProps);
 
     if (this.inspector) {
-      return this.inspector.createTextNode(textNode) as unknown as ITextNode;
+      return this.inspector.createTextNode(textNode) as unknown as ITextNode<A>;
     }
 
-    return textNode as unknown as ITextNode;
+    return textNode as unknown as ITextNode<A>;
   }
 
   /**
@@ -711,7 +734,7 @@ export class RendererMain extends EventEmitter {
    * @param node
    * @returns
    */
-  destroyNode(node: INode) {
+  destroyNode(node: INode<A>) {
     if (this.inspector) {
       this.inspector.destroyNode(node.id);
     }
@@ -764,6 +787,10 @@ export class RendererMain extends EventEmitter {
       NonNullable<ExtractShaderProps<ShType>>
     >;
   }
+
+  animate: A['animate'] = (node, props, options) => {
+    return this.stage.animationManager.animate(node, props, options);
+  };
 
   /**
    * Get a Node by its ID
@@ -886,7 +913,7 @@ export class RendererMain extends EventEmitter {
       ) {
         this.inspector = new options.inspector(
           this.canvas,
-          stage.options as unknown as RendererMainSettings,
+          stage.options as unknown as RendererMainSettings<A>,
         );
         this.inspector?.createNodes(this.root as unknown as CoreNode);
       }

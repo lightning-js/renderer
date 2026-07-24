@@ -18,7 +18,7 @@
  */
 
 import { assertTruthy, setPremultiplyMode } from '../utils.js';
-import { AnimationManager } from './animations/AnimationManager.js';
+import { type AnimationManager } from './animations/AnimationManager.js';
 import {
   UpdateType,
   CoreNode,
@@ -65,14 +65,19 @@ import {
 } from './lib/fps.js';
 
 export type StageOptions = Omit<
-  RendererMainSettings,
-  'inspector' | 'platform' | 'maxRetryCount' | keyof PlatformSettings
+  RendererMainSettings<AnimationManager>,
+  | 'inspector'
+  | 'platform'
+  | 'maxRetryCount'
+  | 'animationManager'
+  | keyof PlatformSettings
 > & {
   textureMemory: TextureMemoryManagerSettings;
   fpsUpdateInterval: number;
   fpsBoundaries?: number[];
   eventBus: EventEmitter;
   platform: Platform | WebPlatform;
+  animationManager: AnimationManager;
   inspector: boolean;
   maxRetryCount: number;
   enableClear: boolean;
@@ -204,7 +209,7 @@ export class Stage {
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
-    this.animationManager = new AnimationManager();
+    this.animationManager = options.animationManager;
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     // Set initial frame buckets and FPS update interval for FPS tracking
