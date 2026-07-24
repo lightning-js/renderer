@@ -484,7 +484,9 @@ export type RendererMainSettings<A extends AnimationManager> =
  * @fires RendererMain#criticalCleanup
  * @fires RendererMain#criticalCleanupFailed
  */
-export class RendererMain<A extends AnimationManager> extends EventEmitter {
+export class RendererMain<
+  A extends AnimationManager = AnimationManager,
+> extends EventEmitter {
   readonly root: INode<A>;
   readonly canvas: HTMLCanvasElement;
   readonly stage: Stage;
@@ -779,6 +781,10 @@ export class RendererMain<A extends AnimationManager> extends EventEmitter {
       NonNullable<ExtractShaderProps<ShType>>
     >;
   }
+
+  animate: A['animate'] = (node, props, options) => {
+    return this.stage.animationManager.animate(node, props, options);
+  };
 
   /**
    * Get a Node by its ID

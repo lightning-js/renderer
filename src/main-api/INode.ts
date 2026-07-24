@@ -44,7 +44,7 @@ import type { AnimationManager } from '../core/animations/AnimationManager.js';
  * instead of CoreNode objects.
  */
 export interface INode<
-  A extends AnimationManager,
+  A extends AnimationManager = AnimationManager,
   ShaderNode extends CoreShaderNode = CoreShaderNode,
 > extends Omit<CoreNode, 'shader' | 'animate' | 'parent'> {
   shader: ShaderNode;
@@ -65,7 +65,7 @@ export interface INodeAnimateProps<
  * Properties used to create a new Node
  */
 export interface INodeProps<
-  A extends AnimationManager,
+  A extends AnimationManager = AnimationManager,
   ShNode extends CoreShaderNode = CoreShaderNode,
 > extends Omit<CoreNodeProps, 'shader' | 'parent'> {
   shader: ShNode;
@@ -84,7 +84,7 @@ export interface INodeProps<
  * Users of the Renderer API, should generally interact with ITextNode objects
  * instead of CoreTextNode objects.
  */
-export interface ITextNode<A extends AnimationManager>
+export interface ITextNode<A extends AnimationManager = AnimationManager>
   extends Omit<CoreTextNode, 'animate' | 'parent'> {
   animate: A['animateNode'];
   parent: INode<A> | null;
@@ -93,7 +93,7 @@ export interface ITextNode<A extends AnimationManager>
 /**
  * Properties used to create a new Text Node
  */
-export interface ITextNodeProps<A extends AnimationManager>
+export interface ITextNodeProps<A extends AnimationManager = AnimationManager>
   extends Omit<CoreTextNodeProps, 'parent'> {
   parent: INode<A> | null;
 }
