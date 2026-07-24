@@ -299,11 +299,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
           }
 
           const segStartX = currentX;
-          if (letterSpacing === 0) {
-            const segment = textLine.substring(segStartJ, j);
-            context.fillText(segment, currentX, currentY);
-            currentX += CanvasFontHandler.measureText(segment, fontFamily, 0);
-          } else {
+          if (letterSpacing) {
             for (let k = segStartJ; k < j; k++) {
               const char = textLine.charAt(k);
               if (hasZeroWidthSpace(char) === false) {
@@ -315,6 +311,10 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
                 letterSpacing,
               );
             }
+          } else {
+            const segment = textLine.substring(segStartJ, j);
+            context.fillText(segment, currentX, currentY);
+            currentX += CanvasFontHandler.measureText(segment, fontFamily, 0);
           }
 
           // Draw underline and/or strikethrough using the same fillStyle as
@@ -360,9 +360,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
       const textLine = line[0];
       let currentX = Math.ceil(line[3]);
       const currentY = Math.ceil(line[4]);
-      if (letterSpacing === 0) {
-        context.fillText(textLine, currentX, currentY);
-      } else {
+      if (letterSpacing) {
         const textLineLength = textLine.length;
         for (let j = 0; j < textLineLength; j++) {
           const char = textLine.charAt(j);
@@ -376,6 +374,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
             letterSpacing,
           );
         }
+      } else {
+        context.fillText(textLine, currentX, currentY);
       }
     }
   }

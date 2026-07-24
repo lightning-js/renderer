@@ -225,10 +225,10 @@ export const processFontMetrics = (
 
 export const measureText = (
   text: string,
-  fontFamily: string,
+  _fontFamily: string, // Unused, but necessary to match SdfFontHandler's signature
   letterSpacing: number,
 ) => {
-  if (letterSpacing === 0) {
+  if (!letterSpacing) {
     return measureContext.measureText(text).width;
   }
   if (hasZeroWidthSpace(text) === false) {
