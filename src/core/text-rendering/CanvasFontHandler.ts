@@ -228,7 +228,7 @@ export const measureText = (
   fontFamily: string,
   letterSpacing: number,
 ) => {
-  if (letterSpacing === 0) {
+  if (!letterSpacing) {
     return measureContext.measureText(text).width;
   }
   if (hasZeroWidthSpace(text) === false) {
