@@ -252,7 +252,7 @@ const generateTextLayout = (
     lines,
     remainingLines,
     hasRemainingText,
-    bareLineHeight,
+    _bareLineHeight,
     lineHeightPx,
     effectiveWidth,
     effectiveHeight,
@@ -270,9 +270,6 @@ const generateTextLayout = (
     maxWidth,
     maxHeight,
   );
-
-  // Suppress unused-variable warning for bareLineHeight (consumed by mapTextLayout tuple).
-  void bareLineHeight;
 
   // --- Pre-compute decoration offsets in design-unit space ---
   // commonFontData.base is the BMFont "base" value: the y-distance from the top of the
