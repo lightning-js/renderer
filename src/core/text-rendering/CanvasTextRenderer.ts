@@ -147,7 +147,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
 
-  const letterSpacing = props.letterSpacing;
+  const letterSpacing = props.letterSpacing || 0;
 
   const [
     lines,
