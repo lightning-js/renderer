@@ -83,6 +83,7 @@ const init = (_stage: Stage): void => {
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
   context.textRendering = 'optimizeSpeed';
 
+  assertTruthy(measureCanvas, 'measureCanvas is not initialized');
   measureContext = measureCanvas.getContext('2d');
   assertTruthy(measureContext, '.getContext(2d) failed');
   measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
