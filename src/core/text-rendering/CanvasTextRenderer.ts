@@ -68,9 +68,11 @@ const init = (_stage: Stage): void => {
   canvas = stage.platform.createOffscreenCanvas();
   if (canvas !== null) {
     isOffscreen = true;
+    measureCanvas = stage.platform.createOffscreenCanvas();
   } else {
     isOffscreen = false;
     canvas = stage.platform.createCanvas();
+    measureCanvas = stage.platform.createCanvas();
   }
 
   context = canvas.getContext('2d') as
@@ -81,9 +83,7 @@ const init = (_stage: Stage): void => {
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
   context.textRendering = 'optimizeSpeed';
 
-  // Separate measuring canvas and context
-  measureCanvas = stage.platform.createCanvas();
-  assertTruthy(measureCanvas, 'createCanvas returned null');
+  assertTruthy(measureCanvas, 'measureCanvas is not initialized');
   measureContext = measureCanvas.getContext('2d');
   assertTruthy(measureContext, '.getContext(2d) failed');
   measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
