@@ -121,6 +121,10 @@ export class Stage {
   public readonly platform: Platform | WebPlatform;
   public readonly calculateTextureCoord: boolean;
 
+  public quadsPayload: QuadsUpdatePayload = {
+    quads: 0,
+  };
+
   /**
    * Target frame time in milliseconds (calculated from targetFPS)
    *
@@ -614,9 +618,8 @@ export class Stage {
     const quads = this.renderer.getQuadCount();
     if (quads && quads !== this.numQuadsRendered) {
       this.numQuadsRendered = quads;
-      this.queueFrameEvent('quadsUpdate', {
-        quads,
-      } satisfies QuadsUpdatePayload);
+      this.quadsPayload.quads = quads;
+      this.queueFrameEvent('quadsUpdate', this.quadsPayload);
     }
   }
 
