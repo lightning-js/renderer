@@ -243,7 +243,10 @@ export class Inspector {
   private width = 1920;
   private scaleX = 1;
   private scaleY = 1;
-  private textureMetrics = new Map<Texture, TextureMetrics>();
+  // Keyed weakly: a texture that is swapped off a node is never revisited by
+  // the inspector, and a strong map would pin it (and its bitmap) for the
+  // lifetime of the renderer.
+  private textureMetrics = new WeakMap<Texture, TextureMetrics>();
 
   // Performance monitoring for frequent setter calls
   private static setterCallCount = new Map<
@@ -962,7 +965,20 @@ export class Inspector {
         });
         coreNodeListeners.clear();
 
-        this.destroyNode(node.id);
+        // Animations that are still running when the node goes away never emit
+        // `stopped`, so their entries - and the controllers they hold - would
+        // stay in the static activeAnimations map forever.
+        Inspector.activeAnimations.forEach((animation, animationId) => {
+          if (animation.nodeId === node.id) {
+            this.trackAnimationEnd(animationId, 'cancelled');
+          }
+        });
+
+        // Remove the div through the direct reference rather than by id:
+        // destroy() is recursive and the parent div is detached first, so
+        // getElementById() no longer finds any of the descendants.
+        div.parentNode?.removeChild(div);
+
         originalDestroy.call(node);
       },
       configurable: true,
@@ -1114,7 +1130,9 @@ export class Inspector {
         if (value.id === value.stage.root.id) {
           this.root.appendChild(div);
         } else {
-          value.div.appendChild(div);
+          // A parent that was never passed through the inspector has no div;
+          // skip rather than throwing out of an app-level property assignment.
+          value.div?.appendChild(div);
         }
       } else {
         div.parentNode?.removeChild(div);
