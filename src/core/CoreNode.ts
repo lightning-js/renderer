@@ -828,7 +828,6 @@ export class CoreNode extends EventEmitter {
 
   constructor(readonly stage: Stage, props: CoreNodeProps) {
     super();
-    const p = (this.props = {} as CoreNodeProps);
 
     // Initialize the renderOpTextures array with a capacity of 16 (typical max textures)
     this.renderOpTextures = [];
@@ -836,6 +835,8 @@ export class CoreNode extends EventEmitter {
     //inital update type
     let initialUpdateType =
       UpdateType.Local | UpdateType.RenderBounds | UpdateType.RenderState;
+
+    const p = (this.props = {} as CoreNodeProps);
 
     // Fast-path assign only known keys
     p.x = props.x;
@@ -892,7 +893,6 @@ export class CoreNode extends EventEmitter {
     p.srcY = props.srcY;
     p.srcWidth = props.srcWidth;
     p.srcHeight = props.srcHeight;
-    p.autosize = props.autosize;
 
     p.parent = props.parent;
     p.texture = null;
@@ -910,13 +910,34 @@ export class CoreNode extends EventEmitter {
       props.parent.addChild(this);
     }
 
-    // Assign props to instances
-    this.texture = props.texture;
-    this.shader = props.shader;
-    this.src = props.src;
-    this.rtt = props.rtt;
-    this.boundsMargin = props.boundsMargin;
-    this.interactive = props.interactive;
+    // Assign saved values through setters only when they differ from
+    // defaults. In the common path most nodes are created with null texture,
+    // default shader, no src, rtt=false, no boundsMargin, and
+    // interactive=false — skipping the setter avoids equality checks,
+    // setUpdateType traversals, and redundant texture/shader operations.
+    if (props.texture !== null) {
+      this.texture = props.texture;
+    }
+    if (props.shader === null || props.shader === this.stage.defShaderNode) {
+      // Default shader — bypass the setter entirely; just point props at
+      // the default shader node without triggering setUpdateType or
+      // attachNode.
+      p.shader = this.stage.defShaderNode;
+    } else {
+      this.shader = props.shader;
+    }
+    if (props.src !== null) {
+      this.src = props.src;
+    }
+    if (props.rtt !== false) {
+      this.rtt = props.rtt;
+    }
+    if (props.boundsMargin !== null) {
+      this.boundsMargin = props.boundsMargin;
+    }
+    if (props.interactive !== false) {
+      this.interactive = props.interactive;
+    }
 
     // Initialize autosize if enabled
     if (p.autosize === true) {
