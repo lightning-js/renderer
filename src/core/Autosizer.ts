@@ -34,7 +34,7 @@ export enum AutosizeUpdateType {
 const applyDimensions = (node: CoreNode, w: number, h: number) => {
   node.props.w = w;
   node.props.h = h;
-  node.setUpdateType(UpdateType.Local);
+  node.setUpdateType(UpdateType.Local | UpdateType.RecalcUniforms);
 };
 
 const getFilteredChildren = (
