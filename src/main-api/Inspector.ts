@@ -963,8 +963,43 @@ export class Inspector {
         });
         coreNodeListeners.clear();
 
-        this.destroyNode(node.id);
+        // Clean up activeAnimations entries for this node
+        for (const [id, anim] of Inspector.activeAnimations) {
+          if (anim.nodeId === node.id) {
+            Inspector.activeAnimations.delete(id);
+          }
+        }
+
+        // Remove div from DOM using direct reference (getElementById fails for
+        // children already detached when parent div was removed first)
+        if (div.parentNode) {
+          div.parentNode.removeChild(div);
+        }
+
+        // Break circular references between node and div
+        (div as any).node = null;
+        (node as any).div = null;
+
+        // Call original destroy (recursively destroys renderer children)
         originalDestroy.call(node);
+
+        // Remove all defineProperty traps to release closures that capture
+        // node, div, originalProp, and the Inspector instance
+        for (let i = 0; i < knownProperties.size; i++) {
+          const property = knownProperties[i];
+          try {
+            delete (node as any)[property];
+          } catch (_) {
+            // Property may not be configurable in rare edge cases
+          }
+        }
+
+        try {
+          delete (node as any).destroy;
+          delete (node as any).animate;
+        } catch (_) {
+          // ignore
+        }
       },
       configurable: true,
     });
@@ -1092,7 +1127,10 @@ export class Inspector {
 
   destroyNode(id: number) {
     const div = document.getElementById(id.toString());
-    div?.remove();
+    if (div) {
+      (div as any).node = null;
+      div.remove();
+    }
   }
 
   updateNodeProperty(
