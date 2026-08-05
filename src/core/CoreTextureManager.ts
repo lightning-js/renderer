@@ -28,6 +28,7 @@ import { EventEmitter } from '../common/EventEmitter.js';
 import type { Stage } from './Stage.js';
 import type { Platform } from './platforms/Platform.js';
 import { TextureError, TextureErrorCode } from './TextureError.js';
+import { createTextureUploadQueue } from './lib/TextureUploadQueue.js';
 
 /**
  * Augmentable map of texture class types
@@ -184,7 +185,7 @@ export class CoreTextureManager extends EventEmitter {
   txConstructors: Partial<TextureMap> = {};
 
   public maxRetryCount: number;
-  private uploadTextureQueue: Array<Texture> = [];
+  private uploadTextureQueue = createTextureUploadQueue();
   private stage: Stage;
 
   public platform: Platform;
@@ -236,9 +237,7 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture - The texture to upload
    */
   enqueueUploadTexture(texture: Texture): void {
-    if (this.uploadTextureQueue.includes(texture) === false) {
-      this.uploadTextureQueue.push(texture);
-    }
+    this.uploadTextureQueue.enqueue(texture);
   }
 
   /**
@@ -259,12 +258,15 @@ export class CoreTextureManager extends EventEmitter {
         `Texture type "${textureType}" is not registered`,
       );
     }
-    const resolvedProps = TextureClass.resolveDefaults(props as any);
-    const cacheKey = TextureClass.makeCacheKey(resolvedProps as any);
+
+    // Compute cache key from raw props first — avoids resolveDefaults
+    // allocation on cache hits (the common case for repeated textures).
+    const cacheKey = TextureClass.makeCacheKey(props as any);
     if (cacheKey && this.keyCache.has(cacheKey)) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       texture = this.keyCache.get(cacheKey)!;
     } else {
+      const resolvedProps = TextureClass.resolveDefaults(props as any);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
       texture = new TextureClass(this, resolvedProps as any);
 
@@ -375,7 +377,7 @@ export class CoreTextureManager extends EventEmitter {
    * Check if a texture is being processed
    */
   isProcessingTexture(texture: Texture): boolean {
-    return this.uploadTextureQueue.includes(texture) === true;
+    return this.uploadTextureQueue.has(texture);
   }
 
   /**
@@ -389,11 +391,11 @@ export class CoreTextureManager extends EventEmitter {
 
     // Process uploads - await each upload to prevent GPU overload
     while (
-      this.uploadTextureQueue.length > 0 &&
+      this.uploadTextureQueue.size > 0 &&
       platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const texture = this.uploadTextureQueue.shift()!;
+      const texture = this.uploadTextureQueue.dequeue();
+      if (texture === undefined) break;
       try {
         await this.uploadTexture(texture);
       } catch (error) {
@@ -404,7 +406,7 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   public hasUpdates(): boolean {
-    return this.uploadTextureQueue.length > 0;
+    return this.uploadTextureQueue.size > 0;
   }
 
   /**
@@ -449,10 +451,7 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture - The texture to remove
    */
   removeTextureFromQueue(texture: Texture): void {
-    const uploadIndex = this.uploadTextureQueue.indexOf(texture);
-    if (uploadIndex !== -1) {
-      this.uploadTextureQueue.splice(uploadIndex, 1);
-    }
+    this.uploadTextureQueue.remove(texture);
   }
 
   /**
@@ -463,7 +462,7 @@ export class CoreTextureManager extends EventEmitter {
    * textures can be garbage-collected after a renderer teardown.
    */
   destroy(): void {
-    this.uploadTextureQueue = [];
+    this.uploadTextureQueue.clear();
     this.keyCache.clear();
   }
 
