@@ -179,11 +179,6 @@ export class CoreTextureManager extends EventEmitter {
   keyCache: Map<string, Texture> = new Map();
 
   /**
-   * Map of cache keys by texture
-   */
-  inverseKeyCache: WeakMap<Texture, string> = new WeakMap();
-
-  /**
    * Map of texture constructors by their type name
    */
   txConstructors: Partial<TextureMap> = {};
@@ -419,9 +414,8 @@ export class CoreTextureManager extends EventEmitter {
    * @param cacheKey Cache key for the texture
    */
   initTextureToCache(texture: Texture, cacheKey: string) {
-    const { keyCache, inverseKeyCache } = this;
-    keyCache.set(cacheKey, texture);
-    inverseKeyCache.set(texture, cacheKey);
+    this.keyCache.set(cacheKey, texture);
+    texture.cacheKey = cacheKey;
   }
 
   /**
@@ -442,10 +436,10 @@ export class CoreTextureManager extends EventEmitter {
    * @param texture
    */
   removeTextureFromCache(texture: Texture) {
-    const { inverseKeyCache, keyCache } = this;
-    const cacheKey = inverseKeyCache.get(texture);
-    if (cacheKey) {
-      keyCache.delete(cacheKey);
+    const cacheKey = texture.cacheKey;
+    if (cacheKey !== null) {
+      this.keyCache.delete(cacheKey);
+      texture.cacheKey = null;
     }
   }
 
@@ -471,8 +465,6 @@ export class CoreTextureManager extends EventEmitter {
   destroy(): void {
     this.uploadTextureQueue = [];
     this.keyCache.clear();
-    // inverseKeyCache is a WeakMap – entries will be GC'd automatically once
-    // the texture objects themselves are no longer referenced.
   }
 
   /**

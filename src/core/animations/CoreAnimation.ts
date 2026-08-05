@@ -95,12 +95,6 @@ export class CoreAnimation extends EventEmitter {
 
   constructor() {
     super();
-    // Pre-allocate listener arrays for the known events so on() never needs to
-    // allocate a new [] when the animation is registered after a pool recycle.
-    this.eventListeners['finished'] = [];
-    this.eventListeners['animating'] = [];
-    this.eventListeners['tick'] = [];
-    this.eventListeners['destroyed'] = [];
   }
 
   /**

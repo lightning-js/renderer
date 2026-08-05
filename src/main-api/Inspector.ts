@@ -898,15 +898,16 @@ export class Inspector {
     // Define traps for each property in knownProperties
     knownProperties.forEach((property) => {
       let proto: CoreNode | ObjectConstructor | null = node;
-      let originalProp: PropertyDescriptor | undefined | null = Object.getOwnPropertyDescriptor(proto, property);
+      let originalProp: PropertyDescriptor | undefined | null =
+        Object.getOwnPropertyDescriptor(proto, property);
 
       // Search the prototype chain for the property descriptor
-      while(originalProp === undefined) {
-          proto = Object.getPrototypeOf(proto) as ObjectConstructor;
-          if (proto === null) {
-            return;
-          }
-          originalProp = Object.getOwnPropertyDescriptor(proto, property);
+      while (originalProp === undefined) {
+        proto = Object.getPrototypeOf(proto) as ObjectConstructor;
+        if (proto === null) {
+          return;
+        }
+        originalProp = Object.getOwnPropertyDescriptor(proto, property);
       }
 
       if (property === 'text') {
@@ -1024,7 +1025,7 @@ export class Inspector {
     // Update renderable owners count
     div.setAttribute(
       'data-texture-owners',
-      String(texture.renderableOwners.length),
+      String(texture.renderableOwners.size),
     );
 
     // Update retry count
