@@ -68,14 +68,14 @@ export enum CoreNodeRenderState {
   InViewport = 8,
 }
 
-const NO_CLIPPING_RECT: RectWithValid = {
+const NO_CLIPPING_RECT: RectWithValid = Object.freeze({
   x: 0,
   y: 0,
   w: 0,
   h: 0,
   valid: false,
   clipRadius: 0,
-};
+});
 
 const CoreNodeRenderStateMap: Map<CoreNodeRenderState, string> = new Map();
 CoreNodeRenderStateMap.set(CoreNodeRenderState.Init, 'init');
@@ -800,14 +800,7 @@ export class CoreNode extends EventEmitter {
   public renderBound?: Bound;
   public strictBound?: Bound;
   public preloadBound?: Bound;
-  public clippingRect: RectWithValid = {
-    x: 0,
-    y: 0,
-    w: 0,
-    h: 0,
-    valid: false,
-    clipRadius: 0,
-  };
+  public clippingRect: RectWithValid = NO_CLIPPING_RECT;
   public textureCoords?: TextureCoords;
   public updateShaderUniforms: boolean = false;
   public isRenderable = false;
@@ -1085,7 +1078,12 @@ export class CoreNode extends EventEmitter {
     this.updateType |= type;
 
     const parent = this.props.parent;
-    if (!parent) return;
+    if (parent === null || parent === undefined) return;
+
+    // Short-circuit: if parent already has Children flag set, skip the
+    // recursive call up the parent chain. This prevents redundant traversal
+    // when many siblings mark the same parent dirty in a single frame.
+    if (parent.updateType & UpdateType.Children) return;
 
     parent.setUpdateType(UpdateType.Children);
   }
@@ -1780,9 +1778,27 @@ export class CoreNode extends EventEmitter {
    * Finally, the node's parentClippingRect and clippingRect properties are updated.
    */
   calculateClippingRect(parentClippingRect: RectWithValid) {
-    const { clippingRect, props, globalTransform: gt } = this;
+    const { props, globalTransform: gt } = this;
     const { clipping } = props;
     const isRotated = gt!.tb !== 0 || gt!.tc !== 0;
+
+    const needsMutableRect =
+      (clipping === true && isRotated === false) ||
+      parentClippingRect.valid === true;
+
+    // Lazily allocate a mutable clipping rect only when this node actually
+    // needs one. Most nodes never clip and can share the frozen default.
+    let clippingRect = this.clippingRect;
+    if (needsMutableRect === true) {
+      if (clippingRect === NO_CLIPPING_RECT) {
+        clippingRect = { x: 0, y: 0, w: 0, h: 0, valid: false, clipRadius: 0 };
+        this.clippingRect = clippingRect;
+      }
+    } else {
+      // No clipping needed — reset to shared frozen default
+      this.clippingRect = NO_CLIPPING_RECT;
+      return;
+    }
 
     if (clipping === true && isRotated === false) {
       clippingRect.x = gt!.tx;
@@ -1797,22 +1813,14 @@ export class CoreNode extends EventEmitter {
     }
 
     if (parentClippingRect.valid === true && clippingRect.valid === true) {
-      // Intersect parent clipping rect with node clipping rect.
-      // clipRadius from this node overrides — children of this node use
-      // this node's own clipRadius, not the ancestor's.
       const ownRadius = clippingRect.clipRadius;
       intersectRect(parentClippingRect, clippingRect, clippingRect);
       clippingRect.clipRadius = ownRadius;
-      // intersectRect writes {0,0,0,0} when the rects don't overlap but does
-      // not touch the valid flag.  An empty intersection means nothing is
-      // visible — mark the rect invalid so children are not clipped to a
-      // zero-area region and the stencil pass is skipped.
       if (clippingRect.w <= 0 || clippingRect.h <= 0) {
         clippingRect.valid = false;
         clippingRect.clipRadius = 0;
       }
     } else if (parentClippingRect.valid === true) {
-      // Copy parent clipping rect — no local clip, inherit parent's
       copyRect(parentClippingRect, clippingRect);
       clippingRect.clipRadius = parentClippingRect.clipRadius;
       clippingRect.valid = true;

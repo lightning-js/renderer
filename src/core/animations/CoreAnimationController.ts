@@ -47,10 +47,6 @@ export class CoreAnimationController
   constructor() {
     super();
     this.state = 'stopped';
-    // Pre-allocate listener arrays for the known events so on() never needs to
-    // allocate a new [] when the controller is reused after a pool recycle.
-    this.eventListeners['stopped'] = [];
-    this.eventListeners['animating'] = [];
   }
 
   /**
@@ -211,14 +207,11 @@ export class CoreAnimationController
    * we are first checking if there are any listeners for the tick event. this avoid unnecessary object creation.
    */
   private onTick = (): void => {
-    const listeners = this.eventListeners['tick'];
-    if (listeners === undefined || listeners.length === 0) {
+    if (this.hasListeners('tick') === false) {
       return;
     }
     // Mutate pre-allocated payload to avoid per-frame {} allocation
     this.tickPayload.progress = this.animation['progress'];
-    for (let i = listeners.length - 1; i >= 0; i--) {
-      listeners[i]!(this, this.tickPayload);
-    }
+    this.emit('tick', this.tickPayload);
   };
 }

@@ -23,26 +23,44 @@ import type { IEventEmitter } from './IEventEmitter.js';
 export type EventListener = (target: any, data: any) => void;
 /**
  * EventEmitter base class
+ *
+ * @remarks
+ * The `eventListeners` map is allocated lazily on the first `on()` call.
+ * Many objects (e.g. CoreNodes that never have listeners attached) avoid
+ * the cost of allocating an empty `{}` at construction time.
  */
 export class EventEmitter implements IEventEmitter {
-  protected eventListeners: { [eventName: string]: EventListener[] } = {};
+  private eventListeners: {
+    [eventName: string]: EventListener[] | undefined;
+  } | null = null;
 
   on(event: string, listener: EventListener): void {
-    let listeners = this.eventListeners[event];
-    if (!listeners) {
+    let map = this.eventListeners;
+    if (map === null) {
+      map = {};
+      this.eventListeners = map;
+    }
+    let listeners = map[event];
+    if (listeners === undefined) {
       listeners = [];
-      this.eventListeners[event] = listeners;
+      map[event] = listeners;
     }
     listeners.push(listener);
   }
 
   off(event: string, listener?: EventListener): void {
-    const listeners = this.eventListeners[event];
-    if (!listeners) {
+    const map = this.eventListeners;
+    if (map === null) {
       return;
     }
-    if (!listener) {
-      delete this.eventListeners[event];
+    const listeners = map[event];
+    if (listeners === undefined) {
+      return;
+    }
+    if (listener === undefined) {
+      // Set to undefined instead of `delete` to avoid V8 hidden-class
+      // transitions on the eventListeners object.
+      map[event] = undefined;
       return;
     }
     const index = listeners.indexOf(listener);
@@ -60,7 +78,11 @@ export class EventEmitter implements IEventEmitter {
   }
 
   emit(event: string, data?: any): void {
-    const listeners = this.eventListeners[event];
+    const map = this.eventListeners;
+    if (map === null) {
+      return;
+    }
+    const listeners = map[event];
     if (listeners === undefined || listeners.length === 0) {
       return;
     }
@@ -72,12 +94,33 @@ export class EventEmitter implements IEventEmitter {
     }
   }
 
-  removeAllListeners() {
-    // Clear in place to avoid allocating a new {} object.
-    const listeners = this.eventListeners;
-    for (const key in listeners) {
-      delete listeners[key];
+  /**
+   * Check whether this emitter has any listeners registered.
+   *
+   * @param event - Optional event name. When provided, checks only that
+   * event. When omitted, checks all events.
+   * @returns `true` if at least one listener is registered.
+   */
+  hasListeners(event?: string): boolean {
+    const map = this.eventListeners;
+    if (map === null) {
+      return false;
     }
+    if (event !== undefined) {
+      const listeners = map[event];
+      return listeners !== undefined && listeners.length > 0;
+    }
+    for (const key in map) {
+      const listeners = map[key];
+      if (listeners !== undefined && listeners.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  removeAllListeners() {
+    this.eventListeners = null;
   }
 
   /**
@@ -93,6 +136,9 @@ export class EventEmitter implements IEventEmitter {
    */
   clearListeners(events: readonly string[]): void {
     const map = this.eventListeners;
+    if (map === null) {
+      return;
+    }
     for (let i = 0; i < events.length; i++) {
       const arr = map[events[i]!];
       if (arr !== undefined && arr.length > 0) {
