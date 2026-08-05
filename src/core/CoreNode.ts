@@ -2083,7 +2083,7 @@ export class CoreNode extends EventEmitter {
     const props = this.props;
     if (props.w !== value) {
       props.w = value;
-      let updateType = UpdateType.Local;
+      let updateType = UpdateType.Local | UpdateType.RecalcUniforms;
 
       if (
         props.texture !== null &&
@@ -2113,7 +2113,7 @@ export class CoreNode extends EventEmitter {
     const props = this.props;
     if (props.h !== value) {
       props.h = value;
-      let updateType = UpdateType.Local;
+      let updateType = UpdateType.Local | UpdateType.RecalcUniforms;
 
       if (
         props.texture !== null &&
