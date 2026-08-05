@@ -806,6 +806,31 @@ export class CoreNode extends EventEmitter {
   public isRenderable = false;
   public renderState: CoreNodeRenderState = CoreNodeRenderState.Init;
 
+  /**
+   * True when the node has no rotation, no scale, no mount offset, and no
+   * contain-resize. The vast majority of nodes in a typical TV UI are
+   * "simple" — their local transform is a pure translation.
+   */
+  public isSimple = true;
+
+  /**
+   * True when localTransform is known to be in identity-shape (ta=1, tb=0,
+   * tc=0, td=1) so that subsequent updateLocalTransform calls can skip the
+   * 4 redundant field writes and use setTranslate() instead.
+   */
+  public _localIsTranslate = false;
+
+  /**
+   * True when globalTransform is a pure translation. Read by child nodes in
+   * update() to determine if the translate-only global fast path applies.
+   */
+  public _globalIsTranslate = false;
+
+  /**
+   * Cached result of the contain-resize check, updated in updateIsSimple().
+   */
+  private _hasContainResize = false;
+
   public worldAlpha = 1;
   public premultipliedColorTl = 0;
   public premultipliedColorTr = 0;
@@ -931,6 +956,8 @@ export class CoreNode extends EventEmitter {
     if (dt !== null && dt.state !== 'loaded') {
       dt.once('loaded', () => this.setUpdateType(UpdateType.IsRenderable));
     }
+
+    this.updateIsSimple();
   }
 
   //#region Textures
@@ -1088,14 +1115,64 @@ export class CoreNode extends EventEmitter {
     parent.setUpdateType(UpdateType.Children);
   }
 
+  /**
+   * Recompute the isSimple flag and the cached contain-resize check.
+   *
+   * @remarks
+   * Called from property setters that affect whether the node is "simple"
+   * (rotation, scaleX, scaleY, mountX, mountY, texture, textureOptions).
+   * This runs on the cold setter path, not per-frame.
+   */
+  updateIsSimple(): void {
+    const p = this.props;
+    this._hasContainResize =
+      p.texture !== null &&
+      p.textureOptions !== null &&
+      p.textureOptions.resizeMode?.type === 'contain';
+    this.isSimple =
+      p.rotation === 0 &&
+      p.scaleX === 1 &&
+      p.scaleY === 1 &&
+      p.mountX === 0 &&
+      p.mountY === 0 &&
+      this._hasContainResize === false;
+  }
+
   updateLocalTransform() {
     const p = this.props;
-    const { x, y, w, h } = p;
+    const { x, y } = p;
+
+    if (this.isSimple === true) {
+      // Fast path: no rotation, no scale, no mount, no contain-resize.
+      // The local transform is a pure translation.
+      if (this._localIsTranslate === true) {
+        // Matrix is already identity-shape — only tx/ty need updating.
+        this.localTransform!.setTranslate(x, y);
+        return;
+      }
+      // First time on the simple path (or transitioning from non-simple):
+      // write full identity + translation, then mark for future setTranslate.
+      this.localTransform = Matrix3d.translate(x, y, this.localTransform);
+      this._localIsTranslate = true;
+      return;
+    }
+
+    // Non-simple path: need w/h for mount/pivot calculations.
+    const { w, h } = p;
     const mountTranslateX = p.mountX * w;
     const mountTranslateY = p.mountY * h;
 
-    if (p.rotation !== 0 || p.scaleX !== 1 || p.scaleY !== 1) {
-      const scaleRotate = Matrix3d.rotate(p.rotation).scale(p.scaleX, p.scaleY);
+    const rotation = p.rotation;
+    const scaleX = p.scaleX;
+    const scaleY = p.scaleY;
+
+    if (rotation !== 0) {
+      // Full rotation (+ optional scale + pivot).
+      // Reuse Matrix3d.temp to avoid allocation.
+      const scaleRotate = Matrix3d.rotate(rotation, Matrix3d.temp).scale(
+        scaleX,
+        scaleY,
+      );
       const pivotTranslateX = p.pivotX * w;
       const pivotTranslateY = p.pivotY * h;
 
@@ -1106,7 +1183,21 @@ export class CoreNode extends EventEmitter {
       )
         .multiply(scaleRotate)
         .translate(-pivotTranslateX, -pivotTranslateY);
+    } else if (scaleX !== 1 || scaleY !== 1) {
+      // Scale (+ optional pivot) without rotation — skip the rotate matrix
+      // and the 8-mul multiply; .scale() is a 4-mul in-place op.
+      const pivotTranslateX = p.pivotX * w;
+      const pivotTranslateY = p.pivotY * h;
+
+      this.localTransform = Matrix3d.translate(
+        x - mountTranslateX + pivotTranslateX,
+        y - mountTranslateY + pivotTranslateY,
+        this.localTransform,
+      )
+        .scale(scaleX, scaleY)
+        .translate(-pivotTranslateX, -pivotTranslateY);
     } else {
+      // Mount only — pure translation.
       this.localTransform = Matrix3d.translate(
         x - mountTranslateX,
         y - mountTranslateY,
@@ -1114,12 +1205,12 @@ export class CoreNode extends EventEmitter {
       );
     }
 
-    // Handle 'contain' resize mode
+    // Handle 'contain' resize mode (cached check)
     const texture = p.texture;
     if (
-      texture &&
-      texture.dimensions &&
-      p.textureOptions.resizeMode?.type === 'contain'
+      this._hasContainResize === true &&
+      texture !== null &&
+      texture.dimensions !== null
     ) {
       let resizeModeScaleX = 1;
       let resizeModeScaleY = 1;
@@ -1129,28 +1220,23 @@ export class CoreNode extends EventEmitter {
       const txAspectRatio = tw / th;
       const nodeAspectRatio = w / h;
       if (txAspectRatio > nodeAspectRatio) {
-        // Texture is wider than node
-        // Center the node vertically (shift down by extraY)
-        // Scale the node vertically to maintain original aspect ratio
         const scaleX = w / tw;
         const scaledTxHeight = th * scaleX;
         extraY = (h - scaledTxHeight) / 2;
         resizeModeScaleY = scaledTxHeight / h;
       } else {
-        // Texture is taller than node (or equal)
-        // Center the node horizontally (shift right by extraX)
-        // Scale the node horizontally to maintain original aspect ratio
         const scaleY = h / th;
         const scaledTxWidth = tw * scaleY;
         extraX = (w - scaledTxWidth) / 2;
         resizeModeScaleX = scaledTxWidth / w;
       }
 
-      // Apply the extra translation and scale to the local transform
       this.localTransform
         .translate(extraX, extraY)
         .scale(resizeModeScaleX, resizeModeScaleY);
     }
+
+    this._localIsTranslate = false;
   }
 
   /**
@@ -1191,44 +1277,78 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.Global) {
+      const lt = this.localTransform!;
+      const gt =
+        this.globalTransform ?? (this.globalTransform = new Matrix3d());
+      let fastPathApplied = false;
+
       if (this.parentHasRenderTexture === true && parent?.rtt === true) {
-        // we are at the start of the RTT chain, so we need to reset the globalTransform
-        // for correct RTT rendering
-        this.globalTransform = Matrix3d.identity();
+        // RTT root: reset globalTransform for correct RTT rendering
+        Matrix3d.identity(gt);
 
         // Maintain a full scene global transform for bounds detection
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.globalTransform || Matrix3d.identity(),
-        ).multiply(this.localTransform!);
+          parent?.globalTransform || Matrix3d.identity(Matrix3d.temp),
+          this.sceneGlobalTransform,
+        ).translateOrMultiply(lt);
+
+        this._globalIsTranslate = this.isSimple;
       } else if (
         this.parentHasRenderTexture === true &&
         parent?.rtt === false
       ) {
-        // we're part of an RTT chain but our parent is not the main RTT node
-        // so we need to propogate the sceneGlobalTransform of the parent
-        // to maintain a full scene global transform for bounds detection
+        // RTT chain: propagate sceneGlobalTransform from parent
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.sceneGlobalTransform || this.localTransform!,
-        ).multiply(this.localTransform!);
+          parent?.sceneGlobalTransform || lt,
+          this.sceneGlobalTransform,
+        ).translateOrMultiply(lt);
 
-        this.globalTransform = Matrix3d.copy(
-          parent?.globalTransform || this.localTransform!,
-          this.globalTransform,
-        );
+        Matrix3d.copy(parent?.globalTransform || lt, gt);
+
+        this._globalIsTranslate = false;
       } else {
-        this.globalTransform = Matrix3d.copy(
-          parent?.globalTransform || this.localTransform!,
-          this.globalTransform,
-        );
+        // Common non-RTT path
+        const parentGT = parent?.globalTransform;
+        if (
+          this.isSimple === true &&
+          parent !== null &&
+          parent._globalIsTranslate === true &&
+          parentGT !== undefined
+        ) {
+          // Translate-only fast path: both parent global and local are pure
+          // translations. The global transform collapses to 2 additions.
+          if (this._globalIsTranslate === false) {
+            gt.ta = 1;
+            gt.tb = 0;
+            gt.tc = 0;
+            gt.td = 1;
+          }
+          gt.setTranslate(parentGT.tx + lt.tx, parentGT.ty + lt.ty);
+          this._globalIsTranslate = true;
+          fastPathApplied = true;
+        } else {
+          Matrix3d.copy(parentGT || lt, gt);
+          this._globalIsTranslate =
+            this.isSimple === true &&
+            parent !== null &&
+            parent._globalIsTranslate === true;
+        }
       }
 
-      if (parent !== null) {
-        this.globalTransform.multiply(this.localTransform!);
+      if (fastPathApplied === false) {
+        if (parent !== null) {
+          if (this.isSimple === true) {
+            gt.translate(lt.tx, lt.ty);
+          } else {
+            gt.translateOrMultiply(lt);
+          }
+        }
       }
+
       this.calculateRenderCoords();
       this.updateBoundingRect();
 
-      updateType |= UpdateType.RenderState | UpdateType.RecalcUniforms;
+      updateType |= UpdateType.RenderState;
       updateParent = hasParent;
 
       //only propagate children updates if not autosizing
@@ -2155,6 +2275,7 @@ export class CoreNode extends EventEmitter {
   set scaleX(value: number) {
     if (this.props.scaleX !== value) {
       this.props.scaleX = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2166,6 +2287,7 @@ export class CoreNode extends EventEmitter {
   set scaleY(value: number) {
     if (this.props.scaleY !== value) {
       this.props.scaleY = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2179,6 +2301,7 @@ export class CoreNode extends EventEmitter {
       this.props.mountX = value;
       this.props.mountY = value;
       this.props.mount = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2190,6 +2313,7 @@ export class CoreNode extends EventEmitter {
   set mountX(value: number) {
     if (this.props.mountX !== value) {
       this.props.mountX = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2201,6 +2325,7 @@ export class CoreNode extends EventEmitter {
   set mountY(value: number) {
     if (this.props.mountY !== value) {
       this.props.mountY = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2247,6 +2372,7 @@ export class CoreNode extends EventEmitter {
   set rotation(value: number) {
     if (this.props.rotation !== value) {
       this.props.rotation = value;
+      this.updateIsSimple();
       this.setUpdateType(UpdateType.Local);
     }
   }
@@ -2756,6 +2882,7 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
+    this.updateIsSimple();
   }
 
   set textureOptions(value: TextureOptions) {
@@ -2763,6 +2890,7 @@ export class CoreNode extends EventEmitter {
     if (this.stage.calculateTextureCoord === true && value !== null) {
       this.textureCoords = this.stage.renderer.getTextureCoords!(this);
     }
+    this.updateIsSimple();
   }
 
   get textureOptions(): TextureOptions {
