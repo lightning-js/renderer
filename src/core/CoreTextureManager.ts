@@ -384,14 +384,20 @@ export class CoreTextureManager extends EventEmitter {
    * Process a limited number of uploads.
    *
    * @param maxProcessingTime - The maximum processing time in milliseconds
+   * @param maxCount - The maximum number of textures to process in this call
    */
-  async processSome(maxProcessingTime: number): Promise<void> {
+  async processSome(
+    maxProcessingTime: number,
+    maxCount: number,
+  ): Promise<void> {
     const platform = this.platform;
     const startTime = platform.getTimeStamp();
+    let count = 0;
 
     // Process uploads - await each upload to prevent GPU overload
     while (
       this.uploadTextureQueue.size > 0 &&
+      count < maxCount &&
       platform.getTimeStamp() - startTime < maxProcessingTime
     ) {
       const texture = this.uploadTextureQueue.dequeue();
@@ -402,6 +408,7 @@ export class CoreTextureManager extends EventEmitter {
         console.error('Failed to upload texture:', error);
         // Continue with next texture instead of stopping entire queue
       }
+      count++;
     }
   }
 

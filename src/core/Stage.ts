@@ -112,6 +112,21 @@ export class Stage {
   public preloadBound: Bound;
   public readonly defaultTexture: Texture | null = null;
   public pixelRatio: number;
+
+  /**
+   * Global count of active animations (internal + external).
+   *
+   * @remarks
+   * Incremented by AnimationManager when an internal animation starts,
+   * decremented when it stops. External animation libraries (e.g. AnimeJS,
+   * GSAP) increment/decrement this counter via
+   * {@link RendererMain.registerAnimation} / {@link RendererMain.unregisterAnimation}.
+   *
+   * Used by the render loop to throttle texture uploads during animations:
+   * when > 0, only one texture is uploaded per frame to preserve the frame
+   * budget.
+   */
+  public activeAnimationCount = 0;
   // Pre-allocated frameTick payload -- reused every frame to avoid per-frame {} allocation
   private readonly frameTickPayload: { time: number; delta: number } = {
     time: 0,
@@ -208,7 +223,7 @@ export class Stage {
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);
 
-    this.animationManager = new AnimationManager();
+    this.animationManager = new AnimationManager(this);
     this.contextSpy = enableContextSpy ? new ContextSpy() : null;
 
     // Set initial frame buckets and FPS update interval for FPS tracking
@@ -485,11 +500,13 @@ export class Stage {
       root.update(this.deltaTime, root.clippingRect);
     }
 
-    // Process some textures asynchronously but don't block the frame
-    // Use a background task to prevent frame drops
+    // Process some textures asynchronously but don't block the frame.
+    // During active animations, limit to 1 texture per frame to preserve
+    // the frame budget. When idle, use the full time budget.
     if (this.txManager.hasUpdates() === true) {
+      const maxCount = this.activeAnimationCount > 0 ? 1 : 0x7fffffff;
       this.txManager
-        .processSome(this.options.textureProcessingTimeLimit)
+        .processSome(this.options.textureProcessingTimeLimit, maxCount)
         .catch((err) => {
           console.error('Error processing textures:', err);
         });

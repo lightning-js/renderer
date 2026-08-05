@@ -21,9 +21,11 @@ import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
 import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
 import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
+import type { Stage } from '../Stage.js';
 
 export class AnimationManager {
   private activeAnimations: CoreAnimation[] = [];
+  private stage: Stage;
 
   /**
    * Pool of reusable CoreAnimation instances.
@@ -37,9 +39,14 @@ export class AnimationManager {
    */
   private controllerPool: CoreAnimationController[] = [];
 
+  constructor(stage: Stage) {
+    this.stage = stage;
+  }
+
   registerAnimation(animation: CoreAnimation) {
     animation.activeIndex = this.activeAnimations.length;
     this.activeAnimations.push(animation);
+    this.stage.activeAnimationCount++;
   }
 
   unregisterAnimation(animation: CoreAnimation) {
@@ -57,6 +64,7 @@ export class AnimationManager {
     }
     animations.pop();
     animation.activeIndex = -1;
+    this.stage.activeAnimationCount--;
   }
 
   update(dt: number) {

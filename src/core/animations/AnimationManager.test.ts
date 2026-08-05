@@ -21,6 +21,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { AnimationManager } from './AnimationManager.js';
 import type { CoreNode } from '../CoreNode.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
+import type { Stage } from '../Stage.js';
+
+/**
+ * Create a minimal mock stage that satisfies AnimationManager's needs.
+ */
+function createMockStage(): Stage {
+  return { activeAnimationCount: 0 } as unknown as Stage;
+}
 
 /**
  * Create a minimal mock node that satisfies CoreAnimation's needs.
@@ -45,7 +53,7 @@ function createMockNode(overrides: Record<string, unknown> = {}): CoreNode {
 describe('AnimationManager', () => {
   describe('object pooling', () => {
     it('should create fresh objects when pool is empty', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       const controller1 = manager.createAnimation(
@@ -64,7 +72,7 @@ describe('AnimationManager', () => {
     });
 
     it('should reuse objects from the pool after stop()', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       // Create and start an animation
@@ -91,7 +99,7 @@ describe('AnimationManager', () => {
     });
 
     it('should properly reinitialize recycled objects', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       // Create, start, and stop
@@ -119,7 +127,7 @@ describe('AnimationManager', () => {
     });
 
     it('should clear event listeners on recycled objects', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       // Create and add a user listener
@@ -155,7 +163,7 @@ describe('AnimationManager', () => {
     });
 
     it('should release to pool on natural animation finish', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       const controller = manager.createAnimation(
@@ -179,7 +187,7 @@ describe('AnimationManager', () => {
     });
 
     it('should release to pool on node destruction', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       const controller = manager.createAnimation(
@@ -204,7 +212,7 @@ describe('AnimationManager', () => {
     });
 
     it('should NOT release looping animations to pool on finish', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       const controller = manager.createAnimation(
@@ -228,7 +236,7 @@ describe('AnimationManager', () => {
     });
 
     it('should handle multiple pool cycles', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       // Cycle 1
@@ -252,7 +260,7 @@ describe('AnimationManager', () => {
     });
 
     it('should grow pool independently for concurrent animations', () => {
-      const manager = new AnimationManager();
+      const manager = new AnimationManager(createMockStage());
       const node = createMockNode();
 
       // Create 3 concurrent animations
