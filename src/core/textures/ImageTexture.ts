@@ -267,11 +267,11 @@ export class ImageTexture extends Texture {
       return false;
     }
 
-    let cacheKey = `ImageTexture,${key},${props.premultiplyAlpha ?? 'true'},${
-      props.maxRetryCount
+    let cacheKey = `ImageTexture,${key},${props.premultiplyAlpha ?? true},${
+      props.maxRetryCount ?? 5
     }`;
 
-    if (props.sh !== null && props.sw !== null) {
+    if (props.sh != null && props.sw != null) {
       cacheKey += ',';
       cacheKey += props.sx ?? '';
       cacheKey += props.sy ?? '';
