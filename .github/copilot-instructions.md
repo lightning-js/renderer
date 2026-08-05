@@ -250,6 +250,39 @@ function flush() {
 }
 ```
 
+### Animation-Aware Texture Processing
+
+The renderer uses a global `activeAnimationCount` on `Stage` to throttle texture uploads during animations. When the count is above zero, only one texture is uploaded per frame to preserve the frame budget. When zero, the full time budget is used.
+
+Both internal and external animations share the same counter:
+
+- **Internal**: `AnimationManager.registerAnimation()` / `unregisterAnimation()` increment/decrement the counter automatically when animations are created/stopped via `node.animate()`.
+- **External**: External animation libraries (AnimeJS, GSAP, custom tween loops) call `renderer.registerAnimation()` / `renderer.unregisterAnimation()` to participate in the same mechanism.
+
+```typescript
+// AnimeJS example — single animation
+anime({
+  targets: myProps,
+  x: 500,
+  duration: 1000,
+  begin: () => renderer.registerAnimation(),
+  complete: () => renderer.unregisterAnimation(),
+  update: () => {
+    node.x = myProps.x;
+  },
+});
+
+// AnimeJS example — timeline (one ref-count for the whole sequence)
+const tl = anime.timeline({
+  begin: () => renderer.registerAnimation(),
+  complete: () => renderer.unregisterAnimation(),
+});
+tl.add({ targets: myProps, x: 100, duration: 500 });
+tl.add({ targets: myProps, y: 200, duration: 500 });
+```
+
+Every `registerAnimation()` call must have a matching `unregisterAnimation()` call. Concurrent animations naturally overlap — the count stays above zero until the last one completes.
+
 ## Code Patterns
 
 ### Class-Based Pattern

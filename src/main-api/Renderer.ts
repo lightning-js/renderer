@@ -1010,6 +1010,65 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
+   * Register an active animation with the renderer.
+   *
+   * @remarks
+   * This increments a global animation counter shared by both the internal
+   * animation engine and external animation libraries. While the counter is
+   * above zero, the renderer throttles texture uploads to one per frame to
+   * preserve the frame budget.
+   *
+   * Call {@link unregisterAnimation} when the animation completes, is
+   * cancelled, or is otherwise no longer driving per-frame updates.
+   *
+   * The renderer's own {@link INode.animate} method handles this
+   * automatically. This API is intended for external animation libraries
+   * such as AnimeJS, GSAP, or custom tween loops.
+   *
+   * @example
+   * ```typescript
+   * // AnimeJS integration
+   * import anime from 'animejs';
+   *
+   * anime({
+   *   targets: myProps,
+   *   x: 500,
+   *   duration: 1000,
+   *   begin: () => renderer.registerAnimation(),
+   *   complete: () => renderer.unregisterAnimation(),
+   *   update: () => { node.x = myProps.x; },
+   * });
+   *
+   * // For AnimeJS timelines, use timeline-level hooks:
+   * const tl = anime.timeline({
+   *   begin: () => renderer.registerAnimation(),
+   *   complete: () => renderer.unregisterAnimation(),
+   * });
+   * tl.add({ targets: node, x: 100, duration: 500 });
+   * tl.add({ targets: node, y: 200, duration: 500 });
+   * ```
+   */
+  registerAnimation(): void {
+    this.stage.activeAnimationCount++;
+  }
+
+  /**
+   * Unregister a previously registered animation.
+   *
+   * @remarks
+   * Decrements the global animation counter. When the counter reaches zero,
+   * the renderer resumes full-budget texture processing.
+   *
+   * Must be called exactly once for each corresponding
+   * {@link registerAnimation} call.
+   */
+  unregisterAnimation(): void {
+    if (this.stage.activeAnimationCount > 0) {
+      this.stage.activeAnimationCount--;
+    }
+  }
+
+  /**
    * Close and destroy the renderer, releasing all resources.
    *
    * @remarks
