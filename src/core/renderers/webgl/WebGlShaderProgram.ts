@@ -56,6 +56,34 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   public isDestroyed = false;
   supportsIndexedTextures = false;
 
+  /**
+   * Shadow copies of system uniform values. Used by bindRenderOp to skip
+   * redundant gl.uniform* calls when the value hasn't changed.
+   *
+   * Each gl.uniform* call crosses into the GPU-process command buffer, so
+   * skipping value-identical re-uploads is a real per-op CPU saving on
+   * embedded targets.
+   *
+   * Sentinel -1 never collides with real values (all >= 0).
+   */
+  private lastPixelRatio = -1;
+  private lastResolutionW = -1;
+  private lastResolutionH = -1;
+  private lastAlpha = -1;
+  private lastDimensionsW = -1;
+  private lastDimensionsH = -1;
+  private lastTime = -1;
+
+  /**
+   * Last-bound shader uniform collection by identity reference.
+   *
+   * Uniform collections are created once, filled once, and shared by
+   * reference across shader nodes with the same value key — so reference
+   * equality implies value equality. Allows skipping the entire for-in
+   * loop over uniform buckets when the same collection is already bound.
+   */
+  private lastBoundUniforms: unknown = null;
+
   constructor(
     renderer: WebGlRenderer,
     config: WebGlShaderType,
@@ -149,39 +177,49 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return this.lifecycle.canBatch(node, currentRenderOp);
     }
 
-    const { time, worldAlpha, w, h } = node;
-
     if (this.useTimeValue === true) {
-      if (time !== currentRenderOp.time) {
+      if (node.time !== currentRenderOp.time) {
         return false;
       }
     }
 
     if (this.useSystemAlpha === true) {
-      if (worldAlpha !== currentRenderOp.worldAlpha) {
+      if (node.worldAlpha !== currentRenderOp.worldAlpha) {
         return false;
       }
     }
 
     if (this.useSystemDimensions === true) {
-      if (w !== currentRenderOp.w || h !== currentRenderOp.h) {
+      if (node.w !== currentRenderOp.w || node.h !== currentRenderOp.h) {
         return false;
       }
     }
 
-    let shaderPropsA: Record<string, unknown> | undefined = undefined;
-    let shaderPropsB: Record<string, unknown> | undefined = undefined;
+    const shader = node.props.shader as WebGlShaderNode | null;
+    const opShader = currentRenderOp.shader as WebGlShaderNode | null;
 
-    const shader = node.props.shader;
-
-    if (shader !== null) {
-      shaderPropsA = (shader as WebGlShaderNode).resolvedProps;
+    // Same shader node — same resolved props by definition.
+    if (shader === opShader) {
+      return true;
     }
 
-    const opShader = currentRenderOp.shader;
-    if (opShader !== null) {
-      shaderPropsB = (opShader as WebGlShaderNode).resolvedProps;
+    if (shader === null || opShader === null) {
+      return false;
     }
+
+    // Uniform collections are shared by reference across shader nodes with
+    // equal value keys — reference equality implies the resolved prop values
+    // match without a key-by-key compare.
+    if (shader.uniforms === opShader.uniforms) {
+      return true;
+    }
+
+    const shaderPropsA = shader.resolvedProps as
+      | Record<string, unknown>
+      | undefined;
+    const shaderPropsB = opShader.resolvedProps as
+      | Record<string, unknown>
+      | undefined;
 
     if (
       (shaderPropsA === undefined && shaderPropsB !== undefined) ||
@@ -215,36 +253,57 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return;
     }
 
-    // Bind render texture framebuffer dimensions as resolution
-    // if the parent has a render texture
+    // Resolve target pixel ratio / resolution, then compare-and-set against
+    // the program's shadow state to skip value-identical re-uploads.
+    let pixelRatio: number;
+    let resolutionW: number;
+    let resolutionH: number;
     if (parentHasRenderTexture === true && framebufferDimensions) {
-      const { w, h } = framebufferDimensions;
-      // Force pixel ratio to 1.0 for render textures since they are always 1:1
-      // the final render texture will be rendered to the screen with the correct pixel ratio
-      this.glw.uniform1f('u_pixelRatio', 1.0);
-
-      // Set resolution to the framebuffer dimensions
-      this.glw.uniform2f('u_resolution', w, h);
+      pixelRatio = 1.0;
+      resolutionW = framebufferDimensions.w;
+      resolutionH = framebufferDimensions.h;
     } else {
-      this.glw.uniform1f('u_pixelRatio', renderOp.stage.pixelRatio);
-
-      this.glw.uniform2f(
-        'u_resolution',
-        this.glw.canvas.width,
-        this.glw.canvas.height,
-      );
+      pixelRatio = renderOp.stage.pixelRatio;
+      resolutionW = this.glw.canvas.width;
+      resolutionH = this.glw.canvas.height;
     }
 
-    if (this.useTimeValue === true) {
+    if (pixelRatio !== this.lastPixelRatio) {
+      this.glw.uniform1f('u_pixelRatio', pixelRatio);
+      this.lastPixelRatio = pixelRatio;
+    }
+
+    if (
+      resolutionW !== this.lastResolutionW ||
+      resolutionH !== this.lastResolutionH
+    ) {
+      this.glw.uniform2f('u_resolution', resolutionW, resolutionH);
+      this.lastResolutionW = resolutionW;
+      this.lastResolutionH = resolutionH;
+    }
+
+    if (this.useTimeValue === true && renderOp.time !== this.lastTime) {
       this.glw.uniform1f('u_time', renderOp.time);
+      this.lastTime = renderOp.time;
     }
 
-    if (this.useSystemAlpha === true) {
+    if (
+      this.useSystemAlpha === true &&
+      renderOp.worldAlpha !== this.lastAlpha
+    ) {
       this.glw.uniform1f('u_alpha', renderOp.worldAlpha);
+      this.lastAlpha = renderOp.worldAlpha;
     }
 
     if (this.useSystemDimensions === true) {
-      this.glw.uniform2f('u_dimensions', renderOp.w, renderOp.h);
+      if (
+        renderOp.w !== this.lastDimensionsW ||
+        renderOp.h !== this.lastDimensionsH
+      ) {
+        this.glw.uniform2f('u_dimensions', renderOp.w, renderOp.h);
+        this.lastDimensionsW = renderOp.w;
+        this.lastDimensionsH = renderOp.h;
+      }
     }
 
     /**temporary fix to make sdf texts work */
@@ -265,9 +324,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     if (uniforms.hasStoredUniforms === true) {
-      /**
-       * loop over all precalculated uniform types
-       */
+      // Uniform collections are immutable after creation and shared by
+      // reference across shader nodes with equal value keys — when the same
+      // object is already bound, the GL program still holds these values.
+      if ((uniforms as unknown) === this.lastBoundUniforms) {
+        return;
+      }
+      this.lastBoundUniforms = uniforms;
+
       for (const key in uniforms.single) {
         const { method, value } = uniforms.single[key]!;
         this.glw[method as keyof UniformSet1Param](key, value as never);
