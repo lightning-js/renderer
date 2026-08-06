@@ -174,6 +174,20 @@ export class Stage {
   private renderRequested = false;
   private frameEventQueue: [name: string, payload: unknown][] = [];
 
+  // Flattened render list — caches the pre-order traversal of visible nodes
+  // and stencil clip operations. Rebuilt only when the scene structure changes
+  // (child add/remove, visibility toggle, z-sort). On clean frames the cached
+  // list is replayed linearly without recursion.
+  //
+  // Two parallel arrays encode a sequence of operations:
+  //   renderListOps[i] = 0  → renderQuads(renderListNodes[i])
+  //   renderListOps[i] = 1  → beginRoundedClip(renderListNodes[i])
+  //   renderListOps[i] = 2  → endRoundedClip(renderListNodes[i])
+  private renderListNodes: CoreNode[] = [];
+  private renderListOps: Uint8Array = new Uint8Array(256);
+  private renderListLen = 0;
+  private renderListDirty = true;
+
   // Font resolve optimisation flags
   private hasOnlyOneFontEngine: boolean;
   private hasOnlyCanvasFontEngine: boolean;
@@ -521,8 +535,29 @@ export class Stage {
       renderer.renderRTTNodes();
     }
 
-    // Fill quads buffer
-    this.addQuads(this.root);
+    // Fill quads buffer — rebuild the flat render list when dirty,
+    // otherwise replay the cached list without recursion.
+    if (this.renderListDirty === true) {
+      this.renderListLen = 0;
+      this.renderListNodes.length = 0;
+      this.buildRenderList(this.root);
+      this.renderListDirty = false;
+    } else {
+      const nodes = this.renderListNodes;
+      const ops = this.renderListOps;
+      const len = this.renderListLen;
+      for (let i = 0; i < len; i++) {
+        const op = ops[i]!;
+        const node = nodes[i]!;
+        if (op === 0) {
+          node.renderQuads(renderer);
+        } else if (op === 1) {
+          renderer.beginRoundedClip(node);
+        } else {
+          renderer.endRoundedClip(node);
+        }
+      }
+    }
 
     // Perform render pass
     renderer.render();
@@ -640,29 +675,80 @@ export class Stage {
     }
   }
 
-  addQuads(node: CoreNode) {
-    assertTruthy(this.renderer);
+  /**
+   * Mark the render list as dirty, triggering a rebuild on the next frame.
+   *
+   * @remarks
+   * Called by CoreNode when the scene structure changes (child add/remove,
+   * visibility toggle, z-index re-sort). Deduplicated: if the list is
+   * already dirty, this is a no-op.
+   */
+  requestRenderListUpdate(): void {
+    if (this.renderListDirty === true) {
+      return;
+    }
+    this.renderListDirty = true;
+    this.requestRender();
+  }
 
-    // Only arm the stencil when this node itself declares the clip region.
-    // Children inherit clippingRect (including clipRadius) from their parent,
-    // but they must NOT emit their own begin/end — doing so would re-draw the
-    // stencil mask at an ever-incrementing depth for every descendant, which
-    // is redundant and causes stencilDepth to overflow on deep trees.
+  /**
+   * Append a render operation to the cached render list.
+   *
+   * @param node - The node associated with this operation
+   * @param op - 0 = renderQuads, 1 = beginRoundedClip, 2 = endRoundedClip
+   */
+  private pushRenderOp(node: CoreNode, op: number): void {
+    const idx = this.renderListLen;
+    // Grow the ops Uint8Array if needed
+    if (idx >= this.renderListOps.length) {
+      const newOps = new Uint8Array(this.renderListOps.length * 2);
+      newOps.set(this.renderListOps);
+      this.renderListOps = newOps;
+    }
+    this.renderListOps[idx] = op;
+    this.renderListNodes[idx] = node;
+    this.renderListLen = idx + 1;
+  }
+
+  /**
+   * Build a flat render list by walking the scene tree in pre-order.
+   *
+   * @remarks
+   * Functionally identical to the previous recursive `addQuads` method but
+   * additionally caches the traversal result (nodes + stencil clip ops) so
+   * that clean frames can replay the list linearly without recursion.
+   *
+   * On rebuild frames, `renderQuads` is called inline (same as before) so
+   * the renderer's `renderOps` array is populated during the walk.
+   *
+   * @param node - Current node being visited
+   * @param cache - Whether to record the traversal into the cached render
+   * list. When false, quads/stencil ops are fed to the renderer immediately
+   * without caching (used by the RTT path).
+   */
+  private buildRenderList(node: CoreNode, cache = true): void {
+    const renderer = this.renderer;
+
     const hasRoundedClip =
       node.props.clipping === true && node.props.clipRadius > 0;
 
     if (hasRoundedClip === true) {
-      this.renderer.beginRoundedClip(node);
+      renderer.beginRoundedClip(node);
+      if (cache === true) {
+        this.pushRenderOp(node, 1);
+      }
     }
 
-    // Render this node's own quad after the stencil mask is armed (when
-    // applicable) so the container itself is also clipped to the rounded shape.
     if (node.isRenderable === true) {
-      node.renderQuads(this.renderer);
+      node.renderQuads(renderer);
+      if (cache === true) {
+        this.pushRenderOp(node, 0);
+      }
     }
 
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
+    const children = node.children;
+    for (let i = 0, len = children.length; i < len; i++) {
+      const child = children[i];
 
       if (child === undefined) {
         continue;
@@ -675,12 +761,30 @@ export class Stage {
         continue;
       }
 
-      this.addQuads(child);
+      this.buildRenderList(child, cache);
     }
 
     if (hasRoundedClip === true) {
-      this.renderer.endRoundedClip(node);
+      renderer.endRoundedClip(node);
+      if (cache === true) {
+        this.pushRenderOp(node, 2);
+      }
     }
+  }
+
+  /**
+   * Walk a node's subtree and feed quads + stencil clip ops to the active
+   * renderer without touching the cached render list.
+   *
+   * @remarks
+   * Used by the render-to-texture path, which draws each RTT subtree to its
+   * own framebuffer immediately and then flushes the renderer's operation
+   * queue.
+   *
+   * @param node - Root of the subtree to render
+   */
+  addSubtreeQuads(node: CoreNode): void {
+    this.buildRenderList(node, false);
   }
 
   /**
