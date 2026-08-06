@@ -164,6 +164,11 @@ export abstract class GlContextWrapper {
     data: ArrayBufferView,
     usage: GLenum,
   ): void;
+  abstract arrayBufferSubData(
+    buffer: any | null,
+    dstByteOffset: GLintptr,
+    data: ArrayBufferView,
+  ): void;
   abstract elementArrayBufferData(
     buffer: any | null,
     data: ArrayBufferView,
