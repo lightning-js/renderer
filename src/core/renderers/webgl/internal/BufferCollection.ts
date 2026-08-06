@@ -19,6 +19,13 @@
 
 import type { AttributeInfo } from './ShaderUtils.js';
 
+/**
+ * Number of 32-bit floats per vertex in the dynamically updated quad buffer:
+ * a_position (2) + a_textureCoords (2) + a_color (1 packed 4xUint8). a_nodeCoords
+ * lives in a separate static buffer shared by all BufferCollections.
+ */
+export const QUAD_VERTEX_STRIDE = 5;
+
 export interface BufferItem {
   buffer: WebGLBuffer;
   attributes: Record<string, AttributeInfo>;

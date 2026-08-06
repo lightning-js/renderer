@@ -35,7 +35,10 @@ import {
 } from '../../textures/Texture.js';
 import { SubTexture } from '../../textures/SubTexture.js';
 import { WebGlCtxSubTexture } from './WebGlCtxSubTexture.js';
-import { BufferCollection } from './internal/BufferCollection.js';
+import {
+  BufferCollection,
+  QUAD_VERTEX_STRIDE,
+} from './internal/BufferCollection.js';
 import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
@@ -122,9 +125,9 @@ export class WebGlRenderer extends CoreRenderer {
   private stencilOpPool: StencilClipRenderOp[] = [];
   private stencilOpPoolIdx: number = 0;
 
-  //// Scratch buffer for the single-quad stencil geometry (4 vertices × 8 floats = 32 floats)
+  //// Scratch buffer for the single-quad stencil geometry (4 vertices × 5 floats = 20 floats)
   private readonly _stencilScratchBuffer: ArrayBuffer = new ArrayBuffer(
-    32 * Float32Array.BYTES_PER_ELEMENT,
+    20 * Float32Array.BYTES_PER_ELEMENT,
   );
   private readonly _stencilScratchF: Float32Array = new Float32Array(
     this._stencilScratchBuffer,
@@ -176,7 +179,32 @@ export class WebGlRenderer extends CoreRenderer {
       extensions: getWebGlExtensions(this.glw),
     };
     const quadBuffer = glw.createBuffer();
-    const stride = 8 * Float32Array.BYTES_PER_ELEMENT;
+
+    // Per-vertex stride is 5 floats (20 bytes): a_position (2 floats),
+    // a_textureCoords (2 floats) and a_color (4 bytes packed into the 20-byte
+    // stride). a_nodeCoords is provided by the separate static VBO below, so it
+    // is no longer duplicated in every vertex.
+    const stride = QUAD_VERTEX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+
+    // Static node-coords VBO. Every quad maps its vertices onto the four
+    // corners of a unit square [0,0],[1,0],[0,1],[1,1]. Because the data is
+    // identical for every quad it is uploaded a single time and shared by all
+    // BufferCollections, removing 2 floats per vertex from the main quad buffer.
+    const maxQuads = ~~(this.stage.bufferMemory / 80); // same sizing as createIndexBuffer
+    const nodeCoords = new Float32Array(maxQuads * 8);
+    for (let i = 0; i < maxQuads * 8; i += 8) {
+      nodeCoords[i] = 0;
+      nodeCoords[i + 1] = 0;
+      nodeCoords[i + 2] = 1;
+      nodeCoords[i + 3] = 0;
+      nodeCoords[i + 4] = 0;
+      nodeCoords[i + 5] = 1;
+      nodeCoords[i + 6] = 1;
+      nodeCoords[i + 7] = 1;
+    }
+    const nodeCoordsBuffer = glw.createBuffer();
+    glw.arrayBufferData(nodeCoordsBuffer, nodeCoords, glw.STATIC_DRAW);
+
     this.quadBufferCollection = new BufferCollection([
       {
         buffer: quadBuffer!,
@@ -205,32 +233,29 @@ export class WebGlRenderer extends CoreRenderer {
             stride,
             offset: 4 * Float32Array.BYTES_PER_ELEMENT,
           },
-          a_textureIndex: {
-            name: 'a_textureIndex',
-            size: 1,
-            type: glw.FLOAT,
-            normalized: false,
-            stride,
-            offset: 5 * Float32Array.BYTES_PER_ELEMENT,
-          },
+        },
+      },
+      {
+        buffer: nodeCoordsBuffer!,
+        attributes: {
           a_nodeCoords: {
             name: 'a_nodeCoords',
             size: 2,
             type: glw.FLOAT,
             normalized: false,
-            stride,
-            offset: 6 * Float32Array.BYTES_PER_ELEMENT,
+            stride: 2 * Float32Array.BYTES_PER_ELEMENT,
+            offset: 0,
           },
         },
       },
     ]);
 
     // Allocate a dedicated DYNAMIC_DRAW VBO for the stencil write-pass quad.
-    // This is a fixed 32-float (128-byte) buffer that is written once per
+    // This is a fixed 20-float (80-byte) buffer that is written once per
     // stencil region and never touches the main quad buffer.
     const stencilBuf = glw.createBuffer();
-    const stencilStride = 8 * Float32Array.BYTES_PER_ELEMENT;
-    glw.arrayBufferData(stencilBuf, new Float32Array(32), glw.DYNAMIC_DRAW);
+    const stencilStride = QUAD_VERTEX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+    glw.arrayBufferData(stencilBuf, new Float32Array(20), glw.DYNAMIC_DRAW);
     this.stencilQuadBufferCollection = new BufferCollection([
       {
         buffer: stencilBuf!,
@@ -243,13 +268,18 @@ export class WebGlRenderer extends CoreRenderer {
             stride: stencilStride,
             offset: 0,
           },
+        },
+      },
+      {
+        buffer: nodeCoordsBuffer!,
+        attributes: {
           a_nodeCoords: {
             name: 'a_nodeCoords',
             size: 2,
             type: glw.FLOAT,
             normalized: false,
-            stride: stencilStride,
-            offset: 6 * Float32Array.BYTES_PER_ELEMENT,
+            stride: 2 * Float32Array.BYTES_PER_ELEMENT,
+            offset: 0,
           },
         },
       },
@@ -368,42 +398,30 @@ export class WebGlRenderer extends CoreRenderer {
     f[i + 2] = tc.x1;
     f[i + 3] = tc.y1;
     u[i + 4] = cTl;
-    f[i + 5] = tidx;
-    f[i + 6] = 0;
-    f[i + 7] = 0;
 
     // Upper-Right
-    f[i + 8] = rc.x2;
-    f[i + 9] = rc.y2;
-    f[i + 10] = tc.x2;
-    f[i + 11] = tc.y1;
-    u[i + 12] = cTr;
-    f[i + 13] = tidx;
-    f[i + 14] = 1;
-    f[i + 15] = 0;
+    f[i + 5] = rc.x2;
+    f[i + 6] = rc.y2;
+    f[i + 7] = tc.x2;
+    f[i + 8] = tc.y1;
+    u[i + 9] = cTr;
 
     // Lower-Left
-    f[i + 16] = rc.x4;
-    f[i + 17] = rc.y4;
-    f[i + 18] = tc.x1;
-    f[i + 19] = tc.y2;
-    u[i + 20] = cBl;
-    f[i + 21] = tidx;
-    f[i + 22] = 0;
-    f[i + 23] = 1;
+    f[i + 10] = rc.x4;
+    f[i + 11] = rc.y4;
+    f[i + 12] = tc.x1;
+    f[i + 13] = tc.y2;
+    u[i + 14] = cBl;
 
     // Lower-Right
-    f[i + 24] = rc.x3;
-    f[i + 25] = rc.y3;
-    f[i + 26] = tc.x2;
-    f[i + 27] = tc.y2;
-    u[i + 28] = cBr;
-    f[i + 29] = tidx;
-    f[i + 30] = 1;
-    f[i + 31] = 1;
+    f[i + 15] = rc.x3;
+    f[i + 16] = rc.y3;
+    f[i + 17] = tc.x2;
+    f[i + 18] = tc.y2;
+    u[i + 19] = cBr;
 
     (this.curRenderOp as WebGlNodeRenderOp).numQuads++;
-    this.curBufferIdx = i + 32;
+    this.curBufferIdx = i + 20;
   }
 
   /**
@@ -532,7 +550,7 @@ export class WebGlRenderer extends CoreRenderer {
     this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
 
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
-    const QUAD_SIZE_IN_BYTES = 4 * (8 * arr.BYTES_PER_ELEMENT); // 8 attributes per vertex
+    const QUAD_SIZE_IN_BYTES = 4 * (QUAD_VERTEX_STRIDE * arr.BYTES_PER_ELEMENT);
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
   }
 
@@ -949,36 +967,24 @@ export class WebGlRenderer extends CoreRenderer {
     f[2] = 0;
     f[3] = 0;
     u[4] = white;
-    f[5] = 0;
-    f[6] = 0;
-    f[7] = 0;
     // Upper-Right
-    f[8] = x2;
-    f[9] = y1;
-    f[10] = 1;
-    f[11] = 0;
-    u[12] = white;
-    f[13] = 0;
-    f[14] = 1;
-    f[15] = 0;
+    f[5] = x2;
+    f[6] = y1;
+    f[7] = 1;
+    f[8] = 0;
+    u[9] = white;
     // Lower-Left
-    f[16] = x1;
-    f[17] = y2;
-    f[18] = 0;
-    f[19] = 1;
-    u[20] = white;
-    f[21] = 0;
-    f[22] = 0;
-    f[23] = 1;
+    f[10] = x1;
+    f[11] = y2;
+    f[12] = 0;
+    f[13] = 1;
+    u[14] = white;
     // Lower-Right
-    f[24] = x2;
-    f[25] = y2;
-    f[26] = 1;
-    f[27] = 1;
-    u[28] = white;
-    f[29] = 0;
-    f[30] = 1;
-    f[31] = 1;
+    f[15] = x2;
+    f[16] = y2;
+    f[17] = 1;
+    f[18] = 1;
+    u[19] = white;
 
     const stencilBuf =
       this.stencilQuadBufferCollection!.getBuffer('a_position') || null;

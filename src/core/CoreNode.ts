@@ -25,7 +25,10 @@ import {
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
 import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
-import type { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
+import {
+  QUAD_VERTEX_STRIDE,
+  type BufferCollection,
+} from './renderers/webgl/internal/BufferCollection.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
@@ -3031,7 +3034,7 @@ export class CoreNode extends EventEmitter {
       glw.setScissorTest(false);
     }
 
-    const quadIdx = (this.renderOpBufferIdx / 32) * 6 * 2;
+    const quadIdx = (this.renderOpBufferIdx / (QUAD_VERTEX_STRIDE * 4)) * 6 * 2;
     glw.drawElements(
       glw.TRIANGLES,
       6 * this.numQuads,
