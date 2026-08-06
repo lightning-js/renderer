@@ -143,11 +143,21 @@ export class Matrix3d {
   }
 
   public static rotate(angle: number, out?: Matrix3d): Matrix3d {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
     if (!out) {
       out = new Matrix3d();
     }
+    if (angle === 0) {
+      out.ta = 1;
+      out.tb = 0;
+      out.tx = 0;
+      out.tc = 0;
+      out.td = 1;
+      out.ty = 0;
+      out.mutation = true;
+      return out;
+    }
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
     out.ta = cos;
     out.tb = -sin;
     out.tx = 0;
@@ -177,6 +187,31 @@ export class Matrix3d {
     this.ty = this.tc * x + this.td * y + this.ty;
     this.mutation = true;
     return this;
+  }
+
+  /**
+   * Set only the translation fields (tx, ty) without touching ta/tb/tc/td.
+   *
+   * @remarks
+   * Use this when the matrix is known to already be in identity-shape
+   * (ta=1, tb=0, tc=0, td=1). Saves 4 field writes vs Matrix3d.translate().
+   */
+  public setTranslate(x: number, y: number): void {
+    this.tx = x;
+    this.ty = y;
+    this.mutation = true;
+  }
+
+  /**
+   * If `other` is a pure translation (identity-shape), apply it via the
+   * cheaper `translate()` (2 muls). Otherwise fall back to `multiply()`
+   * (8 muls).
+   */
+  public translateOrMultiply(other: Matrix3d): Matrix3d {
+    if (other.ta === 1 && other.td === 1 && other.tb === 0 && other.tc === 0) {
+      return this.translate(other.tx, other.ty);
+    }
+    return this.multiply(other);
   }
 
   public scale(sx: number, sy: number): Matrix3d {
