@@ -1985,6 +1985,9 @@ export class CoreNode extends EventEmitter {
     this.removeAllListeners();
 
     this.destroyed = true;
+    // Remove from the Stage's interactive Set so a destroyed node isn't
+    // retained forever (memory leak: destroyed CoreNodes stayed pinned here).
+    this.stage.interactiveNodes.delete(this);
     this.unloadTexture();
     this.isRenderable = false;
     if (this.hasShaderTimeFn === true) {
@@ -2943,6 +2946,10 @@ export class CoreNode extends EventEmitter {
     // Update Stage's interactive Set
     if (value === true) {
       this.stage.interactiveNodes.add(this);
+    } else {
+      // Ensure the node is removed when interactivity is turned off/unset,
+      // otherwise it stays pinned in the Set and leaks.
+      this.stage.interactiveNodes.delete(this);
     }
   }
 

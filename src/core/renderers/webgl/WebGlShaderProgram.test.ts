@@ -34,6 +34,11 @@ const makeStage = (): Stage =>
     defaultTexture: {
       state: 'loaded',
     },
+    interactiveNodes: {
+      add() {},
+      delete() {},
+      has: () => false,
+    } as unknown as Stage['interactiveNodes'],
     pixelRatio: 2,
     renderer: mock<CoreRenderer>() as CoreRenderer,
   });
