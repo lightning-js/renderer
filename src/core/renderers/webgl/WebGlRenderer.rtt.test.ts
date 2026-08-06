@@ -89,6 +89,11 @@ const makeStage = (): Stage =>
     strictBound: createBound(0, 0, 1920, 1080),
     preloadBound: createBound(0, 0, 1920, 1080),
     defaultTexture: { state: 'loaded' } as unknown as Texture,
+    interactiveNodes: {
+      add() {},
+      delete() {},
+      has: () => false,
+    } as unknown as Stage['interactiveNodes'],
     renderer: mock<CoreRenderer>() as CoreRenderer,
     txManager: {
       createTexture: vi.fn().mockReturnValue({

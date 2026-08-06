@@ -105,6 +105,11 @@ describe('CoreTextNode', () => {
       defaultTexture: {
         state: 'loaded',
       },
+      interactiveNodes: {
+        add() {},
+        delete() {},
+        has: () => false,
+      } as unknown as Stage['interactiveNodes'],
       renderer: mock<CoreRenderer>() as CoreRenderer,
     });
 
@@ -318,6 +323,11 @@ describe('CoreTextNode', () => {
       strictBound: createBound(0, 0, 1920, 1080),
       preloadBound: createBound(0, 0, 1920, 1080),
       defaultTexture: { state: 'loaded' },
+      interactiveNodes: {
+        add() {},
+        delete() {},
+        has: () => false,
+      } as unknown as Stage['interactiveNodes'],
       renderer: { deleteBuffer } as unknown as CoreRenderer,
     });
   }
@@ -592,6 +602,11 @@ describe('CoreTextNode', () => {
         strictBound: createBound(0, 0, 1920, 1080),
         preloadBound: createBound(0, 0, 1920, 1080),
         defaultTexture: { state: 'loaded' },
+        interactiveNodes: {
+          add() {},
+          delete() {},
+          has: () => false,
+        } as unknown as Stage['interactiveNodes'],
         renderer: { glw } as unknown as CoreRenderer,
       });
       const node = new CoreTextNode(
@@ -626,6 +641,11 @@ describe('CoreTextNode', () => {
         strictBound: createBound(0, 0, 1920, 1080),
         preloadBound: createBound(0, 0, 1920, 1080),
         defaultTexture: { state: 'loaded' },
+        interactiveNodes: {
+          add() {},
+          delete() {},
+          has: () => false,
+        } as unknown as Stage['interactiveNodes'],
         pixelRatio: 2,
         platform: { canvas: { width: 1920, height: 1080 } } as any,
         shManager: { useShader } as any,

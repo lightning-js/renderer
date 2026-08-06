@@ -80,6 +80,11 @@ describe('CoreNode', () => {
     defaultTexture: {
       state: 'loaded',
     },
+    interactiveNodes: {
+      add() {},
+      delete() {},
+      has: () => false,
+    } as unknown as Stage['interactiveNodes'],
     renderer: mock<CoreRenderer>() as CoreRenderer,
   });
 
