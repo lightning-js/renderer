@@ -670,7 +670,7 @@ export class WebGlRenderer extends CoreRenderer {
           continue;
         }
 
-        this.stage.addQuads(child);
+        this.stage.addSubtreeQuads(child);
         child.hasRTTupdates = false;
       }
 
@@ -882,9 +882,9 @@ export class WebGlRenderer extends CoreRenderer {
 
   /**
    * Inserts an "end rounded clip" sentinel into renderOps for the given node.
-   * Called by Stage.addQuads after processing a rounded-clip node's children.
+   * Called by Stage.addSubtreeQuads after processing a rounded-clip node's children.
    */
-  override endRoundedClip(node: CoreNode) {
+  override endRoundedClip(_node: CoreNode) {
     const op = this.allocStencilOp();
     op.kind = 1;
     op.stencilRef = this.stencilDepth;

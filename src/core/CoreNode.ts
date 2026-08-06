@@ -1709,6 +1709,9 @@ export class CoreNode extends EventEmitter {
 
     const previous = this.renderState;
     this.renderState = renderState;
+    // Render state transitions (in/out of bounds, visibility) change which
+    // nodes appear in the flat render list, so mark it stale.
+    this.stage.requestRenderListUpdate();
     const event = CoreNodeRenderStateMap.get(renderState);
     assertTruthy(event);
     this.emit(event, {
@@ -1784,6 +1787,9 @@ export class CoreNode extends EventEmitter {
 
     // Emit event if renderable status has changed
     if (previousIsRenderable !== isRenderable) {
+      // Renderable changes alter which nodes are present in the flat render
+      // list, so mark it stale.
+      this.stage.requestRenderListUpdate();
       this.emit('renderable', {
         type: 'renderable',
         isRenderable,
@@ -2079,6 +2085,9 @@ export class CoreNode extends EventEmitter {
       return;
     }
     bucketSortByZIndex(children, min);
+    // The flat render list caches child order, so any actual re-order
+    // invalidates it.
+    this.stage.requestRenderListUpdate();
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
@@ -2093,6 +2102,10 @@ export class CoreNode extends EventEmitter {
     }
     const children = this.children;
     removeChild(node, children);
+
+    // The flat render list caches which nodes are present, so any structural
+    // change invalidates it.
+    this.stage.requestRenderListUpdate();
 
     if (children.length === 0) {
       this.zIndexMin = 0;
@@ -2163,6 +2176,9 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
     this.setUpdateType(UpdateType.Children);
+    // The flat render list caches which nodes are present, so any structural
+    // change invalidates it.
+    this.stage.requestRenderListUpdate();
   }
 
   //#region Properties
@@ -2475,6 +2491,8 @@ export class CoreNode extends EventEmitter {
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
     this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+    // Clipping toggles the stencil begin/end ops in the flat render list.
+    this.stage.requestRenderListUpdate();
   }
 
   get clipRadius(): number {
@@ -2488,6 +2506,8 @@ export class CoreNode extends EventEmitter {
         UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
       );
       this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+      // clipRadius toggles the stencil begin/end ops in the flat render list.
+      this.stage.requestRenderListUpdate();
     }
   }
 
