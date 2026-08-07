@@ -183,9 +183,11 @@ export class Stage {
   //   renderListOps[i] = 0  → renderQuads(renderListNodes[i])
   //   renderListOps[i] = 1  → beginRoundedClip(renderListNodes[i])
   //   renderListOps[i] = 2  → endRoundedClip(renderListNodes[i])
-  private renderListNodes: CoreNode[] = [];
+  // renderListNodes is also read by the WebGL renderer (surgical uploads and
+  // slot invalidation), so it is public.
+  public renderListNodes: CoreNode[] = [];
   private renderListOps: Uint8Array = new Uint8Array(256);
-  private renderListLen = 0;
+  public renderListLen = 0;
   private renderListDirty = true;
 
   // Font resolve optimisation flags
@@ -677,6 +679,11 @@ export class Stage {
     }
     this.renderListDirty = true;
     this.requestRender();
+    // A render list rebuild invalidates all permanent quad buffer slot
+    // assignments, so the renderer must reset them and force a full upload.
+    if (this.renderer.invalidateQuadBuffer !== undefined) {
+      this.renderer.invalidateQuadBuffer();
+    }
   }
 
   /**

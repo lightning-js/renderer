@@ -25,7 +25,10 @@ import {
 import type { TextureOptions } from './CoreTextureManager.js';
 import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
 import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
-import type { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
+import {
+  QUAD_VERTEX_STRIDE,
+  type BufferCollection,
+} from './renderers/webgl/internal/BufferCollection.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { Stage } from './Stage.js';
 import {
@@ -779,6 +782,15 @@ export class CoreNode extends EventEmitter {
   public renderOpTextures: WebGlCtxTexture[] = [];
   public stencilDepth: number = 0;
 
+  // Permanent slot of this node's quad in the renderer's quad buffer.
+  // -1 until assigned; reassigned contiguously whenever the render list is
+  // rebuilt (see WebGlRenderer.invalidateQuadBuffer).
+  public quadBufferIndex: number = -1;
+  // Whether the node's quad bytes differ from what the GPU buffer holds.
+  // Set when visual data (transforms, colors, alpha, texture) changes and
+  // cleared once the slot is re-uploaded.
+  public isQuadDirty = false;
+
   private hasShaderUpdater = false;
   public hasShaderTimeFn = false;
   private hasColorProps = false;
@@ -1473,6 +1485,17 @@ export class CoreNode extends EventEmitter {
           true,
         );
       }
+    }
+
+    // Mark the quad dirty only when visual data (transforms, colors, alpha)
+    // actually changed so the renderer re-uploads only modified slots.
+    if (
+      updateType &
+      (UpdateType.Global |
+        UpdateType.PremultipliedColors |
+        UpdateType.WorldAlpha)
+    ) {
+      this.isQuadDirty = true;
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
@@ -2924,6 +2947,7 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
+    this.isQuadDirty = true;
     this.updateIsSimple();
   }
 
@@ -3022,7 +3046,7 @@ export class CoreNode extends EventEmitter {
       glw.setScissorTest(false);
     }
 
-    const quadIdx = (this.renderOpBufferIdx / 32) * 6 * 2;
+    const quadIdx = (this.renderOpBufferIdx / (QUAD_VERTEX_STRIDE * 4)) * 6 * 2;
     glw.drawElements(
       glw.TRIANGLES,
       6 * this.numQuads,

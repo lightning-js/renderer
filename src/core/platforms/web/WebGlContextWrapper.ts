@@ -763,6 +763,19 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.gl.bufferData(this.gl.ARRAY_BUFFER, data, usage);
   }
 
+  // bindBuffer (if needed) then bufferSubData. Surgically updates a subset of
+  // the GPU buffer without reallocating it.
+  arrayBufferSubData(
+    buffer: WebGLBuffer | null,
+    dstByteOffset: GLintptr,
+    data: ArrayBufferView,
+  ) {
+    if (this.boundArrayBuffer !== buffer) {
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+      this.boundArrayBuffer = buffer;
+    }
+    this.gl.bufferSubData(this.gl.ARRAY_BUFFER, dstByteOffset, data);
+  }
   /**
    * ```
    * gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);

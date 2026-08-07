@@ -69,6 +69,12 @@ export abstract class CoreRenderer {
   abstract destroy(): void;
   getTextureCoords?(node: CoreNode): TextureCoords | undefined;
 
+  // Notify the renderer that the cached render list is about to be rebuilt
+  // structurally. WebGL renderers reset per-node quad buffer slots and force a
+  // full GPU re-upload. Optional: renderers without permanent slots (e.g.
+  // Canvas) leave this unimplemented.
+  invalidateQuadBuffer?(): void;
+
   /**
    * Delete a GPU buffer previously allocated by this renderer.
    * No-op for renderers that do not use WebGL buffers (e.g. Canvas).
@@ -81,7 +87,7 @@ export abstract class CoreRenderer {
    * Insert a begin-rounded-clip sentinel into the render op list before a
    * node's children are added. No-op on non-WebGL renderers.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   beginRoundedClip(_node: CoreNode): void {
     // no-op default — overridden by WebGlRenderer
   }
@@ -90,7 +96,7 @@ export abstract class CoreRenderer {
    * Insert an end-rounded-clip sentinel after a node's children have been
    * added. No-op on non-WebGL renderers.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   endRoundedClip(_node: CoreNode): void {
     // no-op default — overridden by WebGlRenderer
   }

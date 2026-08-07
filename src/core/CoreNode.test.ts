@@ -460,4 +460,63 @@ describe('CoreNode', () => {
       expect((child as any).parentAutosizer).toBeNull();
     });
   });
+
+  describe('isQuadDirty marking (dirty quad buffer)', () => {
+    it('starts clean', () => {
+      const node = new CoreNode(stage, defaultProps);
+      expect(node.isQuadDirty).toBe(false);
+      expect(node.quadBufferIndex).toBe(-1);
+    });
+
+    it('marks isQuadDirty when a visual flag (PremultipliedColors) is processed', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = false;
+      node.color = 0xffffffff;
+
+      node.update(0, clippingRect);
+
+      expect(node.isQuadDirty).toBe(true);
+    });
+
+    it('marks isQuadDirty when a transform flag (Global) is processed', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = false;
+      node.x = 10;
+
+      node.update(0, clippingRect);
+
+      expect(node.isQuadDirty).toBe(true);
+    });
+
+    it('does not mark isQuadDirty for bookkeeping-only flags', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = false;
+      node.updateType = UpdateType.Children;
+
+      node.update(0, clippingRect);
+
+      expect(node.isQuadDirty).toBe(false);
+    });
+
+    it('does not clear an existing dirty mark for bookkeeping-only flags', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = true;
+      node.updateType = UpdateType.Children;
+
+      node.update(0, clippingRect);
+
+      // Only the renderer clears isQuadDirty after a GPU upload.
+      expect(node.isQuadDirty).toBe(true);
+    });
+
+    it('marks isQuadDirty immediately in the texture setter', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = false;
+      node.texture = mock<ImageTexture>({
+        state: 'loaded',
+      });
+
+      expect(node.isQuadDirty).toBe(true);
+    });
+  });
 });
