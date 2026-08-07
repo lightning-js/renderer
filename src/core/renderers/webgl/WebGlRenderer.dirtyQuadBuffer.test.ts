@@ -127,6 +127,20 @@ const makeRenderer = (nodes: CoreNode[] = []): RendererHarness => {
   (renderer as any)._quadScratchBuffer = scratch.buffer;
   (renderer as any)._quadScratchF = scratch;
 
+  // Shared SDF text buffers (unused by these tests; sized so the upload paths
+  // early-return). Same mock style as `quadBufferCollection` above.
+  const sdfBuffer = {
+    idx: 0,
+    changed: true,
+    lastUploadedSize: 0,
+    clear: vi.fn(),
+    quadBufferCollection: { getBuffer: () => 'sdf-buffer' },
+  };
+  (renderer as any).sdfBufferPlain = sdfBuffer;
+  (renderer as any).sdfBufferRich = sdfBuffer;
+  (renderer as any).curSdfRenderOp = null;
+  (renderer as any).coreTextRenderOps = [];
+
   return { renderer, glw, stage };
 };
 

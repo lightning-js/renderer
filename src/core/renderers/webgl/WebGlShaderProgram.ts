@@ -33,8 +33,34 @@ import {
   type UniformSet4Params,
 } from './internal/ShaderUtils.js';
 import { CoreNode } from '../../CoreNode.js';
-import type { CoreTextNode } from '../../CoreTextNode.js';
-import type { SdfShaderProps } from '../../shaders/webgl/SdfShader.js';
+import type { Dimensions } from '../../../common/CommonTypes.js';
+import type { Stage } from '../../Stage.js';
+
+/**
+ * Structural surface shared by node render ops (CoreNode / CoreTextNode) and
+ * batched SdfRenderOps that {@link WebGlShaderProgram.bindRenderOp} consumes.
+ *
+ * Node ops expose `parentFramebufferDimensions`, SdfRenderOp exposes
+ * `framebufferDimensions`; `isCoreNode` picks the active one. Keeping this as
+ * an interface (rather than widening to the full `WebGlRenderOp` union)
+ * avoids demanding properties from StencilClipRenderOp, which is never bound
+ * through this path.
+ */
+export interface WebGlBoundRenderOp {
+  renderOpTextures: WebGlCtxTexture[];
+  quadBufferCollection: BufferCollection;
+  isCoreNode: boolean;
+  rtt: boolean;
+  parentHasRenderTexture: boolean;
+  parentFramebufferDimensions?: Dimensions | null;
+  framebufferDimensions?: Dimensions | null;
+  stage: Stage;
+  time: number;
+  worldAlpha: number;
+  w: number;
+  h: number;
+  shader: WebGlShaderNode | null;
+}
 
 export class WebGlShaderProgram implements CoreShaderProgram {
   protected program: WebGLProgram | null;
@@ -239,7 +265,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     return true;
   }
 
-  bindRenderOp(renderOp: WebGlNodeRenderOp) {
+  bindRenderOp(renderOp: WebGlBoundRenderOp) {
     this.bindTextures(renderOp.renderOpTextures);
     this.bindBufferCollection(renderOp.quadBufferCollection);
 
@@ -304,16 +330,6 @@ export class WebGlShaderProgram implements CoreShaderProgram {
         this.lastDimensionsW = renderOp.w;
         this.lastDimensionsH = renderOp.h;
       }
-    }
-
-    /**temporary fix to make sdf texts work */
-    if (renderOp.isSdfRenderOp === true) {
-      const opShader = renderOp.shader!; // SdfRenderOp has .shader
-      (opShader.shaderType as WebGlShaderType<SdfShaderProps>).onSdfBind?.call(
-        this.glw,
-        (renderOp as CoreTextNode).sdfShaderProps,
-      );
-      return;
     }
 
     const shader = renderOp.shader as WebGlShaderNode;

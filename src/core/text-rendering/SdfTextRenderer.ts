@@ -18,37 +18,39 @@
  */
 
 import type { Stage } from '../Stage.js';
+import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type {
   FontHandler,
   SdfRenderInfo,
   TextLineStruct,
   TextRenderInfo,
+  TextLayout,
+  TextRenderProps,
 } from './TextRenderer.js';
-import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
+import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import * as SdfFontHandler from './SdfFontHandler.js';
 import { WebGlRenderer } from '../renderers/webgl/WebGlRenderer.js';
 import { Sdf, SdfPlain } from '../shaders/webgl/SdfShader.js';
 import type { WebGlShaderNode } from '../renderers/webgl/WebGlShaderNode.js';
-import type { TextLayout } from './TextRenderer.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
+import {
+  SDF_PLAIN_GLYPH_STRIDE,
+  SDF_RICH_GLYPH_STRIDE,
+} from '../renderers/webgl/SdfBuffer.js';
 
-// Plain (non-richText) layout: x, y, u, v — matches v3.0.6 format
-const FLOATS_PER_VERTEX_PLAIN = 4;
-// Rich-text layout: x, y, u, v, packed_color, style
-const FLOATS_PER_VERTEX_RICH = 6;
-const VERTICES_PER_GLYPH = 6;
-const FLOATS_PER_QUAD_PLAIN = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX_PLAIN; // 24
-const FLOATS_PER_QUAD_RICH = VERTICES_PER_GLYPH * FLOATS_PER_VERTEX_RICH; // 36
+// Design-unit glyph record strides consumed by WebGlRenderer.addSdfQuads.
+// plain (8 floats): x, y, w, h, u, v, uw, vh
+// rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
 
 // Horizontal shear factor for fake italic: tan(14°).
 // Applied to glyph and decoration vertices in design-unit space.
 const ITALIC_SHEAR = Math.tan((14 * Math.PI) / 180);
 
 // White (0xFFFFFFFF as 0xRRGGBBAA) packed little-endian: all UNSIGNED_BYTE channels = 255 → 1.0
-// When v_color = vec4(1,1,1,1) the span color has no effect; u_color passes through unchanged.
+// When v_color = vec4(1,1,1,1) the span color has no effect; the node color passes through unchanged.
 const _PACKED_WHITE = 0xffffffff;
 
 // Module-level ParseResult singleton — safe because generateTextLayout is synchronous.
@@ -59,7 +61,6 @@ const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
 let sdfPlainShader: WebGlShaderNode | null = null;
-let renderer: WebGlRenderer | null = null;
 
 // Initialize the SDF text renderer
 const init = (stage: Stage): void => {
@@ -70,7 +71,6 @@ const init = (stage: Stage): void => {
   stage.shManager.registerShaderType('SdfPlain', SdfPlain);
   sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
   sdfPlainShader = stage.shManager.createShader('SdfPlain') as WebGlShaderNode;
-  renderer = stage.renderer as WebGlRenderer;
 };
 
 const font: FontHandler = SdfFontHandler;
@@ -127,32 +127,183 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 };
 
 /**
- * Create and submit WebGL render operations for SDF text.
+ * Submit SDF glyphs to the renderer's shared batched buffer.
  * Called from CoreTextNode during rendering.
+ *
+ * Three paths:
+ * 1. **Exact cache hit** — layout, transform, color, and alpha haven't
+ *    changed. The cached pre-transformed Float32Array is mem-copied directly
+ *    into the shared SDF buffer (no per-glyph matrix math).
+ * 2. **Translation hit** — only tx/ty changed (the scroll path). The cached
+ *    vertices are copied with the position delta applied; the cache keeps its
+ *    original base so nothing is re-snapshotted.
+ * 3. **Cache miss** — re-computes per-glyph world-space vertices via
+ *    `addSdfQuads`, then snapshots the result into the cache.
  */
-const renderQuads = (textNode: CoreTextNode): void => {
-  // Select the correct shader variant based on richText mode.
-  // sdfPlainShader uses a 4-float-per-vertex VBO (no a_color / a_style attributes).
-  // sdfShader uses a 6-float-per-vertex VBO with per-span color and style.
-  textNode.props.shader =
-    textNode.textProps.richText === true ? sdfShader : sdfPlainShader;
-  renderer!.addRenderOp(textNode);
+const renderQuads = (
+  renderer: CoreRenderer,
+  layout: TextLayout,
+  _vertexBuffer: Float32Array | null,
+  renderProps: TextRenderProps,
+): void => {
+  const fontFamily = renderProps.fontFamily;
+
+  const atlasTexture = SdfFontHandler.getAtlas(fontFamily);
+  if (atlasTexture === null) {
+    return;
+  }
+
+  const webGlRenderer = renderer as WebGlRenderer;
+  const cache = renderProps.sdfCache;
+  const ctxTexture = atlasTexture.ctxTexture as WebGlCtxTexture;
+  // Select the shared buffer + shader variant for this layout. The two SDF
+  // GPU layouts can never share a draw call (different strides), so each is
+  // tracked in its own SdfBuffer with its own shader node.
+  const isRich = layout.richText === true;
+  const sdfBuffer = isRich
+    ? webGlRenderer.sdfBufferRich
+    : webGlRenderer.sdfBufferPlain;
+  const shader = isRich ? sdfShader! : sdfPlainShader!;
+
+  // --- Cache-hit fast paths -----------------------------------------------
+  if (cache !== undefined && cache.vertices !== null) {
+    const ct = cache.transform;
+    const t = renderProps.globalTransform;
+    if (
+      cache.layoutRef === layout &&
+      cache.color === renderProps.color &&
+      cache.alpha === renderProps.worldAlpha &&
+      ct[0] === t[0] &&
+      ct[1] === t[1] &&
+      ct[2] === t[3] &&
+      ct[3] === t[4]
+    ) {
+      const dx = t[6]! - ct[4]!;
+      const dy = t[7]! - ct[5]!;
+
+      if (dx === 0 && dy === 0) {
+        // Fully static: mem-copy the cached vertices as-is. The GPU copy is
+        // only reusable when the bytes this node is about to write are
+        // identical to what was last uploaded at these offsets. Two events
+        // break that: a reorder that moves this node's quad range (offset
+        // shift), or a prior translated write that placed non-identical bytes
+        // at the current offset. Either forces a full buffer re-upload.
+        const at = sdfBuffer.quadCount;
+        if (at !== cache.lastStartQuad || cache.lastWriteDirty === true) {
+          sdfBuffer.changed = true;
+        }
+        cache.lastStartQuad = at;
+        cache.lastWriteDirty = false;
+        webGlRenderer.addSdfCachedQuads(
+          sdfBuffer,
+          cache.vertices,
+          cache.glyphCount,
+          ctxTexture,
+          renderProps.clippingRect,
+          renderProps.worldAlpha,
+          layout.width,
+          layout.height,
+          renderProps.parentHasRenderTexture,
+          renderProps.framebufferDimensions,
+          shader,
+        );
+        return;
+      }
+
+      // Pure translation (the scroll path): same glyphs, same scale/rotation,
+      // only tx/ty moved. Copy the cached vertices shifted by the delta from
+      // the cached base transform. The cache keeps its original base, so
+      // every frame recomputes from the same reference — no drift and no
+      // per-frame re-snapshot.
+      cache.lastStartQuad = sdfBuffer.quadCount;
+      cache.lastWriteDirty = true;
+      webGlRenderer.addSdfTranslatedQuads(
+        sdfBuffer,
+        cache.vertices,
+        cache.glyphCount,
+        dx,
+        dy,
+        ctxTexture,
+        renderProps.clippingRect,
+        renderProps.worldAlpha,
+        layout.width,
+        layout.height,
+        renderProps.parentHasRenderTexture,
+        renderProps.framebufferDimensions,
+        shader,
+      );
+      return;
+    }
+  }
+
+  // --- Cache-miss slow path -----------------------------------------------
+  const startIdx = sdfBuffer.idx;
+  const startQuad = sdfBuffer.quadCount;
+  webGlRenderer.addSdfQuads(
+    sdfBuffer,
+    layout.glyphs,
+    layout.glyphCount,
+    layout.fontScale,
+    renderProps.globalTransform,
+    renderProps.color,
+    renderProps.worldAlpha,
+    layout.distanceRange,
+    ctxTexture,
+    renderProps.clippingRect,
+    layout.width,
+    layout.height,
+    renderProps.parentHasRenderTexture,
+    renderProps.framebufferDimensions,
+    shader,
+  );
+
+  // Snapshot the written vertex data into the cache for future frames
+  if (cache !== undefined) {
+    const endIdx = sdfBuffer.idx;
+    const len = endIdx - startIdx;
+    if (len > 0) {
+      if (cache.vertices === null || cache.vertices.length !== len) {
+        cache.vertices = new Float32Array(len);
+      }
+      cache.vertices.set(sdfBuffer.fBuffer.subarray(startIdx, endIdx));
+      cache.glyphCount = layout.glyphCount;
+      cache.color = renderProps.color;
+      cache.alpha = renderProps.worldAlpha;
+      cache.layoutRef = layout;
+      // The snapshot lives at `startQuad` in the shared buffer; `addSdfQuads`
+      // already forced a full re-upload, so the GPU is in sync with the fresh
+      // bytes and the dirty marker is cleared.
+      cache.lastStartQuad = startQuad;
+      cache.lastWriteDirty = false;
+
+      const t = renderProps.globalTransform;
+      const ct = cache.transform;
+      ct[0] = t[0]!;
+      ct[1] = t[1]!;
+      ct[2] = t[3]!;
+      ct[3] = t[4]!;
+      ct[4] = t[6]!;
+      ct[5] = t[7]!;
+    }
+  }
 };
 
 /**
- * Write 6 vertices for a solid-fill decoration rect (underline or strikethrough).
+ * Write one 12-float decoration record (underline or strikethrough).
  *
  * Uses u = -1.0 as a UV sentinel so the fragment shader branches to solid fill
- * instead of the SDF glyph path (v_texcoord.x < 0.0).
+ * instead of the SDF glyph path (v_texcoord.x < 0.0). Decorations are never
+ * bold (style = 0.0) but may carry an italic shear.
  *
  * `shear1` / `shear2` are the x-deltas to add at y1 / y2 respectively for
  * italic lean; pass 0 for both when the span is not italic.
  *
- * All positions are in design-unit space (shader scales by u_size = fontScale).
+ * All positions are in design-unit space (the CPU transform scales by
+ * fontScale and applies the node transform).
  */
-const _writeDecoQuad = (
-  vb: Float32Array,
-  u32: Uint32Array,
+const _writeDecoRecord = (
+  glyphs: Float32Array,
+  u32Glyphs: Uint32Array,
   di: number,
   x1: number,
   x2: number,
@@ -162,51 +313,19 @@ const _writeDecoQuad = (
   shear1: number,
   shear2: number,
 ): number => {
-  // Triangle 1: TL, TR, BL
-  vb[di] = x1 + shear1;
-  vb[di + 1] = y1;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  vb[di] = x2 + shear1;
-  vb[di + 1] = y1;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  vb[di] = x1 + shear2;
-  vb[di + 1] = y2;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  // Triangle 2: TR, BR, BL
-  vb[di] = x2 + shear1;
-  vb[di + 1] = y1;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  vb[di] = x2 + shear2;
-  vb[di + 1] = y2;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  vb[di] = x1 + shear2;
-  vb[di + 1] = y2;
-  vb[di + 2] = -1.0;
-  vb[di + 3] = 0.0;
-  u32[di + 4] = color;
-  vb[di + 5] = 0.0;
-  di += 6;
-  return di;
+  glyphs[di] = x1;
+  glyphs[di + 1] = y1;
+  glyphs[di + 2] = x2 - x1;
+  glyphs[di + 3] = y2 - y1;
+  glyphs[di + 4] = -1.0;
+  glyphs[di + 5] = 0.0;
+  glyphs[di + 6] = 0.0;
+  glyphs[di + 7] = 0.0;
+  glyphs[di + 8] = shear1;
+  glyphs[di + 9] = shear2;
+  u32Glyphs[di + 10] = color;
+  glyphs[di + 11] = 0.0;
+  return di + SDF_RICH_GLYPH_STRIDE;
 };
 
 /**
@@ -215,8 +334,13 @@ const _writeDecoQuad = (
  * Two-pass approach:
  *   Pass 1 — count exact glyphs (calling getGlyph to avoid degenerate quads) and
  *             decoration quads needed by richText spans.
- *   Pass 2 — write all glyph vertices then all decoration vertices into a single
+ *   Pass 2 — write one design-unit record per glyph (8 or 12 floats) and, for
+ *             richText, one record per decoration quad, into a single
  *             pre-allocated Float32Array / Uint32Array view pair.
+ *
+ * Glyph records are written first (in character order), then all decoration
+ * records, preserving the legacy draw order so decorations always render on
+ * top of glyphs.
  */
 const generateTextLayout = (
   props: CoreTextNodeProps,
@@ -287,7 +411,7 @@ const generateTextLayout = (
   const lineAmount = lines.length;
 
   if (richText === false) {
-    // --- PLAIN PATH (richText=false): 4 floats/vertex, single counting pass ---
+    // --- PLAIN PATH (richText=false): 8 floats/record, single counting pass ---
     // Pass 1: count glyphs (calling getGlyph to skip null entries, matching rich pass 1 behaviour)
     let glyphCount = 0;
     for (let i = 0; i < lineAmount; i++) {
@@ -301,8 +425,8 @@ const generateTextLayout = (
       }
     }
 
-    const vertexBuffer = new Float32Array(glyphCount * FLOATS_PER_QUAD_PLAIN);
-    let bi = 0;
+    const glyphs = new Float32Array(glyphCount * SDF_PLAIN_GLYPH_STRIDE);
+    let go = 0;
     let currentX = 0;
     let currentY = 0;
 
@@ -330,40 +454,20 @@ const generateTextLayout = (
 
         const x1 = currentX + glyph.xoffset;
         const y1 = currentY + glyph.yoffset;
-        const x2 = x1 + glyph.width;
-        const y2 = y1 + glyph.height;
 
         const u1 = glyph.x / atlasWidth;
         const v1 = glyph.y / atlasHeight;
-        const u2 = u1 + glyph.width / atlasWidth;
-        const v2 = v1 + glyph.height / atlasHeight;
 
-        // Triangle 1: TL, TR, BL
-        vertexBuffer[bi++] = x1;
-        vertexBuffer[bi++] = y1;
-        vertexBuffer[bi++] = u1;
-        vertexBuffer[bi++] = v1;
-        vertexBuffer[bi++] = x2;
-        vertexBuffer[bi++] = y1;
-        vertexBuffer[bi++] = u2;
-        vertexBuffer[bi++] = v1;
-        vertexBuffer[bi++] = x1;
-        vertexBuffer[bi++] = y2;
-        vertexBuffer[bi++] = u1;
-        vertexBuffer[bi++] = v2;
-        // Triangle 2: TR, BR, BL
-        vertexBuffer[bi++] = x2;
-        vertexBuffer[bi++] = y1;
-        vertexBuffer[bi++] = u2;
-        vertexBuffer[bi++] = v1;
-        vertexBuffer[bi++] = x2;
-        vertexBuffer[bi++] = y2;
-        vertexBuffer[bi++] = u2;
-        vertexBuffer[bi++] = v2;
-        vertexBuffer[bi++] = x1;
-        vertexBuffer[bi++] = y2;
-        vertexBuffer[bi++] = u1;
-        vertexBuffer[bi++] = v2;
+        // Design-unit glyph record (x, y, w, h, u, v, uw, vh)
+        glyphs[go] = x1;
+        glyphs[go + 1] = y1;
+        glyphs[go + 2] = glyph.width;
+        glyphs[go + 3] = glyph.height;
+        glyphs[go + 4] = u1;
+        glyphs[go + 5] = v1;
+        glyphs[go + 6] = glyph.width / atlasWidth;
+        glyphs[go + 7] = glyph.height / atlasHeight;
+        go += SDF_PLAIN_GLYPH_STRIDE;
 
         currentX += glyph.xadvance + letterSpacing;
         prevGlyphId = glyph.id;
@@ -371,7 +475,7 @@ const generateTextLayout = (
     }
 
     return {
-      vertexBuffer,
+      glyphs,
       glyphCount,
       totalQuadCount: glyphCount,
       richText: false,
@@ -386,7 +490,7 @@ const generateTextLayout = (
     };
   }
 
-  // --- RICH PATH (richText=true): 6 floats/vertex, two-pass ---
+  // --- RICH PATH (richText=true): 12 floats/record, two-pass ---
   let glyphCount = 0;
   let decoQuadCount = 0;
   let strippedPos = 0;
@@ -427,21 +531,21 @@ const generateTextLayout = (
 
   const totalQuadCount = glyphCount + decoQuadCount;
 
-  // --- Single allocation for the entire vertex payload ---
-  // Layout: [glyph quads (glyphCount × 36)] [deco quads (decoQuadCount × 36)]
-  const vertexBuffer = new Float32Array(totalQuadCount * FLOATS_PER_QUAD_RICH);
-  // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 4 of each vertex.
-  const u32Buffer = new Uint32Array(vertexBuffer.buffer);
+  // --- Single allocation for the entire record payload ---
+  // Layout: [glyph records (glyphCount × 12)] [deco records (decoQuadCount × 12)]
+  const glyphs = new Float32Array(totalQuadCount * SDF_RICH_GLYPH_STRIDE);
+  // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 10 of each record.
+  const u32Glyphs = new Uint32Array(glyphs.buffer);
 
-  // Write cursors (float indices into vertexBuffer / u32Buffer).
-  let gi = 0; // glyph region: 0 … glyphCount*36-1
-  let di = glyphCount * FLOATS_PER_QUAD_RICH; // deco region: starts after all glyph quads
+  // Write cursors (float indices into glyphs / u32Glyphs).
+  let gi = 0; // glyph region: 0 … glyphCount*12-1
+  let di = glyphCount * SDF_RICH_GLYPH_STRIDE; // deco region: starts after all glyph records
 
   // Reset rich-text tracking for pass 2.
   strippedPos = 0;
   curSpanIdx = 0;
 
-  // --- PASS 2: write vertices ---
+  // --- PASS 2: write records ---
   let currentX = 0;
   let currentY = 0;
 
@@ -471,7 +575,7 @@ const generateTextLayout = (
         continue;
       }
 
-      // --- Determine per-vertex color and style ---
+      // --- Determine per-record color and style ---
       let packedColor = _PACKED_WHITE;
       let spanUnderline = false;
       let spanStrikethrough = false;
@@ -503,14 +607,11 @@ const generateTextLayout = (
       // Glyph bounding box in design units.
       const x1 = currentX + glyph.xoffset;
       const y1 = currentY + glyph.yoffset;
-      const x2 = x1 + glyph.width;
       const y2 = y1 + glyph.height;
 
       // Atlas UV coordinates.
       const u1 = glyph.x / atlasWidth;
       const v1 = glyph.y / atlasHeight;
-      const u2 = u1 + glyph.width / atlasWidth;
-      const v2 = v1 + glyph.height / atlasHeight;
 
       // Capture decoration X extents before advancing currentX.
       const decoX1 = currentX;
@@ -526,65 +627,34 @@ const generateTextLayout = (
       // Bold style flag passed to fragment shader for SDF threshold shift.
       const style = spanBold ? 1.0 : 0.0;
 
-      // --- Write 6 glyph vertices (x, y, u, v, packed_color, style) ---
-      // Triangle 1: TL, TR, BL
-      vertexBuffer[gi] = x1 + shearTop;
-      vertexBuffer[gi + 1] = y1;
-      vertexBuffer[gi + 2] = u1;
-      vertexBuffer[gi + 3] = v1;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
-      vertexBuffer[gi] = x2 + shearTop;
-      vertexBuffer[gi + 1] = y1;
-      vertexBuffer[gi + 2] = u2;
-      vertexBuffer[gi + 3] = v1;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
-      vertexBuffer[gi] = x1 + shearBot;
-      vertexBuffer[gi + 1] = y2;
-      vertexBuffer[gi + 2] = u1;
-      vertexBuffer[gi + 3] = v2;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
-      // Triangle 2: TR, BR, BL
-      vertexBuffer[gi] = x2 + shearTop;
-      vertexBuffer[gi + 1] = y1;
-      vertexBuffer[gi + 2] = u2;
-      vertexBuffer[gi + 3] = v1;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
-      vertexBuffer[gi] = x2 + shearBot;
-      vertexBuffer[gi + 1] = y2;
-      vertexBuffer[gi + 2] = u2;
-      vertexBuffer[gi + 3] = v2;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
-      vertexBuffer[gi] = x1 + shearBot;
-      vertexBuffer[gi + 1] = y2;
-      vertexBuffer[gi + 2] = u1;
-      vertexBuffer[gi + 3] = v2;
-      u32Buffer[gi + 4] = packedColor;
-      vertexBuffer[gi + 5] = style;
-      gi += 6;
+      // --- Write 12-float glyph record (x, y, w, h, u, v, uw, vh, shearTop, shearBot, packedColor, style) ---
+      glyphs[gi] = x1;
+      glyphs[gi + 1] = y1;
+      glyphs[gi + 2] = glyph.width;
+      glyphs[gi + 3] = glyph.height;
+      glyphs[gi + 4] = u1;
+      glyphs[gi + 5] = v1;
+      glyphs[gi + 6] = glyph.width / atlasWidth;
+      glyphs[gi + 7] = glyph.height / atlasHeight;
+      glyphs[gi + 8] = shearTop;
+      glyphs[gi + 9] = shearBot;
+      u32Glyphs[gi + 10] = packedColor;
+      glyphs[gi + 11] = style;
+      gi += SDF_RICH_GLYPH_STRIDE;
 
       // Advance the glyph cursor.
       currentX += advance;
       prevGlyphId = glyph.id;
 
-      // --- Write decoration quads (richText only) ---
+      // --- Write decoration records (richText only) ---
       if (spanUnderline === true) {
         const dy1 = currentY + decoUnderlineOffset;
         const dy2 = dy1 + decoThickness;
         const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
         const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
-        di = _writeDecoQuad(
-          vertexBuffer,
-          u32Buffer,
+        di = _writeDecoRecord(
+          glyphs,
+          u32Glyphs,
           di,
           decoX1,
           decoX1 + advance,
@@ -600,9 +670,9 @@ const generateTextLayout = (
         const dy2 = dy1 + decoThickness;
         const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
         const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
-        di = _writeDecoQuad(
-          vertexBuffer,
-          u32Buffer,
+        di = _writeDecoRecord(
+          glyphs,
+          u32Glyphs,
           di,
           decoX1,
           decoX1 + advance,
@@ -614,14 +684,14 @@ const generateTextLayout = (
         );
       }
 
-      if (richText === true) strippedPos++;
+      strippedPos++;
     }
   }
 
   // Convert final dimensions to pixel space for the layout.
   return {
-    vertexBuffer,
-    glyphCount,
+    glyphs,
+    glyphCount: totalQuadCount,
     totalQuadCount,
     richText: true,
     distanceRange: fontScale * fontData.distanceField.distanceRange,

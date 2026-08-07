@@ -51,6 +51,7 @@ import {
   intersectRect,
   type Bound,
   type RectWithValid,
+  type SdfBatchKey,
   createBound,
   boundInsideBound,
   boundLargeThanBound,
@@ -2795,8 +2796,21 @@ export class CoreNode extends EventEmitter {
     return this.props.shader;
   }
 
-  get isSdfRenderOp(): boolean {
-    return false;
+  /**
+   * Return the batch key when this node is main-pass SDF text eligible for
+   * deferred, sorted emission into the shared SDF buffer, or `null` otherwise.
+   *
+   * @remarks
+   * Stage collects renderable nodes with a non-null key into a separate,
+   * scene-order list during the render-list build and emits them in key order
+   * (see {@link compareSdfBatchKeys}) so consecutive writes sharing a layout,
+   * atlas, and clip rect merge into a single draw call. Nodes returning `null`
+   * (images, canvas text, text inside render-to-texture subtrees) keep writing
+   * inline during the normal traversal. The default implementation returns
+   * `null`; {@link CoreTextNode} overrides it.
+   */
+  getSdfBatchKey(): SdfBatchKey | null {
+    return null;
   }
 
   set shader(shader: CoreShaderNode<any> | null) {

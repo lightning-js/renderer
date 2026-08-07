@@ -39,7 +39,18 @@ import {
   BufferCollection,
   QUAD_VERTEX_STRIDE,
 } from './internal/BufferCollection.js';
-import { compareRect, getNormalizedRgbaComponents } from '../../lib/utils.js';
+import {
+  compareRect,
+  getNormalizedRgbaComponents,
+  type RectWithValid,
+} from '../../lib/utils.js';
+import { mergeColorAlpha } from '../../../utils.js';
+import {
+  SdfBuffer,
+  SDF_PLAIN_GLYPH_STRIDE,
+  SDF_RICH_GLYPH_STRIDE,
+} from './SdfBuffer.js';
+import { SdfRenderOp } from './SdfRenderOp.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
@@ -66,6 +77,39 @@ interface CoreWebGlSystem {
 // this fraction of the render list we upload everything in one call instead.
 const FULL_UPLOAD_DIRTY_RATIO = 0.4;
 
+// White (0xFFFFFFFF as 0xRRGGBBAA packed little-endian): all UNSIGNED_BYTE
+// channels = 255 → 1.0. A span color of pure white means "no override".
+const _PACKED_WHITE = 0xffffffff;
+
+/**
+ * Merge a node's packed color (with alpha) into a rich-text span color.
+ *
+ * Both colors are packed RGBA bytes (byte0 = R … byte3 = A, matching
+ * `SdfTextRenderer._packColor`). The old per-node renderer combined these in
+ * the fragment shader as `u_color * v_color`; the batched pipeline has no
+ * `u_color` uniform, so the multiplication happens here on the CPU. RGB is
+ * NOT premultiplied by alpha — the SDF fragment shader multiplies
+ * `v_color.rgb` by the computed opacity (which includes `v_color.a`).
+ */
+const _mergeSdfSpanColor = (nodeColor: number, spanColor: number): number => {
+  if (spanColor === _PACKED_WHITE) {
+    return nodeColor;
+  }
+  const nr = nodeColor & 0xff;
+  const ng = (nodeColor >>> 8) & 0xff;
+  const nb = (nodeColor >>> 16) & 0xff;
+  const na = (nodeColor >>> 24) & 0xff;
+  const sr = spanColor & 0xff;
+  const sg = (spanColor >>> 8) & 0xff;
+  const sb = (spanColor >>> 16) & 0xff;
+  const sa = (spanColor >>> 24) & 0xff;
+  const r = (nr * sr + 127) >> 8;
+  const g = (ng * sg + 127) >> 8;
+  const b = (nb * sb + 127) >> 8;
+  const a = (na * sa + 127) >> 8;
+  return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+};
+
 /**
  * Pre-allocated sentinel op inserted into the renderOps array to bracket the
  * child quads of a node that uses rounded-corner stencil clipping.
@@ -90,7 +134,10 @@ export class StencilClipRenderOp {
 }
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
-export type WebGlRenderOp = WebGlNodeRenderOp | StencilClipRenderOp;
+export type WebGlRenderOp =
+  | WebGlNodeRenderOp
+  | StencilClipRenderOp
+  | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -140,6 +187,39 @@ export class WebGlRenderer extends CoreRenderer {
   private readonly _quadScratchF: Float32Array = new Float32Array(
     this._quadScratchBuffer,
   );
+
+  //// Shared SDF Text Batching
+  /**
+   * Shared SDF vertex buffers — one per GPU layout.
+   *
+   * All SDF text of a given layout writes into a single pre-allocated CPU
+   * buffer that is uploaded to the GPU in one `bufferData` per frame. Compatible
+   * consecutive text nodes are merged into a single SdfRenderOp, producing one
+   * draw call for many strings.
+   *
+   * The two layouts have different strides (6 floats plain / 7 floats rich) and
+   * can therefore never share a draw call; each gets its own buffer, and each
+   * SdfRenderOp carries the SdfBuffer it draws from.
+   */
+  sdfBufferPlain: SdfBuffer;
+  sdfBufferRich: SdfBuffer;
+  /**
+   * Current SDF render op being extended by `finalizeSdfBatch`. Null when the
+   * last op is not extendable (different atlas, clipping rect, or RTT state).
+   */
+  curSdfRenderOp: SdfRenderOp | null = null;
+  /**
+   * Deferred queue for SDF text render ops.
+   *
+   * All text encountered during the quad-fill pass is collected here and
+   * appended to `renderOps` at the start of `render()` (see
+   * `flushTextRenderOps`). This guarantees that all text in a frame draws in a
+   * single contiguous run of draw calls, which is the whole point of text
+   * batching. Text always draws on top of any non-text quads that came after it
+   * in tree order (unless those quads carry an explicit zIndex, which forces an
+   * early flush in addQuad).
+   */
+  coreTextRenderOps: WebGlRenderOp[] = [];
 
   override defaultTextureCoords: TextureCoords = {
     x1: 0,
@@ -324,6 +404,11 @@ export class WebGlRenderer extends CoreRenderer {
         },
       },
     ]);
+
+    // Shared SDF vertex buffers — one per GPU layout (plain 6f / rich 7f).
+    // Each owns its GL buffer, attribute layout, and upload-skip state.
+    this.sdfBufferPlain = new SdfBuffer(glw, 'plain');
+    this.sdfBufferRich = new SdfBuffer(glw, 'rich');
   }
 
   reset() {
@@ -331,7 +416,11 @@ export class WebGlRenderer extends CoreRenderer {
     this.curBufferIdx = 0;
     this.curRenderOp = null;
     this.dirtyQuadCount = 0;
+    this.curSdfRenderOp = null;
     this.renderOps.length = 0;
+    this.coreTextRenderOps.length = 0;
+    this.sdfBufferPlain.clear();
+    this.sdfBufferRich.clear();
     this.stencilOpPoolIdx = 0;
     this.stencilDepth = 0;
     glw.setScissorTest(false);
@@ -521,6 +610,12 @@ export class WebGlRenderer extends CoreRenderer {
       return false;
     }
 
+    // SDF render ops are managed by the SdfBuffer batching pipeline and never
+    // merge with regular node render ops.
+    if (curRenderOp instanceof SdfRenderOp) {
+      return false;
+    }
+
     // Nodes at different stencil depths must not be batched — the GPU stencil
     // test state differs between inside and outside a stencil clip region.
     if (curRenderOp.stencilDepth !== this.stencilDepth) {
@@ -585,6 +680,482 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   /**
+   * Append pre-transformed SDF glyph vertices to the given shared SDF buffer
+   * and manage SDF render op batching.
+   *
+   * @remarks
+   * This method pre-transforms glyph positions from design units to world
+   * pixel space on the CPU, packs per-vertex color and distanceRange, and
+   * writes them into the shared SDF buffer of the given layout. Compatible
+   * consecutive calls (same layout, atlas, clipping, RTT state) are merged
+   * into a single SdfRenderOp, resulting in one draw call for many text nodes.
+   *
+   * The design-unit glyph records are `SDF_PLAIN_GLYPH_STRIDE` (8) or
+   * `SDF_RICH_GLYPH_STRIDE` (12) floats per glyph depending on the layout:
+   *   plain: x, y, w, h, u, v, uw, vh
+   *   rich:  x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
+   * where packed_span_color is RGBA bytes written via a Uint32 view of the
+   * same ArrayBuffer (bit-identical read via `uGlyphs` below), shearTop/shearBot
+   * are the per-corner x-deltas of the italic lean, and the decorated quads use
+   * `u = -1.0` as a solid-fill sentinel.
+   */
+  addSdfQuads(
+    sdfBuffer: SdfBuffer,
+    glyphs: Float32Array,
+    glyphCount: number,
+    fontScale: number,
+    transform: Float32Array,
+    color: number,
+    worldAlpha: number,
+    distanceRange: number,
+    atlasTexture: WebGlCtxTexture,
+    clippingRect: RectWithValid,
+    width: number,
+    height: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | null,
+    sdfShader: WebGlShaderNode,
+  ): void {
+    if (glyphCount === 0) {
+      return;
+    }
+
+    // Full recompute writes fresh bytes — the GPU copy is now stale.
+    sdfBuffer.changed = true;
+
+    const isRich = sdfBuffer.layout === 'rich';
+    const floatsPerVertex = sdfBuffer.floatsPerVertex;
+    const glyphStride = isRich ? SDF_RICH_GLYPH_STRIDE : SDF_PLAIN_GLYPH_STRIDE;
+
+    let idx = sdfBuffer.idx;
+    sdfBuffer.ensureCapacity(idx + glyphCount * floatsPerVertex * 4);
+
+    const f = sdfBuffer.fBuffer;
+    const u = sdfBuffer.uiBuffer;
+    // Uint32 view over the glyph records to read packed span colors bit-exactly
+    // (float reads would canonicalize NaN bit patterns and corrupt them).
+    const uGlyphs = new Uint32Array(
+      glyphs.buffer,
+      glyphs.byteOffset,
+      glyphs.length,
+    );
+
+    // Pre-compute the merged node color (with alpha) packed as RGBA bytes for
+    // the UNSIGNED_BYTE normalized attribute.
+    // NOTE: Do NOT premultiply RGB by alpha here — the SDF fragment shader
+    // already multiplies v_color.rgb by the computed opacity (which includes
+    // v_color.a).
+    const mergedColor = mergeColorAlpha(color, worldAlpha);
+    const r = mergedColor >>> 24;
+    const g = (mergedColor >>> 16) & 0xff;
+    const b = (mergedColor >>> 8) & 0xff;
+    const a = mergedColor & 0xff;
+    // Pack as RGBA bytes (byte0 = R … byte3 = A), read little-endian as
+    // vec4(r,g,b,a) normalized.
+    const packedNodeColor = (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+
+    // Transform matrix components (column-major 3x3)
+    // Pre-multiply fontScale here to save 4 multiplications per glyph in the
+    // hot loop — mirrors the old shader's `a_position * u_size` then
+    // `u_transform *` computation.
+    const m0 = transform[0]! * fontScale;
+    const m1 = transform[1]! * fontScale;
+    const m3 = transform[3]! * fontScale;
+    const m4 = transform[4]! * fontScale;
+    const m6 = transform[6]!;
+    const m7 = transform[7]!;
+
+    // Record start quad for this batch segment
+    const startQuad = sdfBuffer.quadCount;
+
+    // Read packed glyph fields directly from the Float32Array.
+    let go = 0;
+    for (let gi = 0; gi < glyphCount; gi++) {
+      // Glyph corners in design units
+      const gx1 = glyphs[go]!;
+      const gy1 = glyphs[go + 1]!;
+      const gx2 = gx1 + glyphs[go + 2]!;
+      const gy2 = gy1 + glyphs[go + 3]!;
+
+      // Atlas UVs
+      const u1 = glyphs[go + 4]!;
+      const v1 = glyphs[go + 5]!;
+      const u2 = u1 + glyphs[go + 6]!;
+      const v2 = v1 + glyphs[go + 7]!;
+
+      // Per-glyph color (merged with node color + alpha) and style.
+      let packedColor = packedNodeColor;
+      let style = 0;
+      // Italic lean: x-delta applied to the top / bottom vertex rows. A glyph
+      // quad becomes a trapezoid with four distinct x corners when sheared.
+      let shearTop = 0;
+      let shearBot = 0;
+      if (isRich) {
+        shearTop = glyphs[go + 8]!;
+        shearBot = glyphs[go + 9]!;
+        packedColor = _mergeSdfSpanColor(packedNodeColor, uGlyphs[go + 10]!);
+        style = glyphs[go + 11]!;
+      }
+      go += glyphStride;
+
+      const sx1t = gx1 + shearTop;
+      const sx2t = gx2 + shearTop;
+      const sx1b = gx1 + shearBot;
+      const sx2b = gx2 + shearBot;
+
+      // Transform to world space
+      // Note: we use gx/gy directly since m0,m1,m3,m4 are already pre-scaled
+      // Top-left
+      const wx_tl = m0 * sx1t + m3 * gy1 + m6;
+      const wy_tl = m1 * sx1t + m4 * gy1 + m7;
+      // Top-right
+      const wx_tr = m0 * sx2t + m3 * gy1 + m6;
+      const wy_tr = m1 * sx2t + m4 * gy1 + m7;
+      // Bottom-left
+      const wx_bl = m0 * sx1b + m3 * gy2 + m6;
+      const wy_bl = m1 * sx1b + m4 * gy2 + m7;
+      // Bottom-right
+      const wx_br = m0 * sx2b + m3 * gy2 + m6;
+      const wy_br = m1 * sx2b + m4 * gy2 + m7;
+
+      // 4 vertices per glyph: TL, TR, BL, BR
+      // Index buffer supplies the two-triangle winding: [0,1,2, 2,1,3]
+      // TL
+      f[idx] = wx_tl;
+      f[idx + 1] = wy_tl;
+      f[idx + 2] = u1;
+      f[idx + 3] = v1;
+      u[idx + 4] = packedColor;
+      if (isRich) {
+        f[idx + 5] = style;
+        f[idx + 6] = distanceRange;
+      } else {
+        f[idx + 5] = distanceRange;
+      }
+      idx += floatsPerVertex;
+      // TR
+      f[idx] = wx_tr;
+      f[idx + 1] = wy_tr;
+      f[idx + 2] = u2;
+      f[idx + 3] = v1;
+      u[idx + 4] = packedColor;
+      if (isRich) {
+        f[idx + 5] = style;
+        f[idx + 6] = distanceRange;
+      } else {
+        f[idx + 5] = distanceRange;
+      }
+      idx += floatsPerVertex;
+      // BL
+      f[idx] = wx_bl;
+      f[idx + 1] = wy_bl;
+      f[idx + 2] = u1;
+      f[idx + 3] = v2;
+      u[idx + 4] = packedColor;
+      if (isRich) {
+        f[idx + 5] = style;
+        f[idx + 6] = distanceRange;
+      } else {
+        f[idx + 5] = distanceRange;
+      }
+      idx += floatsPerVertex;
+      // BR
+      f[idx] = wx_br;
+      f[idx + 1] = wy_br;
+      f[idx + 2] = u2;
+      f[idx + 3] = v2;
+      u[idx + 4] = packedColor;
+      if (isRich) {
+        f[idx + 5] = style;
+        f[idx + 6] = distanceRange;
+      } else {
+        f[idx + 5] = distanceRange;
+      }
+      idx += floatsPerVertex;
+    }
+
+    sdfBuffer.idx = idx;
+    sdfBuffer.quadCount += glyphCount;
+
+    this.finalizeSdfBatch(
+      sdfBuffer,
+      startQuad,
+      glyphCount,
+      atlasTexture,
+      clippingRect,
+      worldAlpha,
+      width,
+      height,
+      parentHasRenderTexture,
+      framebufferDimensions,
+      sdfShader,
+    );
+  }
+
+  /**
+   * Fast path: copy pre-computed cached SDF vertex data into the shared
+   * buffer and create/extend an SdfRenderOp.
+   *
+   * @remarks
+   * When a text node hasn't changed (same layout, transform, color, alpha),
+   * the per-glyph matrix multiplication is skipped entirely. The cached
+   * Float32Array is written via a single `Float32Array.set()` (memcpy), which
+   * is orders of magnitude faster than the per-glyph computation path.
+   *
+   * The cached data is already in the target SdfBuffer's GPU layout, so the
+   * mem-copy must stay a typed-array `set` (bit-exact): packed RGBA colors
+   * live in the same Float32Array and some bit patterns are float32 NaNs,
+   * which element-wise float reads/writes may canonicalize and corrupt.
+   *
+   * Exact cache hits write byte-identical data at identical offsets, so this
+   * path deliberately does NOT set `sdfBuffer.changed`.
+   */
+  addSdfCachedQuads(
+    sdfBuffer: SdfBuffer,
+    cachedVertices: Float32Array,
+    numGlyphs: number,
+    atlasTexture: WebGlCtxTexture,
+    clippingRect: RectWithValid,
+    worldAlpha: number,
+    width: number,
+    height: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | null,
+    sdfShader: WebGlShaderNode,
+  ): void {
+    if (numGlyphs === 0) {
+      return;
+    }
+
+    const startQuad = sdfBuffer.quadCount;
+
+    sdfBuffer.ensureCapacity(sdfBuffer.idx + cachedVertices.length);
+
+    // Single memcpy — much faster than per-glyph matrix math
+    sdfBuffer.fBuffer.set(cachedVertices, sdfBuffer.idx);
+    sdfBuffer.idx += cachedVertices.length;
+    sdfBuffer.quadCount += numGlyphs;
+
+    this.finalizeSdfBatch(
+      sdfBuffer,
+      startQuad,
+      numGlyphs,
+      atlasTexture,
+      clippingRect,
+      worldAlpha,
+      width,
+      height,
+      parentHasRenderTexture,
+      framebufferDimensions,
+      sdfShader,
+    );
+  }
+
+  /**
+   * Append cached SDF vertices translated by (dx, dy) to the shared buffer.
+   *
+   * @remarks
+   * The scroll fast path: a text node whose transform changed by pure
+   * translation reuses its world-space vertex cache — one mem-copy plus two
+   * adds per vertex instead of full per-glyph matrix math, and the cache
+   * keeps its original base so nothing is re-snapshotted per frame.
+   *
+   * The copy MUST stay a typed-array `set` (bit-exact memcpy): packed RGBA
+   * colors live in the same Float32Array and some bit patterns are float32
+   * NaNs, which element-wise float reads/writes may canonicalize and corrupt.
+   * Only the two position floats of each vertex are touched after the copy.
+   */
+  addSdfTranslatedQuads(
+    sdfBuffer: SdfBuffer,
+    cachedVertices: Float32Array,
+    numGlyphs: number,
+    dx: number,
+    dy: number,
+    atlasTexture: WebGlCtxTexture,
+    clippingRect: RectWithValid,
+    worldAlpha: number,
+    width: number,
+    height: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | null,
+    sdfShader: WebGlShaderNode,
+  ): void {
+    if (numGlyphs === 0) {
+      return;
+    }
+
+    // Translated positions are fresh bytes — the GPU copy is now stale.
+    sdfBuffer.changed = true;
+
+    const startQuad = sdfBuffer.quadCount;
+    const idx = sdfBuffer.idx;
+
+    sdfBuffer.ensureCapacity(idx + cachedVertices.length);
+
+    // Read the buffer reference only after ensureCapacity — growth swaps the
+    // backing store.
+    const f = sdfBuffer.fBuffer;
+    f.set(cachedVertices, idx);
+
+    const end = idx + cachedVertices.length;
+    const floatsPerVertex = sdfBuffer.floatsPerVertex;
+    for (let i = idx; i < end; i += floatsPerVertex) {
+      f[i] = f[i]! + dx;
+      f[i + 1] = f[i + 1]! + dy;
+    }
+
+    sdfBuffer.idx = end;
+    sdfBuffer.quadCount += numGlyphs;
+
+    this.finalizeSdfBatch(
+      sdfBuffer,
+      startQuad,
+      numGlyphs,
+      atlasTexture,
+      clippingRect,
+      worldAlpha,
+      width,
+      height,
+      parentHasRenderTexture,
+      framebufferDimensions,
+      sdfShader,
+    );
+  }
+
+  /**
+   * Shared batching logic for SDF render ops.
+   * Called by all `addSdf*` write paths.
+   */
+  private finalizeSdfBatch(
+    sdfBuffer: SdfBuffer,
+    startQuad: number,
+    glyphCount: number,
+    atlasTexture: WebGlCtxTexture,
+    clippingRect: RectWithValid,
+    worldAlpha: number,
+    width: number,
+    height: number,
+    parentHasRenderTexture: boolean,
+    framebufferDimensions: Dimensions | null,
+    sdfShader: WebGlShaderNode,
+  ): void {
+    // --- Batching: try to extend the current SDF render op ---------------
+    const cur = this.curSdfRenderOp;
+    let canBatch = false;
+
+    if (cur !== null) {
+      // Same SdfBuffer (layout)?
+      if (cur.sdfBuffer === sdfBuffer) {
+        // Same atlas texture?
+        if (
+          cur.renderOpTextures.length === 1 &&
+          cur.renderOpTextures[0] === atlasTexture
+        ) {
+          // Same clipping rect?
+          if (compareRect(cur.clippingRect, clippingRect)) {
+            // Same RTT state?
+            if (
+              cur.parentHasRenderTexture === parentHasRenderTexture &&
+              cur.rtt === false
+            ) {
+              canBatch = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (canBatch && cur !== null) {
+      // Extend existing op
+      cur.numQuads += glyphCount;
+    } else {
+      // Create a new SdfRenderOp referencing the shared buffer
+      const op = new SdfRenderOp(
+        this,
+        sdfShader,
+        sdfBuffer,
+        worldAlpha,
+        clippingRect,
+        width,
+        height,
+        false,
+        parentHasRenderTexture,
+        framebufferDimensions,
+      );
+      op.startQuad = startQuad;
+      op.numQuads = glyphCount;
+      op.addTexture(atlasTexture);
+
+      this.coreTextRenderOps.push(op);
+      this.curSdfRenderOp = op;
+
+      // Break the regular quad render op chain so subsequent image/rect
+      // nodes don't try to extend an SDF op.
+      this.curRenderOp = null;
+    }
+  }
+
+  /**
+   * Append all deferred SDF text render ops to `renderOps`.
+   *
+   * Called at the start of each render pass (main and RTT) so all text in a
+   * frame draws in a single contiguous run of draw calls. Also clears the
+   * merge anchors so a stale op can never swallow a draw from another pass.
+   */
+  flushTextRenderOps() {
+    const len = this.coreTextRenderOps.length;
+    if (len === 0) {
+      return;
+    }
+    for (let i = 0; i < len; i++) {
+      this.renderOps.push(this.coreTextRenderOps[i]!);
+    }
+    this.coreTextRenderOps.length = 0;
+    this.curRenderOp = null;
+    this.curSdfRenderOp = null;
+  }
+
+  /**
+   * Upload the shared SDF buffers for the main pass, skipping the driver-side
+   * `bufferData` copy per layout when its bytes provably match what the GPU
+   * already holds: every write this frame was an exact cache-hit mem-copy
+   * (`changed` false) and the total size matches the previous upload.
+   *
+   * The skip is only sound because a cache hit that is NOT byte-identical to
+   * the current GPU contents always raises `changed`:
+   * - cache-miss recompute (`addSdfQuads`) and translated copies
+   *   (`addSdfTranslatedQuads`) write fresh bytes;
+   * - `renderQuads` marks the buffer dirty when a static cache hit would land
+   *   at a shifted offset (a render-list reorder moves the node's quad range)
+   *   or when the last write at that range was a translated copy;
+   * - backing-store growth swaps the ArrayBuffer, and RTT partial uploads
+   *   have their own dirty path.
+   */
+  private uploadSdfBuffer(): void {
+    this.uploadSdfBufferLayout(this.sdfBufferPlain);
+    this.uploadSdfBufferLayout(this.sdfBufferRich);
+  }
+
+  private uploadSdfBufferLayout(sdfBuffer: SdfBuffer): void {
+    if (sdfBuffer.idx === 0) {
+      return;
+    }
+    if (
+      sdfBuffer.changed === false &&
+      sdfBuffer.idx === sdfBuffer.lastUploadedSize
+    ) {
+      return;
+    }
+    const glw = this.glw;
+    const sdfBuf =
+      sdfBuffer.quadBufferCollection.getBuffer('a_position') || null;
+    const sdfArr = new Float32Array(sdfBuffer.buffer, 0, sdfBuffer.idx);
+    glw.arrayBufferData(sdfBuf, sdfArr, glw.DYNAMIC_DRAW);
+    sdfBuffer.lastUploadedSize = sdfBuffer.idx;
+    sdfBuffer.changed = false;
+  }
+
+  /**
    * Render the current set of RenderOps to render to the specified surface.
    *
    * TODO: 'screen' is the only supported surface at the moment.
@@ -593,6 +1164,10 @@ export class WebGlRenderer extends CoreRenderer {
    */
   render(_surface: 'screen' | CoreContextTexture = 'screen'): void {
     const { glw, quadBuffer } = this;
+
+    // Append deferred SDF text ops so all text draws in one contiguous run.
+    this.flushTextRenderOps();
+
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
     const BYTES = Float32Array.BYTES_PER_ELEMENT;
 
@@ -640,6 +1215,10 @@ export class WebGlRenderer extends CoreRenderer {
         }
       }
     }
+
+    // Upload the shared SDF buffers (each layout skips the driver copy when
+    // its bytes provably match what the GPU already holds).
+    this.uploadSdfBuffer();
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
@@ -812,6 +1391,12 @@ export class WebGlRenderer extends CoreRenderer {
       // Render all associated quads to the texture
       this.renderRTT();
 
+      // Force a re-upload on the next pass: the main pass appends to these
+      // same shared buffers, and an exact cache-hit fill could otherwise
+      // pass the upload-skip test while the GPU still holds RTT-only bytes.
+      this.sdfBufferPlain.changed = true;
+      this.sdfBufferRich.changed = true;
+
       // Reset render operations
       this.renderOps.length = 0;
       node.hasRTTupdates = false;
@@ -843,8 +1428,15 @@ export class WebGlRenderer extends CoreRenderer {
     const glw = this.glw;
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
 
+    // Append deferred SDF text ops so text inside the RTT subtree draws in a
+    // single contiguous run (same as the main pass).
+    this.flushTextRenderOps();
+
     const arr = new Float32Array(this.rttQuadBuffer!, 0, this.curBufferIdx);
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+
+    // Upload the shared SDF buffers for the RTT pass.
+    this.uploadSdfBuffer();
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
