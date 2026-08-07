@@ -47,10 +47,11 @@ let isOffscreen = false;
 
 // Separate canvas and context for text measurements
 let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
-let measureContext:
+type MeasureContext =
   | CanvasRenderingContext2D
   | OffscreenCanvasRenderingContext2D
-  | null = null;
+  | null;
+let measureContext: MeasureContext = null;
 
 // Cache for text layout calculations
 const renderInfoCache = new Map<string, CanvasRenderInfo>();
@@ -84,7 +85,7 @@ const init = (_stage: Stage): void => {
   context.textRendering = 'optimizeSpeed';
 
   assertTruthy(measureCanvas, 'measureCanvas is not initialized');
-  measureContext = measureCanvas.getContext('2d');
+  measureContext = measureCanvas.getContext('2d') as MeasureContext;
   assertTruthy(measureContext, '.getContext(2d) failed');
   measureContext.setTransform(dpr, 0, 0, dpr, 0, 0);
   measureContext.textRendering = 'optimizeSpeed';
