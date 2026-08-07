@@ -58,6 +58,14 @@ interface CoreWebGlSystem {
   extensions: CoreWebGlExtensions;
 }
 
+// Dirty-ratio cutoff that flips the per-frame quad upload from surgical
+// `bufferSubData` (one call per changed node) to a single full `bufferData`.
+// The surgical path wins when few nodes change per frame; when most of the
+// scene moves at once a single bulk upload is cheaper than N driver
+// round-trips, so when the number of nodes we would `bufferSubData` exceeds
+// this fraction of the render list we upload everything in one call instead.
+const FULL_UPLOAD_DIRTY_RATIO = 0.4;
+
 /**
  * Pre-allocated sentinel op inserted into the renderOps array to bracket the
  * child quads of a node that uses rounded-corner stencil clipping.
@@ -100,6 +108,38 @@ export class WebGlRenderer extends CoreRenderer {
   curRenderOp: WebGlRenderOp | null = null;
   override rttNodes: CoreNode[] = [];
   activeRttNode: CoreNode | null = null;
+
+  // When true the entire quad buffer is re-uploaded via bufferData instead of
+  // the surgical per-node bufferSubData path. True on the first frame and
+  // whenever the render list changes structurally (node added/removed/reordered)
+  // or the buffer grows past the last uploaded size.
+  needsFullUpload = true;
+  // Number of float32 elements last uploaded to the GPU via bufferData. Used
+  // to detect when curBufferIdx has grown beyond the GPU buffer's capacity,
+  // requiring a full re-upload even when needsFullUpload is false.
+  lastUploadedBufferSize = 0;
+  // Count of main-scene nodes whose quad data changed this frame and which own
+  // a buffer slot. Accumulated during the addQuad pass and consumed by render()
+  // to choose between surgical uploads and a single full upload.
+  dirtyQuadCount = 0;
+
+  // Dedicated CPU buffer for RTT quad data. Main-scene nodes own permanent
+  // slots in quadBuffer and only rewrite when dirty, so RTT writing into the
+  // same backing storage at index 0 would silently corrupt non-dirty slots.
+  // Allocated lazily on first RTT pass.
+  rttQuadBuffer: ArrayBuffer | null = null;
+  fRttQuadBuffer: Float32Array | null = null;
+  uiRttQuadBuffer: Uint32Array | null = null;
+
+  // Reusable 20-float scratch buffer for surgical uploads. Avoids allocating a
+  // typed-array view per dirty node per frame (GC pressure in scroll-heavy
+  // scenes). Mirrors the stencil scratch buffer pattern below.
+  private readonly _quadScratchBuffer: ArrayBuffer = new ArrayBuffer(
+    20 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  private readonly _quadScratchF: Float32Array = new Float32Array(
+    this._quadScratchBuffer,
+  );
 
   override defaultTextureCoords: TextureCoords = {
     x1: 0,
@@ -290,6 +330,7 @@ export class WebGlRenderer extends CoreRenderer {
     const { glw } = this;
     this.curBufferIdx = 0;
     this.curRenderOp = null;
+    this.dirtyQuadCount = 0;
     this.renderOps.length = 0;
     this.stencilOpPoolIdx = 0;
     this.stencilDepth = 0;
@@ -361,13 +402,17 @@ export class WebGlRenderer extends CoreRenderer {
    * The function updates the length and number of quads in the current render operation, and updates the current buffer index.
    */
   addQuad(node: CoreNode) {
-    const f = this.fQuadBuffer;
-    const u = this.uiQuadBuffer;
-    let i = this.curBufferIdx;
-
-    const reuse = this.reuseRenderOp(node);
-    if (reuse === false) {
-      this.newRenderOp(node, i);
+    const isRTT = this.renderToTextureActive === true;
+    let f = this.fQuadBuffer;
+    let u = this.uiQuadBuffer;
+    if (isRTT === true) {
+      if (this.fRttQuadBuffer === null) {
+        this.rttQuadBuffer = new ArrayBuffer(this.stage.options.quadBufferSize);
+        this.fRttQuadBuffer = new Float32Array(this.rttQuadBuffer);
+        this.uiRttQuadBuffer = new Uint32Array(this.rttQuadBuffer);
+      }
+      f = this.fRttQuadBuffer;
+      u = this.uiRttQuadBuffer!;
     }
 
     let tx = (node.props.texture || this.stage.defaultTexture) as Texture;
@@ -377,11 +422,32 @@ export class WebGlRenderer extends CoreRenderer {
 
     const ctx = tx.ctxTexture as WebGlCtxTexture | undefined;
     if (ctx === undefined) return;
+
+    // Main scene: assign a permanent slot so render() can surgically
+    // re-upload only dirty nodes. RTT: use ephemeral sequential slots and
+    // leave the node's main-scene slot bookkeeping untouched.
+    let i = this.curBufferIdx;
+    if (isRTT === false) {
+      node.quadBufferIndex = i;
+    }
+    this.curBufferIdx = i + 20;
+
+    const reuse = this.reuseRenderOp(node);
+    if (reuse === false) {
+      this.newRenderOp(node, i);
+    }
+
     let tidx = (this.curRenderOp as WebGlNodeRenderOp).addTexture(ctx);
 
     if (tidx === 0xffffffff) {
       this.newRenderOp(node, i);
       tidx = (this.curRenderOp as WebGlNodeRenderOp).addTexture(ctx);
+    }
+
+    // Accumulate the main-scene dirty count during the pass so render() can
+    // pick full vs surgical upload without a second walk over the render list.
+    if (isRTT === false && node.isQuadDirty === true) {
+      this.dirtyQuadCount++;
     }
 
     const rc = node.renderCoords!;
@@ -421,7 +487,6 @@ export class WebGlRenderer extends CoreRenderer {
     u[i + 19] = cBr;
 
     (this.curRenderOp as WebGlNodeRenderOp).numQuads++;
-    this.curBufferIdx = i + 20;
   }
 
   /**
@@ -528,11 +593,53 @@ export class WebGlRenderer extends CoreRenderer {
    */
   render(_surface: 'screen' | CoreContextTexture = 'screen'): void {
     const { glw, quadBuffer } = this;
-
-    const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
-    glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+    const BYTES = Float32Array.BYTES_PER_ELEMENT;
+
+    // Structural realloc (needsFullUpload) or buffer growth past the last
+    // uploaded size always forces a full upload.
+    let fullUpload =
+      this.needsFullUpload || this.curBufferIdx > this.lastUploadedBufferSize;
+
+    // Otherwise decide adaptively: if more than 40% of the render list would
+    // need a surgical upload, a single bulk bufferData is cheaper than that
+    // many bufferSubData calls. The count was accumulated for free during the
+    // addQuad pass, so no separate counting loop is needed here.
+    if (fullUpload === false) {
+      fullUpload =
+        this.dirtyQuadCount >
+        this.stage.renderListLen * FULL_UPLOAD_DIRTY_RATIO;
+    }
+
+    const nodes = this.stage.renderListNodes;
+
+    if (fullUpload === true) {
+      const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
+      glw.arrayBufferData(buffer, arr, glw.DYNAMIC_DRAW);
+      this.needsFullUpload = false;
+      this.lastUploadedBufferSize = this.curBufferIdx;
+
+      // Everything is on the GPU now; clear the dirty flags.
+      for (let i = 0; i < this.stage.renderListLen; i++) {
+        nodes[i]!.isQuadDirty = false;
+      }
+    } else {
+      // Surgical: copy each dirty slot into the preallocated scratch buffer
+      // and upload only those 20 floats. No per-node allocation.
+      const scratch = this._quadScratchF;
+      const f = this.fQuadBuffer;
+      for (let i = 0; i < this.stage.renderListLen; i++) {
+        const node = nodes[i]!;
+        if (node.isQuadDirty === true && node.quadBufferIndex !== -1) {
+          const slot = node.quadBufferIndex;
+          for (let j = 0; j < 20; j++) {
+            scratch[j] = f[slot + j]!;
+          }
+          glw.arrayBufferSubData(buffer, slot * BYTES, scratch);
+          node.isQuadDirty = false;
+        }
+      }
+    }
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
@@ -547,10 +654,10 @@ export class WebGlRenderer extends CoreRenderer {
       }
     }
 
-    this.quadBufferUsage = this.curBufferIdx * arr.BYTES_PER_ELEMENT;
+    this.quadBufferUsage = this.curBufferIdx * BYTES;
 
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
-    const QUAD_SIZE_IN_BYTES = 4 * (QUAD_VERTEX_STRIDE * arr.BYTES_PER_ELEMENT);
+    const QUAD_SIZE_IN_BYTES = 4 * (QUAD_VERTEX_STRIDE * BYTES);
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
   }
 
@@ -644,6 +751,11 @@ export class WebGlRenderer extends CoreRenderer {
 
   renderRTTNodes() {
     const { glw } = this;
+
+    // Save main-scene buffer index so RTT rendering doesn't interfere with
+    // the dirty quad buffer optimization.
+    const savedBufferIdx = this.curBufferIdx;
+
     // Render all associated RTT nodes to their textures
     for (let i = 0; i < this.rttNodes.length; i++) {
       const node = this.rttNodes[i];
@@ -680,6 +792,11 @@ export class WebGlRenderer extends CoreRenderer {
       glw.clearColor(0, 0, 0, 0);
       glw.clear();
 
+      // RTT uses its own sequential buffer from index 0, keeping the main
+      // scene's permanent slot assignments untouched.
+      this.curBufferIdx = 0;
+      this.curRenderOp = null;
+
       // Render all associated quads to the texture
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
@@ -693,12 +810,20 @@ export class WebGlRenderer extends CoreRenderer {
       }
 
       // Render all associated quads to the texture
-      this.render();
+      this.renderRTT();
 
       // Reset render operations
       this.renderOps.length = 0;
       node.hasRTTupdates = false;
     }
+
+    // Restore the main-scene buffer index. The RTT pass replaced the GPU
+    // buffer with a smaller RTT-sized buffer, so the main pass must re-upload
+    // everything rather than only dirty slots.
+    this.curBufferIdx = savedBufferIdx;
+    this.curRenderOp = null;
+    this.needsFullUpload = true;
+    this.lastUploadedBufferSize = 0;
 
     const clearColor = this.clearColor.normalized;
     // Restore the default clear color
@@ -711,6 +836,30 @@ export class WebGlRenderer extends CoreRenderer {
     this.renderToTextureActive = false;
   }
 
+  // Render pass for RTT: always does a full buffer upload from the dedicated
+  // RTT buffer, since RTT quads use temporary sequential slots that are
+  // rebuilt from scratch for each RTT pass.
+  private renderRTT(): void {
+    const glw = this.glw;
+    const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
+
+    const arr = new Float32Array(this.rttQuadBuffer!, 0, this.curBufferIdx);
+    glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+
+    for (let i = 0, length = this.renderOps.length; i < length; i++) {
+      const op = this.renderOps[i]!;
+      if (op instanceof StencilClipRenderOp) {
+        if (op.kind === 0) {
+          this.drawStencilBegin(op);
+        } else {
+          this.drawStencilEnd(op);
+        }
+      } else {
+        op.draw(this);
+      }
+    }
+  }
+
   updateViewport(): void {
     this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
@@ -721,6 +870,23 @@ export class WebGlRenderer extends CoreRenderer {
       return;
     }
     this.rttNodes.splice(index, 1);
+  }
+
+  // Resets all per-node quad buffer slot assignments and schedules a full GPU
+  // buffer re-upload on the next render call. Called by
+  // Stage.requestRenderListUpdate() whenever the render list changes
+  // structurally (node added, removed, or reordered). After this call, the
+  // next addQuad() pass reassigns compact, contiguous slots starting from 0.
+  override invalidateQuadBuffer(): void {
+    const nodes = this.stage.renderListNodes;
+    for (let i = 0; i < this.stage.renderListLen; i++) {
+      const node = nodes[i]!;
+      node.quadBufferIndex = -1;
+      node.isQuadDirty = true;
+    }
+    this.curBufferIdx = 0;
+    this.lastUploadedBufferSize = 0;
+    this.needsFullUpload = true;
   }
 
   getBufferInfo(): BufferInfo | null {

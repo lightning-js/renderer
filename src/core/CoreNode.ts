@@ -784,6 +784,15 @@ export class CoreNode extends EventEmitter {
   public renderOpTextures: WebGlCtxTexture[] = [];
   public stencilDepth: number = 0;
 
+  // Permanent slot of this node's quad in the renderer's quad buffer.
+  // -1 until assigned; reassigned contiguously whenever the render list is
+  // rebuilt (see WebGlRenderer.invalidateQuadBuffer).
+  public quadBufferIndex: number = -1;
+  // Whether the node's quad bytes differ from what the GPU buffer holds.
+  // Set when visual data (transforms, colors, alpha, texture) changes and
+  // cleared once the slot is re-uploaded.
+  public isQuadDirty = false;
+
   private hasShaderUpdater = false;
   public hasShaderTimeFn = false;
   private hasColorProps = false;
@@ -1478,6 +1487,17 @@ export class CoreNode extends EventEmitter {
           true,
         );
       }
+    }
+
+    // Mark the quad dirty only when visual data (transforms, colors, alpha)
+    // actually changed so the renderer re-uploads only modified slots.
+    if (
+      updateType &
+      (UpdateType.Global |
+        UpdateType.PremultipliedColors |
+        UpdateType.WorldAlpha)
+    ) {
+      this.isQuadDirty = true;
     }
 
     if (this.renderState === CoreNodeRenderState.OutOfBounds) {
@@ -2929,6 +2949,7 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
+    this.isQuadDirty = true;
     this.updateIsSimple();
   }
 
