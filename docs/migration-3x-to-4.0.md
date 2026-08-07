@@ -1,6 +1,6 @@
-# Migration Guide to 3.3
+# Migration Guide 3.x to 4.0
 
-This guide documents breaking changes identified in the current 3.3 development line relative to the latest 3.1.x release line.
+This guide documents breaking changes introduced in version 4.0.
 
 ## Breaking Changes
 
