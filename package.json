@@ -86,7 +86,7 @@
     "README.md",
     "scripts"
   ],
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "pnpm@10.17.0",
   "engines": {
     "npm": ">= 10.0.0",
     "pnpm": ">= 10.17.0",
