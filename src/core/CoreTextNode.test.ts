@@ -261,41 +261,46 @@ describe('CoreTextNode', () => {
       height: 20,
       atlasTexture: {} as any,
       layout: {
+        glyphs: new Float32Array([0, 0, 0, 0, 10, 0, 1, 0]),
         glyphCount: 1,
+        totalQuadCount: 1,
+        richText: false,
         width: 100,
         height: 20,
         fontScale: 1,
         lineHeight: 20,
         fontFamily: 'Arial',
         distanceRange: 4,
-        vertexBuffer: new Float32Array([0, 0, 0, 0, 10, 0, 1, 0]),
-        truncatedTextLines: 0,
       },
       hasRemainingText: false,
       remainingLines: 0,
     };
   }
 
-  describe('updateRenderState – SDF buffer release on OutOfBounds', () => {
-    it('should call renderer.deleteBuffer and clear _sdfBuffer when transitioning to OutOfBounds', () => {
-      const deleteBuffer = vi.fn();
-      const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
-        defaultTextProps,
-        mockTextRenderer,
-      );
+  describe('updateRenderState – SDF cache release on OutOfBounds', () => {
+    function seedCache(node: CoreTextNode) {
+      (node as any)._sdfCache = {
+        vertices: new Float32Array([0, 0]),
+        glyphCount: 1,
+        color: 0xffffffff,
+        alpha: 1,
+        transform: new Float32Array(6),
+        layoutRef: null,
+      };
+    }
 
-      const fakeBuffer = {};
-      (node as any)._sdfBuffer = fakeBuffer;
+    it('should clear the SDF cache when transitioning to OutOfBounds', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      seedCache(node);
       (node as any)._renderInfo = createSdfRenderInfo();
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
-      expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBuffer).toBeNull();
+      expect((node as any)._sdfCache).toBeNull();
     });
 
-    it('should not call renderer.deleteBuffer when _sdfBuffer is already null', () => {
+    it('should not call renderer.deleteBuffer (buffers are renderer-owned)', () => {
       const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
         makeStageWithDeleteBuffer(deleteBuffer),
@@ -309,37 +314,30 @@ describe('CoreTextNode', () => {
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
 
-    it('should not release the buffer when transitioning to InBounds', () => {
-      const deleteBuffer = vi.fn();
-      const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
-        defaultTextProps,
-        mockTextRenderer,
-      );
+    it('should not release the cache when transitioning to InBounds', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
 
-      const fakeBuffer = {};
-      (node as any)._sdfBuffer = fakeBuffer;
+      seedCache(node);
       (node as any)._renderInfo = createSdfRenderInfo();
 
       node.updateRenderState(CoreNodeRenderState.InBounds);
 
-      expect(deleteBuffer).not.toHaveBeenCalled();
-      expect((node as any)._sdfBuffer).toBe(fakeBuffer);
+      expect((node as any)._sdfCache).not.toBeNull();
     });
 
-    it('should not release the buffer for a canvas-type text node', () => {
-      const deleteBuffer = vi.fn();
+    it('should not release the cache for a canvas-type text node', () => {
       const canvasTextRenderer = {
         ...mockTextRenderer,
         type: 'canvas' as const,
       } as any;
 
       const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
+        stage,
         defaultTextProps,
         canvasTextRenderer,
       );
 
+      seedCache(node);
       (node as any)._renderInfo = {
         type: 'canvas',
         width: 100,
@@ -351,30 +349,35 @@ describe('CoreTextNode', () => {
 
       node.updateRenderState(CoreNodeRenderState.OutOfBounds);
 
-      expect(deleteBuffer).not.toHaveBeenCalled();
+      expect((node as any)._sdfCache).not.toBeNull();
     });
   });
 
-  describe('SDF buffer release on layout regeneration', () => {
-    it('should call renderer.deleteBuffer before regenerating layout when font is already loaded', () => {
-      const deleteBuffer = vi.fn();
+  describe('SDF cache release on layout regeneration', () => {
+    it('should drop the cache before regenerating layout when font is already loaded', () => {
       const props = { ...defaultTextProps, forceLoad: true };
-      const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
-        props,
-        mockTextRenderer,
-      );
+      const node = new CoreTextNode(stage, props, mockTextRenderer);
 
-      const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBuffer = fakeBuffer;
+      (node as any)._sdfCache = {
+        vertices: new Float32Array([0, 0]),
+        glyphCount: 1,
+        color: 0xffffffff,
+        alpha: 1,
+        transform: new Float32Array(6),
+        layoutRef: null,
+      };
 
       node.update(16, clippingRect);
 
-      expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBuffer).toBeNull();
+      // The stale cached vertices are dropped; a fresh empty cache is created
+      // when the new layout renders.
+      const cache = (node as any)._sdfCache;
+      expect(cache).not.toBeNull();
+      expect(cache.vertices).toBeNull();
+      expect(cache.layoutRef).toBeNull();
     });
 
-    it('should call renderer.deleteBuffer again on each subsequent layout regeneration', () => {
+    it('should not call renderer.deleteBuffer (buffers are renderer-owned)', () => {
       const deleteBuffer = vi.fn();
       const props = { ...defaultTextProps, forceLoad: true };
       const node = new CoreTextNode(
@@ -383,59 +386,44 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      node.update(16, clippingRect); // first layout – no buffer yet, no delete call
-      expect(deleteBuffer).not.toHaveBeenCalled();
+      (node as any)._sdfCache = {
+        vertices: new Float32Array([0, 0]),
+        glyphCount: 1,
+        color: 0xffffffff,
+        alpha: 1,
+        transform: new Float32Array(6),
+        layoutRef: null,
+      };
 
-      // Trigger a second layout pass by invalidating the layout
-      node.fontSize = 24;
-      const secondBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBuffer = secondBuffer;
-
-      node.update(16, clippingRect);
-
-      expect(deleteBuffer).toHaveBeenCalledWith(secondBuffer);
-      expect((node as any)._sdfBuffer).toBeNull();
-    });
-
-    it('should not call renderer.deleteBuffer when buffer is already null at regeneration time', () => {
-      const deleteBuffer = vi.fn();
-      const props = { ...defaultTextProps, forceLoad: true };
-      const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
-        props,
-        mockTextRenderer,
-      );
-
-      // _sdfBuffer is null by default
       node.update(16, clippingRect);
 
       expect(deleteBuffer).not.toHaveBeenCalled();
     });
   });
 
-  describe('SDF buffer release when text becomes invalid', () => {
-    it('should call renderer.deleteBuffer when text is cleared during update', () => {
-      const deleteBuffer = vi.fn();
+  describe('SDF cache release when text becomes invalid', () => {
+    it('should drop the cache when text is cleared during update', () => {
       const props = { ...defaultTextProps, text: 'Hello', forceLoad: true };
-      const node = new CoreTextNode(
-        makeStageWithDeleteBuffer(deleteBuffer),
-        props,
-        mockTextRenderer,
-      );
+      const node = new CoreTextNode(stage, props, mockTextRenderer);
 
-      // Prime the node with a cached buffer
-      const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBuffer = fakeBuffer;
+      // Prime the node with a cached layout and vertex cache
+      (node as any)._sdfCache = {
+        vertices: new Float32Array([0, 0]),
+        glyphCount: 1,
+        color: 0xffffffff,
+        alpha: 1,
+        transform: new Float32Array(6),
+        layoutRef: null,
+      };
       (node as any)._layoutGenerated = true;
 
       node.text = '';
       node.update(16, clippingRect);
 
-      expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBuffer).toBeNull();
+      expect((node as any)._sdfCache).toBeNull();
     });
 
-    it('should not call renderer.deleteBuffer when text is invalid and buffer is already null', () => {
+    it('should not call renderer.deleteBuffer when text is invalid and cache already null', () => {
       const deleteBuffer = vi.fn();
       const props = { ...defaultTextProps, text: '', forceLoad: true };
       const node = new CoreTextNode(
@@ -467,8 +455,8 @@ describe('CoreTextNode', () => {
     });
   });
 
-  describe('SDF buffer release on destroy', () => {
-    it('should call renderer.deleteBuffer on destroy when a buffer is held', () => {
+  describe('SDF cache release on destroy', () => {
+    it('should clear the SDF cache on destroy when a cache is held', () => {
       const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
         makeStageWithDeleteBuffer(deleteBuffer),
@@ -476,16 +464,22 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      const fakeBuffer = {} as WebGLBuffer;
-      (node as any)._sdfBuffer = fakeBuffer;
+      (node as any)._sdfCache = {
+        vertices: new Float32Array([0, 0]),
+        glyphCount: 1,
+        color: 0xffffffff,
+        alpha: 1,
+        transform: new Float32Array(6),
+        layoutRef: null,
+      };
 
       node.destroy();
 
-      expect(deleteBuffer).toHaveBeenCalledWith(fakeBuffer);
-      expect((node as any)._sdfBuffer).toBeNull();
+      expect(deleteBuffer).not.toHaveBeenCalled();
+      expect((node as any)._sdfCache).toBeNull();
     });
 
-    it('should not call renderer.deleteBuffer on destroy when buffer is already null', () => {
+    it('should not call renderer.deleteBuffer on destroy when cache is already null', () => {
       const deleteBuffer = vi.fn();
       const node = new CoreTextNode(
         makeStageWithDeleteBuffer(deleteBuffer),
@@ -493,7 +487,7 @@ describe('CoreTextNode', () => {
         mockTextRenderer,
       );
 
-      // _sdfBufferRef.current is null by default
+      // _sdfCache is null by default
       node.destroy();
 
       expect(deleteBuffer).not.toHaveBeenCalled();
@@ -511,23 +505,8 @@ describe('CoreTextNode', () => {
   });
 
   describe('SDF render path', () => {
-    it('reuses the uploaded SDF buffer across renderQuads calls', () => {
-      const createBuffer = vi.fn().mockReturnValue({ label: 'sdf-buffer' });
-      const arrayBufferData = vi.fn();
-      const glw = {
-        createBuffer,
-        arrayBufferData,
-        STATIC_DRAW: 0x88e4,
-        FLOAT: 0x1406,
-      };
-      const sdfStage = makeMockStage({
-        renderer: { glw } as unknown as CoreRenderer,
-      });
-      const node = new CoreTextNode(
-        sdfStage,
-        defaultTextProps,
-        mockTextRenderer,
-      );
+    it('submits glyphs to the renderer via textRenderer.renderQuads with cache props', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
       const transform = new Float32Array([1, 0, 0, 1, 0, 0]);
 
       (node as any).handleRenderResult(createSdfRenderInfo());
@@ -535,63 +514,63 @@ describe('CoreTextNode', () => {
         getFloatArr: vi.fn().mockReturnValue(transform),
       };
 
-      node.renderQuads(sdfStage.renderer);
-      node.renderQuads(sdfStage.renderer);
+      node.renderQuads(stage.renderer);
+      node.renderQuads(stage.renderer);
 
-      expect(createBuffer).toHaveBeenCalledTimes(1);
-      expect(arrayBufferData).toHaveBeenCalledTimes(1);
+      // Batched path: no per-node WebGL buffer is ever created.
       expect(mockTextRenderer.renderQuads).toHaveBeenCalledTimes(2);
-      expect((node as any)._sdfBuffer).toEqual({ label: 'sdf-buffer' });
-      expect(node.sdfShaderProps.transform).toBe(transform);
+      const layout = (node as any)._renderInfo.layout;
+      const renderProps = (mockTextRenderer.renderQuads as any).mock
+        .calls[0][3];
+      expect((mockTextRenderer.renderQuads as any).mock.calls[0][1]).toBe(
+        layout,
+      );
+      expect((mockTextRenderer.renderQuads as any).mock.calls[0][2]).toBeNull();
+      expect(renderProps.globalTransform).toBe(transform);
+      expect(renderProps.worldAlpha).toBe(node.worldAlpha);
+      expect(renderProps.color).toBe(node.props.color);
+      expect(renderProps.clippingRect).toBe(node.clippingRect);
+      expect(renderProps.sdfCache).not.toBeNull();
+      expect(renderProps.sdfCache).toBe((node as any)._sdfCache);
     });
 
-    it('uses framebuffer-relative scissor coordinates for RTT draws', () => {
-      const bindRenderOp = vi.fn();
-      const useShader = vi.fn();
-      const setScissorTest = vi.fn();
-      const scissor = vi.fn();
-      const drawArrays = vi.fn();
-      const sdfStage = makeMockStage({
-        pixelRatio: 2,
-        platform: { canvas: { width: 1920, height: 1080 } } as any,
-        shManager: { useShader } as any,
-      });
+    it('does not submit when _renderInfo is null', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      node.renderQuads(stage.renderer);
+
+      expect(mockTextRenderer.renderQuads).not.toHaveBeenCalled();
+    });
+
+    it('defers to super for canvas render info', () => {
+      const canvasTextRenderer = {
+        ...mockTextRenderer,
+        type: 'canvas' as const,
+      } as any;
       const node = new CoreTextNode(
-        sdfStage,
+        stage,
         defaultTextProps,
-        mockTextRenderer,
+        canvasTextRenderer,
       );
-      const shader = { program: { bindRenderOp } };
 
-      node.props.shader = shader as any;
-      node.numQuads = 2;
-      node.clippingRect = {
-        x: 10,
-        y: 20,
-        w: 30,
-        h: 40,
-        valid: true,
-        clipRadius: 0,
+      (node as any)._renderInfo = {
+        type: 'canvas',
+        width: 100,
+        height: 20,
+        imageData: {} as ImageData,
+        hasRemainingText: false,
+        remainingLines: 0,
       };
-      node.parentHasRenderTexture = true;
-      node.rttParent = { framebufferDimensions: { w: 320, h: 180 } } as any;
-      node.props.h = 25;
+      node.texture = stage.defaultTexture as any;
+      (node as any).props.texture = stage.defaultTexture;
 
-      node.draw({
-        glw: {
-          TRIANGLES: 4,
-          setScissorTest,
-          scissor,
-          drawArrays,
-        },
-        stage: sdfStage,
-      } as any);
+      const addQuad = vi.fn();
+      (stage.renderer as any).addQuad = addQuad;
 
-      expect(useShader).toHaveBeenCalledWith(shader.program);
-      expect(bindRenderOp).toHaveBeenCalledWith(node);
-      expect(setScissorTest).toHaveBeenCalledWith(true);
-      expect(scissor).toHaveBeenCalledWith(10, 155, 30, 40);
-      expect(drawArrays).toHaveBeenCalledWith(4, 0, 12);
+      node.renderQuads(stage.renderer);
+
+      expect(mockTextRenderer.renderQuads).not.toHaveBeenCalled();
+      expect(addQuad).toHaveBeenCalled();
     });
   });
 

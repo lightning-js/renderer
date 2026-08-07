@@ -20,6 +20,9 @@
 import type { CoreTextNode, CoreTextNodeProps } from '../CoreTextNode.js';
 import type { WebGlCtxTexture } from '../renderers/webgl/WebGlCtxTexture.js';
 import type { Stage } from '../Stage.js';
+import type { CoreRenderer } from '../renderers/CoreRenderer.js';
+import type { RectWithValid } from '../lib/utils.js';
+import type { Dimensions } from '../../common/CommonTypes.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
@@ -321,16 +324,23 @@ export interface GlyphLayout {
  */
 export interface TextLayout {
   /**
-   * vertices for rendering quads in WebGL
+   * Packed per-glyph design-unit records consumed by the renderer's batched
+   * SDF write paths (one record per quad, including decoration quads).
+   *
+   * plain (8 floats): x, y, w, h, u, v, uw, vh
+   * rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
+   *
+   * `shearTop` / `shearBot` are the per-corner x-deltas of the italic lean;
+   * `u = -1.0` with `uw = 0` marks a solid-fill decoration quad.
    */
-  vertexBuffer: Float32Array;
+  glyphs: Float32Array;
   /**
-   * glyph count in layout
+   * Number of glyph records (quads) in `glyphs`.
    */
   glyphCount: number;
   /**
-   * Total quad count (glyphs + decoration rects).
-   * Drives the drawArrays call; equals glyphCount for non-richText.
+   * Total quad count (glyphs + decoration rects). Equals `glyphCount`; kept
+   * for backward compatibility with callers that read the quad total.
    */
   totalQuadCount: number;
   /**
@@ -398,8 +408,8 @@ export interface FontHandler {
   type: 'canvas' | 'sdf';
   isFontLoaded: (fontFamily: string) => boolean;
   loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
-  waitingForFont: (fontFamily: string, CoreTextNode) => void;
-  stopWaitingForFont: (fontFamily: string, CoreTextNode) => void;
+  waitingForFont: (fontFamily: string, node: CoreTextNode) => void;
+  stopWaitingForFont: (fontFamily: string, node: CoreTextNode) => void;
   getFontFamilies: () => FontFamilyMap;
   canRenderFont: (trProps: TrProps) => boolean;
   getFontMetrics: (
@@ -416,20 +426,50 @@ export interface TextRenderProps {
   offsetY: number;
   worldAlpha: number;
   globalTransform: Float32Array;
-  clippingRect: unknown;
+  clippingRect: RectWithValid;
   width: number;
   height: number;
   parentHasRenderTexture: boolean;
-  framebufferDimensions: unknown;
+  framebufferDimensions: Dimensions | null;
   stage: Stage;
+  /** Optional SDF vertex cache — passed by CoreTextNode for the cache-hit fast path. */
+  sdfCache?: SdfVertexCache;
+}
+
+/**
+ * Cached SDF vertex data for a single text node.
+ * When nothing changes (layout, transform, color, alpha), the pre-transformed
+ * vertex Float32Array can be mem-copied into the shared SDF buffer instead of
+ * re-computing per-glyph matrix transforms each frame.
+ */
+export interface SdfVertexCache {
+  /** Pre-transformed vertex Float32Array in the target SDF buffer's GPU layout (null = cache miss). */
+  vertices: Float32Array | null;
+  /** Number of glyphs (quads) in the cached data. */
+  glyphCount: number;
+  /** RGBA color at the time the cache was built. */
+  color: number;
+  /** worldAlpha at the time the cache was built. */
+  alpha: number;
+  /** The 6 relevant transform matrix components [m0,m1,m3,m4,m6,m7]. */
+  transform: Float32Array;
+  /** Reference to the TextLayout the cache was built from. */
+  layoutRef: TextLayout | null;
   /**
-   * Mutable wrapper ref used by the SDF renderer to cache the underlying
-   * WebGLBuffer across frames. The SDF renderer reads and writes the
-   * `.current` property so the node's ref box is updated in-place.
-   * CoreTextNode owns the ref and is responsible for calling
-   * deleteBuffer when the buffer is no longer needed.
+   * Quad index in the shared SDF buffer where the cached vertices were last
+   * written. A cache hit that would land at a different offset than this (a
+   * render-list reorder or layout change elsewhere in the buffer) means the
+   * GPU copy is stale at both the old and new offsets, so the buffer must be
+   * re-uploaded even though every write was a bit-exact mem-copy.
    */
-  glBufferRef: { current: WebGLBuffer | null };
+  lastStartQuad: number;
+  /**
+   * Whether the last write this node made to the shared buffer was NOT a
+   * bit-exact re-write of the bytes the GPU holds at `lastStartQuad` (e.g.
+   * the translated fast path shifted the positions). Forces a re-upload the
+   * next time the node takes the exact cache-hit path.
+   */
+  lastWriteDirty: boolean;
 }
 
 export interface RenderInfo {
@@ -456,7 +496,12 @@ export interface TextRenderer {
   type: 'canvas' | 'sdf';
   font: FontHandler;
   renderText: (props: CoreTextNodeProps) => TextRenderInfo;
-  renderQuads: (textNode: CoreTextNode) => void;
+  renderQuads: (
+    renderer: CoreRenderer,
+    layout: TextLayout,
+    vertexBuffer: Float32Array | null,
+    renderProps: TextRenderProps,
+  ) => void;
   init: (stage: Stage) => void;
   clearCache: () => void;
 }

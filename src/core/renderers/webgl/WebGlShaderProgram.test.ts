@@ -96,7 +96,7 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
     };
   }
 
-  it('binds SDF shader props while using the main framebuffer resolution', () => {
+  it('binds an SdfRenderOp using the main framebuffer resolution', () => {
     const {
       program,
       bindTextures,
@@ -104,12 +104,9 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
       uniform1f,
       uniform2f,
     } = createProgram();
-    const onSdfBind = vi.fn();
     const renderOp = {
       isCoreNode: false,
-      isSdfRenderOp: true,
-      shader: { shaderType: { onSdfBind } },
-      sdfShaderProps: { size: 16, distanceRange: 4 },
+      shader: { uniforms: { hasStoredUniforms: false } },
       renderOpTextures: [],
       quadBufferCollection: {},
       parentHasRenderTexture: false,
@@ -130,17 +127,13 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
     );
     expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1.5);
     expect(uniform2f).toHaveBeenCalledWith('u_resolution', 1920, 1080);
-    expect(onSdfBind).toHaveBeenCalledWith(renderOp.sdfShaderProps);
   });
 
-  it('keeps SDF binding active when rendering into a parent framebuffer', () => {
+  it('uses the parent framebuffer resolution for an SdfRenderOp in RTT', () => {
     const { program, uniform1f, uniform2f } = createProgram();
-    const onSdfBind = vi.fn();
     const renderOp = {
       isCoreNode: false,
-      isSdfRenderOp: true,
-      shader: { shaderType: { onSdfBind } },
-      sdfShaderProps: { size: 18, distanceRange: 6 },
+      shader: { uniforms: { hasStoredUniforms: false } },
       renderOpTextures: [],
       quadBufferCollection: {},
       parentHasRenderTexture: true,
@@ -157,32 +150,20 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
 
     expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1);
     expect(uniform2f).toHaveBeenCalledWith('u_resolution', 320, 180);
-    expect(onSdfBind).toHaveBeenCalledWith(renderOp.sdfShaderProps);
   });
 
-  it('uses parent RTT dimensions for SDF text render ops', () => {
+  it('uses parent RTT dimensions for core-node render ops', () => {
     const { program, uniform1f, uniform2f } = createProgram();
-    const onSdfBind = vi.fn();
-    const sdfShaderProps = {
-      color: 0xffffffff,
-      distanceRange: 1,
-      size: 16,
-      transform: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]),
-    };
     const renderOp = {
       framebufferDimensions: { w: 320, h: 180 },
       isCoreNode: true,
-      isSdfRenderOp: true,
       parentFramebufferDimensions: { w: 640, h: 360 },
       parentHasRenderTexture: true,
       quadBufferCollection: {},
       renderOpTextures: [],
       rtt: false,
-      sdfShaderProps,
       shader: {
-        shaderType: {
-          onSdfBind,
-        },
+        uniforms: { hasStoredUniforms: false },
       },
       stage: { pixelRatio: 2 },
       time: 0,
@@ -195,7 +176,6 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
 
     expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1.0);
     expect(uniform2f).toHaveBeenCalledWith('u_resolution', 640, 360);
-    expect(onSdfBind).toHaveBeenCalledWith(sdfShaderProps);
   });
 });
 
