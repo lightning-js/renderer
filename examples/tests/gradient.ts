@@ -19,7 +19,11 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const elements = [
     'colorTl',
     'colorTr',
@@ -46,16 +50,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setTimeout(() => {
     nodes.forEach((node, idx) => {
-      node
-        .animate(
-          {
-            [elements[idx] ?? 'color']: 0x00ff00ff,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      animate(
+        node,
+        {
+          [elements[idx] ?? 'color']: 0x00ff00ff,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
     });
   }, 2000);
   /*

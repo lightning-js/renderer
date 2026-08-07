@@ -12,7 +12,8 @@
     "./webgl": "./dist/exports/webgl.js",
     "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js",
-    "./platforms": "./dist/exports/platform.js"
+    "./platforms": "./dist/exports/platform.js",
+    "./animation": "./dist/exports/animation.js"
   },
   "scripts": {
     "start": "cd examples && pnpm start",

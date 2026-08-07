@@ -483,18 +483,6 @@ export class Stage {
   }
 
   /**
-   * Update animations
-   */
-  updateAnimations() {
-    const { animationManager } = this;
-    if (!this.root) {
-      return;
-    }
-    // step animation
-    animationManager.update(this.deltaTime);
-  }
-
-  /**
    * Check if the scene has updates
    */
   hasSceneUpdates() {

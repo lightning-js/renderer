@@ -28,6 +28,7 @@ const randomIntBetween = (from: number, to: number) =>
 
 export default async function ({
   renderer,
+  animate,
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
@@ -66,27 +67,26 @@ export default async function ({
   console.log(`Created ${numOuterNodes} nodes with alternating textures`);
 
   // create animations
-  const animate = () => {
+  const startAnimation = () => {
     nodes.forEach((node) => {
-      node
-        .animate(
-          {
-            x: randomIntBetween(20, 1740),
-            y: randomIntBetween(20, 900),
-            rotation: Math.random() * Math.PI,
-          },
-          {
-            duration: 3000,
-            easing: 'ease-out',
-            loop: true,
-            stopMethod: 'reverse',
-          },
-        )
-        .start();
+      animate(
+        node,
+        {
+          x: randomIntBetween(20, 1740),
+          y: randomIntBetween(20, 900),
+          rotation: Math.random() * Math.PI,
+        },
+        {
+          duration: 3000,
+          easing: 'ease-out',
+          loop: true,
+          stopMethod: 'reverse',
+        },
+      ).start();
     });
   };
 
-  animate();
+  startAnimation();
 
   // setInterval(animate, 3000);
 }

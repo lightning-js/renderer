@@ -22,6 +22,7 @@ import {
   type NodeLoadedPayload,
   type RendererMainSettings,
   type FpsUpdatePayload,
+  type FrameTickPayload,
 } from '@lightningjs/renderer';
 import { WebGlRenderer, SdfTextRenderer } from '@lightningjs/renderer/webgl';
 import {
@@ -47,6 +48,7 @@ import { installFonts } from './common/installFonts.js';
 import { MemMonitor } from './common/MemMonitor.js';
 import { setupMathRandom } from './common/setupMathRandom.js';
 import { installShaders } from './common/installShaders.js';
+import { AnimationManager } from '../dist/src/core/animations/AnimationManager.js';
 
 interface TestModule {
   default: (settings: ExampleSettings) => Promise<void>;
@@ -172,7 +174,7 @@ async function runTest(
     ...(globalTargetFPS !== undefined && { targetFPS: globalTargetFPS }),
   };
 
-  const { renderer, appElement } = await initRenderer(
+  const { renderer, appElement, animationManager } = await initRenderer(
     renderMode,
     platform,
     logFps,
@@ -243,6 +245,7 @@ async function runTest(
       // No-op
     },
     memMonitor,
+    animate: animationManager.createAnimation.bind(animationManager),
   };
 
   await module.default(exampleSettings);
@@ -302,6 +305,17 @@ async function initRenderer(
    */
   let fpsSampleIndex = 0;
   let fpsSamplesLeft = fpsSampleCount;
+
+  const animationManager = new AnimationManager(renderer.stage);
+
+  renderer.on(
+    'frameTick',
+    (target: RendererMain, payload: FrameTickPayload) => {
+      // Update the animation manager with the delta time
+      animationManager.update(payload.delta);
+    },
+  );
+
   renderer.on(
     'fpsUpdate',
     (target: RendererMain, fpsData: FpsUpdatePayload) => {
@@ -372,7 +386,7 @@ async function initRenderer(
 
   assertTruthy(appElement instanceof HTMLDivElement);
 
-  return { renderer, appElement };
+  return { renderer, appElement, animationManager };
 }
 
 function wildcardMatch(string: string, wildcardString: string) {
@@ -389,7 +403,7 @@ async function runAutomation(
   logFps: boolean,
 ) {
   const logicalPixelRatio = defaultResolution / appHeight;
-  const { renderer, appElement } = await initRenderer(
+  const { renderer, appElement, animationManager } = await initRenderer(
     renderMode,
     platform,
     logFps,
@@ -471,6 +485,7 @@ async function runAutomation(
             }
           },
           memMonitor: null,
+          animate: animationManager.createAnimation.bind(animationManager),
         };
         await automation(exampleSettings);
         testRoot.parent = null;

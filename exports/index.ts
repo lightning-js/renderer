@@ -39,7 +39,6 @@
 
 export * from '../src/main-api/INode.js';
 export * from '../src/main-api/Renderer.js';
-export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
 
 // Selected types exported from the Core Renderer that can be used in the
@@ -56,7 +55,7 @@ export {
 } from '../src/core/TextureError.js';
 export type { TextRenderer } from '../src/core/text-rendering/TextRenderer.js';
 export type { MemoryInfo } from '../src/core/TextureMemoryManager.js';
-export type { AnimationSettings } from '../src/core/animations/CoreAnimation.js';
+
 export type { TimingFunction } from '../src/core/utils.js';
 export type { Inspector } from '../src/main-api/Inspector.js';
 export {

@@ -16,3 +16,6 @@
 packages:
   - "examples"
   - "visual-regression"
+allowBuilds:
+  core-js: true
+  esbuild: true

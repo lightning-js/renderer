@@ -16,11 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
 import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
 import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
+import type { INode, ITextNode } from '../../main-api/INode.js';
+import type { CoreShaderNode } from '../renderers/CoreShaderNode.js';
 import type { Stage } from '../Stage.js';
 
 export class AnimationManager {
@@ -86,8 +86,8 @@ export class AnimationManager {
    * state (stopped via finish, manual stop, or node destruction).
    */
   createAnimation(
-    node: CoreNode,
-    props: Partial<CoreNodeAnimateProps>,
+    target: Record<string, unknown> | INode | ITextNode | CoreShaderNode,
+    props: Record<string, number>,
     settings: Partial<AnimationSettings>,
   ): IAnimationController {
     // Get or create animation
@@ -97,7 +97,19 @@ export class AnimationManager {
     } else {
       animation = new CoreAnimation();
     }
-    animation.init(node, props, settings);
+    animation.init(
+      target as unknown as Record<string, number>,
+      props,
+      settings,
+    );
+
+    if (animation.animatable === false) {
+      // Return the animation to the pool since it won't be used.
+      this.animationPool.push(animation);
+      throw new Error(
+        `AnimationManager.createAnimation() called with no animatable properties for target id=${target}`,
+      );
+    }
 
     // Get or create controller
     let controller: CoreAnimationController;
