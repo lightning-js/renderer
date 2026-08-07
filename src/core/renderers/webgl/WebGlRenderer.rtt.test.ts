@@ -25,7 +25,6 @@
  * tested at the level of its internal bookkeeping methods only.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mock } from 'vitest-mock-extended';
 import {
   CoreNode,
   CoreNodeRenderState,
@@ -33,63 +32,27 @@ import {
   type CoreNodeProps,
 } from '../../CoreNode.js';
 import type { Stage } from '../../Stage.js';
-import type { CoreRenderer } from '../CoreRenderer.js';
-import { createBound } from '../../lib/utils.js';
-import type { TextureOptions } from '../../CoreTextureManager.js';
-import { Texture } from '../../textures/Texture.js';
 import { WebGlRenderer } from './WebGlRenderer.js';
+import { makeMockStage, makeNodeProps } from '../../../../test/mockStage.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeDefaultProps = (): CoreNodeProps => ({
-  alpha: 1,
-  autosize: false,
-  boundsMargin: null,
-  clipping: false,
-  clipRadius: 0,
-  color: 0xffffffff,
-  colorBl: 0xffffffff,
-  colorBottom: 0xffffffff,
-  colorBr: 0xffffffff,
-  colorLeft: 0xffffffff,
-  colorRight: 0xffffffff,
-  colorTl: 0xffffffff,
-  colorTop: 0xffffffff,
-  colorTr: 0xffffffff,
-  h: 100,
-  mount: 0,
-  mountX: 0,
-  mountY: 0,
-  parent: null,
-  pivot: 0.5,
-  pivotX: 0.5,
-  pivotY: 0.5,
-  rotation: 0,
-  rtt: false,
-  scale: 1,
-  scaleX: 1,
-  scaleY: 1,
-  shader: null,
-  src: '',
-  texture: null,
-  textureOptions: {} as TextureOptions,
-  w: 100,
-  x: 0,
-  y: 0,
-  zIndex: 0,
-});
+const makeDefaultProps = (): CoreNodeProps =>
+  makeNodeProps({
+    pivot: 0.5,
+    pivotX: 0.5,
+    pivotY: 0.5,
+    h: 100,
+    w: 100,
+  });
 
 /**
  * Minimal mock stage that satisfies CoreNode's constructor requirements.
  */
 const makeStage = (): Stage =>
-  mock<Stage>({
-    strictBound: createBound(0, 0, 1920, 1080),
-    preloadBound: createBound(0, 0, 1920, 1080),
-    defaultTexture: { state: 'loaded' } as unknown as Texture,
-    renderer: mock<CoreRenderer>() as CoreRenderer,
+  makeMockStage({
     txManager: {
       createTexture: vi.fn().mockReturnValue({
         state: 'loaded',

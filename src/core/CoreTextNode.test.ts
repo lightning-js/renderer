@@ -22,72 +22,14 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { CoreNodeRenderState } from './CoreNode.js';
 import { Stage } from './Stage.js';
 import { CoreRenderer } from './renderers/CoreRenderer.js';
-import { mock } from 'vitest-mock-extended';
 import type { TextRenderer } from './text-rendering/TextRenderer.js';
-import { createBound } from './lib/utils.js';
+import { makeMockStage, makeTextProps } from '../../test/mockStage.js';
 
 describe('CoreTextNode', () => {
   let stage: Stage;
   let mockTextRenderer: TextRenderer;
 
-  const defaultTextProps: CoreTextNodeProps = {
-    // CoreNodeProps
-    alpha: 1,
-    autosize: false,
-    boundsMargin: null,
-    clipping: false,
-    clipRadius: 0,
-    color: 0xffffffff,
-    colorBl: 0xffffffff,
-    colorBottom: 0xffffffff,
-    colorBr: 0xffffffff,
-    colorLeft: 0xffffffff,
-    colorRight: 0xffffffff,
-    colorTl: 0xffffffff,
-    colorTop: 0xffffffff,
-    colorTr: 0xffffffff,
-    h: 0,
-    mount: 0,
-    mountX: 0,
-    mountY: 0,
-    parent: null,
-    pivot: 0,
-    pivotX: 0,
-    pivotY: 0,
-    rotation: 0,
-    rtt: false,
-    scale: 1,
-    scaleX: 1,
-    scaleY: 1,
-    shader: null,
-    src: '',
-    texture: null,
-    textureOptions: {},
-    w: 0,
-    x: 0,
-    y: 0,
-    zIndex: 0,
-    // TrProps
-    text: 'Test',
-    textAlign: 'left',
-    contain: 'none',
-    fontFamily: 'Arial',
-    fontStyle: 'normal',
-    fontSize: 16,
-    letterSpacing: 0,
-    lineHeight: 1,
-    maxHeight: 0,
-    maxLines: 0,
-    maxWidth: 0,
-    offsetY: 0,
-    overflowSuffix: '...',
-    verticalAlign: 'top',
-    wordBreak: 'break-word',
-    // CoreTextNodeProps specific
-    textRendererOverride: null,
-    forceLoad: false,
-    richText: false,
-  };
+  const defaultTextProps: CoreTextNodeProps = makeTextProps();
 
   const clippingRect = {
     x: 0,
@@ -99,14 +41,7 @@ describe('CoreTextNode', () => {
   };
 
   beforeEach(() => {
-    stage = mock<Stage>({
-      strictBound: createBound(0, 0, 1920, 1080),
-      preloadBound: createBound(0, 0, 1920, 1080),
-      defaultTexture: {
-        state: 'loaded',
-      },
-      renderer: mock<CoreRenderer>() as CoreRenderer,
-    });
+    stage = makeMockStage();
 
     // Mock text renderer with basic functionality
     mockTextRenderer = {
@@ -314,10 +249,7 @@ describe('CoreTextNode', () => {
   });
 
   function makeStageWithDeleteBuffer(deleteBuffer: ReturnType<typeof vi.fn>) {
-    return mock<Stage>({
-      strictBound: createBound(0, 0, 1920, 1080),
-      preloadBound: createBound(0, 0, 1920, 1080),
-      defaultTexture: { state: 'loaded' },
+    return makeMockStage({
       renderer: { deleteBuffer } as unknown as CoreRenderer,
     });
   }
@@ -588,10 +520,7 @@ describe('CoreTextNode', () => {
         STATIC_DRAW: 0x88e4,
         FLOAT: 0x1406,
       };
-      const sdfStage = mock<Stage>({
-        strictBound: createBound(0, 0, 1920, 1080),
-        preloadBound: createBound(0, 0, 1920, 1080),
-        defaultTexture: { state: 'loaded' },
+      const sdfStage = makeMockStage({
         renderer: { glw } as unknown as CoreRenderer,
       });
       const node = new CoreTextNode(
@@ -622,10 +551,7 @@ describe('CoreTextNode', () => {
       const setScissorTest = vi.fn();
       const scissor = vi.fn();
       const drawArrays = vi.fn();
-      const sdfStage = mock<Stage>({
-        strictBound: createBound(0, 0, 1920, 1080),
-        preloadBound: createBound(0, 0, 1920, 1080),
-        defaultTexture: { state: 'loaded' },
+      const sdfStage = makeMockStage({
         pixelRatio: 2,
         platform: { canvas: { width: 1920, height: 1080 } } as any,
         shManager: { useShader } as any,

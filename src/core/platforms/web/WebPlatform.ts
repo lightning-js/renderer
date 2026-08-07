@@ -128,7 +128,6 @@ export class WebPlatform extends Platform {
       }
 
       stage.updateFrameTime();
-      stage.updateAnimations();
 
       if (!stage.hasSceneUpdates()) {
         // We still need to calculate the fps else it looks like the app is frozen

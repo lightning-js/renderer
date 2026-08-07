@@ -26,7 +26,11 @@ const degToRad = (deg: number) => {
   return (Math.PI / 180) * deg;
 };
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -74,7 +78,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       texture: rootRenderToTextureNode.texture,
     });
 
-    const animation = a.animate(
+    const animation = animate(
+      a,
       {
         y: Math.floor(i / 1) * 800 - 15000,
       },

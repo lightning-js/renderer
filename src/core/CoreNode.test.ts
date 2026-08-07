@@ -18,21 +18,14 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { CoreNode, type CoreNodeProps, UpdateType } from './CoreNode.js';
-import { Stage } from './Stage.js';
-import { CoreRenderer } from './renderers/CoreRenderer.js';
+import { CoreNode, UpdateType } from './CoreNode.js';
 import { mock } from 'vitest-mock-extended';
-import { type TextureOptions } from './CoreTextureManager.js';
-import { createBound } from './lib/utils.js';
 import { ImageTexture } from './textures/ImageTexture.js';
+import { makeMockStage, makeNodeProps } from '../../test/mockStage.js';
 
 describe('CoreNode', () => {
-  const defaultProps: CoreNodeProps = {
+  const defaultProps = makeNodeProps({
     alpha: 0,
-    autosize: false,
-    boundsMargin: null,
-    clipping: false,
-    clipRadius: 0,
     color: 0,
     colorBl: 0,
     colorBottom: 0,
@@ -42,28 +35,10 @@ describe('CoreNode', () => {
     colorTl: 0,
     colorTop: 0,
     colorTr: 0,
-    h: 0,
-    mount: 0,
-    mountX: 0,
-    mountY: 0,
-    parent: null,
-    pivot: 0,
-    pivotX: 0,
-    pivotY: 0,
-    rotation: 0,
-    rtt: false,
     scale: 0,
     scaleX: 0,
     scaleY: 0,
-    shader: null,
-    src: '',
-    texture: null,
-    textureOptions: {} as TextureOptions,
-    w: 0,
-    x: 0,
-    y: 0,
-    zIndex: 0,
-  };
+  });
 
   const clippingRect = {
     x: 0,
@@ -74,14 +49,7 @@ describe('CoreNode', () => {
     clipRadius: 0,
   };
 
-  const stage = mock<Stage>({
-    strictBound: createBound(0, 0, 200, 200),
-    preloadBound: createBound(0, 0, 200, 200),
-    defaultTexture: {
-      state: 'loaded',
-    },
-    renderer: mock<CoreRenderer>() as CoreRenderer,
-  });
+  const stage = makeMockStage({}, { width: 200, height: 200 });
 
   describe('set color()', () => {
     it('should set all color subcomponents.', () => {

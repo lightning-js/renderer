@@ -25,6 +25,7 @@ const randomIntBetween = (from: number, to: number) =>
 
 export default async function ({
   renderer,
+  animate,
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
@@ -65,22 +66,21 @@ export default async function ({
   console.log(`Created ${numOuterNodes} nodes with the same text`);
 
   // create 100 animations
-  const animate = () => {
+  const startAnimation = () => {
     nodes.forEach((node) => {
-      node
-        .animate(
-          {
-            x: randomIntBetween(endMin, endMax),
-            y: randomIntBetween(endMin, endMax),
-          },
-          {
-            duration: 3000,
-            loop: true,
-          },
-        )
-        .start();
+      animate(
+        node,
+        {
+          x: randomIntBetween(endMin, endMax),
+          y: randomIntBetween(endMin, endMax),
+        },
+        {
+          duration: 3000,
+          loop: true,
+        },
+      ).start();
     });
   };
 
-  animate();
+  startAnimation();
 }

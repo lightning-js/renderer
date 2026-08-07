@@ -88,7 +88,11 @@ const benchResults: BenchResult[] = [];
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   // Background
   renderer.createNode({
     x: 0,
@@ -146,6 +150,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       animationStarts.push(
         ...addAnimatedChildren(
           renderer,
+          animate,
           outer,
           Math.max(2, Math.floor(CHILD_COUNT / 4)),
         ),
@@ -171,6 +176,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       animationStarts.push(
         ...addAnimatedChildren(
           renderer,
+          animate,
           mid,
           Math.max(2, Math.floor(CHILD_COUNT / 2)),
         ),
@@ -194,7 +200,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
         parent: inner,
       });
       animationStarts.push(
-        ...addAnimatedChildren(renderer, inner, CHILD_COUNT),
+        ...addAnimatedChildren(renderer, animate, inner, CHILD_COUNT),
       );
 
       rttContainers.push(outer, mid, inner);
@@ -211,7 +217,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
       rttContainers.push(container);
       animationStarts.push(
-        ...addAnimatedChildren(renderer, container, CHILD_COUNT),
+        ...addAnimatedChildren(renderer, animate, container, CHILD_COUNT),
       );
     }
   }
@@ -578,6 +584,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
 function addAnimatedChildren(
   renderer: ExampleSettings['renderer'],
+  animate: ExampleSettings['animate'],
   parent: ReturnType<typeof renderer.createNode>,
   count: number,
 ): (() => void)[] {
@@ -608,18 +615,17 @@ function addAnimatedChildren(
       // Vary duration and delay per child to spread phases naturally.
       // stopMethod: 'reverse' produces a smooth ping-pong colour pulse.
       starts.push(() => {
-        child
-          .animate(
-            { color: 0xff2244ff },
-            {
-              duration: 1600 + i * 113,
-              loop: true,
-              stopMethod: 'reverse',
-              easing: 'ease-in-out',
-              delay: i * 37,
-            },
-          )
-          .start();
+        animate(
+          child,
+          { color: 0xff2244ff },
+          {
+            duration: 1600 + i * 113,
+            loop: true,
+            stopMethod: 'reverse',
+            easing: 'ease-in-out',
+            delay: i * 37,
+          },
+        ).start();
       });
     }
   }

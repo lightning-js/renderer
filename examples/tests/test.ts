@@ -17,14 +17,19 @@
  * limitations under the License.
  */
 
-import { type INode, type IAnimationController } from '@lightningjs/renderer';
+import { type INode } from '@lightningjs/renderer';
+import { type IAnimationController } from '@lightningjs/renderer/animation';
 import rocko from '../assets/rocko.png';
 import elevator from '../assets/elevator.png';
 import spritemap from '../assets/spritemap.png';
 import { Character } from '../common/Character.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const redRect = renderer.createNode({
     x: 0,
     y: 0,
@@ -185,47 +190,48 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       // force behind elevator
       rockoRect.zIndex = 1;
 
-      rockoAnimation = rockoRect.animate({}, { duration: 1000 }).start();
+      rockoAnimation = animate(
+        rockoRect,
+        { alpha: 1 },
+        { duration: 1000 },
+      ).start();
       await rockoAnimation.waitUntilStopped();
 
-      rockoAnimation = rockoRect
-        .animate(
-          {
-            x: 400,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      rockoAnimation = animate(
+        rockoRect,
+        {
+          x: 400,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
       await rockoAnimation.waitUntilStopped();
 
-      rockoAnimation = rockoRect
-        .animate(
-          {
-            y: elevatorRect.h - rockoRect.h,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      rockoAnimation = animate(
+        rockoRect,
+        {
+          y: elevatorRect.h - rockoRect.h,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
       await rockoAnimation.waitUntilStopped();
 
       // force before elevator
       rockoRect.zIndex = 3;
 
-      rockoAnimation = rockoRect
-        .animate(
-          {
-            x: renderer.settings.appWidth,
-            // y: 100,
-          },
-          {
-            duration: 2616,
-          },
-        )
-        .start();
+      rockoAnimation = animate(
+        rockoRect,
+        {
+          x: renderer.settings.appWidth,
+          // y: 100,
+        },
+        {
+          duration: 2616,
+        },
+      ).start();
       await rockoAnimation.waitUntilStopped();
 
       console.log('resetting rocko');
@@ -241,56 +247,52 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     while (true) {
       elevatorNumber.text = 'Dn';
       elevatorRect.color = 0x0000ffff;
-      elevatorAnimation = elevatorRect
-        .animate(
-          {
-            y: 1080 - elevatorRect.h,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      elevatorAnimation = animate(
+        elevatorRect,
+        {
+          y: 1080 - elevatorRect.h,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
       await elevatorAnimation.waitUntilStopped();
 
-      elevatorAnimation = elevatorRect
-        .animate(
-          {
-            // y: 1080 - elevatorRect.h,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      elevatorAnimation = animate(
+        elevatorRect,
+        {
+          alpha: 1,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
       await elevatorAnimation.waitUntilStopped();
 
       elevatorNumber.text = 'Up';
 
       elevatorRect.color = 0x00ff00ff;
-      elevatorAnimation = elevatorRect
-        .animate(
-          {
-            y: 0,
-          },
-          {
-            duration: 1000,
-          },
-        )
-        .start();
+      elevatorAnimation = animate(
+        elevatorRect,
+        {
+          y: 0,
+        },
+        {
+          duration: 1000,
+        },
+      ).start();
       await elevatorAnimation.waitUntilStopped();
 
       elevatorRect.color = 0x00ff00ff;
-      elevatorAnimation = elevatorRect
-        .animate(
-          {
-            // y: 0,
-          },
-          {
-            duration: 2616,
-          },
-        )
-        .start();
+      elevatorAnimation = animate(
+        elevatorRect,
+        {
+          alpha: 1,
+        },
+        {
+          duration: 2616,
+        },
+      ).start();
       await elevatorAnimation.waitUntilStopped();
     }
   }, 1000);
@@ -365,24 +367,23 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'ArrowLeft') {
       character.setState('left', 'walk');
-      character.node
-        .animate(
-          {
-            x: character.node.x - 30,
-          },
-          { duration: 200 },
-        )
-        .start();
+      animate(
+        character.node,
+        {
+          x: character.node.x - 30,
+        },
+        { duration: 200 },
+      ).start();
     } else if (e.code === 'ArrowRight') {
       character.setState('right', 'walk');
-      character.node
-        .animate(
-          {
-            x: character.node.x + 30,
-          },
-          { duration: 200 },
-        )
-        .start();
+
+      animate(
+        character.node,
+        {
+          x: character.node.x + 30,
+        },
+        { duration: 200 },
+      ).start();
     } else if (e.code === 'Space') {
       character.setState(character.direction, 'jump');
     }

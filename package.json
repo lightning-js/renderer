@@ -1,6 +1,6 @@
 {
   "name": "@lightningjs/renderer",
-  "version": "3.1.5",
+  "version": "3.1.6",
   "description": "Lightning 3 Renderer",
   "type": "module",
   "main": "./dist/exports/index.js",
@@ -12,7 +12,8 @@
     "./webgl": "./dist/exports/webgl.js",
     "./webgl/shaders": "./dist/exports/webgl-shaders.js",
     "./inspector": "./dist/exports/inspector.js",
-    "./platforms": "./dist/exports/platform.js"
+    "./platforms": "./dist/exports/platform.js",
+    "./animation": "./dist/exports/animation.js"
   },
   "scripts": {
     "start": "cd examples && pnpm start",
@@ -85,7 +86,7 @@
     "README.md",
     "scripts"
   ],
-  "packageManager": "pnpm@10.17.0",
+  "packageManager": "pnpm@11.20.0",
   "engines": {
     "npm": ">= 10.0.0",
     "pnpm": ">= 10.17.0",

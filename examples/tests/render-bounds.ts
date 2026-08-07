@@ -1,7 +1,11 @@
-import type { IAnimationController } from '@lightningjs/renderer';
+import type { IAnimationController } from '@lightningjs/renderer/animation';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const degToRad = (deg: number) => {
     return (Math.PI / 180) * deg;
   };
@@ -40,29 +44,27 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setTimeout(async () => {
     while (true) {
-      redRectAnimation = redRect
-        .animate(
-          {
-            x: 0,
-          },
-          {
-            delay: 2000,
-            duration: 2000,
-          },
-        )
-        .start();
+      redRectAnimation = animate(
+        redRect,
+        {
+          x: 0,
+        },
+        {
+          delay: 2000,
+          duration: 2000,
+        },
+      ).start();
       await redRectAnimation.waitUntilStopped();
 
-      redRectAnimation = redRect
-        .animate(
-          {
-            x: -205,
-          },
-          {
-            duration: 2000,
-          },
-        )
-        .start();
+      redRectAnimation = animate(
+        redRect,
+        {
+          x: -205,
+        },
+        {
+          duration: 2000,
+        },
+      ).start();
       await redRectAnimation.waitUntilStopped();
     }
   }, 1000);
@@ -91,31 +93,29 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setTimeout(async () => {
     while (true) {
-      blueRectAnimation = blueRect
-        .animate(
-          {
-            rotation: degToRad(360),
-            x: 1000,
-          },
-          {
-            delay: 1000,
-            duration: 2000,
-          },
-        )
-        .start();
+      blueRectAnimation = animate(
+        blueRect,
+        {
+          rotation: degToRad(360),
+          x: 1000,
+        },
+        {
+          delay: 1000,
+          duration: 2000,
+        },
+      ).start();
       await blueRectAnimation.waitUntilStopped();
 
-      blueRectAnimation = blueRect
-        .animate(
-          {
-            rotation: degToRad(45),
-            x: 2400,
-          },
-          {
-            duration: 2000,
-          },
-        )
-        .start();
+      blueRectAnimation = animate(
+        blueRect,
+        {
+          rotation: degToRad(45),
+          x: 2400,
+        },
+        {
+          duration: 2000,
+        },
+      ).start();
       await blueRectAnimation.waitUntilStopped();
     }
   }, 1000);

@@ -19,7 +19,11 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const randomColor = () => {
     const randomInt = Math.floor(Math.random() * Math.pow(2, 32));
     const hexString = randomInt.toString(16).padStart(8, '0');
@@ -98,35 +102,33 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   setTimeout(async () => {
-    const dimension = node
-      .animate(
-        {
-          w: 1920,
-        },
-        {
-          duration: 450,
-          loop: false,
-          stopMethod: 'reverse',
-          easing: 'ease-in-out',
-        },
-      )
-      .start();
+    const dimension = animate(
+      node,
+      {
+        w: 1920,
+      },
+      {
+        duration: 450,
+        loop: false,
+        stopMethod: 'reverse',
+        easing: 'ease-in-out',
+      },
+    ).start();
 
     await dimension.waitUntilStopped();
 
-    const rotate = node
-      .animate(
-        {
-          rotation: Math.PI,
-        },
-        {
-          duration: rnd(1500, 1700),
-          loop: false,
-          stopMethod: 'reverse',
-          easing: 'ease-in-out',
-        },
-      )
-      .start();
+    const rotate = animate(
+      node,
+      {
+        rotation: Math.PI,
+      },
+      {
+        duration: rnd(1500, 1700),
+        loop: false,
+        stopMethod: 'reverse',
+        easing: 'ease-in-out',
+      },
+    ).start();
     await rotate.waitUntilStopped();
   }, 2300);
 }

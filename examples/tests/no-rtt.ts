@@ -16,7 +16,11 @@ const animationSettings: Partial<AnimationExampleSettings> = {
   easing: 'ease-in-out-back',
 };
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -60,7 +64,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       src: `https://picsum.photos/id/${image + 30}/120/120`,
     });
 
-    const animation = a.animate(
+    const animation = animate(
+      a,
       {
         y: Math.floor(i / 15) * 120 - 5000,
       },

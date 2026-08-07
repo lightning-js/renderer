@@ -55,8 +55,6 @@ import {
 } from './lib/utils.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import { RenderCoords } from './lib/RenderCoords.js';
-import type { AnimationSettings } from './animations/CoreAnimation.js';
-import type { IAnimationController } from '../common/IAnimationController.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
 import { AutosizeMode, Autosizer } from './Autosizer.js';
 import { bucketSortByZIndex, removeChild } from './lib/collectionUtils.js';
@@ -1709,6 +1707,9 @@ export class CoreNode extends EventEmitter {
 
     const previous = this.renderState;
     this.renderState = renderState;
+    // Render state transitions (in/out of bounds, visibility) change which
+    // nodes appear in the flat render list, so mark it stale.
+    this.stage.requestRenderListUpdate();
     const event = CoreNodeRenderStateMap.get(renderState);
     assertTruthy(event);
     this.emit(event, {
@@ -1784,6 +1785,9 @@ export class CoreNode extends EventEmitter {
 
     // Emit event if renderable status has changed
     if (previousIsRenderable !== isRenderable) {
+      // Renderable changes alter which nodes are present in the flat render
+      // list, so mark it stale.
+      this.stage.requestRenderListUpdate();
       this.emit('renderable', {
         type: 'renderable',
         isRenderable,
@@ -1979,6 +1983,9 @@ export class CoreNode extends EventEmitter {
     this.removeAllListeners();
 
     this.destroyed = true;
+    // Remove from the Stage's interactive Set so a destroyed node isn't
+    // retained forever (memory leak: destroyed CoreNodes stayed pinned here).
+    this.stage.interactiveNodes.delete(this);
     this.unloadTexture();
     this.isRenderable = false;
     if (this.hasShaderTimeFn === true) {
@@ -2079,6 +2086,9 @@ export class CoreNode extends EventEmitter {
       return;
     }
     bucketSortByZIndex(children, min);
+    // The flat render list caches child order, so any actual re-order
+    // invalidates it.
+    this.stage.requestRenderListUpdate();
   }
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
@@ -2093,6 +2103,10 @@ export class CoreNode extends EventEmitter {
     }
     const children = this.children;
     removeChild(node, children);
+
+    // The flat render list caches which nodes are present, so any structural
+    // change invalidates it.
+    this.stage.requestRenderListUpdate();
 
     if (children.length === 0) {
       this.zIndexMin = 0;
@@ -2163,6 +2177,9 @@ export class CoreNode extends EventEmitter {
       this.setUpdateType(UpdateType.SortZIndexChildren);
     }
     this.setUpdateType(UpdateType.Children);
+    // The flat render list caches which nodes are present, so any structural
+    // change invalidates it.
+    this.stage.requestRenderListUpdate();
   }
 
   //#region Properties
@@ -2475,6 +2492,8 @@ export class CoreNode extends EventEmitter {
       UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
     );
     this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+    // Clipping toggles the stencil begin/end ops in the flat render list.
+    this.stage.requestRenderListUpdate();
   }
 
   get clipRadius(): number {
@@ -2488,6 +2507,8 @@ export class CoreNode extends EventEmitter {
         UpdateType.Clipping | UpdateType.RenderBounds | UpdateType.Children,
       );
       this.childUpdateType |= UpdateType.Global | UpdateType.Clipping;
+      // clipRadius toggles the stencil begin/end ops in the flat render list.
+      this.stage.requestRenderListUpdate();
     }
   }
 
@@ -2923,6 +2944,10 @@ export class CoreNode extends EventEmitter {
     // Update Stage's interactive Set
     if (value === true) {
       this.stage.interactiveNodes.add(this);
+    } else {
+      // Ensure the node is removed when interactivity is turned off/unset,
+      // otherwise it stays pinned in the Set and leaks.
+      this.stage.interactiveNodes.delete(this);
     }
   }
 
@@ -2933,13 +2958,6 @@ export class CoreNode extends EventEmitter {
   setRTTUpdates(type: number) {
     this.hasRTTupdates = true;
     this.parent?.setRTTUpdates(type);
-  }
-
-  animate(
-    props: Partial<CoreNodeAnimateProps>,
-    settings: Partial<AnimationSettings>,
-  ): IAnimationController {
-    return this.stage.animationManager.createAnimation(this, props, settings);
   }
 
   flush() {

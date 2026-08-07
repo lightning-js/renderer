@@ -69,6 +69,7 @@ interface ClipNode {
 
 export default async function test({
   renderer,
+  animate,
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
@@ -169,17 +170,16 @@ export default async function test({
       }
     }
 
-    list
-      .animate(
-        { y: -(listH - (H - PADDING * 2)) },
-        {
-          duration: 4000,
-          loop: true,
-          stopMethod: 'reverse',
-          easing: 'ease-in-out',
-        },
-      )
-      .start();
+    animate(
+      list,
+      { y: -(listH - (H - PADDING * 2)) },
+      {
+        duration: 4000,
+        loop: true,
+        stopMethod: 'reverse',
+        easing: 'ease-in-out',
+      },
+    ).start();
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -214,17 +214,16 @@ export default async function test({
       const destX = randomBetween(0, W - CARD_W);
       const destY = randomBetween(0, H - CARD_H);
       const dur = randomBetween(1500, 4000);
-      card
-        .animate(
-          { x: destX, y: destY },
-          {
-            duration: dur,
-            loop: true,
-            stopMethod: 'reverse',
-            easing: 'ease-in-out',
-          },
-        )
-        .start();
+      animate(
+        card,
+        { x: destX, y: destY },
+        {
+          duration: dur,
+          loop: true,
+          stopMethod: 'reverse',
+          easing: 'ease-in-out',
+        },
+      ).start();
     }
   }
 
@@ -297,31 +296,29 @@ export default async function test({
 
       const zoomDur = randomBetween(800, 1800);
       const zoomScale = randomBetween(1.1, 1.6);
-      thumb
-        .animate(
-          { scaleX: zoomScale, scaleY: zoomScale },
-          {
-            duration: zoomDur,
-            loop: true,
-            stopMethod: 'reverse',
-            easing: 'ease-in-out',
-            delay: (i / NUM_CELLS) * zoomDur,
-          },
-        )
-        .start();
-    }
-
-    row
-      .animate(
-        { x: -(rowW - W) },
+      animate(
+        thumb,
+        { scaleX: zoomScale, scaleY: zoomScale },
         {
-          duration: 5000,
+          duration: zoomDur,
           loop: true,
           stopMethod: 'reverse',
           easing: 'ease-in-out',
+          delay: (i / NUM_CELLS) * zoomDur,
         },
-      )
-      .start();
+      ).start();
+    }
+
+    animate(
+      row,
+      { x: -(rowW - W) },
+      {
+        duration: 5000,
+        loop: true,
+        stopMethod: 'reverse',
+        easing: 'ease-in-out',
+      },
+    ).start();
   }
 
   // ── HUD label (top-right corner) ─────────────────────────────────────────

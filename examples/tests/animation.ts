@@ -17,10 +17,8 @@
  * limitations under the License.
  */
 
-import type {
-  IAnimationController,
-  TimingFunction,
-} from '@lightningjs/renderer';
+import type { TimingFunction } from '@lightningjs/renderer';
+import type { IAnimationController } from '@lightningjs/renderer/animation';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 interface AnimationExampleSettings {
@@ -31,7 +29,11 @@ interface AnimationExampleSettings {
   stopMethod: 'reverse' | 'reset' | false;
 }
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  testRoot,
+  animate,
+}: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -140,7 +142,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       currentAnimation.stop();
     }
 
-    currentAnimation = animatableNode.animate(
+    currentAnimation = animate(
+      animatableNode,
       {
         x: renderer.settings.appWidth - animatableNode.w,
       },

@@ -29,7 +29,11 @@ export async function automation(settings: ExampleSettings) {
   await testPage();
 }
 
-export default async function test({ renderer, testRoot }: ExampleSettings) {
+export default async function test({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const instructionText = renderer.createTextNode({
     text: 'Press space to start animation, arrow keys to move, enter to reset',
     fontSize: 30,
@@ -263,58 +267,56 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
   });
 
   let runAnimation = false;
-  const animate = async () => {
-    redRect
-      .animate(
-        {
-          x: -500,
-        },
-        {
-          duration: 4000,
-        },
-      )
-      .start();
+  const startAnimation = async () => {
+    animate(
+      redRect,
+      {
+        x: -500,
+      },
+      {
+        duration: 4000,
+      },
+    ).start();
 
-    await blueRect
-      .animate(
-        {
-          x: -1200,
-        },
-        {
-          duration: 4000,
-        },
-      )
+    await animate(
+      blueRect,
+      {
+        x: -1200,
+      },
+      {
+        duration: 4000,
+      },
+    )
       .start()
       .waitUntilStopped();
 
     redRect.x = 1920 + 400;
     blueRect.x = 1920 + 400;
 
-    redRect
-      .animate(
-        {
-          x: 520,
-        },
-        {
-          duration: 4000,
-        },
-      )
-      .start();
+    animate(
+      redRect,
+      {
+        x: 520,
+      },
+      {
+        duration: 4000,
+      },
+    ).start();
 
-    await blueRect
-      .animate(
-        {
-          x: 1920 / 2 - 200,
-        },
-        {
-          duration: 4000,
-        },
-      )
+    await animate(
+      blueRect,
+      {
+        x: 1920 / 2 - 200,
+      },
+      {
+        duration: 4000,
+      },
+    )
       .start()
       .waitUntilStopped();
 
     if (runAnimation) {
-      setTimeout(animate, 2000);
+      setTimeout(startAnimation, 2000);
     }
   };
 
@@ -466,7 +468,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-        animate();
+        startAnimation();
       }
     }
 

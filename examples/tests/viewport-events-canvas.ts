@@ -19,7 +19,11 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const instructionText = renderer.createTextNode({
     text: 'Press space to start animation, arrow keys to move, enter to reset',
     fontSize: 30,
@@ -122,58 +126,56 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   });
 
   let runAnimation = false;
-  const animate = async () => {
-    redText
-      .animate(
-        {
-          x: -500,
-        },
-        {
-          duration: 4000,
-        },
-      )
-      .start();
+  const startAnimation = async () => {
+    animate(
+      redText,
+      {
+        x: -500,
+      },
+      {
+        duration: 4000,
+      },
+    ).start();
 
-    await blueText
-      .animate(
-        {
-          x: -1200,
-        },
-        {
-          duration: 4000,
-        },
-      )
+    await animate(
+      blueText,
+      {
+        x: -1200,
+      },
+      {
+        duration: 4000,
+      },
+    )
       .start()
       .waitUntilStopped();
 
     redText.x = 1920 + 400;
     blueText.x = 1920 + 400;
 
-    redText
-      .animate(
-        {
-          x: 520,
-        },
-        {
-          duration: 4000,
-        },
-      )
-      .start();
+    animate(
+      redText,
+      {
+        x: 520,
+      },
+      {
+        duration: 4000,
+      },
+    ).start();
 
-    await blueText
-      .animate(
-        {
-          x: 1920 / 2 - 200,
-        },
-        {
-          duration: 4000,
-        },
-      )
+    await animate(
+      blueText,
+      {
+        x: 1920 / 2 - 200,
+      },
+      {
+        duration: 4000,
+      },
+    )
       .start()
       .waitUntilStopped();
 
     if (runAnimation) {
-      setTimeout(animate, 2000);
+      setTimeout(startAnimation, 2000);
     }
   };
 
@@ -183,7 +185,7 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       runAnimation = !runAnimation;
 
       if (runAnimation) {
-        animate();
+        startAnimation();
       }
     }
 
