@@ -36,7 +36,7 @@ import type {
   NodeTextLoadedPayload,
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { RectWithValid } from './lib/utils.js';
+import type { RectWithValid, SdfBatchKey } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
 import { Matrix3d } from './lib/Matrix3d.js';
@@ -392,6 +392,28 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       stage: this.stage,
       sdfCache: this._sdfCache ?? undefined,
     });
+  }
+
+  /**
+   * {@inheritDoc CoreNode.getSdfBatchKey}
+   *
+   * SDF text renders through the renderer's shared batched buffer and is
+   * eligible for deferred, sorted emission in the main pass. Canvas text,
+   * un-laid-out nodes, and text inside render-to-texture subtrees return
+   * `null` and keep the inline traversal path.
+   */
+  override getSdfBatchKey(): SdfBatchKey | null {
+    if (this.parentHasRenderTexture === true) {
+      return null;
+    }
+    if (this._renderInfo === null || this._renderInfo.type === 'canvas') {
+      return null;
+    }
+    return {
+      richText: this._renderInfo.layout.richText,
+      fontFamily: this.textProps.fontFamily,
+      clippingRect: this.clippingRect,
+    };
   }
 
   override updateRenderState(renderState: CoreNodeRenderState): void {

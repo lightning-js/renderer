@@ -574,6 +574,77 @@ describe('CoreTextNode', () => {
     });
   });
 
+  describe('SDF batch key', () => {
+    it('returns a batch key for main-pass SDF text', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      (node as any).handleRenderResult(createSdfRenderInfo());
+
+      const key = node.getSdfBatchKey();
+      expect(key).not.toBeNull();
+      expect(key!.richText).toBe(false);
+      expect(key!.fontFamily).toBe('Arial');
+      expect(key!.clippingRect).toBe(node.clippingRect);
+    });
+
+    it('reflects the rich layout in the batch key', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+      const info = createSdfRenderInfo();
+      info.layout.richText = true;
+
+      (node as any).handleRenderResult(info);
+
+      expect(node.getSdfBatchKey()!.richText).toBe(true);
+    });
+
+    it('uses the node font family, not the layout font family', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      (node as any).handleRenderResult(createSdfRenderInfo());
+      node.fontFamily = 'NotoSans';
+
+      expect(node.getSdfBatchKey()!.fontFamily).toBe('NotoSans');
+    });
+
+    it('returns null before layout generation', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      expect(node.getSdfBatchKey()).toBeNull();
+    });
+
+    it('returns null for canvas text', () => {
+      const canvasTextRenderer = {
+        ...mockTextRenderer,
+        type: 'canvas' as const,
+      } as any;
+      const node = new CoreTextNode(
+        stage,
+        defaultTextProps,
+        canvasTextRenderer,
+      );
+
+      (node as any)._renderInfo = {
+        type: 'canvas',
+        width: 100,
+        height: 20,
+        imageData: {} as ImageData,
+        hasRemainingText: false,
+        remainingLines: 0,
+      };
+
+      expect(node.getSdfBatchKey()).toBeNull();
+    });
+
+    it('returns null for text inside a render-to-texture subtree', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      (node as any).handleRenderResult(createSdfRenderInfo());
+      (node as any).parentHasRenderTexture = true;
+
+      expect(node.getSdfBatchKey()).toBeNull();
+    });
+  });
+
   // -------------------------------------------------------------------------
   // richText property
   // -------------------------------------------------------------------------
