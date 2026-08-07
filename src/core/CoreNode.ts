@@ -2017,12 +2017,12 @@ export class CoreNode extends EventEmitter {
       this.stage.untrackTimedNode(this);
     }
 
+    const { children, parent } = this;
     // Kill children
-    while (this.children.length > 0) {
-      this.children[0]!.destroy();
+    for (let i = children.length - 1; i > -1; i--) {
+      children[i]!.destroy();
     }
 
-    const parent = this.parent;
     if (parent !== null) {
       parent.removeChild(this);
     }
