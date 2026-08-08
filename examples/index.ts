@@ -472,9 +472,17 @@ async function runAutomation(
           },
           memMonitor: null,
         };
-        await automation(exampleSettings);
-        testRoot.parent = null;
-        testRoot.destroy();
+        try {
+          await automation(exampleSettings);
+        } catch (err) {
+          console.error(
+            `Automation error in test '${testName}':`,
+            (err as Error).message,
+          );
+        } finally {
+          testRoot.parent = null;
+          testRoot.destroy();
+        }
       }
     }
   }

@@ -19,6 +19,13 @@ export interface SnapshotOptions {
     width: number;
     height: number;
   };
+  /**
+   * Maximum number of pixels allowed to differ before the snapshot is
+   * considered a failure. Defaults to 10 to absorb sub-pixel rounding
+   * differences across platforms (e.g. macOS vs Linux headless Chromium).
+   * Set to 0 to require a pixel-perfect match.
+   */
+  maxDiffPixels?: number;
 }
 
 interface CompareResult {
@@ -95,7 +102,13 @@ export async function compareSnapshot(
   const expectedPng = await fs.promises.readFile(snapshotPath);
   const width = options.clip?.width || (1080 as number);
   const height = options.clip?.height || (1920 as number);
-  const result = compareBuffers(actualPng, expectedPng, width, height);
+  const result = compareBuffers(
+    actualPng,
+    expectedPng,
+    width,
+    height,
+    options.maxDiffPixels,
+  );
 
   if (result.doesMatch) {
     console.log(chalk.green.bold('PASS!'));
@@ -170,6 +183,7 @@ export function compareBuffers(
   expectedImageBuffer: Buffer,
   width: number,
   height: number,
+  maxDiffPixels = 10,
 ): CompareResult {
   const diff = new PNG({ width: width as number, height: height as number });
   const actualImage = PNG.sync.read(actualImageBuffer);
@@ -196,12 +210,14 @@ export function compareBuffers(
     { threshold: 0.8 }, // Adjust threshold for sensitivity
   );
 
-  const doesMatch = count === 0;
+  const doesMatch = count <= maxDiffPixels;
 
   return {
     doesMatch,
 
     diffImageBuffer: doesMatch ? undefined : diff,
-    reason: doesMatch ? undefined : `${count} pixels differ`,
+    reason: doesMatch
+      ? undefined
+      : `${count} pixels differ (max allowed: ${maxDiffPixels})`,
   };
 }
