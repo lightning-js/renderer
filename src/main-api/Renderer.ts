@@ -526,6 +526,7 @@ export class RendererMain extends EventEmitter {
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || WebPlatform,
       maxRetryCount: settings.maxRetryCount ?? 5,
+      handleLoopError: settings.handleLoopError,
     };
 
     const {
