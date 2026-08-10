@@ -315,61 +315,6 @@ export function valuesAreEqual(values: number[]) {
   return true;
 }
 
-/**
- * Comparable batch key for main-pass SDF text nodes.
- *
- * The WebGL renderer only merges consecutive SDF text writes into a single
- * draw call when they share a GPU vertex layout (plain 6f vs rich 7f per
- * vertex), the same glyph atlas (created per font family), and the same
- * scissor clipping rect (see {@link WebGlRenderer.finalizeSdfBatch}). Sorting
- * the visible SDF text nodes by this key at render-list build time groups them
- * into contiguous buffer ranges, so alternating plain/rich text inside cards
- * or rails still renders in one draw call per (layout, atlas, clip) group
- * without the app having to order its children.
- *
- * {@link CoreNode.getSdfBatchKey} returns `null` for nodes that must keep
- * writing inline (images, canvas text, text inside render-to-texture
- * subtrees); a non-null key marks the node as eligible for deferred, sorted
- * emission in the main pass.
- */
-export interface SdfBatchKey {
-  /** true = rich layout (7 floats/vertex), false = plain layout (6 floats/vertex). */
-  richText: boolean;
-  /** Font family owning the glyph atlas. The atlas is created per family. */
-  fontFamily: string;
-  /** World-space scissor clipping rect the glyphs are clipped to. */
-  clippingRect: RectWithValid;
-}
-
-/**
- * Total ordering over {@link SdfBatchKey} used to group SDF text writes.
- *
- * Order matches the fields {@link WebGlRenderer.finalizeSdfBatch} compares
- * (layout, atlas, clip rect incl. radius), so equal keys are guaranteed to
- * merge when written adjacently. `Array.prototype.sort` is stable, so nodes
- * with equal keys keep their scene order and thus their relative z-order
- * within a group.
- */
-export function compareSdfBatchKeys(a: SdfBatchKey, b: SdfBatchKey): number {
-  if (a.richText !== b.richText) {
-    return a.richText ? 1 : -1;
-  }
-  if (a.fontFamily !== b.fontFamily) {
-    return a.fontFamily < b.fontFamily ? -1 : 1;
-  }
-  return compareRectOrdered(a.clippingRect, b.clippingRect);
-}
-
-function compareRectOrdered(a: RectWithValid, b: RectWithValid): number {
-  if (a.x !== b.x) return a.x < b.x ? -1 : 1;
-  if (a.y !== b.y) return a.y < b.y ? -1 : 1;
-  if (a.w !== b.w) return a.w < b.w ? -1 : 1;
-  if (a.h !== b.h) return a.h < b.h ? -1 : 1;
-  if (a.clipRadius !== b.clipRadius)
-    return a.clipRadius < b.clipRadius ? -1 : 1;
-  return 0;
-}
-
 export function calcFactoredRadiusArray(
   radius: Vec4,
   width: number,

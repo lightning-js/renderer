@@ -139,7 +139,6 @@ const makeRenderer = (nodes: CoreNode[] = []): RendererHarness => {
   (renderer as any).sdfBufferPlain = sdfBuffer;
   (renderer as any).sdfBufferRich = sdfBuffer;
   (renderer as any).curSdfRenderOp = null;
-  (renderer as any).coreTextRenderOps = [];
 
   return { renderer, glw, stage };
 };
