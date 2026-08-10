@@ -51,7 +51,13 @@ import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
-import { createBound, createPreloadBounds, type Bound } from './lib/utils.js';
+import {
+  compareSdfBatchKeys,
+  createBound,
+  createPreloadBounds,
+  type Bound,
+  type SdfBatchKey,
+} from './lib/utils.js';
 import type { Texture } from './textures/Texture.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import type { Platform, PlatformSettings } from './platforms/Platform.js';
@@ -183,12 +189,22 @@ export class Stage {
   //   renderListOps[i] = 0  → renderQuads(renderListNodes[i])
   //   renderListOps[i] = 1  → beginRoundedClip(renderListNodes[i])
   //   renderListOps[i] = 2  → endRoundedClip(renderListNodes[i])
+  //
+  // Main-pass SDF text nodes are NOT in the op sequence. buildRenderList
+  // collects them into `renderListSdfTextNodes` (scene order) and sorts them
+  // by batch key (layout, atlas, clip rect) so consecutive writes sharing a
+  // key merge into a single draw call; the sorted list is emitted after the
+  // main list on every frame (see writeRenderListSdfText).
+  //
   // renderListNodes is also read by the WebGL renderer (surgical uploads and
   // slot invalidation), so it is public.
   public renderListNodes: CoreNode[] = [];
   private renderListOps: Uint8Array = new Uint8Array(256);
   public renderListLen = 0;
   private renderListDirty = true;
+
+  /** Main-pass SDF text nodes in batch-key order; written after the main list. */
+  private renderListSdfTextNodes: CoreNode[] = [];
 
   // Font resolve optimisation flags
   private hasOnlyOneFontEngine: boolean;
@@ -542,7 +558,9 @@ export class Stage {
     if (this.renderListDirty === true) {
       this.renderListLen = 0;
       this.renderListNodes.length = 0;
+      this.renderListSdfTextNodes.length = 0;
       this.buildRenderList(this.root);
+      this.sortRenderListSdfTextNodes();
       this.renderListDirty = false;
     } else {
       const nodes = this.renderListNodes;
@@ -560,6 +578,10 @@ export class Stage {
         }
       }
     }
+
+    // Emit main-pass SDF text in sorted batch order (both build and replay
+    // frames) so each (layout, atlas, clip) group stays one contiguous run.
+    this.writeRenderListSdfText();
 
     // Perform render pass
     renderer.render();
@@ -747,9 +769,18 @@ export class Stage {
     }
 
     if (node.isRenderable === true) {
-      node.renderQuads(renderer);
-      if (cache === true) {
-        this.pushRenderOp(node, 0);
+      // Main-pass SDF text is collected and emitted in sorted batch order
+      // after the traversal so alternating plain/rich text still merges into
+      // one draw call per (layout, atlas, clip) group. Text inside
+      // render-to-texture subtrees (cache=false) and all non-SDF nodes write
+      // inline during the traversal as before.
+      if (cache === true && node.getSdfBatchKey() !== null) {
+        this.renderListSdfTextNodes.push(node);
+      } else {
+        node.renderQuads(renderer);
+        if (cache === true) {
+          this.pushRenderOp(node, 0);
+        }
       }
     }
 
@@ -776,6 +807,51 @@ export class Stage {
       if (cache === true) {
         this.pushRenderOp(node, 2);
       }
+    }
+  }
+
+  /**
+   * Sort the collected main-pass SDF text nodes into batch-key order.
+   *
+   * Only runs when the render list is rebuilt, so the sorted order is cached
+   * across frames. A stable sort keeps nodes with equal keys (same layout,
+   * atlas, and clip rect) in their scene order, preserving their relative
+   * z-order within a group. Runtime key changes without a structural rebuild
+   * (e.g. a fontFamily or clip change) only leave the sort sub-optimal, never
+   * incorrect: `finalizeSdfBatch` still keys off the actual values at write
+   * time and the SdfVertexCache reorder tracking re-uploads on offset shifts.
+   */
+  private sortRenderListSdfTextNodes(): void {
+    const nodes = this.renderListSdfTextNodes;
+    const len = nodes.length;
+    if (len < 2) {
+      return;
+    }
+    const items: { node: CoreNode; key: SdfBatchKey }[] = new Array(len);
+    for (let i = 0; i < len; i++) {
+      items[i] = { node: nodes[i]!, key: nodes[i]!.getSdfBatchKey()! };
+    }
+    // Stable sort: equal keys keep ascending index order, i.e. scene order.
+    items.sort((a, b) => compareSdfBatchKeys(a.key, b.key));
+    for (let i = 0; i < len; i++) {
+      nodes[i] = items[i]!.node;
+    }
+  }
+
+  /**
+   * Emit all main-pass SDF text in sorted batch order.
+   *
+   * Called after the main render list on every frame (both build and replay
+   * frames). Text always flushes after regular quads, so it keeps drawing on
+   * top of images; the sorted order additionally guarantees each (layout,
+   * atlas, clip) group is written as one contiguous range and merges into a
+   * single draw call.
+   */
+  private writeRenderListSdfText(): void {
+    const nodes = this.renderListSdfTextNodes;
+    const renderer = this.renderer;
+    for (let i = 0; i < nodes.length; i++) {
+      nodes[i]!.renderQuads(renderer);
     }
   }
 

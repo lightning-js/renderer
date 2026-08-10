@@ -22,6 +22,7 @@ import type {
   TextRenderer,
   TrProps,
   TextRenderInfo,
+  SdfVertexCache,
 } from './text-rendering/TextRenderer.js';
 import {
   CoreNode,
@@ -35,15 +36,11 @@ import type {
   NodeTextLoadedPayload,
   NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
-import type { RectWithValid } from './lib/utils.js';
+import type { RectWithValid, SdfBatchKey } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
 import { Matrix3d } from './lib/Matrix3d.js';
-import { BufferCollection } from './renderers/webgl/internal/BufferCollection.js';
-import type { SdfShaderProps } from './shaders/webgl/SdfShader.js';
-import type { WebGlRenderer } from './renderers/webgl/WebGlRenderer.js';
 import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
-import { mergeColorAlpha } from '../utils.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
   /**
    * Force Text Node to use a specific Text Renderer
@@ -67,9 +64,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _waitingForFont = false;
   private _containType: TextConstraint = TextConstraint.none;
 
-  private _sdfBuffer: WebGLBuffer | null = null;
-  private _sdfQuadCollection: BufferCollection | null = null;
-  private _sdfShaderProps: Partial<SdfShaderProps> | null = null;
+  private _sdfCache: SdfVertexCache | null = null;
 
   // Text renderer properties - stored directly on the node
   textProps: CoreTextNodeProps;
@@ -112,16 +107,12 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   };
 
   /**
-   * Delete the cached WebGLBuffer held by the SDF renderer ref and reset the
-   * ref so the next renderQuads call allocates a fresh one.
-   * Safe to call from destroy() or on text change.
+   * Drop the cached SDF vertex data. The GPU buffers are shared (owned by the
+   * renderer), so this only frees the per-node CPU snapshot. Safe to call from
+   * destroy(), on text change, or when the node leaves the viewport.
    */
-  private releaseSdfBuffer(): void {
-    const buf = this._sdfBuffer;
-    if (buf === null) return;
-    this.stage.renderer.deleteBuffer(buf);
-    this._sdfBuffer = null;
-    this._sdfQuadCollection = null;
+  private releaseSdfCache(): void {
+    this._sdfCache = null;
   }
 
   allowTextGeneration() {
@@ -219,7 +210,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
         this._waitingForFont = false;
         this._renderInfo = null; // Clear any previous render info before generating new layout
-        this.releaseSdfBuffer(); // Free the cached WebGLBuffer
+        this.releaseSdfCache(); // Drop the stale SDF vertex cache
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
@@ -234,7 +225,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(false);
       this._layoutGenerated = false;
       this._renderInfo = null;
-      this.releaseSdfBuffer(); // Free the cached WebGLBuffer
+      this.releaseSdfCache(); // Drop the stale SDF vertex cache
     }
 
     // First run the standard CoreNode update
@@ -328,9 +319,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.setRenderable(true);
       this.numQuads = layout.totalQuadCount;
 
-      this._sdfShaderProps = {
-        size: layout.fontScale,
-        distanceRange: layout.distanceRange,
+      // Fresh CPU vertex cache — the previous one (if any) was tied to the old
+      // layout and would only be evicted via a layoutRef mismatch anyway.
+      this._sdfCache = {
+        vertices: null,
+        glyphCount: 0,
+        color: 0,
+        alpha: 0,
+        transform: new Float32Array(6),
+        layoutRef: null,
+        lastStartQuad: 0,
+        lastWriteDirty: false,
       };
 
       this.renderOpTextures = [result.atlasTexture as WebGlCtxTexture];
@@ -374,98 +373,57 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    if (this._sdfBuffer === null) {
-      const glw = (this.stage.renderer as WebGlRenderer).glw;
-      this._sdfBuffer = glw.createBuffer();
-      if (this._sdfBuffer === null) {
-        console.error('Failed to create WebGL buffer for SDF text rendering');
-        return;
-      }
-      glw.arrayBufferData(
-        this._sdfBuffer,
-        this._renderInfo.layout.vertexBuffer,
-        glw.STATIC_DRAW,
-      );
+    // SDF renderer: submit glyphs into the renderer's shared batched SDF
+    // buffer. The renderer merges consecutive text nodes into a single draw
+    // call (see WebGlRenderer.addSdfQuads / finalizeSdfBatch).
+    const layout = this._renderInfo.layout;
+    this.textRenderer.renderQuads(renderer, layout, null, {
+      fontFamily: this.textProps.fontFamily,
+      fontSize: this.textProps.fontSize,
+      color: this.props.color,
+      offsetY: this.textProps.offsetY,
+      worldAlpha: this.worldAlpha,
+      globalTransform: this.globalTransform!.getFloatArr(),
+      clippingRect: this.clippingRect,
+      width: layout.width,
+      height: layout.height,
+      parentHasRenderTexture: this.parentHasRenderTexture,
+      framebufferDimensions: this.parentFramebufferDimensions,
+      stage: this.stage,
+      sdfCache: this._sdfCache ?? undefined,
+    });
+  }
 
-      // Select vertex format based on whether richText was used for this layout.
-      // Plain (richText=false): 4 floats/vertex — x, y, u, v.
-      // Rich  (richText=true):  6 floats/vertex — x, y, u, v, packed_color, style.
-      const isRich = this._renderInfo.layout.richText === true;
-      const floatsPerVertex = isRich ? 6 : 4;
-      const stride = floatsPerVertex * Float32Array.BYTES_PER_ELEMENT;
-
-      const attributes: Record<
-        string,
-        {
-          name: string;
-          size: number;
-          type: number;
-          normalized: boolean;
-          stride: number;
-          offset: number;
-        }
-      > = {
-        a_position: {
-          name: 'a_position',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 0,
-        },
-        a_textureCoords: {
-          name: 'a_textureCoords',
-          size: 2,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-        },
-      };
-
-      if (isRich) {
-        attributes['a_color'] = {
-          name: 'a_color',
-          size: 4,
-          type: glw.UNSIGNED_BYTE as number,
-          normalized: true,
-          stride,
-          offset: 4 * Float32Array.BYTES_PER_ELEMENT,
-        };
-        attributes['a_style'] = {
-          name: 'a_style',
-          size: 1,
-          type: glw.FLOAT as number,
-          normalized: false,
-          stride,
-          offset: 5 * Float32Array.BYTES_PER_ELEMENT,
-        };
-      }
-
-      this._sdfQuadCollection = new BufferCollection([
-        {
-          buffer: this._sdfBuffer,
-          attributes,
-        },
-      ]);
+  /**
+   * {@inheritDoc CoreNode.getSdfBatchKey}
+   *
+   * SDF text renders through the renderer's shared batched buffer and is
+   * eligible for deferred, sorted emission in the main pass. Canvas text,
+   * un-laid-out nodes, and text inside render-to-texture subtrees return
+   * `null` and keep the inline traversal path.
+   */
+  override getSdfBatchKey(): SdfBatchKey | null {
+    if (this.parentHasRenderTexture === true) {
+      return null;
     }
-
-    this.sdfShaderProps!.transform = this.globalTransform!.getFloatArr();
-    this.sdfShaderProps!.color = mergeColorAlpha(
-      this.props.color,
-      this.worldAlpha,
-    );
-
-    this.textRenderer.renderQuads(this);
+    if (this._renderInfo === null || this._renderInfo.type === 'canvas') {
+      return null;
+    }
+    return {
+      richText: this._renderInfo.layout.richText,
+      fontFamily: this.textProps.fontFamily,
+      clippingRect: this.clippingRect,
+    };
   }
 
   override updateRenderState(renderState: CoreNodeRenderState): void {
     super.updateRenderState(renderState);
     if (
       this._renderInfo !== null &&
+      this._renderInfo.type === 'sdf' &&
       renderState === CoreNodeRenderState.OutOfBounds
     ) {
-      this.releaseSdfBuffer();
+      this.releaseSdfCache();
     }
   }
 
@@ -474,78 +432,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
     }
 
-    // Clear cached layout and vertex buffer
+    // Clear cached layout and vertex cache
     this._renderInfo = null;
-    this.releaseSdfBuffer(); // Delete the cached WebGLBuffer before losing stage ref
+    this.releaseSdfCache();
 
     this.fontHandler = null!; // Clear reference to avoid memory leaks
     this.textRenderer = null!; // Clear reference to avoid memory leaks
 
     super.destroy();
-  }
-
-  /**
-   * used in webgl SDF shader to get the quad buffer collection for rendering text quads
-   */
-  override get quadBufferCollection(): BufferCollection {
-    return this._sdfQuadCollection || super.quadBufferCollection;
-  }
-
-  /**
-   * used in webgl SDF shader to get the SDF shader props for rendering text quads
-   */
-  get sdfShaderProps(): SdfShaderProps {
-    return this._sdfShaderProps as SdfShaderProps;
-  }
-
-  override get isSdfRenderOp(): boolean {
-    return this.textRenderer.type === 'sdf';
-  }
-
-  override draw(renderer: WebGlRenderer) {
-    if (this.textRenderer.type === 'canvas') {
-      super.draw(renderer);
-      return;
-    }
-
-    const { glw, stage } = renderer;
-    const canvas = stage.platform!.canvas!;
-    const shader = this.props.shader as any;
-
-    stage.shManager.useShader(shader.program);
-    shader.program.bindRenderOp(this);
-
-    const clippingRect = this.clippingRect;
-
-    // Clipping
-    if (clippingRect.valid === true) {
-      const pixelRatio = this.parentHasRenderTexture ? 1 : stage.pixelRatio;
-
-      const clipX = Math.round(clippingRect.x * pixelRatio);
-      const clipWidth = Math.round(clippingRect.w * pixelRatio);
-      const clipHeight = Math.round(clippingRect.h * pixelRatio);
-      let clipY = Math.round(
-        canvas.height - clipHeight - clippingRect.y * pixelRatio,
-      );
-      // if parent has render texture, we need to adjust the scissor rect
-      // to be relative to the parent's framebuffer
-      if (this.parentHasRenderTexture) {
-        const parentFramebufferDimensions = this.parentFramebufferDimensions;
-        clipY =
-          parentFramebufferDimensions !== null
-            ? parentFramebufferDimensions.h - this.props.h
-            : 0;
-      }
-
-      glw.setScissorTest(true);
-      glw.scissor(clipX, clipY, clipWidth, clipHeight);
-    } else {
-      glw.setScissorTest(false);
-    }
-
-    // SDF rendering uses drawArrays with explicit triangle vertices (6 vertices per quad)
-    // Note: buffers should be bound by bindRenderOp -> bindBufferCollection
-    glw.drawArrays(glw.TRIANGLES, 0, 6 * this.numQuads);
   }
 
   override set w(value: number) {
