@@ -285,6 +285,20 @@ export interface RendererRuntimeSettings {
   textureProcessingTimeLimit: number;
 
   /**
+   * Maximum number of textures uploaded per frame while an animation is active.
+   *
+   * @remarks
+   * During animations, texture uploads are throttled to preserve the frame
+   * budget. Set this to a higher value on devices that can afford to upload
+   * multiple textures per frame without dropping frames. Set to `0` to disable
+   * the restriction entirely; uploads are then only limited by
+   * {@link textureProcessingTimeLimit}.
+   *
+   * @defaultValue `1`
+   */
+  maxTextureUploadsDuringAnimation: number;
+
+  /**
    * Target FPS for the global render loop
    *
    * @remarks
@@ -522,6 +536,8 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       fontEngines: settings.fontEngines ?? [],
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
+      maxTextureUploadsDuringAnimation:
+        settings.maxTextureUploadsDuringAnimation ?? 1,
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || WebPlatform,
@@ -576,6 +592,8 @@ export class RendererMain extends EventEmitter {
       inspector: settings.inspector !== null,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
+      maxTextureUploadsDuringAnimation:
+        settings.maxTextureUploadsDuringAnimation!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
       maxRetryCount: settings.maxRetryCount ?? 5,
@@ -1015,8 +1033,9 @@ export class RendererMain extends EventEmitter {
    * @remarks
    * This increments a global animation counter shared by both the internal
    * animation engine and external animation libraries. While the counter is
-   * above zero, the renderer throttles texture uploads to one per frame to
-   * preserve the frame budget.
+   * above zero, the renderer throttles texture uploads (configurable via the
+   * {@link RendererMainSettings.maxTextureUploadsDuringAnimation} setting,
+   * which defaults to one per frame) to preserve the frame budget.
    *
    * Call {@link unregisterAnimation} when the animation completes, is
    * cancelled, or is otherwise no longer driving per-frame updates.
@@ -1057,7 +1076,8 @@ export class RendererMain extends EventEmitter {
    *
    * @remarks
    * Decrements the global animation counter. When the counter reaches zero,
-   * the renderer resumes full-budget texture processing.
+   * the renderer resumes full-budget texture processing (only limited by the
+   * {@link RendererMainSettings.textureProcessingTimeLimit}).
    *
    * Must be called exactly once for each corresponding
    * {@link registerAnimation} call.
