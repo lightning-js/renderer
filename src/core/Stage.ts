@@ -129,8 +129,9 @@ export class Stage {
    * {@link RendererMain.registerAnimation} / {@link RendererMain.unregisterAnimation}.
    *
    * Used by the render loop to throttle texture uploads during animations:
-   * when > 0, only one texture is uploaded per frame to preserve the frame
-   * budget.
+   * while > 0, at most `maxTextureUploadsDuringAnimation` textures are
+   * uploaded per frame to preserve the frame budget. When zero, the full
+   * time budget is used.
    */
   public activeAnimationCount = 0;
   // Pre-allocated frameTick payload -- reused every frame to avoid per-frame {} allocation
@@ -533,10 +534,13 @@ export class Stage {
     }
 
     // Process some textures asynchronously but don't block the frame.
-    // During active animations, limit to 1 texture per frame to preserve
-    // the frame budget. When idle, use the full time budget.
+    // During active animations, limit texture uploads per frame (configurable
+    // via `maxTextureUploadsDuringAnimation`) to preserve the frame budget.
+    // When idle, use the full time budget.
     if (this.txManager.hasUpdates() === true) {
-      const maxCount = this.activeAnimationCount > 0 ? 1 : 0x7fffffff;
+      const cap = this.options.maxTextureUploadsDuringAnimation;
+      const maxCount =
+        this.activeAnimationCount > 0 && cap > 0 ? cap : 0x7fffffff;
       this.txManager
         .processSome(this.options.textureProcessingTimeLimit, maxCount)
         .catch((err) => {
