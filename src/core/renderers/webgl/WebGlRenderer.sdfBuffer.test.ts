@@ -477,7 +477,6 @@ type RendererStub = {
   };
   sdfBufferPlain: SdfBuffer;
   sdfBufferRich: SdfBuffer;
-  coreTextRenderOps: unknown[];
   curSdfRenderOp: unknown;
   curRenderOp: unknown;
   renderOps: unknown[];
@@ -492,13 +491,12 @@ const makeRendererStub = (): RendererStub => {
     DYNAMIC_DRAW: 35048,
   } as unknown as RendererStub['glw'];
   // Object.create so the real production methods (addSdfQuads, finalizeSdfBatch,
-  // flushTextRenderOps, uploadSdfBuffer) are reachable via the prototype.
+  // uploadSdfBuffer) are reachable via the prototype.
   const stub = Object.create(WebGlRenderer.prototype) as RendererStub;
   stub.stage = { pixelRatio: 1 };
   stub.glw = glw;
   stub.sdfBufferPlain = new SdfBuffer(glw, 'plain');
   stub.sdfBufferRich = new SdfBuffer(glw, 'rich');
-  stub.coreTextRenderOps = [];
   stub.curSdfRenderOp = null;
   stub.curRenderOp = null;
   stub.renderOps = [];
@@ -540,8 +538,8 @@ describe('WebGlRenderer.finalizeSdfBatch', () => {
     finalize(stub, stub.sdfBufferPlain, 0, 3);
     finalize(stub, stub.sdfBufferPlain, 3, 2);
 
-    expect(stub.coreTextRenderOps.length).toBe(1);
-    const op = stub.coreTextRenderOps[0] as {
+    expect(stub.renderOps.length).toBe(1);
+    const op = stub.renderOps[0] as {
       startQuad: number;
       numQuads: number;
     };
@@ -556,13 +554,9 @@ describe('WebGlRenderer.finalizeSdfBatch', () => {
     finalize(stub, stub.sdfBufferPlain, 0, 3, atlasA);
     finalize(stub, stub.sdfBufferPlain, 3, 2, atlasB);
 
-    expect(stub.coreTextRenderOps.length).toBe(2);
-    expect((stub.coreTextRenderOps[0] as { numQuads: number }).numQuads).toBe(
-      3,
-    );
-    expect((stub.coreTextRenderOps[1] as { numQuads: number }).numQuads).toBe(
-      2,
-    );
+    expect(stub.renderOps.length).toBe(2);
+    expect((stub.renderOps[0] as { numQuads: number }).numQuads).toBe(3);
+    expect((stub.renderOps[1] as { numQuads: number }).numQuads).toBe(2);
   });
 
   it('breaks the batch on a different clipping rect', () => {
@@ -572,7 +566,7 @@ describe('WebGlRenderer.finalizeSdfBatch', () => {
     finalize(stub, stub.sdfBufferPlain, 0, 3, atlasA, NO_CLIP);
     finalize(stub, stub.sdfBufferPlain, 3, 2, atlasA, clipB);
 
-    expect(stub.coreTextRenderOps.length).toBe(2);
+    expect(stub.renderOps.length).toBe(2);
   });
 
   it('breaks the batch across layouts (different SdfBuffer)', () => {
@@ -581,7 +575,7 @@ describe('WebGlRenderer.finalizeSdfBatch', () => {
     finalize(stub, stub.sdfBufferPlain, 0, 3);
     finalize(stub, stub.sdfBufferRich, 3, 2);
 
-    expect(stub.coreTextRenderOps.length).toBe(2);
+    expect(stub.renderOps.length).toBe(2);
   });
 
   it('resets the regular render op chain so nodes do not extend an SDF op', () => {
@@ -595,34 +589,24 @@ describe('WebGlRenderer.finalizeSdfBatch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// flushTextRenderOps
+// finalizeSdfBatch — inline op placement preserves z-order
 // ---------------------------------------------------------------------------
 
-describe('WebGlRenderer.flushTextRenderOps', () => {
-  it('moves deferred SDF ops into renderOps and clears the anchors', () => {
-    const stub = makeRendererStub();
-    finalize(stub, stub.sdfBufferPlain, 0, 3);
-    finalize(stub, stub.sdfBufferRich, 3, 2);
-    stub.curRenderOp = { some: 'prior-op' };
-
-    (
-      stub as unknown as { flushTextRenderOps: () => void }
-    ).flushTextRenderOps();
-
-    expect(stub.renderOps.length).toBe(2);
-    expect(stub.coreTextRenderOps.length).toBe(0);
-    expect(stub.curSdfRenderOp).toBeNull();
-    expect(stub.curRenderOp).toBeNull();
-  });
-
-  it('is a no-op when no SDF ops are pending', () => {
+describe('WebGlRenderer.finalizeSdfBatch inline placement', () => {
+  it('pushes SDF ops directly into renderOps in write order', () => {
     const stub = makeRendererStub();
 
-    (
-      stub as unknown as { flushTextRenderOps: () => void }
-    ).flushTextRenderOps();
+    // Simulate scene order: text, then a quad, then more text. Each non-mergeable
+    // write becomes its own op positioned exactly where it was written, so an
+    // intervening quad can never be covered by text that draws after it.
+    finalize(stub, stub.sdfBufferPlain, 0, 2);
+    stub.renderOps.push({ kind: 'quad' });
+    finalize(stub, stub.sdfBufferPlain, 2, 1);
 
-    expect(stub.renderOps.length).toBe(0);
+    expect(stub.renderOps.length).toBe(3);
+    expect(stub.renderOps[0]).toHaveProperty('numQuads', 2);
+    expect(stub.renderOps[1]).toMatchObject({ kind: 'quad' });
+    expect(stub.renderOps[2]).toHaveProperty('numQuads', 1);
   });
 });
 

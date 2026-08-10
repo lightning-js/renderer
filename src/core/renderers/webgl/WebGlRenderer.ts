@@ -208,18 +208,6 @@ export class WebGlRenderer extends CoreRenderer {
    * last op is not extendable (different atlas, clipping rect, or RTT state).
    */
   curSdfRenderOp: SdfRenderOp | null = null;
-  /**
-   * Deferred queue for SDF text render ops.
-   *
-   * All text encountered during the quad-fill pass is collected here and
-   * appended to `renderOps` at the start of `render()` (see
-   * `flushTextRenderOps`). This guarantees that all text in a frame draws in a
-   * single contiguous run of draw calls, which is the whole point of text
-   * batching. Text always draws on top of any non-text quads that came after it
-   * in tree order (unless those quads carry an explicit zIndex, which forces an
-   * early flush in addQuad).
-   */
-  coreTextRenderOps: WebGlRenderOp[] = [];
 
   override defaultTextureCoords: TextureCoords = {
     x1: 0,
@@ -418,7 +406,6 @@ export class WebGlRenderer extends CoreRenderer {
     this.dirtyQuadCount = 0;
     this.curSdfRenderOp = null;
     this.renderOps.length = 0;
-    this.coreTextRenderOps.length = 0;
     this.sdfBufferPlain.clear();
     this.sdfBufferRich.clear();
     this.stencilOpPoolIdx = 0;
@@ -1066,9 +1053,18 @@ export class WebGlRenderer extends CoreRenderer {
     }
 
     if (canBatch && cur !== null) {
-      // Extend existing op
-      cur.numQuads += glyphCount;
-    } else {
+      // Only extend while this SDF op is still the last op in the sequence.
+      // Text written after an intervening quad or stencil clip op must not be
+      // merged into an op that draws before it — that would pull the later
+      // (higher z) text under the intervening draw and break z-order.
+      if (this.renderOps[this.renderOps.length - 1] === cur) {
+        cur.numQuads += glyphCount;
+      } else {
+        canBatch = false;
+      }
+    }
+
+    if (canBatch === false) {
       // Create a new SdfRenderOp referencing the shared buffer
       const op = new SdfRenderOp(
         this,
@@ -1086,33 +1082,17 @@ export class WebGlRenderer extends CoreRenderer {
       op.numQuads = glyphCount;
       op.addTexture(atlasTexture);
 
-      this.coreTextRenderOps.push(op);
+      // Push inline into the op sequence so the text draws exactly at its
+      // scene/z-order position. Consecutive SDF text nodes sharing a buffer,
+      // atlas and clip rect still merge into this single op above; text that
+      // is separated by other nodes stays in correct z-order.
+      this.renderOps.push(op);
       this.curSdfRenderOp = op;
 
       // Break the regular quad render op chain so subsequent image/rect
       // nodes don't try to extend an SDF op.
       this.curRenderOp = null;
     }
-  }
-
-  /**
-   * Append all deferred SDF text render ops to `renderOps`.
-   *
-   * Called at the start of each render pass (main and RTT) so all text in a
-   * frame draws in a single contiguous run of draw calls. Also clears the
-   * merge anchors so a stale op can never swallow a draw from another pass.
-   */
-  flushTextRenderOps() {
-    const len = this.coreTextRenderOps.length;
-    if (len === 0) {
-      return;
-    }
-    for (let i = 0; i < len; i++) {
-      this.renderOps.push(this.coreTextRenderOps[i]!);
-    }
-    this.coreTextRenderOps.length = 0;
-    this.curRenderOp = null;
-    this.curSdfRenderOp = null;
   }
 
   /**
@@ -1164,9 +1144,6 @@ export class WebGlRenderer extends CoreRenderer {
    */
   render(_surface: 'screen' | CoreContextTexture = 'screen'): void {
     const { glw, quadBuffer } = this;
-
-    // Append deferred SDF text ops so all text draws in one contiguous run.
-    this.flushTextRenderOps();
 
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
     const BYTES = Float32Array.BYTES_PER_ELEMENT;
@@ -1427,10 +1404,6 @@ export class WebGlRenderer extends CoreRenderer {
   private renderRTT(): void {
     const glw = this.glw;
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
-
-    // Append deferred SDF text ops so text inside the RTT subtree draws in a
-    // single contiguous run (same as the main pass).
-    this.flushTextRenderOps();
 
     const arr = new Float32Array(this.rttQuadBuffer!, 0, this.curBufferIdx);
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
