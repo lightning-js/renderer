@@ -19,7 +19,11 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const randomColor = () => {
     const randomInt = Math.floor(Math.random() * Math.pow(2, 32));
     const hexString = randomInt.toString(16).padStart(8, '0');
@@ -66,24 +70,23 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     });
 
     setTimeout(() => {
-      node
-        .animate(
-          {
-            scale: 1.2,
-            y: 460,
-            x: 820,
-            w: 10,
-            h: 180,
-            rotation: Math.PI * 2,
-          },
-          {
-            duration: rnd(2500, 2700),
-            loop: false,
-            stopMethod: 'reverse',
-            easing: 'cubic-bezier(0,1.35,.99,-0.07)',
-          },
-        )
-        .start();
+      animate(
+        node,
+        {
+          scale: 1.2,
+          y: 460,
+          x: 820,
+          w: 10,
+          h: 180,
+          rotation: Math.PI * 2,
+        },
+        {
+          duration: rnd(2500, 2700),
+          loop: false,
+          stopMethod: 'reverse',
+          easing: 'cubic-bezier(0,1.35,.99,-0.07)',
+        },
+      ).start();
     }, 1500);
   });
 

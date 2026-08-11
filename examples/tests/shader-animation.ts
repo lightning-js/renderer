@@ -27,6 +27,7 @@ export async function automation(settings: ExampleSettings) {
 
 export default async function test({
   renderer,
+  animate,
   testRoot,
   snapshot,
 }: ExampleSettings) {
@@ -45,7 +46,7 @@ export default async function test({
     y: 90,
     color: 0xff0000ff,
     shader: renderer.createShader('Rounded', {
-      radius: 100,
+      radius: 0,
     }),
     parent: testRoot,
   });
@@ -63,18 +64,28 @@ export default async function test({
 
   await snapshot({ name: 'startup' });
 
-  const shaderAnimation = t1.animate(
+  animate(
+    t1.shader.props!,
+    {
+      radius: 150,
+    },
+    {
+      duration: 500,
+    },
+  ).start();
+
+  const nodeAnimation = animate(
+    t1,
     {
       x: 1140,
-      shaderProps: {
-        radius: 150,
-      },
     },
     {
       duration: 500,
     },
   );
-  // shaderAnimation.start();
+  // nodeAnimation.start();
+  // await nodeAnimation.waitUntilStopped();
+  // await snapshot({ name: 'animation1' });
   // await shaderAnimation.waitUntilStopped();
   // t1Radius.text = 'radius: ' + t1.shader.props!.radius.toString();
   // await snapshot({ name: 'animation1' });

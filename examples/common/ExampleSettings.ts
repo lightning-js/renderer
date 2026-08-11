@@ -18,6 +18,7 @@
  */
 
 import type { INode, RendererMain } from '@lightningjs/renderer';
+import type { AnimationManager } from '@lightningjs/renderer/animation';
 import type { MemMonitor } from './MemMonitor.js';
 
 /**
@@ -88,4 +89,6 @@ export interface ExampleSettings {
    * The MemMonitor instance for the test (if enabled)
    */
   memMonitor: MemMonitor | null;
+
+  animate: AnimationManager['createAnimation'];
 }

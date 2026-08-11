@@ -11,7 +11,11 @@ export async function automation(settings: ExampleSettings) {
   }
 }
 
-export default async function test({ renderer, testRoot }: ExampleSettings) {
+export default async function test({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -198,7 +202,8 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
     });
   }
 
-  const animation = rocko4.animate(
+  const animation = animate(
+    rocko4,
     {
       rotation: 0.3,
       scale: 1.5,

@@ -1,6 +1,7 @@
-import type { INode } from '@lightningjs/renderer';
-import type { IAnimationController } from '@lightningjs/renderer/animation';
-import type { ExampleSettings } from '../common/ExampleSettings.js';
+import { RendererMain, type INode } from '@lightningjs/renderer';
+import { WebGlRenderer } from '@lightningjs/renderer/webgl';
+import { WebPlatform } from '@lightningjs/renderer/platforms';
+import { engine, animate } from 'animejs';
 
 const SHAPE_1 =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAEjSURBVHgBnZO9TgJBFIXvbEllQqsJNrTaSmVhqdHKViyplCewsTXhDcAnkBcwUkm52tqwJrYmVLTDOXAWJsPfhJN8e/fuzD2TmblrFsl7fw66YOSXyvWtZpuEwQPw5nfrKaxzZTFCDrjCBLyDIfjXvDo4Aw3lPefcfWjQRWiq4CUojEWjFqiANkw6jntG8qGVn7cUlzqVyRgcZ3jcaWCYUEx9gR/AbTczOVKflq5c8SQ0+LN0lXNrWfCxYnuIBoXeDy1d5dxvGrwqaVi6LhQHNOgpYaPUE4qvQBUU6IN+hkeBpK3Blow26RZc6n3ZiRQaqoPwoJT3zKviafNwj2Rc1fisC1fsYfIY/YWxRurchdwaE3bYDbi2ebexZX9BH6sO4vlTUbSnqsTgwTgAAAAASUVORK5CYII=';
@@ -15,20 +16,38 @@ const COLORS = [0x3c91efff, 0x847effff, 0x00a75eff, 0xf1604bff, 0xc4defaff];
 const Y_START = -40;
 const Y_END = 1600;
 
+const POOL_SIZE = 160;
+const BURST_COUNT = 30;
+
 type Particle = {
   node: INode;
   launchDelay: number;
-  animations: IAnimationController[];
   launch(isBurst: boolean, side: 'left' | 'right' | null, startY: number): void;
 };
-export default async function ({
-  renderer,
-  animate,
-  testRoot,
-  perfMultiplier,
-}: ExampleSettings) {
-  const POOL_SIZE = 160 * perfMultiplier;
-  const BURST_COUNT = 30 * perfMultiplier;
+
+(async () => {
+  const renderer = new RendererMain(
+    {
+      appWidth: 1920,
+      appHeight: 1080,
+      boundsMargin: [100, 100, 100, 100],
+      clearColor: 0x000000ff,
+      fpsUpdateInterval: 1000,
+      enableContextSpy: false,
+      renderEngine: WebGlRenderer,
+      platform: WebPlatform,
+    },
+    'app',
+  );
+  //override default main loop to use animejs timeline for animation updates
+  engine.useDefaultMainLoop = false;
+
+  renderer.on('frameTick', (fps) => {
+    //manually trigger engine update to ensure animejs timeline is updated
+    engine.update();
+  });
+  const root = renderer.root;
+
   function createParticle(
     isBurst: boolean,
     side: 'left' | 'right' | null,
@@ -41,9 +60,8 @@ export default async function ({
         y: Y_START,
         w: 40,
         h: 40,
-        parent: testRoot,
+        parent: root,
       }),
-      animations: [],
       launchDelay: Math.random() * 2000,
       launch(isBurst: boolean, side: 'left' | 'right' | null, startY: number) {
         const size = 11 + Math.random() * 25;
@@ -78,41 +96,15 @@ export default async function ({
         node.color = COLORS[Math.floor(Math.random() * COLORS.length)]!;
         node.src = SHAPES[Math.floor(Math.random() * SHAPES.length)]!;
 
-        const animateY = animate(
-          node,
-          {
-            y: Y_END,
+        animate(node, {
+          y: { to: Y_END, ease: 'linear' },
+          x: { to: endX, ease: 'cubic-bezier(0,0,0.4,1)' },
+          rotation: { to: endRot * (Math.PI / 180), ease: 'easeOut' },
+          duration: durationMs,
+          onComplete: () => {
+            this.launch(false, side, Y_START);
           },
-          {
-            duration: durationMs,
-            easing: 'linear',
-          },
-        );
-
-        animateY.start();
-        const animateX = animate(
-          node,
-          {
-            x: endX,
-          },
-          {
-            duration: durationMs,
-            easing: 'cubic-bezier(0,0,0.4,1)',
-          },
-        );
-
-        animateX.start();
-
-        const onStopped = () => {
-          animateY.off('stopped', onStopped);
-          this.launch(false, null, Y_START);
-          this.animations.length = 0;
-        };
-
-        animateY.on('stopped', onStopped);
-
-        this.animations.length = 0;
-        this.animations.push(animateY, animateX /*, animateRot*/);
+        });
       },
     };
     setTimeout(() => {
@@ -132,4 +124,4 @@ export default async function ({
       (i - BURST_COUNT) * 3,
     );
   }
-}
+})().catch(console.error);

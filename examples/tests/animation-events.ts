@@ -61,6 +61,7 @@ export default async function test({
   renderer,
   testRoot,
   snapshot,
+  animate,
 }: ExampleSettings) {
   testRoot.w = 250;
   testRoot.h = 250;
@@ -91,7 +92,8 @@ export default async function test({
   //////////////////////////
   status.text = 'a1: init';
   await snapshot({ name: 'a1' });
-  const animation1 = robot.animate(
+  const animation1 = animate(
+    robot,
     {
       x: 100,
       y: 100,
@@ -128,7 +130,8 @@ export default async function test({
   status.text = 'a2: init';
   robot.color = 0xffffffff; // white
   await snapshot({ name: 'a2' });
-  const animation2 = robot.animate(
+  const animation2 = animate(
+    robot,
     {
       x: 0,
       y: 0,
@@ -172,7 +175,8 @@ export default async function test({
   status.text = 'a3: init';
   robot.color = 0xffffffff; // white
   await snapshot({ name: 'a3' });
-  const animation3 = robot.animate(
+  const animation3 = animate(
+    robot,
     {
       x: 100,
       y: 100,

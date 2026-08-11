@@ -17,7 +17,8 @@
  * limitations under the License.
  */
 
-import type { IAnimationController, INode } from '@lightningjs/renderer';
+import type { INode } from '@lightningjs/renderer';
+import type { IAnimationController } from '@lightningjs/renderer/animation';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 /**
@@ -32,7 +33,11 @@ import type { ExampleSettings } from '../common/ExampleSettings.js';
  * - 0: Remove FPS limit (unlimited)
  * - Space: Toggle all animations on/off
  */
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const backgroundNode = renderer.createNode({
     x: 0,
     y: 0,
@@ -174,7 +179,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       // Create simple horizontal motion
       const targetX = obj.baseX + 80; // Move 80 pixels to the right
 
-      obj.animation = obj.node.animate(
+      obj.animation = animate(
+        obj.node,
         { x: targetX },
         {
           duration,
@@ -187,7 +193,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     });
 
     // Start rotation animation
-    rotationAnimation = rotatingNode.animate(
+    rotationAnimation = animate(
+      rotatingNode,
       { rotation: Math.PI * 2 },
       {
         duration: 2000,
@@ -198,7 +205,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     rotationAnimation.start();
 
     // Start scaling animation
-    scalingAnimation = scalingNode.animate(
+    scalingAnimation = animate(
+      scalingNode,
       { scaleX: 1.5, scaleY: 1.5 },
       {
         duration: 2000,

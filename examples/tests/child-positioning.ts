@@ -19,7 +19,11 @@
 
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  testRoot,
+  animate,
+}: ExampleSettings) {
   const rand = (min: number, max: number) => {
     return Math.random() * (max - min) + min;
   };
@@ -59,21 +63,20 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
     setTimeout(() => {
       // node.rotation = 0.9;
-      node
-        .animate(
-          {
-            rotation: Math.PI * 2,
-            x: rand(-500, 1700),
-            y: rand(-500, 900),
-            scale: 2,
-          },
-          {
-            duration: 4000,
-            loop: true,
-            easing: 'cubic-bezier(0.5, 0.5, 0.5, 0.5)',
-          },
-        )
-        .start();
+      animate(
+        node,
+        {
+          rotation: Math.PI * 2,
+          x: rand(-500, 1700),
+          y: rand(-500, 900),
+          scale: 2,
+        },
+        {
+          duration: 4000,
+          loop: true,
+          easing: 'cubic-bezier(0.5, 0.5, 0.5, 0.5)',
+        },
+      ).start();
     }, 1400);
   });
 }

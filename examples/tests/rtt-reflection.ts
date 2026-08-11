@@ -6,7 +6,11 @@ const randomColor = () => {
   return parseInt(hexString, 16);
 };
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const node = renderer.createNode({
     x: 0,
     y: 0,
@@ -52,7 +56,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       src: `https://picsum.photos/id/${i + 30}/120/120`,
     });
 
-    const animation = a.animate(
+    const animation = animate(
+      a,
       {
         rotation: Math.random() * Math.PI * 2,
         scale: 1.5,
@@ -77,7 +82,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     text: 'RTT reflection demo',
   });
 
-  const animation = rttLabel.animate(
+  const animation = animate(
+    rttLabel,
     {
       y: 420,
     },
@@ -92,7 +98,8 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   animation.start();
 
   setInterval(() => {
-    const a = reflectionNode.animate(
+    const a = animate(
+      reflectionNode,
       {
         colorTop: randomColor(),
         colorBottom: randomColor(),

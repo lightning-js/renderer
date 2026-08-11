@@ -16,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { type CoreNode, type CoreNodeAnimateProps } from '../CoreNode.js';
 import { getTimingFunction, type TimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
@@ -39,11 +37,6 @@ type PropGroup = {
   length: number;
 };
 
-type PropValuesMap = {
-  props: PropGroup | null;
-  shaderProps: PropGroup | null;
-};
-
 let animationIdCounter = 0;
 
 export class CoreAnimation extends EventEmitter {
@@ -61,7 +54,7 @@ export class CoreAnimation extends EventEmitter {
   private delayFor = 0;
   private delay = 0;
   private timingFunction!: TimingFunction;
-  private node!: CoreNode;
+  private target!: Record<string, number>;
   // Index into AnimationManager.activeAnimations -- kept in sync on every
   // register/swap-remove so unregisterAnimation() is O(1) with no indexOf scan.
   public activeIndex = -1;
@@ -69,13 +62,6 @@ export class CoreAnimation extends EventEmitter {
   // Persistent PropGroup instances -- reused across pool recycles to avoid
   // allocating new arrays each time. length tracks how many entries are active.
   private propsGroup: PropGroup = {
-    keys: [],
-    starts: [],
-    targets: [],
-    isColor: [],
-    length: 0,
-  };
-  private shaderPropsGroup: PropGroup = {
     keys: [],
     starts: [],
     targets: [],
@@ -91,7 +77,7 @@ export class CoreAnimation extends EventEmitter {
     'destroyed',
   ] as const;
 
-  propValuesMap: PropValuesMap = { props: null, shaderProps: null };
+  animatable: boolean = false;
 
   constructor() {
     super();
@@ -102,16 +88,16 @@ export class CoreAnimation extends EventEmitter {
    * Called both on first use and when recycled from the pool.
    */
   init(
-    node: CoreNode,
-    props: Partial<CoreNodeAnimateProps>,
+    target: Record<string, number>,
+    props: Record<string, number>,
     settings: Partial<AnimationSettings>,
   ): void {
     this.id = ++animationIdCounter;
-    this.node = node;
+    this.target = target;
     this.progress = 0;
     this.activeIndex = -1;
-    this.propValuesMap.props = null;
-    this.propValuesMap.shaderProps = null;
+    this.animatable = false;
+    this.target = target;
     // Clear any stale listeners from the previous use. With the arr.length > 0
     // guard in clearListeners(), this is a near-zero cost read of 4 array lengths
     // when unregisterAnimation() has already emptied them (the common case).
@@ -119,37 +105,26 @@ export class CoreAnimation extends EventEmitter {
 
     // Reset persistent group lengths (reuse existing arrays, no new allocations)
     this.propsGroup.length = 0;
-    this.shaderPropsGroup.length = 0;
 
     for (const key in props) {
-      if (key !== 'shaderProps') {
-        if (this.propValuesMap['props'] === null) {
-          this.propValuesMap['props'] = this.propsGroup;
-        }
-        const group = this.propsGroup;
-        const i = group.length++;
-        group.keys[i] = key;
-        group.starts[i] =
-          node[key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>] || 0;
-        group.targets[i] = props[
-          key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
-        ] as number;
-        group.isColor[i] = key.indexOf('color') !== -1;
-      } else if (key === 'shaderProps' && node.shader !== null) {
-        this.propValuesMap['shaderProps'] = this.shaderPropsGroup;
-        const group = this.shaderPropsGroup;
-        for (const key in props.shaderProps) {
-          let start = node.shader.props![key];
-          if (Array.isArray(start) === true) {
-            start = start[0];
-          }
-          const i = group.length++;
-          group.keys[i] = key;
-          group.starts[i] = start;
-          group.targets[i] = props.shaderProps[key] as number;
-          group.isColor[i] = key.indexOf('color') !== -1;
-        }
+      const group = this.propsGroup;
+      const i = group.length++;
+
+      let start = target[key] || 0;
+      if (Array.isArray(start) === true) {
+        start = start[0];
       }
+      group.keys[i] = key;
+      group.starts[i] = start;
+      group.targets[i] = props[key] || 0;
+      group.isColor[i] = key.indexOf('color') !== -1;
+    }
+
+    this.animatable = this.propsGroup.keys.length > 0;
+
+    //early exit if there are no animatable properties
+    if (this.animatable === false) {
+      return;
     }
 
     const easing = settings.easing || 'linear';
@@ -176,19 +151,8 @@ export class CoreAnimation extends EventEmitter {
     // Write start values directly rather than calling update(0), which would
     // run the full update pipeline (dirty marking, event emissions) for no gain.
     // Identical visible behaviour -- node properties snap to start values.
-    const propsGroup = this.propValuesMap.props;
-    const shaderGroup = this.propValuesMap.shaderProps;
-    if (propsGroup !== null) {
-      this.restoreValues(
-        this.node as unknown as Record<string, number>,
-        propsGroup,
-      );
-    }
-    if (shaderGroup !== null) {
-      this.restoreValues(
-        this.node.shader!.props as Record<string, number>,
-        shaderGroup,
-      );
+    if (this.animatable === true) {
+      this.restoreValues(this.target, this.propsGroup);
     }
   }
 
@@ -220,11 +184,8 @@ export class CoreAnimation extends EventEmitter {
   reverse() {
     this.progress = 0;
 
-    if (this.propValuesMap['props'] !== null) {
-      this.reverseValues(this.propValuesMap['props']);
-    }
-    if (this.propValuesMap['shaderProps'] !== null) {
-      this.reverseValues(this.propValuesMap['shaderProps']);
+    if (this.animatable === true) {
+      this.reverseValues(this.propsGroup);
     }
 
     // restore stop method if we are not looping
@@ -295,7 +256,7 @@ export class CoreAnimation extends EventEmitter {
     const { duration, loop, stopMethod } = this;
     const { delayFor } = this;
 
-    if (this.node.destroyed) {
+    if (this.target.destroyed) {
       this.emit('destroyed');
       return;
     }
@@ -348,23 +309,7 @@ export class CoreAnimation extends EventEmitter {
     this.progress = progress;
 
     // Extract to locals to avoid repeated property lookups in the hot path
-    const propsGroup = this.propValuesMap.props;
-    const shaderGroup = this.propValuesMap.shaderProps;
-
-    if (propsGroup !== null) {
-      this.updateValues(
-        this.node as unknown as Record<string, number>,
-        propsGroup,
-        progress,
-      );
-    }
-    if (shaderGroup !== null) {
-      this.updateValues(
-        this.node.shader!.props as Record<string, number>,
-        shaderGroup,
-        progress,
-      );
-    }
+    this.updateValues(this.target, this.propsGroup, progress);
 
     if (progress < 1) {
       this.emit('tick');

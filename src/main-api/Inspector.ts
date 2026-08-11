@@ -1,14 +1,5 @@
-import {
-  CoreNode,
-  type CoreNodeAnimateProps,
-  type CoreNodeProps,
-} from '../core/CoreNode.js';
+import { CoreNode, type CoreNodeProps } from '../core/CoreNode.js';
 import { type RendererMainSettings } from './Renderer.js';
-import type { AnimationSettings } from '../core/animations/CoreAnimation.js';
-import type {
-  IAnimationController,
-  AnimationControllerState,
-} from '../common/IAnimationController.js';
 import { isProductionEnvironment } from '../utils.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Texture } from '../core/textures/Texture.js';
@@ -40,27 +31,6 @@ export interface InspectorOptions {
    * @defaultValue 5000
    */
   resetInterval: number;
-
-  /**
-   * Enable animation monitoring and statistics tracking
-   *
-   * @defaultValue true
-   */
-  enableAnimationMonitoring: boolean;
-
-  /**
-   * Maximum number of animations to keep in history for statistics
-   *
-   * @defaultValue 1000
-   */
-  maxAnimationHistory: number;
-
-  /**
-   * Automatically print animation statistics every X seconds (0 to disable)
-   *
-   * @defaultValue 0
-   */
-  animationStatsInterval: number;
 }
 
 /**
@@ -251,44 +221,12 @@ export class Inspector {
     { count: number; lastReset: number; nodeId: number }
   >();
 
-  // Animation monitoring structures
-  private static activeAnimations = new Map<
-    string,
-    {
-      nodeId: number;
-      animationId: string;
-      startTime: number;
-      props: CoreNodeAnimateProps;
-      settings: AnimationSettings;
-      controller: IAnimationController;
-      state: AnimationControllerState;
-    }
-  >();
-
-  private static animationHistory: Array<{
-    nodeId: number;
-    animationId: string;
-    startTime: number;
-    endTime: number;
-    duration: number;
-    actualDuration: number;
-    props: CoreNodeAnimateProps;
-    settings: AnimationSettings;
-    completionType: 'finished' | 'stopped' | 'cancelled';
-  }> = [];
-
   // Performance monitoring settings (configured via constructor)
   private performanceSettings: InspectorOptions = {
     enablePerformanceMonitoring: false,
     excessiveCallThreshold: 100,
     resetInterval: 5000,
-    enableAnimationMonitoring: false,
-    maxAnimationHistory: 1000,
-    animationStatsInterval: 0,
   };
-
-  // Animation stats printing timer
-  private animationStatsTimer: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
     if (isProductionEnvironment === true) return;
@@ -304,12 +242,6 @@ export class Inspector {
       excessiveCallThreshold:
         settings.inspectorOptions?.excessiveCallThreshold ?? 100,
       resetInterval: settings.inspectorOptions?.resetInterval ?? 5000,
-      enableAnimationMonitoring:
-        settings.inspectorOptions?.enableAnimationMonitoring ?? false,
-      maxAnimationHistory:
-        settings.inspectorOptions?.maxAnimationHistory ?? 1000,
-      animationStatsInterval:
-        settings.inspectorOptions?.animationStatsInterval ?? 0,
     };
 
     // calc dimensions based on the devicePixelRatio
@@ -345,9 +277,6 @@ export class Inspector {
 
     //listen for changes on window
     window.addEventListener('resize', this.setRootPosition.bind(this));
-
-    // Start animation stats timer if enabled
-    this.startAnimationStatsTimer();
 
     console.warn('Inspector is enabled, this will impact performance');
   }
@@ -438,287 +367,6 @@ export class Inspector {
     Inspector.setterCallCount.clear();
   }
 
-  /**
-   * Generate a unique animation ID
-   */
-  private static generateAnimationId(): string {
-    return `anim_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  }
-
-  /**
-   * Wrap animation controller with monitoring capabilities
-   */
-  private wrapAnimationController(
-    controller: IAnimationController,
-    nodeId: number,
-    props: CoreNodeAnimateProps,
-    settings: AnimationSettings,
-    div: HTMLElement,
-  ): IAnimationController {
-    if (!this.performanceSettings.enableAnimationMonitoring) {
-      // Just add the basic DOM animation without tracking
-      const originalStart = controller.start.bind(controller);
-      controller.start = () => {
-        this.animateNode(div, props, settings);
-        return originalStart();
-      };
-      return controller;
-    }
-
-    const animationId = Inspector.generateAnimationId();
-
-    // Create wrapper controller
-    const wrappedController: IAnimationController = {
-      start: () => {
-        this.trackAnimationStart(
-          animationId,
-          nodeId,
-          props,
-          settings,
-          controller,
-        );
-        this.animateNode(div, props, settings);
-        return controller.start();
-      },
-
-      stop: () => {
-        this.trackAnimationEnd(animationId, 'stopped');
-        return controller.stop();
-      },
-
-      pause: () => {
-        this.updateAnimationState(animationId, 'paused');
-        return controller.pause();
-      },
-
-      restore: () => {
-        this.trackAnimationEnd(animationId, 'cancelled');
-        return controller.restore();
-      },
-
-      waitUntilStopped: () => {
-        return controller.waitUntilStopped().then(() => {
-          this.trackAnimationEnd(animationId, 'finished');
-        });
-      },
-
-      get state() {
-        return controller.state;
-      },
-
-      // Event emitter methods
-      on: controller.on.bind(controller),
-      off: controller.off.bind(controller),
-      once: controller.once.bind(controller),
-      emit: controller.emit.bind(controller),
-    };
-
-    // Track animation events
-    controller.on('animating', () => {
-      this.updateAnimationState(animationId, 'running');
-    });
-
-    controller.on('stopped', () => {
-      this.trackAnimationEnd(animationId, 'finished');
-    });
-
-    return wrappedController;
-  }
-
-  /**
-   * Track animation start
-   */
-  private trackAnimationStart(
-    animationId: string,
-    nodeId: number,
-    props: CoreNodeAnimateProps,
-    settings: AnimationSettings,
-    controller: IAnimationController,
-  ): void {
-    const startTime = Date.now();
-
-    Inspector.activeAnimations.set(animationId, {
-      nodeId,
-      animationId,
-      startTime,
-      props,
-      settings,
-      controller,
-      state: 'scheduled',
-    });
-  }
-
-  /**
-   * Update animation state
-   */
-  private updateAnimationState(
-    animationId: string,
-    state: AnimationControllerState,
-  ): void {
-    const animation = Inspector.activeAnimations.get(animationId);
-    if (animation) {
-      animation.state = state;
-    }
-  }
-
-  /**
-   * Track animation end
-   */
-  private trackAnimationEnd(
-    animationId: string,
-    completionType: 'finished' | 'stopped' | 'cancelled',
-  ): void {
-    const animation = Inspector.activeAnimations.get(animationId);
-    if (!animation) return;
-
-    const endTime = Date.now();
-    const actualDuration = endTime - animation.startTime;
-    const expectedDuration = animation.settings.duration || 1000;
-
-    // Move to history
-    Inspector.animationHistory.unshift({
-      nodeId: animation.nodeId,
-      animationId: animation.animationId,
-      startTime: animation.startTime,
-      endTime,
-      duration: expectedDuration,
-      actualDuration,
-      props: animation.props,
-      settings: animation.settings,
-      completionType,
-    });
-
-    // Limit history size for performance
-    if (
-      Inspector.animationHistory.length >
-      this.performanceSettings.maxAnimationHistory
-    ) {
-      Inspector.animationHistory.splice(
-        this.performanceSettings.maxAnimationHistory,
-      );
-    }
-
-    // Remove from active animations
-    Inspector.activeAnimations.delete(animationId);
-  }
-
-  /**
-   * Get currently active animations
-   */
-  public static getActiveAnimations(): Array<{
-    nodeId: number;
-    animationId: string;
-    startTime: number;
-    duration: number;
-    elapsedTime: number;
-    props: CoreNodeAnimateProps;
-    settings: AnimationSettings;
-    state: AnimationControllerState;
-  }> {
-    const now = Date.now();
-    const activeAnimations: Array<{
-      nodeId: number;
-      animationId: string;
-      startTime: number;
-      duration: number;
-      elapsedTime: number;
-      props: CoreNodeAnimateProps;
-      settings: AnimationSettings;
-      state: AnimationControllerState;
-    }> = [];
-
-    Inspector.activeAnimations.forEach((animation) => {
-      activeAnimations.push({
-        nodeId: animation.nodeId,
-        animationId: animation.animationId,
-        startTime: animation.startTime,
-        duration: animation.settings.duration || 1000,
-        elapsedTime: now - animation.startTime,
-        props: animation.props,
-        settings: animation.settings,
-        state: animation.state,
-      });
-    });
-
-    return activeAnimations.sort((a, b) => b.startTime - a.startTime);
-  }
-
-  /**
-   * Get animation statistics
-   */
-  public static getAnimationStats(): {
-    totalAnimations: number;
-    activeCount: number;
-    averageDuration: number;
-  } {
-    const totalAnimations = Inspector.animationHistory.length;
-    const activeCount = Inspector.activeAnimations.size;
-
-    // Calculate average duration from finished animations only
-    const finishedAnimations = Inspector.animationHistory.filter(
-      (anim) => anim.completionType === 'finished',
-    );
-
-    const averageDuration =
-      finishedAnimations.length > 0
-        ? finishedAnimations.reduce(
-            (sum, anim) => sum + anim.actualDuration,
-            0,
-          ) / finishedAnimations.length
-        : 0;
-
-    return {
-      totalAnimations,
-      activeCount,
-      averageDuration,
-    };
-  }
-
-  /**
-   * Clear animation monitoring data
-   */
-  public static clearAnimationStats(): void {
-    Inspector.activeAnimations.clear();
-    Inspector.animationHistory.length = 0;
-  }
-
-  /**
-   * Start the animation stats timer if enabled
-   */
-  private startAnimationStatsTimer(): void {
-    console.log(
-      `Starting animation stats timer with interval: ${this.performanceSettings.animationStatsInterval} seconds`,
-    );
-
-    if (this.performanceSettings.animationStatsInterval > 0) {
-      this.animationStatsTimer = setInterval(() => {
-        this.printAnimationStats();
-      }, this.performanceSettings.animationStatsInterval * 1000) as unknown as number;
-    }
-  }
-
-  /**
-   * Stop the animation stats timer
-   */
-  private stopAnimationStatsTimer(): void {
-    if (this.animationStatsTimer) {
-      clearInterval(this.animationStatsTimer);
-      this.animationStatsTimer = null;
-    }
-  }
-
-  /**
-   * Print current animation statistics to console
-   */
-  private printAnimationStats(): void {
-    const stats = Inspector.getAnimationStats();
-
-    console.log(
-      `🎬 Animation Stats: ${stats.activeCount} active, ${
-        stats.totalAnimations
-      } completed, ${Math.round(stats.averageDuration)}ms avg duration`,
-    );
-  }
   setRootPosition() {
     if (this.root === null || this.canvas === null) {
       return;
@@ -963,13 +611,6 @@ export class Inspector {
         });
         coreNodeListeners.clear();
 
-        // Clean up activeAnimations entries for this node
-        for (const [id, anim] of Inspector.activeAnimations) {
-          if (anim.nodeId === node.id) {
-            Inspector.activeAnimations.delete(id);
-          }
-        }
-
         // Remove div from DOM using direct reference (getElementById fails for
         // children already detached when parent div was removed first)
         if (div.parentNode) {
@@ -996,34 +637,12 @@ export class Inspector {
 
         try {
           delete (node as any).destroy;
-          delete (node as any).animate;
         } catch (_) {
           // ignore
         }
       },
       configurable: true,
     });
-
-    const originalAnimate = node.animate;
-    Object.defineProperty(node, 'animate', {
-      value: (
-        props: CoreNodeAnimateProps,
-        settings: AnimationSettings,
-      ): IAnimationController => {
-        const animationController = originalAnimate.call(node, props, settings);
-
-        // Wrap animation controller with monitoring
-        return this.wrapAnimationController(
-          animationController,
-          node.id,
-          props,
-          settings,
-          div,
-        );
-      },
-      configurable: true,
-    });
-
     return node;
   }
 
@@ -1108,9 +727,6 @@ export class Inspector {
   }
 
   public destroy() {
-    // Stop animation stats timer
-    this.stopAnimationStatsTimer();
-
     // Remove DOM observers
     this.mutationObserver.disconnect();
     this.resizeObserver.disconnect();
@@ -1120,9 +736,6 @@ export class Inspector {
     if (this.root && this.root.parentNode) {
       this.root.remove();
     }
-
-    // Clean up animation monitoring data
-    Inspector.clearAnimationStats();
   }
 
   destroyNode(id: number) {
@@ -1267,50 +880,5 @@ export class Inspector {
     this.width = width;
     this.height = height;
     this.setRootPosition();
-  }
-
-  // simple animation handler
-  animateNode(
-    div: HTMLElement,
-    props: CoreNodeAnimateProps,
-    settings: AnimationSettings,
-  ) {
-    const {
-      duration = 1000,
-      delay = 0,
-      // easing = 'linear',
-      // repeat = 0,
-      // loop = false,
-      // stopMethod = false,
-    } = settings;
-
-    const {
-      x,
-      y,
-      w,
-      h,
-      alpha = 1,
-      rotation = 0,
-      scale = 1,
-      color,
-      mountX,
-      mountY,
-    } = props;
-
-    // ignoring loops and repeats for now, as that might be a bit too much for the inspector
-    function animate() {
-      setTimeout(() => {
-        div.style.top = `${y - h * mountY}px`;
-        div.style.left = `${x - w * mountX}px`;
-        div.style.width = `${w}px`;
-        div.style.height = `${h}px`;
-        div.style.opacity = `${alpha}`;
-        div.style.rotate = `${rotation}rad`;
-        div.style.scale = `${scale}`;
-        div.style.color = convertColorToRgba(color);
-      }, duration);
-    }
-
-    setTimeout(animate, delay);
   }
 }

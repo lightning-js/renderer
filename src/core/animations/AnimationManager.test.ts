@@ -19,7 +19,6 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { AnimationManager } from './AnimationManager.js';
-import type { CoreNode } from '../CoreNode.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
 import type { Stage } from '../Stage.js';
 
@@ -34,7 +33,7 @@ function createMockStage(): Stage {
  * Create a minimal mock node that satisfies CoreAnimation's needs.
  * CoreAnimation accesses node[key] for start values, node.shader, and node.destroyed.
  */
-function createMockNode(overrides: Record<string, unknown> = {}): CoreNode {
+function createMockNode(overrides: Record<string, unknown> = {}) {
   return {
     x: 0,
     y: 0,
@@ -47,7 +46,7 @@ function createMockNode(overrides: Record<string, unknown> = {}): CoreNode {
     destroyed: false,
     shader: null,
     ...overrides,
-  } as unknown as CoreNode;
+  } as unknown as Record<string, number>;
 }
 
 describe('AnimationManager', () => {

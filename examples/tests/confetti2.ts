@@ -34,8 +34,8 @@
  * Use ?multiplier=N to scale the number of nodes (50 * N).
  */
 
-import type { IAnimationController } from '../../dist/exports/index.js';
-import type { INode } from '../../dist/src/main-api/INode.js';
+import type { INode } from '@lightningjs/renderer';
+import type { IAnimationController } from '@lightningjs/renderer/animation';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 const SHAPE_1 =
@@ -64,6 +64,7 @@ type Particle = {
 
 export default async function ({
   renderer,
+  animate,
   testRoot,
   perfMultiplier,
 }: ExampleSettings) {
@@ -113,15 +114,18 @@ export default async function ({
         // Create 3 brand-new animation controllers each cycle --
         // this is the key difference from confetti.ts which reuses
         // the same controllers indefinitely via the relaunch pattern.
-        this.animateY = n.animate(
+        this.animateY = animate(
+          n,
           { y: Y_END },
           { duration: durationMs, easing: 'linear' },
         );
-        this.animateX = n.animate(
+        this.animateX = animate(
+          n,
           { x: endX },
           { duration: durationMs, easing: 'cubic-bezier(0,0,0.4,1)' },
         );
-        this.animateRot = n.animate(
+        this.animateRot = animate(
+          n,
           { rotation: startRot + Math.random() * Math.PI * 4 },
           { duration: durationMs, easing: 'ease-out' },
         );

@@ -25,7 +25,11 @@ const getRandomBezierCurve = () => {
   )}, ${y2.toFixed(2)})`;
 };
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const holder = renderer.createNode({
     x: 0,
     y: 0,
@@ -49,21 +53,20 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
       zIndex: getRandomValue(0, 100),
     });
 
-    node
-      .animate(
-        {
-          x: getRandomValue(0, 1820),
-          y: getRandomValue(0, 980),
-        },
-        {
-          duration: getRandomValue(8000, 12000),
-          delay: getRandomValue(0, 5000),
-          stopMethod: 'reverse',
-          loop: true,
-          easing: getRandomBezierCurve(),
-        },
-      )
-      .start();
+    animate(
+      node,
+      {
+        x: getRandomValue(0, 1820),
+        y: getRandomValue(0, 980),
+      },
+      {
+        duration: getRandomValue(8000, 12000),
+        delay: getRandomValue(0, 5000),
+        stopMethod: 'reverse',
+        loop: true,
+        easing: getRandomBezierCurve(),
+      },
+    ).start();
   }
 
   document.addEventListener('touchstart', (e: TouchEvent) => {

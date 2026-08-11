@@ -43,7 +43,7 @@ const randomIntBetween = (from: number, to: number) =>
  * @returns
  */
 export default async function test(settings: ExampleSettings) {
-  const { renderer, testRoot } = settings;
+  const { renderer, animate, testRoot } = settings;
 
   // Set a smaller snapshot area
   // testRoot.w = 200;
@@ -103,24 +103,23 @@ export default async function test(settings: ExampleSettings) {
   };
 
   let animating = false;
-  const animate = () => {
+  const startAnimation = () => {
     animating = !animating;
 
     const animateNode = (node: any) => {
       nodes.forEach((node) => {
-        node
-          .animate(
-            {
-              x: randomIntBetween(20, 1740),
-              y: randomIntBetween(20, 900),
-              rotation: Math.random() * Math.PI,
-            },
-            {
-              duration: 3000,
-              easing: 'ease-out',
-            },
-          )
-          .start();
+        animate(
+          node,
+          {
+            x: randomIntBetween(20, 1740),
+            y: randomIntBetween(20, 900),
+            rotation: Math.random() * Math.PI,
+          },
+          {
+            duration: 3000,
+            easing: 'ease-out',
+          },
+        ).start();
       });
     };
 
@@ -148,7 +147,7 @@ export default async function test(settings: ExampleSettings) {
     } else if (event.key === '1') {
       newColor();
     } else if (event.key === ' ') {
-      animate();
+      startAnimation();
     }
   });
 

@@ -27,7 +27,11 @@ import robotImg from '../assets/robot/robot.png';
 import shadowImg from '../assets/robot/robot-shadow.png';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
-export default async function ({ renderer, testRoot }: ExampleSettings) {
+export default async function ({
+  renderer,
+  animate,
+  testRoot,
+}: ExampleSettings) {
   const elevatorBg = renderer.createNode({
     x: 368,
     y: 228,
@@ -110,12 +114,10 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setTimeout(async () => {
     while (true) {
-      await robotCore
-        .animate({ y: 10 }, { duration: 500 })
+      await animate(robotCore, { y: 10 }, { duration: 500 })
         .start()
         .waitUntilStopped();
-      await robotCore
-        .animate({ y: 0 }, { duration: 500 })
+      await animate(robotCore, { y: 0 }, { duration: 500 })
         .start()
         .waitUntilStopped();
     }
@@ -143,17 +145,15 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
 
   setTimeout(async () => {
     await openGroundDoors(1000);
-    await robot
-      .animate({ x: 410 }, { duration: 1000 })
+    await animate(robot, { x: 410 }, { duration: 1000 })
       .start()
       .waitUntilStopped();
-    shadow.animate({ alpha: 0 }, { duration: 500 }).start();
+    animate(shadow, { alpha: 0 }, { duration: 500 }).start();
     robot.zIndex = 1;
     robotCore.zIndex = 1;
     shadow.zIndex = 1;
     await closeGroundDoors(1000);
-    await robot
-      .animate({ y: 200 }, { duration: 1000 })
+    await animate(robot, { y: 200 }, { duration: 1000 })
       .start()
       .waitUntilStopped();
     shadow.y = 100;
@@ -161,21 +161,24 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
     robot.zIndex = 5;
     robotCore.zIndex = 5;
     shadow.zIndex = 5;
-    shadow.animate({ alpha: 1 }, { duration: 500 }).start();
-    await shadow.animate({}, { duration: 2000 }).start().waitUntilStopped();
-    await robot
-      .animate({ x: renderer.settings.appWidth }, { duration: 5000 })
+    animate(shadow, { alpha: 1 }, { duration: 500 }).start();
+    await animate(shadow, { alpha: 1 }, { duration: 2000 })
+      .start()
+      .waitUntilStopped();
+    await animate(robot, { x: renderer.settings.appWidth }, { duration: 5000 })
       .start()
       .waitUntilStopped();
     await closeTopDoors(1000);
   }, 1000);
 
   function openTopDoors(duration: number) {
-    const a1 = doorTopTop.animate({ y: 207 - 129 }, { duration }).start();
-    const a2 = doorBottomTop
-      .animate({ y: 207 + 129 + 20 }, { duration })
-      .start();
-    const a3 = elevatorBg.animate({ y: 228 - 20 }, { duration }).start();
+    const a1 = animate(doorTopTop, { y: 207 - 129 }, { duration }).start();
+    const a2 = animate(
+      doorBottomTop,
+      { y: 207 + 129 + 20 },
+      { duration },
+    ).start();
+    const a3 = animate(elevatorBg, { y: 228 - 20 }, { duration }).start();
     return Promise.all([
       a1.waitUntilStopped(),
       a2.waitUntilStopped(),
@@ -184,9 +187,9 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   function closeTopDoors(duration: number) {
-    const a1 = doorTopTop.animate({ y: 207 }, { duration }).start();
-    const a2 = doorBottomTop.animate({ y: 207 + 129 }, { duration }).start();
-    const a3 = elevatorBg.animate({ y: 228 }, { duration }).start();
+    const a1 = animate(doorTopTop, { y: 207 }, { duration }).start();
+    const a2 = animate(doorBottomTop, { y: 207 + 129 }, { duration }).start();
+    const a3 = animate(elevatorBg, { y: 228 }, { duration }).start();
     return Promise.all([
       a1.waitUntilStopped(),
       a2.waitUntilStopped(),
@@ -195,16 +198,18 @@ export default async function ({ renderer, testRoot }: ExampleSettings) {
   }
 
   function openGroundDoors(duration: number) {
-    const a1 = doorLeftGround
-      .animate({ x: 480 - 68 - 68 }, { duration })
-      .start();
-    const a2 = doorRightGround.animate({ x: 480 + 68 }, { duration }).start();
+    const a1 = animate(
+      doorLeftGround,
+      { x: 480 - 68 - 68 },
+      { duration },
+    ).start();
+    const a2 = animate(doorRightGround, { x: 480 + 68 }, { duration }).start();
     return Promise.all([a1.waitUntilStopped(), a2.waitUntilStopped()]);
   }
 
   function closeGroundDoors(duration: number) {
-    const a1 = doorLeftGround.animate({ x: 480 - 68 }, { duration }).start();
-    const a2 = doorRightGround.animate({ x: 480 }, { duration }).start();
+    const a1 = animate(doorLeftGround, { x: 480 - 68 }, { duration }).start();
+    const a2 = animate(doorRightGround, { x: 480 }, { duration }).start();
     return Promise.all([a1.waitUntilStopped(), a2.waitUntilStopped()]);
   }
 }
