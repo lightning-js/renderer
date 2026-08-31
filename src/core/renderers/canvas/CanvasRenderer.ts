@@ -44,7 +44,7 @@ export class CanvasRenderer extends CoreRenderer {
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = stage.pixelRatio;
-    this.clearColor = normalizeCanvasColor(stage.clearColor);
+    this.clearColor = normalizeCanvasColor(stage.clearColor, true);
   }
 
   reset(): void {
@@ -273,7 +273,7 @@ export class CanvasRenderer extends CoreRenderer {
    * @param color - The color to set as the clear color.
    */
   updateClearColor(color: number) {
-    this.clearColor = normalizeCanvasColor(color);
+    this.clearColor = normalizeCanvasColor(color, true);
   }
 
   override updateViewport(): void {
