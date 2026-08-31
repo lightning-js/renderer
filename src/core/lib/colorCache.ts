@@ -3,7 +3,7 @@ import { parseToAbgrString, parseToRgbaString } from './colorParser.js';
 const parsedArgbColors: Map<number, string> = new Map();
 const parsedRgbaColors: Map<number, string> = new Map();
 
-export function normalizeCanvasColor(color: number, isRGBA: boolean = false) {
+export function normalizeCanvasColor(color: number, isRGBA: boolean = true) {
   let targetCache = isRGBA === true ? parsedRgbaColors : parsedArgbColors;
   let out = targetCache.get(color);
   if (out !== undefined) {

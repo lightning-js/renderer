@@ -44,7 +44,7 @@ export class CanvasRenderer extends CoreRenderer {
     this.canvas = canvas as HTMLCanvasElement;
     this.context = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.pixelRatio = stage.pixelRatio;
-    this.clearColor = normalizeCanvasColor(stage.clearColor, true);
+    this.clearColor = normalizeCanvasColor(stage.clearColor);
   }
 
   reset(): void {
@@ -218,12 +218,12 @@ export class CanvasRenderer extends CoreRenderer {
         endColor = node.premultipliedColorTr;
       }
       const gradient = this.context.createLinearGradient(tx, ty, endX, endY);
-      gradient.addColorStop(0, normalizeCanvasColor(color));
-      gradient.addColorStop(1, normalizeCanvasColor(endColor));
+      gradient.addColorStop(0, normalizeCanvasColor(color, false));
+      gradient.addColorStop(1, normalizeCanvasColor(endColor, false));
       this.context.fillStyle = gradient;
       this.context.fillRect(tx, ty, width, height);
     } else {
-      this.context.fillStyle = normalizeCanvasColor(color);
+      this.context.fillStyle = normalizeCanvasColor(color, false);
       this.context.fillRect(tx, ty, width, height);
     }
   }
@@ -273,7 +273,7 @@ export class CanvasRenderer extends CoreRenderer {
    * @param color - The color to set as the clear color.
    */
   updateClearColor(color: number) {
-    this.clearColor = normalizeCanvasColor(color, true);
+    this.clearColor = normalizeCanvasColor(color);
   }
 
   override updateViewport(): void {
