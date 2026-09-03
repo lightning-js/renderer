@@ -2,7 +2,7 @@
 
 ## System Requirements
 
-- **Node.js**: >= 18.0.0
+- **Node.js**: >= 22.13.0 (24 LTS recommended)
 - **pnpm**: >= 10.17.0
 - Modern terminal/command line
 
@@ -187,10 +187,10 @@ npm install -g pnpm
 # Check your Node version
 node --version
 
-# Upgrade Node to >= 18.0.0
+# Upgrade Node to >= 22.13.0
 # Using nvm:
-nvm install 18
-nvm use 18
+nvm install 24
+nvm use 24
 ```
 
 ### Test Issues

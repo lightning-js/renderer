@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "dist-vitest",
     "types": [],
+    "skipLibCheck": true,
     "composite": true,
     "module": "esnext",
     "moduleResolution": "Bundler",

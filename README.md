@@ -40,7 +40,7 @@ Lightning 3 Renderer is managed through the [RDK Management Open Source](https:/
 
 ### Requirements
 
-- Node.js >= 18.0.0
+- Node.js >= 22.13.0 (24 LTS recommended)
 - pnpm >= 10.17.0
 
 ### Install & Build
