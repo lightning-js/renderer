@@ -358,6 +358,20 @@ export type RendererMainSettings = RendererRuntimeSettings &
     quadBufferSize: number;
 
     /**
+     * Enable surgical dirty-quad repaints (PR #861).
+     *
+     * @remarks
+     * When enabled, only the quads that changed are re-uploaded to the GPU
+     * via `bufferSubData` instead of re-uploading the entire quad buffer on
+     * every frame.
+     *
+     * Construction-time only: changing it after construction has no effect.
+     *
+     * @defaultValue `false` (disabled, full buffer upload every frame)
+     */
+    enableDirtyRepaints: boolean;
+
+    /**
      * Font Engines
      *
      * @remarks
@@ -534,6 +548,7 @@ export class RendererMain extends EventEmitter {
       inspectorOptions: settings.inspectorOptions ?? {},
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
+      enableDirtyRepaints: settings.enableDirtyRepaints ?? false,
       fontEngines: settings.fontEngines ?? [],
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       maxTextureUploadsDuringAnimation:
@@ -588,6 +603,7 @@ export class RendererMain extends EventEmitter {
       textureMemory: resolvedTxSettings,
       eventBus: this,
       quadBufferSize: settings.quadBufferSize!,
+      enableDirtyRepaints: settings.enableDirtyRepaints!,
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
       targetFPS: settings.targetFPS!,

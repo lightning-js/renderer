@@ -462,14 +462,20 @@ describe('CoreNode', () => {
   });
 
   describe('isQuadDirty marking (dirty quad buffer)', () => {
+    const dirtyStage = makeMockStage(
+      {
+        options: { enableDirtyRepaints: true },
+      } as unknown as Partial<import('./Stage.js').Stage>,
+      { width: 200, height: 200 },
+    );
     it('starts clean', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       expect(node.isQuadDirty).toBe(false);
       expect(node.quadBufferIndex).toBe(-1);
     });
 
     it('marks isQuadDirty when a visual flag (PremultipliedColors) is processed', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       node.isQuadDirty = false;
       node.color = 0xffffffff;
 
@@ -479,7 +485,7 @@ describe('CoreNode', () => {
     });
 
     it('marks isQuadDirty when a transform flag (Global) is processed', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       node.isQuadDirty = false;
       node.x = 10;
 
@@ -489,7 +495,7 @@ describe('CoreNode', () => {
     });
 
     it('does not mark isQuadDirty for bookkeeping-only flags', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       node.isQuadDirty = false;
       node.updateType = UpdateType.Children;
 
@@ -499,7 +505,7 @@ describe('CoreNode', () => {
     });
 
     it('does not clear an existing dirty mark for bookkeeping-only flags', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       node.isQuadDirty = true;
       node.updateType = UpdateType.Children;
 
@@ -510,13 +516,23 @@ describe('CoreNode', () => {
     });
 
     it('marks isQuadDirty immediately in the texture setter', () => {
-      const node = new CoreNode(stage, defaultProps);
+      const node = new CoreNode(dirtyStage, defaultProps);
       node.isQuadDirty = false;
       node.texture = mock<ImageTexture>({
         state: 'loaded',
       });
 
       expect(node.isQuadDirty).toBe(true);
+    });
+
+    it('stays clean when dirty repaints are disabled (default)', () => {
+      const node = new CoreNode(stage, defaultProps);
+      node.isQuadDirty = false;
+      node.x = 10;
+
+      node.update(0, clippingRect);
+
+      expect(node.isQuadDirty).toBe(false);
     });
   });
 });

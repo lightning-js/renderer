@@ -72,7 +72,10 @@ interface RendererHarness {
   stage: Stage;
 }
 
-const makeRenderer = (nodes: CoreNode[] = []): RendererHarness => {
+const makeRenderer = (
+  nodes: CoreNode[] = [],
+  enableDirtyRepaints = true,
+): RendererHarness => {
   const glw = {
     arrayBufferData: vi.fn(),
     arrayBufferSubData: vi.fn(),
@@ -91,7 +94,11 @@ const makeRenderer = (nodes: CoreNode[] = []): RendererHarness => {
   const stage = makeMockStage({
     renderListNodes: nodes,
     renderListLen: nodes.length,
-    options: { quadBufferSize: quadBuffer.byteLength, enableClear: true },
+    options: {
+      quadBufferSize: quadBuffer.byteLength,
+      enableClear: true,
+      enableDirtyRepaints,
+    },
     // A concrete default shader so reuseRenderOp batches via the
     // shaderKey==='default' fast path instead of touching shader programs.
     defShaderNode: {
@@ -501,5 +508,71 @@ describe('WebGlRenderer dirty quad buffer — RTT isolation', () => {
     expect(renderer.needsFullUpload).toBe(true);
     expect(renderer.lastUploadedBufferSize).toBe(0);
     expect(renderer.renderToTextureActive).toBe(false);
+  });
+});
+
+describe('WebGlRenderer dirty quad buffer — disabled (default)', () => {
+  it('always full uploads with STATIC_DRAW and never uses bufferSubData', () => {
+    const harness = makeRenderer([], false);
+    const { renderer, stage } = harness;
+    const { glw } = harness;
+    const a = makeNode(stage);
+    const b = makeNode(stage);
+    stage.renderListNodes = [a, b];
+    stage.renderListLen = 2;
+
+    renderer.reset();
+    renderer.addQuad(a);
+    renderer.addQuad(b);
+    // No slot bookkeeping when disabled.
+    expect(a.quadBufferIndex).toBe(-1);
+    expect(b.quadBufferIndex).toBe(-1);
+    expect(renderer.dirtyQuadCount).toBe(0);
+
+    // Even with dirty flags set manually, the legacy path ignores them.
+    a.isQuadDirty = true;
+    b.isQuadDirty = true;
+    renderer.render();
+
+    expect(glw.arrayBufferData).toHaveBeenCalledTimes(1);
+    const [, , usage] = glw.arrayBufferData.mock.calls[0]!;
+    expect(usage).toBe(glw.STATIC_DRAW);
+    expect(glw.arrayBufferSubData).not.toHaveBeenCalled();
+  });
+
+  it('invalidateQuadBuffer is a no-op when disabled', () => {
+    const harness = makeRenderer([], false);
+    const { renderer, stage } = harness;
+    const a = makeNode(stage);
+    stage.renderListNodes = [a];
+    stage.renderListLen = 1;
+
+    a.quadBufferIndex = 42;
+    a.isQuadDirty = false;
+    renderer.needsFullUpload = false;
+    renderer.lastUploadedBufferSize = 60;
+    renderer.curBufferIdx = 20;
+
+    renderer.invalidateQuadBuffer();
+
+    expect(a.quadBufferIndex).toBe(42);
+    expect(a.isQuadDirty).toBe(false);
+    expect(renderer.needsFullUpload).toBe(false);
+    expect(renderer.lastUploadedBufferSize).toBe(60);
+    expect(renderer.curBufferIdx).toBe(20);
+  });
+
+  it('writes RTT quads into the shared buffer when disabled', () => {
+    const harness = makeRenderer([], false);
+    const { renderer, stage } = harness;
+    const child = makeNode(stage);
+
+    renderer.renderToTextureActive = true;
+    renderer.addQuad(child);
+
+    expect(renderer.rttQuadBuffer).toBeNull();
+    expect(renderer.curBufferIdx).toBe(20);
+    expect(renderer.fQuadBuffer[0]).toBe(child.renderCoords!.x1);
+    renderer.renderToTextureActive = false;
   });
 });

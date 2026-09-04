@@ -1491,11 +1491,14 @@ export class CoreNode extends EventEmitter {
 
     // Mark the quad dirty only when visual data (transforms, colors, alpha)
     // actually changed so the renderer re-uploads only modified slots.
+    // Skipped unless surgical dirty-quad repaints are enabled (PR #861).
     if (
+      (this.stage.options as { enableDirtyRepaints?: boolean })
+        ?.enableDirtyRepaints === true &&
       updateType &
-      (UpdateType.Global |
-        UpdateType.PremultipliedColors |
-        UpdateType.WorldAlpha)
+        (UpdateType.Global |
+          UpdateType.PremultipliedColors |
+          UpdateType.WorldAlpha)
     ) {
       this.isQuadDirty = true;
     }
@@ -2945,7 +2948,12 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
-    this.isQuadDirty = true;
+    if (
+      (this.stage.options as { enableDirtyRepaints?: boolean })
+        ?.enableDirtyRepaints === true
+    ) {
+      this.isQuadDirty = true;
+    }
     this.updateIsSimple();
   }
 
