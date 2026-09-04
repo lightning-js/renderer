@@ -80,6 +80,6 @@ export function parseColorRgba(rgba: number): IParsedColor {
 /**
  * Format a parsed color into a rgba CSS color
  */
-export function formatRgba({ a, r, g, b }: IParsedColor): string {
-  return `rgba(${r},${g},${b},${a})`;
+export function formatRgba(color: IParsedColor): string {
+  return `rgba(${color.r},${color.g},${color.b},${color.a})`;
 }
