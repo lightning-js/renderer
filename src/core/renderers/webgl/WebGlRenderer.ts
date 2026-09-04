@@ -499,10 +499,25 @@ export class WebGlRenderer extends CoreRenderer {
     const ctx = tx.ctxTexture as WebGlCtxTexture | undefined;
     if (ctx === undefined) return;
 
+    // Guard against stale GPU bytes when the render list was reordered
+    // without an invalidate (e.g. direct children splice, missed
+    // requestRenderListUpdate, or any future prop that changes slot count).
+    // Compare the node's last assigned quadBufferIndex to the slot we are
+    // about to assign; if they differ and the node was not already dirty,
+    // force a surgical re-upload at the new offset. Works for both main
+    // and RTT paths — no !isRTT gate, just index vs index.
+    let i = this.curBufferIdx;
+    if (
+      node.quadBufferIndex !== -1 &&
+      node.quadBufferIndex !== i &&
+      node.isQuadDirty === false
+    ) {
+      node.isQuadDirty = true;
+    }
     // Main scene: assign a permanent slot so render() can surgically
     // re-upload only dirty nodes. RTT: use ephemeral sequential slots and
-    // leave the node's main-scene slot bookkeeping untouched.
-    let i = this.curBufferIdx;
+    // leave the node's main-scene slot bookkeeping untouched for the
+    // main buffer, but the staleness guard above still applies.
     if (isRTT === false) {
       node.quadBufferIndex = i;
     }

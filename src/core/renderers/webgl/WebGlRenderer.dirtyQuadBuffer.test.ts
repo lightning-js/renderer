@@ -29,7 +29,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CoreNode, CoreNodeRenderState } from '../../CoreNode.js';
 import { TextureType, type Texture } from '../../textures/Texture.js';
-import type { Stage } from '../../Stage.js';
+import { Stage } from '../../Stage.js';
 import { WebGlRenderer } from './WebGlRenderer.js';
 import { makeMockStage, makeNodeProps } from '../../../../test/mockStage.js';
 
@@ -51,7 +51,11 @@ const makeTexture = (): Texture =>
     type: TextureType.image,
     ctxTexture: {},
     state: 'loaded',
+    dimensions: { w: 100, h: 100 },
     setRenderableOwner: vi.fn(),
+    off: vi.fn(),
+    on: vi.fn(),
+    once: vi.fn(),
     retryCount: 0,
     maxRetryCount: 0,
   } as unknown as Texture);
@@ -501,5 +505,83 @@ describe('WebGlRenderer dirty quad buffer — RTT isolation', () => {
     expect(renderer.needsFullUpload).toBe(true);
     expect(renderer.lastUploadedBufferSize).toBe(0);
     expect(renderer.renderToTextureActive).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RTT toggle must invalidate the quad buffer (the fix for blue/white flash
+// when a node moves between main and rttQuadBuffer). Without the
+// CoreNode.set rtt -> requestRenderListUpdate -> invalidateQuadBuffer hop,
+// toggling `rtt:true` changes main-list slot count without a FULL upload
+// and the surgical path leaves stale quads on the GPU.
+// ---------------------------------------------------------------------------
+describe('WebGlRenderer dirty quad buffer — rtt toggle invalidates', () => {
+  it('forces a FULL upload after rtt toggles', () => {
+    const harness = makeRenderer([]);
+    const renderer = harness.renderer;
+    const stage = harness.stage;
+    const glw = harness.glw;
+    // Wire stage for rtt init (needs txManager + renderer back-pointer)
+    (stage as unknown as Record<string, unknown>).txManager = {
+      createTexture: vi.fn(
+        () =>
+          ({
+            state: 'loaded',
+            dimensions: { w: 100, h: 100 },
+            off: vi.fn(),
+            on: vi.fn(),
+            once: vi.fn(),
+            setRenderableOwner: vi.fn(),
+          } as unknown),
+      ),
+    };
+    (stage as unknown as Record<string, unknown>).renderer = renderer;
+    (renderer as unknown as Record<string, unknown>).renderToTexture = vi.fn();
+    (stage as unknown as Record<string, unknown>).requestRender = vi.fn();
+    (stage as unknown as Record<string, unknown>).renderListDirty = false;
+    // Mock requestRenderListUpdate to actually invalidate (mimics real Stage)
+    (stage as unknown as Record<string, unknown>).requestRenderListUpdate =
+      vi.fn(() => {
+        (stage as unknown as Record<string, unknown>).renderListDirty = true;
+        renderer.invalidateQuadBuffer();
+      });
+
+    // Minimal stage that actually invalidates on rtt
+    // (stage is a mock, so wire real requestRenderListUpdate that forwards to renderer.invalidateQuadBuffer)
+
+    const node = new CoreNode(
+      stage,
+      makeNodeProps({ w: 100, h: 100, color: 0xff0000ff }),
+    );
+    (node as unknown as { props: { texture: Texture } }).props.texture =
+      makeTexture();
+    vi.spyOn(node, 'draw').mockReturnValue(undefined);
+    node.update(0, clippingRect);
+
+    // First frame FULL
+    stage.renderListNodes = [node];
+    stage.renderListLen = 1;
+    renderer.reset();
+    renderer.addQuad(node);
+    renderer.render();
+    expect(glw.arrayBufferData).toHaveBeenCalled();
+
+    vi.clearAllMocks();
+
+    // Toggle rtt — must invalidate so next frame is FULL even though only 0-1 quads dirty
+    node.rtt = true;
+    expect((stage as unknown as Record<string, unknown>).renderListDirty).toBe(
+      true,
+    );
+    expect(renderer.needsFullUpload).toBe(true);
+
+    stage.renderListNodes = [node];
+    stage.renderListLen = 1;
+    renderer.reset();
+    renderer.addQuad(node);
+    renderer.render();
+    // FULL, not surgical, because invalidate set needsFullUpload
+    expect(glw.arrayBufferData).toHaveBeenCalled();
+    expect(glw.arrayBufferSubData).not.toHaveBeenCalled();
   });
 });

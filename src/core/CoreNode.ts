@@ -2727,6 +2727,12 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.RenderTexture);
+    // rtt toggles which buffer (main vs rttQuadBuffer) a node writes to and
+    // changes main-list slot count. Must rebuild the flat render list and
+    // re-assign contiguous quad slots (invalidateQuadBuffer) — otherwise the
+    // surgical bufferSubData path leaves stale quads on the GPU (blue/white
+    // flash). See WebGlRenderer.renderRTTNodes() -> needsFullUpload.
+    this.stage.requestRenderListUpdate();
 
     if (this.parentHasRenderTexture === true) {
       this.notifyParentRTTOfUpdate();
