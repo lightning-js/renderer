@@ -24,7 +24,7 @@ import { CoreRenderer } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
-import { normalizeCanvasColor } from '../../lib/colorCache.js';
+import { normalizeCanvasColor, normalizeCanvasColorArgb } from '../../lib/colorCache.js';
 import type { Stage } from '../../Stage.js';
 
 export class CanvasRenderer extends CoreRenderer {
@@ -218,12 +218,12 @@ export class CanvasRenderer extends CoreRenderer {
         endColor = node.premultipliedColorTr;
       }
       const gradient = this.context.createLinearGradient(tx, ty, endX, endY);
-      gradient.addColorStop(0, normalizeCanvasColor(color, false));
-      gradient.addColorStop(1, normalizeCanvasColor(endColor, false));
+      gradient.addColorStop(0, normalizeCanvasColorArgb(color));
+      gradient.addColorStop(1, normalizeCanvasColorArgb(endColor));
       this.context.fillStyle = gradient;
       this.context.fillRect(tx, ty, width, height);
     } else {
-      this.context.fillStyle = normalizeCanvasColor(color, false);
+      this.context.fillStyle = normalizeCanvasColorArgb(color);
       this.context.fillRect(tx, ty, width, height);
     }
   }
