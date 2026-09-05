@@ -110,6 +110,9 @@ const makeRenderer = (
   const renderer = Object.create(WebGlRenderer.prototype) as WebGlRenderer;
   (renderer as any).glw = glw;
   (renderer as any).stage = stage;
+  // Construction-time flag is cached in the constructor in production; the
+  // harness bypasses the constructor via Object.create, so set it explicitly.
+  (renderer as any).useDirtyRepaints = enableDirtyRepaints === true;
   (renderer as any).quadBuffer = quadBuffer;
   (renderer as any).fQuadBuffer = new Float32Array(quadBuffer);
   (renderer as any).uiQuadBuffer = new Uint32Array(quadBuffer);

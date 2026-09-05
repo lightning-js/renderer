@@ -1493,8 +1493,7 @@ export class CoreNode extends EventEmitter {
     // actually changed so the renderer re-uploads only modified slots.
     // Skipped unless surgical dirty-quad repaints are enabled (PR #861).
     if (
-      (this.stage.options as { enableDirtyRepaints?: boolean })
-        ?.enableDirtyRepaints === true &&
+      this.stage.options.enableDirtyRepaints === true &&
       updateType &
         (UpdateType.Global |
           UpdateType.PremultipliedColors |
@@ -2948,10 +2947,7 @@ export class CoreNode extends EventEmitter {
     }
 
     this.setUpdateType(UpdateType.IsRenderable);
-    if (
-      (this.stage.options as { enableDirtyRepaints?: boolean })
-        ?.enableDirtyRepaints === true
-    ) {
+    if (this.stage.options.enableDirtyRepaints === true) {
       this.isQuadDirty = true;
     }
     this.updateIsSimple();

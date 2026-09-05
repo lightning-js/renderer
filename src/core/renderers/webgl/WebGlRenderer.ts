@@ -196,12 +196,7 @@ export class WebGlRenderer extends CoreRenderer {
    * When disabled, `addQuad`/`render`/`renderRTTNodes` use the legacy full
    * buffer upload path and all slot/dirty bookkeeping stays inert.
    */
-  private get useDirtyRepaints(): boolean {
-    return (
-      (this.stage.options as { enableDirtyRepaints?: boolean })
-        ?.enableDirtyRepaints === true
-    );
-  }
+  private readonly useDirtyRepaints: boolean;
 
   //// Shared SDF Text Batching
   /**
@@ -277,6 +272,8 @@ export class WebGlRenderer extends CoreRenderer {
 
   constructor(stage: Stage) {
     super(stage);
+
+    this.useDirtyRepaints = stage.options.enableDirtyRepaints === true;
 
     this.quadBuffer = new ArrayBuffer(stage.options.quadBufferSize);
     this.fQuadBuffer = new Float32Array(this.quadBuffer);
@@ -1161,60 +1158,15 @@ export class WebGlRenderer extends CoreRenderer {
    * @param surface
    */
   render(_surface: 'screen' | CoreContextTexture = 'screen'): void {
-    const { glw, quadBuffer } = this;
+    const { quadBuffer } = this;
 
     const buffer = this.quadBufferCollection.getBuffer('a_position') || null;
     const BYTES = Float32Array.BYTES_PER_ELEMENT;
 
     if (this.useDirtyRepaints === false) {
-      // Legacy path (pre-PR #861): re-upload the entire quad buffer.
-      const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-      glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+      this.uploadFullLegacy(buffer, quadBuffer);
     } else {
-      // Structural realloc (needsFullUpload) or buffer growth past the last
-      // uploaded size always forces a full upload.
-      let fullUpload =
-        this.needsFullUpload || this.curBufferIdx > this.lastUploadedBufferSize;
-
-      // Otherwise decide adaptively: if more than 40% of the render list would
-      // need a surgical upload, a single bulk bufferData is cheaper than that
-      // many bufferSubData calls. The count was accumulated for free during the
-      // addQuad pass, so no separate counting loop is needed here.
-      if (fullUpload === false) {
-        fullUpload =
-          this.dirtyQuadCount >
-          this.stage.renderListLen * FULL_UPLOAD_DIRTY_RATIO;
-      }
-
-      const nodes = this.stage.renderListNodes;
-
-      if (fullUpload === true) {
-        const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
-        glw.arrayBufferData(buffer, arr, glw.DYNAMIC_DRAW);
-        this.needsFullUpload = false;
-        this.lastUploadedBufferSize = this.curBufferIdx;
-
-        // Everything is on the GPU now; clear the dirty flags.
-        for (let i = 0; i < this.stage.renderListLen; i++) {
-          nodes[i]!.isQuadDirty = false;
-        }
-      } else {
-        // Surgical: copy each dirty slot into the preallocated scratch buffer
-        // and upload only those 20 floats. No per-node allocation.
-        const scratch = this._quadScratchF;
-        const f = this.fQuadBuffer;
-        for (let i = 0; i < this.stage.renderListLen; i++) {
-          const node = nodes[i]!;
-          if (node.isQuadDirty === true && node.quadBufferIndex !== -1) {
-            const slot = node.quadBufferIndex;
-            for (let j = 0; j < 20; j++) {
-              scratch[j] = f[slot + j]!;
-            }
-            glw.arrayBufferSubData(buffer, slot * BYTES, scratch);
-            node.isQuadDirty = false;
-          }
-        }
-      }
+      this.uploadDirtyAdaptive(buffer, quadBuffer, BYTES);
     }
 
     // Upload the shared SDF buffers (each layout skips the driver copy when
@@ -1239,6 +1191,80 @@ export class WebGlRenderer extends CoreRenderer {
     // Calculate the size of each quad in bytes (4 vertices per quad) times the size of each vertex in bytes
     const QUAD_SIZE_IN_BYTES = 4 * (QUAD_VERTEX_STRIDE * BYTES);
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
+  }
+
+  private uploadFullLegacy(
+    buffer: WebGLBuffer | null,
+    quadBuffer: ArrayBuffer,
+  ): void {
+    const { glw } = this;
+    // Legacy path (pre-PR #861): re-upload the entire quad buffer.
+    const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
+    glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
+  }
+
+  private uploadDirtyAdaptive(
+    buffer: WebGLBuffer | null,
+    quadBuffer: ArrayBuffer,
+    BYTES: number,
+  ): void {
+    // Structural realloc (needsFullUpload) or buffer growth past the last
+    // uploaded size always forces a full upload.
+    let fullUpload =
+      this.needsFullUpload || this.curBufferIdx > this.lastUploadedBufferSize;
+
+    // Otherwise decide adaptively: if more than 40% of the render list would
+    // need a surgical upload, a single bulk bufferData is cheaper than that
+    // many bufferSubData calls. The count was accumulated for free during the
+    // addQuad pass, so no separate counting loop is needed here.
+    if (fullUpload === false) {
+      fullUpload =
+        this.dirtyQuadCount >
+        this.stage.renderListLen * FULL_UPLOAD_DIRTY_RATIO;
+    }
+
+    if (fullUpload === true) {
+      this.uploadFullDirty(buffer, quadBuffer);
+      return;
+    }
+    this.uploadSurgicalQuads(buffer, BYTES);
+  }
+
+  private uploadFullDirty(
+    buffer: WebGLBuffer | null,
+    quadBuffer: ArrayBuffer,
+  ): void {
+    const { glw } = this;
+    const nodes = this.stage.renderListNodes;
+    const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
+    glw.arrayBufferData(buffer, arr, glw.DYNAMIC_DRAW);
+    this.needsFullUpload = false;
+    this.lastUploadedBufferSize = this.curBufferIdx;
+
+    // Everything is on the GPU now; clear the dirty flags.
+    for (let i = 0; i < this.stage.renderListLen; i++) {
+      nodes[i]!.isQuadDirty = false;
+    }
+  }
+
+  private uploadSurgicalQuads(buffer: WebGLBuffer | null, BYTES: number): void {
+    const { glw } = this;
+    const nodes = this.stage.renderListNodes;
+    // Surgical: copy each dirty slot into the preallocated scratch buffer
+    // and upload only those 20 floats. No per-node allocation.
+    const scratch = this._quadScratchF;
+    const f = this.fQuadBuffer;
+    for (let i = 0; i < this.stage.renderListLen; i++) {
+      const node = nodes[i]!;
+      if (node.isQuadDirty === true && node.quadBufferIndex !== -1) {
+        const slot = node.quadBufferIndex;
+        for (let j = 0; j < 20; j++) {
+          scratch[j] = f[slot + j]!;
+        }
+        glw.arrayBufferSubData(buffer, slot * BYTES, scratch);
+        node.isQuadDirty = false;
+      }
+    }
   }
 
   getQuadCount(): number {
