@@ -76,6 +76,60 @@ export class CoreShaderManager {
   }
 
   /**
+   * Remove a shader type and destroy its compiled programs.
+   *
+   * @remarks
+   * Enables dynamic runtime shaders and hot-reload: after unregistering,
+   * the same name can be registered again with new GLSL source and
+   * re-created via {@link createShader}. Existing shader nodes hold a
+   * direct program reference and are not auto-migrated — callers must
+   * re-create them with `createShader` and reassign `node.shader`.
+   *
+   * Cache entries derived from `getCacheMarkers` (`name-marker`) are
+   * evicted together with the base name.
+   */
+  unregisterShaderType(name: string): void {
+    if (this.shTypes[name] === undefined) {
+      console.warn(
+        `ShaderType not found with the name: ${name}. Nothing to unregister.`,
+      );
+      return;
+    }
+    delete this.shTypes[name];
+    for (const key of [...this.shCache.keys()]) {
+      if (key === name || key.startsWith(`${name}-`)) {
+        const program = this.shCache.get(key);
+        if (program !== undefined) {
+          if (this.attachedShader === program) {
+            this.releaseShader();
+          }
+          program.destroy?.();
+        }
+        this.shCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Replace a shader type definition at runtime.
+   *
+   * @remarks
+   * Equivalent to `unregisterShaderType` + `registerShaderType`. Compiled
+   * programs for the old definition are destroyed so the next
+   * {@link createShader} call compiles the new source.
+   */
+  updateShaderType(name: string, shType: CoreShaderType): void {
+    if (this.shTypes[name] === undefined) {
+      console.warn(
+        `ShaderType not found with the name: ${name}. Registering as new.`,
+      );
+    } else {
+      this.unregisterShaderType(name);
+    }
+    this.registerShaderType(name, shType);
+  }
+
+  /**
    * Loads a shader (if not already loaded) and returns a controller for it.
    *
    * @param shType
@@ -121,7 +175,15 @@ export class CoreShaderManager {
      * if shaderProgram was not found create a new one
      */
     if (shProgram === undefined) {
-      shProgram = this.stage.renderer.createShaderProgram(shType, props)!;
+      try {
+        shProgram = this.stage.renderer.createShaderProgram(shType, props)!;
+      } catch (err) {
+        console.warn(
+          `Shader "${shaderKey}" failed to compile falling back on renderer default shader`,
+          err,
+        );
+        return this.stage.defShaderNode;
+      }
       this.shCache.set(shaderKey, shProgram);
     }
 
