@@ -514,7 +514,7 @@ describe('WebGlRenderer dirty quad buffer — RTT isolation', () => {
   });
 });
 
-describe('WebGlRenderer dirty quad buffer — disabled (default)', () => {
+describe('WebGlRenderer dirty quad buffer — disabled (opt-out)', () => {
   it('always full uploads with STATIC_DRAW and never uses bufferSubData', () => {
     const harness = makeRenderer([], false);
     const { renderer, stage } = harness;

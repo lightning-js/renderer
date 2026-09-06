@@ -192,7 +192,7 @@ export class WebGlRenderer extends CoreRenderer {
    * Whether surgical dirty-quad repaints (PR #861) are enabled.
    *
    * @remarks
-   * Construction-time only via `enableDirtyRepaints` (default `false`).
+   * Construction-time only via `enableDirtyRepaints` (default `true`).
    * When disabled, `addQuad`/`render`/`renderRTTNodes` use the legacy full
    * buffer upload path and all slot/dirty bookkeeping stays inert.
    */
@@ -1164,9 +1164,28 @@ export class WebGlRenderer extends CoreRenderer {
     const BYTES = Float32Array.BYTES_PER_ELEMENT;
 
     if (this.useDirtyRepaints === false) {
-      this.uploadFullLegacy(buffer, quadBuffer);
+      this.uploadFullBuffer(buffer, quadBuffer);
     } else {
-      this.uploadDirtyAdaptive(buffer, quadBuffer, BYTES);
+      // Structural realloc (needsFullUpload) or buffer growth past the last
+      // uploaded size always forces a full upload.
+      let fullUpload =
+        this.needsFullUpload || this.curBufferIdx > this.lastUploadedBufferSize;
+
+      // Otherwise decide adaptively: if more than 40% of the render list would
+      // need a surgical upload, a single bulk bufferData is cheaper than that
+      // many bufferSubData calls. The count was accumulated for free during the
+      // addQuad pass, so no separate counting loop is needed here.
+      if (fullUpload === false) {
+        fullUpload =
+          this.dirtyQuadCount >
+          this.stage.renderListLen * FULL_UPLOAD_DIRTY_RATIO;
+      }
+
+      if (fullUpload === true) {
+        this.uploadFullDirty(buffer, quadBuffer);
+      } else {
+        this.uploadSurgicalQuads(buffer, BYTES);
+      }
     }
 
     // Upload the shared SDF buffers (each layout skips the driver copy when
@@ -1193,43 +1212,22 @@ export class WebGlRenderer extends CoreRenderer {
     this.numQuadsRendered = this.quadBufferUsage / QUAD_SIZE_IN_BYTES;
   }
 
-  private uploadFullLegacy(
+  // Full upload for the disabled (opt-out) path: re-uploads the entire quad
+  // buffer with a STATIC_DRAW hint and touches no slot/dirty bookkeeping,
+  // which stays inert while dirty repaints are disabled.
+  private uploadFullBuffer(
     buffer: WebGLBuffer | null,
     quadBuffer: ArrayBuffer,
   ): void {
     const { glw } = this;
-    // Legacy path (pre-PR #861): re-upload the entire quad buffer.
     const arr = new Float32Array(quadBuffer, 0, this.curBufferIdx);
     glw.arrayBufferData(buffer, arr, glw.STATIC_DRAW);
   }
 
-  private uploadDirtyAdaptive(
-    buffer: WebGLBuffer | null,
-    quadBuffer: ArrayBuffer,
-    BYTES: number,
-  ): void {
-    // Structural realloc (needsFullUpload) or buffer growth past the last
-    // uploaded size always forces a full upload.
-    let fullUpload =
-      this.needsFullUpload || this.curBufferIdx > this.lastUploadedBufferSize;
-
-    // Otherwise decide adaptively: if more than 40% of the render list would
-    // need a surgical upload, a single bulk bufferData is cheaper than that
-    // many bufferSubData calls. The count was accumulated for free during the
-    // addQuad pass, so no separate counting loop is needed here.
-    if (fullUpload === false) {
-      fullUpload =
-        this.dirtyQuadCount >
-        this.stage.renderListLen * FULL_UPLOAD_DIRTY_RATIO;
-    }
-
-    if (fullUpload === true) {
-      this.uploadFullDirty(buffer, quadBuffer);
-      return;
-    }
-    this.uploadSurgicalQuads(buffer, BYTES);
-  }
-
+  // Full upload within the enabled path: same bulk bytes as uploadFullBuffer
+  // but with a DYNAMIC_DRAW hint, and it resets the slot/dirty bookkeeping
+  // (upload cursor + dirty flags) so later surgical frames know exactly what
+  // is already on the GPU.
   private uploadFullDirty(
     buffer: WebGLBuffer | null,
     quadBuffer: ArrayBuffer,

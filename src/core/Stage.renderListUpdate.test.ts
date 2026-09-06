@@ -94,7 +94,7 @@ describe('Stage.requestRenderListUpdate', () => {
     expect(stage.requestRender.mock.calls.length).toBe(1);
   });
 
-  it('skips invalidation when dirty repaints are disabled (default)', () => {
+  it('skips invalidation when dirty repaints are disabled', () => {
     const stage = makeStage(true, false);
 
     requestRenderListUpdate(stage);

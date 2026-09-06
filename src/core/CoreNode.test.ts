@@ -468,6 +468,12 @@ describe('CoreNode', () => {
       } as unknown as Partial<import('./Stage.js').Stage>,
       { width: 200, height: 200 },
     );
+    const disabledStage = makeMockStage(
+      {
+        options: { enableDirtyRepaints: false },
+      } as unknown as Partial<import('./Stage.js').Stage>,
+      { width: 200, height: 200 },
+    );
     it('starts clean', () => {
       const node = new CoreNode(dirtyStage, defaultProps);
       expect(node.isQuadDirty).toBe(false);
@@ -525,8 +531,8 @@ describe('CoreNode', () => {
       expect(node.isQuadDirty).toBe(true);
     });
 
-    it('stays clean when dirty repaints are disabled (default)', () => {
-      const node = new CoreNode(stage, defaultProps);
+    it('stays clean when dirty repaints are disabled', () => {
+      const node = new CoreNode(disabledStage, defaultProps);
       node.isQuadDirty = false;
       node.x = 10;
 

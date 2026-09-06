@@ -365,9 +365,12 @@ export type RendererMainSettings = RendererRuntimeSettings &
      * via `bufferSubData` instead of re-uploading the entire quad buffer on
      * every frame.
      *
+     * Set to `false` to opt out and restore the legacy behavior of
+     * re-uploading the entire quad buffer on every frame.
+     *
      * Construction-time only: changing it after construction has no effect.
      *
-     * @defaultValue `false` (disabled, full buffer upload every frame)
+     * @defaultValue `true` (enabled, surgical dirty-quad uploads)
      */
     enableDirtyRepaints: boolean;
 
@@ -548,7 +551,7 @@ export class RendererMain extends EventEmitter {
       inspectorOptions: settings.inspectorOptions ?? {},
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
-      enableDirtyRepaints: settings.enableDirtyRepaints ?? false,
+      enableDirtyRepaints: settings.enableDirtyRepaints ?? true,
       fontEngines: settings.fontEngines ?? [],
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       maxTextureUploadsDuringAnimation:
