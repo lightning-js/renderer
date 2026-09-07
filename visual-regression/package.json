@@ -20,7 +20,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.4.1",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
     "@types/yargs": "^17.0.35",

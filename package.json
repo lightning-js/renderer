@@ -53,7 +53,7 @@
   },
   "homepage": "https://github.com/lightning-js/renderer#readme",
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.4.1",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
     "@typescript-eslint/parser": "^8.69.0",
     "@vitest/coverage-v8": "^3.2.7",
