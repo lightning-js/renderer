@@ -28,7 +28,7 @@
     "wait-port": "^1.1.0"
   },
   "dependencies": {
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "execa": "^8.0.1",
     "fs-extra": "^11.4.0",
     "pixelmatch": "^6.0.0",
