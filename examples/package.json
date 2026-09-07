@@ -24,8 +24,8 @@
     "@stdlib/random-base-mt19937": "^0.2.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-legacy": "^6.1.1",
-    "vite": "^6.4.3",
+    "@vitejs/plugin-legacy": "^7.2.1",
+    "vite": "^7.3.6",
     "whatwg-fetch": "^3.6.20"
   },
   "engines": {
