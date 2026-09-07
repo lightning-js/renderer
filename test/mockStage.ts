@@ -39,6 +39,24 @@ export interface MockStageDimensions {
 }
 
 /**
+ * The implementation argument accepted by `mock<T>()`, i.e. `DeepPartial<T>`.
+ *
+ * `DeepPartial` recurses structurally through every nested type, and `Stage`
+ * transitively reaches the DOM lib via `renderer.canvas`. TypeScript 5.x gave
+ * up on that comparison early and treated it as assignable; TypeScript 6 walks
+ * far enough to surface mismatches deep inside the DOM types (e.g.
+ * `StylePropertyMapReadOnly` vs `ReadonlyMap`), so concrete values are rejected
+ * as incompatible with their own deep-partial form.
+ *
+ * The defaults below are deliberately concrete, so the argument is cast as a
+ * whole. This is purely a type-level escape hatch — the object is still handed
+ * to `mock()` unchanged, which matters because `mock()` recursively wraps
+ * nested objects in proxies. Building the mock and assigning afterwards would
+ * silently drop that behaviour.
+ */
+type MockImpl<T> = Parameters<typeof mock<T>>[0];
+
+/**
  * Build a `mock<Stage>` pre-populated with the scaffolding required to
  * construct core nodes.
  *
@@ -65,7 +83,7 @@ export function makeMockStage(
     } as unknown as Stage['interactiveNodes'],
     renderer: mock<CoreRenderer>() as CoreRenderer,
     ...overrides,
-  });
+  } as unknown as MockImpl<Stage>);
 }
 
 /**

@@ -65,7 +65,7 @@
     "lint-staged": "^17.4.1",
     "prettier": "^2.8.8",
     "typedoc": "^0.28.20",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.3",
     "vitest": "^3.2.7",
     "vitest-mock-extended": "^3.1.1"
   },
