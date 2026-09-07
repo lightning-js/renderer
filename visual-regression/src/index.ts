@@ -163,8 +163,8 @@ async function dockerCiMode(): Promise<number> {
     -w /work/ -i visual-regression:latest \
     /bin/bash -c ${`pnpm install && RUNTIME_ENV=ci pnpm test:visual ${commandLineStr}`}
   `;
-  await childProc;
-  return childProc.exitCode ?? 1;
+  const result = await childProc;
+  return result.exitCode ?? 1;
 }
 
 /**
@@ -206,6 +206,12 @@ async function compareCaptureMode(): Promise<number> {
     detached: true,
     cleanup: false,
   })`pnpm serve-examples --port ${argv.port}`;
+
+  // We deliberately SIGTERM this subprocess in the `finally` block below. Since
+  // execa 9 the returned value is a real promise that is always active, so that
+  // termination surfaces as an unhandled rejection and crashes the process.
+  // Swallow the expected rejection; the `finally` block owns the lifecycle.
+  serveExamplesChildProc.catch(() => undefined);
 
   let exitCode = 1;
   try {
