@@ -103,7 +103,9 @@ export class CoreShaderManager {
           if (this.attachedShader === program) {
             this.releaseShader();
           }
-          program.destroy?.();
+          if (program.destroy !== undefined) {
+            program.destroy();
+          }
         }
         this.shCache.delete(key);
       }
