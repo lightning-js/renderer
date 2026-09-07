@@ -31,12 +31,17 @@ type FakeStage = {
   renderer: { invalidateQuadBuffer?: ReturnType<typeof vi.fn> };
   renderListDirty: boolean;
   requestRender: ReturnType<typeof vi.fn>;
+  options: { enableDirtyRepaints?: boolean };
 };
 
-const makeStage = (hasInvalidate = true): FakeStage => ({
+const makeStage = (
+  hasInvalidate = true,
+  enableDirtyRepaints = true,
+): FakeStage => ({
   renderer: hasInvalidate ? { invalidateQuadBuffer: vi.fn() } : {},
   renderListDirty: false,
   requestRender: vi.fn(),
+  options: { enableDirtyRepaints },
 });
 
 const requestRenderListUpdate = (stage: FakeStage) =>
@@ -85,6 +90,16 @@ describe('Stage.requestRenderListUpdate', () => {
 
     requestRenderListUpdate(stage);
 
+    expect(stage.renderListDirty).toBe(true);
+    expect(stage.requestRender.mock.calls.length).toBe(1);
+  });
+
+  it('skips invalidation when dirty repaints are disabled', () => {
+    const stage = makeStage(true, false);
+
+    requestRenderListUpdate(stage);
+
+    expect(stage.renderer.invalidateQuadBuffer!.mock.calls.length).toBe(0);
     expect(stage.renderListDirty).toBe(true);
     expect(stage.requestRender.mock.calls.length).toBe(1);
   });

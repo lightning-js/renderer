@@ -698,7 +698,12 @@ export class Stage {
     this.requestRender();
     // A render list rebuild invalidates all permanent quad buffer slot
     // assignments, so the renderer must reset them and force a full upload.
-    if (this.renderer.invalidateQuadBuffer !== undefined) {
+    // Only applies when surgical dirty-quad repaints are enabled (PR #861);
+    // otherwise the renderer re-uploads the full buffer every frame anyway.
+    if (
+      this.options.enableDirtyRepaints === true &&
+      this.renderer.invalidateQuadBuffer !== undefined
+    ) {
       this.renderer.invalidateQuadBuffer();
     }
   }
