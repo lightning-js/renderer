@@ -33,7 +33,7 @@
     "fs-extra": "^11.4.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
-    "yargs": "^17.7.3"
+    "yargs": "^18.1.0"
   },
   "engines": {
     "npm": "please-use-pnpm"
