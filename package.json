@@ -61,7 +61,7 @@
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^8.10.2",
     "happy-dom": "^20.13.2",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
     "prettier": "^2.8.8",
     "typedoc": "^0.28.20",
