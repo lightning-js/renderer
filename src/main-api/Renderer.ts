@@ -29,7 +29,10 @@ import type { TextRenderer } from '../core/text-rendering/TextRenderer.js';
 import type { CanvasRenderer } from '../core/renderers/canvas/CanvasRenderer.js';
 import type { WebGlRenderer } from '../core/renderers/webgl/WebGlRenderer.js';
 import type { Inspector, InspectorOptions } from './Inspector.js';
-import type { CoreShaderNode } from '../core/renderers/CoreShaderNode.js';
+import type {
+  CoreShaderNode,
+  CoreShaderType,
+} from '../core/renderers/CoreShaderNode.js';
 import type {
   ExtractShaderProps,
   OptionalShaderProps,
@@ -800,6 +803,31 @@ export class RendererMain extends EventEmitter {
     return this.stage.shManager.createShader(shType, props) as CoreShaderNode<
       NonNullable<ExtractShaderProps<ShType>>
     >;
+  }
+
+  /**
+   * Remove a shader type and destroy its compiled programs.
+   *
+   * @remarks
+   * Enables dynamic runtime shaders and hot-reload: after unregistering,
+   * the same name can be registered again with new GLSL source via
+   * `stage.shManager.registerShaderType` and re-created via `createShader`.
+   * Existing shader nodes are not auto-migrated — re-create them and
+   * reassign `node.shader`.
+   */
+  unregisterShaderType(name: string): void {
+    this.stage.shManager.unregisterShaderType(name);
+  }
+
+  /**
+   * Replace a shader type definition at runtime.
+   *
+   * @remarks
+   * Equivalent to `unregisterShaderType` + `registerShaderType`. The next
+   * `createShader` call compiles the new source.
+   */
+  updateShaderType(name: string, shType: CoreShaderType): void {
+    this.stage.shManager.updateShaderType(name, shType);
   }
 
   /**
