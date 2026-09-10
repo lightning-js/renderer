@@ -1048,7 +1048,7 @@ export class CoreNode extends EventEmitter {
     texture.setRenderableOwner(this._id, false);
   }
 
-  protected onTextureLoaded: TextureLoadedEventHandler = (_, dimensions) => {
+  protected onTextureLoaded: TextureLoadedEventHandler = (_target, dimensions) => {
     if (this.autosizer !== null) {
       this.autosizer.update();
     }
@@ -1085,7 +1085,7 @@ export class CoreNode extends EventEmitter {
     }
   };
 
-  private onTextureFailed: TextureFailedEventHandler = (_, error) => {
+  private onTextureFailed: TextureFailedEventHandler = (_target, error) => {
     // immediately set isRenderable to false, so that we handle the error
     // without waiting for the next frame loop
     this.isRenderable = false;
