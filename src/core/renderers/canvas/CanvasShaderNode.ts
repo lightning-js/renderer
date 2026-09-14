@@ -90,6 +90,6 @@ export class CanvasShaderNode<
   }
 
   toColorString(rgba: number) {
-    return normalizeCanvasColor(rgba, true);
+    return normalizeCanvasColor(rgba);
   }
 }
