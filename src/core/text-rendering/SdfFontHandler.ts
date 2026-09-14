@@ -355,7 +355,7 @@ export const loadFont = async (
         resolve();
       });
 
-      atlasTexture.on('failed', (error: Error) => {
+      atlasTexture.on('failed', (_target, error: Error) => {
         // Cleanup on error
         fontLoadPromises.delete(fontFamily);
         if (fontCache[fontFamily]) {
