@@ -118,3 +118,45 @@ export const spanIndexAt = (
   }
   return idx;
 };
+
+// --- Decoration geometry -----------------------------------------------------
+//
+// Underline and strikethrough offsets are shared so the same markup lands in
+// the same place on both backends. The baseline itself is still derived per
+// backend (Canvas from normalized font metrics, SDF from the BMFont `base`
+// value, which is more accurate for SDF atlases), since those are genuinely
+// different and better sources; only the offsets from it are unified.
+//
+// All three return pixels. The SDF renderer works in design units and divides
+// by its font scale.
+
+/**
+ * Stroke thickness for underline and strikethrough, in pixels.
+ */
+export const decorationThickness = (fontSize: number): number =>
+  Math.max(1, Math.round(fontSize / 20));
+
+/**
+ * Gap between the alphabetic baseline and the top of the underline, in pixels.
+ */
+export const underlineGap = (fontSize: number): number =>
+  Math.max(1, Math.round(fontSize * 0.08));
+
+/**
+ * Fraction of the top-to-baseline distance at which the strikethrough sits.
+ *
+ * @remarks
+ * A true strikethrough is centred on the x-height, but neither backend has
+ * x-height available, so it is approximated as a fraction of the distance from
+ * the top of the line box down to the alphabetic baseline.
+ */
+export const STRIKE_BASELINE_RATIO = 0.6;
+
+/**
+ * Distance from the top of the line box to the strikethrough, in pixels.
+ *
+ * @param baselineDistance Distance from the top of the line box to the
+ * alphabetic baseline.
+ */
+export const strikeOffset = (baselineDistance: number): number =>
+  baselineDistance * STRIKE_BASELINE_RATIO;
