@@ -611,7 +611,7 @@ export class RendererMain extends EventEmitter {
       quadBufferSize: settings.quadBufferSize!,
       enableDirtyRepaints: settings.enableDirtyRepaints!,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector !== null,
+      inspector: inspector as boolean,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       maxTextureUploadsDuringAnimation:
