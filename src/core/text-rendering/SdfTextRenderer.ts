@@ -21,6 +21,7 @@ import type { Stage } from '../Stage.js';
 import type { CoreRenderer } from '../renderers/CoreRenderer.js';
 import type {
   FontHandler,
+  MeasureTextFn,
   SdfRenderInfo,
   TextLineStruct,
   TextRenderInfo,
@@ -333,84 +334,68 @@ const _writeDecoRecord = (
 };
 
 /**
- * Re-measure each layout line accounting for span styles, in design units.
+ * Build a {@link MeasureTextFn} that accounts for span styles during layout.
  *
  * @remarks
- * The layout engine measures with plain glyph metrics. Bold is faked by a
- * shader threshold shift and italic by a shear, neither of which changes
- * `xadvance`, so a styled line is drawn wider than it measured. The reported
- * width becomes the node's width, so it has to be corrected or siblings are
- * laid out against a box that is too small.
+ * Mirrors the advance arithmetic of the positioning loop and of
+ * {@link correctStyledLineWidths}: synthetic bold widens each glyph, an italic
+ * run owes a shear overhang when it ends, and kerning does not apply across a
+ * style boundary. Using it for line breaking means a bold run that overflows
+ * wraps at the right place rather than at the place the regular face would.
  *
- * Mutates `lines` in place (widths at index 1, x offsets at index 3) and
- * returns the widest corrected width. Line breaking is unaffected — this only
- * corrects the extent of lines that were already chosen.
+ * `start < 0` means the substring is not locatable in the source (the overflow
+ * suffix, or a separator), so plain metrics are used.
  */
-const correctStyledLineWidths = (
-  lines: TextLineStruct[],
-  fontFamily: string,
-  letterSpacing: number,
+const makeStyledMeasureText = (
   boldAdvanceExtra: number,
   base: number,
-  textAlign: string,
-  fallbackWidth: number,
-): number => {
-  const spanCount = _richTextResult.spanCount;
+): MeasureTextFn => {
   const spans = _richTextResult.spans;
 
-  // No spans means no style variation, so the base measurement already holds.
-  if (spanCount === 0) {
-    return fallbackWidth;
-  }
-
-  let widest = 0;
-  let curSpanIdx = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    const textLine = line[0];
-    if (textLine.length === 0) {
-      continue;
+  return (text, fontFamily, letterSpacing, start) => {
+    const spanCount = _richTextResult.spanCount;
+    if (text.length === 0) {
+      return 0;
+    }
+    if (start === undefined || start < 0 || spanCount === 0) {
+      return SdfFontHandler.measureText(text, fontFamily, letterSpacing);
     }
 
     let width = 0;
     let prevGlyphId = 0;
     let prevSpanIdx = -1;
     let pendingItalicOverhang = 0;
-    let strippedPos = line[5];
+    let pos = start;
+    let curSpanIdx = spanIndexAt(spans, spanCount, start, 0);
 
-    for (const char of textLine) {
+    for (const char of text) {
       const charLen = char.length;
       if (hasZeroWidthSpace(char) === true) {
-        strippedPos += charLen;
+        pos += charLen;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
-        strippedPos += charLen;
+        pos += charLen;
         continue;
       }
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
-        strippedPos += charLen;
+        pos += charLen;
         continue;
       }
 
-      curSpanIdx = spanIndexAt(spans, spanCount, strippedPos, curSpanIdx);
+      curSpanIdx = spanIndexAt(spans, spanCount, pos, curSpanIdx);
       const span = spans[curSpanIdx]!;
 
-      // Mirrors the positioning loop exactly; see the comments there.
       if (prevGlyphId !== 0 && prevSpanIdx === curSpanIdx) {
         width += SdfFontHandler.getKerning(fontFamily, prevGlyphId, glyph.id);
       }
       if (pendingItalicOverhang > 0 && span.italic === false) {
         width += pendingItalicOverhang;
       }
-      pendingItalicOverhang = 0;
-
-      if (span.italic === true) {
-        pendingItalicOverhang = italicOverhang(base, glyph.yoffset);
-      }
+      pendingItalicOverhang =
+        span.italic === true ? italicOverhang(base, glyph.yoffset) : 0;
 
       width +=
         glyph.xadvance +
@@ -419,12 +404,45 @@ const correctStyledLineWidths = (
 
       prevGlyphId = glyph.id;
       prevSpanIdx = curSpanIdx;
-      strippedPos += charLen;
+      pos += charLen;
     }
 
-    // A run that reaches the end of the line still overhangs the line box.
-    width += pendingItalicOverhang;
+    return width + pendingItalicOverhang;
+  };
+};
 
+/**
+ * Recompute line widths in design units using a style-aware measure function,
+ * returning the widest.
+ *
+ * @remarks
+ * Line breaking already accounts for styles, but a line's width is accumulated
+ * from word widths plus base-font separator widths, and a line-final italic
+ * overhang falls outside any word. That width becomes the node's width, so
+ * measure each final line in one go instead.
+ *
+ * Mutates `lines` in place (widths at index 1, x offsets at index 3).
+ */
+const correctStyledLineWidths = (
+  lines: TextLineStruct[],
+  measureStyled: MeasureTextFn,
+  fontFamily: string,
+  letterSpacing: number,
+  textAlign: string,
+  fallbackWidth: number,
+): number => {
+  if (_richTextResult.spanCount === 0) {
+    // No spans means no style variation, so the base measurement already holds.
+    return fallbackWidth;
+  }
+
+  let widest = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line[0].length === 0) {
+      continue;
+    }
+    const width = measureStyled(line[0], fontFamily, letterSpacing, line[5]);
     line[1] = width;
     if (width > widest) {
       widest = width;
@@ -486,6 +504,17 @@ const generateTextLayout = (
     layoutText = _richTextResult.stripped;
   }
 
+  // Extra advance, in design units, for a synthetically emboldened glyph, and
+  // the alphabetic baseline used for the italic shear overhang. Both are needed
+  // before layout so line breaking can account for styled runs.
+  const boldAdvanceExtra = sdfBoldExtra(fontData.distanceField.distanceRange);
+  const designBase = commonFontData.base;
+
+  const measureTextFn: MeasureTextFn =
+    richText === true
+      ? makeStyledMeasureText(boldAdvanceExtra, designBase)
+      : SdfFontHandler.measureText;
+
   const [
     lines,
     remainingLines,
@@ -495,7 +524,7 @@ const generateTextLayout = (
     baseEffectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
-    SdfFontHandler.measureText,
+    measureTextFn,
     metrics,
     layoutText,
     props.textAlign,
@@ -509,10 +538,10 @@ const generateTextLayout = (
     maxHeight,
   );
 
-  // Extra advance, in design units, for a synthetically emboldened glyph.
-  const boldAdvanceExtra = sdfBoldExtra(fontData.distanceField.distanceRange);
-
-  // mapTextLayout measured with plain glyph metrics, so a line containing bold
+  // mapTextLayout now measures styled runs correctly, but line widths are still
+  // accumulated from word widths plus base-font separators, and a line-final
+  // italic overhang is outside any word. Recompute the exact drawn extent so
+  // the node's width matches what is rendered., so a line containing bold
   // or italic spans is drawn wider than the width it reported. Correct the line
   // widths (and the alignment offsets derived from them) before any glyph
   // positions are computed, so the node's width matches what is drawn.
@@ -520,10 +549,9 @@ const generateTextLayout = (
     richText === true
       ? correctStyledLineWidths(
           lines,
+          measureTextFn,
           fontFamily,
           letterSpacing,
-          boldAdvanceExtra,
-          commonFontData.base,
           props.textAlign,
           baseEffectiveWidth,
         )
