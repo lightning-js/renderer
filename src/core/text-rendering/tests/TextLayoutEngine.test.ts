@@ -194,7 +194,7 @@ describe('SDF Text Utils', () => {
       );
 
       const [lines] = result1;
-      expect(lines[0]?.[0]).toEqual('helloworld'); // Break at space, not ZWSP
+      expect(lines[0]?.[0]).toEqual('hello\u200Bworld'); // Break at space, ZWSP preserved in-line
       expect(lines[1]?.[0]).toEqual('test');
 
       // Test 2: ZWSP should NOT break when text fits on one line
@@ -210,7 +210,7 @@ describe('SDF Text Utils', () => {
         'break-word',
         1,
       );
-      expect(result2[0][0]).toEqual(['hithere', 70, false, 0, 0, 0]); // ZWSP is invisible, no space added
+      expect(result2[0][0]).toEqual(['hi\u200Bthere', 70, false, 0, 0, 0]); // ZWSP preserved (zero width, offsets stay aligned)
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
@@ -588,6 +588,57 @@ describe('SDF Text Utils', () => {
       );
       expect(lines.map((l) => l[0])).toEqual(['one', 'two', 'three']);
       expect(lines.map((l) => l[5])).toEqual([0, 4, 8]);
+    });
+
+    it('preserves a single ZWSP within a line so offsets stay aligned', () => {
+      const text = 'hi\u200Bthere';
+      const lines = wrap(text, 200);
+      expect(lines.length).toBe(1);
+      // The ZWSP is zero-width but must stay in the text so rendered length
+      // matches source length and span offsets stay aligned.
+      expect(lines[0]?.[0]).toBe('hi\u200Bthere');
+      expect(lines[0]?.[5]).toBe(0);
+      expect(text.startsWith(lines[0]![0], lines[0]![5])).toBe(true);
+    });
+
+    it('maps collapsed-separator text to the correct spans (Canvas + SDF logic)', () => {
+      // Regression lock for the span/line desync: a naive "+= lineLen + 1"
+      // accumulator assumes one separator char and lands the second line at
+      // 6 instead of 8; SDF additionally drifted per line and on astral chars.
+      const text = 'hello   world \uD834\uDF06 test';
+      const lines = wrap(text, 100);
+      expect(lines.length).toBeGreaterThan(1);
+      // 'world' begins after 'hello' (5) + three spaces.
+      expect(lines[1]?.[5]).toBe(8);
+
+      // Two spans splitting exactly at the wrap point.
+      const spans = [
+        { start: 0, end: 8 },
+        { start: 8, end: text.length },
+      ];
+      const spanAt = (pos: number) => (pos >= 8 ? 1 : 0);
+
+      for (const line of lines) {
+        const lineText = line[0];
+        const lineStart = line[5] as number;
+        // Canvas logic: UTF-16 index j added to the absolute line offset.
+        for (let j = 0; j < lineText.length; j++) {
+          const pos = lineStart + j;
+          // Every rendered char must be locatable in the source text.
+          expect(text.charAt(pos)).toBe(lineText.charAt(j));
+          expect(spanAt(pos)).toBe(pos >= spans[1]!.start ? 1 : 0);
+        }
+        // SDF logic: for..of iterates code points, advance by unit length so
+        // astral characters (length 2) stay aligned with UTF-16 span offsets.
+        let pos = lineStart;
+        for (const char of lineText) {
+          expect(text.startsWith(char, pos)).toBe(true);
+          expect(spanAt(pos)).toBe(pos >= 8 ? 1 : 0);
+          pos += char.length;
+        }
+        // The SDF walk must consume exactly the rendered line.
+        expect(pos - lineStart).toBe(lineText.length);
+      }
     });
   });
 });

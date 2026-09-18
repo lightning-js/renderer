@@ -172,10 +172,10 @@ export const measureLines = (
   while (remainingLines > 0) {
     const line = lines[i];
     i++;
-    remainingLines--;
     if (line === undefined) {
       continue;
     }
+    remainingLines--;
     const width = measureText(line, fontFamily, letterSpacing);
     measuredLines.push([line, width, false, 0, 0, lineStart]);
     lineStart += line.length + 1;
@@ -406,7 +406,15 @@ export const wrapLine = (
     const totalWidth = currentLineWidth + effectiveSpaceWidth + wordWidth;
 
     if (totalWidth < maxWidth) {
-      currentLine += effectiveSpaceWidth > 0 ? space + word : word;
+      // Preserve a lone ZWSP in the text (zero width) so rendered length stays
+      // 1:1 with source offsets. Renderers skip the glyph but still advance
+      // the span cursor past it.
+      currentLine +=
+        space === '\u200B'
+          ? space + word
+          : effectiveSpaceWidth > 0
+          ? space + word
+          : word;
       currentLineWidth = totalWidth;
       continue;
     }
@@ -414,7 +422,13 @@ export const wrapLine = (
     remainingLines--;
 
     if (totalWidth === maxWidth) {
-      currentLine += effectiveSpaceWidth > 0 ? space + word : word;
+      // Same ZWSP preservation as above: keep the char, width stays 0.
+      currentLine +=
+        space === '\u200B'
+          ? space + word
+          : effectiveSpaceWidth > 0
+          ? space + word
+          : word;
       currentLineWidth = totalWidth;
       wrappedLines.push([
         currentLine,
