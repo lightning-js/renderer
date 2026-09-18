@@ -41,6 +41,7 @@ export * from '../src/main-api/INode.js';
 export * from '../src/main-api/Renderer.js';
 export * from '../src/common/IAnimationController.js';
 export * from '../src/common/CommonTypes.js';
+export type { FrameCount, FrameCounter } from '../src/core/lib/fps.js';
 
 // Selected types exported from the Core Renderer that can be used in the
 // context of the main API.
