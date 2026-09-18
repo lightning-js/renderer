@@ -33,7 +33,9 @@ type WrapStrategyFn = (
   spaceWidth: number,
   overflowSuffix: string,
   overflowWidth: number,
-) => [string, number, string];
+  currentLineStart?: number,
+  wordStart?: number,
+) => [string, number, string, number, number];
 
 export const normalizeFontMetrics = (
   metrics: FontMetrics,
@@ -163,6 +165,9 @@ export const measureLines = (
   const measuredLines: TextLineStruct[] = [];
   let remainingLines = maxLines > 0 ? maxLines : lines.length;
   let i = 0;
+  // Absolute offset of lines[i] in the source text. `lines` came from a plain
+  // '\n' split, so each line consumes its own length plus the one separator.
+  let lineStart = 0;
 
   while (remainingLines > 0) {
     const line = lines[i];
@@ -172,7 +177,8 @@ export const measureLines = (
       continue;
     }
     const width = measureText(line, fontFamily, letterSpacing);
-    measuredLines.push([line, width, false, 0, 0]);
+    measuredLines.push([line, width, false, 0, 0, lineStart]);
+    lineStart += line.length + 1;
   }
 
   return [
@@ -203,6 +209,9 @@ export const wrapText = (
   let remainingLines = maxLines > 0 ? maxLines : 1000;
   let hasRemainingText = true;
   let hasMaxLines = maxLines > 0;
+  // Absolute offset of lines[i] in `text`; advanced by the line length plus the
+  // single '\n' that separated it from the next.
+  let lineStart = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -223,9 +232,15 @@ export const wrapText = (
             overflowWidth,
             wordBreak,
             remainingLines,
+            lineStart,
           )
-        : [[['', 0, false, 0, 0]], remainingLines, i < lines.length - 1];
+        : [
+            [['', 0, false, 0, 0, lineStart]],
+            remainingLines,
+            i < lines.length - 1,
+          ];
 
+    lineStart += line.length + 1;
     remainingLines--;
     for (let j = 0; j < wrappedLine.length; j++) {
       wrappedLines.push(wrappedLine[j]!);
@@ -271,6 +286,7 @@ export const wrapLine = (
   overflowWidth: number,
   wordBreak: string,
   remainingLines: number,
+  lineStart = 0,
 ): WrappedLinesStruct => {
   const words = line.split(spaceRegex);
   const spaces = line.match(spaceRegex) || [];
@@ -284,6 +300,17 @@ export const wrapLine = (
   let spaceIdx = 0;
   let pendingWord = '';
 
+  // --- Absolute offset bookkeeping ---
+  // wordCursor: absolute start of words[wordIdx] in the source text. Advanced
+  //   past each consumed word *and* its trailing separator run, so collapsed
+  //   multi-character whitespace is accounted for exactly.
+  // currentLineStart: absolute start of `currentLine`; set when the line's
+  //   first word is adopted and reset to -1 whenever the line is flushed.
+  // pendingWordStart: absolute start of the remainder left by a split word.
+  let wordCursor = lineStart;
+  let currentLineStart = -1;
+  let pendingWordStart = lineStart;
+
   while (
     (pendingWord.length > 0 || wordIdx < words.length) &&
     remainingLines > 0
@@ -291,14 +318,23 @@ export const wrapLine = (
     let word: string;
     let wordWidth: number;
     let remainingWord = '';
+    let wordStart: number;
 
     if (pendingWord.length > 0) {
       word = pendingWord;
+      wordStart = pendingWordStart;
       pendingWord = '';
     } else {
+      wordStart = wordCursor;
       word = words[wordIdx++]!;
+      // Advance past this word and the separator run that followed it. The
+      // separator may be several characters wide (spaceRegex matches runs),
+      // which is precisely what a naive "+1 per line" accumulator gets wrong.
+      wordCursor += word.length + (spaces[wordIdx - 1]?.length ?? 0);
     }
     wordWidth = measureText(word, fontFamily, letterSpacing);
+    // Length before any truncate/split rewrite, used to locate the remainder.
+    const sourceWordLen = word.length;
 
     //handle first word of new line separately to avoid empty line issues
     if (currentLineWidth === 0) {
@@ -346,16 +382,21 @@ export const wrapLine = (
             lineTruncated = true;
           }
           pendingWord = remainingWord;
+          // The remainder begins where the consumed prefix ended. Derive it
+          // from the remainder length rather than from `word`, which may have
+          // had an overflow suffix appended and is no longer source text.
+          pendingWordStart = wordStart + (sourceWordLen - remainingWord.length);
         }
         // first word doesn't fit on an empty line
-        wrappedLines.push([word, wordWidth, lineTruncated, 0, 0]);
+        wrappedLines.push([word, wordWidth, lineTruncated, 0, 0, wordStart]);
       } else if (wordWidth + spaceWidth >= maxWidth) {
         remainingLines--;
         // word with space doesn't fit, but word itself fits - put on new line
-        wrappedLines.push([word, wordWidth, false, 0, 0]);
+        wrappedLines.push([word, wordWidth, false, 0, 0, wordStart]);
       } else {
         currentLine = word;
         currentLineWidth = wordWidth;
+        currentLineStart = wordStart;
       }
       continue;
     }
@@ -375,13 +416,27 @@ export const wrapLine = (
     if (totalWidth === maxWidth) {
       currentLine += effectiveSpaceWidth > 0 ? space + word : word;
       currentLineWidth = totalWidth;
-      wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
+      wrappedLines.push([
+        currentLine,
+        currentLineWidth,
+        false,
+        0,
+        0,
+        currentLineStart,
+      ]);
       currentLine = '';
       currentLineWidth = 0;
+      currentLineStart = -1;
       continue;
     }
 
-    [currentLine, currentLineWidth, remainingWord] = wrapFn(
+    [
+      currentLine,
+      currentLineWidth,
+      remainingWord,
+      currentLineStart,
+      pendingWordStart,
+    ] = wrapFn(
       measureText,
       word,
       wordWidth,
@@ -397,6 +452,8 @@ export const wrapLine = (
       spaceWidth,
       overflowSuffix,
       overflowWidth,
+      currentLineStart,
+      wordStart,
     );
 
     if (remainingWord.length > 0) {
@@ -405,7 +462,14 @@ export const wrapLine = (
   }
 
   if (currentLineWidth > 0 && remainingLines > 0) {
-    wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
+    wrappedLines.push([
+      currentLine,
+      currentLineWidth,
+      false,
+      0,
+      0,
+      currentLineStart,
+    ]);
   }
 
   return [wrappedLines, remainingLines, hasRemainingText];
@@ -451,7 +515,9 @@ export const overflow = (
   spaceWidth: number,
   overflowSuffix: string,
   overflowWidth: number,
-): [string, number, string] => {
+  currentLineStart = -1,
+  wordStart = -1,
+): [string, number, string, number, number] => {
   currentLine += space + word;
   currentLineWidth += spaceWidth + wordWidth;
 
@@ -460,8 +526,16 @@ export const overflow = (
     currentLineWidth += overflowWidth;
   }
 
-  wrappedLines.push([currentLine, currentLineWidth, true, 0, 0]);
-  return ['', 0, ''];
+  wrappedLines.push([
+    currentLine,
+    currentLineWidth,
+    true,
+    0,
+    0,
+    currentLineStart,
+  ]);
+  // Line is flushed and the word fully consumed: no pending remainder.
+  return ['', 0, '', -1, wordStart + word.length];
 };
 
 export const breakWord = (
@@ -480,7 +554,9 @@ export const breakWord = (
   spaceWidth: number,
   overflowSuffix: string,
   overflowWidth: number,
-): [string, number, string] => {
+  currentLineStart = -1,
+  wordStart = -1,
+): [string, number, string, number, number] => {
   remainingWord = word;
   if (remainingLines === 0) {
     [currentLine, currentLineWidth, remainingWord] = truncateLineEnd(
@@ -494,13 +570,31 @@ export const breakWord = (
       overflowSuffix,
       overflowWidth,
     );
-    wrappedLines.push([currentLine, currentLineWidth, true, 0, 0]);
-  } else {
-    wrappedLines.push([currentLine, currentLineWidth, false, 0, 0]);
-    currentLine = '';
-    currentLineWidth = 0;
+    wrappedLines.push([
+      currentLine,
+      currentLineWidth,
+      true,
+      0,
+      0,
+      currentLineStart,
+    ]);
+    // remainingLines is exhausted, so the caller's loop exits and the
+    // remainder offset is never read. Report the word start for consistency.
+    return [currentLine, currentLineWidth, remainingWord, -1, wordStart];
   }
-  return [currentLine, currentLineWidth, remainingWord];
+  wrappedLines.push([
+    currentLine,
+    currentLineWidth,
+    false,
+    0,
+    0,
+    currentLineStart,
+  ]);
+  currentLine = '';
+  currentLineWidth = 0;
+  // The whole word is pushed to the next line untouched, so it still begins
+  // at wordStart.
+  return [currentLine, currentLineWidth, remainingWord, -1, wordStart];
 };
 
 export const breakAll = (
@@ -519,12 +613,16 @@ export const breakAll = (
   spaceWidth: number,
   overflowSuffix: string,
   overflowWidth: number,
-): [string, number, string] => {
+  currentLineStart = -1,
+  wordStart = -1,
+): [string, number, string, number, number] => {
   let remainingSpace = maxWidth - currentLineWidth;
   if (currentLineWidth > 0) {
     remainingSpace -= spaceWidth;
   }
   const truncate = remainingLines === 0;
+  // Capture before truncateWord/splitWord rewrite `word`.
+  const sourceWordLen = word.length;
   [word, remainingWord, wordWidth] = truncate
     ? truncateWord(
         measureText,
@@ -548,12 +646,23 @@ export const breakAll = (
   currentLineWidth += spaceWidth + wordWidth;
 
   // first word doesn't fit on an empty line
-  wrappedLines.push([currentLine, currentLineWidth, truncate, 0, 0]);
+  wrappedLines.push([
+    currentLine,
+    currentLineWidth,
+    truncate,
+    0,
+    0,
+    currentLineStart,
+  ]);
 
   currentLine = '';
   currentLineWidth = 0;
 
-  return [currentLine, currentLineWidth, remainingWord];
+  // Derive the remainder offset from the remainder length: `word` may now
+  // carry an appended overflow suffix and is no longer pure source text.
+  const remainingWordStart = wordStart + (sourceWordLen - remainingWord.length);
+
+  return [currentLine, currentLineWidth, remainingWord, -1, remainingWordStart];
 };
 
 export const truncateLineEnd = (

@@ -23,6 +23,7 @@ import {
   wrapLine,
   breakWord,
   truncateLineEnd,
+  mapTextLayout,
 } from '../TextLayoutEngine.js';
 
 // Mock font data for testing
@@ -154,7 +155,7 @@ describe('SDF Text Utils', () => {
         'break-word',
         1,
       );
-      expect(result[0][0]).toEqual(['hello', 50, false, 0, 0]); // 4-element format
+      expect(result[0][0]).toEqual(['hello', 50, false, 0, 0, 0]);
     });
 
     it('should break long words', () => {
@@ -209,7 +210,7 @@ describe('SDF Text Utils', () => {
         'break-word',
         1,
       );
-      expect(result2[0][0]).toEqual(['hithere', 70, false, 0, 0]); // ZWSP is invisible, no space added
+      expect(result2[0][0]).toEqual(['hithere', 70, false, 0, 0, 0]); // ZWSP is invisible, no space added
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
@@ -225,7 +226,7 @@ describe('SDF Text Utils', () => {
         2,
       );
       expect(result3.length).toBeGreaterThan(1); // Should break at ZWSP position
-      expect(result3[0][0]).toEqual(['verylongwo', 100, false, 0, 0]);
+      expect(result3[0][0]).toEqual(['verylongwo', 100, false, 0, 0, 0]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -282,7 +283,7 @@ describe('SDF Text Utils', () => {
         0,
       );
       expect(result[0].length).toBeGreaterThan(2);
-      expect(result[0][0]).toStrictEqual(['line one', 80, false, 0, 0]);
+      expect(result[0][0]).toStrictEqual(['line one', 80, false, 0, 0, 0]);
     });
 
     it('should handle empty lines', () => {
@@ -407,7 +408,7 @@ describe('SDF Text Utils', () => {
         '...',
         30,
       );
-      expect(result).toStrictEqual(['', 0, 'a']);
+      expect(result).toStrictEqual(['', 0, 'a', -1, -1]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -468,6 +469,125 @@ describe('SDF Text Utils', () => {
       expect(lines.length).toBeGreaterThan(2);
       expect(lines[0]?.[0]).toBe('Short');
       expect(lines[lines.length - 1]?.[0]).toBe('short');
+    });
+  });
+
+  describe('line start offsets (TextLineStruct[5])', () => {
+    // A line's start offset must always point at the index in the source text
+    // where that line's first character actually lives. Consumers (rich text
+    // span correlation) rely on this instead of accumulating line lengths,
+    // because the wrapper collapses whitespace runs.
+
+    const wrap = (
+      text: string,
+      maxWidth: number,
+      wordBreak = 'normal',
+      maxLines = 0,
+      overflowSuffix = '',
+    ) =>
+      wrapText(
+        testMeasureText,
+        text,
+        'Arial',
+        maxWidth,
+        0,
+        overflowSuffix,
+        wordBreak,
+        maxLines,
+      )[0];
+
+    it('points at the source index of each line for a single space separator', () => {
+      const text = 'hello world test';
+      const lines = wrap(text, 100);
+      expect(lines.map((l) => l[0])).toEqual(['hello', 'world test']);
+      // 'world' begins at index 6, after 'hello' (5) + one space.
+      expect(lines.map((l) => l[5])).toEqual([0, 6]);
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+    });
+
+    it('accounts for collapsed multi-space separators', () => {
+      // The regression this field exists for: a naive "+= lineLen + 1"
+      // accumulator assumes exactly one consumed separator character and
+      // drifts by one per extra space.
+      const text = 'hello   world test';
+      const lines = wrap(text, 100);
+      expect(lines.map((l) => l[0])).toEqual(['hello', 'world test']);
+      // 'world' begins at index 8, after 'hello' (5) + three spaces.
+      expect(lines.map((l) => l[5])).toEqual([0, 8]);
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+    });
+
+    it('accounts for explicit newlines', () => {
+      const text = 'line one\nline two';
+      const lines = wrap(text, 200);
+      expect(lines.map((l) => l[0])).toEqual(['line one', 'line two']);
+      expect(lines.map((l) => l[5])).toEqual([0, 9]);
+    });
+
+    it('accounts for empty lines produced by consecutive newlines', () => {
+      const text = 'a\n\nb';
+      const lines = wrap(text, 200);
+      expect(lines.map((l) => l[0])).toEqual(['a', '', 'b']);
+      expect(lines.map((l) => l[5])).toEqual([0, 2, 3]);
+    });
+
+    it('tracks offsets across ZWSP break opportunities', () => {
+      const text = 'Short\u200Bverylongwordthatmustbebroken\u200Bshort';
+      const lines = wrap(text, 100);
+      // Every line must be locatable at its reported offset.
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+      expect(lines[0]?.[5]).toBe(0);
+    });
+
+    it('tracks offsets when a long word is split across lines', () => {
+      const text = 'verylongwordthatdoesnotfit';
+      const lines = wrap(text, 100, 'break-all');
+      expect(lines.length).toBeGreaterThan(1);
+      // Split pieces are contiguous: each continues where the previous ended.
+      let expected = 0;
+      for (const line of lines) {
+        expect(line[5]).toBe(expected);
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+        expected += line[0].length;
+      }
+    });
+
+    it('offsets are non-negative and monotonically increasing', () => {
+      const text = 'alpha beta  gamma\ndelta   epsilon zeta';
+      const lines = wrap(text, 120);
+      let prev = -1;
+      for (const line of lines) {
+        expect(line[5]).toBeGreaterThanOrEqual(0);
+        expect(line[5]).toBeGreaterThan(prev);
+        prev = line[5];
+      }
+    });
+
+    it('measureLines reports offsets when no wrapping occurs', () => {
+      const text = 'one\ntwo\nthree';
+      // maxWidth 0 routes through measureLines rather than wrapText.
+      const [lines] = mapTextLayout(
+        testMeasureText,
+        { ascender: 10, descender: -2, lineGap: 2 },
+        text,
+        'left',
+        'Arial',
+        1,
+        '',
+        'normal',
+        0,
+        0,
+        0,
+        0,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two', 'three']);
+      expect(lines.map((l) => l[5])).toEqual([0, 4, 8]);
     });
   });
 });
