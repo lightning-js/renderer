@@ -338,8 +338,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this.emit('textCalculated', {
       type: 'text',
       dimensions: {
-        width,
-        height,
+        w: width,
+        h: height,
       },
     });
     this._renderInfo = result;
