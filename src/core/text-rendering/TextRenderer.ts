@@ -394,11 +394,23 @@ export interface FontLoadOptions {
 
 /**
  * Measure Width of Text function to be defined in font handlers, used in TextLayoutEngine
+ *
+ * @param text The substring to measure.
+ * @param fontFamily Font family; ignored by the Canvas handler, which measures
+ * against a shared context.
+ * @param letterSpacing Additional spacing per character.
+ * @param start Absolute index of `text` within the text passed to
+ * {@link mapTextLayout}. Style-aware implementations use it to look up the
+ * rich text spans covering this substring so bold and italic runs are measured
+ * with the face they will actually be drawn with. Omitted, or negative, means
+ * the caller cannot locate the substring in the source (an overflow suffix, for
+ * example) and the base font should be used.
  */
 export type MeasureTextFn = (
   text: string,
   fontFamily: string,
   letterSpacing: number,
+  start?: number,
 ) => number;
 
 export interface FontHandler {
