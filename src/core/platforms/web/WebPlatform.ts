@@ -127,45 +127,56 @@ export class WebPlatform extends Platform {
         return;
       }
 
-      stage.updateFrameTime();
-      stage.updateAnimations();
+      try {
+        stage.updateFrameTime();
+        stage.updateAnimations();
 
-      if (!stage.hasSceneUpdates()) {
-        // We still need to calculate the fps else it looks like the app is frozen
-        stage.calculateFps();
+        if (!stage.hasSceneUpdates()) {
+          // We still need to calculate the fps else it looks like the app is frozen
+          stage.calculateFps();
 
-        if (targetFrameTime > 0) {
-          // Use setTimeout for throttled idle frames
-          setTimeout(
-            () => requestAnimationFrame(runLoop),
-            Math.max(targetFrameTime, 16.666666666666668),
-          );
-        } else {
-          // Use standard idle timeout when not throttling
-          setTimeout(() => requestAnimationFrame(runLoop), 16.666666666666668);
+          if (targetFrameTime > 0) {
+            // Use setTimeout for throttled idle frames
+            setTimeout(
+              () => requestAnimationFrame(runLoop),
+              Math.max(targetFrameTime, 16.666666666666668),
+            );
+          } else {
+            // Use standard idle timeout when not throttling
+            setTimeout(
+              () => requestAnimationFrame(runLoop),
+              16.666666666666668,
+            );
+          }
+
+          if (isIdle === false) {
+            stage.shManager.cleanup();
+            stage.eventBus.emit('idle');
+            isIdle = true;
+          }
+
+          if (stage.txMemManager.checkCleanup() === true) {
+            stage.txMemManager.cleanup();
+          }
+
+          stage.flushFrameEvents();
+          return;
         }
 
-        if (isIdle === false) {
-          stage.shManager.cleanup();
-          stage.eventBus.emit('idle');
-          isIdle = true;
+        if (isIdle === true) {
+          stage.eventBus.emit('active');
+          isIdle = false;
         }
 
-        if (stage.txMemManager.checkCleanup() === true) {
-          stage.txMemManager.cleanup();
-        }
-
+        stage.drawFrame();
         stage.flushFrameEvents();
-        return;
+      } catch (error: unknown) {
+        if (this.settings.handleLoopError) {
+          this.settings.handleLoopError(error);
+        } else {
+          throw error;
+        }
       }
-
-      if (isIdle === true) {
-        stage.eventBus.emit('active');
-        isIdle = false;
-      }
-
-      stage.drawFrame();
-      stage.flushFrameEvents();
 
       // Schedule next frame
       if (targetFrameTime > 0) {
