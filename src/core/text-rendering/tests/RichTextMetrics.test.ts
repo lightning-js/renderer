@@ -21,10 +21,14 @@ import { describe, it, expect } from 'vitest';
 import {
   SDF_BOLD_THRESHOLD_SHIFT,
   ITALIC_SHEAR,
+  STRIKE_BASELINE_RATIO,
   sdfBoldExtra,
   italicOverhang,
   canvasSpanFont,
   spanIndexAt,
+  decorationThickness,
+  underlineGap,
+  strikeOffset,
 } from '../RichTextMetrics.js';
 import {
   parseRichText,
@@ -161,6 +165,36 @@ describe('RichTextMetrics', () => {
         cursor = spanIndexAt(spans, count, pos, cursor);
         expect(cursor).toBe(spanIndexAt(spans, count, pos, 0));
       }
+    });
+  });
+
+  describe('decoration geometry', () => {
+    it('never produces a sub-pixel stroke', () => {
+      // A thickness below 1 would round away to nothing at small font sizes.
+      expect(decorationThickness(4)).toBe(1);
+      expect(decorationThickness(20)).toBe(1);
+      expect(decorationThickness(40)).toBe(2);
+    });
+
+    it('never places the underline on the baseline', () => {
+      expect(underlineGap(1)).toBeGreaterThanOrEqual(1);
+      expect(underlineGap(100)).toBe(8);
+    });
+
+    it('scales the underline gap with font size', () => {
+      expect(underlineGap(200)).toBeGreaterThan(underlineGap(100));
+    });
+
+    it('places the strikethrough above the baseline', () => {
+      const baseline = 40;
+      expect(strikeOffset(baseline)).toBeLessThan(baseline);
+      expect(strikeOffset(baseline)).toBeCloseTo(
+        baseline * STRIKE_BASELINE_RATIO,
+      );
+    });
+
+    it('scales the strikethrough with the baseline distance', () => {
+      expect(strikeOffset(80)).toBeCloseTo(strikeOffset(40) * 2);
     });
   });
 });
