@@ -541,10 +541,9 @@ const generateTextLayout = (
   // mapTextLayout now measures styled runs correctly, but line widths are still
   // accumulated from word widths plus base-font separators, and a line-final
   // italic overhang is outside any word. Recompute the exact drawn extent so
-  // the node's width matches what is rendered., so a line containing bold
-  // or italic spans is drawn wider than the width it reported. Correct the line
-  // widths (and the alignment offsets derived from them) before any glyph
-  // positions are computed, so the node's width matches what is drawn.
+  // the node's width matches what is rendered. Correct the line widths
+  // (and the alignment offsets derived from them) before any glyph positions
+  // are computed.
   const effectiveWidth =
     richText === true
       ? correctStyledLineWidths(
