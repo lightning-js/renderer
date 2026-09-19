@@ -513,8 +513,23 @@ export interface TextRenderer {
  * 2 - truncated
  * 3 - line offset x
  * 4 - line offset y
+ * 5 - absolute start index of this line within the (stripped) source text
+ *
+ * @remarks
+ * Index 5 is the character offset at which this line's first character appears
+ * in the text that was handed to {@link mapTextLayout}. For rich text this is
+ * the *stripped* text (BB-code tags removed), which is the same coordinate
+ * space the {@link RichSpan} start/end offsets use.
+ *
+ * It cannot be derived by accumulating line lengths at the consumer: the word
+ * wrapper collapses runs of whitespace, so the number of source characters
+ * consumed between two layout lines is not always one. Consumers that need to
+ * correlate a line back to its spans must read this field.
+ *
+ * For truncated lines the text may contain an appended overflow suffix that has
+ * no counterpart in the source, so `text.length` is not a reliable span length.
  */
-export type TextLineStruct = [string, number, boolean, number, number];
+export type TextLineStruct = [string, number, boolean, number, number, number];
 
 /**
  * Wrapped lines struct for text mapping

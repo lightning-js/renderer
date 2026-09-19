@@ -498,19 +498,27 @@ const generateTextLayout = (
 
   for (let i = 0; i < lineAmount; i++) {
     const textLine = (lines[i] as TextLineStruct)[0];
+    // Seed from the layout engine's absolute offset rather than carrying the
+    // running total across lines: the previous line's characters are not the
+    // only thing consumed between lines (whitespace runs collapse), and the
+    // separator itself was never accounted for here at all.
+    strippedPos = (lines[i] as TextLineStruct)[5];
     for (const char of textLine) {
+      // for..of iterates code points; span offsets are UTF-16 indices, so
+      // advance by the unit length to keep astral characters aligned.
+      const charLen = char.length;
       if (hasZeroWidthSpace(char) === true) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
       glyphCount++;
@@ -525,7 +533,7 @@ const generateTextLayout = (
       const span = _richTextResult.spans[curSpanIdx]!;
       if (span.underline === true) decoQuadCount++;
       if (span.strikethrough === true) decoQuadCount++;
-      strippedPos++;
+      strippedPos += charLen;
     }
   }
 
@@ -554,24 +562,27 @@ const generateTextLayout = (
     const textLine = line[0];
     let prevGlyphId = 0;
     currentX = line[3];
+    // Seed the span cursor position from the line's absolute start offset.
+    strippedPos = line[5];
     // Convert pixel Y coordinate to design-unit space.
     currentY = line[4] / fontScale;
     // Alphabetic baseline in design-unit space for this line (used for italic shear).
     const baseline = currentY + base;
 
     for (const char of textLine) {
+      const charLen = char.length;
       if (hasZeroWidthSpace(char) === true) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
       const codepoint = char.codePointAt(0);
       if (codepoint === undefined) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
       const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
       if (glyph === null) {
-        strippedPos++;
+        strippedPos += charLen;
         continue;
       }
 
@@ -684,7 +695,7 @@ const generateTextLayout = (
         );
       }
 
-      strippedPos++;
+      strippedPos += charLen;
     }
   }
 

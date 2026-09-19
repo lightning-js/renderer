@@ -23,6 +23,8 @@ import {
   wrapLine,
   breakWord,
   truncateLineEnd,
+  mapTextLayout,
+  measureLines,
 } from '../TextLayoutEngine.js';
 
 // Mock font data for testing
@@ -154,7 +156,7 @@ describe('SDF Text Utils', () => {
         'break-word',
         1,
       );
-      expect(result[0][0]).toEqual(['hello', 50, false, 0, 0]); // 4-element format
+      expect(result[0][0]).toEqual(['hello', 50, false, 0, 0, 0]);
     });
 
     it('should break long words', () => {
@@ -193,7 +195,7 @@ describe('SDF Text Utils', () => {
       );
 
       const [lines] = result1;
-      expect(lines[0]?.[0]).toEqual('helloworld'); // Break at space, not ZWSP
+      expect(lines[0]?.[0]).toEqual('hello\u200Bworld'); // Break at space, ZWSP preserved in-line
       expect(lines[1]?.[0]).toEqual('test');
 
       // Test 2: ZWSP should NOT break when text fits on one line
@@ -209,7 +211,7 @@ describe('SDF Text Utils', () => {
         'break-word',
         1,
       );
-      expect(result2[0][0]).toEqual(['hithere', 70, false, 0, 0]); // ZWSP is invisible, no space added
+      expect(result2[0][0]).toEqual(['hi\u200Bthere', 70, false, 0, 0, 0]); // ZWSP preserved (zero width, offsets stay aligned)
 
       // Test 3: ZWSP should break when it's the only break opportunity
       const result3 = wrapLine(
@@ -225,7 +227,7 @@ describe('SDF Text Utils', () => {
         2,
       );
       expect(result3.length).toBeGreaterThan(1); // Should break at ZWSP position
-      expect(result3[0][0]).toEqual(['verylongwo', 100, false, 0, 0]);
+      expect(result3[0][0]).toEqual(['verylongwo', 100, false, 0, 0, 0]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -282,7 +284,7 @@ describe('SDF Text Utils', () => {
         0,
       );
       expect(result[0].length).toBeGreaterThan(2);
-      expect(result[0][0]).toStrictEqual(['line one', 80, false, 0, 0]);
+      expect(result[0][0]).toStrictEqual(['line one', 80, false, 0, 0, 0]);
     });
 
     it('should handle empty lines', () => {
@@ -407,7 +409,7 @@ describe('SDF Text Utils', () => {
         '...',
         30,
       );
-      expect(result).toStrictEqual(['', 0, 'a']);
+      expect(result).toStrictEqual(['', 0, 'a', -1, -1]);
     });
 
     it('should truncate with suffix when max lines reached', () => {
@@ -468,6 +470,232 @@ describe('SDF Text Utils', () => {
       expect(lines.length).toBeGreaterThan(2);
       expect(lines[0]?.[0]).toBe('Short');
       expect(lines[lines.length - 1]?.[0]).toBe('short');
+    });
+  });
+
+  describe('line start offsets (TextLineStruct[5])', () => {
+    // A line's start offset must always point at the index in the source text
+    // where that line's first character actually lives. Consumers (rich text
+    // span correlation) rely on this instead of accumulating line lengths,
+    // because the wrapper collapses whitespace runs.
+
+    const wrap = (
+      text: string,
+      maxWidth: number,
+      wordBreak = 'normal',
+      maxLines = 0,
+      overflowSuffix = '',
+    ) =>
+      wrapText(
+        testMeasureText,
+        text,
+        'Arial',
+        maxWidth,
+        0,
+        overflowSuffix,
+        wordBreak,
+        maxLines,
+      )[0];
+
+    it('points at the source index of each line for a single space separator', () => {
+      const text = 'hello world test';
+      const lines = wrap(text, 100);
+      expect(lines.map((l) => l[0])).toEqual(['hello', 'world test']);
+      // 'world' begins at index 6, after 'hello' (5) + one space.
+      expect(lines.map((l) => l[5])).toEqual([0, 6]);
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+    });
+
+    it('accounts for collapsed multi-space separators', () => {
+      // The regression this field exists for: a naive "+= lineLen + 1"
+      // accumulator assumes exactly one consumed separator character and
+      // drifts by one per extra space.
+      const text = 'hello   world test';
+      const lines = wrap(text, 100);
+      expect(lines.map((l) => l[0])).toEqual(['hello', 'world test']);
+      // 'world' begins at index 8, after 'hello' (5) + three spaces.
+      expect(lines.map((l) => l[5])).toEqual([0, 8]);
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+    });
+
+    it('accounts for explicit newlines', () => {
+      const text = 'line one\nline two';
+      const lines = wrap(text, 200);
+      expect(lines.map((l) => l[0])).toEqual(['line one', 'line two']);
+      expect(lines.map((l) => l[5])).toEqual([0, 9]);
+    });
+
+    it('accounts for empty lines produced by consecutive newlines', () => {
+      const text = 'a\n\nb';
+      const lines = wrap(text, 200);
+      expect(lines.map((l) => l[0])).toEqual(['a', '', 'b']);
+      expect(lines.map((l) => l[5])).toEqual([0, 2, 3]);
+    });
+
+    it('tracks offsets across ZWSP break opportunities', () => {
+      const text = 'Short\u200Bverylongwordthatmustbebroken\u200Bshort';
+      const lines = wrap(text, 100);
+      // Every line must be locatable at its reported offset.
+      for (const line of lines) {
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+      }
+      expect(lines[0]?.[5]).toBe(0);
+    });
+
+    it('tracks offsets when a long word is split across lines', () => {
+      const text = 'verylongwordthatdoesnotfit';
+      const lines = wrap(text, 100, 'break-all');
+      expect(lines.length).toBeGreaterThan(1);
+      // Split pieces are contiguous: each continues where the previous ended.
+      let expected = 0;
+      for (const line of lines) {
+        expect(line[5]).toBe(expected);
+        expect(text.startsWith(line[0], line[5])).toBe(true);
+        expected += line[0].length;
+      }
+    });
+
+    it('offsets are non-negative and monotonically increasing', () => {
+      const text = 'alpha beta  gamma\ndelta   epsilon zeta';
+      const lines = wrap(text, 120);
+      let prev = -1;
+      for (const line of lines) {
+        expect(line[5]).toBeGreaterThanOrEqual(0);
+        expect(line[5]).toBeGreaterThan(prev);
+        prev = line[5];
+      }
+    });
+
+    it('measureLines terminates when maxLines exceeds the line count', () => {
+      // The loop must be bounded on the index as well as the line budget.
+      // Skipping the budget decrement for an out-of-range entry without also
+      // bounding the index spins forever, hanging the renderer rather than
+      // failing: lines[i] past the end is undefined, so it continues without
+      // making progress.
+      const [lines, remaining] = measureLines(
+        testMeasureText,
+        ['one', 'two'],
+        'Arial',
+        0,
+        5,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+      // Unused budget is reported rather than being silently drained.
+      expect(remaining).toBe(3);
+    });
+
+    it('mapTextLayout terminates for contain:height with room to spare', () => {
+      // contain: 'height' sets maxHeight but leaves maxWidth at 0, which routes
+      // to measureLines with effectiveMaxLines derived from the box height.
+      // A box taller than the text is the common case and must not hang.
+      const [lines] = mapTextLayout(
+        testMeasureText,
+        { ascender: 10, descender: -2, lineGap: 2 },
+        'one\ntwo',
+        'left',
+        'Arial',
+        1,
+        '',
+        'normal',
+        0,
+        0, // maxLines unset
+        0, // maxWidth 0 -> measureLines path
+        1000, // maxHeight fits far more than two lines
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+    });
+
+    it('measureLines respects maxLines below the line count', () => {
+      const [lines, remaining] = measureLines(
+        testMeasureText,
+        ['one', 'two', 'three'],
+        'Arial',
+        0,
+        2,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+      expect(remaining).toBe(0);
+    });
+
+    it('measureLines terminates with no maxLines and no lines', () => {
+      const [lines] = measureLines(testMeasureText, [], 'Arial', 0, 0);
+      expect(lines).toHaveLength(0);
+    });
+
+    it('measureLines reports offsets when no wrapping occurs', () => {
+      const text = 'one\ntwo\nthree';
+      // maxWidth 0 routes through measureLines rather than wrapText.
+      const [lines] = mapTextLayout(
+        testMeasureText,
+        { ascender: 10, descender: -2, lineGap: 2 },
+        text,
+        'left',
+        'Arial',
+        1,
+        '',
+        'normal',
+        0,
+        0,
+        0,
+        0,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two', 'three']);
+      expect(lines.map((l) => l[5])).toEqual([0, 4, 8]);
+    });
+
+    it('preserves a single ZWSP within a line so offsets stay aligned', () => {
+      const text = 'hi\u200Bthere';
+      const lines = wrap(text, 200);
+      expect(lines.length).toBe(1);
+      // The ZWSP is zero-width but must stay in the text so rendered length
+      // matches source length and span offsets stay aligned.
+      expect(lines[0]?.[0]).toBe('hi\u200Bthere');
+      expect(lines[0]?.[5]).toBe(0);
+      expect(text.startsWith(lines[0]![0], lines[0]![5])).toBe(true);
+    });
+
+    it('maps collapsed-separator text to the correct spans (Canvas + SDF logic)', () => {
+      // Regression lock for the span/line desync: a naive "+= lineLen + 1"
+      // accumulator assumes one separator char and lands the second line at
+      // 6 instead of 8; SDF additionally drifted per line and on astral chars.
+      const text = 'hello   world \uD834\uDF06 test';
+      const lines = wrap(text, 100);
+      expect(lines.length).toBeGreaterThan(1);
+      // 'world' begins after 'hello' (5) + three spaces.
+      expect(lines[1]?.[5]).toBe(8);
+
+      // Two spans splitting exactly at the wrap point.
+      const spans = [
+        { start: 0, end: 8 },
+        { start: 8, end: text.length },
+      ];
+      const spanAt = (pos: number) => (pos >= 8 ? 1 : 0);
+
+      for (const line of lines) {
+        const lineText = line[0];
+        const lineStart = line[5] as number;
+        // Canvas logic: UTF-16 index j added to the absolute line offset.
+        for (let j = 0; j < lineText.length; j++) {
+          const pos = lineStart + j;
+          // Every rendered char must be locatable in the source text.
+          expect(text.charAt(pos)).toBe(lineText.charAt(j));
+          expect(spanAt(pos)).toBe(pos >= spans[1]!.start ? 1 : 0);
+        }
+        // SDF logic: for..of iterates code points, advance by unit length so
+        // astral characters (length 2) stay aligned with UTF-16 span offsets.
+        let pos = lineStart;
+        for (const char of lineText) {
+          expect(text.startsWith(char, pos)).toBe(true);
+          expect(spanAt(pos)).toBe(pos >= 8 ? 1 : 0);
+          pos += char.length;
+        }
+        // The SDF walk must consume exactly the rendered line.
+        expect(pos - lineStart).toBe(lineText.length);
+      }
     });
   });
 });
