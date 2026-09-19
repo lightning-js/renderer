@@ -24,6 +24,7 @@ import {
   breakWord,
   truncateLineEnd,
   mapTextLayout,
+  measureLines,
 } from '../TextLayoutEngine.js';
 
 // Mock font data for testing
@@ -567,6 +568,62 @@ describe('SDF Text Utils', () => {
         expect(line[5]).toBeGreaterThan(prev);
         prev = line[5];
       }
+    });
+
+    it('measureLines terminates when maxLines exceeds the line count', () => {
+      // The loop must be bounded on the index as well as the line budget.
+      // Skipping the budget decrement for an out-of-range entry without also
+      // bounding the index spins forever, hanging the renderer rather than
+      // failing: lines[i] past the end is undefined, so it continues without
+      // making progress.
+      const [lines, remaining] = measureLines(
+        testMeasureText,
+        ['one', 'two'],
+        'Arial',
+        0,
+        5,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+      // Unused budget is reported rather than being silently drained.
+      expect(remaining).toBe(3);
+    });
+
+    it('mapTextLayout terminates for contain:height with room to spare', () => {
+      // contain: 'height' sets maxHeight but leaves maxWidth at 0, which routes
+      // to measureLines with effectiveMaxLines derived from the box height.
+      // A box taller than the text is the common case and must not hang.
+      const [lines] = mapTextLayout(
+        testMeasureText,
+        { ascender: 10, descender: -2, lineGap: 2 },
+        'one\ntwo',
+        'left',
+        'Arial',
+        1,
+        '',
+        'normal',
+        0,
+        0, // maxLines unset
+        0, // maxWidth 0 -> measureLines path
+        1000, // maxHeight fits far more than two lines
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+    });
+
+    it('measureLines respects maxLines below the line count', () => {
+      const [lines, remaining] = measureLines(
+        testMeasureText,
+        ['one', 'two', 'three'],
+        'Arial',
+        0,
+        2,
+      );
+      expect(lines.map((l) => l[0])).toEqual(['one', 'two']);
+      expect(remaining).toBe(0);
+    });
+
+    it('measureLines terminates with no maxLines and no lines', () => {
+      const [lines] = measureLines(testMeasureText, [], 'Arial', 0, 0);
+      expect(lines).toHaveLength(0);
     });
 
     it('measureLines reports offsets when no wrapping occurs', () => {

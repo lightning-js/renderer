@@ -169,7 +169,11 @@ export const measureLines = (
   // '\n' split, so each line consumes its own length plus the one separator.
   let lineStart = 0;
 
-  while (remainingLines > 0) {
+  // Bounded on `i` as well as the line budget. An out-of-range `lines[i]` is
+  // undefined and must not consume budget, but skipping the decrement alone
+  // would spin forever once `i` runs past the end, which it does whenever
+  // maxLines exceeds the number of lines.
+  while (remainingLines > 0 && i < lines.length) {
     const line = lines[i];
     i++;
     if (line === undefined) {
