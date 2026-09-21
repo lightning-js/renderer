@@ -103,6 +103,26 @@ export function getWebGlExtensions(glw: GlContextWrapper): CoreWebGlExtensions {
 }
 
 /**
+ * The number of quads the shared element index buffer can address.
+ *
+ * Indices are stored as `Uint16`, and quad `n` references vertices
+ * `4n .. 4n + 3`. The highest representable vertex index is 65535, so at most
+ * `65536 / 4 = 16384` quads can be indexed, regardless of how much buffer
+ * memory is configured.
+ */
+const MAX_INDEXABLE_QUADS = 16384;
+
+/**
+ * Number of quads that can be drawn from the shared index buffer for a given
+ * buffer memory budget.
+ *
+ * @param bufferMemory
+ */
+export function getMaxQuads(bufferMemory: number) {
+  return Math.min(~~(bufferMemory / 80), MAX_INDEXABLE_QUADS);
+}
+
+/**
  * Allocate big memory chunk that we
  * can re-use to draw quads
  *
@@ -110,10 +130,12 @@ export function getWebGlExtensions(glw: GlContextWrapper): CoreWebGlExtensions {
  * @param size
  */
 export function createIndexBuffer(glw: GlContextWrapper, size: number) {
-  const maxQuads = ~~(size / 80);
+  const maxQuads = getMaxQuads(size);
   const indices = new Uint16Array(maxQuads * 6);
 
-  for (let i = 0, j = 0; i < maxQuads; i += 6, j += 4) {
+  for (let quad = 0; quad < maxQuads; quad++) {
+    const i = quad * 6;
+    const j = quad * 4;
     indices[i] = j;
     indices[i + 1] = j + 1;
     indices[i + 2] = j + 2;
