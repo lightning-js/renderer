@@ -30,6 +30,7 @@ import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
+import { canvasSpanFont, spanIndexAt } from './RichTextMetrics.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
 
 const type = 'canvas' as const;
@@ -59,6 +60,108 @@ const renderInfoCache = new Map<string, CanvasRenderInfo>();
 // Pre-allocated rich text parse result — reused across renderText calls.
 // Safe because renderText is synchronous and JS is single-threaded.
 const _richTextResult = new ParseResult();
+
+/**
+ * Re-measure each layout line with its spans' own fonts and return the widest.
+ *
+ * @remarks
+ * The layout engine is style-agnostic: it measures every line with the base
+ * font, so any line containing a bold or italic span reports a width narrower
+ * than what will actually be drawn. Correcting it here keeps the texture large
+ * enough and the node's reported width honest.
+ *
+ * Line `x` offsets are recomputed too, because the non-left alignments are
+ * relative to the widest line and that reference has just changed.
+ *
+ * Mutates `lines` in place (widths at index 1, x offsets at index 3) and
+ * restores the shared measure font before returning.
+ */
+const correctStyledLineWidths = (
+  lines: TextLineStruct[],
+  baseFont: string,
+  fontStyle: string,
+  fontSize: number,
+  fontFamily: string,
+  letterSpacing: number,
+  textAlign: string,
+  fallbackWidth: number,
+): number => {
+  const spanCount = _richTextResult.spanCount;
+  const spans = _richTextResult.spans;
+
+  // No spans means no style variation, so the base measurement already holds.
+  if (spanCount === 0) {
+    return fallbackWidth;
+  }
+
+  let widest = 0;
+  let curSpanIdx = 0;
+  let activeFont = baseFont;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const text = line[0];
+    const len = text.length;
+    if (len === 0) {
+      continue;
+    }
+    const lineStart = line[5];
+    curSpanIdx = spanIndexAt(spans, spanCount, lineStart, curSpanIdx);
+
+    // Walk the line in style runs, measuring each with its own font. Measuring
+    // whole runs rather than characters preserves kerning within a run; kerning
+    // across a style boundary is meaningless anyway, since the two glyphs come
+    // from different faces.
+    let width = 0;
+    let segStart = 0;
+    let segSpanIdx = curSpanIdx;
+
+    for (let j = 1; j <= len; j++) {
+      let nextSpanIdx = segSpanIdx;
+      if (j < len) {
+        nextSpanIdx = spanIndexAt(spans, spanCount, lineStart + j, segSpanIdx);
+        curSpanIdx = nextSpanIdx;
+      }
+      if (j === len || nextSpanIdx !== segSpanIdx) {
+        const font = canvasSpanFont(
+          spans[segSpanIdx]!,
+          fontStyle,
+          fontSize,
+          fontFamily,
+        );
+        if (font !== activeFont) {
+          CanvasFontHandler.setMeasureFont(font);
+          activeFont = font;
+        }
+        width += CanvasFontHandler.measureText(
+          text.substring(segStart, j),
+          fontFamily,
+          letterSpacing,
+        );
+        segStart = j;
+        segSpanIdx = nextSpanIdx;
+      }
+    }
+
+    line[1] = width;
+    if (width > widest) {
+      widest = width;
+    }
+  }
+
+  // Restore the shared context; font metrics and the plain path expect it.
+  CanvasFontHandler.setMeasureFont(baseFont);
+
+  if (textAlign !== 'left') {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      line[3] =
+        textAlign === 'right' ? widest - line[1] : (widest - line[1]) / 2;
+    }
+  }
+
+  return widest > 0 ? widest : fallbackWidth;
+};
 
 // Initialize the Text Renderer
 const init = (_stage: Stage): void => {
@@ -156,7 +259,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     hasRemainingText,
     _bareLineHeight,
     _lineHeightPx,
-    effectiveWidth,
+    baseEffectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
     CanvasFontHandler.measureText,
@@ -173,6 +276,29 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     maxHeight,
   );
   const lineAmount = lines.length;
+
+  // mapTextLayout measured every line with the base font, so a line containing
+  // bold or italic spans is wider on screen than the width it reported. That
+  // width both sizes the texture and is published as the node's width, so
+  // without a correction the styled run would be clipped at the right edge and
+  // siblings would be laid out against a too-small box.
+  //
+  // Line breaking itself is still base-font based; this only corrects the
+  // extent of the lines that were chosen.
+  const effectiveWidth =
+    richText === true
+      ? correctStyledLineWidths(
+          lines,
+          baseFont,
+          fontStyle,
+          fontSize,
+          fontFamily,
+          letterSpacing,
+          textAlign,
+          baseEffectiveWidth,
+        )
+      : baseEffectiveWidth;
+
   const canvasW = Math.ceil(effectiveWidth);
   const canvasH = Math.ceil(effectiveHeight);
 
@@ -282,14 +408,21 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
           // Build the CSS font string for this segment.
           // Bold/italic from the span override the node-level fontStyle.
-          const spanStyle = span.italic === true ? 'italic' : fontStyle;
-          const spanFont =
-            span.bold === true
-              ? `${spanStyle} bold ${fontSize}px Unknown, ${fontFamily}`
-              : `${spanStyle} ${fontSize}px Unknown, ${fontFamily}`;
+          const spanFont = canvasSpanFont(
+            span,
+            fontStyle,
+            fontSize,
+            fontFamily,
+          );
 
           if (spanFont !== activeFont) {
             context.font = spanFont;
+            // The measure context must track the draw context. measureText
+            // ignores its fontFamily argument and measures against this
+            // shared context, so leaving it on the base font advances bold
+            // and italic runs by regular-face widths and runs the following
+            // text into them.
+            CanvasFontHandler.setMeasureFont(spanFont);
             activeFont = spanFont;
           }
 
@@ -352,6 +485,11 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
         }
       }
     }
+
+    // The measure context is shared with font metric calculation and the plain
+    // text path, so hand it back on the base font rather than whatever style
+    // the last span happened to use.
+    CanvasFontHandler.setMeasureFont(baseFont);
   } else {
     // -------------------------------------------------------------------------
     // Plain text draw path — unchanged from original implementation.

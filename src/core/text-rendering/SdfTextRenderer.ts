@@ -40,14 +40,18 @@ import {
   SDF_PLAIN_GLYPH_STRIDE,
   SDF_RICH_GLYPH_STRIDE,
 } from '../renderers/webgl/SdfBuffer.js';
+// Fake-italic shear and synthetic-bold advance live alongside the shader's
+// threshold shift so measurement and drawing cannot disagree.
+import {
+  ITALIC_SHEAR,
+  italicOverhang,
+  sdfBoldExtra,
+  spanIndexAt,
+} from './RichTextMetrics.js';
 
 // Design-unit glyph record strides consumed by WebGlRenderer.addSdfQuads.
 // plain (8 floats): x, y, w, h, u, v, uw, vh
 // rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
-
-// Horizontal shear factor for fake italic: tan(14°).
-// Applied to glyph and decoration vertices in design-unit space.
-const ITALIC_SHEAR = Math.tan((14 * Math.PI) / 180);
 
 // White (0xFFFFFFFF as 0xRRGGBBAA) packed little-endian: all UNSIGNED_BYTE channels = 255 → 1.0
 // When v_color = vec4(1,1,1,1) the span color has no effect; the node color passes through unchanged.
@@ -329,6 +333,116 @@ const _writeDecoRecord = (
 };
 
 /**
+ * Re-measure each layout line accounting for span styles, in design units.
+ *
+ * @remarks
+ * The layout engine measures with plain glyph metrics. Bold is faked by a
+ * shader threshold shift and italic by a shear, neither of which changes
+ * `xadvance`, so a styled line is drawn wider than it measured. The reported
+ * width becomes the node's width, so it has to be corrected or siblings are
+ * laid out against a box that is too small.
+ *
+ * Mutates `lines` in place (widths at index 1, x offsets at index 3) and
+ * returns the widest corrected width. Line breaking is unaffected — this only
+ * corrects the extent of lines that were already chosen.
+ */
+const correctStyledLineWidths = (
+  lines: TextLineStruct[],
+  fontFamily: string,
+  letterSpacing: number,
+  boldAdvanceExtra: number,
+  base: number,
+  textAlign: string,
+  fallbackWidth: number,
+): number => {
+  const spanCount = _richTextResult.spanCount;
+  const spans = _richTextResult.spans;
+
+  // No spans means no style variation, so the base measurement already holds.
+  if (spanCount === 0) {
+    return fallbackWidth;
+  }
+
+  let widest = 0;
+  let curSpanIdx = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const textLine = line[0];
+    if (textLine.length === 0) {
+      continue;
+    }
+
+    let width = 0;
+    let prevGlyphId = 0;
+    let prevSpanIdx = -1;
+    let pendingItalicOverhang = 0;
+    let strippedPos = line[5];
+
+    for (const char of textLine) {
+      const charLen = char.length;
+      if (hasZeroWidthSpace(char) === true) {
+        strippedPos += charLen;
+        continue;
+      }
+      const codepoint = char.codePointAt(0);
+      if (codepoint === undefined) {
+        strippedPos += charLen;
+        continue;
+      }
+      const glyph = SdfFontHandler.getGlyph(fontFamily, codepoint);
+      if (glyph === null) {
+        strippedPos += charLen;
+        continue;
+      }
+
+      curSpanIdx = spanIndexAt(spans, spanCount, strippedPos, curSpanIdx);
+      const span = spans[curSpanIdx]!;
+
+      // Mirrors the positioning loop exactly; see the comments there.
+      if (prevGlyphId !== 0 && prevSpanIdx === curSpanIdx) {
+        width += SdfFontHandler.getKerning(fontFamily, prevGlyphId, glyph.id);
+      }
+      if (pendingItalicOverhang > 0 && span.italic === false) {
+        width += pendingItalicOverhang;
+      }
+      pendingItalicOverhang = 0;
+
+      if (span.italic === true) {
+        pendingItalicOverhang = italicOverhang(base, glyph.yoffset);
+      }
+
+      width +=
+        glyph.xadvance +
+        letterSpacing +
+        (span.bold === true ? boldAdvanceExtra : 0);
+
+      prevGlyphId = glyph.id;
+      prevSpanIdx = curSpanIdx;
+      strippedPos += charLen;
+    }
+
+    // A run that reaches the end of the line still overhangs the line box.
+    width += pendingItalicOverhang;
+
+    line[1] = width;
+    if (width > widest) {
+      widest = width;
+    }
+  }
+
+  if (textAlign !== 'left') {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      line[3] =
+        textAlign === 'right' ? widest - line[1] : (widest - line[1]) / 2;
+    }
+  }
+
+  return widest > 0 ? widest : fallbackWidth;
+};
+
+/**
  * Generate complete text layout with glyph positioning for caching.
  *
  * Two-pass approach:
@@ -378,7 +492,7 @@ const generateTextLayout = (
     hasRemainingText,
     _bareLineHeight,
     lineHeightPx,
-    effectiveWidth,
+    baseEffectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
     SdfFontHandler.measureText,
@@ -394,6 +508,26 @@ const generateTextLayout = (
     maxWidth,
     maxHeight,
   );
+
+  // Extra advance, in design units, for a synthetically emboldened glyph.
+  const boldAdvanceExtra = sdfBoldExtra(fontData.distanceField.distanceRange);
+
+  // mapTextLayout measured with plain glyph metrics, so a line containing bold
+  // or italic spans is drawn wider than the width it reported. Correct the line
+  // widths (and the alignment offsets derived from them) before any glyph
+  // positions are computed, so the node's width matches what is drawn.
+  const effectiveWidth =
+    richText === true
+      ? correctStyledLineWidths(
+          lines,
+          fontFamily,
+          letterSpacing,
+          boldAdvanceExtra,
+          commonFontData.base,
+          props.textAlign,
+          baseEffectiveWidth,
+        )
+      : baseEffectiveWidth;
 
   // --- Pre-compute decoration offsets in design-unit space ---
   // commonFontData.base is the BMFont "base" value: the y-distance from the top of the
@@ -561,6 +695,11 @@ const generateTextLayout = (
     const line = lines[i] as TextLineStruct;
     const textLine = line[0];
     let prevGlyphId = 0;
+    // Span index of the previous glyph, used to suppress kerning across a
+    // style boundary. -1 so the first glyph never matches.
+    let prevSpanIdx = -1;
+    // Shear overhang owed by a trailing italic glyph, paid when the run ends.
+    let pendingItalicOverhang = 0;
     currentX = line[3];
     // Seed the span cursor position from the line's absolute start offset.
     strippedPos = line[5];
@@ -607,7 +746,10 @@ const generateTextLayout = (
       spanItalic = span.italic;
 
       // --- Kerning ---
-      if (prevGlyphId !== 0) {
+      // Kerning pairs are only meaningful within a single style run. Across a
+      // style boundary the two glyphs are rendered with different weights or
+      // slants, so the pair adjustment from the regular face does not apply.
+      if (prevGlyphId !== 0 && prevSpanIdx === curSpanIdx) {
         currentX += SdfFontHandler.getKerning(
           fontFamily,
           prevGlyphId,
@@ -615,8 +757,19 @@ const generateTextLayout = (
         );
       }
 
-      // Glyph bounding box in design units.
-      const x1 = currentX + glyph.xoffset;
+      // An italic run that has just ended needs its shear overhang paid for
+      // before the next upright glyph is placed, otherwise the leaning top of
+      // the last italic glyph collides with it.
+      if (pendingItalicOverhang > 0 && spanItalic === false) {
+        currentX += pendingItalicOverhang;
+      }
+      pendingItalicOverhang = 0;
+
+      // Glyph bounding box in design units. Emboldening dilates the glyph
+      // outward on both sides, so shift the box by half the growth to keep it
+      // centred on its advance.
+      const boldExtra = spanBold === true ? boldAdvanceExtra : 0;
+      const x1 = currentX + glyph.xoffset + boldExtra * 0.5;
       const y1 = currentY + glyph.yoffset;
       const y2 = y1 + glyph.height;
 
@@ -626,7 +779,13 @@ const generateTextLayout = (
 
       // Capture decoration X extents before advancing currentX.
       const decoX1 = currentX;
-      const advance = glyph.xadvance + letterSpacing;
+      // The shader widens bold glyphs without touching xadvance, so the extra
+      // width has to be added here or bold runs overlap the following text.
+      const advance = glyph.xadvance + letterSpacing + boldExtra;
+
+      if (spanItalic === true) {
+        pendingItalicOverhang = italicOverhang(baseline, y1);
+      }
 
       // --- Italic horizontal shear: delta-x per vertex at y1 / y2 ---
       // shear = (baseline_y - vertex_y) * tan(14°)
@@ -656,6 +815,7 @@ const generateTextLayout = (
       // Advance the glyph cursor.
       currentX += advance;
       prevGlyphId = glyph.id;
+      prevSpanIdx = curSpanIdx;
 
       // --- Write decoration records (richText only) ---
       if (spanUnderline === true) {

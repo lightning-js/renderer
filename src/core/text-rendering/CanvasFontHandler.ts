@@ -243,6 +243,36 @@ export const measureText = (
 };
 
 /**
+ * Set the CSS font used by {@link measureText}.
+ *
+ * @remarks
+ * `measureText` deliberately ignores its `fontFamily` argument (it only exists
+ * to match SdfFontHandler's signature) and measures against a shared, module
+ * level context. Rich text needs to measure bold and italic runs with the same
+ * face they will be drawn with, otherwise the advance width is taken from the
+ * regular face and styled runs collide with the text that follows them.
+ *
+ * Callers that change the measure font are responsible for restoring it, since
+ * the context is shared with font metric calculation and the plain text path.
+ *
+ * Returns true if the font actually changed. Assigning `context.font` forces
+ * the UA to parse the font shorthand, so the redundant-write guard is
+ * worthwhile in the per-segment draw loop.
+ */
+export const setMeasureFont = (font: string): boolean => {
+  if (measureContext.font === font) {
+    return false;
+  }
+  measureContext.font = font;
+  return true;
+};
+
+/**
+ * The CSS font string currently used by {@link measureText}.
+ */
+export const getMeasureFont = (): string => measureContext.font;
+
+/**
  * Get the font metrics for a font face.
  *
  * @remarks
