@@ -12,6 +12,8 @@
     "build:renderer": "cd .. && pnpm build",
     "build:examples": "cd ../examples && pnpm build",
     "build:docker": "tsc && node dist/src/build-docker.js",
+    "check:playwright": "tsc && node dist/src/checkPlaywrightVersion.js",
+    "sync:playwright": "tsc && node dist/src/checkPlaywrightVersion.js --write",
     "serve-examples": "cd ../examples && pnpm preview:automation",
     "node-version": "node --version"
   },

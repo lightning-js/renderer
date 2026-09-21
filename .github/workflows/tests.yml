@@ -50,6 +50,13 @@ jobs:
           echo "For more details, see: https://github.com/lightning-js/renderer/blob/main/CONTRIBUTING.md#testing-requirements"
         continue-on-error: true
 
+      - name: Check Playwright Version Alignment
+        # The container used to capture snapshots gets its browser binaries from
+        # a versioned base image but installs the client from the lockfile. CI
+        # itself is immune, since it installs the browser directly, so without
+        # this check a Playwright bump breaks local snapshot capture silently.
+        run: cd visual-regression && pnpm run check:playwright
+
       - name: Install Playwright Browser
         run: cd visual-regression && pnpm exec playwright install chromium
 
