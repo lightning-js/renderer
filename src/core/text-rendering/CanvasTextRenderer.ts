@@ -206,9 +206,9 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // -------------------------------------------------------------------------
     // Rich text draw path — segment-by-segment with per-span font and color.
     //
-    // strippedPos tracks the absolute character position in stripped text as
-    // we walk through layout lines. curSpanIdx advances monotonically with
-    // strippedPos (spans are sorted by start, no backward scan is needed).
+    // Each layout line carries its own absolute start offset in the stripped
+    // text (TextLineStruct index 5). curSpanIdx advances monotonically with
+    // that offset (spans are sorted by start, no backward scan is needed).
     //
     // Note: layout (mapTextLayout) used the base font metrics, so bold text
     // may render slightly wider than its measured width — acceptable for MVP.
@@ -220,7 +220,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // normalizeCanvasColor caches the string, so no allocation in hot path.
     const nodeColor = normalizeCanvasColor(color, true);
 
-    let strippedPos = 0;
     let curSpanIdx = 0;
     let activeFont = baseFont;
     let activeFillStyle = nodeColor;
@@ -244,6 +243,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
       const lineLen = textLine.length;
       let currentX = Math.ceil(line[3]);
       const currentY = Math.ceil(line[4]);
+
+      // Absolute offset of this line's first character in the stripped text,
+      // supplied by the layout engine. Do not accumulate line lengths here:
+      // the wrapper collapses whitespace runs, so the gap between two layout
+      // lines is not always a single character.
+      const strippedPos = line[5];
 
       // Advance span pointer to cover strippedPos (first char of this line).
       while (
@@ -346,11 +351,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
           segSpanIdx = nextSpanIdx;
         }
       }
-
-      // Advance strippedPos past this line's characters plus the line-break
-      // character (space consumed by wrapText, or \n for explicit newlines)
-      // that separates layout lines. The final line has no trailing break.
-      strippedPos += lineLen + (i < lineAmount - 1 ? 1 : 0);
     }
   } else {
     // -------------------------------------------------------------------------
