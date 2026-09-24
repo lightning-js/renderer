@@ -136,14 +136,27 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  | WebGlNodeRenderOp
-  | StencilClipRenderOp
-  | SdfRenderOp;
+  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
   glw: GlContextWrapper;
-  system: CoreWebGlSystem;
+  private _system: CoreWebGlSystem | null = null;
+  /**
+   * GPU parameters and extensions, enumerated lazily on first access.
+   * The enumeration issues hundreds of synchronous GL queries, so it is kept
+   * out of the constructor (startup path). First consumer is the default
+   * shader build on the first rendered frame.
+   */
+  get system(): CoreWebGlSystem {
+    if (this._system === null) {
+      this._system = {
+        parameters: getWebGlParameters(this.glw),
+        extensions: getWebGlExtensions(this.glw),
+      };
+    }
+    return this._system;
+  }
 
   //// Persistent data
   quadBuffer: ArrayBuffer;
@@ -211,9 +224,30 @@ export class WebGlRenderer extends CoreRenderer {
    * The two layouts have different strides (6 floats plain / 7 floats rich) and
    * can therefore never share a draw call; each gets its own buffer, and each
    * SdfRenderOp carries the SdfBuffer it draws from.
+   *
+   * Created lazily on first SDF text render to keep renderer construction
+   * (startup path) lean; apps without early text never pay for them.
    */
-  sdfBufferPlain: SdfBuffer;
-  sdfBufferRich: SdfBuffer;
+  private _sdfBufferPlain: SdfBuffer | null = null;
+  private _sdfBufferRich: SdfBuffer | null = null;
+  get sdfBufferPlain(): SdfBuffer {
+    if (this._sdfBufferPlain === null) {
+      this._sdfBufferPlain = new SdfBuffer(this.glw, 'plain');
+    }
+    return this._sdfBufferPlain;
+  }
+  set sdfBufferPlain(buffer: SdfBuffer) {
+    this._sdfBufferPlain = buffer;
+  }
+  get sdfBufferRich(): SdfBuffer {
+    if (this._sdfBufferRich === null) {
+      this._sdfBufferRich = new SdfBuffer(this.glw, 'rich');
+    }
+    return this._sdfBufferRich;
+  }
+  set sdfBufferRich(buffer: SdfBuffer) {
+    this._sdfBufferRich = buffer;
+  }
   /**
    * Current SDF render op being extended by `finalizeSdfBatch`. Null when the
    * last op is not extendable (different atlas, clipping rect, or RTT state).
@@ -295,10 +329,6 @@ export class WebGlRenderer extends CoreRenderer {
 
     createIndexBuffer(glw, stage.bufferMemory);
 
-    this.system = {
-      parameters: getWebGlParameters(this.glw),
-      extensions: getWebGlExtensions(this.glw),
-    };
     const quadBuffer = glw.createBuffer();
 
     // Per-vertex stride is 5 floats (20 bytes): a_position (2 floats),
@@ -406,10 +436,7 @@ export class WebGlRenderer extends CoreRenderer {
       },
     ]);
 
-    // Shared SDF vertex buffers — one per GPU layout (plain 6f / rich 7f).
-    // Each owns its GL buffer, attribute layout, and upload-skip state.
-    this.sdfBufferPlain = new SdfBuffer(glw, 'plain');
-    this.sdfBufferRich = new SdfBuffer(glw, 'rich');
+    // Shared SDF vertex buffers are created lazily on first SDF text render.
   }
 
   reset() {
@@ -419,8 +446,8 @@ export class WebGlRenderer extends CoreRenderer {
     this.dirtyQuadCount = 0;
     this.curSdfRenderOp = null;
     this.renderOps.length = 0;
-    this.sdfBufferPlain.clear();
-    this.sdfBufferRich.clear();
+    this._sdfBufferPlain?.clear();
+    this._sdfBufferRich?.clear();
     this.stencilOpPoolIdx = 0;
     this.stencilDepth = 0;
     glw.setScissorTest(false);
@@ -1128,8 +1155,8 @@ export class WebGlRenderer extends CoreRenderer {
    *   have their own dirty path.
    */
   private uploadSdfBuffer(): void {
-    this.uploadSdfBufferLayout(this.sdfBufferPlain);
-    this.uploadSdfBufferLayout(this.sdfBufferRich);
+    this._sdfBufferPlain && this.uploadSdfBufferLayout(this._sdfBufferPlain);
+    this._sdfBufferRich && this.uploadSdfBufferLayout(this._sdfBufferRich);
   }
 
   private uploadSdfBufferLayout(sdfBuffer: SdfBuffer): void {
@@ -1428,8 +1455,9 @@ export class WebGlRenderer extends CoreRenderer {
       // Force a re-upload on the next pass: the main pass appends to these
       // same shared buffers, and an exact cache-hit fill could otherwise
       // pass the upload-skip test while the GPU still holds RTT-only bytes.
-      this.sdfBufferPlain.changed = true;
-      this.sdfBufferRich.changed = true;
+      // (No-ops when the SDF buffers have not been created yet.)
+      if (this._sdfBufferPlain) this._sdfBufferPlain.changed = true;
+      if (this._sdfBufferRich) this._sdfBufferRich.changed = true;
 
       // Reset render operations
       this.renderOps.length = 0;
