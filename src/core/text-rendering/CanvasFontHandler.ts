@@ -54,6 +54,21 @@ const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(
 
 const fontCache = new Map<string, CanvasFont>();
 
+interface CanvasFontConfig {
+  fontUrl: string;
+  metrics?: FontMetrics;
+}
+
+/**
+ * Registered font configurations.
+ *
+ * @remarks
+ * Registration (via `loadFont`) only stores where to find the font. The
+ * `FontFace` fetch starts on first use (`requestLoad`) or explicit
+ * `preloadFont`, so fonts that are never rendered cost nothing.
+ */
+const fontConfigs = new Map<string, CanvasFontConfig>();
+
 let initialized = false;
 let measureContext:
   | CanvasRenderingContext2D
@@ -81,10 +96,16 @@ const processFontData = (
 };
 
 /**
- * Load a font by providing fontFamily, fontUrl, and optional metrics
+ * Register a font by providing fontFamily, fontUrl, and optional metrics.
+ *
+ * @remarks
+ * Registration only stores where to find the font — no `FontFace` fetch
+ * happens here. Loading starts on first use (see {@link requestLoad}) or
+ * explicit {@link preloadFont}, so registered fonts that are never rendered
+ * cost nothing.
  */
 export const loadFont = async (
-  stage: Stage,
+  _stage: Stage,
   options: FontLoadOptions,
 ): Promise<void> => {
   const { fontFamily, fontUrl, metrics } = options;
@@ -94,16 +115,76 @@ export const loadFont = async (
     return;
   }
 
+  if (fontUrl === undefined || fontUrl === null || fontUrl === '') {
+    throw new Error(`Font URL must be provided for canvas font: ${fontFamily}`);
+  }
+
+  fontConfigs.set(fontFamily, { fontUrl, metrics });
+};
+
+/**
+ * Eagerly load a previously registered (or new) canvas font.
+ *
+ * @remarks
+ * Use when first-paint readiness must be guaranteed (e.g. awaited before
+ * drawing). Unlike {@link loadFont}, this resolves only after the `FontFace`
+ * is fetched and processed.
+ */
+export const preloadFont = async (
+  stage: Stage,
+  options: FontLoadOptions,
+): Promise<void> => {
+  await loadFont(stage, options);
+  await ensureLoaded(stage, options.fontFamily);
+};
+
+/**
+ * Start loading a registered font if it hasn't started yet.
+ *
+ * @remarks
+ * Cheap and idempotent: map lookups plus promise dedup. Called on first use
+ * (node creation / update ticks) so the first text node warms its own font.
+ * Load failures are logged; waiting nodes behave as before.
+ */
+export const requestLoad = (stage: Stage, fontFamily: string): void => {
+  if (
+    fontConfigs.has(fontFamily) === true &&
+    fontCache.has(fontFamily) === false &&
+    fontLoadPromises.has(fontFamily) === false
+  ) {
+    ensureLoaded(stage, fontFamily).catch((error: unknown) => {
+      console.error(`Failed to load font: ${fontFamily}`, error);
+    });
+  }
+};
+
+/**
+ * Fetch and process a registered canvas font.
+ */
+const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
+  // If already loaded, return immediately
+  if (fontCache.has(fontFamily) === true) {
+    return Promise.resolve();
+  }
+
   const existingPromise = fontLoadPromises.get(fontFamily);
   // If already loading, return the existing promise
   if (existingPromise !== undefined) {
     return existingPromise;
   }
 
+  const config = fontConfigs.get(fontFamily);
+  if (config === undefined) {
+    return Promise.reject(
+      new Error(`Canvas font not registered: ${fontFamily}`),
+    );
+  }
+  const { fontUrl, metrics } = config;
+
   const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create and store the loading promise
   const loadPromise = stage.platform
-    .loadFontFace(fontFamily, fontUrl!)
+    .loadFontFace(fontFamily, fontUrl)
     .then((loadedFont) => {
       processFontData(fontFamily, loadedFont ?? undefined, metrics);
       fontLoadPromises.delete(fontFamily);

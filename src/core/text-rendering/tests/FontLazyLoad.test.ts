@@ -18,10 +18,132 @@
  */
 
 /**
- * Lazy font engine initialization.
+ * Lazy font loading: registration defers fetch/decode until first use.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Stage } from '../../Stage.js';
+import * as SdfFontHandler from '../SdfFontHandler.js';
+import * as CanvasFontHandler from '../CanvasFontHandler.js';
+import type { Stage as StageType } from '../../Stage.js';
+
+const makeStage = (platform: object = {}) =>
+  ({
+    txManager: {
+      createTexture: vi.fn(),
+    },
+    platform,
+    fontHandlers: {
+      sdf: SdfFontHandler,
+      canvas: CanvasFontHandler,
+    },
+  } as unknown as StageType);
+
+describe('SDF lazy font loading', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      new Error('fetch should not be called'),
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('loadFont registers without fetching', async () => {
+    const stage = makeStage();
+    await Stage.prototype.loadFont.call(stage, 'sdf', {
+      fontFamily: 'LazyTest',
+      atlasUrl: 'http://example.com/a.png',
+      atlasDataUrl: 'http://example.com/a.json',
+    });
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(SdfFontHandler.isFontLoaded('LazyTest')).toBe(false);
+    // Registered families are renderable (load starts on first use)
+    expect(
+      SdfFontHandler.canRenderFont({ fontFamily: 'LazyTest' } as never),
+    ).toBe(true);
+  });
+
+  it('requestLoad starts the load once for registered families', async () => {
+    const stage = makeStage();
+    const fontData = {
+      chars: [{ id: 65, x: 0, y: 0, width: 10, height: 10 }],
+      kernings: [],
+      info: {},
+      common: {},
+      distanceField: {},
+    };
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => fontData,
+    } as Response);
+
+    const texture = {
+      state: 'loaded',
+      setRenderableOwner: vi.fn(),
+      preventCleanup: false,
+      on: vi.fn(),
+    };
+    stage.txManager.createTexture = vi.fn().mockReturnValue(texture);
+
+    await Stage.prototype.loadFont.call(stage, 'sdf', {
+      fontFamily: 'LazyLoadMe',
+      atlasUrl: 'http://example.com/b.png',
+      atlasDataUrl: 'http://example.com/b.json',
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+
+    SdfFontHandler.requestLoad(stage, 'LazyLoadMe');
+    // Second call while loading must not start another fetch
+    SdfFontHandler.requestLoad(stage, 'LazyLoadMe');
+
+    await vi.waitFor(() => {
+      expect(SdfFontHandler.isFontLoaded('LazyLoadMe')).toBe(true);
+    });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('requestLoad is a no-op for unknown families', () => {
+    const stage = makeStage();
+    expect(() =>
+      SdfFontHandler.requestLoad(stage, 'NeverRegistered'),
+    ).not.toThrow();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('Canvas lazy font loading', () => {
+  it('loadFont registers without calling loadFontFace', async () => {
+    const loadFontFace = vi.fn();
+    const stage = makeStage({ loadFontFace });
+
+    await Stage.prototype.loadFont.call(stage, 'canvas', {
+      fontFamily: 'LazyCanvas',
+      fontUrl: 'http://example.com/c.woff2',
+    });
+
+    expect(loadFontFace).not.toHaveBeenCalled();
+    expect(CanvasFontHandler.isFontLoaded('LazyCanvas')).toBe(false);
+  });
+
+  it('requestLoad fetches the FontFace once', async () => {
+    const loadFontFace = vi.fn().mockResolvedValue(null);
+    const stage = makeStage({ loadFontFace });
+
+    await Stage.prototype.loadFont.call(stage, 'canvas', {
+      fontFamily: 'LazyCanvas2',
+      fontUrl: 'http://example.com/d.woff2',
+    });
+    CanvasFontHandler.requestLoad(stage, 'LazyCanvas2');
+    CanvasFontHandler.requestLoad(stage, 'LazyCanvas2');
+
+    await vi.waitFor(() => {
+      expect(CanvasFontHandler.isFontLoaded('LazyCanvas2')).toBe(true);
+    });
+    expect(loadFontFace).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('Stage.ensureTextEngineInitialized', () => {
   it('initializes each engine once on demand', () => {
