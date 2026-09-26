@@ -48,12 +48,19 @@ export class ImageWorkerManager {
   workers: Worker[] = [];
   workerLoad: number[] = [];
   nextId = 0;
+  private readonly maxWorkers: number;
+  private readonly workerFactory: ImageWorkerFactory;
+  private readonly blobURL: string;
 
-  constructor(numImageWorkers: number, workerFactory: ImageWorkerFactory) {
-    this.workers = this.createWorkers(numImageWorkers, workerFactory);
-    this.workers.forEach((worker, index) => {
-      worker.onmessage = (event) => this.handleMessage(event, index);
-    });
+  /**
+   * @param maxWorkers Maximum pool size. Workers spawn on demand (see
+   * {@link getImage}): the first image load spawns one worker and the pool
+   * grows while all workers are busy, instead of spawning everything upfront.
+   */
+  constructor(maxWorkers: number, workerFactory: ImageWorkerFactory) {
+    this.maxWorkers = Math.max(1, maxWorkers);
+    this.workerFactory = workerFactory;
+    this.blobURL = this.createBlobURL(workerFactory);
   }
 
   private isLegacyResponse(
@@ -107,10 +114,7 @@ export class ImageWorkerManager {
     }
   }
 
-  private createWorkers(
-    numWorkers = 1,
-    workerFactory: ImageWorkerFactory,
-  ): Worker[] {
+  private createBlobURL(workerFactory: ImageWorkerFactory): string {
     let workerCode = `(${workerFactory.toString()})()`;
 
     workerCode = workerCode.replace('"use strict";', '');
@@ -118,17 +122,39 @@ export class ImageWorkerManager {
       type: 'application/javascript',
     });
 
-    const blobURL: string = (self.URL ? URL : webkitURL).createObjectURL(blob);
-    const workers: Worker[] = [];
-    for (let i = 0; i < numWorkers; i++) {
-      workers.push(new Worker(blobURL));
-      this.workerLoad.push(0);
-    }
-    return workers;
+    return (self.URL ? URL : webkitURL).createObjectURL(blob);
   }
 
+  /**
+   * Spawn one worker and append it to the pool.
+   *
+   * @returns Index of the new worker, or -1 when the pool is at capacity.
+   */
+  private addWorker(): number {
+    if (this.workers.length >= this.maxWorkers) {
+      return -1;
+    }
+    const worker = new Worker(this.blobURL);
+    const index = this.workers.length;
+    worker.onmessage = (event) => this.handleMessage(event, index);
+    this.workers.push(worker);
+    this.workerLoad.push(0);
+    return index;
+  }
+
+  /**
+   * Pick the worker for the next image, growing the pool on demand.
+   *
+   * @remarks
+   * An idle worker wins immediately. When every worker is busy and the pool
+   * is below capacity, a new worker spawns instead of queueing behind busy
+   * ones; otherwise the least-loaded worker takes the job. Never returns -1:
+   * the pool always grows from empty since capacity is at least 1.
+   */
   private getNextWorkerIndex(): number {
-    if (this.workers.length === 0) return -1;
+    if (this.workers.length === 0) {
+      return this.addWorker();
+    }
 
     let minLoad = 99;
     let workerIndex = 0;
@@ -145,7 +171,9 @@ export class ImageWorkerManager {
         workerIndex = i;
       }
     }
-    return workerIndex;
+
+    const grown = this.addWorker();
+    return grown !== -1 ? grown : workerIndex;
   }
 
   getImage(
