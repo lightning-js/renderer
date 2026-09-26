@@ -1033,6 +1033,24 @@ export class RendererMain extends EventEmitter {
   }
 
   /**
+   * Resolves after the renderer's first frame has been drawn.
+   *
+   * @remarks
+   * See {@link Stage.ready}. Useful to defer heavy scene building until the
+   * renderer is actually capable of presenting frames.
+   *
+   * @example
+   * ```typescript
+   * const renderer = new RendererMain({ ... }, 'app');
+   * await renderer.ready;
+   * // build scene, load fonts, ...
+   * ```
+   */
+  get ready(): Promise<void> {
+    return this.stage.ready;
+  }
+
+  /**
    * Gets the target FPS for the global render loop
    *
    * @returns The current target FPS (0 means no throttling)
