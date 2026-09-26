@@ -143,7 +143,26 @@ export type WebGlRenderOp =
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
   glw: GlContextWrapper;
-  system: CoreWebGlSystem;
+  private _system: CoreWebGlSystem | null = null;
+
+  /**
+   * Device parameters and extensions, queried lazily on first access.
+   *
+   * @remarks
+   * The query is a burst of synchronous `getParameter`/`getExtension` calls
+   * that used to run in the constructor. Nothing on the startup path reads
+   * it (first use is shader batching at render time), so it is deferred.
+   */
+  get system(): CoreWebGlSystem {
+    if (this._system === null) {
+      const glw = this.glw;
+      this._system = {
+        parameters: getWebGlParameters(glw),
+        extensions: getWebGlExtensions(glw),
+      };
+    }
+    return this._system;
+  }
 
   //// Persistent data
   quadBuffer: ArrayBuffer;
@@ -295,10 +314,6 @@ export class WebGlRenderer extends CoreRenderer {
 
     createIndexBuffer(glw, stage.bufferMemory);
 
-    this.system = {
-      parameters: getWebGlParameters(this.glw),
-      extensions: getWebGlExtensions(this.glw),
-    };
     const quadBuffer = glw.createBuffer();
 
     // Per-vertex stride is 5 floats (20 bytes): a_position (2 floats),
