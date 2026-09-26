@@ -46,19 +46,34 @@ interface FontFaceSetWithAdd extends FontFaceSet {
 
 export class WebPlatform extends Platform {
   private useImageWorker: boolean;
-  private imageWorkerManager: ImageWorkerManager | null = null;
+  private readonly numImageWorkers: number;
+  private _imageWorkerManager: ImageWorkerManager | null = null;
   private hasWorker = !!self.Worker;
   private stopped = false;
 
   constructor(settings: PlatformSettings = {}) {
     super(settings);
 
-    const numImageWorkers = settings.numImageWorkers ?? 0;
-    this.useImageWorker = numImageWorkers > 0 && this.hasWorker;
+    this.numImageWorkers = settings.numImageWorkers ?? 0;
+    this.useImageWorker = this.numImageWorkers > 0 && this.hasWorker;
+  }
 
-    if (this.useImageWorker === true) {
-      this.imageWorkerManager = this.createImageWorkerManager(numImageWorkers);
+  /**
+   * Image worker pool, created on first image load.
+   *
+   * @remarks
+   * The pool object itself is free (no workers spawn until the first image);
+   * workers then grow on demand up to `numImageWorkers` (see
+   * {@link ImageWorkerManager}). Image decoding is asynchronous and off the
+   * frame path either way.
+   */
+  private get imageWorkerManager(): ImageWorkerManager | null {
+    if (this._imageWorkerManager === null && this.useImageWorker === true) {
+      this._imageWorkerManager = this.createImageWorkerManager(
+        this.numImageWorkers,
+      );
     }
+    return this._imageWorkerManager;
   }
 
   protected createImageWorkerManager(
@@ -185,11 +200,13 @@ export class WebPlatform extends Platform {
 
   override stopLoop(): void {
     this.stopped = true;
-    if (this.imageWorkerManager !== null) {
-      for (const worker of this.imageWorkerManager.workers) {
+    // NOTE: read the backing field, not the lazy getter — tearing down must
+    // never spawn workers.
+    if (this._imageWorkerManager !== null) {
+      for (const worker of this._imageWorkerManager.workers) {
         worker.terminate();
       }
-      this.imageWorkerManager = null;
+      this._imageWorkerManager = null;
     }
   }
 
