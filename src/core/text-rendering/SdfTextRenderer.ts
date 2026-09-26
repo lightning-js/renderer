@@ -65,16 +65,45 @@ const type = 'sdf' as const;
 
 let sdfShader: WebGlShaderNode | null = null;
 let sdfPlainShader: WebGlShaderNode | null = null;
+let sdfShaderStage: Stage | null = null;
+let sdfPlainShaderStage: Stage | null = null;
 
 // Initialize the SDF text renderer
 const init = (stage: Stage): void => {
   SdfFontHandler.init();
 
-  // Register both SDF shader variants with the shader manager
+  // Register both SDF shader variants with the shader manager.
+  // Shader *nodes* (and their GL program compiles) are created lazily on
+  // first text render so apps without text never pay for compilation.
   stage.shManager.registerShaderType('Sdf', Sdf);
   stage.shManager.registerShaderType('SdfPlain', SdfPlain);
-  sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
-  sdfPlainShader = stage.shManager.createShader('SdfPlain') as WebGlShaderNode;
+};
+
+/**
+ * Create the shared SDF shader node for the needed layout on first use.
+ *
+ * @remarks
+ * Only the variant the scene actually renders (rich vs plain) pays for
+ * program compilation; the other compiles on first use of its layout. Nodes
+ * are cached per stage: a different stage (e.g. a second renderer on the
+ * same page) gets its own nodes instead of reusing GL programs from another
+ * context.
+ */
+const ensureShader = (stage: Stage, isRich: boolean): WebGlShaderNode => {
+  if (isRich === true) {
+    if (sdfShaderStage !== stage || sdfShader === null) {
+      sdfShader = stage.shManager.createShader('Sdf') as WebGlShaderNode;
+      sdfShaderStage = stage;
+    }
+    return sdfShader;
+  }
+  if (sdfPlainShaderStage !== stage || sdfPlainShader === null) {
+    sdfPlainShader = stage.shManager.createShader(
+      'SdfPlain',
+    ) as WebGlShaderNode;
+    sdfPlainShaderStage = stage;
+  }
+  return sdfPlainShader;
 };
 
 const font: FontHandler = SdfFontHandler;
@@ -167,7 +196,7 @@ const renderQuads = (
   const sdfBuffer = isRich
     ? webGlRenderer.sdfBufferRich
     : webGlRenderer.sdfBufferPlain;
-  const shader = isRich ? sdfShader! : sdfPlainShader!;
+  const shader = ensureShader(webGlRenderer.stage, isRich);
 
   // --- Cache-hit fast paths -----------------------------------------------
   if (cache !== undefined && cache.vertices !== null) {
