@@ -846,7 +846,9 @@ export class Stage {
    * Will try to return a canvas renderer if no other suitable renderer can be resolved.
    *
    * As a side effect the returned engine is initialized (see
-   * {@link ensureTextEngineInitialized}).
+   * {@link ensureTextEngineInitialized}) and a load of the requested font
+   * family is kicked off when the handler supports it, so the first text
+   * node warms everything its first frame needs.
    *
    * @param fontFamily
    * @param textRendererOverride
@@ -865,6 +867,7 @@ export class Stage {
       }
 
       this.ensureTextEngineInitialized(overrideKey);
+      this.fontHandlers[overrideKey]?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers[overrideKey];
     }
 
@@ -873,6 +876,7 @@ export class Stage {
       // If we have only one font engine and its the canvas engine, we can just return it
       if (this.hasOnlyCanvasFontEngine === true) {
         this.ensureTextEngineInitialized('canvas');
+        this.fontHandlers['canvas']?.requestLoad?.(this, trProps.fontFamily);
         return this.singleFontEngine;
       }
 
@@ -880,6 +884,7 @@ export class Stage {
       if (this.singleFontHandler?.canRenderFont(trProps) === true) {
         const type = this.singleFontEngine.type;
         this.ensureTextEngineInitialized(type);
+        this.singleFontHandler?.requestLoad?.(this, trProps.fontFamily);
         return this.singleFontEngine;
       }
 
@@ -894,12 +899,14 @@ export class Stage {
     // First check SDF
     if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
       this.ensureTextEngineInitialized('sdf');
+      this.fontHandlers['sdf']?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers.sdf || null;
     }
 
     // If we have a canvas engine, we can return it (it can render all fonts)
     if (this.hasCanvasEngine === true) {
       this.ensureTextEngineInitialized('canvas');
+      this.fontHandlers['canvas']?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers.canvas || null;
     }
 
@@ -1169,19 +1176,24 @@ export class Stage {
   }
 
   /**
-   * Load a font using a specific text renderer type
+   * Register a font using a specific text renderer type
    *
    * @remarks
-   * This method allows consumers to explicitly load fonts for a specific
+   * This method allows consumers to explicitly register fonts for a specific
    * text renderer type (e.g., 'canvas', 'sdf'). Consumers must specify
    * the renderer type to ensure fonts are loaded with the correct pipeline.
+   *
+   * Registration only stores where to find the font — no fetch, decode, or
+   * GPU upload happens here. Loading starts automatically on first use of
+   * the font family (or via {@link preloadFont} for eager loading), so
+   * registered fonts that are never rendered cost nothing.
    *
    * For Canvas fonts, provide fontUrl (e.g., .ttf, .woff, .woff2)
    * For SDF fonts, provide atlasUrl (image) and atlasDataUrl (JSON glyph data)
    *
    * @param rendererType - The type of text renderer ('canvas', 'sdf', etc.)
    * @param options - Font loading options specific to the renderer type
-   * @returns Promise that resolves when the font is loaded
+   * @returns Promise that resolves when the font is registered
    */
   async loadFont(
     rendererType: TextRenderers,
@@ -1198,6 +1210,39 @@ export class Stage {
       );
     }
 
+    return fontHandler.loadFont(this, options);
+  }
+
+  /**
+   * Eagerly load a font, resolving only after it is renderable.
+   *
+   * @remarks
+   * Unlike {@link loadFont} (register-only), this fetches, decodes, and
+   * uploads the font immediately. Use when first-paint readiness of a font
+   * must be guaranteed (e.g. awaited before drawing).
+   *
+   * @param rendererType - The type of text renderer ('canvas', 'sdf', etc.)
+   * @param options - Font loading options specific to the renderer type
+   * @returns Promise that resolves when the font is loaded
+   */
+  async preloadFont(
+    rendererType: TextRenderers,
+    options: FontLoadOptions,
+  ): Promise<void> {
+    const rendererTypeKey = String(rendererType);
+    const fontHandler = this.fontHandlers[rendererTypeKey];
+
+    if (!fontHandler) {
+      throw new Error(
+        `Font handler for renderer type '${rendererTypeKey}' not found. Available types: ${Object.keys(
+          this.fontHandlers,
+        ).join(', ')}`,
+      );
+    }
+
+    if (fontHandler.preloadFont !== undefined) {
+      return fontHandler.preloadFont(this, options);
+    }
     return fontHandler.loadFont(this, options);
   }
 }
