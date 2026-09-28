@@ -1519,12 +1519,54 @@ export class WebGlContextWrapper extends GlContextWrapper {
    *
    * Compressed Textures support
    */
+  /**
+   * Ensures the WebGL extension that owns `glInternalFormat` has been queried
+   * (and is therefore recognized as a valid enum by the driver) before it is
+   * passed to `compressedTexImage2D`. Extensions used to be enumerated eagerly
+   * in the constructor (which implicitly activated every compressed texture
+   * format enum), but that enumeration is now lazy, so formats that are never
+   * referenced elsewhere must be activated here or the driver will reject
+   * them with `INVALID_ENUM`.
+   *
+   * @param glInternalFormat
+   */
+  private ensureCompressedFormatSupported(glInternalFormat: number) {
+    let extensionName: string | null = null;
+    if (glInternalFormat >= 0x83f0 && glInternalFormat <= 0x83f3) {
+      extensionName = 'WEBGL_compressed_texture_s3tc';
+    } else if (glInternalFormat === 0x8d64) {
+      extensionName = 'WEBGL_compressed_texture_etc1';
+    } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
+      extensionName = 'WEBGL_compressed_texture_etc';
+    } else if (glInternalFormat >= 0x8c00 && glInternalFormat <= 0x8c03) {
+      extensionName =
+        this.getExtension('WEBGL_compressed_texture_pvrtc') !== null
+          ? 'WEBGL_compressed_texture_pvrtc'
+          : 'WEBKIT_WEBGL_compressed_texture_pvrtc';
+    } else if (glInternalFormat >= 0x93b0 && glInternalFormat <= 0x93d5) {
+      extensionName = 'WEBGL_compressed_texture_astc';
+    }
+
+    if (extensionName === null) {
+      return;
+    }
+
+    if (this.getExtension(extensionName) === null) {
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} requires extension "${extensionName}" which is not supported by this device`,
+      );
+    }
+  }
+
   uploadKTX(texture: WebGLTexture, data: CompressedData) {
     const { glInternalFormat, mipmaps, w: width, h: height, blockInfo } = data;
     if (mipmaps === undefined) {
       return;
     }
 
+    this.ensureCompressedFormatSupported(glInternalFormat);
     this.bindTexture(texture);
 
     const blockWidth = blockInfo.width;
@@ -1569,6 +1611,8 @@ export class WebGlContextWrapper extends GlContextWrapper {
     if (mipmaps === undefined) {
       return;
     }
+
+    this.ensureCompressedFormatSupported(glInternalFormat);
     this.bindTexture(texture);
 
     let w = width;
