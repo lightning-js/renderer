@@ -215,6 +215,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
       } else if (this._waitingForFont === false) {
+        // Kick off a first-use load for registered-but-unstarted fonts
+        // (cheap no-op otherwise), then join the waiter queue.
+        this.fontHandler.requestLoad?.(this.stage, this.textProps.fontFamily);
         this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
         this._waitingForFont = true;
       }
