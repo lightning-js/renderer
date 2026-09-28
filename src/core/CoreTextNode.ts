@@ -50,10 +50,10 @@ export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
 }
 
 export enum TextConstraint {
-  'none' = 0,
-  'width' = 1,
-  'height' = 2,
-  'both' = 3,
+  none = 0,
+  width = 1,
+  height = 2,
+  both = 3,
 }
 
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
@@ -315,6 +315,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
       this.props.w = width;
       this.props.h = height;
+
       this.setUpdateType(UpdateType.Local);
       this.setRenderable(true);
       this.numQuads = layout.totalQuadCount;
@@ -334,7 +335,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
       this.renderOpTextures = [result.atlasTexture as WebGlCtxTexture];
     }
-
+    this.emit('textCalculated', {
+      type: 'text',
+      dimensions: {
+        w: width,
+        h: height,
+      },
+    });
     this._renderInfo = result;
     queueMicrotask(this.emitTextLoadedEvent);
   }
