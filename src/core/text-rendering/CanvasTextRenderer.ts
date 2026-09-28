@@ -34,7 +34,6 @@ import { parseRichText, ParseResult } from './RichTextParser.js';
 import {
   canvasSpanFont,
   decorationThickness,
-  italicOverhang,
   spanIndexAt,
   strikeOffset,
   underlineGap,
@@ -47,7 +46,9 @@ const font: FontHandler = CanvasFontHandler;
 let stage: Stage | null = null;
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let context:
-  CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D
+  | null = null;
 
 // Whether the drawing canvas is an OffscreenCanvas (supports transferToImageBitmap)
 let isOffscreen = false;
@@ -55,7 +56,9 @@ let isOffscreen = false;
 // Separate canvas and context for text measurements
 let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 type MeasureContext =
-  CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+  | CanvasRenderingContext2D
+  | OffscreenCanvasRenderingContext2D
+  | null;
 let measureContext: MeasureContext = null;
 
 // Cache for text layout calculations
@@ -91,15 +94,8 @@ const makeStyledMeasureText = (
   fontStyle: string,
   fontSize: number,
   fontFamily: string,
-  ascenderPx: number,
 ): MeasureTextFn => {
   const spans = _richTextResult.spans;
-  // Faux-italic obliquing leans the top of the glyph to the right without
-  // changing its advance, so an italic run's last glyph overhangs whatever
-  // follows it. Paid once here (as it is on the SDF path) whenever a segment
-  // boundary transitions from italic to non-italic, using the shared
-  // italicOverhang() so both backends agree on how much space to add.
-  const overhang = italicOverhang(ascenderPx, 0);
 
   return (text, family, letterSpacing, start) => {
     const spanCount = _richTextResult.spanCount;
@@ -120,25 +116,14 @@ const makeStyledMeasureText = (
         nextSpanIdx = spanIndexAt(spans, spanCount, start + j, segSpanIdx);
       }
       if (j === len || nextSpanIdx !== segSpanIdx) {
-        const span = spans[segSpanIdx]!;
         CanvasFontHandler.setMeasureFont(
-          canvasSpanFont(span, fontStyle, fontSize, fontFamily),
+          canvasSpanFont(spans[segSpanIdx]!, fontStyle, fontSize, fontFamily),
         );
         width += CanvasFontHandler.measureText(
           text.substring(segStart, j),
           family,
           letterSpacing,
         );
-        if (span.italic === true) {
-          const nextSpan = spans[nextSpanIdx];
-          if (
-            j === len ||
-            nextSpan === undefined ||
-            nextSpan.italic === false
-          ) {
-            width += overhang;
-          }
-        }
         segStart = j;
         segSpanIdx = nextSpanIdx;
       }
@@ -216,7 +201,8 @@ const init = (_stage: Stage): void => {
   }
 
   context = canvas.getContext('2d') as
-    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D;
   assertTruthy(context, '.getContext(2d) failed');
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -292,13 +278,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   // the reported width both account for bold and italic.
   const measureTextFn: MeasureTextFn =
     richText === true
-      ? makeStyledMeasureText(
-          baseFont,
-          fontStyle,
-          fontSize,
-          fontFamily,
-          metrics.ascender,
-        )
+      ? makeStyledMeasureText(baseFont, fontStyle, fontSize, fontFamily)
       : CanvasFontHandler.measureText;
 
   const [
@@ -414,12 +394,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     const decoThickness = decorationThickness(fontSize);
     const decoUnderlineBase = Math.ceil(ascenderPx) + underlineGap(fontSize);
     const decoStrikeBase = Math.round(strikeOffset(ascenderPx));
-    // Faux-italic obliquing leans the top of the glyph right without changing
-    // its advance, so the last glyph of an italic run overhangs whatever comes
-    // next. Paid once per run-end, mirroring makeStyledMeasureText above and
-    // the SDF renderer's pendingItalicOverhang, so drawing agrees with the
-    // width that was measured and reported.
-    const italicOverhangPx = italicOverhang(ascenderPx, 0);
 
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
@@ -535,20 +509,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
                   decoThickness,
                 );
               }
-            }
-          }
-
-          // An italic run's last glyph overhangs whatever comes next (see
-          // italicOverhangPx above). Pay it once here, when this run ends,
-          // so the next segment starts where it was measured to start.
-          if (span.italic === true) {
-            const nextSpan = spans[nextSpanIdx];
-            if (
-              j === lineLen ||
-              nextSpan === undefined ||
-              nextSpan.italic === false
-            ) {
-              currentX += italicOverhangPx;
             }
           }
 

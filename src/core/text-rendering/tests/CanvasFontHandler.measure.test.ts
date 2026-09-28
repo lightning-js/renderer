@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as CanvasFontHandler from '../CanvasFontHandler.js';
-import { canvasSpanFont, italicOverhang } from '../RichTextMetrics.js';
+import { canvasSpanFont } from '../RichTextMetrics.js';
 import {
   parseRichText,
   ParseResult,
@@ -126,48 +126,5 @@ describe('CanvasFontHandler measure font', () => {
     expect(styledWidth).toBeGreaterThan(baseWidth);
     // 'brown' is 5 chars and gains 2px per char in the stub's bold face.
     expect(styledWidth - baseWidth).toBe(10);
-  });
-
-  it('an adjacent italic run needs an overhang correction to avoid colliding with the next run', () => {
-    // Reproduces the reported defect: '[i]Italic[/i]Plain' with no separator
-    // between the runs. Advancing by the italic run's own measured width
-    // alone is not enough — faux-italic obliquing leans the top of the glyph
-    // to the right without changing its advance, so without the overhang
-    // correction the leaning top of the last italic glyph collides with the
-    // start of the following plain run.
-    const parsed = new ParseResult();
-    parseRichText('[i]Italic[/i]Plain', parsed);
-    expect(parsed.stripped).toBe('ItalicPlain');
-    expect(parsed.spanCount).toBe(2);
-
-    const fontStyle = 'normal';
-    const fontSize = 20;
-    const fontFamily = 'Arial';
-    const ascenderPx = 16; // arbitrary distance from hanging baseline to alphabetic baseline
-
-    // What the draw path advances span by span, without any overhang.
-    let unadjustedWidth = 0;
-    let cursor = 0;
-    for (let i = 0; i < parsed.spanCount; i++) {
-      const s = parsed.spans[i] as RichSpan;
-      CanvasFontHandler.setMeasureFont(
-        canvasSpanFont(s, fontStyle, fontSize, fontFamily),
-      );
-      unadjustedWidth += CanvasFontHandler.measureText(
-        parsed.stripped.substring(cursor, s.end),
-        fontFamily,
-        0,
-      );
-      cursor = s.end;
-    }
-
-    // The correction paid once, when the italic run ends and the next run is
-    // not italic — mirrors makeStyledMeasureText / the draw loop in
-    // CanvasTextRenderer.ts.
-    const overhang = italicOverhang(ascenderPx, 0);
-    const adjustedWidth = unadjustedWidth + overhang;
-
-    expect(overhang).toBeGreaterThan(0);
-    expect(adjustedWidth).toBeGreaterThan(unadjustedWidth);
   });
 });
