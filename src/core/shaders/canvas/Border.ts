@@ -15,7 +15,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { formatRgba, parseColorRgba } from '../../lib/colorParser.js';
+import { parseColorRgba } from '../../lib/colorParser.js';
 import { valuesAreEqual } from '../../lib/utils.js';
 import type { CanvasShaderType } from '../../renderers/canvas/CanvasShaderNode.js';
 import type { Vec4 } from '../../renderers/webgl/internal/ShaderUtils.js';
@@ -40,7 +40,8 @@ export interface ComputedBorderValues {
 export const Border: CanvasShaderType<BorderProps, ComputedBorderValues> = {
   props: BorderTemplate.props,
   update() {
-    this.computed.borderColor = formatRgba(parseColorRgba(this.props!.color));
+    const c = parseColorRgba(this.props!.color);
+    this.computed.borderColor = `rgba(${c.r},${c.g},${c.b},${c.a})`;
     this.computed.borderAsym = !valuesAreEqual(this.props!.w as number[]);
     const borderAlign = this.props!.align as number;
     const borderGap = this.props!.gap as number;

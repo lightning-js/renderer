@@ -24,7 +24,10 @@ import { CoreRenderer } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
 import { parseColor } from '../../lib/colorParser.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
-import { normalizeCanvasColor, normalizeCanvasColorArgb } from '../../lib/colorCache.js';
+import {
+  normalizeCanvasColor,
+  normalizeCanvasColorArgb,
+} from '../../lib/colorCache.js';
 import type { Stage } from '../../Stage.js';
 
 export class CanvasRenderer extends CoreRenderer {
