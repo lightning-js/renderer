@@ -1495,7 +1495,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray - The vertex array object to delete
    */
   deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
-    if (this.isWebGl2()) {
+    if (this.isWebGl2() === true) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
   }
@@ -1586,7 +1586,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
     } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
       // ETC2/EAC is core in WebGL2: no extension exists to query and
       // `getExtension()` would return null, so skip the check entirely.
-      if (this.isWebGl2()) {
+      if (this.isWebGl2() === true) {
         return;
       }
       extensionName = 'WEBGL_compressed_texture_etc';

@@ -221,10 +221,13 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
     glw.uploadKTX({} as WebGLTexture, data);
     glw.uploadKTX({} as WebGLTexture, data);
 
-    const s3tcCalls = gl.getExtension.mock.calls.filter(
-      ([name]: string[]) => name === 'WEBGL_compressed_texture_s3tc',
-    );
-    expect(s3tcCalls.length).toBe(1);
+    let s3tcCalls = 0;
+    for (const call of gl.getExtension.mock.calls) {
+      if (call[0] === 'WEBGL_compressed_texture_s3tc') {
+        s3tcCalls++;
+      }
+    }
+    expect(s3tcCalls).toBe(1);
     expect(gl.compressedTexImage2D).toHaveBeenCalledTimes(2);
   });
 
@@ -253,10 +256,13 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
     glw.clearExtensionCache();
     glw.uploadKTX({} as WebGLTexture, data);
 
-    const s3tcCalls = gl.getExtension.mock.calls.filter(
-      ([name]: string[]) => name === 'WEBGL_compressed_texture_s3tc',
-    );
-    expect(s3tcCalls.length).toBe(2);
+    let s3tcCalls = 0;
+    for (const call of gl.getExtension.mock.calls) {
+      if (call[0] === 'WEBGL_compressed_texture_s3tc') {
+        s3tcCalls++;
+      }
+    }
+    expect(s3tcCalls).toBe(2);
   });
 
   it('uploadPVR costs a single getExtension call when the standard extension is supported', () => {
