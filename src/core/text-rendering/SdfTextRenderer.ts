@@ -45,9 +45,12 @@ import {
 // threshold shift so measurement and drawing cannot disagree.
 import {
   ITALIC_SHEAR,
+  decorationThickness,
   italicOverhang,
   sdfBoldExtra,
   spanIndexAt,
+  strikeOffset,
+  underlineGap,
 } from './RichTextMetrics.js';
 
 // Design-unit glyph record strides consumed by WebGlRenderer.addSdfQuads.
@@ -562,12 +565,12 @@ const generateTextLayout = (
   // directly is more accurate than deriving the baseline from metrics.ascender, which
   // comes from a different metrics source and can be off by several design units.
   const base = commonFontData.base;
-  const decoThickness = Math.max(1, Math.round(fontSize / 20)) / fontScale;
-  // Underline: 10 % of fontSize below the alphabetic baseline.
-  const decoUnderlineOffset =
-    base + Math.max(1 / fontScale, Math.round(fontSize * 0.1) / fontScale);
-  // Strikethrough: 75 % of base from the line top ≈ visual midpoint of lowercase letters.
-  const decoStrikeOffset = Math.round(base * 0.75);
+  // Offsets are shared with the Canvas renderer so the same markup lands in the
+  // same place on both backends; they are expressed in pixels there, so convert
+  // to design units here. The baseline itself stays BMFont-derived.
+  const decoThickness = decorationThickness(fontSize) / fontScale;
+  const decoUnderlineOffset = base + underlineGap(fontSize) / fontScale;
+  const decoStrikeOffset = Math.round(strikeOffset(base));
 
   const lineAmount = lines.length;
 

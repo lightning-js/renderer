@@ -31,7 +31,13 @@ import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
-import { canvasSpanFont, spanIndexAt } from './RichTextMetrics.js';
+import {
+  canvasSpanFont,
+  decorationThickness,
+  spanIndexAt,
+  strikeOffset,
+  underlineGap,
+} from './RichTextMetrics.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
 
 const type = 'canvas' as const;
@@ -382,11 +388,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // draw loop. Positions are offsets from currentY (top of the em box with
     // textBaseline:'hanging'). metrics.ascender is the distance from the
     // hanging baseline down to the alphabetic baseline in pixels.
+    // Geometry is shared with the SDF renderer so the same markup lands in the
+    // same place on both backends.
     const ascenderPx = metrics.ascender;
-    const decoThickness = Math.max(1, Math.round(fontSize / 20));
-    const decoUnderlineBase =
-      Math.ceil(ascenderPx) + Math.max(1, Math.round(fontSize * 0.08));
-    const decoStrikeBase = Math.ceil(ascenderPx) - Math.round(ascenderPx * 0.4);
+    const decoThickness = decorationThickness(fontSize);
+    const decoUnderlineBase = Math.ceil(ascenderPx) + underlineGap(fontSize);
+    const decoStrikeBase = Math.round(strikeOffset(ascenderPx));
 
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
