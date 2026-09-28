@@ -180,7 +180,7 @@ export const measureLines = (
       continue;
     }
     remainingLines--;
-    const width = measureText(line, fontFamily, letterSpacing);
+    const width = measureText(line, fontFamily, letterSpacing, lineStart);
     measuredLines.push([line, width, false, 0, 0, lineStart]);
     lineStart += line.length + 1;
   }
@@ -206,8 +206,16 @@ export const wrapText = (
   const wrappedLines: TextLineStruct[] = [];
 
   // Calculate space width for line wrapping
-  const spaceWidth = measureText(' ', fontFamily, letterSpacing);
-  const overflowWidth = measureText(overflowSuffix, fontFamily, letterSpacing);
+  // Separators and the overflow suffix are measured with the base font: the
+  // suffix is not source text at all, and a separator's style is ambiguous
+  // since it sits between two potentially different runs.
+  const spaceWidth = measureText(' ', fontFamily, letterSpacing, -1);
+  const overflowWidth = measureText(
+    overflowSuffix,
+    fontFamily,
+    letterSpacing,
+    -1,
+  );
 
   let wrappedLine: TextLineStruct[] = [];
   let remainingLines = maxLines > 0 ? maxLines : 1000;
@@ -266,6 +274,7 @@ export const wrapText = (
             maxWidth,
             overflowSuffix,
             overflowWidth,
+            lastLine[5],
           );
           lastLine[0] = line;
           lastLine[1] = lineWidth;
@@ -336,7 +345,7 @@ export const wrapLine = (
       // which is precisely what a naive "+1 per line" accumulator gets wrong.
       wordCursor += word.length + (spaces[wordIdx - 1]?.length ?? 0);
     }
-    wordWidth = measureText(word, fontFamily, letterSpacing);
+    wordWidth = measureText(word, fontFamily, letterSpacing, wordStart);
     // Length before any truncate/split rewrite, used to locate the remainder.
     const sourceWordLen = word.length;
 
@@ -359,6 +368,7 @@ export const wrapLine = (
               letterSpacing,
               overflowSuffix,
               overflowWidth,
+              wordStart,
             )
           : splitWord(
               measureText,
@@ -367,6 +377,7 @@ export const wrapLine = (
               maxWidth,
               fontFamily,
               letterSpacing,
+              wordStart,
             );
 
         if (remainingWord.length > 0) {
@@ -379,7 +390,14 @@ export const wrapLine = (
               if (word.length === 0) {
                 break;
               }
-              wordWidth = measureText(word, fontFamily, letterSpacing);
+              // This is the first character of the remainder, which begins
+              // where the consumed prefix ended.
+              wordWidth = measureText(
+                word,
+                fontFamily,
+                letterSpacing,
+                wordStart + (sourceWordLen - remainingWord.length),
+              );
             }
             remainingWord = '';
             remainingLines = 0;
@@ -587,6 +605,7 @@ export const breakWord = (
       maxWidth,
       overflowSuffix,
       overflowWidth,
+      currentLineStart,
     );
     wrappedLines.push([
       currentLine,
@@ -651,6 +670,7 @@ export const breakAll = (
         letterSpacing,
         overflowSuffix,
         overflowWidth,
+        wordStart,
       )
     : splitWord(
         measureText,
@@ -659,6 +679,7 @@ export const breakAll = (
         remainingSpace,
         fontFamily,
         letterSpacing,
+        wordStart,
       );
   currentLine += space + word;
   currentLineWidth += spaceWidth + wordWidth;
@@ -693,6 +714,7 @@ export const truncateLineEnd = (
   maxWidth: number,
   overflowSuffix: string,
   overflowWidth: number,
+  textStart = -1,
 ): [string, number, string] => {
   if (currentLineWidth + overflowWidth <= maxWidth) {
     currentLine += overflowSuffix;
@@ -704,7 +726,12 @@ export const truncateLineEnd = (
   let truncated = false;
   for (let i = currentLine.length - 1; i > 0; i--) {
     const char = currentLine.charAt(i);
-    const charWidth = measureText(char, fontFamily, letterSpacing);
+    const charWidth = measureText(
+      char,
+      fontFamily,
+      letterSpacing,
+      textStart < 0 ? -1 : textStart + i,
+    );
     currentLineWidth -= charWidth;
     if (currentLineWidth + overflowWidth <= maxWidth) {
       currentLine = currentLine.substring(0, i) + overflowSuffix;
@@ -732,6 +759,7 @@ export const truncateWord = (
   letterSpacing: number,
   overflowSuffix: string,
   overflowWidth: number,
+  wordStart = -1,
 ): [string, string, number] => {
   const targetWidth = maxWidth - overflowWidth;
 
@@ -749,7 +777,12 @@ export const truncateWord = (
     let currentWidth = wordWidth;
     for (let i = word.length - 1; i > 0; i--) {
       const char = word.charAt(i);
-      const charWidth = measureText(char, fontFamily, letterSpacing);
+      const charWidth = measureText(
+        char,
+        fontFamily,
+        letterSpacing,
+        wordStart < 0 ? -1 : wordStart + i,
+      );
       currentWidth -= charWidth;
       if (currentWidth <= targetWidth) {
         const remainingWord = word.substring(i);
@@ -768,7 +801,12 @@ export const truncateWord = (
   let currentWidth = 0;
   for (let i = 0; i < word.length; i++) {
     const char = word.charAt(i);
-    const charWidth = measureText(char, fontFamily, letterSpacing);
+    const charWidth = measureText(
+      char,
+      fontFamily,
+      letterSpacing,
+      wordStart < 0 ? -1 : wordStart + i,
+    );
     if (currentWidth + charWidth > targetWidth) {
       const remainingWord = word.substring(i);
       return [
@@ -790,6 +828,7 @@ export const splitWord = (
   maxWidth: number,
   fontFamily: string,
   letterSpacing: number,
+  wordStart = -1,
 ): [string, string, number] => {
   if (maxWidth <= 0) {
     return ['', word, 0];
@@ -805,7 +844,12 @@ export const splitWord = (
     let currentWidth = wordWidth;
     for (let i = word.length - 1; i > 0; i--) {
       const char = word.charAt(i);
-      const charWidth = measureText(char, fontFamily, letterSpacing);
+      const charWidth = measureText(
+        char,
+        fontFamily,
+        letterSpacing,
+        wordStart < 0 ? -1 : wordStart + i,
+      );
       currentWidth -= charWidth;
       if (currentWidth <= maxWidth) {
         const remainingWord = word.substring(i);
@@ -820,7 +864,12 @@ export const splitWord = (
   let currentWidth = 0;
   for (let i = 0; i < word.length; i++) {
     const char = word.charAt(i);
-    const charWidth = measureText(char, fontFamily, letterSpacing);
+    const charWidth = measureText(
+      char,
+      fontFamily,
+      letterSpacing,
+      wordStart < 0 ? -1 : wordStart + i,
+    );
     if (currentWidth + charWidth > maxWidth) {
       const remainingWord = word.substring(i);
       return [word.substring(0, i), remainingWord, currentWidth];

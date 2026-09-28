@@ -698,4 +698,179 @@ describe('SDF Text Utils', () => {
       }
     });
   });
+
+  describe('style-aware measurement', () => {
+    // A measure function in the shape a renderer supplies for rich text:
+    // characters inside `boldRange` are wider, and it locates them using the
+    // absolute `start` offset the layout engine passes in.
+    const makeStyledMeasure =
+      (boldStart: number, boldEnd: number, boldWidth = 30) =>
+      (
+        text: string,
+        _fontFamily: string,
+        letterSpacing: number,
+        start?: number,
+      ): number => {
+        if (start === undefined || start < 0) {
+          return testMeasureText(text, _fontFamily, letterSpacing);
+        }
+        let width = 0;
+        for (let i = 0; i < text.length; i++) {
+          if (text.charAt(i) === '\u200B') continue;
+          const pos = start + i;
+          width +=
+            (pos >= boldStart && pos < boldEnd ? boldWidth : 10) +
+            letterSpacing;
+        }
+        return width;
+      };
+
+    it('passes the absolute offset of every substring it measures', () => {
+      const seen: Array<[string, number | undefined]> = [];
+      const spy = (
+        text: string,
+        fontFamily: string,
+        letterSpacing: number,
+        start?: number,
+      ): number => {
+        seen.push([text, start]);
+        return testMeasureText(text, fontFamily, letterSpacing);
+      };
+
+      const text = 'alpha beta gamma';
+      wrapText(spy, text, 'Arial', 100, 0, '', 'normal', 0);
+
+      // Every located substring must actually live at the offset reported,
+      // otherwise a style lookup keyed on it would read the wrong span.
+      for (const [substr, start] of seen) {
+        if (start === undefined || start < 0) continue;
+        expect(text.startsWith(substr, start)).toBe(true);
+      }
+      // And the words themselves must have been located, not skipped.
+      expect(seen.some(([t, s]) => t === 'alpha' && s === 0)).toBe(true);
+      expect(seen.some(([t, s]) => t === 'beta' && s === 6)).toBe(true);
+      expect(seen.some(([t, s]) => t === 'gamma' && s === 11)).toBe(true);
+    });
+
+    it('measures the overflow suffix with the base font', () => {
+      // The suffix is not source text, so it has no span and must be measured
+      // unstyled rather than inheriting whatever offset happened to be current.
+      const starts: Array<number | undefined> = [];
+      const spy = (
+        text: string,
+        fontFamily: string,
+        letterSpacing: number,
+        start?: number,
+      ): number => {
+        if (text === '...') starts.push(start);
+        return testMeasureText(text, fontFamily, letterSpacing);
+      };
+      wrapText(spy, 'alpha beta gamma', 'Arial', 100, 0, '...', 'normal', 2);
+      expect(starts.length).toBeGreaterThan(0);
+      for (const s of starts) {
+        expect(s === undefined || s < 0).toBe(true);
+      }
+    });
+
+    it('wraps earlier when a styled run is wider than the base font', () => {
+      const text = 'aaa bbb ccc';
+      // Unstyled: 'aaa bbb' is 30 + 10 + 30 = 70 < 100, so it fits.
+      const plain = wrapText(
+        testMeasureText,
+        text,
+        'Arial',
+        100,
+        0,
+        '',
+        'normal',
+        0,
+      )[0];
+      expect(plain[0]?.[0]).toBe('aaa bbb');
+
+      // With 'bbb' (offsets 4..7) tripled in width, 'aaa bbb' is 30 + 10 + 90
+      // = 130, which no longer fits, so it must break earlier.
+      const styled = wrapText(
+        makeStyledMeasure(4, 7),
+        text,
+        'Arial',
+        100,
+        0,
+        '',
+        'normal',
+        0,
+      )[0];
+      expect(styled.map((l) => l[0])).toEqual(['aaa', 'bbb', 'ccc']);
+    });
+
+    it('does not change wrapping when the styled run is not on the line', () => {
+      const text = 'aaa bbb ccc';
+      // Style a run far past the first break; the first line is unaffected.
+      const styled = wrapText(
+        makeStyledMeasure(8, 11),
+        text,
+        'Arial',
+        100,
+        0,
+        '',
+        'normal',
+        0,
+      )[0];
+      expect(styled[0]?.[0]).toBe('aaa bbb');
+    });
+
+    it('reports a wider line width for a styled line', () => {
+      const text = 'aaa bbb';
+      const plain = wrapText(
+        testMeasureText,
+        text,
+        'Arial',
+        500,
+        0,
+        '',
+        'normal',
+        0,
+      )[0];
+      const styled = wrapText(
+        makeStyledMeasure(4, 7),
+        text,
+        'Arial',
+        500,
+        0,
+        '',
+        'normal',
+        0,
+      )[0];
+      expect(styled[0]![1]).toBeGreaterThan(plain[0]![1]!);
+    });
+
+    it('applies styles when splitting a long word across lines', () => {
+      // break-all splits mid-word using per-character measurement, so the
+      // split point must respect the styled characters too.
+      const text = 'aaaaaaaaaa';
+      const plain = wrapText(
+        testMeasureText,
+        text,
+        'Arial',
+        50,
+        0,
+        '',
+        'break-all',
+        0,
+      )[0];
+      expect(plain[0]?.[0]).toBe('aaaaa');
+
+      // First 4 characters tripled: only one of them fits in 50 units.
+      const styled = wrapText(
+        makeStyledMeasure(0, 4),
+        text,
+        'Arial',
+        50,
+        0,
+        '',
+        'break-all',
+        0,
+      )[0];
+      expect(styled[0]?.[0]).toBe('a');
+    });
+  });
 });
