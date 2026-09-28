@@ -21,6 +21,7 @@ import { CoreRenderer, type BufferInfo } from '../CoreRenderer.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import {
   createIndexBuffer,
+  getMaxQuads,
   type CoreWebGlParameters,
   type CoreWebGlExtensions,
   getWebGlParameters,
@@ -310,7 +311,7 @@ export class WebGlRenderer extends CoreRenderer {
     // corners of a unit square [0,0],[1,0],[0,1],[1,1]. Because the data is
     // identical for every quad it is uploaded a single time and shared by all
     // BufferCollections, removing 2 floats per vertex from the main quad buffer.
-    const maxQuads = ~~(this.stage.bufferMemory / 80); // same sizing as createIndexBuffer
+    const maxQuads = getMaxQuads(this.stage.bufferMemory); // same sizing as createIndexBuffer
     const nodeCoords = new Float32Array(maxQuads * 8);
     for (let i = 0; i < maxQuads * 8; i += 8) {
       nodeCoords[i] = 0;

@@ -1048,7 +1048,10 @@ export class CoreNode extends EventEmitter {
     texture.setRenderableOwner(this._id, false);
   }
 
-  protected onTextureLoaded: TextureLoadedEventHandler = (_target, dimensions) => {
+  protected onTextureLoaded: TextureLoadedEventHandler = (
+    _target,
+    dimensions,
+  ) => {
     if (this.autosizer !== null) {
       this.autosizer.update();
     }
@@ -1420,7 +1423,13 @@ export class CoreNode extends EventEmitter {
     }
 
     if (updateType & UpdateType.WorldAlpha) {
+      const previousWorldAlpha = this.worldAlpha;
       this.worldAlpha = (parent?.worldAlpha ?? 1) * this.props.alpha;
+      if ((previousWorldAlpha === 0) !== (this.worldAlpha === 0)) {
+        // The flat render list excludes nodes with worldAlpha === 0, so any
+        // zero-crossing transition (excluded <-> included) must invalidate it.
+        this.stage.requestRenderListUpdate();
+      }
       updateType |=
         UpdateType.PremultipliedColors |
         UpdateType.Children |
