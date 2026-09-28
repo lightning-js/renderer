@@ -196,6 +196,7 @@ export class Stage {
   private hasOnlyOneFontEngine: boolean;
   private hasOnlyCanvasFontEngine: boolean;
   private hasCanvasEngine: boolean;
+  private initializedTextEngines = new Set<string>();
   private singleFontEngine: TextRenderer | null = null;
   private singleFontHandler: FontHandler | null = null;
 
@@ -293,7 +294,7 @@ export class Stage {
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    // Create text renderers
+    // Register text renderers (engines initialize lazily on first use)
     this.hasOnlyOneFontEngine = fontEngines.length === 1;
     this.hasOnlyCanvasFontEngine =
       fontEngines.length === 1 && fontEngines[0]!.type === 'canvas';
@@ -338,18 +339,20 @@ export class Stage {
         },
       );
 
-      // Initialize engines in sorted order
+      // Register engines in sorted order. Engines are initialized
+      // lazily on first use (see ensureTextEngineInitialized) so unused
+      // engines (e.g. Canvas fallback in an MSDF-only app) cost nothing.
       sortedEngines.forEach((fontEngine: TextRenderer) => {
         const type = fontEngine.type;
 
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
-        this.textRenderers[type].init(this);
 
         this.fontHandlers[type] = fontEngine.font;
       });
     } else {
-      // Single font engine case - initialize it directly
+      // Single font engine case - register it (initialization is lazy,
+      // see ensureTextEngineInitialized)
       const fontEngine = this.singleFontEngine;
       const type = fontEngine.type;
 
@@ -366,7 +369,6 @@ export class Stage {
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
         this.fontHandlers[type] = fontEngine.font;
-        this.textRenderers[type].init(this);
       }
     }
 
@@ -817,10 +819,34 @@ export class Stage {
   }
 
   /**
+   * Initialize a text engine on first use.
+   *
+   * @remarks
+   * Engines are registered (not initialized) in the constructor so unused
+   * engines — e.g. the Canvas fallback in an MSDF-only app — never pay for
+   * canvas allocation and context setup. Initialization is idempotent per
+   * engine type.
+   */
+  ensureTextEngineInitialized(type: string): void {
+    if (this.initializedTextEngines.has(type)) {
+      return;
+    }
+    const engine = this.textRenderers[type];
+    if (engine === undefined) {
+      return;
+    }
+    engine.init(this);
+    this.initializedTextEngines.add(type);
+  }
+
+  /**
    * Given a font name, and possible renderer override, return the best compatible text renderer.
    *
    * @remarks
    * Will try to return a canvas renderer if no other suitable renderer can be resolved.
+   *
+   * As a side effect the returned engine is initialized (see
+   * {@link ensureTextEngineInitialized}).
    *
    * @param fontFamily
    * @param textRendererOverride
@@ -838,6 +864,7 @@ export class Stage {
         return null;
       }
 
+      this.ensureTextEngineInitialized(overrideKey);
       return this.textRenderers[overrideKey];
     }
 
@@ -845,11 +872,14 @@ export class Stage {
     if (this.singleFontEngine !== null) {
       // If we have only one font engine and its the canvas engine, we can just return it
       if (this.hasOnlyCanvasFontEngine === true) {
+        this.ensureTextEngineInitialized('canvas');
         return this.singleFontEngine;
       }
 
       // If we have only one font engine and it can render the font, return it
       if (this.singleFontHandler?.canRenderFont(trProps) === true) {
+        const type = this.singleFontEngine.type;
+        this.ensureTextEngineInitialized(type);
         return this.singleFontEngine;
       }
 
@@ -863,11 +893,13 @@ export class Stage {
 
     // First check SDF
     if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
+      this.ensureTextEngineInitialized('sdf');
       return this.textRenderers.sdf || null;
     }
 
     // If we have a canvas engine, we can return it (it can render all fonts)
     if (this.hasCanvasEngine === true) {
+      this.ensureTextEngineInitialized('canvas');
       return this.textRenderers.canvas || null;
     }
 
