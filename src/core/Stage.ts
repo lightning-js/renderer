@@ -96,6 +96,19 @@ export interface Point {
 const autoStart = true;
 
 export class Stage {
+  /**
+   * Resolves after the first frame has been drawn.
+   *
+   * @remarks
+   * Lets apps distinguish "constructed" from "first frame capable" without
+   * guessing: `await renderer.ready` before building heavy scenes, or show
+   * loading UI until it resolves. Also resolved by `destroy()` so it never
+   * dangles if the loop never draws.
+   */
+  public readonly ready: Promise<void>;
+  private resolveReady: () => void = () => undefined;
+  private firstFrameDrawn = false;
+
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -207,6 +220,10 @@ export class Stage {
    * Stage constructor
    */
   constructor(public options: StageOptions) {
+    this.ready = new Promise<void>((resolve) => {
+      this.resolveReady = resolve;
+    });
+
     const {
       clearColor,
       appWidth,
@@ -590,6 +607,11 @@ export class Stage {
     // Check if we need to cleanup textures
     if (this.txMemManager.criticalCleanupRequested === true) {
       this.txMemManager.cleanup();
+    }
+
+    if (this.firstFrameDrawn === false) {
+      this.firstFrameDrawn = true;
+      this.resolveReady();
     }
   }
 
@@ -1144,6 +1166,9 @@ export class Stage {
    * textures and GPU resources, and terminates any background workers.
    */
   destroy(): void {
+    // Resolve readiness so `ready` never dangles if no frame was drawn.
+    this.resolveReady();
+
     // Stop the render loop and terminate workers
     this.platform.stopLoop();
 
