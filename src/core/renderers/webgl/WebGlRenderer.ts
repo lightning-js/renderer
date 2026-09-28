@@ -1456,8 +1456,8 @@ export class WebGlRenderer extends CoreRenderer {
       // same shared buffers, and an exact cache-hit fill could otherwise
       // pass the upload-skip test while the GPU still holds RTT-only bytes.
       // (No-ops when the SDF buffers have not been created yet.)
-      if (this._sdfBufferPlain) this._sdfBufferPlain.changed = true;
-      if (this._sdfBufferRich) this._sdfBufferRich.changed = true;
+      if (this._sdfBufferPlain !== null) this._sdfBufferPlain.changed = true;
+      if (this._sdfBufferRich !== null) this._sdfBufferRich.changed = true;
 
       // Reset render operations
       this.renderOps.length = 0;
