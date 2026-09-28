@@ -96,6 +96,19 @@ export interface Point {
 const autoStart = true;
 
 export class Stage {
+  /**
+   * Resolves after the first frame has been drawn.
+   *
+   * @remarks
+   * Lets apps distinguish "constructed" from "first frame capable" without
+   * guessing: `await renderer.ready` before building heavy scenes, or show
+   * loading UI until it resolves. Also resolved by `destroy()` so it never
+   * dangles if the loop never draws.
+   */
+  public readonly ready: Promise<void>;
+  private resolveReady: () => void = () => undefined;
+  private firstFrameDrawn = false;
+
   /// Module Instances
   public readonly animationManager: AnimationManager;
   public readonly txManager: CoreTextureManager;
@@ -196,6 +209,7 @@ export class Stage {
   private hasOnlyOneFontEngine: boolean;
   private hasOnlyCanvasFontEngine: boolean;
   private hasCanvasEngine: boolean;
+  private initializedTextEngines = new Set<string>();
   private singleFontEngine: TextRenderer | null = null;
   private singleFontHandler: FontHandler | null = null;
 
@@ -206,6 +220,10 @@ export class Stage {
    * Stage constructor
    */
   constructor(public options: StageOptions) {
+    this.ready = new Promise<void>((resolve) => {
+      this.resolveReady = resolve;
+    });
+
     const {
       clearColor,
       appWidth,
@@ -293,7 +311,7 @@ export class Stage {
     // Must do this after renderer is created
     this.txManager.renderer = this.renderer;
 
-    // Create text renderers
+    // Register text renderers (engines initialize lazily on first use)
     this.hasOnlyOneFontEngine = fontEngines.length === 1;
     this.hasOnlyCanvasFontEngine =
       fontEngines.length === 1 && fontEngines[0]!.type === 'canvas';
@@ -338,18 +356,20 @@ export class Stage {
         },
       );
 
-      // Initialize engines in sorted order
+      // Register engines in sorted order. Engines are initialized
+      // lazily on first use (see ensureTextEngineInitialized) so unused
+      // engines (e.g. Canvas fallback in an MSDF-only app) cost nothing.
       sortedEngines.forEach((fontEngine: TextRenderer) => {
         const type = fontEngine.type;
 
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
-        this.textRenderers[type].init(this);
 
         this.fontHandlers[type] = fontEngine.font;
       });
     } else {
-      // Single font engine case - initialize it directly
+      // Single font engine case - register it (initialization is lazy,
+      // see ensureTextEngineInitialized)
       const fontEngine = this.singleFontEngine;
       const type = fontEngine.type;
 
@@ -366,7 +386,6 @@ export class Stage {
         // Add to map for type-based access
         this.textRenderers[type] = fontEngine;
         this.fontHandlers[type] = fontEngine.font;
-        this.textRenderers[type].init(this);
       }
     }
 
@@ -588,6 +607,11 @@ export class Stage {
     // Check if we need to cleanup textures
     if (this.txMemManager.criticalCleanupRequested === true) {
       this.txMemManager.cleanup();
+    }
+
+    if (this.firstFrameDrawn === false) {
+      this.firstFrameDrawn = true;
+      this.resolveReady();
     }
   }
 
@@ -817,10 +841,36 @@ export class Stage {
   }
 
   /**
+   * Initialize a text engine on first use.
+   *
+   * @remarks
+   * Engines are registered (not initialized) in the constructor so unused
+   * engines — e.g. the Canvas fallback in an MSDF-only app — never pay for
+   * canvas allocation and context setup. Initialization is idempotent per
+   * engine type.
+   */
+  ensureTextEngineInitialized(type: string): void {
+    if (this.initializedTextEngines.has(type)) {
+      return;
+    }
+    const engine = this.textRenderers[type];
+    if (engine === undefined) {
+      return;
+    }
+    engine.init(this);
+    this.initializedTextEngines.add(type);
+  }
+
+  /**
    * Given a font name, and possible renderer override, return the best compatible text renderer.
    *
    * @remarks
    * Will try to return a canvas renderer if no other suitable renderer can be resolved.
+   *
+   * As a side effect the returned engine is initialized (see
+   * {@link ensureTextEngineInitialized}) and a load of the requested font
+   * family is kicked off when the handler supports it, so the first text
+   * node warms everything its first frame needs.
    *
    * @param fontFamily
    * @param textRendererOverride
@@ -838,6 +888,8 @@ export class Stage {
         return null;
       }
 
+      this.ensureTextEngineInitialized(overrideKey);
+      this.fontHandlers[overrideKey]?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers[overrideKey];
     }
 
@@ -845,11 +897,16 @@ export class Stage {
     if (this.singleFontEngine !== null) {
       // If we have only one font engine and its the canvas engine, we can just return it
       if (this.hasOnlyCanvasFontEngine === true) {
+        this.ensureTextEngineInitialized('canvas');
+        this.fontHandlers['canvas']?.requestLoad?.(this, trProps.fontFamily);
         return this.singleFontEngine;
       }
 
       // If we have only one font engine and it can render the font, return it
       if (this.singleFontHandler?.canRenderFont(trProps) === true) {
+        const type = this.singleFontEngine.type;
+        this.ensureTextEngineInitialized(type);
+        this.singleFontHandler?.requestLoad?.(this, trProps.fontFamily);
         return this.singleFontEngine;
       }
 
@@ -863,11 +920,15 @@ export class Stage {
 
     // First check SDF
     if (this.fontHandlers['sdf']?.canRenderFont(trProps) === true) {
+      this.ensureTextEngineInitialized('sdf');
+      this.fontHandlers['sdf']?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers.sdf || null;
     }
 
     // If we have a canvas engine, we can return it (it can render all fonts)
     if (this.hasCanvasEngine === true) {
+      this.ensureTextEngineInitialized('canvas');
+      this.fontHandlers['canvas']?.requestLoad?.(this, trProps.fontFamily);
       return this.textRenderers.canvas || null;
     }
 
@@ -1105,6 +1166,9 @@ export class Stage {
    * textures and GPU resources, and terminates any background workers.
    */
   destroy(): void {
+    // Resolve readiness so `ready` never dangles if no frame was drawn.
+    this.resolveReady();
+
     // Stop the render loop and terminate workers
     this.platform.stopLoop();
 
@@ -1137,19 +1201,24 @@ export class Stage {
   }
 
   /**
-   * Load a font using a specific text renderer type
+   * Register a font using a specific text renderer type
    *
    * @remarks
-   * This method allows consumers to explicitly load fonts for a specific
+   * This method allows consumers to explicitly register fonts for a specific
    * text renderer type (e.g., 'canvas', 'sdf'). Consumers must specify
    * the renderer type to ensure fonts are loaded with the correct pipeline.
+   *
+   * Registration only stores where to find the font — no fetch, decode, or
+   * GPU upload happens here. Loading starts automatically on first use of
+   * the font family (or via {@link preloadFont} for eager loading), so
+   * registered fonts that are never rendered cost nothing.
    *
    * For Canvas fonts, provide fontUrl (e.g., .ttf, .woff, .woff2)
    * For SDF fonts, provide atlasUrl (image) and atlasDataUrl (JSON glyph data)
    *
    * @param rendererType - The type of text renderer ('canvas', 'sdf', etc.)
    * @param options - Font loading options specific to the renderer type
-   * @returns Promise that resolves when the font is loaded
+   * @returns Promise that resolves when the font is registered
    */
   async loadFont(
     rendererType: TextRenderers,
@@ -1166,6 +1235,39 @@ export class Stage {
       );
     }
 
+    return fontHandler.loadFont(this, options);
+  }
+
+  /**
+   * Eagerly load a font, resolving only after it is renderable.
+   *
+   * @remarks
+   * Unlike {@link loadFont} (register-only), this fetches, decodes, and
+   * uploads the font immediately. Use when first-paint readiness of a font
+   * must be guaranteed (e.g. awaited before drawing).
+   *
+   * @param rendererType - The type of text renderer ('canvas', 'sdf', etc.)
+   * @param options - Font loading options specific to the renderer type
+   * @returns Promise that resolves when the font is loaded
+   */
+  async preloadFont(
+    rendererType: TextRenderers,
+    options: FontLoadOptions,
+  ): Promise<void> {
+    const rendererTypeKey = String(rendererType);
+    const fontHandler = this.fontHandlers[rendererTypeKey];
+
+    if (!fontHandler) {
+      throw new Error(
+        `Font handler for renderer type '${rendererTypeKey}' not found. Available types: ${Object.keys(
+          this.fontHandlers,
+        ).join(', ')}`,
+      );
+    }
+
+    if (fontHandler.preloadFont !== undefined) {
+      return fontHandler.preloadFont(this, options);
+    }
     return fontHandler.loadFont(this, options);
   }
 }

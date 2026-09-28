@@ -129,6 +129,22 @@ export interface SdfFont {
 //global state variables for SdfFontHandler
 const fontCache = new Map<string, SdfFont>();
 const fontLoadPromises = new Map<string, Promise<void>>();
+
+interface SdfFontConfig {
+  atlasUrl: string;
+  atlasDataUrl: string;
+  metrics?: FontMetrics;
+}
+
+/**
+ * Registered font configurations.
+ *
+ * @remarks
+ * Registration (via `loadFont`) only stores where to find the font. The
+ * atlas fetch/decode/upload starts on first use (`requestLoad`) or explicit
+ * `preloadFont`, so fonts that are never rendered cost nothing.
+ */
+const fontConfigs = new Map<string, SdfFontConfig>();
 const normalizedMetrics = new Map<string, NormalizedFontMetrics>();
 const nodesWaitingForFont: Record<string, CoreTextNode[]> = Object.create(
   null,
@@ -265,12 +281,21 @@ const processFontData = (
  */
 export const canRenderFont = (trProps: TrProps): boolean => {
   return (
-    isFontLoaded(trProps.fontFamily) || fontLoadPromises.has(trProps.fontFamily)
+    isFontLoaded(trProps.fontFamily) ||
+    fontLoadPromises.has(trProps.fontFamily) ||
+    fontConfigs.has(trProps.fontFamily)
   );
 };
 
 /**
- * Load SDF font from JSON + PNG atlas
+ * Register an SDF font from JSON + PNG atlas.
+ *
+ * @remarks
+ * Registration only stores where to find the font — no fetch, decode, or
+ * GPU upload happens here. Loading starts on first use (see
+ * {@link requestLoad}) or explicit {@link preloadFont}, so registered fonts
+ * that are never rendered cost nothing.
+ *
  * @param {Object} options - Font loading options
  * @param {string} options.fontFamily - Font family name
  * @param {string} options.fontUrl - JSON font data URL (atlasDataUrl)
@@ -278,7 +303,7 @@ export const canRenderFont = (trProps: TrProps): boolean => {
  * @param {FontMetrics} options.metrics - Optional font metrics
  */
 export const loadFont = async (
-  stage: Stage,
+  _stage: Stage,
   options: FontLoadOptions,
 ): Promise<void> => {
   const { fontFamily, atlasUrl, atlasDataUrl, metrics } = options;
@@ -287,17 +312,76 @@ export const loadFont = async (
     return;
   }
 
+  if (atlasDataUrl === undefined) {
+    throw new Error(
+      `Atlas data URL must be provided for SDF font: ${fontFamily}`,
+    );
+  }
+
+  // Atlas texture should be provided externally
+  if (!atlasUrl) {
+    throw new Error('Atlas texture must be provided for SDF fonts');
+  }
+
+  fontConfigs.set(fontFamily, { atlasUrl, atlasDataUrl, metrics });
+};
+
+/**
+ * Eagerly load a previously registered (or new) SDF font.
+ *
+ * @remarks
+ * Use when first-paint readiness must be guaranteed (e.g. awaited before
+ * drawing). Unlike {@link loadFont}, this resolves only after the atlas is
+ * decoded, uploaded, and processed.
+ */
+export const preloadFont = async (
+  stage: Stage,
+  options: FontLoadOptions,
+): Promise<void> => {
+  await loadFont(stage, options);
+  await ensureLoaded(stage, options.fontFamily);
+};
+
+/**
+ * Start loading a registered font if it hasn't started yet.
+ *
+ * @remarks
+ * Cheap and idempotent: map lookups plus promise dedup. Called on first use
+ * (node creation / update ticks) so the first text node warms its own font.
+ * Load failures are logged; waiting nodes behave as before.
+ */
+export const requestLoad = (stage: Stage, fontFamily: string): void => {
+  if (
+    fontConfigs.has(fontFamily) === true &&
+    fontCache.has(fontFamily) === false &&
+    fontLoadPromises.has(fontFamily) === false
+  ) {
+    ensureLoaded(stage, fontFamily).catch((error: unknown) => {
+      console.error(`Failed to load SDF font: ${fontFamily}`, error);
+    });
+  }
+};
+
+/**
+ * Fetch, decode, upload, and process a registered SDF font.
+ */
+const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
+  // Early return if already loaded
+  if (fontCache.get(fontFamily) !== undefined) {
+    return Promise.resolve();
+  }
+
   // Early return if already loading
   const existingPromise = fontLoadPromises.get(fontFamily);
   if (existingPromise !== undefined) {
     return existingPromise;
   }
 
-  if (atlasDataUrl === undefined) {
-    throw new Error(
-      `Atlas data URL must be provided for SDF font: ${fontFamily}`,
-    );
+  const config = fontConfigs.get(fontFamily);
+  if (config === undefined) {
+    return Promise.reject(new Error(`SDF font not registered: ${fontFamily}`));
   }
+  const { atlasUrl, atlasDataUrl, metrics } = config;
 
   const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
   // Create loading promise
@@ -311,11 +395,6 @@ export const loadFont = async (
     const fontData = (await response.json()) as SdfFontData;
     if (!fontData || !fontData.chars) {
       throw new Error('Invalid SDF font data format');
-    }
-
-    // Atlas texture should be provided externally
-    if (!atlasUrl) {
-      throw new Error('Atlas texture must be provided for SDF fonts');
     }
 
     // Wait for atlas texture to load

@@ -26,11 +26,7 @@ import type { Dimensions } from '../../common/CommonTypes.js';
 
 // Text baseline and vertical align types
 export type TextBaseline =
-  | 'alphabetic'
-  | 'hanging'
-  | 'middle'
-  | 'ideographic'
-  | 'bottom';
+  'alphabetic' | 'hanging' | 'middle' | 'ideographic' | 'bottom';
 export type TextVerticalAlign = 'top' | 'middle' | 'bottom';
 export type TextRenderers = 'canvas' | 'sdf';
 /**
@@ -420,6 +416,22 @@ export interface FontHandler {
   type: 'canvas' | 'sdf';
   isFontLoaded: (fontFamily: string) => boolean;
   loadFont: (stage: Stage, options: FontLoadOptions) => Promise<void>;
+  /**
+   * Start loading a previously registered font family if it hasn't started.
+   *
+   * @remarks
+   * Optional so third-party handlers keep working without it. Used to
+   * trigger first-use loads; must be cheap and idempotent. No-op for
+   * unknown families.
+   */
+  requestLoad?: (stage: Stage, fontFamily: string) => void;
+  /**
+   * Eagerly load a font, resolving only after it is renderable.
+   *
+   * @remarks
+   * Optional; when absent, `Stage.preloadFont` falls back to `loadFont`.
+   */
+  preloadFont?: (stage: Stage, options: FontLoadOptions) => Promise<void>;
   waitingForFont: (fontFamily: string, node: CoreTextNode) => void;
   stopWaitingForFont: (fontFamily: string, node: CoreTextNode) => void;
   getFontFamilies: () => FontFamilyMap;
