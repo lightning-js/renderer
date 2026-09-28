@@ -46,7 +46,7 @@ const span = (over: Partial<RichSpan> = {}): RichSpan =>
     underline: false,
     strikethrough: false,
     ...over,
-  } as RichSpan);
+  }) as RichSpan;
 
 describe('RichTextMetrics', () => {
   describe('sdfBoldExtra', () => {
@@ -54,7 +54,7 @@ describe('RichTextMetrics', () => {
       // The shader lowers the alpha threshold by SDF_BOLD_THRESHOLD_SHIFT,
       // pushing the edge out by that fraction of distanceRange per side.
       expect(sdfBoldExtra(4)).toBeCloseTo(2 * SDF_BOLD_THRESHOLD_SHIFT * 4);
-      expect(sdfBoldExtra(4)).toBeCloseTo(0.4);
+      expect(sdfBoldExtra(4)).toBeCloseTo(1.2);
     });
 
     it('scales linearly with distanceRange', () => {

@@ -32,12 +32,24 @@ import type { RichSpan } from './RichTextParser.js';
 
 /**
  * Amount the SDF alpha threshold is shifted for bold, matching
- * `threshold = 0.5 - v_style * 0.05` in SdfShader's fragment source.
+ * `threshold = 0.5 - v_style * SDF_BOLD_THRESHOLD_SHIFT` in SdfShader's
+ * fragment source.
+ *
+ * @remarks
+ * The rendered edge grows outward by `SDF_BOLD_THRESHOLD_SHIFT * distanceRange`
+ * design units on each side (see {@link sdfBoldExtra}). At the previous value
+ * of 0.05, a typical atlas baked with `distanceRange = 4` only dilates the
+ * glyph edge by 0.2 design units per side — well under a pixel once scaled
+ * to a rendered font size, so "bold" text was visually indistinguishable
+ * from regular weight. 0.15 triples that dilation, producing a stroke growth
+ * closer to what a real bold face looks like, while staying safely inside
+ * (0, 0.5) so the shifted threshold never crosses zero or flips sign for any
+ * standard SDF/MSDF atlas.
  *
  * Changing this constant without changing the shader (or vice versa) will
  * reintroduce the advance/extent mismatch it exists to prevent.
  */
-export const SDF_BOLD_THRESHOLD_SHIFT = 0.05;
+export const SDF_BOLD_THRESHOLD_SHIFT = 0.15;
 
 /**
  * Horizontal shear applied to fake italics in the SDF renderer: tan(14°).
