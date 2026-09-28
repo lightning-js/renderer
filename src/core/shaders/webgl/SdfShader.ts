@@ -173,9 +173,12 @@ export const Sdf: WebGlShaderType = {
         // mix() below. Sampling with u = -1.0 is safe: the atlas uses CLAMP_TO_EDGE
         // so it returns the leftmost texel column, but the result is zeroed by mix().
         vec3 s = texture2D(u_texture, v_texcoord).rgb;
-        // Bold shifts the SDF threshold down by 0.05, expanding glyph edges.
+        // Bold shifts the SDF threshold down by 0.15, expanding glyph edges.
+        // Must match SDF_BOLD_THRESHOLD_SHIFT in RichTextMetrics.ts — the CPU
+        // side derives its matching advance-width extra (sdfBoldExtra) from
+        // that constant, so the two must never drift apart.
         // v_style: 0.0 = normal, 1.0 = bold.
-        float threshold = 0.5 - v_style * 0.05;
+        float threshold = 0.5 - v_style * 0.15;
         float sigDist = v_scaledDistRange * (median(s.r, s.g, s.b) - threshold);
         // v_color already carries node tint × world alpha × span override.
         float opacity = clamp(sigDist + threshold, 0.0, 1.0) * v_color.a;

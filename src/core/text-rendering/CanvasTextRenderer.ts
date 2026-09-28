@@ -22,6 +22,7 @@ import type { Stage } from '../Stage.js';
 import type {
   CanvasRenderInfo,
   FontHandler,
+  MeasureTextFn,
   TextLineStruct,
   TextRenderInfo,
 } from './TextRenderer.js';
@@ -30,7 +31,13 @@ import type { CoreTextNodeProps } from '../CoreTextNode.js';
 import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
-import { canvasSpanFont, spanIndexAt } from './RichTextMetrics.js';
+import {
+  canvasSpanFont,
+  decorationThickness,
+  spanIndexAt,
+  strikeOffset,
+  underlineGap,
+} from './RichTextMetrics.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
 
 const type = 'canvas' as const;
@@ -62,95 +69,109 @@ const renderInfoCache = new Map<string, CanvasRenderInfo>();
 const _richTextResult = new ParseResult();
 
 /**
- * Re-measure each layout line with its spans' own fonts and return the widest.
+ * Build a {@link MeasureTextFn} that measures each substring with the fonts of
+ * the rich text spans covering it.
  *
  * @remarks
- * The layout engine is style-agnostic: it measures every line with the base
- * font, so any line containing a bold or italic span reports a width narrower
- * than what will actually be drawn. Correcting it here keeps the texture large
- * enough and the node's reported width honest.
+ * The layout engine hands us the absolute offset of every substring it
+ * measures, so a bold run can be measured with the bold face during line
+ * breaking instead of afterwards. Without this, a line that fits under regular
+ * metrics but overflows in bold wraps in the wrong place.
  *
- * Line `x` offsets are recomputed too, because the non-left alignments are
- * relative to the widest line and that reference has just changed.
+ * The range is split at span boundaries and each run measured with its own
+ * font. Measuring whole runs keeps kerning intact within a run; kerning across
+ * a style boundary is dropped, which is correct — the glyphs come from
+ * different faces.
  *
- * Mutates `lines` in place (widths at index 1, x offsets at index 3) and
- * restores the shared measure font before returning.
+ * `start < 0` means the caller could not locate the substring in the source
+ * (the overflow suffix, or a separator), so the base font is used.
+ *
+ * The returned function leaves the shared measure context on whatever font it
+ * last used; callers restore it.
  */
-const correctStyledLineWidths = (
-  lines: TextLineStruct[],
+const makeStyledMeasureText = (
   baseFont: string,
   fontStyle: string,
   fontSize: number,
   fontFamily: string,
-  letterSpacing: number,
-  textAlign: string,
-  fallbackWidth: number,
-): number => {
-  const spanCount = _richTextResult.spanCount;
+): MeasureTextFn => {
   const spans = _richTextResult.spans;
 
-  // No spans means no style variation, so the base measurement already holds.
-  if (spanCount === 0) {
-    return fallbackWidth;
-  }
-
-  let widest = 0;
-  let curSpanIdx = 0;
-  let activeFont = baseFont;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    const text = line[0];
+  return (text, family, letterSpacing, start) => {
+    const spanCount = _richTextResult.spanCount;
     const len = text.length;
-    if (len === 0) {
-      continue;
-    }
-    const lineStart = line[5];
-    curSpanIdx = spanIndexAt(spans, spanCount, lineStart, curSpanIdx);
 
-    // Walk the line in style runs, measuring each with its own font. Measuring
-    // whole runs rather than characters preserves kerning within a run; kerning
-    // across a style boundary is meaningless anyway, since the two glyphs come
-    // from different faces.
+    if (start === undefined || start < 0 || spanCount === 0 || len === 0) {
+      CanvasFontHandler.setMeasureFont(baseFont);
+      return CanvasFontHandler.measureText(text, family, letterSpacing);
+    }
+
     let width = 0;
     let segStart = 0;
-    let segSpanIdx = curSpanIdx;
+    let segSpanIdx = spanIndexAt(spans, spanCount, start, 0);
 
     for (let j = 1; j <= len; j++) {
       let nextSpanIdx = segSpanIdx;
       if (j < len) {
-        nextSpanIdx = spanIndexAt(spans, spanCount, lineStart + j, segSpanIdx);
-        curSpanIdx = nextSpanIdx;
+        nextSpanIdx = spanIndexAt(spans, spanCount, start + j, segSpanIdx);
       }
       if (j === len || nextSpanIdx !== segSpanIdx) {
-        const font = canvasSpanFont(
-          spans[segSpanIdx]!,
-          fontStyle,
-          fontSize,
-          fontFamily,
+        CanvasFontHandler.setMeasureFont(
+          canvasSpanFont(spans[segSpanIdx]!, fontStyle, fontSize, fontFamily),
         );
-        if (font !== activeFont) {
-          CanvasFontHandler.setMeasureFont(font);
-          activeFont = font;
-        }
         width += CanvasFontHandler.measureText(
           text.substring(segStart, j),
-          fontFamily,
+          family,
           letterSpacing,
         );
         segStart = j;
         segSpanIdx = nextSpanIdx;
       }
     }
+    return width;
+  };
+};
 
+/**
+ * Recompute line widths using a style-aware measure function, returning the
+ * widest.
+ *
+ * @remarks
+ * The layout engine now measures styled runs correctly, but a line's width is
+ * accumulated from word widths plus base-font separator widths, so it is not
+ * exactly the drawn extent. That width sizes the texture and is published as
+ * the node's width, so measure each final line in one go instead.
+ *
+ * Line `x` offsets are recomputed too, because the non-left alignments are
+ * relative to the widest line and that reference may have moved.
+ *
+ * Mutates `lines` in place (widths at index 1, x offsets at index 3).
+ */
+const correctStyledLineWidths = (
+  lines: TextLineStruct[],
+  measureStyled: MeasureTextFn,
+  fontFamily: string,
+  letterSpacing: number,
+  textAlign: string,
+  fallbackWidth: number,
+): number => {
+  if (_richTextResult.spanCount === 0) {
+    // No spans means no style variation, so the base measurement already holds.
+    return fallbackWidth;
+  }
+
+  let widest = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line[0].length === 0) {
+      continue;
+    }
+    const width = measureStyled(line[0], fontFamily, letterSpacing, line[5]);
     line[1] = width;
     if (width > widest) {
       widest = width;
     }
   }
-
-  // Restore the shared context; font metrics and the plain path expect it.
-  CanvasFontHandler.setMeasureFont(baseFont);
 
   if (textAlign !== 'left') {
     for (let i = 0; i < lines.length; i++) {
@@ -253,6 +274,13 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
   const letterSpacing = props.letterSpacing || 0;
 
+  // Rich text measures each run with its span's own font, so line breaking and
+  // the reported width both account for bold and italic.
+  const measureTextFn: MeasureTextFn =
+    richText === true
+      ? makeStyledMeasureText(baseFont, fontStyle, fontSize, fontFamily)
+      : CanvasFontHandler.measureText;
+
   const [
     lines,
     remainingLines,
@@ -262,7 +290,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     baseEffectiveWidth,
     effectiveHeight,
   ] = mapTextLayout(
-    CanvasFontHandler.measureText,
+    measureTextFn,
     metrics,
     layoutText,
     textAlign,
@@ -289,15 +317,18 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     richText === true
       ? correctStyledLineWidths(
           lines,
-          baseFont,
-          fontStyle,
-          fontSize,
+          measureTextFn,
           fontFamily,
           letterSpacing,
           textAlign,
           baseEffectiveWidth,
         )
       : baseEffectiveWidth;
+
+  // mapTextLayout and the width correction both leave the shared measure
+  // context on whichever span font they last used. Hand it back on the base
+  // font: it is shared with font metric calculation and the plain text path.
+  CanvasFontHandler.setMeasureFont(baseFont);
 
   const canvasW = Math.ceil(effectiveWidth);
   const canvasH = Math.ceil(effectiveHeight);
@@ -336,15 +367,15 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // text (TextLineStruct index 5). curSpanIdx advances monotonically with
     // that offset (spans are sorted by start, no backward scan is needed).
     //
-    // Note: layout (mapTextLayout) used the base font metrics, so bold text
-    // may render slightly wider than its measured width — acceptable for MVP.
+    // Layout measured styled runs with their own fonts, so the advances below
+    // agree with the widths line breaking was based on.
     // -------------------------------------------------------------------------
     const spanCount = _richTextResult.spanCount;
     const spans = _richTextResult.spans;
 
     // CSS color string for uncolored spans — inherits the node's text color.
     // normalizeCanvasColor caches the string, so no allocation in hot path.
-    const nodeColor = normalizeCanvasColor(color, true);
+    const nodeColor = normalizeCanvasColor(color);
 
     let curSpanIdx = 0;
     let activeFont = baseFont;
@@ -357,11 +388,12 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     // draw loop. Positions are offsets from currentY (top of the em box with
     // textBaseline:'hanging'). metrics.ascender is the distance from the
     // hanging baseline down to the alphabetic baseline in pixels.
+    // Geometry is shared with the SDF renderer so the same markup lands in the
+    // same place on both backends.
     const ascenderPx = metrics.ascender;
-    const decoThickness = Math.max(1, Math.round(fontSize / 20));
-    const decoUnderlineBase =
-      Math.ceil(ascenderPx) + Math.max(1, Math.round(fontSize * 0.08));
-    const decoStrikeBase = Math.ceil(ascenderPx) - Math.round(ascenderPx * 0.4);
+    const decoThickness = decorationThickness(fontSize);
+    const decoUnderlineBase = Math.ceil(ascenderPx) + underlineGap(fontSize);
+    const decoStrikeBase = Math.round(strikeOffset(ascenderPx));
 
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
@@ -428,9 +460,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
           // Colored span uses span.color; uncolored span inherits node color.
           const spanFillStyle =
-            span.color !== 0
-              ? normalizeCanvasColor(span.color, true)
-              : nodeColor;
+            span.color !== 0 ? normalizeCanvasColor(span.color) : nodeColor;
 
           if (spanFillStyle !== activeFillStyle) {
             context.fillStyle = spanFillStyle;
