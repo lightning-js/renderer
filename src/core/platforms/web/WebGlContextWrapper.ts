@@ -1551,6 +1551,13 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * referenced elsewhere must be activated here or the driver will reject
    * them with `INVALID_ENUM`.
    *
+   * ETC2/EAC formats are core in WebGL2 and have no extension to query, so
+   * they pass through on WebGL2 contexts.
+   *
+   * @throws If the format's owning extension is unsupported, or the format
+   * is not a recognized compressed format. Thrown in all environments
+   * (including production), unlike `checkGLError()`-based handling.
+   *
    * @param glInternalFormat
    */
   private ensureCompressedFormatSupported(glInternalFormat: number) {
@@ -1577,13 +1584,22 @@ export class WebGlContextWrapper extends GlContextWrapper {
     } else if (glInternalFormat === 0x8d64) {
       extensionName = 'WEBGL_compressed_texture_etc1';
     } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
+      // ETC2/EAC is core in WebGL2: no extension exists to query and
+      // `getExtension()` would return null, so skip the check entirely.
+      if (this.isWebGl2()) {
+        return;
+      }
       extensionName = 'WEBGL_compressed_texture_etc';
     } else if (glInternalFormat >= 0x93b0 && glInternalFormat <= 0x93d5) {
       extensionName = 'WEBGL_compressed_texture_astc';
     }
 
     if (extensionName === null) {
-      return;
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} is not a recognized compressed texture format`,
+      );
     }
 
     if (this.getExtension(extensionName) === null) {
@@ -1677,13 +1693,11 @@ export class WebGlContextWrapper extends GlContextWrapper {
   }
 
   uploadASTC(texture: WebGLTexture, data: CompressedData) {
-    if (this.getExtension('WEBGL_compressed_texture_astc') === null) {
-      throw new Error('ASTC compressed textures not supported by this device');
-    }
+    const { glInternalFormat, mipmaps, w, h } = data;
+    this.ensureCompressedFormatSupported(glInternalFormat);
 
     this.bindTexture(texture);
 
-    const { glInternalFormat, mipmaps, w, h } = data;
     if (mipmaps === undefined) {
       return;
     }

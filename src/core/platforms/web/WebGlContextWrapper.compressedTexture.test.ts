@@ -208,7 +208,7 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
     const glw = new WebGlContextWrapper(gl);
     const data = makeCompressedData(0x93b0, { type: 'ASTC' }); // COMPRESSED_RGBA_ASTC_4x4_KHR
 
-    expect(() => glw.uploadASTC({} as WebGLTexture, data)).toThrow(/ASTC/);
+    expect(() => glw.uploadASTC({} as WebGLTexture, data)).toThrow(/astc/i);
     expect(gl.compressedTexImage2D).not.toHaveBeenCalled();
   });
 
@@ -288,5 +288,59 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
       'WEBKIT_WEBGL_compressed_texture_pvrtc',
     );
     expect(gl.compressedTexImage2D).toHaveBeenCalled();
+  });
+
+  it('uploadASTC queries the ASTC extension via the shared helper on success', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBGL_compressed_texture_astc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x93b0, { type: 'ASTC' });
+
+    glw.uploadASTC({} as WebGLTexture, data);
+
+    expect(gl.getExtension).toHaveBeenCalledWith(
+      'WEBGL_compressed_texture_astc',
+    );
+    expect(gl.compressedTexImage2D).toHaveBeenCalled();
+  });
+
+  it('uploadKTX throws on WebGL1 when the ETC2 extension is unavailable', () => {
+    const gl = makeMockGl();
+    const glw = new WebGlContextWrapper(gl);
+    // isWebGl2() reads the `self` global, which is undefined in this
+    // environment — stub it to simulate a WebGL1 context.
+    vi.spyOn(glw, 'isWebGl2').mockReturnValue(false);
+    const data = makeCompressedData(0x9274); // COMPRESSED_RGB8_ETC2
+
+    expect(() => glw.uploadKTX({} as WebGLTexture, data)).toThrow(
+      /WEBGL_compressed_texture_etc/,
+    );
+    expect(gl.compressedTexImage2D).not.toHaveBeenCalled();
+  });
+
+  it('uploadKTX skips the ETC2 extension check on WebGL2 where it is core', () => {
+    const gl = makeMockGl();
+    const glw = new WebGlContextWrapper(gl);
+    vi.spyOn(glw, 'isWebGl2').mockReturnValue(true);
+    const data = makeCompressedData(0x9274); // COMPRESSED_RGB8_ETC2
+
+    glw.uploadKTX({} as WebGLTexture, data);
+
+    expect(gl.getExtension).not.toHaveBeenCalledWith(
+      'WEBGL_compressed_texture_etc',
+    );
+    expect(gl.compressedTexImage2D).toHaveBeenCalled();
+  });
+
+  it('uploadKTX throws for an unrecognized compressed format instead of reaching the driver', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBGL_compressed_texture_s3tc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x1234);
+
+    expect(() => glw.uploadKTX({} as WebGLTexture, data)).toThrow(
+      /not a recognized compressed texture format/,
+    );
+    expect(gl.compressedTexImage2D).not.toHaveBeenCalled();
   });
 });
