@@ -471,7 +471,7 @@ describe('WebGlRenderer.addSdfCachedQuads', () => {
 // ---------------------------------------------------------------------------
 
 type RendererStub = {
-  stage: { pixelRatio: number };
+  stage: { pixelRatio: number; shManager: { createShader: () => unknown } };
   glw: ReturnType<typeof makeGlw> & {
     arrayBufferData: ReturnType<typeof vi.fn>;
   };
@@ -493,7 +493,10 @@ const makeRendererStub = (): RendererStub => {
   // Object.create so the real production methods (addSdfQuads, finalizeSdfBatch,
   // uploadSdfBuffer) are reachable via the prototype.
   const stub = Object.create(WebGlRenderer.prototype) as RendererStub;
-  stub.stage = { pixelRatio: 1 };
+  stub.stage = {
+    pixelRatio: 1,
+    shManager: { createShader: () => ({}) },
+  };
   stub.glw = glw;
   stub.sdfBufferPlain = new SdfBuffer(glw, 'plain');
   stub.sdfBufferRich = new SdfBuffer(glw, 'rich');
