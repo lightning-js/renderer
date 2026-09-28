@@ -87,7 +87,7 @@ export abstract class CoreRenderer {
    * Insert a begin-rounded-clip sentinel into the render op list before a
    * node's children are added. No-op on non-WebGL renderers.
    */
-   
+
   beginRoundedClip(_node: CoreNode): void {
     // no-op default — overridden by WebGlRenderer
   }
@@ -96,7 +96,7 @@ export abstract class CoreRenderer {
    * Insert an end-rounded-clip sentinel after a node's children have been
    * added. No-op on non-WebGL renderers.
    */
-   
+
   endRoundedClip(_node: CoreNode): void {
     // no-op default — overridden by WebGlRenderer
   }

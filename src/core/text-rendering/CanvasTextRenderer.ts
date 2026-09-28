@@ -375,7 +375,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
     // CSS color string for uncolored spans — inherits the node's text color.
     // normalizeCanvasColor caches the string, so no allocation in hot path.
-    const nodeColor = normalizeCanvasColor(color, true);
+    const nodeColor = normalizeCanvasColor(color);
 
     let curSpanIdx = 0;
     let activeFont = baseFont;
@@ -460,9 +460,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
 
           // Colored span uses span.color; uncolored span inherits node color.
           const spanFillStyle =
-            span.color !== 0
-              ? normalizeCanvasColor(span.color, true)
-              : nodeColor;
+            span.color !== 0 ? normalizeCanvasColor(span.color) : nodeColor;
 
           if (spanFillStyle !== activeFillStyle) {
             context.fillStyle = spanFillStyle;
