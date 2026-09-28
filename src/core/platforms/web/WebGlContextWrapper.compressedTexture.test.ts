@@ -211,4 +211,82 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
     expect(() => glw.uploadASTC({} as WebGLTexture, data)).toThrow(/ASTC/);
     expect(gl.compressedTexImage2D).not.toHaveBeenCalled();
   });
+
+  it('memoizes getExtension across repeated uploads of the same format', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBGL_compressed_texture_s3tc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x83f1);
+
+    glw.uploadKTX({} as WebGLTexture, data);
+    glw.uploadKTX({} as WebGLTexture, data);
+
+    const s3tcCalls = gl.getExtension.mock.calls.filter(
+      ([name]: string[]) => name === 'WEBGL_compressed_texture_s3tc',
+    );
+    expect(s3tcCalls.length).toBe(1);
+    expect(gl.compressedTexImage2D).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches unsupported extensions so repeat uploads do not re-query GL', () => {
+    const gl = makeMockGl();
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x83f1);
+
+    expect(() => glw.uploadKTX({} as WebGLTexture, data)).toThrow(
+      /WEBGL_compressed_texture_s3tc/,
+    );
+    expect(() => glw.uploadKTX({} as WebGLTexture, data)).toThrow(
+      /WEBGL_compressed_texture_s3tc/,
+    );
+    expect(gl.getExtension).toHaveBeenCalledTimes(1);
+    expect(gl.compressedTexImage2D).not.toHaveBeenCalled();
+  });
+
+  it('re-queries GL after clearExtensionCache', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBGL_compressed_texture_s3tc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x83f1);
+
+    glw.uploadKTX({} as WebGLTexture, data);
+    glw.clearExtensionCache();
+    glw.uploadKTX({} as WebGLTexture, data);
+
+    const s3tcCalls = gl.getExtension.mock.calls.filter(
+      ([name]: string[]) => name === 'WEBGL_compressed_texture_s3tc',
+    );
+    expect(s3tcCalls.length).toBe(2);
+  });
+
+  it('uploadPVR costs a single getExtension call when the standard extension is supported', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBGL_compressed_texture_pvrtc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x8c02, { type: 'PVR' });
+
+    glw.uploadPVR({} as WebGLTexture, data);
+
+    expect(gl.getExtension).toHaveBeenCalledTimes(1);
+    expect(gl.getExtension).toHaveBeenCalledWith(
+      'WEBGL_compressed_texture_pvrtc',
+    );
+  });
+
+  it('uploadPVR falls back to the WEBKIT extension when the standard one is missing', () => {
+    const gl = makeMockGl();
+    gl._extensions.set('WEBKIT_WEBGL_compressed_texture_pvrtc', {});
+    const glw = new WebGlContextWrapper(gl);
+    const data = makeCompressedData(0x8c02, { type: 'PVR' });
+
+    glw.uploadPVR({} as WebGLTexture, data);
+
+    expect(gl.getExtension).toHaveBeenCalledWith(
+      'WEBGL_compressed_texture_pvrtc',
+    );
+    expect(gl.getExtension).toHaveBeenCalledWith(
+      'WEBKIT_WEBGL_compressed_texture_pvrtc',
+    );
+    expect(gl.compressedTexImage2D).toHaveBeenCalled();
+  });
 });

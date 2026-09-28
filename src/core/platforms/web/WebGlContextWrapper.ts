@@ -83,6 +83,14 @@ export class WebGlContextWrapper extends GlContextWrapper {
   private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
   private curUniformLocations: Record<string, WebGLUniformLocation> = {};
+  /**
+   * Memoized `gl.getExtension()` results (including `null` for unsupported).
+   * `getExtension()` activates the extension's enums driver-side, so caching
+   * the lookup avoids repeat JS->native bridge calls on every compressed
+   * texture upload. Lifetime is tied to this wrapper instance, which is
+   * recreated with the GL context, so no stale entries across contexts.
+   */
+  private extCache = new Map<string, unknown>();
   //#endregion Cached WebGL State
 
   //#region Canvas
@@ -1211,14 +1219,29 @@ export class WebGlContextWrapper extends GlContextWrapper {
 
   /**
    * ```
-   * gl.drawArrays(mode, first, count);
+   * gl.getExtension(name);
    * ```
+   *
+   * Results (including `null`) are memoized to avoid repeat bridge calls.
+   * Call {@link clearExtensionCache} if the GL context is lost/restored
+   * in place rather than recreated.
    *
    * @param name
    * @returns
    */
   getExtension(name: string) {
-    return this.gl.getExtension(name);
+    if (this.extCache.has(name) === false) {
+      this.extCache.set(name, this.gl.getExtension(name));
+    }
+    return this.extCache.get(name);
+  }
+
+  /**
+   * Clears memoized `getExtension()` results, e.g. after an in-place
+   * context restore where extensions must be re-queried.
+   */
+  clearExtensionCache() {
+    this.extCache.clear();
   }
 
   /**
@@ -1531,6 +1554,23 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param glInternalFormat
    */
   private ensureCompressedFormatSupported(glInternalFormat: number) {
+    // PVRTC ships under two possible extension names. Probe each once and
+    // return on the first hit so the supported path costs a single
+    // (memoized) `getExtension()` call.
+    if (glInternalFormat >= 0x8c00 && glInternalFormat <= 0x8c03) {
+      if (this.getExtension('WEBGL_compressed_texture_pvrtc') !== null) {
+        return;
+      }
+      if (this.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc') !== null) {
+        return;
+      }
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} requires extension "WEBGL_compressed_texture_pvrtc" or "WEBKIT_WEBGL_compressed_texture_pvrtc" which is not supported by this device`,
+      );
+    }
+
     let extensionName: string | null = null;
     if (glInternalFormat >= 0x83f0 && glInternalFormat <= 0x83f3) {
       extensionName = 'WEBGL_compressed_texture_s3tc';
@@ -1538,11 +1578,6 @@ export class WebGlContextWrapper extends GlContextWrapper {
       extensionName = 'WEBGL_compressed_texture_etc1';
     } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
       extensionName = 'WEBGL_compressed_texture_etc';
-    } else if (glInternalFormat >= 0x8c00 && glInternalFormat <= 0x8c03) {
-      extensionName =
-        this.getExtension('WEBGL_compressed_texture_pvrtc') !== null
-          ? 'WEBGL_compressed_texture_pvrtc'
-          : 'WEBKIT_WEBGL_compressed_texture_pvrtc';
     } else if (glInternalFormat >= 0x93b0 && glInternalFormat <= 0x93d5) {
       extensionName = 'WEBGL_compressed_texture_astc';
     }
