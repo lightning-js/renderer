@@ -6,6 +6,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { detectContainerRuntime } from './detectDockerRuntime.js';
+import {
+  checkPlaywrightVersions,
+  describeMismatch,
+} from './playwrightVersion.js';
 
 /**
  * Builds a container image using the detected container runtime.
@@ -35,6 +39,17 @@ async function buildContainer(
 (async () => {
   const imageName = argv[2] || 'visual-regression'; // Default image name
   try {
+    // Refuse to build an image whose browser binaries cannot match the client
+    // the container will install. Building it anyway produces an image that
+    // fails at launch time with a message about the executable not existing,
+    // which is a long way from the actual cause.
+    const versions = checkPlaywrightVersions();
+    if (versions.aligned === false) {
+      console.error(describeMismatch(versions));
+      process.exit(1);
+    }
+    console.log(`Playwright version: ${versions.lockfile}`);
+
     const runtime = await detectContainerRuntime();
     await buildContainer(runtime, imageName);
   } catch (error) {
