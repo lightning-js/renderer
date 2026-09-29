@@ -73,6 +73,10 @@ export class CoreAnimationController
     return this;
   }
 
+  private getLoopErrorHandler(): ((error: unknown) => void) | undefined {
+    return this.manager?.getLoopErrorHandler?.();
+  }
+
   stop(reset = true): IAnimationController {
     if (this.state === 'stopped') {
       return this;
@@ -91,7 +95,7 @@ export class CoreAnimationController
     }
 
     this.state = 'stopped';
-    this.emit('stopped', this);
+    this.emitSafe('stopped', this, this.getLoopErrorHandler());
 
     if (reset === true) {
       animation.reset();
@@ -163,7 +167,7 @@ export class CoreAnimationController
     }
 
     this.state = 'stopped';
-    this.emit('stopped', this);
+    this.emitSafe('stopped', this, this.getLoopErrorHandler());
     manager.releaseToPool(animation, this);
   };
 
@@ -193,13 +197,13 @@ export class CoreAnimationController
     }
 
     this.state = 'stopped';
-    this.emit('stopped', this);
+    this.emitSafe('stopped', this, this.getLoopErrorHandler());
     manager.releaseToPool(animation, this);
   };
 
   private onAnimating = (): void => {
     this.state = 'running';
-    this.emit('animating', this);
+    this.emitSafe('animating', this, this.getLoopErrorHandler());
   };
 
   /**
@@ -212,6 +216,6 @@ export class CoreAnimationController
     }
     // Mutate pre-allocated payload to avoid per-frame {} allocation
     this.tickPayload.progress = this.animation['progress'];
-    this.emit('tick', this.tickPayload);
+    this.emitSafe('tick', this.tickPayload, this.getLoopErrorHandler());
   };
 }

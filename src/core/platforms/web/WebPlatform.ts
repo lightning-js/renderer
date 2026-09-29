@@ -127,6 +127,12 @@ export class WebPlatform extends Platform {
     let isIdle = false;
     let lastFrameTime = 0;
 
+    // Intentionally `try`-free: app callbacks on this path are isolated at
+    // their boundaries (Stage.updateFrameTime/ flushFrameEvents via emitSafe,
+    // AnimationManager/CoreAnimation via emitSafe + safe easing). A bad client
+    // callback therefore never propagates here, so the scheduling below always
+    // runs. Internal renderer errors still throw loudly (fail fast) instead of
+    // being swallowed as app errors.
     const runLoop = (currentTime: number = 0) => {
       if (this.stopped) return;
       const targetFrameTime = stage.targetFrameTime;
@@ -162,7 +168,11 @@ export class WebPlatform extends Platform {
 
         if (isIdle === false) {
           stage.shManager.cleanup();
-          stage.eventBus.emit('idle');
+          stage.eventBus.emitSafe(
+            'idle',
+            undefined,
+            stage.platform.settings.handleLoopError,
+          );
           isIdle = true;
         }
 
@@ -175,7 +185,11 @@ export class WebPlatform extends Platform {
       }
 
       if (isIdle === true) {
-        stage.eventBus.emit('active');
+        stage.eventBus.emitSafe(
+          'active',
+          undefined,
+          stage.platform.settings.handleLoopError,
+        );
         isIdle = false;
       }
 
