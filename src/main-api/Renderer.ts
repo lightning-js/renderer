@@ -322,7 +322,8 @@ export interface RendererRuntimeSettings {
  * Configuration settings for {@link RendererMain}
  */
 export type RendererMainSettings = RendererRuntimeSettings &
-  Required<PlatformSettings> & {
+  Omit<Required<PlatformSettings>, 'handleLoopError'> &
+  Pick<PlatformSettings, 'handleLoopError'> & {
     /**
      * Include context call (i.e. WebGL) information in FPS updates
      *
@@ -563,6 +564,7 @@ export class RendererMain extends EventEmitter {
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || WebPlatform,
       maxRetryCount: settings.maxRetryCount ?? 5,
+      handleLoopError: settings.handleLoopError,
     };
 
     const {
