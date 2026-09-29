@@ -83,6 +83,14 @@ export class WebGlContextWrapper extends GlContextWrapper {
   private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
   private curUniformLocations: Record<string, WebGLUniformLocation> = {};
+  /**
+   * Memoized `gl.getExtension()` results (including `null` for unsupported).
+   * `getExtension()` activates the extension's enums driver-side, so caching
+   * the lookup avoids repeat JS->native bridge calls on every compressed
+   * texture upload. Lifetime is tied to this wrapper instance, which is
+   * recreated with the GL context, so no stale entries across contexts.
+   */
+  private extCache = new Map<string, unknown>();
   //#endregion Cached WebGL State
 
   //#region Canvas
@@ -1211,14 +1219,29 @@ export class WebGlContextWrapper extends GlContextWrapper {
 
   /**
    * ```
-   * gl.drawArrays(mode, first, count);
+   * gl.getExtension(name);
    * ```
+   *
+   * Results (including `null`) are memoized to avoid repeat bridge calls.
+   * Call {@link clearExtensionCache} if the GL context is lost/restored
+   * in place rather than recreated.
    *
    * @param name
    * @returns
    */
   getExtension(name: string) {
-    return this.gl.getExtension(name);
+    if (this.extCache.has(name) === false) {
+      this.extCache.set(name, this.gl.getExtension(name));
+    }
+    return this.extCache.get(name);
+  }
+
+  /**
+   * Clears memoized `getExtension()` results, e.g. after an in-place
+   * context restore where extensions must be re-queried.
+   */
+  clearExtensionCache() {
+    this.extCache.clear();
   }
 
   /**
@@ -1472,7 +1495,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray - The vertex array object to delete
    */
   deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
-    if (this.isWebGl2()) {
+    if (this.isWebGl2() === true) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
   }
@@ -1519,12 +1542,82 @@ export class WebGlContextWrapper extends GlContextWrapper {
    *
    * Compressed Textures support
    */
+  /**
+   * Ensures the WebGL extension that owns `glInternalFormat` has been queried
+   * (and is therefore recognized as a valid enum by the driver) before it is
+   * passed to `compressedTexImage2D`. Extensions used to be enumerated eagerly
+   * in the constructor (which implicitly activated every compressed texture
+   * format enum), but that enumeration is now lazy, so formats that are never
+   * referenced elsewhere must be activated here or the driver will reject
+   * them with `INVALID_ENUM`.
+   *
+   * ETC2/EAC formats are core in WebGL2 and have no extension to query, so
+   * they pass through on WebGL2 contexts.
+   *
+   * @throws If the format's owning extension is unsupported, or the format
+   * is not a recognized compressed format. Thrown in all environments
+   * (including production), unlike `checkGLError()`-based handling.
+   *
+   * @param glInternalFormat
+   */
+  private ensureCompressedFormatSupported(glInternalFormat: number) {
+    // PVRTC ships under two possible extension names. Probe each once and
+    // return on the first hit so the supported path costs a single
+    // (memoized) `getExtension()` call.
+    if (glInternalFormat >= 0x8c00 && glInternalFormat <= 0x8c03) {
+      if (this.getExtension('WEBGL_compressed_texture_pvrtc') !== null) {
+        return;
+      }
+      if (this.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc') !== null) {
+        return;
+      }
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} requires extension "WEBGL_compressed_texture_pvrtc" or "WEBKIT_WEBGL_compressed_texture_pvrtc" which is not supported by this device`,
+      );
+    }
+
+    let extensionName: string | null = null;
+    if (glInternalFormat >= 0x83f0 && glInternalFormat <= 0x83f3) {
+      extensionName = 'WEBGL_compressed_texture_s3tc';
+    } else if (glInternalFormat === 0x8d64) {
+      extensionName = 'WEBGL_compressed_texture_etc1';
+    } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
+      // ETC2/EAC is core in WebGL2: no extension exists to query and
+      // `getExtension()` would return null, so skip the check entirely.
+      if (this.isWebGl2() === true) {
+        return;
+      }
+      extensionName = 'WEBGL_compressed_texture_etc';
+    } else if (glInternalFormat >= 0x93b0 && glInternalFormat <= 0x93d5) {
+      extensionName = 'WEBGL_compressed_texture_astc';
+    }
+
+    if (extensionName === null) {
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} is not a recognized compressed texture format`,
+      );
+    }
+
+    if (this.getExtension(extensionName) === null) {
+      throw new Error(
+        `Compressed texture format 0x${glInternalFormat.toString(
+          16,
+        )} requires extension "${extensionName}" which is not supported by this device`,
+      );
+    }
+  }
+
   uploadKTX(texture: WebGLTexture, data: CompressedData) {
     const { glInternalFormat, mipmaps, w: width, h: height, blockInfo } = data;
     if (mipmaps === undefined) {
       return;
     }
 
+    this.ensureCompressedFormatSupported(glInternalFormat);
     this.bindTexture(texture);
 
     const blockWidth = blockInfo.width;
@@ -1569,6 +1662,8 @@ export class WebGlContextWrapper extends GlContextWrapper {
     if (mipmaps === undefined) {
       return;
     }
+
+    this.ensureCompressedFormatSupported(glInternalFormat);
     this.bindTexture(texture);
 
     let w = width;
@@ -1598,13 +1693,11 @@ export class WebGlContextWrapper extends GlContextWrapper {
   }
 
   uploadASTC(texture: WebGLTexture, data: CompressedData) {
-    if (this.getExtension('WEBGL_compressed_texture_astc') === null) {
-      throw new Error('ASTC compressed textures not supported by this device');
-    }
+    const { glInternalFormat, mipmaps, w, h } = data;
+    this.ensureCompressedFormatSupported(glInternalFormat);
 
     this.bindTexture(texture);
 
-    const { glInternalFormat, mipmaps, w, h } = data;
     if (mipmaps === undefined) {
       return;
     }
