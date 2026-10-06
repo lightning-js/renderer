@@ -21,6 +21,10 @@ import { type CoreNode, type CoreNodeAnimateProps } from '../CoreNode.js';
 import { getTimingFunction, type TimingFunction } from '../utils.js';
 import { mergeColorProgress } from '../../utils.js';
 import { EventEmitter } from '../../common/EventEmitter.js';
+import {
+  reportLoopError,
+  type LoopErrorHandler,
+} from '../../common/loopError.js';
 
 export interface AnimationSettings {
   duration: number;
@@ -95,6 +99,36 @@ export class CoreAnimation extends EventEmitter {
 
   constructor() {
     super();
+  }
+
+  /**
+   * Error handler for app code fired from this animation (custom easing fns
+   * and finished/tick/animating/destroyed listeners).
+   */
+  private getLoopErrorHandler(): LoopErrorHandler | undefined {
+    return (this.node as CoreNode | undefined)?.stage?.platform?.settings
+      ?.handleLoopError;
+  }
+
+  /**
+   * Invoke the app-supplied easing function, falling back to `fallback` on throw.
+   *
+   * @remarks
+   * The `try` lives here — not in `update()`/`updateValue()` — so those hot
+   * functions stay `try`-free. No closure allocation (unlike a generic
+   * safe-call helper): direct call keeps per-prop-per-frame cost to one call.
+   */
+  private applyEasing(
+    progress: number,
+    fallback: number,
+    onError: LoopErrorHandler | undefined,
+  ): number {
+    try {
+      return this.timingFunction(progress);
+    } catch (error) {
+      reportLoopError(error, onError);
+      return fallback;
+    }
   }
 
   /**
@@ -243,6 +277,7 @@ export class CoreAnimation extends EventEmitter {
     propValue: number,
     startValue: number,
     progress: number,
+    onError?: LoopErrorHandler,
   ): number {
     if (progress === 1) {
       return propValue;
@@ -256,7 +291,7 @@ export class CoreAnimation extends EventEmitter {
         return startValue;
       }
       if (this.hasEasing === true) {
-        const p = this.timingFunction(progress) || progress;
+        const p = this.applyEasing(progress, progress, onError) || progress;
         return mergeColorProgress(startValue, propValue, p);
       }
       return mergeColorProgress(startValue, propValue, progress);
@@ -265,7 +300,9 @@ export class CoreAnimation extends EventEmitter {
     if (this.hasEasing === true) {
       // Inlined applyEasing: this.timingFunction(p) * (e - s) + s
       return (
-        this.timingFunction(progress) * (propValue - startValue) + startValue
+        this.applyEasing(progress, progress, onError) *
+          (propValue - startValue) +
+        startValue
       );
     }
     return startValue + (propValue - startValue) * progress;
@@ -275,6 +312,7 @@ export class CoreAnimation extends EventEmitter {
     target: Record<string, number>,
     group: PropGroup,
     progress: number,
+    onError: LoopErrorHandler | undefined,
   ) {
     const keys = group.keys;
     const starts = group.starts;
@@ -287,6 +325,7 @@ export class CoreAnimation extends EventEmitter {
         targets[i]!,
         starts[i]!,
         progress,
+        onError,
       );
     }
   }
@@ -294,14 +333,18 @@ export class CoreAnimation extends EventEmitter {
   update(dt: number) {
     const { duration, loop, stopMethod } = this;
     const { delayFor } = this;
+    // Resolved once per update (a few property reads): app's error hook for
+    // every app entry point below (easing + all emits). `undefined` falls back
+    // to console.error inside emitSafe/reportLoopError — still isolated.
+    const onError = this.getLoopErrorHandler();
 
     if (this.node.destroyed) {
-      this.emit('destroyed');
+      this.emitSafe('destroyed', undefined, onError);
       return;
     }
 
     if (duration === 0 && delayFor === 0) {
-      this.emit('finished');
+      this.emitSafe('finished', undefined, onError);
       return;
     }
 
@@ -319,7 +362,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     if (duration === 0) {
-      this.emit('finished');
+      this.emitSafe('finished', undefined, onError);
       return;
     }
 
@@ -328,7 +371,7 @@ export class CoreAnimation extends EventEmitter {
     let progress = this.progress;
 
     if (progress === 0) {
-      this.emit('animating');
+      this.emitSafe('animating', undefined, onError);
     }
 
     // Multiply by pre-computed reciprocal -- avoids per-frame float division
@@ -339,7 +382,7 @@ export class CoreAnimation extends EventEmitter {
       this.delayFor = this.delay;
       if (stopMethod !== false) {
         this.progress = progress;
-        this.emit('finished');
+        this.emitSafe('finished', undefined, onError);
         return;
       }
     }
@@ -356,6 +399,7 @@ export class CoreAnimation extends EventEmitter {
         this.node as unknown as Record<string, number>,
         propsGroup,
         progress,
+        onError,
       );
     }
     if (shaderGroup !== null) {
@@ -363,15 +407,16 @@ export class CoreAnimation extends EventEmitter {
         this.node.shader!.props as Record<string, number>,
         shaderGroup,
         progress,
+        onError,
       );
     }
 
     if (progress < 1) {
-      this.emit('tick');
+      this.emitSafe('tick', undefined, onError);
     }
 
     if (progress === 1) {
-      this.emit('finished');
+      this.emitSafe('finished', undefined, onError);
     }
   }
 }
