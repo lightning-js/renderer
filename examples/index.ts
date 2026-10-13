@@ -180,6 +180,7 @@ async function runTest(
     logicalPixelRatio,
     physicalPixelRatio,
     enableInspector,
+    false, // preloadFonts
     forceWebGL2,
     textureProcessingLimit,
     customSettings,
@@ -256,6 +257,7 @@ async function initRenderer(
   logicalPixelRatio: number,
   physicalPixelRatio: number,
   enableInspector: boolean,
+  preloadFonts = false,
   forceWebGL2?: boolean,
   textureProcessingTimeLimit?: number,
   customSettings?: Partial<RendererMainSettings>,
@@ -283,7 +285,7 @@ async function initRenderer(
     'app',
   );
   await installShaders(renderer.stage, renderMode);
-  await installFonts(renderer.stage);
+  await installFonts(renderer.stage, preloadFonts);
 
   /**
    * Sample data captured
@@ -397,6 +399,7 @@ async function runAutomation(
     logicalPixelRatio,
     defaultPhysicalPixelRatio,
     false, // enableInspector
+    true, // preloadFonts
   );
 
   // Iterate through all test modules
@@ -479,8 +482,7 @@ async function runAutomation(
     }
   }
   const doneTests = (window as any).doneTests as
-    | (() => Promise<void>)
-    | undefined;
+    (() => Promise<void>) | undefined;
   if (doneTests) {
     console.error('Calling doneTests()');
     await doneTests();
