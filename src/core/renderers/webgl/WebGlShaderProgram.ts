@@ -112,8 +112,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   constructor(
     renderer: WebGlRenderer,
-    config: WebGlShaderType,
-    resolvedProps: Record<string, any>,
+    private config: WebGlShaderType,
+    private resolvedProps: Record<string, any>,
   ) {
     this.renderer = renderer;
     const glw = (this.glw = renderer.glw);
@@ -184,6 +184,36 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       update: config.update,
       canBatch: config.canBatch,
     };
+  }
+
+  // Shader nodes created while the context is lost keep a stable program ref.
+  static createDeferred(
+    renderer: WebGlRenderer,
+    config: WebGlShaderType,
+    props: Record<string, any>,
+  ): WebGlShaderProgram {
+    const deferred = Object.create(
+      WebGlShaderProgram.prototype,
+    ) as WebGlShaderProgram;
+    deferred.renderer = renderer;
+    deferred.config = config;
+    deferred.resolvedProps = props;
+    deferred.glw = renderer.glw;
+    deferred.program = null;
+    deferred.isDestroyed = false;
+    deferred.attributeLocations = [];
+    deferred.uniformLocations = null;
+    deferred.lifecycle = {};
+    return deferred;
+  }
+
+  // Keep shader-node references stable while replacing all native GL state.
+  restoreContext(): void {
+    if (this.isDestroyed === true) return;
+    Object.assign(
+      this,
+      new WebGlShaderProgram(this.renderer, this.config, this.resolvedProps),
+    );
   }
 
   disableAttribute(location: number) {
@@ -454,6 +484,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     glw.deleteProgram(this.program!);
     this.program = null;
     this.uniformLocations = null;
+    this.isDestroyed = true;
+    this.renderer.untrackShaderProgram(this);
 
     const attribs = this.attributeLocations;
     const attribLen = this.attributeLocations.length;

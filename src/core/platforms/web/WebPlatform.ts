@@ -49,7 +49,10 @@ export class WebPlatform extends Platform {
   private readonly numImageWorkers: number;
   private _imageWorkerManager: ImageWorkerManager | null = null;
   private hasWorker = !!self.Worker;
-  private stopped = false;
+  private loopGeneration = 0;
+  private frameHandle: number | null = null;
+  private timerHandle: ReturnType<typeof setTimeout> | null = null;
+  private detachContextEvents: (() => void) | null = null;
 
   constructor(settings: PlatformSettings = {}) {
     super(settings);
@@ -123,7 +126,34 @@ export class WebPlatform extends Platform {
   ////////////////////////
 
   override startLoop(stage: Stage): void {
-    this.stopped = false;
+    if (this.detachContextEvents !== null) this.detachContextEvents();
+    if (stage.renderer.mode === 'webgl' && this.canvas !== null) {
+      const canvas = this.canvas;
+      const onLost = (event: Event) => {
+        event.preventDefault();
+        this.loopGeneration++;
+        this.cancelScheduledFrame();
+        stage.onContextLost();
+      };
+      const onRestored = () => {
+        if (stage.contextState !== 'lost' && stage.contextState !== 'failed')
+          return;
+        if (stage.onContextRestored() !== true) return;
+        this.cancelScheduledFrame();
+        const generation = ++this.loopGeneration;
+        this.frameHandle = requestAnimationFrame(() => {
+          this.drawRecoveryFrame(stage, generation);
+        });
+      };
+      canvas.addEventListener('webglcontextlost', onLost);
+      canvas.addEventListener('webglcontextrestored', onRestored);
+      this.detachContextEvents = () => {
+        canvas.removeEventListener('webglcontextlost', onLost);
+        canvas.removeEventListener('webglcontextrestored', onRestored);
+      };
+    }
+    this.cancelScheduledFrame();
+    const generation = ++this.loopGeneration;
     let isIdle = false;
     let lastFrameTime = 0;
 
@@ -133,8 +163,26 @@ export class WebPlatform extends Platform {
     // callback therefore never propagates here, so the scheduling below always
     // runs. Internal renderer errors still throw loudly (fail fast) instead of
     // being swallowed as app errors.
+    const scheduleFrame = (delay?: number) => {
+      if (delay !== undefined) {
+        this.timerHandle = setTimeout(() => {
+          this.timerHandle = null;
+          // A timeout may fire after loss or stopLoop; never enqueue its old rAF.
+          if (generation === this.loopGeneration) {
+            this.frameHandle = requestAnimationFrame(runLoop);
+          }
+        }, delay);
+      } else {
+        this.frameHandle = requestAnimationFrame(runLoop);
+      }
+    };
+
     const runLoop = (currentTime: number = 0) => {
-      if (this.stopped) return;
+      // Canceled/previous loops can still have queued callbacks; only the
+      // current loop may draw, and a lost context cannot accept GPU work.
+      if (generation !== this.loopGeneration) return;
+      this.frameHandle = null;
+      if (stage.contextState !== 'running') return;
       const targetFrameTime = stage.targetFrameTime;
 
       // Check if we should throttle this frame
@@ -144,26 +192,27 @@ export class WebPlatform extends Platform {
       ) {
         // Too early for next frame, schedule with setTimeout for precise timing
         const delay = targetFrameTime - (currentTime - lastFrameTime);
-        setTimeout(() => requestAnimationFrame(runLoop), delay);
+        scheduleFrame(delay);
         return;
       }
 
       stage.updateFrameTime();
+      // frameTick handlers run synchronously and may destroy/suspend the stage.
+      if (stage.contextState !== 'running') return;
       stage.updateAnimations();
+      // Animation callbacks can do the same before scene traversal begins.
+      if (stage.contextState !== 'running') return;
 
-      if (!stage.hasSceneUpdates()) {
+      if (stage.hasSceneUpdates() === false) {
         // We still need to calculate the fps else it looks like the app is frozen
         stage.calculateFps();
 
         if (targetFrameTime > 0) {
           // Use setTimeout for throttled idle frames
-          setTimeout(
-            () => requestAnimationFrame(runLoop),
-            Math.max(targetFrameTime, 16.666666666666668),
-          );
+          scheduleFrame(Math.max(targetFrameTime, 16.666666666666668));
         } else {
           // Use standard idle timeout when not throttling
-          setTimeout(() => requestAnimationFrame(runLoop), 16.666666666666668);
+          scheduleFrame(16.666666666666668);
         }
 
         if (isIdle === false) {
@@ -175,6 +224,10 @@ export class WebPlatform extends Platform {
           );
           isIdle = true;
         }
+
+        // An idle listener may have suspended or destroyed the stage; skip
+        // GPU-backed cleanup and queued events in that case.
+        if (stage.contextState !== 'running') return;
 
         if (stage.txMemManager.checkCleanup() === true) {
           stage.txMemManager.cleanup();
@@ -194,7 +247,16 @@ export class WebPlatform extends Platform {
       }
 
       stage.drawFrame();
+      // A loss detected during rendering must not flush frame events.
+      if (stage.contextState !== 'running') return;
       stage.flushFrameEvents();
+      // Event handlers can stop/restart the loop without changing contextState.
+      // Do not schedule a second loop from this now-stale callback.
+      if (
+        generation !== this.loopGeneration ||
+        stage.contextState !== 'running'
+      )
+        return;
 
       // Schedule next frame
       if (targetFrameTime > 0) {
@@ -203,17 +265,67 @@ export class WebPlatform extends Platform {
           0,
           targetFrameTime - (performance.now() - currentTime),
         );
-        setTimeout(() => requestAnimationFrame(runLoop), nextFrameDelay);
+        scheduleFrame(nextFrameDelay);
       } else {
         // Use standard rAF when not throttling
-        requestAnimationFrame(runLoop);
+        scheduleFrame();
       }
     };
-    requestAnimationFrame(runLoop);
+    scheduleFrame();
+  }
+
+  // Run once after the browser restores the context, outside the normal loop.
+  private drawRecoveryFrame(stage: Stage, generation: number): void {
+    if (generation !== this.loopGeneration || stage.contextState !== 'running')
+      return;
+    this.frameHandle = null;
+
+    stage.updateFrameTime();
+    if (generation !== this.loopGeneration || stage.contextState !== 'running')
+      return;
+    stage.updateAnimations();
+    if (generation !== this.loopGeneration || stage.contextState !== 'running')
+      return;
+
+    try {
+      stage.drawFrame();
+    } catch (error) {
+      // A stopped/replaced callback must not fail a newer recovery attempt.
+      if (
+        generation !== this.loopGeneration ||
+        stage.contextState !== 'running'
+      )
+        return;
+      if (stage.onRecoveryFrameFailed(error) === false) throw error;
+      return;
+    }
+
+    if (generation !== this.loopGeneration || stage.contextState !== 'running')
+      return;
+    stage.flushFrameEvents();
+    if (generation !== this.loopGeneration || stage.contextState !== 'running')
+      return;
+    stage.onRecoveryFrameCompleted();
+    if (
+      generation === this.loopGeneration &&
+      stage.contextState === 'running'
+    ) {
+      this.startLoop(stage);
+    }
+  }
+
+  private cancelScheduledFrame(): void {
+    if (this.frameHandle !== null) cancelAnimationFrame(this.frameHandle);
+    if (this.timerHandle !== null) clearTimeout(this.timerHandle);
+    this.frameHandle = null;
+    this.timerHandle = null;
   }
 
   override stopLoop(): void {
-    this.stopped = true;
+    this.loopGeneration++;
+    this.cancelScheduledFrame();
+    if (this.detachContextEvents !== null) this.detachContextEvents();
+    this.detachContextEvents = null;
     // NOTE: read the backing field, not the lazy getter — tearing down must
     // never spawn workers.
     if (this._imageWorkerManager !== null) {

@@ -41,6 +41,13 @@ const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
  */
 export class WebGlCtxTexture extends CoreContextTexture {
   protected _nativeCtxTexture: WebGLTexture | null = null;
+  private contextInvalidated = false;
+
+  invalidateContext(): void {
+    this.contextInvalidated = true;
+    this._nativeCtxTexture = null;
+    this.state = 'freed';
+  }
   private _w = 0;
   private _h = 0;
 
@@ -72,6 +79,10 @@ export class WebGlCtxTexture extends CoreContextTexture {
     if (isProductionEnvironment === false) {
       const error = this.glw.getError();
       if (error !== 0) {
+        if (error === 0x9242 || this.glw.isContextLost() === true) {
+          this.textureSource.notifyContextLost();
+          return true;
+        }
         this.state = 'failed';
         this.textureSource.setState(
           'failed',
@@ -121,6 +132,10 @@ export class WebGlCtxTexture extends CoreContextTexture {
     this._nativeCtxTexture = this.createNativeCtxTexture();
 
     if (this._nativeCtxTexture === null) {
+      if (this.glw.isContextLost() === true) {
+        this.textureSource.notifyContextLost();
+        return;
+      }
       this.state = 'failed';
       const error = new Error('Could not create WebGL Texture');
       this.textureSource.setState('failed', error);
@@ -130,6 +145,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
     try {
       const { w, h } = await this.onLoadRequest();
+      if (this.contextInvalidated === true) return;
 
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
@@ -152,6 +168,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       // freed while the texture is still being loaded or used.
       this.textureSource.freeTextureData();
     } catch (err: unknown) {
+      if (this.contextInvalidated === true) return;
       // If the texture has been freed while loading, return early.
       // Type assertion needed because state could change during async operations
       if ((this.state as string) === 'freed') {
@@ -243,7 +260,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {
-        return { w: 0, h: 0 };
+        throw new Error('WebGL texture upload failed');
       }
 
       this.setTextureMemUse(h * w * formatBytes * memoryPadding);
@@ -270,7 +287,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {
-        return { w: 0, h: 0 };
+        throw new Error('WebGL texture upload failed');
       }
 
       w = tdata.w;
@@ -295,7 +312,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
 
       // Check for errors after compressed texture operations
       if (this.checkGLError() === true) {
-        return { w: 0, h: 0 };
+        throw new Error('WebGL texture upload failed');
       }
 
       this.setTextureMemUse(w * h * formatBytes);

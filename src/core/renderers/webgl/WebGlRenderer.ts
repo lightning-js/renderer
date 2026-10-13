@@ -136,11 +136,13 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
+  | WebGlNodeRenderOp
+  | StencilClipRenderOp
+  | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
-  glw: GlContextWrapper;
+  glw!: GlContextWrapper;
   private _system: CoreWebGlSystem | null = null;
   /**
    * GPU parameters and extensions, enumerated lazily on first access.
@@ -263,7 +265,8 @@ export class WebGlRenderer extends CoreRenderer {
 
   //// Default Shader
   defaultShaderNode: WebGlShaderNode | null = null;
-  quadBufferCollection: BufferCollection;
+  private shaderPrograms = new Set<WebGlShaderProgram>();
+  quadBufferCollection!: BufferCollection;
 
   //// Stencil clip program (compiled once, reused every frame)
   stencilClipProgram: WebGlShaderProgram | null = null;
@@ -316,6 +319,29 @@ export class WebGlRenderer extends CoreRenderer {
 
     this.mode = 'webgl';
 
+    this.initializeContext();
+  }
+
+  // Recreate every renderer-owned GL object after a restored context.
+  override restoreContext(): void {
+    this._system = null;
+    this.clearColor.raw = Number.NaN;
+    this._sdfBufferPlain = null;
+    this._sdfBufferRich = null;
+    this.stencilClipProgram = null;
+    this.renderOps.length = 0;
+    this.curRenderOp = null;
+    this.curSdfRenderOp = null;
+    this.renderToTextureActive = false;
+    this.activeRttNode = null;
+    this.stencilOpPool.length = 0;
+    this.initializeContext();
+    this.invalidateQuadBuffer();
+    this.needsFullUpload = true;
+  }
+
+  private initializeContext(): void {
+    const stage = this.stage;
     const platform = stage.platform;
     const canvas = platform.canvas!;
 
@@ -461,7 +487,20 @@ export class WebGlRenderer extends CoreRenderer {
     shaderType: WebGlShaderType,
     props: Record<string, unknown>,
   ): WebGlShaderProgram {
-    return new WebGlShaderProgram(this, shaderType, props);
+    const program =
+      this.stage.contextState !== 'running'
+        ? WebGlShaderProgram.createDeferred(this, shaderType, props)
+        : new WebGlShaderProgram(this, shaderType, props);
+    this.shaderPrograms.add(program);
+    return program;
+  }
+
+  untrackShaderProgram(program: WebGlShaderProgram): void {
+    this.shaderPrograms.delete(program);
+  }
+
+  override restoreShaderPrograms(): void {
+    for (const program of this.shaderPrograms) program.restoreContext();
   }
 
   createShaderNode(
@@ -1513,6 +1552,7 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   updateViewport(): void {
+    if (this.stage.contextState !== 'running') return;
     this.glw.viewport(0, 0, this.glw.canvas.width, this.glw.canvas.height);
   }
 
@@ -1651,12 +1691,17 @@ export class WebGlRenderer extends CoreRenderer {
     }
     const glw = this.glw;
     const normalizedColor = getNormalizedRgbaComponents(color);
-    glw.clearColor(
-      normalizedColor[0],
-      normalizedColor[1],
-      normalizedColor[2],
-      normalizedColor[3],
-    );
+    if (
+      this.stage.contextState === 'running' ||
+      this.stage.contextState === 'restoring'
+    ) {
+      glw.clearColor(
+        normalizedColor[0],
+        normalizedColor[1],
+        normalizedColor[2],
+        normalizedColor[3],
+      );
+    }
     this.clearColor = {
       raw: color,
       normalized: normalizedColor,
@@ -1844,6 +1889,7 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   override destroy(): void {
+    this.shaderPrograms.clear();
     const loseCtx = this.glw.getExtension(
       'WEBGL_lose_context',
     ) as WEBGL_lose_context | null;

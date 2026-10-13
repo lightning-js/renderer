@@ -27,12 +27,12 @@ import {
 } from './CoreNode.js';
 import { CoreTextureManager } from './CoreTextureManager.js';
 import { CoreShaderManager } from './CoreShaderManager.js';
-import {
-  type FontHandler,
-  type FontLoadOptions,
-  type TextRenderer,
-  type TextRenderers,
-  type TrProps,
+import type {
+  FontHandler,
+  FontLoadOptions,
+  TextRenderer,
+  TextRenderers,
+  TrProps,
 } from './text-rendering/TextRenderer.js';
 
 import { EventEmitter } from '../common/EventEmitter.js';
@@ -46,7 +46,7 @@ import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
-import { CoreRenderer } from './renderers/CoreRenderer.js';
+import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import { pointInBound } from './lib/utils.js';
@@ -108,6 +108,122 @@ export class Stage {
   public readonly ready: Promise<void>;
   private resolveReady: () => void = () => undefined;
   private firstFrameDrawn = false;
+
+  public contextState:
+    | 'running'
+    | 'lost'
+    | 'restoring'
+    | 'failed'
+    | 'destroyed' = 'running';
+  private contextSuspended = false;
+  private contextGeneration = 0;
+  private contextLostAt = 0;
+  private pendingRestoreEvent = false;
+  private restoreTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  private clearRestoreTimeout(): void {
+    if (this.restoreTimeoutHandle !== null)
+      clearTimeout(this.restoreTimeoutHandle);
+    this.restoreTimeoutHandle = null;
+  }
+
+  onContextLost(): void {
+    if (this.contextState === 'destroyed' || this.contextState === 'lost')
+      return;
+    this.contextState = 'lost';
+    this.contextSuspended = true;
+    this.contextGeneration++;
+    this.contextLostAt = this.platform.getTimeStamp();
+    this.pendingRestoreEvent = false;
+    this.txManager.invalidateContext();
+    this.txMemManager.invalidateContext();
+    this.clearRestoreTimeout();
+    const generation = this.contextGeneration;
+    const timeout = this.options.contextRestoreTimeout ?? 10000;
+    if (timeout > 0) {
+      this.restoreTimeoutHandle = setTimeout(() => {
+        if (
+          this.contextState !== 'lost' ||
+          this.contextGeneration !== generation
+        )
+          return;
+        this.restoreTimeoutHandle = null;
+        this.eventBus.emit('contextRestoreFailed', {
+          generation,
+          error: new Error('WebGL context restoration timed out'),
+        });
+        // A late browser restoration remains valid.
+      }, timeout);
+    }
+    this.eventBus.emit('contextLost', { generation: this.contextGeneration });
+  }
+
+  onContextRestored(): boolean {
+    if (this.contextState !== 'lost' && this.contextState !== 'failed')
+      return false;
+    const generation = this.contextGeneration;
+    this.contextState = 'restoring';
+    this.clearRestoreTimeout();
+    try {
+      const renderer = this.renderer;
+      if (renderer.restoreContext === undefined) {
+        throw new Error('Renderer does not support context restoration');
+      }
+      renderer.restoreContext();
+      this.shManager.restoreContext();
+      if (
+        this.contextGeneration !== generation ||
+        this.contextState !== 'restoring'
+      )
+        return false;
+      this.contextState = 'running';
+      this.txManager.restoreContext();
+      if (
+        this.contextGeneration !== generation ||
+        this.contextState !== 'running'
+      )
+        return false;
+      this.lastFrameTime = 0;
+      this.currentFrameTime = 0;
+      this.root.setUpdateType(UpdateType.RenderBounds | UpdateType.Children);
+      for (const node of renderer.rttNodes) node.hasRTTupdates = true;
+      this.requestRenderListUpdate();
+      this.requestRender();
+      this.contextSuspended = false;
+      this.pendingRestoreEvent = true;
+      return true;
+    } catch (error) {
+      if (this.contextGeneration !== generation) return false;
+      this.contextState = 'failed';
+      this.contextSuspended = true;
+      this.eventBus.emit('contextRestoreFailed', { generation, error });
+      return false;
+    }
+  }
+
+  // Report a failed recovery frame without hiding unrelated frame errors.
+  onRecoveryFrameFailed(error: unknown): boolean {
+    if (this.pendingRestoreEvent === false || this.contextState !== 'running')
+      return false;
+    this.pendingRestoreEvent = false;
+    this.contextState = 'failed';
+    this.contextSuspended = true;
+    this.eventBus.emit('contextRestoreFailed', {
+      generation: this.contextGeneration,
+      error,
+    });
+    return true;
+  }
+
+  onRecoveryFrameCompleted(): void {
+    if (this.pendingRestoreEvent === false || this.contextState !== 'running')
+      return;
+    this.pendingRestoreEvent = false;
+    this.eventBus.emit('contextRestored', {
+      generation: this.contextGeneration,
+      duration: this.platform.getTimeStamp() - this.contextLostAt,
+    });
+  }
 
   /// Module Instances
   public readonly animationManager: AnimationManager;
@@ -535,6 +651,7 @@ export class Stage {
    * Start a new frame draw
    */
   drawFrame() {
+    if (this.contextSuspended === true) return;
     const { renderer, renderRequested, root } = this;
 
     // Update tree if needed
@@ -1178,6 +1295,10 @@ export class Stage {
    * textures and GPU resources, and terminates any background workers.
    */
   destroy(): void {
+    this.clearRestoreTimeout();
+    this.contextState = 'destroyed';
+    this.contextSuspended = true;
+    this.contextGeneration++;
     // Resolve readiness so `ready` never dangles if no frame was drawn.
     this.resolveReady();
 

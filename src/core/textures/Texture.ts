@@ -191,6 +191,11 @@ export abstract class Texture extends EventEmitter {
   public preventCleanup = false;
 
   public ctxTexture: CoreContextTexture | undefined;
+  protected contextGeneration = 0;
+
+  notifyContextLost(): void {
+    this.txManager.notifyContextLost();
+  }
 
   public textureData: TextureData | null = null;
 
@@ -366,6 +371,7 @@ export abstract class Texture extends EventEmitter {
   loadCtxTexture(): CoreContextTexture {
     if (this.ctxTexture === undefined) {
       this.ctxTexture = this.txManager.renderer.createCtxTexture(this);
+      this.txManager.trackContextTexture(this);
     }
 
     return this.ctxTexture;
@@ -380,6 +386,7 @@ export abstract class Texture extends EventEmitter {
   free(): void {
     this.ctxTexture?.free();
     this.ctxTexture = undefined;
+    this.txManager.untrackContextTexture(this);
   }
 
   /**
@@ -391,7 +398,26 @@ export abstract class Texture extends EventEmitter {
   release(): void {
     this.ctxTexture?.release();
     this.ctxTexture = undefined;
+    this.txManager.untrackContextTexture(this);
     this.freeTextureData();
+  }
+
+  // The browser has already discarded this generation's GPU resources.
+  invalidateContext(): void {
+    this.contextGeneration++;
+    if (
+      this.ctxTexture !== undefined &&
+      'invalidateContext' in this.ctxTexture
+    ) {
+      (
+        this.ctxTexture as CoreContextTexture & { invalidateContext(): void }
+      ).invalidateContext();
+    }
+    this.ctxTexture = undefined;
+    if (this.state !== 'failed') this.state = 'freed';
+    // A decoded image may have been closed after its first upload.
+    this.textureData = null;
+    this.memUsed = 0;
   }
 
   /**
@@ -407,6 +433,8 @@ export abstract class Texture extends EventEmitter {
       this.free();
     }
 
+    this.txManager.untrackContextTexture(this);
+
     // Always free texture data regardless of state
     this.freeTextureData();
   }
@@ -419,7 +447,10 @@ export abstract class Texture extends EventEmitter {
    * e.g. ImageData that is downloaded from a URL.
    */
   freeTextureData(): void {
-    queueMicrotask(this.freeTextureDataTask);
+    const generation = this.contextGeneration;
+    queueMicrotask(() => {
+      if (generation === this.contextGeneration) this.freeTextureDataTask();
+    });
   }
 
   public setState(
@@ -452,7 +483,10 @@ export abstract class Texture extends EventEmitter {
       // to determine if we should try loading again
       this.retryCount += 1;
 
-      queueMicrotask(this.releaseTask);
+      const generation = this.contextGeneration;
+      queueMicrotask(() => {
+        if (generation === this.contextGeneration) this.releaseTask();
+      });
     } else if (state === 'loading') {
       this._error = null;
       this._dimensions = null;
@@ -477,7 +511,10 @@ export abstract class Texture extends EventEmitter {
    */
   async getTextureData(): Promise<TextureData> {
     if (this.textureData === null) {
-      this.textureData = await this.getTextureSource();
+      const generation = this.contextGeneration;
+      const data = await this.getTextureSource();
+      if (generation !== this.contextGeneration) return data;
+      this.textureData = data;
     }
 
     return this.textureData;

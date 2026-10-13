@@ -186,6 +186,10 @@ export class CoreTextureManager extends EventEmitter {
 
   public maxRetryCount: number;
   private uploadTextureQueue = createTextureUploadQueue();
+  private contextTextures = new Set<Texture>();
+  private restoreTextures = new Set<Texture>();
+  private pendingContextLoads = new Set<Texture>();
+  private contextGeneration = 0;
   private stage: Stage;
 
   public platform: Platform;
@@ -198,6 +202,50 @@ export class CoreTextureManager extends EventEmitter {
    * will occur when using the texture manager.
    */
   renderer!: CoreRenderer;
+
+  trackContextTexture(texture: Texture): void {
+    this.contextTextures.add(texture);
+  }
+
+  notifyContextLost(): void {
+    this.stage.onContextLost();
+  }
+
+  untrackContextTexture(texture: Texture): void {
+    this.contextTextures.delete(texture);
+    this.restoreTextures.delete(texture);
+    this.pendingContextLoads.delete(texture);
+  }
+
+  // Drop old GPU handles without treating context loss as a texture error.
+  invalidateContext(): void {
+    this.contextGeneration++;
+    this.uploadTextureQueue.clear();
+    for (const texture of this.pendingContextLoads) {
+      this.restoreTextures.add(texture);
+      if (this.contextTextures.has(texture) === false)
+        texture.invalidateContext();
+    }
+    this.pendingContextLoads.clear();
+    for (const texture of this.contextTextures) {
+      this.restoreTextures.add(texture);
+      texture.invalidateContext();
+    }
+    this.contextTextures.clear();
+  }
+
+  restoreContext(): void {
+    // Restore GPU-backed and pending resources, including explicit preloads
+    // without renderable owners. Previously evicted textures load on demand.
+    const defaultTracked =
+      this.stage.defaultTexture !== null &&
+      this.restoreTextures.has(this.stage.defaultTexture);
+    for (const texture of this.restoreTextures) {
+      texture.load();
+    }
+    this.restoreTextures.clear();
+    if (defaultTracked === false) this.stage.defaultTexture?.load();
+  }
 
   /**
    * The current frame time in milliseconds
@@ -285,6 +333,11 @@ export class CoreTextureManager extends EventEmitter {
    * @param immediate - Whether to prioritize the texture for immediate loading
    */
   async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
+    if (this.stage.contextState !== 'running') {
+      this.restoreTextures.add(texture);
+      return;
+    }
+    const generation = this.contextGeneration;
     if (texture.type === TextureType.subTexture) {
       // ignore subtextures - they get loaded through their parent
       return;
@@ -295,17 +348,27 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
+    this.pendingContextLoads.add(texture);
+
     texture.setState('loading');
 
     // Get texture data - early return on failure
     const textureDataResult = await texture.getTextureData().catch((err) => {
+      if (generation !== this.contextGeneration) return null;
       console.error(err);
       texture.setState('failed');
       return null;
     });
 
     // Early return if texture data fetch failed
+    if (
+      generation !== this.contextGeneration ||
+      this.stage.contextState !== 'running'
+    )
+      return;
     if (textureDataResult === null || texture.state === 'failed') {
+      if (generation === this.contextGeneration)
+        this.pendingContextLoads.delete(texture);
       return;
     }
 
@@ -314,9 +377,12 @@ export class CoreTextureManager extends EventEmitter {
       texture.type !== TextureType.image || priority === true;
     if (shouldUploadImmediately === true) {
       await this.uploadTexture(texture).catch((err) => {
+        if (generation !== this.contextGeneration) return;
         console.error(`Failed to upload texture:`, err);
         texture.setState('failed');
       });
+      if (generation === this.contextGeneration)
+        this.pendingContextLoads.delete(texture);
       return;
     }
 
@@ -331,6 +397,12 @@ export class CoreTextureManager extends EventEmitter {
    * @returns Promise that resolves when the texture is fully loaded
    */
   async uploadTexture(texture: Texture): Promise<void> {
+    if (this.stage.contextState !== 'running') return;
+    const generation = this.contextGeneration;
+    const finish = () => {
+      if (generation === this.contextGeneration)
+        this.pendingContextLoads.delete(texture);
+    };
     if (
       this.stage.txMemManager.doNotExceedCriticalThreshold === true &&
       this.stage.txMemManager.criticalCleanupRequested === true
@@ -340,16 +412,19 @@ export class CoreTextureManager extends EventEmitter {
         'failed',
         new TextureError(TextureErrorCode.MEMORY_THRESHOLD_EXCEEDED),
       );
+      finish();
       return;
     }
 
     if (texture.state === 'failed' || texture.state === 'freed') {
       // don't upload failed or freed textures
+      finish();
       return;
     }
 
     if (texture.state === 'loaded') {
       // already loaded
+      finish();
       return;
     }
 
@@ -361,16 +436,19 @@ export class CoreTextureManager extends EventEmitter {
           'Texture data is null, cannot upload texture',
         ),
       );
+      finish();
       return;
     }
 
     const coreContext = texture.loadCtxTexture();
     if (coreContext !== null && coreContext.state === 'loaded') {
       texture.setState('loaded');
+      finish();
       return;
     }
 
     await coreContext.load();
+    finish();
   }
 
   /**
@@ -402,10 +480,13 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       const texture = this.uploadTextureQueue.dequeue();
       if (texture === undefined) break;
+      const generation = this.contextGeneration;
       try {
         await this.uploadTexture(texture);
       } catch (error) {
+        if (generation !== this.contextGeneration) continue;
         console.error('Failed to upload texture:', error);
+        this.pendingContextLoads.delete(texture);
         // Continue with next texture instead of stopping entire queue
       }
       count++;
