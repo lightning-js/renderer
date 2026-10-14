@@ -131,19 +131,15 @@ export class WebPlatform extends Platform {
       const canvas = this.canvas;
       const onLost = (event: Event) => {
         event.preventDefault();
-        this.loopGeneration++;
-        this.cancelScheduledFrame();
+        // Loop invalidation happens inside Stage.onContextLost via
+        // suspendFrameLoop(), so GL-error and canvas paths share one bump.
         stage.onContextLost();
       };
       const onRestored = () => {
         if (stage.contextState !== 'lost' && stage.contextState !== 'failed')
           return;
         if (stage.onContextRestored() !== true) return;
-        this.cancelScheduledFrame();
-        const generation = ++this.loopGeneration;
-        this.frameHandle = requestAnimationFrame(() => {
-          this.drawRecoveryFrame(stage, generation);
-        });
+        this.scheduleRecoveryFrame(stage);
       };
       canvas.addEventListener('webglcontextlost', onLost);
       canvas.addEventListener('webglcontextrestored', onRestored);
@@ -151,6 +147,24 @@ export class WebPlatform extends Platform {
         canvas.removeEventListener('webglcontextlost', onLost);
         canvas.removeEventListener('webglcontextrestored', onRestored);
       };
+      // Reconcile loss/restore that happened while stopped and detached:
+      // a missed `webglcontextlost` without preventDefault may never fire
+      // `webglcontextrestored`, so poll once here instead of per-frame.
+      if (this.glw !== null && this.glw !== undefined) {
+        const glLost = this.glw.isContextLost();
+        if (glLost === true && stage.contextState === 'running') {
+          stage.onContextLost();
+        } else if (
+          glLost === false &&
+          (stage.contextState === 'lost' || stage.contextState === 'failed')
+        ) {
+          if (stage.onContextRestored() === true) {
+            this.cancelScheduledFrame();
+            this.scheduleRecoveryFrame(stage);
+            return;
+          }
+        }
+      }
     }
     this.cancelScheduledFrame();
     const generation = ++this.loopGeneration;
@@ -319,6 +333,19 @@ export class WebPlatform extends Platform {
     if (this.timerHandle !== null) clearTimeout(this.timerHandle);
     this.frameHandle = null;
     this.timerHandle = null;
+  }
+
+  override suspendFrameLoop(): void {
+    this.loopGeneration++;
+    this.cancelScheduledFrame();
+  }
+
+  private scheduleRecoveryFrame(stage: Stage): void {
+    this.cancelScheduledFrame();
+    const generation = ++this.loopGeneration;
+    this.frameHandle = requestAnimationFrame(() => {
+      this.drawRecoveryFrame(stage, generation);
+    });
   }
 
   override stopLoop(): void {

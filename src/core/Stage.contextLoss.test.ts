@@ -18,6 +18,7 @@ function makeStage() {
     platform: {
       getTimeStamp: () => 200,
       glw: { isContextLost: vi.fn(() => true) },
+      suspendFrameLoop: vi.fn(),
     },
     renderer,
     txManager: { invalidateContext: vi.fn(), restoreContext: vi.fn() },
@@ -87,6 +88,14 @@ describe('WebGL context recovery', () => {
       'contextLost',
       'contextRestoreFailed',
     ]);
+  });
+
+  it('suspends the platform loop on loss so GL-error paths cancel stale frames', () => {
+    const { stage } = makeStage();
+    stage.onContextLost();
+    expect(stage.platform.suspendFrameLoop).toHaveBeenCalledOnce();
+    stage.onContextLost();
+    expect(stage.platform.suspendFrameLoop).toHaveBeenCalledOnce();
   });
 
   it('reports restored only after the first recovery frame', () => {

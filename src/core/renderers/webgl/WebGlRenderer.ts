@@ -323,6 +323,12 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   // Recreate every renderer-owned GL object after a restored context.
+  // `canvas.getContext()` returns the *same* underlying context object after
+  // restoration (per spec), so `initializeContext()` just re-wraps it and
+  // rebuilds quad/stencil VBOs + index buffer below. Old GL handles were
+  // already discarded by the browser on loss, so no `deleteBuffer` needed.
+  // SDF buffers are lazy (recreated on next SDF draw); shader programs are
+  // recompiled separately via `restoreShaderPrograms()` to keep node refs.
   override restoreContext(): void {
     this._system = null;
     this.clearColor.raw = Number.NaN;

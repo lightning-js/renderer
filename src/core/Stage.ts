@@ -130,6 +130,9 @@ export class Stage {
   onContextLost(): void {
     if (this.contextState === 'destroyed' || this.contextState === 'lost')
       return;
+    // Invalidate stale loop callbacks first: GL-error detection paths call
+    // this directly and bypass the canvas `webglcontextlost` handler.
+    this.platform.suspendFrameLoop?.();
     this.contextState = 'lost';
     this.contextSuspended = true;
     this.contextGeneration++;
@@ -1299,6 +1302,7 @@ export class Stage {
     this.contextState = 'destroyed';
     this.contextSuspended = true;
     this.contextGeneration++;
+    this.platform.suspendFrameLoop?.();
     // Resolve readiness so `ready` never dangles if no frame was drawn.
     this.resolveReady();
 
