@@ -19,6 +19,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IEventEmitter } from './IEventEmitter.js';
+import { reportLoopError, type LoopErrorHandler } from './loopError.js';
 
 export type EventListener = (target: any, data: any) => void;
 /**
@@ -91,6 +92,38 @@ export class EventEmitter implements IEventEmitter {
     // Zero allocations vs the previous listeners.slice() snapshot approach.
     for (let i = listeners.length - 1; i >= 0; i--) {
       listeners[i]!(this, data);
+    }
+  }
+
+  /**
+   * Emit to all listeners, isolating each one from the others.
+   *
+   * @remarks
+   * Unlike {@link emit}, a throwing listener neither aborts the remaining
+   * listeners nor propagates to the caller (e.g. the rAF loop). Each error is
+   * routed to `onError` (`handleLoopError`) or `console.error` and iteration
+   * continues. Internal renderer code should keep using `emit` (fail loudly);
+   * app-facing boundaries should use this.
+   *
+   * Kept as a separate method so the hot `emit` path — and more importantly
+   * its callers in the frame loop — stay `try`-free for older JITs.
+   */
+  emitSafe(event: string, data?: any, onError?: LoopErrorHandler): void {
+    const map = this.eventListeners;
+    if (map === null) {
+      return;
+    }
+    const listeners = map[event];
+    if (listeners === undefined || listeners.length === 0) {
+      return;
+    }
+    for (let i = listeners.length - 1; i >= 0; i--) {
+      const listener = listeners[i]!;
+      try {
+        listener(this, data);
+      } catch (error) {
+        reportLoopError(error, onError);
+      }
     }
   }
 

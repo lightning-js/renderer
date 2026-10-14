@@ -472,9 +472,14 @@ export class Stage {
 
     // This event is emitted at the beginning of the frame (before any updates
     // or rendering), so no need to to use `stage.queueFrameEvent` here.
+    // App-facing: isolated per-listener so a bad client callback can't kill rAF.
     this.frameTickPayload.time = this.currentFrameTime;
     this.frameTickPayload.delta = this.deltaTime;
-    this.eventBus.emit('frameTick', this.frameTickPayload);
+    this.eventBus.emitSafe(
+      'frameTick',
+      this.frameTickPayload,
+      this.platform.settings.handleLoopError,
+    );
   }
 
   /**
@@ -640,11 +645,18 @@ export class Stage {
    * This method should be called after the frame has been rendered to emit
    * all events that were queued during the frame.
    *
+   * App-facing (`fpsUpdate`, `quadsUpdate`, `criticalCleanup*`): each event
+   * is fanned out via `emitSafe`, so one bad listener neither blocks the
+   * remaining listeners nor the remaining queued events, and never kills rAF.
+   *
    * See {@link queueFrameEvent} for more information.
    */
   flushFrameEvents() {
+    // No `try` here by design: `emitSafe` never throws, so iteration always
+    // reaches every queued event and the queue is always drained.
+    const onError = this.platform.settings.handleLoopError;
     for (const [name, data] of this.frameEventQueue) {
-      this.eventBus.emit(name, data);
+      this.eventBus.emitSafe(name, data, onError);
     }
     this.frameEventQueue = [];
   }

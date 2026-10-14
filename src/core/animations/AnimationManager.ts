@@ -21,6 +21,7 @@ import type { CoreNode, CoreNodeAnimateProps } from '../CoreNode.js';
 import { CoreAnimation, type AnimationSettings } from './CoreAnimation.js';
 import { CoreAnimationController } from './CoreAnimationController.js';
 import type { IAnimationController } from '../../common/IAnimationController.js';
+import type { LoopErrorHandler } from '../../common/loopError.js';
 import type { Stage } from '../Stage.js';
 
 export class AnimationManager {
@@ -41,6 +42,18 @@ export class AnimationManager {
 
   constructor(stage: Stage) {
     this.stage = stage;
+  }
+
+  /**
+   * Error handler for app callbacks fired from the animation update path.
+   *
+   * @remarks
+   * Read live from `platform.settings` (not cached) so late-assigned
+   * handlers are honored. Returns `undefined` when no handler is set, in
+   * which case `emitSafe`/`reportLoopError` fall back to `console.error`.
+   */
+  getLoopErrorHandler(): LoopErrorHandler | undefined {
+    return this.stage?.platform?.settings?.handleLoopError;
   }
 
   registerAnimation(animation: CoreAnimation) {
@@ -72,6 +85,9 @@ export class AnimationManager {
     // Iterate backwards. With activeIndex tracking, if a sibling stop() during
     // a completion event swap-removes an already-visited element into index i,
     // we check activeIndex >= 0 before updating to avoid double-processing.
+    // Intentionally `try`-free: CoreAnimation.update() contains all app entry
+    // points (easing fn, finished/tick/animating emits) via emitSafe, so a bad
+    // callback can't propagate here to kill sibling animations or the rAF loop.
     for (let i = animations.length - 1; i >= 0; i--) {
       const anim = animations[i]!;
       if (anim.activeIndex >= 0) {

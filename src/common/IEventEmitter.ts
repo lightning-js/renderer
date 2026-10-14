@@ -25,4 +25,9 @@ export interface IEventEmitter<
     event: Extract<K, string>,
     data: Parameters<any>[1],
   ): void;
+  emitSafe?<K extends keyof T>(
+    event: Extract<K, string>,
+    data?: Parameters<any>[1],
+    onError?: (error: unknown) => void,
+  ): void;
 }

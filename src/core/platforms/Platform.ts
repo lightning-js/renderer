@@ -41,6 +41,24 @@ export interface PlatformSettings {
    * Optional provided canvas element to use for rendering. If not provided, the platform will create its own canvas element.
    */
   canvas?: HTMLCanvasElement | null;
+
+  /**
+   * Request Animation Frame Error Callback
+   *
+   * @remarks
+   * Invoked when application code called from the render loop throws
+   * (animation callbacks, `frameTick` / `idle` / `active` / `fpsUpdate` /
+   * `quadsUpdate` / `criticalCleanup*` listeners, custom easing functions).
+   * The loop survives the error and keeps scheduling frames; this callback
+   * is the app's hook to log/report it. Never rethrown.
+   *
+   * Called in all environments. Without it, errors fall back to
+   * `console.error` in development builds and are swallowed silently in
+   * production — so wire this up for prod telemetry.
+   *
+   * @param error The error that was thrown
+   */
+  handleLoopError?: (error: unknown) => void;
 }
 
 export abstract class Platform {
@@ -55,6 +73,7 @@ export abstract class Platform {
     this.settings = {
       numImageWorkers: settings.numImageWorkers ?? 2,
       forceWebGL2: settings.forceWebGL2 ?? false,
+      handleLoopError: settings.handleLoopError,
     };
 
     // If a canvas was provided in the settings, use it. Otherwise, create a new one.
