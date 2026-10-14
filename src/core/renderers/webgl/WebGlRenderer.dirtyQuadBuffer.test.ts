@@ -54,7 +54,7 @@ const makeTexture = (): Texture =>
     setRenderableOwner: vi.fn(),
     retryCount: 0,
     maxRetryCount: 0,
-  } as unknown as Texture);
+  }) as unknown as Texture;
 
 interface GlwMock {
   arrayBufferData: ReturnType<typeof vi.fn>;
@@ -136,6 +136,7 @@ const makeRenderer = (
   const scratch = new Float32Array(20);
   (renderer as any)._quadScratchBuffer = scratch.buffer;
   (renderer as any)._quadScratchF = scratch;
+  (renderer as any)._quadScratchU = new Uint32Array(scratch.buffer);
 
   // Shared SDF text buffers (unused by these tests; sized so the upload paths
   // early-return). Same mock style as `quadBufferCollection` above.
@@ -371,11 +372,35 @@ describe('WebGlRenderer dirty quad buffer — render() upload decision', () => {
     renderer.render();
 
     const [, , data] = glw.arrayBufferSubData.mock.calls[0]!;
-    expect(data).toBe((renderer as any)._quadScratchF);
-    // The scratch holds the slot's fresh data.
-    expect((data as Float32Array)[0]).toBe(
-      renderer.fQuadBuffer[b.quadBufferIndex],
+    expect((data as Uint32Array).buffer).toBe(
+      (renderer as any)._quadScratchBuffer,
     );
+    // The scratch holds the slot's fresh data.
+    expect((data as Uint32Array)[0]).toBe(
+      renderer.uiQuadBuffer[b.quadBufferIndex],
+    );
+  });
+
+  it('uploads packed colours bit-exactly (NaN bit patterns)', () => {
+    renderer.reset();
+    renderer.addQuad(a);
+    renderer.addQuad(b);
+    renderer.addQuad(c);
+    renderer.render();
+
+    const slot = b.quadBufferIndex;
+    const colourBits = 0xffc00001; // opaque, non-canonical NaN pattern
+    renderer.uiQuadBuffer[slot + 4] = colourBits;
+    b.isQuadDirty = true;
+    renderer.reset();
+    renderer.addQuad(a);
+    renderer.addQuad(b);
+    renderer.addQuad(c);
+    renderer.uiQuadBuffer[slot + 4] = colourBits;
+    renderer.render();
+
+    const [, , data] = glw.arrayBufferSubData.mock.calls[0]!;
+    expect((data as Uint32Array)[4]).toBe(colourBits);
   });
 });
 

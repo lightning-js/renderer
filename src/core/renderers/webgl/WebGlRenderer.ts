@@ -201,6 +201,10 @@ export class WebGlRenderer extends CoreRenderer {
   private readonly _quadScratchF: Float32Array = new Float32Array(
     this._quadScratchBuffer,
   );
+  // Packed colours are NaN bit patterns; only integer views preserve them.
+  private readonly _quadScratchU: Uint32Array = new Uint32Array(
+    this._quadScratchBuffer,
+  );
 
   /**
    * Whether surgical dirty-quad repaints (PR #861) are enabled.
@@ -1278,14 +1282,14 @@ export class WebGlRenderer extends CoreRenderer {
     const nodes = this.stage.renderListNodes;
     // Surgical: copy each dirty slot into the preallocated scratch buffer
     // and upload only those 20 floats. No per-node allocation.
-    const scratch = this._quadScratchF;
-    const f = this.fQuadBuffer;
+    const scratch = this._quadScratchU;
+    const u = this.uiQuadBuffer;
     for (let i = 0; i < this.stage.renderListLen; i++) {
       const node = nodes[i]!;
       if (node.isQuadDirty === true && node.quadBufferIndex !== -1) {
         const slot = node.quadBufferIndex;
         for (let j = 0; j < 20; j++) {
-          scratch[j] = f[slot + j]!;
+          scratch[j] = u[slot + j]!;
         }
         glw.arrayBufferSubData(buffer, slot * BYTES, scratch);
         node.isQuadDirty = false;
