@@ -48,6 +48,60 @@ describe('CoreTextureManager context loss', () => {
 
     stage.contextState = 'running';
     manager.restoreContext();
+    // Image restores stay queued for the throttled drain instead of firing
+    // all decodes at once.
+    expect(texture.load).not.toHaveBeenCalled();
+    expect(manager.hasUpdates()).toBe(true);
+    await manager.processSome(1000, 10);
     expect(texture.load).toHaveBeenCalledOnce();
+    expect(manager.hasUpdates()).toBe(false);
+  });
+
+  it('reloads non-image restores immediately without waiting for the drain', () => {
+    const stage = {
+      contextState: 'running',
+      platform: { getTimeStamp: () => 0 },
+      defaultTexture: null,
+    } as unknown as Stage;
+    const manager = new CoreTextureManager(stage, {
+      maxRetryCount: 5,
+      createImageBitmapSupport: 'full',
+    });
+    const texture = {
+      type: TextureType.color,
+      state: 'freed',
+      invalidateContext: vi.fn(),
+      load: vi.fn(),
+    } as unknown as Texture;
+    manager.trackContextTexture(texture);
+    manager.invalidateContext();
+    manager.restoreContext();
+    expect(texture.load).toHaveBeenCalledOnce();
+    expect(manager.hasUpdates()).toBe(false);
+  });
+
+  it('drops queued restores on destroy so dead textures can be collected', async () => {
+    const stage = {
+      contextState: 'lost',
+      platform: { getTimeStamp: () => 0 },
+      defaultTexture: null,
+    } as unknown as Stage;
+    const manager = new CoreTextureManager(stage, {
+      maxRetryCount: 5,
+      createImageBitmapSupport: 'full',
+    });
+    const texture = {
+      type: TextureType.image,
+      state: 'freed',
+      invalidateContext: vi.fn(),
+      load: vi.fn(),
+    } as unknown as Texture;
+    manager.trackContextTexture(texture);
+    manager.invalidateContext();
+    manager.destroy();
+    expect(manager.hasUpdates()).toBe(false);
+    stage.contextState = 'running';
+    await manager.processSome(1000, 10);
+    expect(texture.load).not.toHaveBeenCalled();
   });
 });

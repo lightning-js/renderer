@@ -93,6 +93,13 @@ export interface RendererMainContextRestoredEvent {
 }
 
 // Emitted when GPU reinitialisation fails; rendering remains suspended.
+//
+// Two cases share this event:
+// - Restoration timeout (non-terminal): the browser has not fired
+//   `webglcontextrestored` within `contextRestoreTimeout`. The stage stays
+//   `lost` and a late browser restoration is still accepted.
+// - Reinitialisation / recovery-frame failure (terminal): the stage moves to
+//   `failed` and stays suspended until the next `webglcontextrestored`.
 export interface RendererMainContextRestoreFailedEvent {
   generation: number;
   error: unknown;

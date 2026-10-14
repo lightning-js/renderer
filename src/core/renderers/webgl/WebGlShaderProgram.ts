@@ -164,10 +164,27 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     );
 
     if (!fragmentShader) {
+      // createShader already deleted the failed fragment shader; the
+      // compiled vertex shader would otherwise leak on this path.
+      glw.deleteShader(vertexShader);
       throw new Error('fragment shader creation failed');
     }
 
-    const program = createProgram(glw, vertexShader, fragmentShader);
+    let program: WebGLProgram;
+    try {
+      program = createProgram(glw, vertexShader, fragmentShader);
+    } catch (error) {
+      // createProgram deletes the program on link failure but not the
+      // attached shaders — delete both so repeated restore attempts cannot
+      // accumulate shader objects on low-end devices.
+      glw.deleteShader(vertexShader);
+      glw.deleteShader(fragmentShader);
+      throw error;
+    }
+    // Shaders are referenced by the linked program; flag them for deletion
+    // so the driver can free the source copies.
+    glw.deleteShader(vertexShader);
+    glw.deleteShader(fragmentShader);
     this.program = program;
     this.attributeLocations = glw.getAttributeLocations(program);
 

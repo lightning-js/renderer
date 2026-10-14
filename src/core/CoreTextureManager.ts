@@ -235,15 +235,20 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   restoreContext(): void {
-    // Restore GPU-backed and pending resources, including explicit preloads
-    // without renderable owners. Previously evicted textures load on demand.
+    // Re-queue GPU-backed and pending resources through the normal throttled
+    // path instead of firing all decodes at once: image restores stay queued
+    // and drain via processSome() inside the per-frame budget (low-end
+    // safe), while cheap non-image textures and the default texture reload
+    // immediately. Explicit preloads without renderable owners are included;
+    // previously evicted textures load on demand.
     const defaultTracked =
       this.stage.defaultTexture !== null &&
       this.restoreTextures.has(this.stage.defaultTexture);
     for (const texture of this.restoreTextures) {
+      if (texture.type === TextureType.image) continue;
+      this.restoreTextures.delete(texture);
       texture.load();
     }
-    this.restoreTextures.clear();
     if (defaultTracked === false) this.stage.defaultTexture?.load();
   }
 
@@ -348,6 +353,9 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
+    // A queued restore is now being handled (possibly demand-loaded before
+    // the throttled drain reached it) — remove it so it isn't loaded twice.
+    this.restoreTextures.delete(texture);
     this.pendingContextLoads.add(texture);
 
     texture.setState('loading');
@@ -472,6 +480,22 @@ export class CoreTextureManager extends EventEmitter {
     const startTime = platform.getTimeStamp();
     let count = 0;
 
+    // Drain queued context restores first within the same budget: each
+    // load() kicks off an async decode and enqueues the GPU upload below,
+    // so restores pipeline through the throttle instead of storming.
+    // load() re-queues itself if the context became unavailable.
+    while (
+      this.restoreTextures.size > 0 &&
+      count < maxCount &&
+      platform.getTimeStamp() - startTime < maxProcessingTime
+    ) {
+      const texture = this.restoreTextures.values().next().value;
+      if (texture === undefined) break;
+      this.restoreTextures.delete(texture);
+      texture.load();
+      count++;
+    }
+
     // Process uploads - await each upload to prevent GPU overload
     while (
       this.uploadTextureQueue.size > 0 &&
@@ -494,7 +518,7 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   public hasUpdates(): boolean {
-    return this.uploadTextureQueue.size > 0;
+    return this.uploadTextureQueue.size > 0 || this.restoreTextures.size > 0;
   }
 
   /**
@@ -546,11 +570,18 @@ export class CoreTextureManager extends EventEmitter {
    * Destroy the CoreTextureManager and release all internal references.
    *
    * @remarks
-   * Clears the upload queue and key/inverse-key caches so that queued
-   * textures can be garbage-collected after a renderer teardown.
+   * Clears the upload queue, context-loss tracking sets, and key/inverse-key
+   * caches so that queued textures can be garbage-collected after a renderer
+   * teardown — including a teardown while the context is lost with pending
+   * restores. Bumps the context generation so in-flight decodes abort
+   * instead of uploading after destroy.
    */
   destroy(): void {
+    this.contextGeneration++;
     this.uploadTextureQueue.clear();
+    this.contextTextures.clear();
+    this.restoreTextures.clear();
+    this.pendingContextLoads.clear();
     this.keyCache.clear();
   }
 
