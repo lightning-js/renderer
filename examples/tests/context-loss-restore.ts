@@ -49,7 +49,10 @@ function waitForEvent(
   });
 }
 
-function waitForNodeLoaded(imgNode: INode, timeoutMs: number) {
+function waitForNodeLoaded(
+  imgNode: ReturnType<RendererMain['createNode']>,
+  timeoutMs: number,
+) {
   return new Promise<Dimensions>((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error('Timed out waiting for texture load'));
@@ -75,11 +78,32 @@ function waitFrames(count: number) {
   });
 }
 
-export async function automation(settings: ExampleSettings) {
-  const { renderer, testRoot } = settings;
+function getLoseContextExtension(renderer: RendererMain): LoseContextExtension {
+  const canvas = renderer.canvas;
+  const gl =
+    (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ??
+    (canvas.getContext('webgl') as WebGLRenderingContext | null) ??
+    (canvas.getContext(
+      'experimental-webgl' as 'webgl',
+    ) as WebGLRenderingContext | null);
+  if (gl === null) {
+    throw new Error('Could not obtain canvas WebGL context');
+  }
+  const loseExt = gl.getExtension(
+    'WEBGL_lose_context',
+  ) as unknown as LoseContextExtension | null;
+  if (loseExt === null) {
+    throw new Error('WEBGL_lose_context extension unavailable');
+  }
+  return loseExt;
+}
 
-  // Scene covers both restore paths: an image texture (async decode +
-  // throttled upload) and solid color blocks (immediate reload).
+// Scene covers both restore paths: an image texture (async decode +
+// throttled upload) and solid color blocks (immediate reload).
+function buildScene(
+  renderer: RendererMain,
+  testRoot: INode,
+): ReturnType<RendererMain['createNode']> {
   const imgNode = renderer.createNode({
     x: 200,
     y: 100,
@@ -102,6 +126,12 @@ export async function automation(settings: ExampleSettings) {
     color: 0x00ff00ff,
     parent: testRoot,
   });
+  return imgNode;
+}
+
+export async function automation(settings: ExampleSettings) {
+  const { renderer, testRoot } = settings;
+  const imgNode = buildScene(renderer, testRoot);
 
   try {
     const dimensions = await waitForNodeLoaded(imgNode, 10000);
@@ -110,22 +140,7 @@ export async function automation(settings: ExampleSettings) {
 
     await settings.snapshot({ name: 'healthy' });
 
-    const canvas = renderer.canvas;
-    const gl =
-      (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ??
-      (canvas.getContext('webgl') as WebGLRenderingContext | null) ??
-      (canvas.getContext(
-        'experimental-webgl' as 'webgl',
-      ) as WebGLRenderingContext | null);
-    if (gl === null) {
-      throw new Error('Could not obtain canvas WebGL context');
-    }
-    const loseExt = gl.getExtension(
-      'WEBGL_lose_context',
-    ) as unknown as LoseContextExtension | null;
-    if (loseExt === null) {
-      throw new Error('WEBGL_lose_context extension unavailable');
-    }
+    const loseExt = getLoseContextExtension(renderer);
 
     const lost = waitForEvent(renderer, 'contextLost', 5000);
     loseExt.loseContext();
@@ -161,6 +176,64 @@ export async function automation(settings: ExampleSettings) {
   await settings.snapshot({ name: 'restored' });
 }
 
-export default async function test() {
-  console.log('ready!');
+export default async function test({ renderer, testRoot }: ExampleSettings) {
+  const imgNode = buildScene(renderer, testRoot);
+  try {
+    const dimensions = await waitForNodeLoaded(imgNode, 10000);
+    imgNode.w = dimensions.w;
+    imgNode.h = dimensions.h;
+  } catch (e: unknown) {
+    console.error(
+      `[context-loss-restore] initial load: ${(e as Error).message}`,
+    );
+  }
+
+  // Manual mode: click the canvas to toggle context loss / restore, with
+  // live status text. Lets you inspect DevTools and frame behavior locally.
+  const status = renderer.createTextNode({
+    fontFamily: 'Ubuntu',
+    fontSize: 30,
+    x: 200,
+    y: 650,
+    parent: testRoot,
+    zIndex: 1000,
+  });
+  const setStatus = (text: string, color: number) => {
+    status.text = text;
+    status.color = color;
+  };
+
+  let loseExt: LoseContextExtension | null = null;
+  try {
+    loseExt = getLoseContextExtension(renderer);
+  } catch (e: unknown) {
+    setStatus(`No context-loss extension: ${(e as Error).message}`, 0xff0000ff);
+    return;
+  }
+
+  let lost = false;
+  renderer.on('contextLost', () => {
+    lost = true;
+    setStatus('CONTEXT LOST — click canvas to restore', 0xff0000ff);
+  });
+  renderer.on('contextRestored', () => {
+    lost = false;
+    setStatus('Context restored — click canvas to lose it again', 0x00ff00ff);
+  });
+  renderer.on('contextRestoreFailed', () => {
+    setStatus('Restore FAILED — click canvas to retry', 0xff00ffff);
+  });
+
+  setStatus('Context running — click canvas to simulate loss', 0xffffffff);
+  renderer.canvas.addEventListener('click', () => {
+    if (loseExt === null) {
+      return;
+    }
+    if (lost === false) {
+      loseExt.loseContext();
+    } else {
+      loseExt.restoreContext();
+    }
+  });
+  console.log('ready! Click the canvas to toggle WebGL context loss.');
 }
