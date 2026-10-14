@@ -7,6 +7,7 @@ function makeStage() {
   const renderer = {
     mode: 'webgl',
     restoreContext: vi.fn(),
+    destroy: vi.fn(),
     rttNodes: [{ hasRTTupdates: false }],
   };
   Object.assign(stage, {
@@ -15,16 +16,22 @@ function makeStage() {
     contextGeneration: 0,
     contextLostAt: 0,
     pendingRestoreEvent: false,
+    resolveReady: vi.fn(),
     platform: {
       getTimeStamp: () => 200,
       glw: { isContextLost: vi.fn(() => true) },
       suspendFrameLoop: vi.fn(),
+      stopLoop: vi.fn(),
     },
     renderer,
-    txManager: { invalidateContext: vi.fn(), restoreContext: vi.fn() },
-    txMemManager: { invalidateContext: vi.fn() },
+    txManager: {
+      invalidateContext: vi.fn(),
+      restoreContext: vi.fn(),
+      destroy: vi.fn(),
+    },
+    txMemManager: { invalidateContext: vi.fn(), destroy: vi.fn() },
     shManager: { restoreContext: vi.fn() },
-    root: { setUpdateType: vi.fn() },
+    root: { setUpdateType: vi.fn(), destroy: vi.fn() },
     eventBus: {
       emit: (name: string, data: unknown) => events.push([name, data]),
     },
@@ -152,6 +159,23 @@ describe('WebGL context recovery', () => {
     }
   });
 
+  it('aborts restoration when a second loss lands mid-restore', () => {
+    const { stage, renderer, events } = makeStage();
+    stage.onContextLost();
+    renderer.restoreContext.mockImplementationOnce(() => {
+      // GL work during re-init detects the context is gone again.
+      stage.onContextLost();
+    });
+    expect(stage.onContextRestored()).toBe(false);
+    expect(stage.contextState).toBe('lost');
+    expect(events.map(([event]) => event)).toEqual([
+      'contextLost',
+      'contextLost',
+    ]);
+    expect(events[1]?.[1]).toEqual({ generation: 2 });
+    expect(stage.txManager.restoreContext).not.toHaveBeenCalled();
+  });
+
   it('reports a failed first recovery frame and gates subsequent draws', () => {
     const { stage, events } = makeStage();
     stage.onContextLost();
@@ -163,5 +187,20 @@ describe('WebGL context recovery', () => {
       'contextRestoreFailed',
     ]);
     expect(stage.onRecoveryFrameFailed(new Error('later'))).toBe(false);
+  });
+
+  it('tears down while lost without accepting further loss or restore', () => {
+    const { stage, events } = makeStage();
+    stage.onContextLost();
+    stage.destroy();
+    expect(stage.contextState).toBe('destroyed');
+    expect(stage.txManager.destroy).toHaveBeenCalledOnce();
+    expect(stage.platform.stopLoop).toHaveBeenCalledOnce();
+    const emitted = events.length;
+    stage.onContextLost();
+    expect(stage.contextState).toBe('destroyed');
+    expect(events.length).toBe(emitted);
+    expect(stage.onContextRestored()).toBe(false);
+    expect(stage.contextState).toBe('destroyed');
   });
 });
