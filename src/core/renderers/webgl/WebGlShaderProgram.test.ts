@@ -195,3 +195,66 @@ describe('WebGlRenderer.canReuseRenderOp', () => {
     expect(renderer.reuseRenderOp(node)).toBe(true);
   });
 });
+
+describe('WebGlShaderProgram context restore', () => {
+  const makeGlw = () => ({
+    isWebGl2: () => false,
+    getExtension: vi.fn(() => null),
+    VERTEX_SHADER: 1,
+    FRAGMENT_SHADER: 2,
+    COMPILE_STATUS: 3,
+    LINK_STATUS: 4,
+    createShader: vi.fn((type: number) => ({ shaderType: type })),
+    shaderSource: vi.fn(),
+    compileShader: vi.fn(),
+    getShaderParameter: vi.fn(() => true),
+    getShaderInfoLog: vi.fn(() => ''),
+    createProgram: vi.fn(() => ({ linked: true })),
+    attachShader: vi.fn(),
+    linkProgram: vi.fn(),
+    getProgramParameter: vi.fn(() => true),
+    getProgramInfoLog: vi.fn(() => ''),
+    getAttributeLocations: vi.fn(() => []),
+    getUniformLocations: vi.fn(() => ({})),
+    getUniformLocation: vi.fn(() => null),
+    deleteShader: vi.fn(),
+    deleteProgram: vi.fn(),
+  });
+  const config = { vertex: 'void main() {}', fragment: 'void main() {}' };
+
+  it('recompiles against the new wrapper while keeping node references stable', () => {
+    const renderer = { glw: makeGlw() } as unknown as WebGlRenderer;
+    const program = new WebGlShaderProgram(renderer, config, {});
+    const oldNative = (program as unknown as { program: unknown }).program;
+
+    // Post-restore wrapper replacing platform.glw in renderer.restoreContext().
+    const restoredGlw = makeGlw();
+    (renderer as unknown as { glw: unknown }).glw = restoredGlw;
+    program.restoreContext();
+
+    expect(restoredGlw.createProgram).toHaveBeenCalledOnce();
+    expect(program.isDestroyed).toBe(false);
+    expect((program as unknown as { program: unknown }).program).not.toBe(
+      oldNative,
+    );
+  });
+
+  it('deletes the vertex shader when fragment compilation fails on restore', () => {
+    const renderer = { glw: makeGlw() } as unknown as WebGlRenderer;
+    const program = new WebGlShaderProgram(renderer, config, {});
+    const oldNative = (program as unknown as { program: unknown }).program;
+
+    const failingGlw = makeGlw();
+    failingGlw.getShaderParameter
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    (renderer as unknown as { glw: unknown }).glw = failingGlw;
+    expect(() => program.restoreContext()).toThrow();
+    expect(failingGlw.deleteShader).toHaveBeenCalledWith({ shaderType: 1 });
+    // A failed recompile leaves the old object untouched for the next attempt.
+    expect((program as unknown as { program: unknown }).program).toBe(
+      oldNative,
+    );
+    expect(program.isDestroyed).toBe(false);
+  });
+});

@@ -111,6 +111,15 @@ export abstract class Platform {
   abstract stopLoop(): void;
 
   /**
+   * Suspend any scheduled frames without detaching context listeners.
+   *
+   * Called by Stage when GPU work becomes illegal (context loss / destroy)
+   * so that GL-error detection paths (which bypass canvas events) also
+   * invalidate stale rAF/timeout callbacks.
+   */
+  suspendFrameLoop?(): void;
+
+  /**
    * Fetches a resource from the network.
    * @param url - The URL of the resource to fetch.
    * @returns A promise that resolves with the response.

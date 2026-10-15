@@ -32,6 +32,8 @@ function makeStage(
   });
   const stage = Object.create(Stage.prototype) as Stage;
   Object.assign(stage, {
+    contextState: 'running',
+    contextSuspended: false,
     ready,
     resolveReady,
     firstFrameDrawn: false,
