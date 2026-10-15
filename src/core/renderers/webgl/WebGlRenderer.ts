@@ -136,7 +136,9 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
+  | WebGlNodeRenderOp
+  | StencilClipRenderOp
+  | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -197,9 +199,6 @@ export class WebGlRenderer extends CoreRenderer {
   // scenes). Mirrors the stencil scratch buffer pattern below.
   private readonly _quadScratchBuffer: ArrayBuffer = new ArrayBuffer(
     20 * Float32Array.BYTES_PER_ELEMENT,
-  );
-  private readonly _quadScratchF: Float32Array = new Float32Array(
-    this._quadScratchBuffer,
   );
   // Packed colours are NaN bit patterns; only integer views preserve them.
   private readonly _quadScratchU: Uint32Array = new Uint32Array(

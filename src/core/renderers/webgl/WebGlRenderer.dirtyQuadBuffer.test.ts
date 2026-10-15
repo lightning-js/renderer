@@ -54,7 +54,7 @@ const makeTexture = (): Texture =>
     setRenderableOwner: vi.fn(),
     retryCount: 0,
     maxRetryCount: 0,
-  }) as unknown as Texture;
+  } as unknown as Texture);
 
 interface GlwMock {
   arrayBufferData: ReturnType<typeof vi.fn>;
@@ -135,7 +135,6 @@ const makeRenderer = (
   (renderer as any).defaultTextureCoords = { x1: 0, y1: 0, x2: 1, y2: 1 };
   const scratch = new Float32Array(20);
   (renderer as any)._quadScratchBuffer = scratch.buffer;
-  (renderer as any)._quadScratchF = scratch;
   (renderer as any)._quadScratchU = new Uint32Array(scratch.buffer);
 
   // Shared SDF text buffers (unused by these tests; sized so the upload paths
@@ -372,9 +371,7 @@ describe('WebGlRenderer dirty quad buffer — render() upload decision', () => {
     renderer.render();
 
     const [, , data] = glw.arrayBufferSubData.mock.calls[0]!;
-    expect((data as Uint32Array).buffer).toBe(
-      (renderer as any)._quadScratchBuffer,
-    );
+    expect(data).toBe((renderer as any)._quadScratchU);
     // The scratch holds the slot's fresh data.
     expect((data as Uint32Array)[0]).toBe(
       renderer.uiQuadBuffer[b.quadBufferIndex],
@@ -386,16 +383,19 @@ describe('WebGlRenderer dirty quad buffer — render() upload decision', () => {
     renderer.addQuad(a);
     renderer.addQuad(b);
     renderer.addQuad(c);
-    renderer.render();
+    renderer.render(); // frame 1: full upload
 
-    const slot = b.quadBufferIndex;
-    const colourBits = 0xffc00001; // opaque, non-canonical NaN pattern
-    renderer.uiQuadBuffer[slot + 4] = colourBits;
+    // Frame 2: surgical path. AddQuad rewrites the slot's colour from node
+    // props, so poke it afterwards with an opaque, non-canonical NaN pattern;
+    // the upload must preserve the bits exactly.
     b.isQuadDirty = true;
     renderer.reset();
     renderer.addQuad(a);
     renderer.addQuad(b);
     renderer.addQuad(c);
+
+    const slot = b.quadBufferIndex;
+    const colourBits = 0xffc00001; // opaque, non-canonical NaN pattern
     renderer.uiQuadBuffer[slot + 4] = colourBits;
     renderer.render();
 
