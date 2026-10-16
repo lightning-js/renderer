@@ -232,6 +232,9 @@ const knownProperties = new Set<string>([
   'parent',
   'data',
   'text',
+  'mount',
+  'mountX',
+  'mountY',
 ]);
 
 export class Inspector {
@@ -1142,6 +1145,13 @@ export class Inspector {
   ) {
     if (this.root === null || value === undefined) {
       return;
+    }
+
+    if (property === 'w' || property === 'mountX' || property === 'mount') {
+      this.updateNodeProperty(div, 'x', props.x, props);
+    }
+    if (property === 'h' || property === 'mountY' || property === 'mount') {
+      this.updateNodeProperty(div, 'y', props.y, props);
     }
 
     /**
