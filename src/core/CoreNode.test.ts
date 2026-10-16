@@ -347,6 +347,79 @@ describe('CoreNode', () => {
     });
   });
 
+  describe('parent', () => {
+    it('recalculates inherited clipping', () => {
+      const root = new CoreNode(stage, defaultProps);
+      const firstParent = new CoreNode(stage, {
+        ...defaultProps,
+        parent: root,
+        clipping: true,
+        w: 200,
+        h: 200,
+      });
+      const secondParent = new CoreNode(stage, {
+        ...defaultProps,
+        parent: root,
+        clipping: true,
+        x: 10,
+        y: 10,
+        w: 100,
+        h: 100,
+      });
+      const jumpingNode = new CoreNode(stage, defaultProps);
+      const child = new CoreNode(stage, {
+        ...defaultProps,
+        parent: jumpingNode,
+      });
+
+      jumpingNode.parent = firstParent;
+      root.update(0, clippingRect);
+      expect(jumpingNode.clippingRect).toEqual(firstParent.clippingRect);
+      expect(child.clippingRect).toEqual(firstParent.clippingRect);
+
+      jumpingNode.parent = secondParent;
+      root.update(1, clippingRect);
+      expect(jumpingNode.clippingRect.valid).toBe(true);
+      expect(jumpingNode.clippingRect).toEqual(secondParent.clippingRect);
+      expect(child.clippingRect).toEqual(secondParent.clippingRect);
+
+      jumpingNode.parent = root;
+      root.update(2, clippingRect);
+      expect(jumpingNode.clippingRect.valid).toBe(false);
+      expect(child.clippingRect.valid).toBe(false);
+    });
+
+    it('recalculates world alpha', () => {
+      const root = new CoreNode(stage, { ...defaultProps, alpha: 1 });
+      const firstParent = new CoreNode(stage, {
+        ...defaultProps,
+        alpha: 0.5,
+        parent: root,
+      });
+      const secondParent = new CoreNode(stage, {
+        ...defaultProps,
+        alpha: 0.25,
+        parent: root,
+      });
+      const jumpingNode = new CoreNode(stage, { ...defaultProps, alpha: 0.5 });
+      const child = new CoreNode(stage, {
+        ...defaultProps,
+        alpha: 0.5,
+        parent: jumpingNode,
+      });
+
+      jumpingNode.parent = firstParent;
+      root.update(0, clippingRect);
+      expect(jumpingNode.worldAlpha).toBe(0.25);
+      expect(child.worldAlpha).toBe(0.125);
+
+      jumpingNode.parent = secondParent;
+      root.update(1, clippingRect);
+      expect(jumpingNode.worldAlpha).toBe(0.125);
+      expect(child.worldAlpha).toBe(0.0625);
+    });
+  });
+
   describe('autosize system', () => {
     it('should initialize with autosize disabled', () => {
       const node = new CoreNode(stage, defaultProps);
