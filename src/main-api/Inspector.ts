@@ -82,19 +82,15 @@ export interface InspectorOptions {
  */
 interface StyleResponse {
   prop: string;
-  value: string;
+  value: string | null;
 }
 const stylePropertyMap: {
   [key: string]: (
     value: string | number | boolean,
-  ) => string | StyleResponse | null;
+  ) => string | StyleResponse;
 } = {
   alpha: (v) => {
-    if (v === 1) {
-      return null;
-    }
-
-    return { prop: 'opacity', value: `${v}` };
+    return { prop: 'opacity', value: v === 1 ? null : `${v}` };
   },
   x: (x) => {
     return { prop: 'left', value: `${x}px` };
@@ -117,18 +113,10 @@ const stylePropertyMap: {
     return { prop: 'height', value: `${h}px` };
   },
   fontSize: (fs) => {
-    if (fs === 0) {
-      return null;
-    }
-
-    return { prop: 'font-size', value: `${fs}px` };
+    return { prop: 'font-size', value: fs === 0 ? null : `${fs}px` };
   },
   lineHeight: (lh) => {
-    if (lh === 0) {
-      return null;
-    }
-
-    return { prop: 'line-height', value: `${lh}px` };
+    return { prop: 'line-height', value: lh === 0 ? null : `${lh}px` };
   },
   zIndex: () => 'z-index',
   fontFamily: () => 'font-family',
@@ -140,46 +128,25 @@ const stylePropertyMap: {
   contain: () => 'contain',
   verticalAlign: () => 'vertical-align',
   clipping: (v) => {
-    if (v === false) {
-      return null;
-    }
-
-    return { prop: 'overflow', value: v ? 'hidden' : 'visible' };
+    return { prop: 'overflow', value: v === false ? null : 'hidden' };
   },
   rotation: (v) => {
-    if (v === 0) {
-      return null;
-    }
-
-    return { prop: 'transform', value: `rotate(${v}rad)` };
+    return { prop: 'transform', value: v === 0 ? null : `rotate(${v}rad)` };
   },
   scale: (v) => {
-    if (v === 1) {
-      return null;
-    }
-
-    return { prop: 'transform', value: `scale(${v})` };
+    return { prop: 'transform', value: v === 1 ? null : `scale(${v})` };
   },
   scaleX: (v) => {
-    if (v === 1) {
-      return null;
-    }
-
-    return { prop: 'transform', value: `scaleX(${v})` };
+    return { prop: 'transform', value: v === 1 ? null : `scaleX(${v})` };
   },
   scaleY: (v) => {
-    if (v === 1) {
-      return null;
-    }
-
-    return { prop: 'transform', value: `scaleY(${v})` };
+    return { prop: 'transform', value: v === 1 ? null : `scaleY(${v})` };
   },
   color: (v) => {
-    if (v === 0) {
-      return null;
-    }
-
-    return { prop: 'color', value: convertColorToRgba(v as number) };
+    return {
+      prop: 'color',
+      value: v === 0 ? null : convertColorToRgba(v as number),
+    };
   },
 };
 
@@ -1198,10 +1165,6 @@ export class Inspector {
     if (stylePropertyMap[property]) {
       const mappedStyleResponse = stylePropertyMap[property]?.(value);
 
-      if (mappedStyleResponse === null) {
-        return;
-      }
-
       if (typeof mappedStyleResponse === 'string') {
         div.style.setProperty(mappedStyleResponse, String(value));
         return;
@@ -1209,6 +1172,10 @@ export class Inspector {
 
       if (typeof mappedStyleResponse === 'object') {
         let value = mappedStyleResponse.value;
+        if (value === null) {
+          div.style.removeProperty(mappedStyleResponse.prop);
+          return;
+        }
         if (property === 'x') {
           const mount = props.mountX;
           const width = props.w;
