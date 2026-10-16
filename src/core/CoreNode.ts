@@ -2708,7 +2708,12 @@ export class CoreNode extends EventEmitter {
       newParent.addChild(this, oldParent);
     }
     //since this node has a new parent, recalc global and render bounds
-    this.setUpdateType(UpdateType.Global | UpdateType.RenderBounds);
+    this.setUpdateType(
+      UpdateType.Global |
+        UpdateType.RenderBounds |
+        UpdateType.Clipping |
+        UpdateType.WorldAlpha,
+    );
   }
 
   get rtt(): boolean {
