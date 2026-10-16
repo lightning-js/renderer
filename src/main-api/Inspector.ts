@@ -128,17 +128,17 @@ const stylePropertyMap: {
   clipping: (v) => {
     return { prop: 'overflow', value: v === false ? null : 'hidden' };
   },
-  rotation: (v) => {
-    return { prop: 'transform', value: v === 0 ? null : `rotate(${v}rad)` };
+  rotation: () => {
+    return { prop: 'transform', value: '' };
   },
-  scale: (v) => {
-    return { prop: 'transform', value: v === 1 ? null : `scale(${v})` };
+  scale: () => {
+    return { prop: 'transform', value: '' };
   },
-  scaleX: (v) => {
-    return { prop: 'transform', value: v === 1 ? null : `scaleX(${v})` };
+  scaleX: () => {
+    return { prop: 'transform', value: '' };
   },
-  scaleY: (v) => {
-    return { prop: 'transform', value: v === 1 ? null : `scaleY(${v})` };
+  scaleY: () => {
+    return { prop: 'transform', value: '' };
   },
   color: (v) => {
     return {
@@ -1188,6 +1188,22 @@ export class Inspector {
           if (mount) {
             value = `${parseInt(value) - height * mount}px`;
           }
+        } else if (mappedStyleResponse.prop === 'transform') {
+          const rotation = props.rotation;
+          const scaleX = props.scaleX;
+          const scaleY = props.scaleY;
+
+          if (rotation !== 0) {
+            value = `rotate(${rotation}rad)`;
+          }
+          if (scaleX !== 1 || scaleY !== 1) {
+            value += ` scale(${scaleX}, ${scaleY})`;
+          }
+          if (value === '') {
+            div.style.removeProperty('transform');
+            return;
+          }
+          value = value.trim();
         }
         div.style.setProperty(mappedStyleResponse.prop, value);
       }
