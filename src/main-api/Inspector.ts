@@ -85,9 +85,7 @@ interface StyleResponse {
   value: string | null;
 }
 const stylePropertyMap: {
-  [key: string]: (
-    value: string | number | boolean,
-  ) => string | StyleResponse;
+  [key: string]: (value: string | number | boolean) => string | StyleResponse;
 } = {
   alpha: (v) => {
     return { prop: 'opacity', value: v === 1 ? null : `${v}` };
