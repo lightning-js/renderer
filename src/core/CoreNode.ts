@@ -2707,7 +2707,7 @@ export class CoreNode extends EventEmitter {
     if (newParent !== null) {
       newParent.addChild(this, oldParent);
     }
-    //since this node has a new parent, recalc global and render bounds
+    // Ensure subtree no longer uses state inherited from its former ancestors.
     this.setUpdateType(
       UpdateType.Global |
         UpdateType.RenderBounds |
