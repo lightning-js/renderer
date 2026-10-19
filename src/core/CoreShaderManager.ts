@@ -237,6 +237,12 @@ export class CoreShaderManager {
     }
   }
 
+  // Shader nodes hold program references; recompile those objects in place.
+  restoreContext(): void {
+    this.attachedShader = null;
+    this.stage.renderer.restoreShaderPrograms?.();
+  }
+
   useShader(shader: CoreShaderProgram): void {
     if (this.attachedShader === shader) {
       return;

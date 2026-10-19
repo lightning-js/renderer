@@ -67,6 +67,8 @@ export abstract class CoreRenderer {
   abstract updateViewport(): void;
   abstract updateClearColor(color: number): void;
   abstract destroy(): void;
+  restoreContext?(): void;
+  restoreShaderPrograms?(): void;
   getTextureCoords?(node: CoreNode): TextureCoords | undefined;
 
   // Notify the renderer that the cached render list is about to be rebuilt

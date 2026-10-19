@@ -116,6 +116,16 @@ export interface MemoryInfo {
 export class TextureMemoryManager {
   private memUsed = 0;
   private loadedTextures: (Texture | null)[] = [];
+
+  invalidateContext(): void {
+    for (const texture of this.loadedTextures) {
+      if (texture !== null) texture.memUsed = 0;
+    }
+    this.loadedTextures = [];
+    this.memUsed = 0;
+    this.criticalCleanupRequested = false;
+    this.hasWarnedAboveCritical = false;
+  }
   private criticalThreshold: number = 124e6;
   private targetThreshold: number = 0.5;
   private cleanupInterval: number = 5000;
