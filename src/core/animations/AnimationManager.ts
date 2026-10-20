@@ -136,10 +136,8 @@ export class AnimationManager {
     animation: CoreAnimation,
     controller: CoreAnimationController,
   ): void {
-    // Do NOT clearListeners here -- init() clears lazily on next reuse.
-    // By the time releaseToPool() fires, unregisterAnimation() has already
-    // emptied all listener arrays via off(). Moving clearListeners to init()
-    // keeps this hot path (inside the rAF completion chain) as cheap as possible.
+    animation.release();
+    controller.release();
     this.animationPool.push(animation);
     this.controllerPool.push(controller);
   }
