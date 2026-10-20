@@ -185,35 +185,31 @@ export class ImageWorkerManager {
     sh: number | null,
   ): Promise<ImageResponse> {
     return new Promise((resolve, reject) => {
-      try {
-        if (this.workers) {
-          const id = this.nextId++;
-          this.messageManager[id] = [resolve, reject];
-          const nextWorkerIndex = this.getNextWorkerIndex();
+      if (this.workers) {
+        const id = this.nextId++;
+        this.messageManager[id] = [resolve, reject];
+        const nextWorkerIndex = this.getNextWorkerIndex();
 
-          if (nextWorkerIndex !== -1) {
-            const worker = this.workers[nextWorkerIndex];
-            if (worker === undefined) {
-              delete this.messageManager[id];
-              reject(new Error('No image worker available.'));
-              return;
-            }
-
-            this.workerLoad[nextWorkerIndex] =
-              (this.workerLoad[nextWorkerIndex] ?? 0) + 1;
-            worker.postMessage({
-              id,
-              src: src,
-              premultiplyAlpha,
-              sx,
-              sy,
-              sw,
-              sh,
-            });
+        if (nextWorkerIndex !== -1) {
+          const worker = this.workers[nextWorkerIndex];
+          if (worker === undefined) {
+            delete this.messageManager[id];
+            reject(new Error('No image worker available.'));
+            return;
           }
+
+          this.workerLoad[nextWorkerIndex] =
+            (this.workerLoad[nextWorkerIndex] ?? 0) + 1;
+          worker.postMessage({
+            id,
+            src: src,
+            premultiplyAlpha,
+            sx,
+            sy,
+            sw,
+            sh,
+          });
         }
-      } catch (error) {
-        reject(error);
       }
     });
   }
