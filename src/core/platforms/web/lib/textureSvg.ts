@@ -29,10 +29,10 @@ export const loadSvg = (
   url: string,
   width: number | null,
   height: number | null,
-  sx: number | null,
-  sy: number | null,
-  sw: number | null,
-  sh: number | null,
+  sx?: number | null,
+  sy?: number | null,
+  sw?: number | null,
+  sh?: number | null,
 ): Promise<ImageResponse> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
