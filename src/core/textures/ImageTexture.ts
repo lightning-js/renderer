@@ -114,7 +114,6 @@ export interface ImageTextureProps {
 
 export interface ImageResponse {
   data: ImageBitmap | ImageData | CompressedImageData | HTMLImageElement | null;
-  premultiplyAlpha: boolean | null;
   /**
    * Whether the pixel data is already premultiplied.
    *

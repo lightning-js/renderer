@@ -28,7 +28,6 @@ type MessageCallback = [
 
 interface ImageWorkerLegacyResponse {
   data: Blob;
-  premultiplyAlpha: boolean | null;
 }
 
 interface ImageWorkerMessage {
@@ -69,17 +68,14 @@ export class ImageWorkerManager {
     return data.data instanceof Blob;
   }
 
-  private createImageFromBlob(
-    blob: Blob,
-    premultiplyAlpha: boolean | null,
-  ): Promise<ImageResponse> {
+  private createImageFromBlob(blob: Blob): Promise<ImageResponse> {
     return new Promise((resolve, reject) => {
       const objectUrl = URL.createObjectURL(blob);
       const image = new Image();
 
       image.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        resolve({ data: image, premultiplyAlpha });
+        resolve({ data: image });
       };
 
       image.onerror = () => {
@@ -105,9 +101,7 @@ export class ImageWorkerManager {
       if (error) {
         reject(new Error(error));
       } else if (this.isLegacyResponse(data)) {
-        this.createImageFromBlob(data.data, data.premultiplyAlpha)
-          .then(resolve)
-          .catch(reject);
+        this.createImageFromBlob(data.data).then(resolve).catch(reject);
       } else {
         resolve(data);
       }

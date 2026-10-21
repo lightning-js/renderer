@@ -94,7 +94,7 @@ describe('ImageWorkerManager on-demand growth', () => {
         worker.onmessage?.({
           data: {
             id,
-            data: { data: {}, premultiplyAlpha: null },
+            data: { data: {} },
             error: undefined,
           },
         } as MessageEvent);

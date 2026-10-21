@@ -67,7 +67,6 @@ export function createImageWorker() {
             .then(function (data) {
               resolve({
                 data,
-                premultiplyAlpha: withAlphaChannel,
                 premultiplied: true,
               });
             })
@@ -85,7 +84,6 @@ export function createImageWorker() {
           .then(function (data) {
             resolve({
               data,
-              premultiplyAlpha: withAlphaChannel,
               premultiplied: true,
             });
           })
