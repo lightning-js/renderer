@@ -25,17 +25,9 @@
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 export function createImageWorkerNoOptions() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
-  function getImage(
-    src: string,
-    premultiplyAlpha: boolean | null,
-  ): Promise<{
+  function getImage(src: string): Promise<{
     data: ImageBitmap;
-    premultiplyAlpha: boolean | null;
-    premultiplied: boolean;
+    isPremultiplied: boolean;
   }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
@@ -54,20 +46,14 @@ export function createImageWorkerNoOptions() {
         }
 
         var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
 
         createImageBitmap(blob)
           .then(function (data) {
-            // No premultiplyAlpha option was passed so the browser decides.
-            // Mark premultiplied: false so the upload path sets
-            // UNPACK_PREMULTIPLY_ALPHA_WEBGL = true for PNG images.
+            // Without options the browser's default applies, which is
+            // straight alpha on older WPEWebKit.
             resolve({
               data,
-              premultiplyAlpha: withAlphaChannel,
-              premultiplied: false,
+              isPremultiplied: false,
             });
           })
           .catch(function (error) {
@@ -88,9 +74,8 @@ export function createImageWorkerNoOptions() {
   self.onmessage = (event) => {
     var src = event.data.src;
     var id = event.data.id;
-    var premultiplyAlpha = event.data.premultiplyAlpha;
 
-    getImage(src, premultiplyAlpha)
+    getImage(src)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);

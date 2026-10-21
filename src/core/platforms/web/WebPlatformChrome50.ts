@@ -41,7 +41,9 @@ export class WebPlatformChrome50 extends WebPlatform {
 
   override async createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    // Not supported: createImageBitmap takes no options in Chrome 50
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    premultiplyOnDecode: boolean,
     // Cropping parameters are not supported in Chrome 50
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sx: number | null,
@@ -52,20 +54,15 @@ export class WebPlatformChrome50 extends WebPlatform {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
-
     // Chrome 50 createImageBitmap signature: createImageBitmap(blob)
     // No options or cropping parameters supported
     const bitmap = await createImageBitmap(blob);
 
-    // The bitmap was created without a premultiplyAlpha option so the browser
-    // decides whether to premultiply. On older WPEWebKit the default is
-    // straight alpha, so we mark premultiplied: false here to signal
-    // that UNPACK_PREMULTIPLY_ALPHA_WEBGL should be set at upload time.
+    // Without options the browser's default applies, which is straight
+    // alpha on older WPEWebKit.
     return {
       data: bitmap,
-      premultiplyAlpha: hasAlphaChannel,
-      premultiplied: false,
+      isPremultiplied: false,
     };
   }
 }

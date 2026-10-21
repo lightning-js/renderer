@@ -84,7 +84,7 @@ export class ColorTexture extends Texture {
 
     return {
       data: pixelData,
-      premultiplyAlpha: true,
+      premultiplyOnUpload: true,
     };
   }
 

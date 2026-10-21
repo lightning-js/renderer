@@ -392,45 +392,32 @@ export class WebPlatform extends Platform {
 
   override async createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     sx: number | null,
     sy: number | null,
     sw: number | null,
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
-
-    if (sw !== null && sh !== null) {
-      // createImageBitmap with crop
-      const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
-        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
-        colorSpaceConversion: 'none',
-        imageOrientation: 'none',
-      });
-      return {
-        data: bitmap,
-        premultiplyAlpha: hasAlphaChannel,
-        premultiplied: true,
-      };
-    }
-
-    // default createImageBitmap without crop but with options
-    const bitmap = await createImageBitmap(blob, {
-      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+    const options: ImageBitmapOptions = {
+      premultiplyAlpha: premultiplyOnDecode ? 'premultiply' : 'none',
       colorSpaceConversion: 'none',
       imageOrientation: 'none',
-    });
+    };
+
+    const bitmap =
+      sw !== null && sh !== null
+        ? await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, options)
+        : await createImageBitmap(blob, options);
 
     return {
       data: bitmap,
-      premultiplyAlpha: hasAlphaChannel,
-      premultiplied: true,
+      isPremultiplied: premultiplyOnDecode,
     };
   }
 
   override async loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -447,7 +434,7 @@ export class WebPlatform extends Platform {
     if (this.imageWorkerManager !== null && isBase64 === false) {
       return this.imageWorkerManager.getImage(
         absoluteSrc,
-        premultiplyAlpha,
+        premultiplyOnDecode,
         x,
         y,
         width,
@@ -463,7 +450,7 @@ export class WebPlatform extends Platform {
       blob = await this.fetch(absoluteSrc);
     }
 
-    return this.createImage(blob, premultiplyAlpha, x, y, width, height);
+    return this.createImage(blob, premultiplyOnDecode, x, y, width, height);
   }
 
   override async loadSvg(

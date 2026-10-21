@@ -158,7 +158,7 @@ const loadASTC = async function (view: DataView): Promise<ImageResponse> {
       h: sizeY,
       type: 'ASTC',
     },
-    premultiplyAlpha: false,
+    isPremultiplied: false,
   };
 };
 
@@ -233,7 +233,7 @@ const loadKTX = async function (view: DataView): Promise<ImageResponse> {
       h: height,
       type: 'KTX',
     },
-    premultiplyAlpha: false,
+    isPremultiplied: false,
   };
 };
 
@@ -325,7 +325,7 @@ const loadPVR = async function (view: DataView): Promise<ImageResponse> {
       h: height,
       type: 'PVR',
     },
-    premultiplyAlpha: false,
+    isPremultiplied: false,
   };
 };
 

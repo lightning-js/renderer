@@ -112,25 +112,28 @@ export interface ImageTextureProps {
   maxRetryCount?: number;
 }
 
+export type ResolvedImageTextureProps = Required<ImageTextureProps> & {
+  premultiplyAlpha: boolean;
+};
+
 export interface ImageResponse {
-  data: ImageBitmap | ImageData | CompressedImageData | HTMLImageElement | null;
-  premultiplyAlpha: boolean | null;
+  data:
+    | ImageBitmap
+    | ImageData
+    | HTMLCanvasElement
+    | CompressedImageData
+    | HTMLImageElement
+    | null;
   /**
-   * Whether the pixel data is already premultiplied.
+   * Whether the decoded pixel data is already premultiplied.
    *
    * @remarks
-   * Only meaningful for `ImageBitmap` responses. Platforms that invoke
-   * `createImageBitmap` with an explicit `premultiplyAlpha: 'premultiply'`
-   * option set this to `true`. Platforms that call `createImageBitmap`
-   * without options (e.g. `WebPlatformChrome50`) set this to `false` because
-   * the browser's default alpha handling is implementation-defined and may
-   * return straight-alpha data on older WPEWebKit.
-   *
-   * `HTMLImageElement`-based platforms (e.g. `WebPlatformLegacy`) leave this
-   * `undefined`; it is irrelevant for them because straight-alpha is handled
-   * via `UNPACK_PREMULTIPLY_ALPHA_WEBGL = true` at upload time.
+   * Must describe the data actually produced, not the decode request: a
+   * platform that cannot honour `premultiplyOnDecode` (e.g.
+   * `WebPlatformChrome50`, `HTMLImageElement` decoding) reports `false`, and
+   * the alpha is then premultiplied at upload instead.
    */
-  premultiplied?: boolean;
+  isPremultiplied: boolean;
 }
 
 /**
@@ -150,13 +153,10 @@ export interface ImageResponse {
 export class ImageTexture extends Texture {
   private platform: Platform;
 
-  public props: Required<ImageTextureProps>;
+  public props: ResolvedImageTextureProps;
   public override type: TextureType = TextureType.image;
 
-  constructor(
-    txManager: CoreTextureManager,
-    props: Required<ImageTextureProps>,
-  ) {
+  constructor(txManager: CoreTextureManager, props: ResolvedImageTextureProps) {
     super(txManager);
 
     this.platform = txManager.platform;
@@ -184,7 +184,7 @@ export class ImageTexture extends Texture {
       }
     }
 
-    let resp: TextureData;
+    let resp: ImageResponse;
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
@@ -215,36 +215,37 @@ export class ImageTexture extends Texture {
 
     return {
       data: resp.data,
-      premultiplyAlpha: this.props.premultiplyAlpha ?? true,
-      premultiplied: resp.premultiplied,
+      premultiplyOnUpload: this.props.premultiplyAlpha && !resp.isPremultiplied,
     };
   }
 
-  determineImageTypeAndLoadImage() {
-    const { src, premultiplyAlpha, type, w, h, sx, sy, sw, sh } = this.props;
+  async determineImageTypeAndLoadImage(): Promise<ImageResponse> {
+    const { src, type, w, h, sx, sy, sw, sh } = this.props;
     const platform = this.platform;
-    const premultiply = premultiplyAlpha ?? true;
+    const premultiplyOnDecode = this.props.premultiplyAlpha;
 
     if (src === null) {
-      return {
-        data: null,
-      };
+      return { data: null, isPremultiplied: false };
     }
 
     if (typeof src !== 'string') {
       if (src instanceof Blob) {
-        return platform.createImage(src, premultiply, sx, sy, sw, sh);
+        return platform.createImage(src, premultiplyOnDecode, sx, sy, sw, sh);
       }
 
       // ImageData, ImageBitmap, or HTMLCanvasElement
+      const data = typeof src === 'function' ? src() : src;
       return {
-        data: typeof src === 'function' ? src() : src,
-        premultiplyAlpha,
+        data,
+        // ImageBitmap does not expose its alpha format; keep the existing
+        // assumption that bitmaps are premultiplied.
+        isPremultiplied:
+          typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap,
       };
     }
 
     if (type === 'regular') {
-      return platform.loadImage(src, premultiply, sx, sy, sw, sh);
+      return platform.loadImage(src, premultiplyOnDecode, sx, sy, sw, sh);
     }
 
     if (type === 'svg') {
@@ -264,7 +265,7 @@ export class ImageTexture extends Texture {
     }
 
     // default
-    return platform.loadImage(src, premultiply, sx, sy, sw, sh);
+    return platform.loadImage(src, premultiplyOnDecode, sx, sy, sw, sh);
   }
 
   /**
@@ -296,10 +297,10 @@ export class ImageTexture extends Texture {
 
   static override resolveDefaults(
     props: ImageTextureProps,
-  ): Required<ImageTextureProps> {
+  ): ResolvedImageTextureProps {
     return {
       src: props.src ?? '',
-      premultiplyAlpha: props.premultiplyAlpha ?? true, // null,
+      premultiplyAlpha: props.premultiplyAlpha ?? true,
       key: props.key ?? null,
       type: props.type ?? null,
       w: props.w ?? null,

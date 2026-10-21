@@ -227,34 +227,10 @@ export class WebGlCtxTexture extends CoreContextTexture {
       w = tdata.width;
       h = tdata.height;
       glw.bindTexture(this._nativeCtxTexture);
-
-      // Determine whether the WebGL driver should premultiply alpha at upload
-      // time (UNPACK_PREMULTIPLY_ALPHA_WEBGL).
-      //
-      // • ImageBitmap — the spec allows implementations to ignore UNPACK for
-      //   ImageBitmap sources, so premultiplication must happen inside
-      //   createImageBitmap itself.  We use textureData.premultiplied
-      //   to know whether the platform did that:
-      //     - true  → bitmap is already premultiplied → UNPACK = false (no-op)
-      //     - false → bitmap has straight alpha (e.g. WebPlatformChrome50 on
-      //               older WPEWebKit) → UNPACK = !!premultiplyAlpha so the
-      //               driver premultiplies during the CPU→GPU copy
-      //     - undefined → legacy path, assume premultiplied (UNPACK = false)
-      //
-      // • HTMLImageElement / ImageData — the spec guarantees that
-      //   UNPACK_PREMULTIPLY_ALPHA_WEBGL is honoured for these types, so we
-      //   delegate to the premultiplyAlpha flag as before.
-      let unpackPremultiply: boolean;
-      if (isImageBitmap) {
-        const premultiplied = textureData.premultiplied ?? true;
-        unpackPremultiply = premultiplied
-          ? false
-          : !!textureData.premultiplyAlpha;
-      } else {
-        unpackPremultiply = !!textureData.premultiplyAlpha;
-      }
-
-      glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, unpackPremultiply);
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyOnUpload,
+      );
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
 
@@ -305,7 +281,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       glw.bindTexture(this._nativeCtxTexture);
       glw.pixelStorei(
         glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
-        !!textureData.premultiplyAlpha,
+        !!textureData.premultiplyOnUpload,
       );
 
       glw.texImage2D(0, format, w, h, 0, format, glw.UNSIGNED_BYTE, tdata);

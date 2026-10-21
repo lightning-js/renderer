@@ -48,7 +48,7 @@ export class WebPlatformLegacy extends WebPlatform {
 
   override async loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -57,7 +57,7 @@ export class WebPlatformLegacy extends WebPlatform {
     const isBase64 = isBase64Image(src);
 
     if (isBase64 === false && this.settings.numImageWorkers > 0) {
-      return super.loadImage(src, premultiplyAlpha, sx, sy, sw, sh);
+      return super.loadImage(src, premultiplyOnDecode, sx, sy, sw, sh);
     }
 
     const absoluteSrc = convertUrlToAbsolute(src);
@@ -67,7 +67,7 @@ export class WebPlatformLegacy extends WebPlatform {
       const blob = dataURIToBlob(src);
       return this.createImage(
         blob,
-        premultiplyAlpha,
+        premultiplyOnDecode,
         sx ?? null,
         sy ?? null,
         sw ?? null,
@@ -76,14 +76,12 @@ export class WebPlatformLegacy extends WebPlatform {
     }
 
     // For regular URLs, load directly without blob conversion
-    const hasAlpha =
-      premultiplyAlpha ?? absoluteSrc.toLowerCase().endsWith('.png');
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
-        resolve({ data: img, premultiplyAlpha: hasAlpha });
+        resolve({ data: img, isPremultiplied: false });
       };
 
       img.onerror = (err) => {
@@ -91,8 +89,8 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
@@ -102,7 +100,9 @@ export class WebPlatformLegacy extends WebPlatform {
 
   override async createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    // Not supported: HTMLImageElement always decodes to straight alpha
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    premultiplyOnDecode: boolean,
     // Cropping parameters are not supported in legacy mode
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sx: number | null,
@@ -113,7 +113,6 @@ export class WebPlatformLegacy extends WebPlatform {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlpha = premultiplyAlpha ?? blob.type.includes('image/png');
     const src = URL.createObjectURL(blob);
     const img = new Image();
 
@@ -124,7 +123,7 @@ export class WebPlatformLegacy extends WebPlatform {
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
         URL.revokeObjectURL(src);
-        resolve({ data: img, premultiplyAlpha: hasAlpha });
+        resolve({ data: img, isPremultiplied: false });
       };
 
       img.onerror = (err) => {
@@ -133,8 +132,8 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
@@ -172,12 +171,12 @@ export class WebPlatformLegacy extends WebPlatform {
     const formatHint = lower.endsWith('.ttf')
       ? " format('truetype')"
       : lower.endsWith('.woff2')
-      ? " format('woff2')"
-      : lower.endsWith('.woff')
-      ? " format('woff')"
-      : lower.endsWith('.otf')
-      ? " format('opentype')"
-      : '';
+        ? " format('woff2')"
+        : lower.endsWith('.woff')
+          ? " format('woff')"
+          : lower.endsWith('.otf')
+            ? " format('opentype')"
+            : '';
 
     const style = document.createElement('style');
     style.textContent = `@font-face { font-family: '${fontFamily}'; src: url('${fontUrl}')${formatHint}; }`;
