@@ -71,16 +71,16 @@ describe('ImageWorkerManager on-demand growth', () => {
 
     // Never resolve: both loads stay in flight so the pool must grow.
     const pending: Promise<never>[] = [];
-    const first = manager.getImage('a.png', null, null, null, null, null);
+    const first = manager.getImage('a.png', true, null, null, null, null);
     pending.push(first as Promise<never>);
     expect(manager.workers.length).toBe(1);
 
-    const second = manager.getImage('b.png', null, null, null, null, null);
+    const second = manager.getImage('b.png', true, null, null, null, null);
     pending.push(second as Promise<never>);
     expect(manager.workers.length).toBe(2);
 
     // At capacity: third load queues on the least-loaded worker.
-    const third = manager.getImage('c.png', null, null, null, null, null);
+    const third = manager.getImage('c.png', true, null, null, null, null);
     pending.push(third as Promise<never>);
     expect(manager.workers.length).toBe(2);
     // 1 + 1 + 1 distributed as 2 on worker 0 (least-loaded tie) + 1

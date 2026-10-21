@@ -27,7 +27,7 @@
 export function createImageWorkerNoOptions() {
   function getImage(src: string): Promise<{
     data: ImageBitmap;
-    premultiplied: boolean;
+    isPremultiplied: boolean;
   }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
@@ -49,12 +49,11 @@ export function createImageWorkerNoOptions() {
 
         createImageBitmap(blob)
           .then(function (data) {
-            // No premultiplyAlpha option was passed so the browser decides.
-            // Mark premultiplied: false so the upload path sets
-            // UNPACK_PREMULTIPLY_ALPHA_WEBGL = true for PNG images.
+            // Without options the browser's default applies, which is
+            // straight alpha on older WPEWebKit.
             resolve({
               data,
-              premultiplied: false,
+              isPremultiplied: false,
             });
           })
           .catch(function (error) {

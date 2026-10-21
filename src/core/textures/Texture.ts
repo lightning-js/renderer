@@ -109,32 +109,16 @@ export interface TextureData {
     | Uint8Array
     | null;
   /**
-   * Premultiply alpha when uploading texture data to the GPU
+   * Premultiply alpha while uploading the data to the GPU
+   * (`UNPACK_PREMULTIPLY_ALPHA_WEBGL`).
+   *
+   * @remarks
+   * Must be `false` for data that is already premultiplied, otherwise alpha
+   * is applied twice.
    *
    * @defaultValue `false`
    */
-  premultiplyAlpha?: boolean | null;
-  /**
-   * Whether the pixel data is already premultiplied (e.g. produced by
-   * `createImageBitmap` with `premultiplyAlpha: 'premultiply'`).
-   *
-   * @remarks
-   * This flag is only meaningful for `ImageBitmap` data sources. When `true`,
-   * `UNPACK_PREMULTIPLY_ALPHA_WEBGL` is set to `false` at upload time to
-   * prevent double-premultiplication. When `false`, the flag is set to `true`
-   * so the WebGL driver premultiplies during the CPU→GPU copy (same path as
-   * `HTMLImageElement`). When `undefined`, behaviour falls back to the legacy
-   * assumption that all `ImageBitmap` sources are already premultiplied.
-   *
-   * Platforms that call `createImageBitmap` **without** the
-   * `premultiplyAlpha: 'premultiply'` option (e.g. `WebPlatformChrome50`)
-   * must set this to `false`, otherwise the renderer composites straight-alpha
-   * pixels against a `blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` equation and
-   * produces incorrect results on older WPEWebKit.
-   *
-   * @defaultValue `undefined` (treated as `true` for `ImageBitmap` sources)
-   */
-  premultiplied?: boolean;
+  premultiplyOnUpload?: boolean;
 }
 /**
  * TextureCoords generally numbers between 0 - 1
@@ -151,12 +135,12 @@ export type TextureState =
   | 'freed'; // Released and must be reloaded
 
 export enum TextureType {
-  'generic' = 0,
-  'color' = 1,
-  'image' = 2,
-  'noise' = 3,
-  'renderToTexture' = 4,
-  'subTexture' = 5,
+  generic = 0,
+  color = 1,
+  image = 2,
+  noise = 3,
+  renderToTexture = 4,
+  subTexture = 5,
 }
 
 /**

@@ -70,7 +70,6 @@ export class RenderTexture extends Texture {
     // Render texture data ready - dimensions will be set during upload
     return {
       data: null,
-      premultiplyAlpha: null,
     };
   }
 

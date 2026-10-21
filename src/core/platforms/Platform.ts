@@ -129,16 +129,16 @@ export abstract class Platform {
   /**
    * Loads an image from a UR and returns it as an ImageBitmap or HTMLImageElement.
    * @param src - The source URL or Blob of the image to load.
-   * @param premultiplyAlpha - Whether to premultiply alpha (if supported by the platform).
+   * @param premultiplyOnDecode - Whether to premultiply alpha while decoding (if supported by the platform).
    * @param sx - The x coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
    * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
-   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   * @returns A promise that resolves with the decoded image and whether its alpha is premultiplied.
    */
   abstract loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -149,16 +149,16 @@ export abstract class Platform {
    * Create an image out of a Blob
    *
    * @param blob - The Blob to create an image from
-   * @param premultiplyAlpha - Whether to premultiply alpha (if supported by the platform).
+   * @param premultiplyOnDecode - Whether to premultiply alpha while decoding (if supported by the platform).
    * @param sx - The x coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
    * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
-   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   * @returns A promise that resolves with the decoded image and whether its alpha is premultiplied.
    */
   abstract createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -188,7 +188,7 @@ export abstract class Platform {
   /**
    * Loads a compressed texture from a URL and returns it as an ImageBitmap or HTMLImageElement.
    * @param src - The source URL of the compressed texture to load.
-   * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
+   * @returns A promise that resolves with the compressed texture data.
    */
   abstract loadCompressedTexture(src: string): Promise<ImageResponse>;
 

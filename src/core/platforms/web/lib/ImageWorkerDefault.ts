@@ -24,13 +24,9 @@
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 export function createImageWorker() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
   function getImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyOnDecode: boolean,
     x: number | null,
     y: number | null,
     width: number | null,
@@ -53,38 +49,21 @@ export function createImageWorker() {
         }
 
         var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
-
-        if (width !== null && height !== null) {
-          createImageBitmap(blob, x || 0, y || 0, width, height, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
-            colorSpaceConversion: 'none',
-            imageOrientation: 'none',
-          })
-            .then(function (data) {
-              resolve({
-                data,
-                premultiplied: true,
-              });
-            })
-            .catch(function (error) {
-              reject(error);
-            });
-          return;
-        }
-
-        createImageBitmap(blob, {
-          premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+        var options: ImageBitmapOptions = {
+          premultiplyAlpha: premultiplyOnDecode ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
-        })
+        };
+        var decode =
+          width !== null && height !== null
+            ? createImageBitmap(blob, x || 0, y || 0, width, height, options)
+            : createImageBitmap(blob, options);
+
+        decode
           .then(function (data) {
             resolve({
               data,
-              premultiplied: true,
+              isPremultiplied: premultiplyOnDecode,
             });
           })
           .catch(function (error) {
@@ -105,13 +84,13 @@ export function createImageWorker() {
   self.onmessage = (event) => {
     var src = event.data.src;
     var id = event.data.id;
-    var premultiplyAlpha = event.data.premultiplyAlpha;
+    var premultiplyOnDecode = event.data.premultiplyOnDecode;
     var x = event.data.sx;
     var y = event.data.sy;
     var width = event.data.sw;
     var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha, x, y, width, height)
+    getImage(src, premultiplyOnDecode, x, y, width, height)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);
