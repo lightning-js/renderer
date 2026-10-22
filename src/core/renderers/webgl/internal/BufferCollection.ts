@@ -27,16 +27,58 @@ import type { AttributeInfo } from './ShaderUtils.js';
 export const QUAD_VERTEX_STRIDE = 5;
 
 export interface BufferItem {
-  buffer: WebGLBuffer;
-  attributes: Record<string, AttributeInfo>;
+  readonly buffer: WebGLBuffer;
+  readonly attributes: Readonly<Record<string, Readonly<AttributeInfo>>>;
+}
+
+/**
+ * A vertex attribute resolved to the buffer that holds it.
+ */
+export interface BufferAttribute {
+  readonly buffer: WebGLBuffer;
+  readonly info: Readonly<AttributeInfo>;
 }
 
 /**
  * Represents a collection of WebGL Buffers along with their associated
  * vertex attribute formats.
+ *
+ * @remarks
+ * `config` is immutable after construction (enforced by type only, not frozen):
+ * attribute lookups are resolved once here because they run per attribute on
+ * every shader bind.
+ *
+ * The lookup table is a plain object (faster than a prototype-less one on old
+ * V8), so attribute names must not collide with `Object.prototype` members
+ * such as `constructor` or `toString`.
  */
 export class BufferCollection {
-  constructor(readonly config: BufferItem[]) {}
+  private readonly attributes: Record<string, BufferAttribute | undefined> = {};
+
+  constructor(readonly config: ReadonlyArray<BufferItem>) {
+    for (let i = 0; i < config.length; i++) {
+      const item = config[i]!;
+      for (const name in item.attributes) {
+        // First buffer declaring an attribute wins
+        if (this.attributes[name] === undefined) {
+          this.attributes[name] = {
+            buffer: item.buffer,
+            info: item.attributes[name]!,
+          };
+        }
+      }
+    }
+  }
+
+  /**
+   * Get the buffer and AttributeInfo for the given attribute name if it exists.
+   *
+   * @param attributeName
+   * @returns
+   */
+  getAttribute(attributeName: string): BufferAttribute | undefined {
+    return this.attributes[attributeName];
+  }
 
   /**
    * Get the WebGLBuffer associated with the given attribute name if it exists.
@@ -45,7 +87,8 @@ export class BufferCollection {
    * @returns
    */
   getBuffer(attributeName: string): WebGLBuffer | undefined {
-    return this.config.find((item) => item.attributes[attributeName])?.buffer;
+    const attribute = this.attributes[attributeName];
+    return attribute === undefined ? undefined : attribute.buffer;
   }
 
   /**
@@ -54,8 +97,8 @@ export class BufferCollection {
    * @param attributeName
    * @returns
    */
-  getAttributeInfo(attributeName: string): AttributeInfo | undefined {
-    return this.config.find((item) => item.attributes[attributeName])
-      ?.attributes[attributeName];
+  getAttributeInfo(attributeName: string): Readonly<AttributeInfo> | undefined {
+    const attribute = this.attributes[attributeName];
+    return attribute === undefined ? undefined : attribute.info;
   }
 }
