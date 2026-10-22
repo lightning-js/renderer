@@ -77,7 +77,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
-  public _layoutGenerated = false;
+  private _layoutGenerated = false;
   private _waitingForFont = false;
   private _containType: TextConstraint = TextConstraint.none;
 
@@ -519,8 +519,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxWidth(value: number) {
     if (this.textProps.maxWidth !== value) {
       this.textProps.maxWidth = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -532,8 +531,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set maxHeight(value: number) {
     if (this.textProps.maxHeight !== value) {
       this.textProps.maxHeight = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -566,8 +564,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     if (this.textProps.text !== normalizedValue) {
       this.textProps.text = normalizedValue;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -582,8 +579,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     if (this.textProps.fontSize !== value) {
       this.textProps.fontSize = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -599,8 +595,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         this._waitingForFont = false;
       }
       this.textProps.fontFamily = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -612,8 +607,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_FONT_STYLE;
     if (this.textProps.fontStyle !== value) {
       this.textProps.fontStyle = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -625,8 +619,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_TEXT_ALIGN;
     if (this.textProps.textAlign !== value) {
       this.textProps.textAlign = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -639,8 +632,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     if (this.textProps.letterSpacing !== value) {
       this.textProps.letterSpacing = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -655,8 +647,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     if (this.textProps.lineHeight !== value) {
       this.textProps.lineHeight = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -668,8 +659,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_MAX_LINES;
     if (this.textProps.maxLines !== value) {
       this.textProps.maxLines = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -681,8 +671,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_VERTICAL_ALIGN;
     if (this.textProps.verticalAlign !== value) {
       this.textProps.verticalAlign = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -697,8 +686,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     if (this.textProps.overflowSuffix !== value) {
       this.textProps.overflowSuffix = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -710,8 +698,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_WORD_BREAK;
     if (this.textProps.wordBreak !== value) {
       this.textProps.wordBreak = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -723,8 +710,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     value ||= DEFAULT_OFFSET_Y;
     if (this.textProps.offsetY !== value) {
       this.textProps.offsetY = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
@@ -746,12 +732,16 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   set richText(value: boolean) {
     if (this.textProps.richText !== value) {
       this.textProps.richText = value;
-      this._layoutGenerated = false;
-      this.setUpdateType(UpdateType.Local);
+      this.invalidateLayout();
     }
   }
 
   get renderInfo(): TextRenderInfo | null {
     return this._renderInfo;
+  }
+
+  public invalidateLayout() {
+    this._layoutGenerated = false;
+    this.setUpdateType(UpdateType.Local);
   }
 }

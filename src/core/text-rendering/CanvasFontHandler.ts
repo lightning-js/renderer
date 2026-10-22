@@ -26,7 +26,6 @@ import type {
 import type { Stage } from '../Stage.js';
 import { hasZeroWidthSpace } from './Utils.js';
 import type { CoreTextNode } from '../CoreTextNode.js';
-import { UpdateType } from '../CoreNode.js';
 import {
   defaultFontMetrics,
   normalizeFontMetrics,
@@ -189,8 +188,7 @@ const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
       processFontData(fontFamily, loadedFont ?? undefined, metrics);
       fontLoadPromises.delete(fontFamily);
       for (let key in nwff) {
-        nwff[key]!.setUpdateType(UpdateType.Local);
-        nwff[key]!._layoutGenerated = false;
+        nwff[key]!.invalidateLayout();
       }
       delete nodesWaitingForFont[fontFamily];
     })
