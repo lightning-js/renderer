@@ -332,7 +332,6 @@ export class CoreAnimation extends EventEmitter {
 
   update(dt: number) {
     const node = this.node!;
-    const { duration, loop, stopMethod } = this;
     // Resolved once per update (a few property reads): app's error hook for
     // every app entry point below (easing + all emits). `undefined` falls back
     // to console.error inside emitSafe/reportLoopError — still isolated.
@@ -365,12 +364,12 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // Multiply by pre-computed reciprocal -- avoids per-frame float division
-    progress = duration === 0 ? 1 : progress + dt * this.invDuration;
+    progress = this.duration === 0 ? 1 : progress + dt * this.invDuration;
 
     if (progress > 1) {
-      progress = loop === true ? 0 : 1;
+      progress = this.loop === true ? 0 : 1;
       this.delayFor = this.delay;
-      if (stopMethod !== false) {
+      if (this.stopMethod !== false) {
         this.progress = progress;
         this.emitSafe('finished', undefined, onError);
         return;
