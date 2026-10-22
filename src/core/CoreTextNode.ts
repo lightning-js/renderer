@@ -77,7 +77,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
-  private _layoutGenerated = false;
+  public _layoutGenerated = false;
   private _waitingForFont = false;
   private _containType: TextConstraint = TextConstraint.none;
 
@@ -250,19 +250,23 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       (forceLoad === true || this.allowTextGeneration() === true) &&
       this._layoutGenerated === false
     ) {
-      if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
+      const fontLoaded = this.fontHandler.isFontLoaded(
+        this.textProps.fontFamily,
+      );
+      if (fontLoaded === true) {
         this._waitingForFont = false;
+      } else if (this._waitingForFont === false) {
+        this.fontHandler.requestLoad?.(this.stage, this.textProps.fontFamily);
+        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
+        this._waitingForFont = true;
+      }
+
+      if (fontLoaded === true || this.textRenderer.type === 'canvas') {
         this._renderInfo = null; // Clear any previous render info before generating new layout
         this.releaseSdfCache(); // Drop the stale SDF vertex cache
         const resp = this.textRenderer.renderText(this.textProps);
         this.handleRenderResult(resp);
         this._layoutGenerated = true;
-      } else if (this._waitingForFont === false) {
-        // Kick off a first-use load for registered-but-unstarted fonts
-        // (cheap no-op otherwise), then join the waiter queue.
-        this.fontHandler.requestLoad?.(this.stage, this.textProps.fontFamily);
-        this.fontHandler.waitingForFont(this.textProps.fontFamily, this);
-        this._waitingForFont = true;
       }
     } else if (hasValidText === false) {
       this.props.w = 0;
@@ -592,6 +596,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     if (this.textProps.fontFamily !== value) {
       if (this._waitingForFont === true) {
         this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
+        this._waitingForFont = false;
       }
       this.textProps.fontFamily = value;
       this._layoutGenerated = false;
