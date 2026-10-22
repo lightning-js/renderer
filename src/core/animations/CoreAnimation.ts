@@ -333,7 +333,6 @@ export class CoreAnimation extends EventEmitter {
   update(dt: number) {
     const node = this.node!;
     const { duration, loop, stopMethod } = this;
-    const { delayFor } = this;
     // Resolved once per update (a few property reads): app's error hook for
     // every app entry point below (easing + all emits). `undefined` falls back
     // to console.error inside emitSafe/reportLoopError — still isolated.
@@ -341,11 +340,6 @@ export class CoreAnimation extends EventEmitter {
 
     if (node.destroyed) {
       this.emitSafe('destroyed', undefined, onError);
-      return;
-    }
-
-    if (duration === 0 && delayFor === 0) {
-      this.emitSafe('finished', undefined, onError);
       return;
     }
 
@@ -362,11 +356,6 @@ export class CoreAnimation extends EventEmitter {
       }
     }
 
-    if (duration === 0) {
-      this.emitSafe('finished', undefined, onError);
-      return;
-    }
-
     // Read progress once into a local -- avoids repeated this.progress reads
     // which cause V8 to box the float value on each access to the object property.
     let progress = this.progress;
@@ -376,7 +365,7 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // Multiply by pre-computed reciprocal -- avoids per-frame float division
-    progress += dt * this.invDuration;
+    progress = duration === 0 ? 1 : progress + dt * this.invDuration;
 
     if (progress > 1) {
       progress = loop === true ? 0 : 1;
