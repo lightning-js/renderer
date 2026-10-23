@@ -324,6 +324,11 @@ export class ImageTexture extends Texture {
  * @returns
  */
 export function isSvgImage(url: string): boolean {
+  // Bound the work done by the regex for caller-provided URLs.
+  if (url.length > 1000) {
+    return false;
+  }
+
   return /\.(svg)(\?.*)?$/.test(url);
 }
 
