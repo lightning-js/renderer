@@ -20,18 +20,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars
  */
 export function createImageWorkerLegacy() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
   function getImage(
     src: string,
-    premultiplyAlpha: boolean | null,
     x: number | null,
     y: number | null,
     width: number | null,
     height: number | null,
-  ): Promise<{ data: Blob; premultiplyAlpha: boolean | null }> {
+  ): Promise<{ data: Blob }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', src, true);
@@ -48,13 +43,7 @@ export function createImageWorkerLegacy() {
           );
         }
 
-        var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
-
-        resolve({ data: blob, premultiplyAlpha: withAlphaChannel });
+        resolve({ data: xhr.response });
       };
 
       xhr.onerror = function () {
@@ -70,13 +59,12 @@ export function createImageWorkerLegacy() {
   self.onmessage = (event) => {
     var src = event.data.src;
     var id = event.data.id;
-    var premultiplyAlpha = event.data.premultiplyAlpha;
     var x = event.data.sx;
     var y = event.data.sy;
     var width = event.data.sw;
     var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha, x, y, width, height)
+    getImage(src, x, y, width, height)
       .then(function (data) {
         self.postMessage({ id: id, src: src, data: data });
       })

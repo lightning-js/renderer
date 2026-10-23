@@ -53,7 +53,6 @@ export const loadSvg = (
 
       resolve({
         data: ctx.getImageData(x, y, sw ?? w, sh ?? h),
-        premultiplyAlpha: false,
       });
     };
 

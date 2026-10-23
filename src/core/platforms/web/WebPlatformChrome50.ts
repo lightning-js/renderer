@@ -41,6 +41,7 @@ export class WebPlatformChrome50 extends WebPlatform {
 
   override async createImage(
     blob: Blob,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     premultiplyAlpha: boolean | null,
     // Cropping parameters are not supported in Chrome 50
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -52,8 +53,6 @@ export class WebPlatformChrome50 extends WebPlatform {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
-
     // Chrome 50 createImageBitmap signature: createImageBitmap(blob)
     // No options or cropping parameters supported
     const bitmap = await createImageBitmap(blob);
@@ -64,7 +63,6 @@ export class WebPlatformChrome50 extends WebPlatform {
     // that UNPACK_PREMULTIPLY_ALPHA_WEBGL should be set at upload time.
     return {
       data: bitmap,
-      premultiplyAlpha: hasAlphaChannel,
       premultiplied: false,
     };
   }
