@@ -288,11 +288,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     const shaderPropsA = shader.resolvedProps as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     const shaderPropsB = opShader.resolvedProps as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
 
     if (
       (shaderPropsA === undefined && shaderPropsB !== undefined) ||
@@ -434,15 +432,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     const attribLen = attribs.length;
 
     for (let i = 0; i < attribLen; i++) {
-      const name = attribs[i]!;
-      const resolvedBuffer = buffer.getBuffer(name);
-      const resolvedInfo = buffer.getAttributeInfo(name);
-      if (resolvedBuffer === undefined || resolvedInfo === undefined) {
+      const attribute = buffer.getAttribute(attribs[i]!);
+      if (attribute === undefined) {
         continue;
       }
+      const resolvedInfo = attribute.info;
       glw.enableVertexAttribArray(i);
       glw.vertexAttribPointer(
-        resolvedBuffer,
+        attribute.buffer,
         i,
         resolvedInfo.size,
         resolvedInfo.type,
