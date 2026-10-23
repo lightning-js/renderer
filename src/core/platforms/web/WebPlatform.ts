@@ -53,6 +53,7 @@ export class WebPlatform extends Platform {
   private frameHandle: number | null = null;
   private timerHandle: ReturnType<typeof setTimeout> | null = null;
   private detachContextEvents: (() => void) | null = null;
+  private supportsOffscreenCanvas: boolean | undefined;
 
   constructor(settings: PlatformSettings = {}) {
     super(settings);
@@ -101,10 +102,33 @@ export class WebPlatform extends Platform {
   }
 
   override createOffscreenCanvas() {
-    if (typeof OffscreenCanvas !== 'undefined') {
-      return new OffscreenCanvas(0, 0);
+    if (
+      this.supportsOffscreenCanvas === false ||
+      typeof OffscreenCanvas === 'undefined'
+    ) {
+      return null;
     }
-    return null;
+
+    const canvas = new OffscreenCanvas(0, 0);
+
+    if (this.supportsOffscreenCanvas === undefined) {
+      const context = canvas.getContext('2d');
+
+      // Some Xfinity devices expose OffscreenCanvas but its 2d context
+      // lacks text APIs.
+      if (
+        context === null ||
+        typeof context.fillText !== 'function' ||
+        typeof context.measureText !== 'function'
+      ) {
+        this.supportsOffscreenCanvas = false;
+        return null;
+      }
+
+      this.supportsOffscreenCanvas = true;
+    }
+
+    return canvas;
   }
 
   override createContext(): GlContextWrapper {
