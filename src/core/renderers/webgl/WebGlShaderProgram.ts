@@ -288,9 +288,11 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     const shaderPropsA = shader.resolvedProps as
-      Record<string, unknown> | undefined;
+      | Record<string, unknown>
+      | undefined;
     const shaderPropsB = opShader.resolvedProps as
-      Record<string, unknown> | undefined;
+      | Record<string, unknown>
+      | undefined;
 
     if (
       (shaderPropsA === undefined && shaderPropsB !== undefined) ||
