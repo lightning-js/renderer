@@ -344,12 +344,10 @@ export class CoreAnimation extends EventEmitter {
 
     if (this.delayFor > 0) {
       this.delayFor -= dt;
-      if (this.delayFor >= 0) {
-        // Either no or more delay left. Exit.
+      if (this.delayFor > 0) {
         return;
       } else {
-        // We went beyond the delay time, add it back to dt so we can continue
-        // with the animation.
+        // Preserve only the part of this frame that remained after the delay.
         dt = -this.delayFor;
         this.delayFor = 0;
       }

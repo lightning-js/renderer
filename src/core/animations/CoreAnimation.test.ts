@@ -124,7 +124,7 @@ describe('CoreAnimation', () => {
       expect(node.x).toEqual(10);
       expect(finished).not.toHaveBeenCalled();
 
-      animation.update(51);
+      animation.update(50);
       expect(node.x).toEqual(100);
       expect(finished).toHaveBeenCalledTimes(1);
     });
