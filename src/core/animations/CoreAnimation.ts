@@ -332,8 +332,6 @@ export class CoreAnimation extends EventEmitter {
 
   update(dt: number) {
     const node = this.node!;
-    const { duration, loop, stopMethod } = this;
-    const { delayFor } = this;
     // Resolved once per update (a few property reads): app's error hook for
     // every app entry point below (easing + all emits). `undefined` falls back
     // to console.error inside emitSafe/reportLoopError — still isolated.
@@ -344,27 +342,15 @@ export class CoreAnimation extends EventEmitter {
       return;
     }
 
-    if (duration === 0 && delayFor === 0) {
-      this.emitSafe('finished', undefined, onError);
-      return;
-    }
-
     if (this.delayFor > 0) {
       this.delayFor -= dt;
-      if (this.delayFor >= 0) {
-        // Either no or more delay left. Exit.
+      if (this.delayFor > 0) {
         return;
       } else {
-        // We went beyond the delay time, add it back to dt so we can continue
-        // with the animation.
+        // Preserve only the part of this frame that remained after the delay.
         dt = -this.delayFor;
         this.delayFor = 0;
       }
-    }
-
-    if (duration === 0) {
-      this.emitSafe('finished', undefined, onError);
-      return;
     }
 
     // Read progress once into a local -- avoids repeated this.progress reads
@@ -376,12 +362,12 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // Multiply by pre-computed reciprocal -- avoids per-frame float division
-    progress += dt * this.invDuration;
+    progress = this.duration === 0 ? 1 : progress + dt * this.invDuration;
 
     if (progress > 1) {
-      progress = loop === true ? 0 : 1;
+      progress = this.loop === true ? 0 : 1;
       this.delayFor = this.delay;
-      if (stopMethod !== false) {
+      if (this.stopMethod !== false) {
         this.progress = progress;
         this.emitSafe('finished', undefined, onError);
         return;
