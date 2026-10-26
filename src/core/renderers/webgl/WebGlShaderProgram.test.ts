@@ -23,6 +23,7 @@ import type { Stage } from '../../Stage.js';
 import type { TextRenderer } from '../../text-rendering/TextRenderer.js';
 import { WebGlRenderer } from './WebGlRenderer.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
+import { BufferCollection } from './internal/BufferCollection.js';
 import {
   makeMockStage,
   makeTextProps as makeSharedTextProps,
@@ -51,7 +52,7 @@ const makeSdfTextRenderer = (): TextRenderer =>
     }),
     addQuads: vi.fn().mockReturnValue(new Float32Array(0)),
     renderQuads: vi.fn(),
-  } as unknown as TextRenderer);
+  }) as unknown as TextRenderer;
 
 const makeSdfTextNode = () => {
   const node = new CoreTextNode(
@@ -176,6 +177,54 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
 
     expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1.0);
     expect(uniform2f).toHaveBeenCalledWith('u_resolution', 640, 360);
+  });
+});
+
+describe('WebGlShaderProgram.bindBufferCollection', () => {
+  it('points each program attribute at its buffer and skips missing ones', () => {
+    const program = Object.create(
+      WebGlShaderProgram.prototype,
+    ) as WebGlShaderProgram;
+    const glw = {
+      enableVertexAttribArray: vi.fn(),
+      vertexAttribPointer: vi.fn(),
+    };
+    (program as any).glw = glw;
+    (program as any).attributeLocations = [
+      'a_position',
+      'a_style',
+      'a_nodeCoords',
+    ];
+
+    const quadBuffer = { id: 'quad' } as unknown as WebGLBuffer;
+    const coordsBuffer = { id: 'coords' } as unknown as WebGLBuffer;
+    const info = (name: string, offset: number) => ({
+      name,
+      size: 2,
+      type: 0x1406,
+      normalized: false,
+      stride: 20,
+      offset,
+    });
+
+    program.bindBufferCollection(
+      new BufferCollection([
+        {
+          buffer: quadBuffer,
+          attributes: { a_position: info('a_position', 0) },
+        },
+        {
+          buffer: coordsBuffer,
+          attributes: { a_nodeCoords: info('a_nodeCoords', 8) },
+        },
+      ]),
+    );
+
+    expect(glw.enableVertexAttribArray.mock.calls).toEqual([[0], [2]]);
+    expect(glw.vertexAttribPointer.mock.calls).toEqual([
+      [quadBuffer, 0, 2, 0x1406, false, 20, 0],
+      [coordsBuffer, 2, 2, 0x1406, false, 20, 8],
+    ]);
   });
 });
 
