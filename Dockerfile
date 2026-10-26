@@ -7,7 +7,7 @@
 # Do not edit by hand. `pnpm --filter visual-regression sync:playwright` rewrites
 # this line from the lockfile, `check:playwright` verifies it, and CI fails on a
 # mismatch so a dependabot bump cannot silently leave this behind.
-FROM mcr.microsoft.com/playwright:v1.64.0-jammy
+FROM mcr.microsoft.com/playwright:v1.64.1-jammy
 
 # Set the working directory
 WORKDIR /work
