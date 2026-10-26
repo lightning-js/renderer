@@ -93,8 +93,6 @@ export interface Point {
   y: number;
 }
 
-const autoStart = true;
-
 export class Stage {
   /**
    * Resolves after the first frame has been drawn.
@@ -554,7 +552,7 @@ export class Stage {
     this.root = rootNode;
 
     // execute platform start loop
-    if (autoStart === true) {
+    if (options.autoStart === true) {
       this.platform.startLoop(this);
     }
   }

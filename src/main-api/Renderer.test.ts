@@ -71,6 +71,7 @@ function makeRenderer(
   target: HTMLElement,
   extra: Partial<{
     inspector: typeof Inspector | false;
+    autoStart: boolean;
   }> = {},
 ) {
   const MockPlatform = makeMockPlatform();
@@ -79,6 +80,7 @@ function makeRenderer(
       appWidth: 1920,
       appHeight: 1080,
       inspector: extra.inspector ?? false,
+      autoStart: extra.autoStart,
       platform: MockPlatform as unknown as typeof Platform,
       renderEngine: {} as unknown as
         | typeof CanvasRenderer
@@ -149,5 +151,33 @@ describe('RendererMain.close()', () => {
 
     // inspector is set to null after close(); the ?. guard must handle it
     expect(() => renderer.close()).not.toThrow();
+  });
+});
+
+describe('RendererMain autoStart setting', () => {
+  let target: HTMLDivElement;
+
+  beforeEach(() => {
+    target = document.createElement('div');
+    document.body.appendChild(target);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    target.remove();
+  });
+
+  it('defaults autoStart to true', async () => {
+    const { Stage } = await import('../core/Stage.js');
+    makeRenderer(target);
+
+    expect(vi.mocked(Stage).mock.calls[0]?.[0].autoStart).toBe(true);
+  });
+
+  it('passes autoStart false to the stage', async () => {
+    const { Stage } = await import('../core/Stage.js');
+    makeRenderer(target, { autoStart: false });
+
+    expect(vi.mocked(Stage).mock.calls[0]?.[0].autoStart).toBe(false);
   });
 });

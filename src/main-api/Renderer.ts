@@ -352,6 +352,12 @@ export type RendererMainSettings = RendererRuntimeSettings &
     // Milliseconds before reporting restoration as overdue; 0 disables it. Default: 10000.
     contextRestoreTimeout?: number;
     /**
+     * Automatically start the rendering loop after the stage is initialized.
+     *
+     * @defaultValue `true`
+     */
+    autoStart: boolean;
+    /**
      * Include context call (i.e. WebGL) information in FPS updates
      *
      * @remarks
@@ -596,6 +602,7 @@ export class RendererMain extends EventEmitter {
       platform: settings.platform || WebPlatform,
       maxRetryCount: settings.maxRetryCount ?? 5,
       handleLoopError: settings.handleLoopError,
+      autoStart: settings.autoStart ?? true,
     };
 
     const {
@@ -653,6 +660,7 @@ export class RendererMain extends EventEmitter {
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
       maxRetryCount: settings.maxRetryCount ?? 5,
+      autoStart: settings.autoStart!,
     });
 
     // Extract the root node
