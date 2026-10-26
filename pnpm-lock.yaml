@@ -85,8 +85,8 @@ importers:
         specifier: ^11.4.0
         version: 11.4.1
       pixelmatch:
-        specifier: ^7.2.0
-        version: 7.2.0
+        specifier: ^8.0.0
+        version: 8.0.0
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
@@ -110,7 +110,7 @@ importers:
         specifier: ^17.0.35
         version: 17.0.35
       playwright:
-        specifier: ^1.62.1
+        specifier: ^1.64.1
         version: 1.64.1
       wait-port:
         specifier: ^1.1.0
@@ -3113,8 +3113,8 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
-  pixelmatch@7.2.0:
-    resolution: {integrity: sha512-xhcb4yHu9sM/G7foGzoLtXYcC0zHEaOXXjRKhGup0fw78Nf2Tkiapv4EQyMzrbcmQPsllAI7DbFY2UT7PlI9Pg==}
+  pixelmatch@8.0.0:
+    resolution: {integrity: sha512-cIqOLfh5k52us715qf3B3+kTOxZv+WDv77HN7xokLScYQGYQHi4m/ynoDIPpvF2LvCyUJGyvzY64i0QCXtzu1g==}
     hasBin: true
 
   playwright-core@1.64.1:
@@ -5854,7 +5854,7 @@ snapshots:
 
   '@types/pixelmatch@7.1.0':
     dependencies:
-      pixelmatch: 7.2.0
+      pixelmatch: 8.0.0
 
   '@types/pngjs@6.0.5':
     dependencies:
@@ -6758,7 +6758,7 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  pixelmatch@7.2.0:
+  pixelmatch@8.0.0:
     dependencies:
       pngjs: 7.0.0
 
