@@ -22,6 +22,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Stage } from '../../Stage.js';
+import type { CoreTextNode } from '../../CoreTextNode.js';
 import * as SdfFontHandler from '../SdfFontHandler.js';
 import * as CanvasFontHandler from '../CanvasFontHandler.js';
 import type { Stage as StageType } from '../../Stage.js';
@@ -102,6 +103,62 @@ describe('SDF lazy font loading', () => {
       expect(SdfFontHandler.isFontLoaded('LazyLoadMe')).toBe(true);
     });
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('can retry font loading, keeping waiting nodes', async () => {
+    const stage = makeStage();
+    const fontFamily = 'RetrySdfLoad';
+    const error = new Error('Font data unavailable');
+    const waitingNode = {
+      id: 1,
+      setUpdateType: vi.fn(),
+    } as unknown as CoreTextNode;
+    const fontData = {
+      chars: [],
+      kernings: [],
+      info: {},
+      common: {},
+      distanceField: {},
+    };
+    vi.mocked(globalThis.fetch)
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => fontData,
+      } as Response);
+
+    const texture = {
+      state: 'loaded',
+      setRenderableOwner: vi.fn(),
+      preventCleanup: false,
+    };
+    stage.txManager.createTexture = vi.fn().mockReturnValue(texture);
+
+    await SdfFontHandler.loadFont(stage, {
+      fontFamily,
+      atlasUrl: 'http://example.com/retry.png',
+      atlasDataUrl: 'http://example.com/retry.json',
+    });
+    SdfFontHandler.requestLoad(stage, fontFamily);
+    SdfFontHandler.waitingForFont(fontFamily, waitingNode);
+
+    await expect(
+      SdfFontHandler.preloadFont(stage, {
+        fontFamily,
+        atlasUrl: 'http://example.com/retry.png',
+        atlasDataUrl: 'http://example.com/retry.json',
+      }),
+    ).rejects.toBe(error);
+
+    await SdfFontHandler.preloadFont(stage, {
+      fontFamily,
+      atlasUrl: 'http://example.com/retry.png',
+      atlasDataUrl: 'http://example.com/retry.json',
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(SdfFontHandler.isFontLoaded(fontFamily)).toBe(true);
+    expect(waitingNode.setUpdateType).toHaveBeenCalledTimes(1);
   });
 
   it('requestLoad is a no-op for unknown families', () => {

@@ -383,7 +383,7 @@ const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
   }
   const { atlasUrl, atlasDataUrl, metrics } = config;
 
-  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
+  const nwff = (nodesWaitingForFont[fontFamily] ||= []);
   // Create loading promise
   const loadPromise = (async (): Promise<void> => {
     // Load font JSON data
@@ -436,15 +436,19 @@ const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
 
       atlasTexture.on('failed', (_target, error: Error) => {
         // Cleanup on error
-        fontLoadPromises.delete(fontFamily);
         if (fontCache[fontFamily]) {
           delete fontCache[fontFamily];
         }
-        console.error(`Failed to load SDF font: ${fontFamily}`, error);
         reject(error);
       });
     });
-  })();
+  })().catch(
+    (error: unknown) => {
+      fontLoadPromises.delete(fontFamily);
+      console.error(`Failed to load SDF font: ${fontFamily}`, error);
+      throw error;
+    },
+  );
 
   fontLoadPromises.set(fontFamily, loadPromise);
   return loadPromise;
