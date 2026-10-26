@@ -409,7 +409,6 @@ export class WebPlatform extends Platform {
       });
       return {
         data: bitmap,
-        premultiplyAlpha: hasAlphaChannel,
         premultiplied: true,
       };
     }
@@ -423,7 +422,6 @@ export class WebPlatform extends Platform {
 
     return {
       data: bitmap,
-      premultiplyAlpha: hasAlphaChannel,
       premultiplied: true,
     };
   }
