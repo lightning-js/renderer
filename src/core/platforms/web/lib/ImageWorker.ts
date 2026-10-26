@@ -28,7 +28,6 @@ type MessageCallback = [
 
 interface ImageWorkerLegacyResponse {
   data: Blob;
-  premultiplyAlpha: boolean | null;
 }
 
 interface ImageWorkerMessage {
@@ -69,17 +68,14 @@ export class ImageWorkerManager {
     return data.data instanceof Blob;
   }
 
-  private createImageFromBlob(
-    blob: Blob,
-    premultiplyAlpha: boolean | null,
-  ): Promise<ImageResponse> {
+  private createImageFromBlob(blob: Blob): Promise<ImageResponse> {
     return new Promise((resolve, reject) => {
       const objectUrl = URL.createObjectURL(blob);
       const image = new Image();
 
       image.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        resolve({ data: image, premultiplyAlpha });
+        resolve({ data: image });
       };
 
       image.onerror = () => {
@@ -105,9 +101,7 @@ export class ImageWorkerManager {
       if (error) {
         reject(new Error(error));
       } else if (this.isLegacyResponse(data)) {
-        this.createImageFromBlob(data.data, data.premultiplyAlpha)
-          .then(resolve)
-          .catch(reject);
+        this.createImageFromBlob(data.data).then(resolve).catch(reject);
       } else {
         resolve(data);
       }
@@ -185,35 +179,31 @@ export class ImageWorkerManager {
     sh: number | null,
   ): Promise<ImageResponse> {
     return new Promise((resolve, reject) => {
-      try {
-        if (this.workers) {
-          const id = this.nextId++;
-          this.messageManager[id] = [resolve, reject];
-          const nextWorkerIndex = this.getNextWorkerIndex();
+      if (this.workers) {
+        const id = this.nextId++;
+        this.messageManager[id] = [resolve, reject];
+        const nextWorkerIndex = this.getNextWorkerIndex();
 
-          if (nextWorkerIndex !== -1) {
-            const worker = this.workers[nextWorkerIndex];
-            if (worker === undefined) {
-              delete this.messageManager[id];
-              reject(new Error('No image worker available.'));
-              return;
-            }
-
-            this.workerLoad[nextWorkerIndex] =
-              (this.workerLoad[nextWorkerIndex] ?? 0) + 1;
-            worker.postMessage({
-              id,
-              src: src,
-              premultiplyAlpha,
-              sx,
-              sy,
-              sw,
-              sh,
-            });
+        if (nextWorkerIndex !== -1) {
+          const worker = this.workers[nextWorkerIndex];
+          if (worker === undefined) {
+            delete this.messageManager[id];
+            reject(new Error('No image worker available.'));
+            return;
           }
+
+          this.workerLoad[nextWorkerIndex] =
+            (this.workerLoad[nextWorkerIndex] ?? 0) + 1;
+          worker.postMessage({
+            id,
+            src: src,
+            premultiplyAlpha,
+            sx,
+            sy,
+            sw,
+            sh,
+          });
         }
-      } catch (error) {
-        reject(error);
       }
     });
   }

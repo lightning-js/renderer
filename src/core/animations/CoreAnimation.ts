@@ -65,7 +65,7 @@ export class CoreAnimation extends EventEmitter {
   private delayFor = 0;
   private delay = 0;
   private timingFunction!: TimingFunction;
-  private node!: CoreNode;
+  private node?: CoreNode;
   // Index into AnimationManager.activeAnimations -- kept in sync on every
   // register/swap-remove so unregisterAnimation() is O(1) with no indexOf scan.
   public activeIndex = -1;
@@ -106,8 +106,7 @@ export class CoreAnimation extends EventEmitter {
    * and finished/tick/animating/destroyed listeners).
    */
   private getLoopErrorHandler(): LoopErrorHandler | undefined {
-    return (this.node as CoreNode | undefined)?.stage?.platform?.settings
-      ?.handleLoopError;
+    return this.node?.stage?.platform?.settings?.handleLoopError;
   }
 
   /**
@@ -146,10 +145,6 @@ export class CoreAnimation extends EventEmitter {
     this.activeIndex = -1;
     this.propValuesMap.props = null;
     this.propValuesMap.shaderProps = null;
-    // Clear any stale listeners from the previous use. With the arr.length > 0
-    // guard in clearListeners(), this is a near-zero cost read of 4 array lengths
-    // when unregisterAnimation() has already emptied them (the common case).
-    this.clearListeners(CoreAnimation.EVENTS);
 
     // Reset persistent group lengths (reuse existing arrays, no new allocations)
     this.propsGroup.length = 0;
@@ -204,6 +199,11 @@ export class CoreAnimation extends EventEmitter {
     this.delayFor = delay;
   }
 
+  release(): void {
+    this.clearListeners(CoreAnimation.EVENTS);
+    this.node = undefined;
+  }
+
   reset() {
     this.progress = 0;
     this.delayFor = this.delay || 0;
@@ -220,7 +220,7 @@ export class CoreAnimation extends EventEmitter {
     }
     if (shaderGroup !== null) {
       this.restoreValues(
-        this.node.shader!.props as Record<string, number>,
+        this.node!.shader!.props as Record<string, number>,
         shaderGroup,
       );
     }
@@ -331,39 +331,26 @@ export class CoreAnimation extends EventEmitter {
   }
 
   update(dt: number) {
-    const { duration, loop, stopMethod } = this;
-    const { delayFor } = this;
+    const node = this.node!;
     // Resolved once per update (a few property reads): app's error hook for
     // every app entry point below (easing + all emits). `undefined` falls back
     // to console.error inside emitSafe/reportLoopError — still isolated.
     const onError = this.getLoopErrorHandler();
 
-    if (this.node.destroyed) {
+    if (node.destroyed) {
       this.emitSafe('destroyed', undefined, onError);
-      return;
-    }
-
-    if (duration === 0 && delayFor === 0) {
-      this.emitSafe('finished', undefined, onError);
       return;
     }
 
     if (this.delayFor > 0) {
       this.delayFor -= dt;
-      if (this.delayFor >= 0) {
-        // Either no or more delay left. Exit.
+      if (this.delayFor > 0) {
         return;
       } else {
-        // We went beyond the delay time, add it back to dt so we can continue
-        // with the animation.
+        // Preserve only the part of this frame that remained after the delay.
         dt = -this.delayFor;
         this.delayFor = 0;
       }
-    }
-
-    if (duration === 0) {
-      this.emitSafe('finished', undefined, onError);
-      return;
     }
 
     // Read progress once into a local -- avoids repeated this.progress reads
@@ -375,12 +362,12 @@ export class CoreAnimation extends EventEmitter {
     }
 
     // Multiply by pre-computed reciprocal -- avoids per-frame float division
-    progress += dt * this.invDuration;
+    progress = this.duration === 0 ? 1 : progress + dt * this.invDuration;
 
     if (progress > 1) {
-      progress = loop === true ? 0 : 1;
+      progress = this.loop === true ? 0 : 1;
       this.delayFor = this.delay;
-      if (stopMethod !== false) {
+      if (this.stopMethod !== false) {
         this.progress = progress;
         this.emitSafe('finished', undefined, onError);
         return;
@@ -396,7 +383,7 @@ export class CoreAnimation extends EventEmitter {
 
     if (propsGroup !== null) {
       this.updateValues(
-        this.node as unknown as Record<string, number>,
+        node as unknown as Record<string, number>,
         propsGroup,
         progress,
         onError,
@@ -404,7 +391,7 @@ export class CoreAnimation extends EventEmitter {
     }
     if (shaderGroup !== null) {
       this.updateValues(
-        this.node.shader!.props as Record<string, number>,
+        node.shader!.props as Record<string, number>,
         shaderGroup,
         progress,
         onError,

@@ -48,6 +48,7 @@ const makeGlwMock = () => ({
 const makeRenderer = () => {
   const glw = makeGlwMock();
   const stage = {
+    contextState: 'running',
     options: { quadBufferSize: 4096, enableDirtyRepaints: false },
     platform: {
       canvas: { width: 1920, height: 1080 },
@@ -97,5 +98,28 @@ describe('WebGlRenderer lazy startup init', () => {
     expect(rich).toBeInstanceOf(SdfBuffer);
     expect(rich.layout).toBe('rich');
     expect(renderer.sdfBufferRich).toBe(rich);
+  });
+
+  it('recreates renderer buffers and reapplies clear color on restoration', () => {
+    const { renderer, glw } = makeRenderer();
+    const oldBuffer = renderer.quadBufferCollection;
+    const oldSdfBuffer = renderer.sdfBufferPlain;
+    renderer.restoreContext();
+
+    expect(renderer.quadBufferCollection).not.toBe(oldBuffer);
+    expect(renderer.sdfBufferPlain).not.toBe(oldSdfBuffer);
+    expect(renderer.needsFullUpload).toBe(true);
+    expect(glw.clearColor).toHaveBeenCalledOnce();
+  });
+
+  it('defers shader compilation while the context is unavailable', () => {
+    const { renderer } = makeRenderer();
+    renderer.stage.contextState = 'lost';
+    const program = renderer.createShaderProgram(
+      { fragment: 'void main() {}' },
+      {},
+    );
+    expect(program.glw).toBe(renderer.glw);
+    expect(program.isDestroyed).toBe(false);
   });
 });

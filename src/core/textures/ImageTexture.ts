@@ -114,7 +114,6 @@ export interface ImageTextureProps {
 
 export interface ImageResponse {
   data: ImageBitmap | ImageData | CompressedImageData | HTMLImageElement | null;
-  premultiplyAlpha: boolean | null;
   /**
    * Whether the pixel data is already premultiplied.
    *
@@ -165,6 +164,7 @@ export class ImageTexture extends Texture {
   }
 
   override async getTextureSource(): Promise<TextureData> {
+    const generation = this.contextGeneration;
     // Compressed textures are not supported by the Canvas2D renderer.
     // Fail fast here before incurring a network fetch or binary decode.
     if (this.txManager.renderer?.mode === 'canvas') {
@@ -187,6 +187,7 @@ export class ImageTexture extends Texture {
     try {
       resp = await this.determineImageTypeAndLoadImage();
     } catch (e) {
+      if (generation !== this.contextGeneration) return { data: null };
       this.setState('failed', e as Error);
 
       return {
@@ -194,6 +195,16 @@ export class ImageTexture extends Texture {
       };
     }
 
+    if (generation !== this.contextGeneration) {
+      if (
+        typeof ImageBitmap !== 'undefined' &&
+        resp.data instanceof ImageBitmap &&
+        (typeof this.props.src === 'string' || this.props.src instanceof Blob)
+      ) {
+        resp.data.close();
+      }
+      return { data: null };
+    }
     if (resp.data === null) {
       this.setState('failed', Error('ImageTexture: No image data'));
       return {
@@ -312,6 +323,11 @@ export class ImageTexture extends Texture {
  * @returns
  */
 export function isSvgImage(url: string): boolean {
+  // Bound the work done by the regex for caller-provided URLs.
+  if (url.length > 1000) {
+    return false;
+  }
+
   return /\.(svg)(\?.*)?$/.test(url);
 }
 

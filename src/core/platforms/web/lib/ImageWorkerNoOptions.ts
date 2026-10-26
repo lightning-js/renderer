@@ -25,16 +25,8 @@
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 export function createImageWorkerNoOptions() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
-  function getImage(
-    src: string,
-    premultiplyAlpha: boolean | null,
-  ): Promise<{
+  function getImage(src: string): Promise<{
     data: ImageBitmap;
-    premultiplyAlpha: boolean | null;
     premultiplied: boolean;
   }> {
     return new Promise(function (resolve, reject) {
@@ -54,10 +46,6 @@ export function createImageWorkerNoOptions() {
         }
 
         var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
 
         createImageBitmap(blob)
           .then(function (data) {
@@ -66,7 +54,6 @@ export function createImageWorkerNoOptions() {
             // UNPACK_PREMULTIPLY_ALPHA_WEBGL = true for PNG images.
             resolve({
               data,
-              premultiplyAlpha: withAlphaChannel,
               premultiplied: false,
             });
           })
@@ -88,9 +75,8 @@ export function createImageWorkerNoOptions() {
   self.onmessage = (event) => {
     var src = event.data.src;
     var id = event.data.id;
-    var premultiplyAlpha = event.data.premultiplyAlpha;
 
-    getImage(src, premultiplyAlpha)
+    getImage(src)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);

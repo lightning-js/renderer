@@ -1255,6 +1255,10 @@ export class WebGlContextWrapper extends GlContextWrapper {
     return this.gl.getError();
   }
 
+  override isContextLost(): boolean {
+    return this.gl.isContextLost();
+  }
+
   /**
    * ```
    * gl.createVertexArray();

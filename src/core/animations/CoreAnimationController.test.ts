@@ -310,4 +310,17 @@ describe('CoreAnimationController', () => {
       expect(controller.state).toBe('stopped');
     });
   });
+
+  describe('release()', () => {
+    it('should clear all event listeners', () => {
+      const controller = createController();
+      controller.on('stopped', vi.fn());
+      controller.on('animating', vi.fn());
+      controller.on('tick', vi.fn());
+
+      controller.release();
+
+      expect(controller.hasListeners()).toBe(false);
+    });
+  });
 });

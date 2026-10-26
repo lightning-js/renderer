@@ -80,6 +80,31 @@ export interface RendererMainFrameTickEvent {
   delta: number;
 }
 
+// Emitted when the canvas WebGL context is lost; GPU work is suspended.
+export interface RendererMainContextLostEvent {
+  generation: number;
+}
+
+// Emitted after the first recovery frame; textures may still be loading.
+export interface RendererMainContextRestoredEvent {
+  generation: number;
+  // Milliseconds since the context was lost.
+  duration: number;
+}
+
+// Emitted when GPU reinitialisation fails; rendering remains suspended.
+//
+// Two cases share this event:
+// - Restoration timeout (non-terminal): the browser has not fired
+//   `webglcontextrestored` within `contextRestoreTimeout`. The stage stays
+//   `lost` and a late browser restoration is still accepted.
+// - Reinitialisation / recovery-frame failure (terminal): the stage moves to
+//   `failed` and stays suspended until the next `webglcontextrestored`.
+export interface RendererMainContextRestoreFailedEvent {
+  generation: number;
+  error: unknown;
+}
+
 /**
  * Quads Update Event Data
  *
@@ -324,6 +349,8 @@ export interface RendererRuntimeSettings {
 export type RendererMainSettings = RendererRuntimeSettings &
   Omit<Required<PlatformSettings>, 'handleLoopError'> &
   Pick<PlatformSettings, 'handleLoopError'> & {
+    // Milliseconds before reporting restoration as overdue; 0 disables it. Default: 10000.
+    contextRestoreTimeout?: number;
     /**
      * Include context call (i.e. WebGL) information in FPS updates
      *
@@ -510,6 +537,9 @@ export type RendererMainSettings = RendererRuntimeSettings &
  * @fires RendererMain#idle
  * @fires RendererMain#criticalCleanup
  * @fires RendererMain#criticalCleanupFailed
+ * @fires RendererMain#contextLost
+ * @fires RendererMain#contextRestored
+ * @fires RendererMain#contextRestoreFailed
  */
 export class RendererMain extends EventEmitter {
   readonly root: INode;
@@ -556,6 +586,7 @@ export class RendererMain extends EventEmitter {
       renderEngine: settings.renderEngine,
       quadBufferSize: settings.quadBufferSize ?? 4 * 1024 * 1024,
       enableDirtyRepaints: settings.enableDirtyRepaints ?? true,
+      contextRestoreTimeout: settings.contextRestoreTimeout ?? 10000,
       fontEngines: settings.fontEngines ?? [],
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       maxTextureUploadsDuringAnimation:
@@ -612,6 +643,7 @@ export class RendererMain extends EventEmitter {
       eventBus: this,
       quadBufferSize: settings.quadBufferSize!,
       enableDirtyRepaints: settings.enableDirtyRepaints!,
+      contextRestoreTimeout: settings.contextRestoreTimeout,
       fontEngines: settings.fontEngines!,
       inspector: settings.inspector !== null,
       targetFPS: settings.targetFPS!,

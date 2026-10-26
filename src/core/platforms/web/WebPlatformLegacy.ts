@@ -76,14 +76,12 @@ export class WebPlatformLegacy extends WebPlatform {
     }
 
     // For regular URLs, load directly without blob conversion
-    const hasAlpha =
-      premultiplyAlpha ?? absoluteSrc.toLowerCase().endsWith('.png');
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
-        resolve({ data: img, premultiplyAlpha: hasAlpha });
+        resolve({ data: img });
       };
 
       img.onerror = (err) => {
@@ -91,8 +89,8 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
@@ -102,6 +100,7 @@ export class WebPlatformLegacy extends WebPlatform {
 
   override async createImage(
     blob: Blob,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     premultiplyAlpha: boolean | null,
     // Cropping parameters are not supported in legacy mode
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -113,7 +112,6 @@ export class WebPlatformLegacy extends WebPlatform {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlpha = premultiplyAlpha ?? blob.type.includes('image/png');
     const src = URL.createObjectURL(blob);
     const img = new Image();
 
@@ -124,7 +122,7 @@ export class WebPlatformLegacy extends WebPlatform {
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
         URL.revokeObjectURL(src);
-        resolve({ data: img, premultiplyAlpha: hasAlpha });
+        resolve({ data: img });
       };
 
       img.onerror = (err) => {
@@ -133,8 +131,8 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
@@ -172,12 +170,12 @@ export class WebPlatformLegacy extends WebPlatform {
     const formatHint = lower.endsWith('.ttf')
       ? " format('truetype')"
       : lower.endsWith('.woff2')
-      ? " format('woff2')"
-      : lower.endsWith('.woff')
-      ? " format('woff')"
-      : lower.endsWith('.otf')
-      ? " format('opentype')"
-      : '';
+        ? " format('woff2')"
+        : lower.endsWith('.woff')
+          ? " format('woff')"
+          : lower.endsWith('.otf')
+            ? " format('opentype')"
+            : '';
 
     const style = document.createElement('style');
     style.textContent = `@font-face { font-family: '${fontFamily}'; src: url('${fontUrl}')${formatHint}; }`;

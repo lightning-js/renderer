@@ -112,8 +112,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   constructor(
     renderer: WebGlRenderer,
-    config: WebGlShaderType,
-    resolvedProps: Record<string, any>,
+    private config: WebGlShaderType,
+    private resolvedProps: Record<string, any>,
   ) {
     this.renderer = renderer;
     const glw = (this.glw = renderer.glw);
@@ -164,10 +164,27 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     );
 
     if (!fragmentShader) {
+      // createShader already deleted the failed fragment shader; the
+      // compiled vertex shader would otherwise leak on this path.
+      glw.deleteShader(vertexShader);
       throw new Error('fragment shader creation failed');
     }
 
-    const program = createProgram(glw, vertexShader, fragmentShader);
+    let program: WebGLProgram;
+    try {
+      program = createProgram(glw, vertexShader, fragmentShader);
+    } catch (error) {
+      // createProgram deletes the program on link failure but not the
+      // attached shaders — delete both so repeated restore attempts cannot
+      // accumulate shader objects on low-end devices.
+      glw.deleteShader(vertexShader);
+      glw.deleteShader(fragmentShader);
+      throw error;
+    }
+    // Shaders are referenced by the linked program; flag them for deletion
+    // so the driver can free the source copies.
+    glw.deleteShader(vertexShader);
+    glw.deleteShader(fragmentShader);
     this.program = program;
     this.attributeLocations = glw.getAttributeLocations(program);
 
@@ -184,6 +201,36 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       update: config.update,
       canBatch: config.canBatch,
     };
+  }
+
+  // Shader nodes created while the context is lost keep a stable program ref.
+  static createDeferred(
+    renderer: WebGlRenderer,
+    config: WebGlShaderType,
+    props: Record<string, any>,
+  ): WebGlShaderProgram {
+    const deferred = Object.create(
+      WebGlShaderProgram.prototype,
+    ) as WebGlShaderProgram;
+    deferred.renderer = renderer;
+    deferred.config = config;
+    deferred.resolvedProps = props;
+    deferred.glw = renderer.glw;
+    deferred.program = null;
+    deferred.isDestroyed = false;
+    deferred.attributeLocations = [];
+    deferred.uniformLocations = null;
+    deferred.lifecycle = {};
+    return deferred;
+  }
+
+  // Keep shader-node references stable while replacing all native GL state.
+  restoreContext(): void {
+    if (this.isDestroyed === true) return;
+    Object.assign(
+      this,
+      new WebGlShaderProgram(this.renderer, this.config, this.resolvedProps),
+    );
   }
 
   disableAttribute(location: number) {
@@ -387,15 +434,14 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     const attribLen = attribs.length;
 
     for (let i = 0; i < attribLen; i++) {
-      const name = attribs[i]!;
-      const resolvedBuffer = buffer.getBuffer(name);
-      const resolvedInfo = buffer.getAttributeInfo(name);
-      if (resolvedBuffer === undefined || resolvedInfo === undefined) {
+      const attribute = buffer.getAttribute(attribs[i]!);
+      if (attribute === undefined) {
         continue;
       }
+      const resolvedInfo = attribute.info;
       glw.enableVertexAttribArray(i);
       glw.vertexAttribPointer(
-        resolvedBuffer,
+        attribute.buffer,
         i,
         resolvedInfo.size,
         resolvedInfo.type,
@@ -454,6 +500,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     glw.deleteProgram(this.program!);
     this.program = null;
     this.uniformLocations = null;
+    this.isDestroyed = true;
+    this.renderer.untrackShaderProgram(this);
 
     const attribs = this.attributeLocations;
     const attribLen = this.attributeLocations.length;

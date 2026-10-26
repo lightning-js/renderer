@@ -289,6 +289,10 @@ export abstract class GlContextWrapper {
   abstract getParameter(pname: GLenum): any;
   abstract getExtension(name: string): any;
   abstract getError(): number;
+  // Platforms without WebGL context-loss reporting can retain the default.
+  isContextLost(): boolean {
+    return false;
+  }
   abstract checkError(
     operation: string,
   ): { error: number; errorName: string; message: string } | null;
