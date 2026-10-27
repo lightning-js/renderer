@@ -112,6 +112,14 @@ const argv = yargs(hideBin(process.argv))
       default: '*',
       description: 'Tests to run ("*" wildcard pattern)',
     },
+    renderMode: {
+      type: 'string',
+      alias: 'r',
+      default: runtimeEnv === 'ci' ? 'all' : 'webgl',
+      choices: ['webgl', 'canvas', 'all'],
+      description:
+        'Renderer mode to test ("webgl", "canvas", or "all" for both)',
+    },
   })
   .parseSync();
 
@@ -148,6 +156,7 @@ async function dockerCiMode(): Promise<number> {
     argv.skipBuild ? '--skipBuild' : '',
     argv.port ? `--port ${argv.port}` : '',
     argv.filter ? `--filter "${argv.filter}"` : '',
+    argv.renderMode ? `--renderMode ${argv.renderMode}` : '',
   ].join(' ');
 
   // Get the directory of the current file
@@ -226,7 +235,17 @@ async function compareCaptureMode(): Promise<number> {
     }
 
     // Run the tests
-    exitCode = await runTest('chromium');
+    const renderModes: ('webgl' | 'canvas')[] =
+      argv.renderMode === 'all'
+        ? ['webgl', 'canvas']
+        : [argv.renderMode as 'webgl' | 'canvas'];
+    exitCode = 0;
+    for (const mode of renderModes) {
+      const result = await runTest('chromium', mode);
+      if (result !== 0) {
+        exitCode = result;
+      }
+    }
   } finally {
     // Kill the serve-examples process
     serveExamplesChildProc.kill();
@@ -238,9 +257,13 @@ async function compareCaptureMode(): Promise<number> {
  * Run the tests in capture or compare mode depending on the `argv.capture` flag
  * for a specific browser type.
  */
-async function runTest(browserType: 'chromium') {
+async function runTest(
+  browserType: 'chromium',
+  renderMode: 'webgl' | 'canvas',
+) {
   const paramString = Object.entries({
     browser: browserType,
+    renderMode,
     overwrite: argv.overwrite,
     filter: argv.filter,
     RUNTIME_ENV: runtimeEnv,
@@ -255,7 +278,9 @@ async function runTest(browserType: 'chromium') {
     ),
   );
 
-  const snapshotSubDirName = `${browserType}-${runtimeEnv}`;
+  const snapshotSubDirName = `${browserType}-${runtimeEnv}${
+    renderMode === 'canvas' ? '-canvas' : ''
+  }`;
 
   const snapshotSubDir = path.join(certifiedSnapshotDir, snapshotSubDirName);
 
@@ -455,7 +480,7 @@ async function runTest(browserType: 'chromium') {
 
   // Go to the examples page
   await page.goto(
-    `http://localhost:${argv.port}/?automation=true&test=${argv.filter}`,
+    `http://localhost:${argv.port}/?automation=true&test=${argv.filter}&renderMode=${renderMode}`,
   );
 
   return donePromise;
