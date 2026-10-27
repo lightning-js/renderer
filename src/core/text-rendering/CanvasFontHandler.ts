@@ -397,13 +397,18 @@ export function calculateFontMetrics(fontFamily: string): FontMetrics {
     metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? 0;
   const descender =
     metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? 0;
+  let unitsPerEm =
+    (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0);
+  if (unitsPerEm === 0) {
+    unitsPerEm = ascender + descender;
+  }
+  if (unitsPerEm === 0) {
+    return defaultFontMetrics;
+  }
   return {
     ascender,
     descender: -descender,
-    lineGap:
-      (metrics.emHeightAscent ?? 0) +
-      (metrics.emHeightDescent ?? 0) -
-      (ascender + descender),
-    unitsPerEm: (metrics.emHeightAscent ?? 0) + (metrics.emHeightDescent ?? 0),
+    lineGap: unitsPerEm - (ascender + descender),
+    unitsPerEm,
   };
 }
