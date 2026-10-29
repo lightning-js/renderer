@@ -112,20 +112,20 @@ export class CanvasRenderer extends CoreRenderer {
     }
 
     if (hasClipping === true) {
-      const path = new Path2D();
+      ctx.beginPath();
       const { x, y, w, h, clipRadius } = clippingRect;
       if (clipRadius > 0) {
         const r = Math.min(clipRadius, w / 2, h / 2);
-        path.moveTo(x + r, y);
-        path.arcTo(x + w, y, x + w, y + h, r);
-        path.arcTo(x + w, y + h, x, y + h, r);
-        path.arcTo(x, y + h, x, y, r);
-        path.arcTo(x, y, x + w, y, r);
-        path.closePath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
       } else {
-        path.rect(x, y, w, h);
+        ctx.rect(x, y, w, h);
       }
-      ctx.clip(path);
+      ctx.clip();
     }
 
     if (hasTransform === true) {

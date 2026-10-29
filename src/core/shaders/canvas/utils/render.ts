@@ -18,7 +18,7 @@
 import type { Vec4 } from '../../../renderers/webgl/internal/ShaderUtils.js';
 
 export function roundRect(
-  ctx: CanvasRenderingContext2D | Path2D,
+  ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
@@ -81,9 +81,9 @@ export function roundedRectWithBorder(
     ctx.fill();
     ctx.closePath();
 
-    const path = new Path2D();
-    roundRect(path, innerX, innerY, innerW, innerH, innerBorderRadius as Vec4);
-    ctx.clip(path);
+    ctx.beginPath();
+    roundRect(ctx, innerX, innerY, innerW, innerH, innerBorderRadius as Vec4);
+    ctx.clip();
     renderContext();
     return;
   }
@@ -92,19 +92,20 @@ export function roundedRectWithBorder(
 
   //draw node content first
   ctx.save();
-  const path = new Path2D();
-  roundRect(path, x, y, width, height, radius);
-  ctx.clip(path);
+  ctx.beginPath();
+
+  roundRect(ctx, x, y, width, height, radius);
+  ctx.clip();
   renderContext();
   ctx.restore();
 
   //draw border by clipping inner area from outer area
   ctx.save();
-  const borderPath = new Path2D();
-  roundRect(borderPath, outerX, outerY, outerW, outerH, outerBorderRadius);
-  roundRect(borderPath, innerX, innerY, innerW, innerH, innerBorderRadius);
+  ctx.beginPath();
+  roundRect(ctx, outerX, outerY, outerW, outerH, outerBorderRadius);
+  roundRect(ctx, innerX, innerY, innerW, innerH, innerBorderRadius);
   ctx.fillStyle = borderColor;
-  ctx.fill(borderPath, 'evenodd');
+  ctx.fill('evenodd');
   ctx.restore();
 }
 

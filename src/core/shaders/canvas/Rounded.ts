@@ -39,16 +39,16 @@ export const Rounded: CanvasShaderType<RoundedProps, ComputedRoundedValues> = {
     );
   },
   render(ctx, node, renderContext) {
-    const path = new Path2D();
+    ctx.beginPath();
     roundRect(
-      path,
+      ctx,
       node.globalTransform!.tx,
       node.globalTransform!.ty,
       node.props.w,
       node.props.h,
       this.computed.radius!,
     );
-    ctx.clip(path);
+    ctx.clip();
 
     renderContext();
   },
