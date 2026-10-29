@@ -181,7 +181,7 @@ const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
   }
   const { fontUrl, metrics } = config;
 
-  const nwff: CoreTextNode[] = (nodesWaitingForFont[fontFamily] = []);
+  const nwff = (nodesWaitingForFont[fontFamily] ||= []);
   // Create and store the loading promise
   const loadPromise = stage.platform
     .loadFontFace(fontFamily, fontUrl)
