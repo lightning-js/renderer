@@ -23,6 +23,7 @@ import type {
   CanvasRenderInfo,
   FontHandler,
   MeasureTextFn,
+  NormalizedFontMetrics,
   TextLineStruct,
   TextRenderInfo,
 } from './TextRenderer.js';
@@ -46,9 +47,7 @@ const font: FontHandler = CanvasFontHandler;
 let stage: Stage | null = null;
 let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let context:
-  | CanvasRenderingContext2D
-  | OffscreenCanvasRenderingContext2D
-  | null = null;
+  CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
 
 // Whether the drawing canvas is an OffscreenCanvas (supports transferToImageBitmap)
 let isOffscreen = false;
@@ -56,9 +55,7 @@ let isOffscreen = false;
 // Separate canvas and context for text measurements
 let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 type MeasureContext =
-  | CanvasRenderingContext2D
-  | OffscreenCanvasRenderingContext2D
-  | null;
+  CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
 let measureContext: MeasureContext = null;
 
 // Cache for text layout calculations
@@ -201,8 +198,7 @@ const init = (_stage: Stage): void => {
   }
 
   context = canvas.getContext('2d') as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D;
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
   assertTruthy(context, '.getContext(2d) failed');
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -222,116 +218,46 @@ const init = (_stage: Stage): void => {
 };
 
 /**
- * Canvas text renderer
+ * Draws the laid-out text into a canvas and snapshots it as a texture source.
  *
- * @param stage - Stage instance for font resolution
- * @param props - Text rendering properties
- * @returns Object containing ImageData and dimensions
+ * @remarks
+ * Split out of {@link renderText} so the call site can wrap just this step
+ * in a try/catch: `transferToImageBitmap()` is the one part of text
+ * rendering known to throw in some sandboxed/headed-browser environments
+ * (no real GPU/display surface), and isolating it here keeps the draw logic
+ * itself free of error-handling noise.
  */
-const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
+interface DrawAndCaptureArgs {
+  canvasW: number;
+  canvasH: number;
+  baseFont: string;
+  fontStyle: string;
+  fontSize: number;
+  fontFamily: string;
+  color: number;
+  letterSpacing: number;
+  richText: boolean;
+  lines: TextLineStruct[];
+  lineAmount: number;
+  metrics: NormalizedFontMetrics;
+}
+
+const drawAndCaptureText = ({
+  canvasW,
+  canvasH,
+  baseFont,
+  fontStyle,
+  fontSize,
+  fontFamily,
+  color,
+  letterSpacing,
+  richText,
+  lines,
+  lineAmount,
+  metrics,
+}: DrawAndCaptureArgs): ImageBitmap | HTMLCanvasElement | null => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
-  assertTruthy(measureContext, 'Canvas measureContext is not available');
-  const cacheKey = getLayoutCacheKey(props);
-
-  let layout = renderInfoCache.get(cacheKey);
-  if (layout !== undefined) {
-    return layout;
-  }
-  // Extract already normalized properties
-  const {
-    text,
-    fontFamily,
-    fontStyle,
-    fontSize,
-    textAlign,
-    maxLines,
-    lineHeight,
-    overflowSuffix,
-    maxWidth,
-    maxHeight,
-    wordBreak,
-    richText,
-    color,
-  } = props;
-
-  // When richText is enabled, parse BB-code tags from text and use the
-  // stripped plain text for layout. The parse result is stored in the
-  // module-level singleton (safe — renderText is synchronous).
-  let layoutText = text;
-  if (richText === true) {
-    parseRichText(text, _richTextResult);
-    layoutText = _richTextResult.stripped;
-  }
-
-  // Rename to baseFont to avoid shadowing the module-level FontHandler
-  const baseFont = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
-  // Get font metrics and calculate line height
-  measureContext.font = baseFont;
-  measureContext.textBaseline = 'hanging';
-
-  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
-
-  const letterSpacing = props.letterSpacing || 0;
-
-  // Rich text measures each run with its span's own font, so line breaking and
-  // the reported width both account for bold and italic.
-  const measureTextFn: MeasureTextFn =
-    richText === true
-      ? makeStyledMeasureText(baseFont, fontStyle, fontSize, fontFamily)
-      : CanvasFontHandler.measureText;
-
-  const [
-    lines,
-    remainingLines,
-    hasRemainingText,
-    _bareLineHeight,
-    _lineHeightPx,
-    baseEffectiveWidth,
-    effectiveHeight,
-  ] = mapTextLayout(
-    measureTextFn,
-    metrics,
-    layoutText,
-    textAlign,
-    fontFamily,
-    lineHeight,
-    overflowSuffix,
-    wordBreak,
-    letterSpacing,
-    maxLines,
-    maxWidth,
-    maxHeight,
-  );
-  const lineAmount = lines.length;
-
-  // mapTextLayout measured every line with the base font, so a line containing
-  // bold or italic spans is wider on screen than the width it reported. That
-  // width both sizes the texture and is published as the node's width, so
-  // without a correction the styled run would be clipped at the right edge and
-  // siblings would be laid out against a too-small box.
-  //
-  // Line breaking itself is still base-font based; this only corrects the
-  // extent of the lines that were chosen.
-  const effectiveWidth =
-    richText === true
-      ? correctStyledLineWidths(
-          lines,
-          measureTextFn,
-          fontFamily,
-          letterSpacing,
-          textAlign,
-          baseEffectiveWidth,
-        )
-      : baseEffectiveWidth;
-
-  // mapTextLayout and the width correction both leave the shared measure
-  // context on whichever span font they last used. Hand it back on the base
-  // font: it is shared with font metric calculation and the plain text path.
-  CanvasFontHandler.setMeasureFont(baseFont);
-
-  const canvasW = Math.ceil(effectiveWidth);
-  const canvasH = Math.ceil(effectiveHeight);
 
   // For OffscreenCanvas we reuse the shared canvas and snapshot via
   // transferToImageBitmap at the end. For HTMLCanvasElement we allocate a
@@ -554,22 +480,163 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   //   synchronously (zero-copy). The shared canvas gets a fresh empty bitmap.
   // HTMLCanvasElement: drawCanvas was allocated specifically for this text
   //   node, so it can be passed directly — no copy needed.
-  let imageData: ImageBitmap | HTMLCanvasElement | null = null;
-  if (drawCanvas.width > 0 && drawCanvas.height > 0) {
-    if (isOffscreen) {
-      assertTruthy(
-        drawCanvas instanceof OffscreenCanvas,
-        'drawCanvas is not an OffscreenCanvas',
-      );
-      imageData = drawCanvas.transferToImageBitmap();
-    } else {
-      assertTruthy(
-        drawCanvas instanceof HTMLCanvasElement,
-        'drawCanvas is not an HTMLCanvasElement',
-      );
-      imageData = drawCanvas;
-    }
+  if (drawCanvas.width <= 0 || drawCanvas.height <= 0) {
+    return null;
   }
+  if (isOffscreen) {
+    assertTruthy(
+      drawCanvas instanceof OffscreenCanvas,
+      'drawCanvas is not an OffscreenCanvas',
+    );
+    return drawCanvas.transferToImageBitmap();
+  }
+  assertTruthy(
+    drawCanvas instanceof HTMLCanvasElement,
+    'drawCanvas is not an HTMLCanvasElement',
+  );
+  return drawCanvas;
+};
+
+/**
+ * Canvas text renderer
+ *
+ * @param stage - Stage instance for font resolution
+ * @param props - Text rendering properties
+ * @returns Object containing ImageData and dimensions
+ */
+const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
+  assertTruthy(canvas, 'Canvas is not initialized');
+  assertTruthy(context, 'Canvas context is not available');
+  assertTruthy(measureContext, 'Canvas measureContext is not available');
+  const cacheKey = getLayoutCacheKey(props);
+
+  let layout = renderInfoCache.get(cacheKey);
+  if (layout !== undefined) {
+    return layout;
+  }
+  // Extract already normalized properties
+  const {
+    text,
+    fontFamily,
+    fontStyle,
+    fontSize,
+    textAlign,
+    maxLines,
+    lineHeight,
+    overflowSuffix,
+    maxWidth,
+    maxHeight,
+    wordBreak,
+    richText,
+    color,
+  } = props;
+
+  // When richText is enabled, parse BB-code tags from text and use the
+  // stripped plain text for layout. The parse result is stored in the
+  // module-level singleton (safe — renderText is synchronous).
+  let layoutText = text;
+  if (richText === true) {
+    parseRichText(text, _richTextResult);
+    layoutText = _richTextResult.stripped;
+  }
+
+  // Rename to baseFont to avoid shadowing the module-level FontHandler
+  const baseFont = `${fontStyle} ${fontSize}px Unknown, ${fontFamily}`;
+  // Get font metrics and calculate line height
+  measureContext.font = baseFont;
+  measureContext.textBaseline = 'hanging';
+
+  const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
+
+  const letterSpacing = props.letterSpacing || 0;
+
+  // Rich text measures each run with its span's own font, so line breaking and
+  // the reported width both account for bold and italic.
+  const measureTextFn: MeasureTextFn =
+    richText === true
+      ? makeStyledMeasureText(baseFont, fontStyle, fontSize, fontFamily)
+      : CanvasFontHandler.measureText;
+
+  const [
+    lines,
+    remainingLines,
+    hasRemainingText,
+    _bareLineHeight,
+    _lineHeightPx,
+    baseEffectiveWidth,
+    effectiveHeight,
+  ] = mapTextLayout(
+    measureTextFn,
+    metrics,
+    layoutText,
+    textAlign,
+    fontFamily,
+    lineHeight,
+    overflowSuffix,
+    wordBreak,
+    letterSpacing,
+    maxLines,
+    maxWidth,
+    maxHeight,
+  );
+  const lineAmount = lines.length;
+
+  // mapTextLayout measured every line with the base font, so a line containing
+  // bold or italic spans is wider on screen than the width it reported. That
+  // width both sizes the texture and is published as the node's width, so
+  // without a correction the styled run would be clipped at the right edge and
+  // siblings would be laid out against a too-small box.
+  //
+  // Line breaking itself is still base-font based; this only corrects the
+  // extent of the lines that were chosen.
+  const effectiveWidth =
+    richText === true
+      ? correctStyledLineWidths(
+          lines,
+          measureTextFn,
+          fontFamily,
+          letterSpacing,
+          textAlign,
+          baseEffectiveWidth,
+        )
+      : baseEffectiveWidth;
+
+  // mapTextLayout and the width correction both leave the shared measure
+  // context on whichever span font they last used. Hand it back on the base
+  // font: it is shared with font metric calculation and the plain text path.
+  CanvasFontHandler.setMeasureFont(baseFont);
+
+  const canvasW = Math.ceil(effectiveWidth);
+  const canvasH = Math.ceil(effectiveHeight);
+
+  // Some sandboxed/headed-browser environments (no real GPU/display surface)
+  // can throw out of the canvas snapshot step (observed: "Failed to execute
+  // 'transferToImageBitmap' on 'OffscreenCanvas': ImageBitmap construction
+  // failed"). Letting that escape renderText would bubble up through
+  // CoreTextNode.update() and wedge the whole render/update loop — no
+  // further frames or 'idle' events. Treat it the same as the existing
+  // zero-size-canvas case below: leave imageData null so CoreTextNode's
+  // "no image data" handling applies and the node just fails to render.
+  let imageData: ImageBitmap | HTMLCanvasElement | null = null;
+  try {
+    imageData = drawAndCaptureText({
+      canvasW,
+      canvasH,
+      baseFont,
+      fontStyle,
+      fontSize,
+      fontFamily,
+      color,
+      letterSpacing,
+      richText,
+      lines,
+      lineAmount,
+      metrics,
+    });
+  } catch (err) {
+    console.warn('CanvasTextRenderer: failed to render text node', err);
+  }
+
   const renderInfo = {
     type,
     imageData,
