@@ -28,7 +28,11 @@ export function createImageWorker() {
     return mimeType.indexOf('image/png') !== -1;
   }
 
+  // In-flight downloads by message id, so a `cancel` message can abort them.
+  var requests: Record<number, XMLHttpRequest> = {};
+
   function getImage(
+    id: number,
     src: string,
     premultiplyAlpha: boolean | null,
     x: number | null,
@@ -38,10 +42,12 @@ export function createImageWorker() {
   ) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
+      requests[id] = xhr;
       xhr.open('GET', src, true);
       xhr.responseType = 'blob';
 
       xhr.onload = function () {
+        delete requests[id];
         if (xhr.status !== 200 && xhr.status !== 0) {
           return reject(
             new Error(
@@ -95,9 +101,15 @@ export function createImageWorker() {
       };
 
       xhr.onerror = function () {
+        delete requests[id];
         reject(
           new Error('Network error occurred while trying to fetch the image.'),
         );
+      };
+
+      xhr.onabort = function () {
+        delete requests[id];
+        reject(new Error('Image load cancelled'));
       };
 
       xhr.send();
@@ -105,15 +117,23 @@ export function createImageWorker() {
   }
 
   self.onmessage = (event) => {
-    var src = event.data.src;
     var id = event.data.id;
+    if (event.data.type === 'cancel') {
+      var pending = requests[id];
+      if (pending !== undefined) {
+        pending.abort();
+      }
+      return;
+    }
+
+    var src = event.data.src;
     var premultiplyAlpha = event.data.premultiplyAlpha;
     var x = event.data.sx;
     var y = event.data.sy;
     var width = event.data.sw;
     var height = event.data.sh;
 
-    getImage(src, premultiplyAlpha, x, y, width, height)
+    getImage(id, src, premultiplyAlpha, x, y, width, height)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);

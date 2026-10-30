@@ -36,6 +36,10 @@ import { loadSvg } from './lib/textureSvg.js';
 import { loadCompressedTexture } from './lib/textureCompression.js';
 import { WebGlContextWrapper } from './WebGlContextWrapper.js';
 import type { GlContextWrapper } from '../GlContextWrapper.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../lib/CancelToken.js';
 
 /**
  * make fontface add not show errors
@@ -367,7 +371,7 @@ export class WebPlatform extends Platform {
   // Image handling
   ////////////////////////
 
-  override fetch(url: string): Promise<Blob> {
+  override fetch(url: string, cancelToken?: CancelToken): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.responseType = 'blob';
@@ -387,6 +391,16 @@ export class WebPlatform extends Platform {
       };
       xhr.open('GET', url, true);
       xhr.send(null);
+
+      if (cancelToken !== undefined) {
+        cancelToken.onCancel(() => {
+          // abort() moves the request to DONE with status 0, which the
+          // handler above would treat as success.
+          xhr.onreadystatechange = null;
+          xhr.abort();
+          reject(new TextureLoadCancelledError());
+        });
+      }
     });
   }
 
@@ -435,6 +449,7 @@ export class WebPlatform extends Platform {
     sy?: number | null,
     sw?: number | null,
     sh?: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse> {
     const isBase64 = isBase64Image(src);
     const absoluteSrc = convertUrlToAbsolute(src);
@@ -452,6 +467,7 @@ export class WebPlatform extends Platform {
         y,
         width,
         height,
+        cancelToken,
       );
     }
 
@@ -460,7 +476,7 @@ export class WebPlatform extends Platform {
     if (isBase64 === true) {
       blob = dataURIToBlob(src);
     } else {
-      blob = await this.fetch(absoluteSrc);
+      blob = await this.fetch(absoluteSrc, cancelToken);
     }
 
     return this.createImage(blob, premultiplyAlpha, x, y, width, height);
@@ -474,6 +490,7 @@ export class WebPlatform extends Platform {
     sy?: number | null,
     sw?: number | null,
     sh?: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse> {
     return loadSvg(
       convertUrlToAbsolute(src),
@@ -483,11 +500,15 @@ export class WebPlatform extends Platform {
       sy ?? null,
       sw ?? null,
       sh ?? null,
+      cancelToken,
     );
   }
 
-  override async loadCompressedTexture(src: string): Promise<ImageResponse> {
-    return loadCompressedTexture(convertUrlToAbsolute(src));
+  override async loadCompressedTexture(
+    src: string,
+    cancelToken?: CancelToken,
+  ): Promise<ImageResponse> {
+    return loadCompressedTexture(convertUrlToAbsolute(src), cancelToken);
   }
 
   ////////////////////////

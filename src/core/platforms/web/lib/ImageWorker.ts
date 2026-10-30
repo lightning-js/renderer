@@ -18,6 +18,10 @@
  */
 
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../../lib/CancelToken.js';
 
 export type ImageWorkerFactory = () => void;
 
@@ -111,6 +115,14 @@ export class ImageWorkerManager {
       } else {
         resolve(data);
       }
+    } else if (
+      // Cancelled after the worker finished downloading: the decoded bitmap
+      // was transferred to us and has no other owner.
+      data !== undefined &&
+      typeof ImageBitmap !== 'undefined' &&
+      data.data instanceof ImageBitmap
+    ) {
+      data.data.close();
     }
   }
 
@@ -183,6 +195,7 @@ export class ImageWorkerManager {
     sy: number | null,
     sw: number | null,
     sh: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse> {
     return new Promise((resolve, reject) => {
       if (this.workers) {
@@ -209,6 +222,19 @@ export class ImageWorkerManager {
             sw,
             sh,
           });
+
+          if (cancelToken !== undefined) {
+            cancelToken.onCancel(() => {
+              if (this.messageManager[id] === undefined) {
+                return;
+              }
+              // The worker still answers this id (with an abort error or a
+              // late bitmap), so workerLoad is released in handleMessage.
+              delete this.messageManager[id];
+              worker.postMessage({ type: 'cancel', id });
+              reject(new TextureLoadCancelledError());
+            });
+          }
         }
       }
     });

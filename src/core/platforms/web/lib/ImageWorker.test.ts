@@ -22,6 +22,10 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ImageWorkerManager } from './ImageWorker.js';
+import {
+  CancelToken,
+  TextureLoadCancelledError,
+} from '../../../lib/CancelToken.js';
 
 class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -103,5 +107,58 @@ describe('ImageWorkerManager on-demand growth', () => {
     await expect(first).resolves.toBeDefined();
     await expect(second).resolves.toBeDefined();
     await expect(third).resolves.toBeDefined();
+  });
+
+  it('asks the worker to abort and rejects when the token is cancelled', async () => {
+    const manager = new ImageWorkerManager(1, () => undefined);
+    const token = new CancelToken();
+
+    const request = manager.getImage(
+      'a.png',
+      null,
+      null,
+      null,
+      null,
+      null,
+      token,
+    );
+    const worker = FakeWorker.instances[0] as FakeWorker;
+    const { id } = worker.posted[0] as { id: number };
+
+    token.cancel();
+
+    await expect(request).rejects.toBeInstanceOf(TextureLoadCancelledError);
+    expect(worker.posted[1]).toEqual({ type: 'cancel', id });
+    expect(manager.workerLoad[0]).toBe(1);
+
+    // The worker's abort reply releases the slot.
+    worker.onmessage?.({
+      data: { id, error: 'Image load cancelled' },
+    } as MessageEvent);
+    expect(manager.workerLoad[0]).toBe(0);
+  });
+
+  it('ignores a cancel after the image has already resolved', async () => {
+    const manager = new ImageWorkerManager(1, () => undefined);
+    const token = new CancelToken();
+
+    const request = manager.getImage(
+      'a.png',
+      null,
+      null,
+      null,
+      null,
+      null,
+      token,
+    );
+    const worker = FakeWorker.instances[0] as FakeWorker;
+    const { id } = worker.posted[0] as { id: number };
+    worker.onmessage?.({
+      data: { id, data: { data: {} } },
+    } as MessageEvent);
+    await expect(request).resolves.toBeDefined();
+
+    token.cancel();
+    expect(worker.posted).toHaveLength(1);
   });
 });

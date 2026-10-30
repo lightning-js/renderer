@@ -27,6 +27,10 @@ import {
   dataURIToBlob,
   convertUrlToAbsolute,
 } from './lib/utils.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../lib/CancelToken.js';
 
 /**
  * Legacy Web Platform implementation that uses Image() instead of createImageBitmap
@@ -53,11 +57,20 @@ export class WebPlatformLegacy extends WebPlatform {
     sy?: number | null,
     sw?: number | null,
     sh?: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse> {
     const isBase64 = isBase64Image(src);
 
     if (isBase64 === false && this.settings.numImageWorkers > 0) {
-      return super.loadImage(src, premultiplyAlpha, sx, sy, sw, sh);
+      return super.loadImage(
+        src,
+        premultiplyAlpha,
+        sx,
+        sy,
+        sw,
+        sh,
+        cancelToken,
+      );
     }
 
     const absoluteSrc = convertUrlToAbsolute(src);
@@ -91,12 +104,21 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
       img.src = absoluteSrc;
+
+      if (cancelToken !== undefined) {
+        cancelToken.onCancel(() => {
+          img.onload = null;
+          img.onerror = null;
+          img.removeAttribute('src');
+          reject(new TextureLoadCancelledError());
+        });
+      }
     });
   }
 
@@ -133,8 +155,8 @@ export class WebPlatformLegacy extends WebPlatform {
           err instanceof Error
             ? err.message
             : err instanceof Event
-            ? `Image loading failed for ${img.src}`
-            : 'Unknown image loading error';
+              ? `Image loading failed for ${img.src}`
+              : 'Unknown image loading error';
         reject(new Error(`Image loading failed: ${errorMessage}`));
       };
 
@@ -172,12 +194,12 @@ export class WebPlatformLegacy extends WebPlatform {
     const formatHint = lower.endsWith('.ttf')
       ? " format('truetype')"
       : lower.endsWith('.woff2')
-      ? " format('woff2')"
-      : lower.endsWith('.woff')
-      ? " format('woff')"
-      : lower.endsWith('.otf')
-      ? " format('opentype')"
-      : '';
+        ? " format('woff2')"
+        : lower.endsWith('.woff')
+          ? " format('woff')"
+          : lower.endsWith('.otf')
+            ? " format('opentype')"
+            : '';
 
     const style = document.createElement('style');
     style.textContent = `@font-face { font-family: '${fontFamily}'; src: url('${fontUrl}')${formatHint}; }`;

@@ -24,6 +24,7 @@ import { EventEmitter } from '../../common/EventEmitter.js';
 import type { CoreContextTexture } from '../renderers/CoreContextTexture.js';
 import type { Bound } from '../lib/utils.js';
 import type { TextureError } from '../TextureError.js';
+import type { CancelToken } from '../lib/CancelToken.js';
 
 /**
  * Event handler for when a Texture is freed
@@ -151,12 +152,12 @@ export type TextureState =
   | 'freed'; // Released and must be reloaded
 
 export enum TextureType {
-  'generic' = 0,
-  'color' = 1,
-  'image' = 2,
-  'noise' = 3,
-  'renderToTexture' = 4,
-  'subTexture' = 5,
+  generic = 0,
+  color = 1,
+  image = 2,
+  noise = 3,
+  renderToTexture = 4,
+  subTexture = 5,
 }
 
 /**
@@ -339,6 +340,9 @@ export abstract class Texture extends EventEmitter {
       if (owners.size === 0) {
         (this.renderable as boolean) = false;
         this.onChangeIsRenderable?.(false);
+        if (this.state === 'loading') {
+          this.txManager.scheduleLoadCancel(this);
+        }
       }
     }
   }
@@ -506,19 +510,52 @@ export abstract class Texture extends EventEmitter {
    * This method is called by the CoreContextTexture when the texture is loaded.
    * The texture data is then used to populate the CoreContextTexture.
    *
+   * @param cancelToken - Cancels the underlying fetch. A result that arrives
+   * after cancellation is returned but not stored.
+   *
    * @returns
    * The texture data for this texture.
    */
-  async getTextureData(): Promise<TextureData> {
+  async getTextureData(cancelToken?: CancelToken): Promise<TextureData> {
     if (this.textureData === null) {
       const generation = this.contextGeneration;
-      const data = await this.getTextureSource();
-      if (generation !== this.contextGeneration) return data;
+      const data = await this.getTextureSource(cancelToken);
+      if (
+        generation !== this.contextGeneration ||
+        cancelToken?.cancelled === true
+      )
+        return data;
       this.textureData = data;
     }
 
     return this.textureData;
   }
+
+  /**
+   * Return to `initial` after a load was cancelled before GPU upload.
+   *
+   * @remarks
+   * Decoded source data is released rather than kept: until upload it is not
+   * counted by the TextureMemoryManager, so cleanup could never reclaim it.
+   */
+  resetCancelledLoad(): void {
+    const data = this.textureData;
+    this.textureData = null;
+    if (data !== null) {
+      this.releaseSourceData(data);
+    }
+    this.setState('initial');
+  }
+
+  /**
+   * Release resources held by source data that will not be uploaded.
+   *
+   * @remarks
+   * Subclasses that own decoded resources (e.g. `ImageBitmap`s they created)
+   * should free them here. Data supplied by the app must be left untouched.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected releaseSourceData(data: TextureData): void {}
 
   /**
    * Task for queueMicrotask to free texture data.
@@ -546,8 +583,11 @@ export abstract class Texture extends EventEmitter {
    * @remarks
    * This method is called by the CoreContextTexture when the texture is loaded.
    * The texture source is then used to populate the CoreContextTexture.
+   *
+   * @param cancelToken - Passed to network-backed loaders so the request can
+   * be aborted when the texture is no longer needed.
    */
-  abstract getTextureSource(): Promise<TextureData>;
+  abstract getTextureSource(cancelToken?: CancelToken): Promise<TextureData>;
 
   /**
    * Make a cache key for this texture.

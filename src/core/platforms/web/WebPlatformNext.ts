@@ -18,6 +18,10 @@
  */
 
 import { WebPlatform } from './WebPlatform.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../lib/CancelToken.js';
 
 /**
  * Next-generation Web Platform implementation that uses Fetch API
@@ -37,9 +41,16 @@ import { WebPlatform } from './WebPlatform.js';
  * All other platform features remain the same as WebPlatform.
  */
 export class WebPlatformNext extends WebPlatform {
-  override async fetch(url: string): Promise<Blob> {
+  override async fetch(url: string, cancelToken?: CancelToken): Promise<Blob> {
+    let signal: AbortSignal | undefined;
+    if (cancelToken !== undefined && typeof AbortController !== 'undefined') {
+      const controller = new AbortController();
+      cancelToken.onCancel(() => controller.abort());
+      signal = controller.signal;
+    }
+
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal });
 
       if (!response.ok) {
         throw new Error(
@@ -49,6 +60,9 @@ export class WebPlatformNext extends WebPlatform {
 
       return await response.blob();
     } catch (error) {
+      if (cancelToken?.cancelled === true) {
+        throw new TextureLoadCancelledError();
+      }
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown fetch error';
       throw new Error(`Fetch failed for ${url}: ${errorMessage}`);

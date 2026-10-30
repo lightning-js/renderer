@@ -19,6 +19,10 @@
 
 import { assertTruthy } from '../../../../utils.js';
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../../lib/CancelToken.js';
 
 /**
  * Loads a SVG image
@@ -33,6 +37,7 @@ export const loadSvg = (
   sy?: number | null,
   sw?: number | null,
   sh?: number | null,
+  cancelToken?: CancelToken,
 ): Promise<ImageResponse> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -62,5 +67,14 @@ export const loadSvg = (
     };
 
     img.src = url;
+
+    if (cancelToken !== undefined) {
+      cancelToken.onCancel(() => {
+        img.onload = null;
+        img.onerror = null;
+        img.removeAttribute('src');
+        reject(new TextureLoadCancelledError());
+      });
+    }
   });
 };

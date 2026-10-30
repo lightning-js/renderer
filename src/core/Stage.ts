@@ -110,11 +110,7 @@ export class Stage {
   private firstFrameDrawn = false;
 
   public contextState:
-    | 'running'
-    | 'lost'
-    | 'restoring'
-    | 'failed'
-    | 'destroyed' = 'running';
+    'running' | 'lost' | 'restoring' | 'failed' | 'destroyed' = 'running';
   private contextSuspended = false;
   private contextGeneration = 0;
   private contextLostAt = 0;
@@ -374,6 +370,7 @@ export class Stage {
     this.txManager = new CoreTextureManager(this, {
       createImageBitmapSupport,
       maxRetryCount,
+      loadCancelDelay: options.textureLoadCancelDelay,
     });
 
     this.txMemManager = new TextureMemoryManager(this, textureMemory);

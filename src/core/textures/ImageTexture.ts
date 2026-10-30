@@ -21,6 +21,7 @@ import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
 import type { Platform } from '../platforms/Platform.js';
 import type { CompressedImageData } from '../platforms/web/lib/textureCompression.js';
+import type { CancelToken } from '../lib/CancelToken.js';
 
 /**
  * Properties of the {@link ImageTexture}
@@ -164,7 +165,9 @@ export class ImageTexture extends Texture {
     this.maxRetryCount = props.maxRetryCount as number;
   }
 
-  override async getTextureSource(): Promise<TextureData> {
+  override async getTextureSource(
+    cancelToken?: CancelToken,
+  ): Promise<TextureData> {
     const generation = this.contextGeneration;
     // Compressed textures are not supported by the Canvas2D renderer.
     // Fail fast here before incurring a network fetch or binary decode.
@@ -186,9 +189,13 @@ export class ImageTexture extends Texture {
 
     let resp: TextureData;
     try {
-      resp = await this.determineImageTypeAndLoadImage();
+      resp = await this.determineImageTypeAndLoadImage(cancelToken);
     } catch (e) {
-      if (generation !== this.contextGeneration) return { data: null };
+      if (
+        generation !== this.contextGeneration ||
+        cancelToken?.cancelled === true
+      )
+        return { data: null };
       this.setState('failed', e as Error);
 
       return {
@@ -196,14 +203,11 @@ export class ImageTexture extends Texture {
       };
     }
 
-    if (generation !== this.contextGeneration) {
-      if (
-        typeof ImageBitmap !== 'undefined' &&
-        resp.data instanceof ImageBitmap &&
-        (typeof this.props.src === 'string' || this.props.src instanceof Blob)
-      ) {
-        resp.data.close();
-      }
+    if (
+      generation !== this.contextGeneration ||
+      cancelToken?.cancelled === true
+    ) {
+      this.releaseSourceData(resp);
       return { data: null };
     }
     if (resp.data === null) {
@@ -220,7 +224,18 @@ export class ImageTexture extends Texture {
     };
   }
 
-  determineImageTypeAndLoadImage() {
+  protected override releaseSourceData(data: TextureData): void {
+    // Only close bitmaps this texture decoded; app-supplied ones are not ours.
+    if (
+      typeof ImageBitmap !== 'undefined' &&
+      data.data instanceof ImageBitmap &&
+      (typeof this.props.src === 'string' || this.props.src instanceof Blob)
+    ) {
+      data.data.close();
+    }
+  }
+
+  determineImageTypeAndLoadImage(cancelToken?: CancelToken) {
     const { src, premultiplyAlpha, type, w, h, sx, sy, sw, sh } = this.props;
     const platform = this.platform;
     const premultiply = premultiplyAlpha ?? true;
@@ -244,27 +259,27 @@ export class ImageTexture extends Texture {
     }
 
     if (type === 'regular') {
-      return platform.loadImage(src, premultiply, sx, sy, sw, sh);
+      return platform.loadImage(src, premultiply, sx, sy, sw, sh, cancelToken);
     }
 
     if (type === 'svg') {
-      return platform.loadSvg(src, w, h, sx, sy, sw, sh);
+      return platform.loadSvg(src, w, h, sx, sy, sw, sh, cancelToken);
     }
 
     if (isSvgImage(src) === true) {
-      return platform.loadSvg(src, w, h, sx, sy, sw, sh);
+      return platform.loadSvg(src, w, h, sx, sy, sw, sh, cancelToken);
     }
 
     if (type === 'compressed') {
-      return platform.loadCompressedTexture(src);
+      return platform.loadCompressedTexture(src, cancelToken);
     }
 
     if (isCompressedTextureContainer(src) === true) {
-      return platform.loadCompressedTexture(src);
+      return platform.loadCompressedTexture(src, cancelToken);
     }
 
     // default
-    return platform.loadImage(src, premultiply, sx, sy, sw, sh);
+    return platform.loadImage(src, premultiply, sx, sy, sw, sh, cancelToken);
   }
 
   /**

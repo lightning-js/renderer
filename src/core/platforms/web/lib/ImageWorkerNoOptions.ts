@@ -25,11 +25,40 @@
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 export function createImageWorkerNoOptions() {
+  // In-flight downloads by message id, so a `cancel` message can abort them.
+  var requestIds: (number | undefined)[] = [];
+  var requests: (XMLHttpRequest | null | undefined)[] = [];
+  var requestCount = 0;
+
+  function getRequest(id: number): XMLHttpRequest | null {
+    for (var i = 0; i < requestCount; i++) {
+      if (requestIds[i] === id) {
+        return requests[i] ?? null;
+      }
+    }
+    return null;
+  }
+
+  function removeRequest(id: number) {
+    for (var i = 0; i < requestCount; i++) {
+      if (requestIds[i] !== id) {
+        continue;
+      }
+      requestCount--;
+      requestIds[i] = requestIds[requestCount];
+      requests[i] = requests[requestCount];
+      requestIds[requestCount] = undefined;
+      requests[requestCount] = undefined;
+      return;
+    }
+  }
+
   function hasAlphaChannel(mimeType: string) {
     return mimeType.indexOf('image/png') !== -1;
   }
 
   function getImage(
+    id: number,
     src: string,
     premultiplyAlpha: boolean | null,
   ): Promise<{
@@ -39,10 +68,14 @@ export function createImageWorkerNoOptions() {
   }> {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
+      requestIds[requestCount] = id;
+      requests[requestCount] = xhr;
+      requestCount++;
       xhr.open('GET', src, true);
       xhr.responseType = 'blob';
 
       xhr.onload = function () {
+        removeRequest(id);
         if (xhr.status !== 200 && xhr.status !== 0) {
           return reject(
             new Error(
@@ -76,9 +109,15 @@ export function createImageWorkerNoOptions() {
       };
 
       xhr.onerror = function () {
+        removeRequest(id);
         reject(
           new Error('Network error occurred while trying to fetch the image.'),
         );
+      };
+
+      xhr.onabort = function () {
+        removeRequest(id);
+        reject(new Error('Image load cancelled'));
       };
 
       xhr.send();
@@ -86,11 +125,19 @@ export function createImageWorkerNoOptions() {
   }
 
   self.onmessage = (event) => {
-    var src = event.data.src;
     var id = event.data.id;
+    if (event.data.type === 'cancel') {
+      var pending = getRequest(id);
+      if (pending !== null) {
+        pending.abort();
+      }
+      return;
+    }
+
+    var src = event.data.src;
     var premultiplyAlpha = event.data.premultiplyAlpha;
 
-    getImage(src, premultiplyAlpha)
+    getImage(id, src, premultiplyAlpha)
       .then(function (data) {
         // @ts-expect-error ts has wrong postMessage signature
         self.postMessage({ id: id, src: src, data: data }, [data.data]);

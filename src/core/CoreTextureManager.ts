@@ -29,6 +29,7 @@ import type { Stage } from './Stage.js';
 import type { Platform } from './platforms/Platform.js';
 import { TextureError, TextureErrorCode } from './TextureError.js';
 import { createTextureUploadQueue } from './lib/TextureUploadQueue.js';
+import { CancelToken } from './lib/CancelToken.js';
 
 /**
  * Augmentable map of texture class types
@@ -61,6 +62,14 @@ export interface TextureManagerDebugInfo {
 export interface TextureManagerSettings {
   createImageBitmapSupport: 'auto' | 'basic' | 'options' | 'full';
   maxRetryCount: number;
+  /**
+   * Delay before an image load whose texture is no longer renderable is
+   * cancelled (`RendererMainSettings.textureLoadCancelDelay`). Negative
+   * disables load cancellation.
+   *
+   * @defaultValue `200`
+   */
+  loadCancelDelay?: number;
 }
 
 export type ResizeModeOptions =
@@ -185,10 +194,25 @@ export class CoreTextureManager extends EventEmitter {
   txConstructors: Partial<TextureMap> = {};
 
   public maxRetryCount: number;
+  /**
+   * How long an image load survives after its last renderable owner leaves.
+   *
+   * @remarks
+   * Absorbs nodes that wobble across the preload boundary (e.g. key-repeat
+   * scrolling back and forth) so their downloads are not aborted and
+   * restarted from scratch. Negative disables cancellation.
+   */
+  private loadCancelDelay: number;
   private uploadTextureQueue = createTextureUploadQueue();
   private contextTextures = new Set<Texture>();
   private restoreTextures = new Set<Texture>();
   private pendingContextLoads = new Set<Texture>();
+  /**
+   * Image loads that may be cancelled, from fetch start until GPU upload
+   * starts. Preloads and priority loads are never registered here.
+   */
+  private cancellableLoads = new Map<Texture, CancelToken>();
+  private pendingCancels = new Map<Texture, ReturnType<typeof setTimeout>>();
   private contextGeneration = 0;
   private stage: Stage;
 
@@ -220,6 +244,7 @@ export class CoreTextureManager extends EventEmitter {
   // Drop old GPU handles without treating context loss as a texture error.
   invalidateContext(): void {
     this.contextGeneration++;
+    this.abortCancellableLoads();
     this.uploadTextureQueue.clear();
     for (const texture of this.pendingContextLoads) {
       this.restoreTextures.add(texture);
@@ -269,6 +294,7 @@ export class CoreTextureManager extends EventEmitter {
     this.stage = stage;
     this.platform = stage.platform;
     this.maxRetryCount = settings.maxRetryCount;
+    this.loadCancelDelay = settings.loadCancelDelay ?? 200;
 
     this.registerTextureType('ImageTexture', ImageTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
@@ -353,6 +379,15 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
+    // Covers fetch/decode and GPU upload. A second call would start
+    // another getTextureSource() while textureData is still null
+    // (L2 TextureSource.isLoading() equivalent).
+    if (texture.state === 'loading') {
+      // An owner came back during the grace period: keep the in-flight load.
+      this.clearPendingCancel(texture);
+      return;
+    }
+
     // A queued restore is now being handled (possibly demand-loaded before
     // the throttled drain reached it) — remove it so it isn't loaded twice.
     this.restoreTextures.delete(texture);
@@ -360,13 +395,29 @@ export class CoreTextureManager extends EventEmitter {
 
     texture.setState('loading');
 
+    const cancelToken = new CancelToken();
+    if (
+      this.loadCancelDelay >= 0 &&
+      texture.type === TextureType.image &&
+      priority !== true &&
+      texture.renderableOwners.size > 0
+    ) {
+      this.cancellableLoads.set(texture, cancelToken);
+    }
+
     // Get texture data - early return on failure
-    const textureDataResult = await texture.getTextureData().catch((err) => {
-      if (generation !== this.contextGeneration) return null;
-      console.error(err);
-      texture.setState('failed');
-      return null;
-    });
+    const textureDataResult = await texture
+      .getTextureData(cancelToken)
+      .catch((err) => {
+        if (generation !== this.contextGeneration) return null;
+        if (cancelToken.cancelled === true) return null;
+        console.error(err);
+        texture.setState('failed');
+        return null;
+      });
+
+    // cancelLoad() already reset the texture; a newer load may own it now.
+    if (cancelToken.cancelled === true) return;
 
     // Early return if texture data fetch failed
     if (
@@ -375,8 +426,9 @@ export class CoreTextureManager extends EventEmitter {
     )
       return;
     if (textureDataResult === null || texture.state === 'failed') {
-      if (generation === this.contextGeneration)
-        this.pendingContextLoads.delete(texture);
+      this.cancellableLoads.delete(texture);
+      this.clearPendingCancel(texture);
+      this.pendingContextLoads.delete(texture);
       return;
     }
 
@@ -406,6 +458,8 @@ export class CoreTextureManager extends EventEmitter {
    */
   async uploadTexture(texture: Texture): Promise<void> {
     if (this.stage.contextState !== 'running') return;
+    this.cancellableLoads.delete(texture);
+    this.clearPendingCancel(texture);
     const generation = this.contextGeneration;
     const finish = () => {
       if (generation === this.contextGeneration)
@@ -504,6 +558,11 @@ export class CoreTextureManager extends EventEmitter {
     ) {
       const texture = this.uploadTextureQueue.dequeue();
       if (texture === undefined) break;
+      if (this.pendingCancels.has(texture) === true) {
+        // Decoded but no longer wanted: don't spend upload budget on it.
+        this.cancelLoad(texture);
+        continue;
+      }
       const generation = this.contextGeneration;
       try {
         await this.uploadTexture(texture);
@@ -567,6 +626,70 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
+   * Cancel an in-flight image load once its grace period expires.
+   *
+   * @remarks
+   * Called when a loading texture loses its last renderable owner. If an
+   * owner returns within {@link loadCancelDelay}, `loadTexture` clears the
+   * pending cancel and the original load continues. Textures with
+   * `preventCleanup` are kept.
+   */
+  scheduleLoadCancel(texture: Texture): void {
+    if (
+      this.cancellableLoads.has(texture) === false ||
+      this.pendingCancels.has(texture) === true ||
+      texture.preventCleanup === true
+    ) {
+      return;
+    }
+    this.pendingCancels.set(
+      texture,
+      setTimeout(() => {
+        this.pendingCancels.delete(texture);
+        if (texture.renderable === false) {
+          this.cancelLoad(texture);
+        }
+      }, this.loadCancelDelay),
+    );
+  }
+
+  private clearPendingCancel(texture: Texture): void {
+    const timer = this.pendingCancels.get(texture);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.pendingCancels.delete(texture);
+    }
+  }
+
+  /**
+   * Abort a load at whatever stage it has reached before GPU upload and
+   * reset the texture so the next renderable owner starts a fresh load.
+   */
+  private cancelLoad(texture: Texture): void {
+    this.clearPendingCancel(texture);
+    const token = this.cancellableLoads.get(texture);
+    if (token === undefined) {
+      return;
+    }
+    this.cancellableLoads.delete(texture);
+    this.uploadTextureQueue.remove(texture);
+    this.pendingContextLoads.delete(texture);
+    token.cancel();
+    texture.resetCancelledLoad();
+  }
+
+  private abortCancellableLoads(): void {
+    for (const timer of this.pendingCancels.values()) {
+      clearTimeout(timer);
+    }
+    this.pendingCancels.clear();
+    for (const token of this.cancellableLoads.values()) {
+      token.cancel();
+    }
+    this.cancellableLoads.clear();
+  }
+
+  /**
    * Destroy the CoreTextureManager and release all internal references.
    *
    * @remarks
@@ -578,6 +701,7 @@ export class CoreTextureManager extends EventEmitter {
    */
   destroy(): void {
     this.contextGeneration++;
+    this.abortCancellableLoads();
     this.uploadTextureQueue.clear();
     this.contextTextures.clear();
     this.restoreTextures.clear();

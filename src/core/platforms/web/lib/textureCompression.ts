@@ -19,6 +19,10 @@
 import { type CompressedData } from '../../../textures/Texture.js';
 import type { ImageResponse } from '../../../textures/ImageTexture.js';
 import type { WebGlContextWrapper } from '../WebGlContextWrapper.js';
+import {
+  TextureLoadCancelledError,
+  type CancelToken,
+} from '../../../lib/CancelToken.js';
 
 export type UploadCompressedTextureFunction = (
   glw: WebGlContextWrapper,
@@ -61,9 +65,17 @@ const KTX_IDENTIFIER = [
  */
 export const loadCompressedTexture = async (
   url: string,
+  cancelToken?: CancelToken,
 ): Promise<ImageResponse> => {
+  let signal: AbortSignal | undefined;
+  if (cancelToken !== undefined && typeof AbortController !== 'undefined') {
+    const controller = new AbortController();
+    cancelToken.onCancel(() => controller.abort());
+    signal = controller.signal;
+  }
+
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     if (!response.ok) {
       throw new Error(
         `Failed to fetch compressed texture: ${response.status} ${response.statusText}`,
@@ -105,6 +117,9 @@ export const loadCompressedTexture = async (
       throw new Error('Unrecognized compressed texture format');
     }
   } catch (error) {
+    if (cancelToken?.cancelled === true) {
+      throw new TextureLoadCancelledError();
+    }
     throw new Error(`Failed to load compressed texture from ${url}: ${error}`);
   }
 };

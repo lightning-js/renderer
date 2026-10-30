@@ -20,6 +20,7 @@
 import { type Stage } from '../Stage.js';
 import type { ImageResponse } from '../textures/ImageTexture.js';
 import type { GlContextWrapper } from './GlContextWrapper.js';
+import type { CancelToken } from '../lib/CancelToken.js';
 
 /**
  * Settings for the Platform
@@ -122,9 +123,11 @@ export abstract class Platform {
   /**
    * Fetches a resource from the network.
    * @param url - The URL of the resource to fetch.
+   * @param cancelToken - Aborts the request when cancelled; the promise then
+   * rejects with a `TextureLoadCancelledError`.
    * @returns A promise that resolves with the response.
    */
-  abstract fetch(url: string): Promise<unknown>;
+  abstract fetch(url: string, cancelToken?: CancelToken): Promise<unknown>;
 
   /**
    * Loads an image from a UR and returns it as an ImageBitmap or HTMLImageElement.
@@ -134,6 +137,8 @@ export abstract class Platform {
    * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
    * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
+   * @param cancelToken - Aborts the download when cancelled; the promise then
+   * rejects with a `TextureLoadCancelledError`.
    * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
    */
   abstract loadImage(
@@ -143,6 +148,7 @@ export abstract class Platform {
     sy?: number | null,
     sw?: number | null,
     sh?: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse>;
 
   /**
@@ -174,6 +180,8 @@ export abstract class Platform {
    * @param sy - The y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
    * @param sw - The width of the sub-rectangle of the source image to draw into the destination context.
    * @param sh - The height of the sub-rectangle of the source image to draw into the destination context.
+   * @param cancelToken - Aborts the download when cancelled; the promise then
+   * rejects with a `TextureLoadCancelledError`.
    */
   abstract loadSvg(
     src: string,
@@ -183,14 +191,20 @@ export abstract class Platform {
     sy?: number | null,
     sw?: number | null,
     sh?: number | null,
+    cancelToken?: CancelToken,
   ): Promise<ImageResponse>;
 
   /**
    * Loads a compressed texture from a URL and returns it as an ImageBitmap or HTMLImageElement.
    * @param src - The source URL of the compressed texture to load.
+   * @param cancelToken - Aborts the download when cancelled; the promise then
+   * rejects with a `TextureLoadCancelledError`.
    * @returns A promise that resolves with an object containing the loaded image and whether alpha was premultiplied.
    */
-  abstract loadCompressedTexture(src: string): Promise<ImageResponse>;
+  abstract loadCompressedTexture(
+    src: string,
+    cancelToken?: CancelToken,
+  ): Promise<ImageResponse>;
 
   /**
    * Retrieves the current timestamp.

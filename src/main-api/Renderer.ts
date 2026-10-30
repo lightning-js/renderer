@@ -327,6 +327,24 @@ export interface RendererRuntimeSettings {
   maxTextureUploadsDuringAnimation: number;
 
   /**
+   * Delay (in milliseconds) before an image load is cancelled once its
+   * texture is no longer renderable.
+   *
+   * @remarks
+   * When the last renderable owner of a loading image texture goes away
+   * (e.g. it scrolls out of the preload bounds), the download is aborted, or
+   * the decoded data is dropped if it is waiting for GPU upload, after this
+   * delay. If the texture becomes renderable again within the delay, the
+   * original load continues. Preloads and textures with `preventCleanup`
+   * are never cancelled.
+   *
+   * Set to a negative value to disable load cancellation.
+   *
+   * @defaultValue `200`
+   */
+  textureLoadCancelDelay: number;
+
+  /**
    * Target FPS for the global render loop
    *
    * @remarks
@@ -591,6 +609,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit || 42,
       maxTextureUploadsDuringAnimation:
         settings.maxTextureUploadsDuringAnimation ?? 1,
+      textureLoadCancelDelay: settings.textureLoadCancelDelay ?? 200,
       canvas: settings.canvas,
       createImageBitmapSupport: settings.createImageBitmapSupport || 'full',
       platform: settings.platform || WebPlatform,
@@ -650,6 +669,7 @@ export class RendererMain extends EventEmitter {
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       maxTextureUploadsDuringAnimation:
         settings.maxTextureUploadsDuringAnimation!,
+      textureLoadCancelDelay: settings.textureLoadCancelDelay!,
       createImageBitmapSupport: settings.createImageBitmapSupport!,
       platform,
       maxRetryCount: settings.maxRetryCount ?? 5,
