@@ -47,7 +47,23 @@ import {
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import { CoreTextNode, type CoreTextNodeProps } from './CoreTextNode.js';
+import {
+  CoreTextNode,
+  DEFAULT_CONTAIN,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_FONT_STYLE,
+  DEFAULT_LETTER_SPACING,
+  DEFAULT_LINE_HEIGHT,
+  DEFAULT_MAX_LINES,
+  DEFAULT_OFFSET_Y,
+  DEFAULT_OVERFLOW_SUFFIX,
+  DEFAULT_TEXT,
+  DEFAULT_TEXT_ALIGN,
+  DEFAULT_VERTICAL_ALIGN,
+  DEFAULT_WORD_BREAK,
+  type CoreTextNodeProps,
+} from './CoreTextNode.js';
 import { santizeCustomDataMap } from '../main-api/utils.js';
 import { pointInBound } from './lib/utils.js';
 import type { CoreShaderNode } from './renderers/CoreShaderNode.js';
@@ -1073,22 +1089,22 @@ export class Stage {
   }
 
   createTextNode(props: Partial<CoreTextNodeProps>) {
-    const fontSize = props.fontSize || 16;
+    const fontSize = props.fontSize || DEFAULT_FONT_SIZE;
     const resolvedProps = Object.assign(this.resolveNodeDefaults(props), {
-      text: props.text || '',
+      text: props.text || DEFAULT_TEXT,
       textRendererOverride: props.textRendererOverride || null,
       fontSize,
-      fontFamily: props.fontFamily || 'sans-serif',
-      fontStyle: props.fontStyle || 'normal',
-      textAlign: props.textAlign || 'left',
-      offsetY: props.offsetY || 0,
-      letterSpacing: props.letterSpacing || 0,
-      lineHeight: props.lineHeight || 1.2,
-      maxLines: props.maxLines || 0,
-      verticalAlign: props.verticalAlign || 'top',
-      overflowSuffix: props.overflowSuffix || '...',
-      wordBreak: props.wordBreak || 'break-word',
-      contain: props.contain || 'none',
+      fontFamily: props.fontFamily || DEFAULT_FONT_FAMILY,
+      fontStyle: props.fontStyle || DEFAULT_FONT_STYLE,
+      textAlign: props.textAlign || DEFAULT_TEXT_ALIGN,
+      offsetY: props.offsetY || DEFAULT_OFFSET_Y,
+      letterSpacing: props.letterSpacing || DEFAULT_LETTER_SPACING,
+      lineHeight: props.lineHeight || DEFAULT_LINE_HEIGHT,
+      maxLines: props.maxLines || DEFAULT_MAX_LINES,
+      verticalAlign: props.verticalAlign || DEFAULT_VERTICAL_ALIGN,
+      overflowSuffix: props.overflowSuffix || DEFAULT_OVERFLOW_SUFFIX,
+      wordBreak: props.wordBreak || DEFAULT_WORD_BREAK,
+      contain: props.contain || DEFAULT_CONTAIN,
       maxWidth: props.maxWidth || 0,
       maxHeight: props.maxHeight || 0,
       forceLoad: props.forceLoad || false,
