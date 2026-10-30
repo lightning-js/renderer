@@ -863,7 +863,10 @@ export class CoreNode extends EventEmitter {
 
   public destroyed = false;
 
-  constructor(readonly stage: Stage, props: CoreNodeProps) {
+  constructor(
+    readonly stage: Stage,
+    props: CoreNodeProps,
+  ) {
     super();
 
     // Initialize the renderOpTextures array with a capacity of 16 (typical max textures)
@@ -1998,7 +2001,11 @@ export class CoreNode extends EventEmitter {
       intersectRect(parentClippingRect, clippingRect, clippingRect);
       clippingRect.clipRadius = ownRadius;
       if (clippingRect.w <= 0 || clippingRect.h <= 0) {
-        clippingRect.valid = false;
+        // Empty intersection: the node is fully outside its clip region.
+        // Keep the rect valid with zero area (matching CanvasRenderer, which
+        // skips zero-area clips) so the subtree stays scissored to nothing.
+        // Flipping to invalid here would make descendants inherit the shared
+        // no-clip rect and draw fully unclipped outside the clip region.
         clippingRect.clipRadius = 0;
       }
     } else if (parentClippingRect.valid === true) {
