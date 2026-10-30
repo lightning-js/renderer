@@ -143,20 +143,18 @@ export type TextureCoords = Bound;
 
 export type TextureState =
   | 'initial' // Before anything is loaded
-  | 'fetching' // Fetching or generating texture source
-  | 'fetched' // Texture source is ready
-  | 'loading' // Uploading to GPU
+  | 'loading' // Fetching/decoding source data or uploading to the GPU
   | 'loaded' // Fully loaded and usable
   | 'failed' // Failed to load
   | 'freed'; // Released and must be reloaded
 
 export enum TextureType {
-  'generic' = 0,
-  'color' = 1,
-  'image' = 2,
-  'noise' = 3,
-  'renderToTexture' = 4,
-  'subTexture' = 5,
+  generic = 0,
+  color = 1,
+  image = 2,
+  noise = 3,
+  renderToTexture = 4,
+  subTexture = 5,
 }
 
 /**

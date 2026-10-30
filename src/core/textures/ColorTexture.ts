@@ -80,8 +80,6 @@ export class ColorTexture extends Texture {
       pixelData[3] = (this.color >>> 24) & 0xff; // Alpha
     }
 
-    this.setState('fetched', { w: 1, h: 1 });
-
     return {
       data: pixelData,
       premultiplyAlpha: true,
