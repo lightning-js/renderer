@@ -633,4 +633,87 @@ describe('CoreTextNode', () => {
       expect(node['_layoutGenerated']).toBe(true);
     });
   });
+
+  describe('text setter defaults', () => {
+    // [property, value that is not the default, explicit value that must be kept, default]
+    const fallbackCases = [
+      ['contain', 'width', 'both', 'none'],
+      ['fontFamily', 'Arial', 'Ubuntu', 'sans-serif'],
+      ['fontStyle', 'italic', 'oblique', 'normal'],
+      ['textAlign', 'center', 'right', 'left'],
+      ['verticalAlign', 'bottom', 'middle', 'top'],
+      ['wordBreak', 'break-all', 'overflow', 'break-word'],
+      ['overflowSuffix', '>>', '', '...'],
+      ['fontSize', 32, 0, 16],
+      ['lineHeight', 2, 0, 1.2],
+      ['letterSpacing', 4, 0, 0],
+      ['maxLines', 3, 0, 0],
+      ['offsetY', 5, 0, 0],
+      ['text', 'Hello', 'Kept', ''],
+    ] as const;
+
+    it.each(fallbackCases)(
+      '%s uses the create default when set to undefined',
+      (prop, initial, _kept, fallback) => {
+        const node = new CoreTextNode(
+          stage,
+          { ...defaultTextProps, [prop]: initial },
+          mockTextRenderer,
+        );
+
+        (node)[prop] = undefined;
+
+        expect((node)[prop]).toBe(fallback);
+      },
+    );
+
+    it.each(fallbackCases)(
+      '%s keeps an explicit value',
+      (prop, _initial, kept) => {
+        const node = new CoreTextNode(
+          stage,
+          defaultTextProps,
+          mockTextRenderer,
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        (node as any)[prop] = kept;
+
+        expect((node)[prop]).toBe(kept);
+      },
+    );
+
+    it('stringifies numeric and boolean text instead of using the empty default', () => {
+      const node = new CoreTextNode(stage, defaultTextProps, mockTextRenderer);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      node.text = 0 as any;
+      expect(node.text).toBe('0');
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      node.text = false as any;
+      expect(node.text).toBe('false');
+    });
+
+    it('keeps explicit 0 and empty string instead of replacing them', () => {
+      const node = new CoreTextNode(
+        stage,
+        {
+          ...defaultTextProps,
+          fontSize: 32,
+          lineHeight: 2,
+          overflowSuffix: '...',
+        },
+        mockTextRenderer,
+      );
+
+      node.fontSize = 0;
+      node.lineHeight = 0;
+      node.overflowSuffix = '';
+
+      expect(node.fontSize).toBe(0);
+      expect(node.lineHeight).toBe(0);
+      expect(node.overflowSuffix).toBe('');
+    });
+  });
 });

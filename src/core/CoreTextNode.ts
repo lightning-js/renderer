@@ -524,7 +524,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontSize(value: number | undefined) {
-    value ||= DEFAULT_FONT_SIZE;
+    if( value === undefined) {
+      value = DEFAULT_FONT_SIZE
+    };
+
     if (this.textProps.fontSize !== value) {
       this.textProps.fontSize = value;
       this._layoutGenerated = false;
@@ -580,6 +583,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   set letterSpacing(value: number | undefined) {
     value ||= DEFAULT_LETTER_SPACING;
+
     if (this.textProps.letterSpacing !== value) {
       this.textProps.letterSpacing = value;
       this._layoutGenerated = false;
@@ -592,7 +596,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set lineHeight(value: number | undefined) {
-    value ||= DEFAULT_LINE_HEIGHT;
+    if( value === undefined) {
+      value = DEFAULT_LINE_HEIGHT;
+    }
+
     if (this.textProps.lineHeight !== value) {
       this.textProps.lineHeight = value;
       this._layoutGenerated = false;
@@ -631,7 +638,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set overflowSuffix(value: string | undefined) {
-    value ||= DEFAULT_OVERFLOW_SUFFIX;
+    if( value === undefined) {
+      value = DEFAULT_OVERFLOW_SUFFIX;
+    }
+
     if (this.textProps.overflowSuffix !== value) {
       this.textProps.overflowSuffix = value;
       this._layoutGenerated = false;
