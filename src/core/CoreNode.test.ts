@@ -18,7 +18,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { CoreNode, UpdateType } from './CoreNode.js';
+import { CoreNode, CoreNodeRenderState, UpdateType } from './CoreNode.js';
+import type { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { ImageTexture } from './textures/ImageTexture.js';
 import { makeMockStage, makeNodeProps } from '../../test/mockStage.js';
@@ -344,6 +345,66 @@ describe('CoreNode', () => {
       node.update(0, clippingRect);
       expect(node.clippingRect.valid).toBe(false);
       expect(node.clippingRect.clipRadius).toBe(0);
+    });
+    it('calculateClippingRect keeps an empty intersection scissored instead of unclipped', () => {
+      const bigStage = makeMockStage(
+        { boundsMargin: [100, 100, 100, 100] } as Partial<
+          Pick<Stage, 'boundsMargin'>
+        >,
+        { width: 1920, height: 1080 },
+      );
+      const root = new CoreNode(bigStage, makeNodeProps({ w: 1920, h: 1080 }));
+      const clipper = new CoreNode(
+        bigStage,
+        makeNodeProps({
+          parent: root,
+          x: 600,
+          y: 200,
+          w: 1300,
+          h: 800,
+          clipping: true,
+        }),
+      );
+      const row = new CoreNode(
+        bigStage,
+        makeNodeProps({ parent: clipper, w: 200, h: 50, clipping: true }),
+      );
+      const child = new CoreNode(
+        bigStage,
+        makeNodeProps({ parent: row, w: 200, h: 50 }),
+      );
+      const grandchild = new CoreNode(
+        bigStage,
+        makeNodeProps({ parent: child, w: 200, h: 50 }),
+      );
+      const noClipRect = {
+        x: 0,
+        y: 0,
+        w: 1920,
+        h: 1080,
+        valid: false,
+        clipRadius: 0,
+      };
+      root.update(0, noClipRect);
+      expect(row.clippingRect.valid).toBe(true);
+      expect(row.clippingRect.x).toBe(600);
+      expect(row.clippingRect.y).toBe(200);
+      expect(row.clippingRect.w).toBe(200);
+      expect(row.clippingRect.h).toBe(50);
+
+      row.y = -100;
+      root.update(1, noClipRect);
+
+      expect(row.renderState).not.toBe(CoreNodeRenderState.OutOfBounds);
+      expect(row.clippingRect.valid).toBe(true);
+      expect(row.clippingRect.w).toBe(0);
+      expect(row.clippingRect.h).toBe(0);
+      expect(child.clippingRect.valid).toBe(true);
+      expect(child.clippingRect.w).toBe(0);
+      expect(child.clippingRect.h).toBe(0);
+      expect(grandchild.clippingRect.valid).toBe(true);
+      expect(grandchild.clippingRect.w).toBe(0);
+      expect(grandchild.clippingRect.h).toBe(0);
     });
   });
 
