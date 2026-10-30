@@ -269,4 +269,49 @@ describe('Plan 2 canvas text latency', () => {
 
     expect(rt.state).toBe('loaded');
   });
+
+  it('emits text loaded (fractional dims) before texture loaded (integer dims)', async () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const textRenderer = makeCanvasTextRenderer();
+    // Fractional layout dims vs integer texture dims distinguishes the two
+    // 'loaded' payloads the way real canvas text does.
+    (textRenderer.renderText as ReturnType<typeof vi.fn>).mockReturnValue({
+      type: 'canvas',
+      width: 120.5,
+      height: 40.25,
+      hasRemainingText: false,
+      remainingLines: 0,
+      imageData: new (
+        globalThis as unknown as { ImageBitmap: new () => unknown }
+      ).ImageBitmap(),
+    } as unknown as CanvasRenderInfo);
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    const seen: Array<{ type: string; w: number; h: number }> = [];
+    node.on('loaded', (_target: unknown, payload: unknown) => {
+      const p = payload as {
+        type: string;
+        dimensions: { w: number; h: number };
+      };
+      seen.push({ type: p.type, w: p.dimensions.w, h: p.dimensions.h });
+    });
+
+    node.text = 'hello';
+    stage.drawFrame();
+
+    // Both user-facing emits are deferred; nothing fires synchronously
+    // mid-frame even though the texture upload completed synchronously.
+    expect(seen).toEqual([]);
+    expect(node.texture!.state).toBe('loaded');
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(seen.length).toBe(2);
+    expect(seen[0]).toEqual({ type: 'text', w: 120.5, h: 40.25 });
+    expect(seen[1]).toEqual({ type: 'texture', w: 120, h: 40 });
+  });
 });

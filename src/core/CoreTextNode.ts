@@ -96,10 +96,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.notifyParentRTTOfUpdate();
     }
     if (dimensions.w > 1 && dimensions.h > 1) {
-      this.emit('loaded', {
-        type: 'texture',
-        dimensions,
-      } satisfies NodeTextureLoadedPayload);
+      // Deferred to preserve text-before-texture 'loaded' ordering for
+      // synchronous canvas uploads (see CoreNode.onTextureLoaded).
+      queueMicrotask(() => {
+        this.emit('loaded', {
+          type: 'texture',
+          dimensions,
+        } satisfies NodeTextureLoadedPayload);
+      });
     }
     this.setUpdateType(UpdateType.IsRenderable);
     this.stage.requestRender();
