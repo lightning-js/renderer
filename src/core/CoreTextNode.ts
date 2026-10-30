@@ -96,10 +96,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.notifyParentRTTOfUpdate();
     }
     if (dimensions.w > 1 && dimensions.h > 1) {
-      this.emit('loaded', {
-        type: 'texture',
-        dimensions,
-      } satisfies NodeTextureLoadedPayload);
+      // Deferred to preserve text-before-texture 'loaded' ordering for
+      // synchronous canvas uploads (see CoreNode.onTextureLoaded).
+      queueMicrotask(() => {
+        this.emit('loaded', {
+          type: 'texture',
+          dimensions,
+        } satisfies NodeTextureLoadedPayload);
+      });
     }
     this.setUpdateType(UpdateType.IsRenderable);
     this.stage.requestRender();
@@ -289,17 +293,18 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         return;
       }
 
-      this.texture = this.stage.txManager.createTexture('ImageTexture', {
-        premultiplyAlpha: true,
-        src: result.imageData,
-      });
-
       this.props.w = width;
       this.props.h = height;
+      this.setUpdateType(UpdateType.Local);
       // It isn't renderable until the texture is loaded we have to set it to false here to avoid it
       // being detected as a renderable default color node in the next frame
       // it will be corrected once the texture is loaded
       this.setRenderable(false);
+
+      this.texture = this.stage.txManager.createTexture('ImageTexture', {
+        premultiplyAlpha: true,
+        src: result.imageData,
+      });
 
       if (this.renderState > CoreNodeRenderState.OutOfBounds) {
         // We do want the texture to load immediately

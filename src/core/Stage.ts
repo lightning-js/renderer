@@ -108,11 +108,7 @@ export class Stage {
   private firstFrameDrawn = false;
 
   public contextState:
-    | 'running'
-    | 'lost'
-    | 'restoring'
-    | 'failed'
-    | 'destroyed' = 'running';
+    'running' | 'lost' | 'restoring' | 'failed' | 'destroyed' = 'running';
   private contextSuspended = false;
   private contextGeneration = 0;
   private contextLostAt = 0;
@@ -404,6 +400,11 @@ export class Stage {
 
     this.renderer = new renderEngine(this);
 
+    // Must be set before createDefaultTexture(): the default texture upload
+    // runs synchronously during construction, so the texture manager needs
+    // the renderer to create its GPU-side context texture.
+    this.txManager.renderer = this.renderer;
+
     this.shManager = new CoreShaderManager(this);
 
     this.defShaderNode = this.renderer.getDefaultShaderNode();
@@ -424,9 +425,6 @@ export class Stage {
 
     this.createDefaultTexture();
     setPremultiplyMode(renderMode);
-
-    // Must do this after renderer is created
-    this.txManager.renderer = this.renderer;
 
     // Register text renderers (engines initialize lazily on first use)
     this.hasOnlyOneFontEngine = fontEngines.length === 1;

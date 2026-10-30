@@ -23,7 +23,7 @@ import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
-import { Texture, TextureType } from './textures/Texture.js';
+import { Texture, TextureType, type TextureData } from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import type { Stage } from './Stage.js';
 import type { Platform } from './platforms/Platform.js';
@@ -360,21 +360,40 @@ export class CoreTextureManager extends EventEmitter {
 
     texture.setState('loading');
 
-    // Get texture data - early return on failure
-    const textureDataResult = await texture.getTextureData().catch((err) => {
-      if (generation !== this.contextGeneration) return null;
+    // Get texture data - early return on failure. In-memory sources resolve
+    // synchronously so canvas text enqueues within the same update pass.
+    let dataOrPromise: TextureData | Promise<TextureData>;
+    try {
+      dataOrPromise = texture.getTextureData();
+    } catch (err) {
+      if (generation !== this.contextGeneration) return;
       console.error(err);
       texture.setState('failed');
-      return null;
-    });
-
-    // Early return if texture data fetch failed
-    if (
-      generation !== this.contextGeneration ||
-      this.stage.contextState !== 'running'
-    )
+      if (generation === this.contextGeneration)
+        this.pendingContextLoads.delete(texture);
       return;
-    if (textureDataResult === null || texture.state === 'failed') {
+    }
+
+    if (dataOrPromise instanceof Promise) {
+      const textureDataResult = await dataOrPromise.catch((err) => {
+        if (generation !== this.contextGeneration) return null;
+        console.error(err);
+        texture.setState('failed');
+        return null;
+      });
+
+      // Early return if texture data fetch failed
+      if (
+        generation !== this.contextGeneration ||
+        this.stage.contextState !== 'running'
+      )
+        return;
+      if (textureDataResult === null || texture.state === 'failed') {
+        if (generation === this.contextGeneration)
+          this.pendingContextLoads.delete(texture);
+        return;
+      }
+    } else if (dataOrPromise.data === null && texture.state === 'failed') {
       if (generation === this.contextGeneration)
         this.pendingContextLoads.delete(texture);
       return;

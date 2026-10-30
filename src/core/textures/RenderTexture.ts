@@ -66,7 +66,7 @@ export class RenderTexture extends Texture {
     this.props.h = value;
   }
 
-  override async getTextureSource(): Promise<TextureData> {
+  override getTextureSource(): TextureData {
     // Render texture data ready - dimensions will be set during upload
     return {
       data: null,

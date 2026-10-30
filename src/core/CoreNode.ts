@@ -1068,10 +1068,17 @@ export class CoreNode extends EventEmitter {
 
     // ignore 1x1 pixel textures
     if (dimensions.w > 1 && dimensions.h > 1) {
-      this.emit('loaded', {
-        type: 'texture',
-        dimensions,
-      } satisfies NodeTextureLoadedPayload);
+      // Defer only the user-facing emit. State changes above stay
+      // synchronous so the same-frame render still picks up the texture.
+      // This preserves the pre-sync-fast-path ordering where the text
+      // 'loaded' event (queued via queueMicrotask in handleRenderResult)
+      // is observed before the texture 'loaded' event.
+      queueMicrotask(() => {
+        this.emit('loaded', {
+          type: 'texture',
+          dimensions,
+        } satisfies NodeTextureLoadedPayload);
+      });
     }
 
     if (
@@ -1103,10 +1110,12 @@ export class CoreNode extends EventEmitter {
       this.texture !== null &&
       this.texture.retryCount > this.texture.maxRetryCount
     ) {
-      this.emit('failed', {
-        type: 'texture',
-        error,
-      } satisfies NodeTextureFailedPayload);
+      queueMicrotask(() => {
+        this.emit('failed', {
+          type: 'texture',
+          error,
+        } satisfies NodeTextureFailedPayload);
+      });
     }
   };
 
@@ -1122,9 +1131,11 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
-    this.emit('freed', {
-      type: 'texture',
-    } satisfies NodeTextureFreedPayload);
+    queueMicrotask(() => {
+      this.emit('freed', {
+        type: 'texture',
+      } satisfies NodeTextureFreedPayload);
+    });
   };
   //#endregion Textures
 
