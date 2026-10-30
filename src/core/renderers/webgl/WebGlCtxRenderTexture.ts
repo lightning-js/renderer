@@ -44,7 +44,7 @@ export class WebGlCtxRenderTexture extends WebGlCtxTexture {
     super(glw, memManager, textureSource);
   }
 
-  override async onLoadRequest(): Promise<Dimensions> {
+  override onLoadRequest(): Dimensions {
     const { glw } = this;
     const nativeTexture = (this._nativeCtxTexture =
       this.createNativeCtxTexture());

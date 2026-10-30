@@ -384,11 +384,13 @@ export class CoreTextureManager extends EventEmitter {
     const shouldUploadImmediately =
       texture.type !== TextureType.image || priority === true;
     if (shouldUploadImmediately === true) {
-      await this.uploadTexture(texture).catch((err) => {
+      try {
+        this.uploadTexture(texture);
+      } catch (err) {
         if (generation !== this.contextGeneration) return;
         console.error(`Failed to upload texture:`, err);
         texture.setState('failed');
-      });
+      }
       if (generation === this.contextGeneration)
         this.pendingContextLoads.delete(texture);
       return;
@@ -398,13 +400,7 @@ export class CoreTextureManager extends EventEmitter {
     this.enqueueUploadTexture(texture);
   }
 
-  /**
-   * Upload a texture to the GPU
-   *
-   * @param texture Texture to upload
-   * @returns Promise that resolves when the texture is fully loaded
-   */
-  async uploadTexture(texture: Texture): Promise<void> {
+  uploadTexture(texture: Texture): void {
     if (this.stage.contextState !== 'running') return;
     const generation = this.contextGeneration;
     const finish = () => {
@@ -455,7 +451,7 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    await coreContext.load();
+    coreContext.load();
     finish();
   }
 
@@ -472,10 +468,7 @@ export class CoreTextureManager extends EventEmitter {
    * @param maxProcessingTime - The maximum processing time in milliseconds
    * @param maxCount - The maximum number of textures to process in this call
    */
-  async processSome(
-    maxProcessingTime: number,
-    maxCount: number,
-  ): Promise<void> {
+  processSome(maxProcessingTime: number, maxCount: number): void {
     const platform = this.platform;
     const startTime = platform.getTimeStamp();
     let count = 0;
@@ -496,7 +489,7 @@ export class CoreTextureManager extends EventEmitter {
       count++;
     }
 
-    // Process uploads - await each upload to prevent GPU overload
+    // Process uploads - each upload completes synchronously within the budget
     while (
       this.uploadTextureQueue.size > 0 &&
       count < maxCount &&
@@ -506,7 +499,7 @@ export class CoreTextureManager extends EventEmitter {
       if (texture === undefined) break;
       const generation = this.contextGeneration;
       try {
-        await this.uploadTexture(texture);
+        this.uploadTexture(texture);
       } catch (error) {
         if (generation !== this.contextGeneration) continue;
         console.error('Failed to upload texture:', error);

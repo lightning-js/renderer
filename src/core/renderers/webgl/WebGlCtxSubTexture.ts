@@ -35,7 +35,7 @@ export class WebGlCtxSubTexture extends WebGlCtxTexture {
     super(glw, memManager, textureSource);
   }
 
-  override async onLoadRequest(): Promise<Dimensions> {
+  override onLoadRequest(): Dimensions {
     const props = (this.textureSource as SubTexture).textureData;
     assertTruthy(props, 'SubTexture must have texture data');
 
