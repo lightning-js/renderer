@@ -92,11 +92,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     _,
     dimensions,
   ) => {
-    // If parent has a render texture, flag that we need to update
     if (this.parentHasRenderTexture) {
       this.notifyParentRTTOfUpdate();
     }
-    // ignore 1x1 pixel textures
     if (dimensions.w > 1 && dimensions.h > 1) {
       this.emit('loaded', {
         type: 'texture',
@@ -104,6 +102,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       } satisfies NodeTextureLoadedPayload);
     }
     this.setUpdateType(UpdateType.IsRenderable);
+    this.stage.requestRender();
+    if (this.stage.options.enableDirtyRepaints === true) {
+      this.isQuadDirty = true;
+    }
   };
 
   /**

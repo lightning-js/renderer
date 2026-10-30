@@ -34,7 +34,7 @@ export abstract class CoreContextTexture {
     this.memManager.setTextureMemUse(this.textureSource, byteSize);
   }
 
-  abstract load(): Promise<void>;
+  abstract load(): void;
   abstract release(): void;
   abstract free(): void;
 

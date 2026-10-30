@@ -36,8 +36,8 @@ export class CanvasTexture extends CoreContextTexture {
       }
     | undefined;
 
-  async load(): Promise<void> {
-    // Capture textureData synchronously before any await - a pending
+  load(): void {
+    // Capture textureData synchronously - a pending
     // freeTextureDataTask microtask could null textureSource.textureData
     // during the first async suspension, causing onLoadRequest to fail.
     const textureData = this.textureSource.textureData;
@@ -46,7 +46,7 @@ export class CanvasTexture extends CoreContextTexture {
     this.textureSource.setState('loading');
 
     try {
-      const size = await this.onLoadRequest(textureData.data);
+      const size = this.onLoadRequest(textureData.data);
 
       // Guard against the texture being freed while the load was in flight
       if (this.textureSource.state === 'freed') {
@@ -149,9 +149,9 @@ export class CanvasTexture extends CoreContextTexture {
     return canvas;
   }
 
-  private async onLoadRequest(
+  private onLoadRequest(
     data: NonNullable<NonNullable<Texture['textureData']>['data']>,
-  ): Promise<Dimensions> {
+  ): Dimensions {
     if (data instanceof ImageData) {
       const canvas = document.createElement('canvas');
       canvas.width = data.width;

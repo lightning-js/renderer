@@ -668,11 +668,14 @@ export class Stage {
       const cap = this.options.maxTextureUploadsDuringAnimation;
       const maxCount =
         this.activeAnimationCount > 0 && cap > 0 ? cap : 0x7fffffff;
-      this.txManager
-        .processSome(this.options.textureProcessingTimeLimit, maxCount)
-        .catch((err) => {
-          console.error('Error processing textures:', err);
-        });
+      this.txManager.processSome(
+        this.options.textureProcessingTimeLimit,
+        maxCount,
+      );
+
+      if (root.updateType !== 0) {
+        root.update(this.deltaTime, root.clippingRect);
+      }
     }
 
     // Reset render operations and clear the canvas

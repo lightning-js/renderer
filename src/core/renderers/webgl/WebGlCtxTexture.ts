@@ -119,10 +119,10 @@ export class WebGlCtxTexture extends CoreContextTexture {
    * to force the texture to be pre-loaded prior to accessing the ctxTexture
    * property.
    */
-  async load(): Promise<void> {
-    // If the texture is already loading or loaded, return resolved promise
+  load(): void {
+    // If the texture is already loading or loaded, return early
     if (this.state === 'loading' || this.state === 'loaded') {
-      return Promise.resolve();
+      return;
     }
 
     this.state = 'loading';
@@ -144,7 +144,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     }
 
     try {
-      const { w, h } = await this.onLoadRequest();
+      const { w, h } = this.onLoadRequest();
       if (this.contextInvalidated === true) return;
 
       // If the texture has been freed while loading, return early.
@@ -187,7 +187,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
   /**
    * Called when the texture data needs to be loaded and uploaded to a texture
    */
-  async onLoadRequest(): Promise<Dimensions> {
+  onLoadRequest(): Dimensions {
     const { glw } = this;
     const textureData = this.textureSource.textureData;
     if (textureData === null || this._nativeCtxTexture === null) {

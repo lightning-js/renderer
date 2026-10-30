@@ -995,29 +995,11 @@ export class CoreNode extends EventEmitter {
 
   //#region Textures
   loadTexture(): void {
-    if (this.props.texture === null) {
-      return;
-    }
-
-    // If texture is already loaded / failed, trigger loaded event manually
-    // so that users get a consistent event experience.
-    // We do this in a microtask to allow listeners to be attached in the same
-    // synchronous task after calling loadTexture()
-    queueMicrotask(this.loadTextureTask);
-  }
-
-  /**
-   * Task for queueMicrotask to loadTexture
-   *
-   * @remarks
-   * This method is called in a microtask to release the texture.
-   */
-  private loadTextureTask = (): void => {
-    const texture = this.props.texture as Texture;
-    //it is possible that texture is null here if user sets the texture to null right after loadTexture call
+    const texture = this.props.texture;
     if (texture === null) {
       return;
     }
+
     if (this.textureOptions.preload === true) {
       this.stage.txManager.loadTexture(texture);
     }
@@ -1027,6 +1009,20 @@ export class CoreNode extends EventEmitter {
     texture.on('failed', this.onTextureFailed);
     texture.on('freed', this.onTextureFreed);
 
+    if (
+      texture.state === 'loaded' ||
+      texture.state === 'failed' ||
+      texture.state === 'freed'
+    ) {
+      queueMicrotask(this.loadTextureTask);
+    }
+  }
+
+  private loadTextureTask = (): void => {
+    const texture = this.props.texture;
+    if (texture === null) {
+      return;
+    }
     if (texture.state === 'loaded') {
       this.onTextureLoaded(texture, texture.dimensions!);
     } else if (texture.state === 'failed') {
