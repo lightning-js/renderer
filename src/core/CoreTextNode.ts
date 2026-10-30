@@ -503,8 +503,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set text(value: string | undefined) {
-    value ||= DEFAULT_TEXT;
-    const normalizedValue = typeof value === 'string' ? value : String(value);
+    let normalizedValue: string;
+    if (value === undefined || value === null) {
+      normalizedValue = DEFAULT_TEXT;
+    } else if (typeof value !== 'string') {
+      normalizedValue = String(value);
+    } else {
+      normalizedValue = value;
+    }
 
     if (this.textProps.text !== normalizedValue) {
       this.textProps.text = normalizedValue;
