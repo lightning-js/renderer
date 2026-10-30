@@ -151,12 +151,12 @@ export type TextureState =
   | 'freed'; // Released and must be reloaded
 
 export enum TextureType {
-  'generic' = 0,
-  'color' = 1,
-  'image' = 2,
-  'noise' = 3,
-  'renderToTexture' = 4,
-  'subTexture' = 5,
+  generic = 0,
+  color = 1,
+  image = 2,
+  noise = 3,
+  renderToTexture = 4,
+  subTexture = 5,
 }
 
 /**
@@ -509,15 +509,24 @@ export abstract class Texture extends EventEmitter {
    * @returns
    * The texture data for this texture.
    */
-  async getTextureData(): Promise<TextureData> {
-    if (this.textureData === null) {
-      const generation = this.contextGeneration;
-      const data = await this.getTextureSource();
-      if (generation !== this.contextGeneration) return data;
-      this.textureData = data;
+  getTextureData(): TextureData | Promise<TextureData> {
+    if (this.textureData !== null) {
+      return this.textureData;
     }
-
-    return this.textureData;
+    const generation = this.contextGeneration;
+    const sourceOrPromise = this.getTextureSource();
+    if (sourceOrPromise instanceof Promise) {
+      return sourceOrPromise.then((data) => {
+        if (generation === this.contextGeneration) {
+          this.textureData = data;
+        }
+        return data;
+      });
+    }
+    if (generation === this.contextGeneration) {
+      this.textureData = sourceOrPromise;
+    }
+    return sourceOrPromise;
   }
 
   /**
@@ -547,7 +556,7 @@ export abstract class Texture extends EventEmitter {
    * This method is called by the CoreContextTexture when the texture is loaded.
    * The texture source is then used to populate the CoreContextTexture.
    */
-  abstract getTextureSource(): Promise<TextureData>;
+  abstract getTextureSource(): TextureData | Promise<TextureData>;
 
   /**
    * Make a cache key for this texture.
