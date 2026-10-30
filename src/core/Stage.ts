@@ -108,11 +108,7 @@ export class Stage {
   private firstFrameDrawn = false;
 
   public contextState:
-    | 'running'
-    | 'lost'
-    | 'restoring'
-    | 'failed'
-    | 'destroyed' = 'running';
+    'running' | 'lost' | 'restoring' | 'failed' | 'destroyed' = 'running';
   private contextSuspended = false;
   private contextGeneration = 0;
   private contextLostAt = 0;
@@ -660,7 +656,10 @@ export class Stage {
       root.update(this.deltaTime, root.clippingRect);
     }
 
-    // Process some textures asynchronously but don't block the frame.
+    // Upload queued textures within the frame budget. Uploads complete
+    // synchronously, so this must run after the tree update above: updating
+    // is what discovers texture demand (scroll/visibility-dependent), and
+    // uploading first would stall newly demanded textures by a frame.
     // During active animations, limit texture uploads per frame (configurable
     // via `maxTextureUploadsDuringAnimation`) to preserve the frame budget.
     // When idle, use the full time budget.
@@ -673,6 +672,10 @@ export class Stage {
         maxCount,
       );
 
+      // Synchronous uploads above fired onTextureLoaded, dirtying nodes after
+      // this frame's update already ran. Flush those nodes now so they render
+      // this frame instead of the next. Only dirty-marked subtrees are
+      // visited; clean frames skip this entirely via the check above.
       if (root.updateType !== 0) {
         root.update(this.deltaTime, root.clippingRect);
       }
