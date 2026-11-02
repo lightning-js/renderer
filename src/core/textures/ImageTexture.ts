@@ -164,7 +164,7 @@ export class ImageTexture extends Texture {
   }
 
   override getTextureSource(): TextureData | Promise<TextureData> {
-    const generation = this.contextGeneration;
+    const generation = this.loadGeneration;
     // Compressed textures are not supported by the Canvas2D renderer.
     // Fail fast here before incurring a network fetch or binary decode.
     if (this.txManager.renderer?.mode === 'canvas') {
@@ -187,7 +187,7 @@ export class ImageTexture extends Texture {
     try {
       result = this.determineImageTypeAndLoadImage();
     } catch (e) {
-      if (generation !== this.contextGeneration) return { data: null };
+      if (generation !== this.loadGeneration) return { data: null };
       this.setState('failed', e as Error);
       return {
         data: null,
@@ -202,7 +202,7 @@ export class ImageTexture extends Texture {
     return (result as Promise<TextureData>).then(
       (resp) => this.finishTextureSource(resp, generation),
       (e: unknown) => {
-        if (generation !== this.contextGeneration) return { data: null };
+        if (generation !== this.loadGeneration) return { data: null };
         this.setState('failed', e as Error);
         return {
           data: null,
@@ -215,7 +215,7 @@ export class ImageTexture extends Texture {
     resp: TextureData,
     generation: number,
   ): TextureData {
-    if (generation !== this.contextGeneration) {
+    if (generation !== this.loadGeneration) {
       if (
         typeof ImageBitmap !== 'undefined' &&
         resp.data instanceof ImageBitmap &&

@@ -203,7 +203,7 @@ export abstract class Texture extends EventEmitter {
   public preventCleanup = false;
 
   public ctxTexture: CoreContextTexture | undefined;
-  protected contextGeneration = 0;
+  protected loadGeneration = 0;
 
   notifyContextLost(): void {
     this.txManager.notifyContextLost();
@@ -416,7 +416,7 @@ export abstract class Texture extends EventEmitter {
 
   // The browser has already discarded this generation's GPU resources.
   invalidateContext(): void {
-    this.contextGeneration++;
+    this.loadGeneration++;
     if (
       this.ctxTexture !== undefined &&
       'invalidateContext' in this.ctxTexture
@@ -462,9 +462,9 @@ export abstract class Texture extends EventEmitter {
    * e.g. ImageData that is downloaded from a URL.
    */
   freeTextureData(): void {
-    const generation = this.contextGeneration;
+    const generation = this.loadGeneration;
     queueMicrotask(() => {
-      if (generation === this.contextGeneration) this.freeTextureDataTask();
+      if (generation === this.loadGeneration) this.freeTextureDataTask();
     });
   }
 
@@ -498,9 +498,9 @@ export abstract class Texture extends EventEmitter {
       // to determine if we should try loading again
       this.retryCount += 1;
 
-      const generation = this.contextGeneration;
+      const generation = this.loadGeneration;
       queueMicrotask(() => {
-        if (generation === this.contextGeneration) this.releaseTask();
+        if (generation === this.loadGeneration) this.releaseTask();
       });
     } else if (state === 'loading') {
       this._error = null;
@@ -528,17 +528,17 @@ export abstract class Texture extends EventEmitter {
     if (this.textureData !== null) {
       return this.textureData;
     }
-    const generation = this.contextGeneration;
+    const generation = this.loadGeneration;
     const sourceOrPromise = this.getTextureSource();
     // Keep the resolved-data case as the primary path.
     if (isTextureDataPromise(sourceOrPromise) === false) {
-      if (generation === this.contextGeneration) {
+      if (generation === this.loadGeneration) {
         this.textureData = sourceOrPromise;
       }
       return sourceOrPromise;
     }
     return sourceOrPromise.then((data) => {
-      if (generation === this.contextGeneration) {
+      if (generation === this.loadGeneration) {
         this.textureData = data;
       }
       return data;
