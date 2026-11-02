@@ -38,11 +38,11 @@ describe('CoreTextureManager context loss', () => {
       load: vi.fn(),
     } as unknown as Texture;
 
-    const request = manager.loadTexture(texture);
+    manager.loadTexture(texture);
     manager.invalidateContext();
     stage.contextState = 'lost';
     finishDecode({ data: new Uint8Array([0, 0, 0, 0]) });
-    await request;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(texture.invalidateContext).toHaveBeenCalledOnce();
     expect(texture.setState).not.toHaveBeenCalledWith('failed');
 

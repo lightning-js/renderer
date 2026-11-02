@@ -332,12 +332,17 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
-   * Override loadTexture to use the batched approach.
+   * Load a texture: fetch its data, then upload it to the GPU. Image
+   * textures are queued for throttled upload unless `priority` is set.
+   *
+   * @remarks
+   * Fire-and-forget: listen to the texture's `loaded` / `failed` events for
+   * completion.
    *
    * @param texture - The texture to load
-   * @param immediate - Whether to prioritize the texture for immediate loading
+   * @param priority - Upload immediately instead of queueing (images only)
    */
-  async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
+  loadTexture(texture: Texture, priority?: boolean): void {
     if (this.stage.contextState !== 'running') {
       this.restoreTextures.add(texture);
       return;
@@ -388,29 +393,49 @@ export class CoreTextureManager extends EventEmitter {
           this.pendingContextLoads.delete(texture);
         return;
       }
-    } else {
-      const textureDataResult = await (
-        dataOrPromise as Promise<TextureData>
-      ).catch((err) => {
-        if (generation !== this.contextGeneration) return null;
-        console.error(err);
-        texture.setState('failed');
-        return null;
-      });
-
-      // Early return if texture data fetch failed
-      if (
-        generation !== this.contextGeneration ||
-        this.stage.contextState !== 'running'
-      )
-        return;
-      if (textureDataResult === null || texture.state === 'failed') {
-        if (generation === this.contextGeneration)
-          this.pendingContextLoads.delete(texture);
-        return;
-      }
+      this.uploadOrEnqueueTexture(texture, generation, priority);
+      return;
     }
+    this.loadTextureAsync(
+      texture,
+      dataOrPromise as Promise<TextureData>,
+      generation,
+      priority,
+    );
+  }
 
+  private async loadTextureAsync(
+    texture: Texture,
+    dataPromise: Promise<TextureData>,
+    generation: number,
+    priority: boolean | undefined,
+  ): Promise<void> {
+    const textureDataResult = await dataPromise.catch((err) => {
+      if (generation !== this.contextGeneration) return null;
+      console.error(err);
+      texture.setState('failed');
+      return null;
+    });
+
+    // Early return if texture data fetch failed
+    if (
+      generation !== this.contextGeneration ||
+      this.stage.contextState !== 'running'
+    )
+      return;
+    if (textureDataResult === null || texture.state === 'failed') {
+      if (generation === this.contextGeneration)
+        this.pendingContextLoads.delete(texture);
+      return;
+    }
+    this.uploadOrEnqueueTexture(texture, generation, priority);
+  }
+
+  private uploadOrEnqueueTexture(
+    texture: Texture,
+    generation: number,
+    priority: boolean | undefined,
+  ): void {
     // Handle non-image textures: upload immediately
     const shouldUploadImmediately =
       texture.type !== TextureType.image || priority === true;
