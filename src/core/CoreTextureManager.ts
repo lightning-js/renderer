@@ -459,7 +459,10 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
     console.error(message, err);
-    texture.setState('failed');
+    texture.setState(
+      'failed',
+      err instanceof Error ? err : new TextureError(String(err)),
+    );
     this.pendingContextLoads.delete(texture);
   }
 
@@ -564,10 +567,13 @@ export class CoreTextureManager extends EventEmitter {
       try {
         this.uploadTexture(texture);
       } catch (error) {
-        if (generation !== this.contextGeneration) continue;
-        console.error('Failed to upload texture:', error);
-        this.pendingContextLoads.delete(texture);
         // Continue with next texture instead of stopping entire queue
+        this.failTextureLoad(
+          texture,
+          generation,
+          'Failed to upload texture:',
+          error,
+        );
       }
       count++;
     }
