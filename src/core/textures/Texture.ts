@@ -515,18 +515,22 @@ export abstract class Texture extends EventEmitter {
     }
     const generation = this.contextGeneration;
     const sourceOrPromise = this.getTextureSource();
-    if (sourceOrPromise instanceof Promise) {
-      return sourceOrPromise.then((data) => {
-        if (generation === this.contextGeneration) {
-          this.textureData = data;
-        }
-        return data;
-      });
+    // TextureData always defines 'data' explicitly (even as null); a Promise
+    // never has a 'data' property, so this distinguishes the two without an
+    // instanceof check. Keep the resolved-data case as the primary path.
+    if ((sourceOrPromise as TextureData).data !== undefined) {
+      const data = sourceOrPromise as TextureData;
+      if (generation === this.contextGeneration) {
+        this.textureData = data;
+      }
+      return data;
     }
-    if (generation === this.contextGeneration) {
-      this.textureData = sourceOrPromise;
-    }
-    return sourceOrPromise;
+    return (sourceOrPromise as Promise<TextureData>).then((data) => {
+      if (generation === this.contextGeneration) {
+        this.textureData = data;
+      }
+      return data;
+    });
   }
 
   /**

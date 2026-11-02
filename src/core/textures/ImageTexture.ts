@@ -193,19 +193,22 @@ export class ImageTexture extends Texture {
         data: null,
       };
     }
-    if (result instanceof Promise) {
-      return result.then(
-        (resp) => this.finishTextureSource(resp, generation),
-        (e: unknown) => {
-          if (generation !== this.contextGeneration) return { data: null };
-          this.setState('failed', e as Error);
-          return {
-            data: null,
-          };
-        },
-      );
+    // TextureData always defines 'data' explicitly (even as null); a Promise
+    // never has a 'data' property, so this distinguishes the two without an
+    // instanceof check. Keep the resolved-data case as the primary path.
+    if ((result as TextureData).data !== undefined) {
+      return this.finishTextureSource(result as TextureData, generation);
     }
-    return this.finishTextureSource(result, generation);
+    return (result as Promise<TextureData>).then(
+      (resp) => this.finishTextureSource(resp, generation),
+      (e: unknown) => {
+        if (generation !== this.contextGeneration) return { data: null };
+        this.setState('failed', e as Error);
+        return {
+          data: null,
+        };
+      },
+    );
   }
 
   private finishTextureSource(

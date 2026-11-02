@@ -374,8 +374,22 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
-    if (dataOrPromise instanceof Promise) {
-      const textureDataResult = await dataOrPromise.catch((err) => {
+    // TextureData always defines 'data' explicitly (even as null); a Promise
+    // never has a 'data' property, so this distinguishes the two without an
+    // instanceof check. Keep the resolved-data case as the primary path.
+    if ((dataOrPromise as TextureData).data !== undefined) {
+      if (
+        (dataOrPromise as TextureData).data === null &&
+        texture.state === 'failed'
+      ) {
+        if (generation === this.contextGeneration)
+          this.pendingContextLoads.delete(texture);
+        return;
+      }
+    } else {
+      const textureDataResult = await (
+        dataOrPromise as Promise<TextureData>
+      ).catch((err) => {
         if (generation !== this.contextGeneration) return null;
         console.error(err);
         texture.setState('failed');
@@ -393,10 +407,6 @@ export class CoreTextureManager extends EventEmitter {
           this.pendingContextLoads.delete(texture);
         return;
       }
-    } else if (dataOrPromise.data === null && texture.state === 'failed') {
-      if (generation === this.contextGeneration)
-        this.pendingContextLoads.delete(texture);
-      return;
     }
 
     // Handle non-image textures: upload immediately
