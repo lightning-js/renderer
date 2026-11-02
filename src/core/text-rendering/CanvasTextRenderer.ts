@@ -523,6 +523,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     textAlign,
     maxLines,
     lineHeight,
+    letterSpacing,
     overflowSuffix,
     maxWidth,
     maxHeight,
@@ -547,8 +548,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   measureContext.textBaseline = 'hanging';
 
   const metrics = CanvasFontHandler.getFontMetrics(fontFamily, fontSize);
-
-  const letterSpacing = props.letterSpacing || 0;
 
   // Rich text measures each run with its span's own font, so line breaking and
   // the reported width both account for bold and italic.

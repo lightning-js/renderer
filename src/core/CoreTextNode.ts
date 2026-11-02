@@ -55,6 +55,20 @@ export enum TextConstraint {
   both = 3,
 }
 
+export const DEFAULT_TEXT = '';
+export const DEFAULT_FONT_SIZE = 16;
+export const DEFAULT_FONT_FAMILY = 'sans-serif';
+export const DEFAULT_FONT_STYLE = 'normal';
+export const DEFAULT_TEXT_ALIGN = 'left';
+export const DEFAULT_OFFSET_Y = 0;
+export const DEFAULT_LETTER_SPACING = 0;
+export const DEFAULT_LINE_HEIGHT = 1.2;
+export const DEFAULT_MAX_LINES = 0;
+export const DEFAULT_VERTICAL_ALIGN = 'top';
+export const DEFAULT_OVERFLOW_SUFFIX = '...';
+export const DEFAULT_WORD_BREAK = 'break-word';
+export const DEFAULT_CONTAIN = 'none';
+
 export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
@@ -478,7 +492,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.contain;
   }
 
-  set contain(value: TrProps['contain']) {
+  set contain(value: TrProps['contain'] | undefined) {
+    value ||= DEFAULT_CONTAIN;
     if (this.textProps.contain !== value) {
       this.textProps.contain = value;
       this._containType = TextConstraint[value];
@@ -490,12 +505,14 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.text;
   }
 
-  set text(value: string) {
-    let normalizedValue = value;
+  set text(value: string | undefined) {
+    let normalizedValue: string;
     if (value === undefined || value === null) {
-      normalizedValue = '';
+      normalizedValue = DEFAULT_TEXT;
     } else if (typeof value !== 'string') {
       normalizedValue = String(value);
+    } else {
+      normalizedValue = value;
     }
 
     if (this.textProps.text !== normalizedValue) {
@@ -509,7 +526,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.fontSize;
   }
 
-  set fontSize(value: number) {
+  set fontSize(value: number | undefined) {
+    if( value === undefined) {
+      value = DEFAULT_FONT_SIZE
+    };
+
     if (this.textProps.fontSize !== value) {
       this.textProps.fontSize = value;
       this._layoutGenerated = false;
@@ -521,7 +542,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.fontFamily;
   }
 
-  set fontFamily(value: string) {
+  set fontFamily(value: string | undefined) {
+    value ||= DEFAULT_FONT_FAMILY;
     if (this.textProps.fontFamily !== value) {
       if (this._waitingForFont === true) {
         this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
@@ -536,7 +558,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.fontStyle;
   }
 
-  set fontStyle(value: TrProps['fontStyle']) {
+  set fontStyle(value: TrProps['fontStyle'] | undefined) {
+    value ||= DEFAULT_FONT_STYLE;
     if (this.textProps.fontStyle !== value) {
       this.textProps.fontStyle = value;
       this._layoutGenerated = false;
@@ -548,7 +571,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.textAlign;
   }
 
-  set textAlign(value: TrProps['textAlign']) {
+  set textAlign(value: TrProps['textAlign'] | undefined) {
+    value ||= DEFAULT_TEXT_ALIGN;
     if (this.textProps.textAlign !== value) {
       this.textProps.textAlign = value;
       this._layoutGenerated = false;
@@ -560,7 +584,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.letterSpacing;
   }
 
-  set letterSpacing(value: number) {
+  set letterSpacing(value: number | undefined) {
+    value ||= DEFAULT_LETTER_SPACING;
+
     if (this.textProps.letterSpacing !== value) {
       this.textProps.letterSpacing = value;
       this._layoutGenerated = false;
@@ -572,7 +598,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.lineHeight;
   }
 
-  set lineHeight(value: number) {
+  set lineHeight(value: number | undefined) {
+    if( value === undefined) {
+      value = DEFAULT_LINE_HEIGHT;
+    }
+
     if (this.textProps.lineHeight !== value) {
       this.textProps.lineHeight = value;
       this._layoutGenerated = false;
@@ -584,7 +614,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.maxLines;
   }
 
-  set maxLines(value: number) {
+  set maxLines(value: number | undefined) {
+    value ||= DEFAULT_MAX_LINES;
     if (this.textProps.maxLines !== value) {
       this.textProps.maxLines = value;
       this._layoutGenerated = false;
@@ -596,7 +627,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.verticalAlign;
   }
 
-  set verticalAlign(value: TrProps['verticalAlign']) {
+  set verticalAlign(value: TrProps['verticalAlign'] | undefined) {
+    value ||= DEFAULT_VERTICAL_ALIGN;
     if (this.textProps.verticalAlign !== value) {
       this.textProps.verticalAlign = value;
       this._layoutGenerated = false;
@@ -608,7 +640,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.overflowSuffix;
   }
 
-  set overflowSuffix(value: string) {
+  set overflowSuffix(value: string | undefined) {
+    if( value === undefined) {
+      value = DEFAULT_OVERFLOW_SUFFIX;
+    }
+
     if (this.textProps.overflowSuffix !== value) {
       this.textProps.overflowSuffix = value;
       this._layoutGenerated = false;
@@ -620,7 +656,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.wordBreak;
   }
 
-  set wordBreak(value: TrProps['wordBreak']) {
+  set wordBreak(value: TrProps['wordBreak'] | undefined) {
+    value ||= DEFAULT_WORD_BREAK;
     if (this.textProps.wordBreak !== value) {
       this.textProps.wordBreak = value;
       this._layoutGenerated = false;
@@ -632,7 +669,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     return this.textProps.offsetY;
   }
 
-  set offsetY(value: number) {
+  set offsetY(value: number | undefined) {
+    value ||= DEFAULT_OFFSET_Y;
     if (this.textProps.offsetY !== value) {
       this.textProps.offsetY = value;
       this._layoutGenerated = false;
