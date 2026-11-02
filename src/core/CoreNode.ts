@@ -38,6 +38,7 @@ import {
   type TextureFreedEventHandler,
   type TextureLoadedEventHandler,
 } from './textures/Texture.js';
+import type { TextureError } from './TextureError.js';
 import type {
   Dimensions,
   NodeTextureFailedPayload,
@@ -1068,10 +1069,13 @@ export class CoreNode extends EventEmitter {
 
     // ignore 1x1 pixel textures
     if (dimensions.w > 1 && dimensions.h > 1) {
-      this.emit('loaded', {
-        type: 'texture',
-        dimensions,
-      } satisfies NodeTextureLoadedPayload);
+      // Defer only the user-facing emit. State changes above stay
+      // synchronous so the same-frame render still picks up the texture.
+      // This preserves the pre-sync-fast-path ordering where the text
+      // 'loaded' event (queued via queueMicrotask in handleRenderResult)
+      // is observed before the texture 'loaded' event.
+      this.pendingTextureLoadedDimensions = dimensions;
+      queueMicrotask(this.emitTextureLoadedTask);
     }
 
     if (
@@ -1103,10 +1107,8 @@ export class CoreNode extends EventEmitter {
       this.texture !== null &&
       this.texture.retryCount > this.texture.maxRetryCount
     ) {
-      this.emit('failed', {
-        type: 'texture',
-        error,
-      } satisfies NodeTextureFailedPayload);
+      this.pendingTextureFailedError = error;
+      queueMicrotask(this.emitTextureFailedTask);
     }
   };
 
@@ -1122,6 +1124,28 @@ export class CoreNode extends EventEmitter {
       this.notifyParentRTTOfUpdate();
     }
 
+    queueMicrotask(this.emitTextureFreedTask);
+  };
+
+  protected pendingTextureLoadedDimensions: Dimensions | null = null;
+
+  protected emitTextureLoadedTask = (): void => {
+    this.emit('loaded', {
+      type: 'texture',
+      dimensions: this.pendingTextureLoadedDimensions!,
+    } satisfies NodeTextureLoadedPayload);
+  };
+
+  private pendingTextureFailedError: TextureError | null = null;
+
+  private emitTextureFailedTask = (): void => {
+    this.emit('failed', {
+      type: 'texture',
+      error: this.pendingTextureFailedError!,
+    } satisfies NodeTextureFailedPayload);
+  };
+
+  private emitTextureFreedTask = (): void => {
     this.emit('freed', {
       type: 'texture',
     } satisfies NodeTextureFreedPayload);

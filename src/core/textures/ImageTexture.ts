@@ -163,7 +163,7 @@ export class ImageTexture extends Texture {
     this.maxRetryCount = props.maxRetryCount as number;
   }
 
-  override async getTextureSource(): Promise<TextureData> {
+  override getTextureSource(): TextureData | Promise<TextureData> {
     const generation = this.contextGeneration;
     // Compressed textures are not supported by the Canvas2D renderer.
     // Fail fast here before incurring a network fetch or binary decode.
@@ -183,18 +183,38 @@ export class ImageTexture extends Texture {
       }
     }
 
-    let resp: TextureData;
+    let result: TextureData | Promise<TextureData>;
     try {
-      resp = await this.determineImageTypeAndLoadImage();
+      result = this.determineImageTypeAndLoadImage();
     } catch (e) {
       if (generation !== this.contextGeneration) return { data: null };
       this.setState('failed', e as Error);
-
       return {
         data: null,
       };
     }
+    // TextureData always defines 'data' explicitly (even as null); a Promise
+    // never has a 'data' property, so this distinguishes the two without an
+    // instanceof check. Keep the resolved-data case as the primary path.
+    if ((result as TextureData).data !== undefined) {
+      return this.finishTextureSource(result as TextureData, generation);
+    }
+    return (result as Promise<TextureData>).then(
+      (resp) => this.finishTextureSource(resp, generation),
+      (e: unknown) => {
+        if (generation !== this.contextGeneration) return { data: null };
+        this.setState('failed', e as Error);
+        return {
+          data: null,
+        };
+      },
+    );
+  }
 
+  private finishTextureSource(
+    resp: TextureData,
+    generation: number,
+  ): TextureData {
     if (generation !== this.contextGeneration) {
       if (
         typeof ImageBitmap !== 'undefined' &&

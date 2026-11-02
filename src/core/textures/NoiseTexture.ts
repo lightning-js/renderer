@@ -66,7 +66,7 @@ export class NoiseTexture extends Texture {
     this.props = props;
   }
 
-  override async getTextureSource(): Promise<TextureData> {
+  override getTextureSource(): TextureData {
     const { w, h } = this.props;
     const size = w * h * 4;
     const pixelData8 = new Uint8ClampedArray(size);

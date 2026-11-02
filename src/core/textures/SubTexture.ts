@@ -152,13 +152,11 @@ export class SubTexture extends Texture {
     this.parentTexture.setRenderableOwner(this.subtextureId, isRenderable);
   }
 
-  override async getTextureSource(): Promise<TextureData> {
+  override getTextureSource(): TextureData {
     // Check if parent texture is loaded
-    return new Promise((resolve, _reject) => {
-      resolve({
-        data: this.props,
-      });
-    });
+    return {
+      data: this.props,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
