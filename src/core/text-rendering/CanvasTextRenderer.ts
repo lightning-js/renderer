@@ -40,6 +40,7 @@ import {
   underlineGap,
 } from './RichTextMetrics.js';
 import { normalizeCanvasColor } from '../lib/colorCache.js';
+import { isProductionEnvironment } from '../../utils.js';
 
 const type = 'canvas' as const;
 const font: FontHandler = CanvasFontHandler;
@@ -60,6 +61,12 @@ let measureContext: MeasureContext = null;
 
 // Cache for text layout calculations
 const renderInfoCache = new Map<string, CanvasRenderInfo>();
+
+// Number of live CoreTextNodes currently relying on each renderInfoCache
+// entry. A cache entry's bitmap/canvas is the only surviving pixel source
+// for its texture (there is no URL to refetch), so it can only be disposed
+// once no node holds it anymore.
+const renderInfoRefs = new Map<string, number>();
 
 // Pre-allocated rich text parse result — reused across renderText calls.
 // Safe because renderText is synchronous and JS is single-threaded.
@@ -510,7 +517,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(measureContext, 'Canvas measureContext is not available');
   const cacheKey = getLayoutCacheKey(props);
 
-  let layout = renderInfoCache.get(cacheKey);
+  const layout = renderInfoCache.get(cacheKey);
   if (layout !== undefined) {
     return layout;
   }
@@ -643,16 +650,102 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
+    cacheKey,
   } as CanvasRenderInfo;
   renderInfoCache.set(cacheKey, renderInfo);
   return renderInfo;
 };
 
 /**
- * Clear layout cache for memory management
+ * Dispose of the pixel resource backing a renderInfoCache entry.
+ *
+ * @remarks
+ * `info.imageData` is either an `ImageBitmap` (offscreen path) or an
+ * `HTMLCanvasElement` (DOM path). Neither is GC-managed in a way that
+ * releases its backing pixel buffer promptly, so each needs an explicit
+ * disposal step. The `typeof X !== 'undefined'` guard matches the style used
+ * elsewhere in this file and in WebGlCtxTexture.ts/CanvasTexture.ts, since
+ * this code can run in web workers and older browsers where `ImageBitmap`
+ * may not be defined (see BROWSERS.md).
+ */
+const disposeRenderInfo = (info: CanvasRenderInfo): void => {
+  const img = info.imageData;
+  if (img === null || img === undefined) {
+    return;
+  }
+  if (typeof ImageBitmap !== 'undefined' && img instanceof ImageBitmap) {
+    img.close();
+  } else {
+    const canvasEl = img as HTMLCanvasElement;
+    canvasEl.width = 0;
+    canvasEl.height = 0;
+  }
+};
+
+/**
+ * Mark a `CoreTextNode` as relying on a renderInfoCache entry. Must be
+ * called on both cache-hit and cache-miss paths through `renderText()` so a
+ * layout string shared by two nodes isn't disposed while one of them is
+ * still using it.
+ */
+const acquire = (cacheKey: string): void => {
+  renderInfoRefs.set(cacheKey, (renderInfoRefs.get(cacheKey) ?? 0) + 1);
+};
+
+/**
+ * Release a `CoreTextNode`'s claim on a renderInfoCache entry. Once the
+ * refcount reaches zero, the entry is removed and its bitmap/canvas is
+ * disposed.
+ *
+ * @remarks
+ * This means renderInfoCache only dedups *concurrent* reuse (e.g. several
+ * nodes rendering the same text at once), not reuse across a gap where
+ * nothing held a reference - a node that moves off a layout and later moves
+ * back onto it will redraw and re-upload rather than hit the cache. That's
+ * a deliberate trade: this cache previously grew without bound because
+ * nothing ever disposed its entries, so trading some redraw cost on
+ * revisited layouts for a bounded cache is preferable to leaking.
+ */
+const release = (cacheKey: string): void => {
+  const count = renderInfoRefs.get(cacheKey);
+  if (count === undefined || count <= 0) {
+    if (isProductionEnvironment === false) {
+      console.warn(
+        `CanvasTextRenderer: release() called for cacheKey "${cacheKey}" with no outstanding acquire() - ignoring`,
+      );
+    }
+    return;
+  }
+  if (count > 1) {
+    renderInfoRefs.set(cacheKey, count - 1);
+    return;
+  }
+  renderInfoRefs.delete(cacheKey);
+  const info = renderInfoCache.get(cacheKey);
+  renderInfoCache.delete(cacheKey);
+  if (info !== undefined) {
+    disposeRenderInfo(info);
+  }
+};
+
+/**
+ * Clear layout cache for memory management.
+ *
+ * @remarks
+ * This unconditionally disposes every cached bitmap/canvas and drops
+ * renderInfoRefs, without regard for whether any CoreTextNode still holds a
+ * reference. It's only safe to call when every node using this renderer is
+ * also being torn down (currently: Stage.destroy()). Calling it while nodes
+ * are still alive will dispose bitmaps out from under them and cause their
+ * later release() calls to warn about releasing a key with no outstanding
+ * acquire().
  */
 const clearCache = (): void => {
+  for (const info of renderInfoCache.values()) {
+    disposeRenderInfo(info);
+  }
   renderInfoCache.clear();
+  renderInfoRefs.clear();
 };
 
 /**
@@ -673,6 +766,8 @@ const CanvasTextRenderer = {
   renderQuads,
   init,
   clearCache,
+  acquire,
+  release,
 };
 
 export default CanvasTextRenderer;

@@ -71,6 +71,7 @@ function makeCanvasTextRenderer() {
           height: 40,
           hasRemainingText: false,
           remainingLines: 0,
+          cacheKey: 'single-node-key',
           imageData: new (
             globalThis as unknown as { ImageBitmap: new () => unknown }
           ).ImageBitmap(),
@@ -80,6 +81,100 @@ function makeCanvasTextRenderer() {
     renderQuads: vi.fn(),
   } as unknown as TextRenderer;
 }
+
+/**
+ * A text renderer stand-in that mirrors CanvasTextRenderer's refcounted
+ * renderInfoCache (a cacheKey-keyed Map, acquire()/release() with real
+ * dispose-at-zero semantics) without needing the real canvas/font
+ * machinery. Lets these tests observe exactly when a bitmap is disposed,
+ * independent of CanvasTextRenderer's own unit tests.
+ */
+function makeRefcountedCanvasTextRenderer() {
+  const cache = new Map<string, { imageData: { close: ReturnType<typeof vi.fn> } }>();
+  const refs = new Map<string, number>();
+  const renderCalls = new Map<string, number>();
+
+  const renderText = vi.fn((props: { text: string }) => {
+    const cacheKey = props.text;
+    renderCalls.set(cacheKey, (renderCalls.get(cacheKey) ?? 0) + 1);
+    let entry = cache.get(cacheKey);
+    if (entry === undefined) {
+      entry = { imageData: { close: vi.fn() } };
+      cache.set(cacheKey, entry);
+    }
+    // Mirrors the real CanvasTextRenderer.renderText(): it always inserts
+    // into renderInfoCache, even for a text value that's set up (via the
+    // markers below) to simulate a failed render, so a consumer that
+    // doesn't release on those failure paths would orphan the entry.
+    if (cacheKey.startsWith('zero-dimension:')) {
+      return {
+        type: 'canvas',
+        width: 0,
+        height: 0,
+        hasRemainingText: false,
+        remainingLines: 0,
+        cacheKey,
+        imageData: entry.imageData,
+      } as unknown as CanvasRenderInfo;
+    }
+    if (cacheKey.startsWith('no-image-data:')) {
+      return {
+        type: 'canvas',
+        width: 120,
+        height: 40,
+        hasRemainingText: false,
+        remainingLines: 0,
+        cacheKey,
+        imageData: undefined,
+      } as unknown as CanvasRenderInfo;
+    }
+    return {
+      type: 'canvas',
+      width: 120,
+      height: 40,
+      hasRemainingText: false,
+      remainingLines: 0,
+      cacheKey,
+      imageData: entry.imageData,
+    } as unknown as CanvasRenderInfo;
+  });
+
+  const acquire = vi.fn((cacheKey: string) => {
+    refs.set(cacheKey, (refs.get(cacheKey) ?? 0) + 1);
+  });
+
+  const release = vi.fn((cacheKey: string) => {
+    const count = refs.get(cacheKey);
+    if (count === undefined || count <= 0) {
+      return;
+    }
+    if (count > 1) {
+      refs.set(cacheKey, count - 1);
+      return;
+    }
+    refs.delete(cacheKey);
+    const entry = cache.get(cacheKey);
+    cache.delete(cacheKey);
+    entry?.imageData.close();
+  });
+
+  const textRenderer = {
+    type: 'canvas',
+    font: {
+      isFontLoaded: vi.fn().mockReturnValue(true),
+      waitingForFont: vi.fn(),
+      stopWaitingForFont: vi.fn(),
+    },
+    renderText,
+    acquire,
+    release,
+    addQuads: vi.fn(),
+    renderQuads: vi.fn(),
+  } as unknown as TextRenderer;
+
+  return { textRenderer, cache, refs, renderCalls };
+}
+
 
 function makeMemSettings(
   overrides?: Partial<TextureMemoryManagerSettings>,
@@ -474,4 +569,160 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
       vi.useRealTimers();
     }
   });
+
+  it('14. two nodes rendering identical text share one renderInfoCache entry; destroying one does not dispose it, destroying both does', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const { textRenderer, cache } = makeRefcountedCanvasTextRenderer();
+
+    const nodeA = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+    const nodeB = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    nodeA.text = 'shared';
+    stage.drawFrame();
+    nodeB.text = 'shared';
+    stage.drawFrame();
+
+    const entry = cache.get('shared');
+    expect(entry).toBeDefined();
+    const close = entry!.imageData.close;
+
+    nodeA.destroy();
+    expect(close).not.toHaveBeenCalled();
+
+    nodeB.destroy();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('15. a node changing text A -> B -> A disposes A on the first move off, and re-renders A instead of reusing a closed bitmap', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const { textRenderer, cache, renderCalls } =
+      makeRefcountedCanvasTextRenderer();
+
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    node.text = 'A';
+    stage.drawFrame();
+    const entryA = cache.get('A')!;
+    expect(renderCalls.get('A')).toBe(1);
+
+    node.text = 'B';
+    stage.drawFrame();
+
+    // Moving off A drops its refcount to zero - it must be disposed right
+    // away rather than lingering until some later cleanup pass.
+    expect(entryA.imageData.close).toHaveBeenCalledTimes(1);
+    expect(cache.has('A')).toBe(false);
+
+    node.text = 'A';
+    stage.drawFrame();
+
+    // A's entry was disposed, so this must be a genuine cache miss - the
+    // renderer is invoked again instead of handing back the closed bitmap.
+    expect(renderCalls.get('A')).toBe(2);
+    expect(node.texture).not.toBeNull();
+  });
+
+  it('16. the renderInfoCache bitmap survives a GPU texture reset/reload while the node is still alive (context-loss regression guard)', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const { textRenderer, cache } = makeRefcountedCanvasTextRenderer();
+
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    node.text = 'surviving-text';
+    stage.drawFrame();
+
+    const texture = node.texture as Texture;
+    expect(texture.state).toBe('loaded');
+
+    const entry = cache.get('surviving-text')!;
+    expect(entry).toBeDefined();
+
+    // Simulate a WebGL context loss: the GPU side discards its resources
+    // (mirrors CoreTextureManager.invalidateContext()/Texture.invalidateContext()),
+    // but the node, the Texture instance, and the renderInfoCache entry it
+    // still refcounts all survive.
+    texture.invalidateContext();
+    expect(texture.state).toBe('freed');
+    expect(entry.imageData.close).not.toHaveBeenCalled();
+
+    // Simulate CoreTextureManager.restoreContext() reloading the texture:
+    // this re-reads props.src, which is the SAME imageData object the node
+    // acquired - it must not have been closed in the meantime.
+    texture.load();
+    stage.drawFrame();
+
+    expect(texture.state).toBe('loaded');
+    expect(
+      (texture as unknown as { props: { src: unknown } }).props.src,
+    ).toBe(entry.imageData);
+    expect(entry.imageData.close).not.toHaveBeenCalled();
+  });
+
+  it('17. a zero-dimension render result does not orphan its renderInfoCache entry', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const { textRenderer, refs } = makeRefcountedCanvasTextRenderer();
+
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    node.text = 'zero-dimension:case';
+    stage.drawFrame();
+
+    // renderText() still inserted a cache entry for this key even though
+    // the render "failed" (zero width/height) - it must not be left behind
+    // with no outstanding acquire(), or it leaks forever. Grab the entry via
+    // the mock's own return value since a successful release() deletes it
+    // from `cache` before this assertion would otherwise read it back.
+    const result = (
+      textRenderer.renderText as ReturnType<typeof vi.fn>
+    ).mock.results[0]!.value as CanvasRenderInfo;
+    expect(
+      (result.imageData as unknown as { close: ReturnType<typeof vi.fn> })
+        .close,
+    ).toHaveBeenCalledTimes(1);
+    expect(refs.has('zero-dimension:case')).toBe(false);
+    expect(node.texture).toBeNull();
+  });
+
+  it('18. a missing-imageData render result does not orphan its renderInfoCache entry', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const { textRenderer, cache, refs } = makeRefcountedCanvasTextRenderer();
+
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: '' }),
+      textRenderer,
+    );
+
+    node.text = 'no-image-data:case';
+    stage.drawFrame();
+
+    // The underlying cache entry created by renderText() (keyed internally
+    // in the fake's `cache` map) still gets disposed even though the
+    // *returned* imageData was undefined - fetch it from `cache` before
+    // asserting, since release() already deleted the public-facing key.
+    expect(cache.has('no-image-data:case')).toBe(false);
+    expect(refs.has('no-image-data:case')).toBe(false);
+    expect(node.texture).toBeNull();
+  });
 });
+

@@ -511,7 +511,14 @@ export type SdfRenderInfo = RenderInfo & {
 
 export type CanvasRenderInfo = RenderInfo & {
   type: 'canvas';
-  imageData: ImageBitmap | HTMLCanvasElement;
+  // drawAndCaptureText() can leave this null if the canvas snapshot step
+  // throws (see renderText()'s catch around it) - consumers must treat null
+  // the same as a failed render, not just `undefined`.
+  imageData: ImageBitmap | HTMLCanvasElement | null;
+  // The renderInfoCache key this entry was stored/retrieved under. Stored
+  // here so a consumer can release the exact entry it acquired without
+  // recomputing the key later, when the originating props may have changed.
+  cacheKey: string;
 };
 
 export type TextRenderInfo = SdfRenderInfo | CanvasRenderInfo;
@@ -528,6 +535,12 @@ export interface TextRenderer {
   ) => void;
   init: (stage: Stage) => void;
   clearCache: () => void;
+  // Reference-count a renderInfoCache entry. Only meaningful for renderers
+  // whose cached render info holds a disposable resource (canvas text's
+  // ImageBitmap/HTMLCanvasElement); optional so renderers without such a
+  // resource (SDF) can omit them entirely.
+  acquire?: (cacheKey: string) => void;
+  release?: (cacheKey: string) => void;
 }
 
 /**

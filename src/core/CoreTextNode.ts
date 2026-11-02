@@ -79,6 +79,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
   private _sdfCache: SdfVertexCache | null = null;
   private _canvasTexture: Texture | null = null;
+  // The renderInfoCache key this node's current canvas texture was built
+  // from, used to release the renderer's refcount on that entry without
+  // recomputing the key from (by then stale) text props.
+  private _renderInfoKey: string | null = null;
 
   // Text renderer properties - stored directly on the node
   textProps: CoreTextNodeProps;
@@ -133,14 +137,15 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   /**
-   * Free the GPU texture backing a canvas-rendered text node. Canvas text
-   * textures are never added to the texture manager's keyCache (their
-   * source is an ImageBitmap/HTMLCanvasElement, not a string), so each one
-   * has exactly one owner - this node - and can be released deterministically
-   * on text change or destroy instead of waiting for LRU cleanup to reclaim
-   * it. Safe to call multiple times.
+   * Destroy the GPU texture backing a canvas-rendered text node, without
+   * touching the renderInfoCache refcount. Canvas text textures are never
+   * added to the texture manager's keyCache (their source is an
+   * ImageBitmap/HTMLCanvasElement, not a string), so each one has exactly
+   * one owner - this node - and can be released deterministically on text
+   * change or destroy instead of waiting for LRU cleanup to reclaim it.
+   * Safe to call multiple times.
    */
-  private releaseCanvasTexture(): void {
+  private destroyCanvasTexture(): void {
     const tex = this._canvasTexture;
     if (tex === null) {
       return;
@@ -164,6 +169,26 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Use the memory manager so cache bookkeeping and memUsed accounting
     // stay correct (plain texture.destroy() would leak that accounting).
     this.stage.txMemManager.destroyTexture(tex);
+  }
+
+  /**
+   * Free the GPU texture backing a canvas-rendered text node, and release
+   * this node's claim on the renderInfoCache entry that backs it.
+   *
+   * The GPU texture is destroyed before the render-info key is released.
+   * While the texture is alive it may still need to read back its pixel
+   * source (e.g. on WebGL context-loss restore or an LRU reload), and the
+   * renderInfoCache entry is that texture's only surviving pixel source -
+   * releasing it first could close a bitmap/canvas still in use.
+   */
+  private releaseCanvasTexture(): void {
+    this.destroyCanvasTexture();
+
+    const key = this._renderInfoKey;
+    if (key !== null) {
+      this._renderInfoKey = null;
+      this.textRenderer.release?.(key);
+    }
   }
 
   allowTextGeneration() {
@@ -318,8 +343,23 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     let width = result.width;
     let height = result.height;
 
+    // Canvas text takes a reference on its renderInfoCache entry as soon as
+    // renderText() returns one, before any of the validity checks below can
+    // short-circuit. renderText() always inserts into renderInfoCache
+    // regardless of whether the render actually succeeded, so every return
+    // path out of this method for a canvas result must release this
+    // reference exactly once - either on an early return below, or later by
+    // handing the key off to _renderInfoKey - or the entry is orphaned:
+    // never acquired again, so never released, so never disposed.
+    if (textRendererType === 'canvas') {
+      this.textRenderer.acquire?.(result.cacheKey);
+    }
+
     // Handle zero-dimension case (can happen with certain text inputs or font issues)
     if (width === 0 || height === 0) {
+      if (textRendererType === 'canvas') {
+        this.textRenderer.release?.(result.cacheKey);
+      }
       this.emit('failed', {
         type: 'text',
         error: new Error('Text rendering failed, width or height zero'),
@@ -329,7 +369,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
 
     // Handle Canvas renderer (uses ImageData)
     if (textRendererType === 'canvas') {
-      if (result.imageData === undefined) {
+      if (result.imageData === undefined || result.imageData === null) {
+        this.textRenderer.release?.(result.cacheKey);
         this.emit('failed', {
           type: 'text',
           error: new Error(
@@ -347,17 +388,39 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // it will be corrected once the texture is loaded
       this.setRenderable(false);
 
-      // Release the previous canvas text texture before creating the new
+      // Destroy the previous canvas text texture before creating the new
       // one, so a text change never transiently holds two GPU textures live
-      // at once.
-      this.releaseCanvasTexture();
+      // at once. The render-info key release is deferred until after the
+      // new key is adopted (see below).
+      const oldRenderInfoKey = this._renderInfoKey;
+      this.destroyCanvasTexture();
 
-      const newTexture = this.stage.txManager.createTexture('ImageTexture', {
-        premultiplyAlpha: true,
-        src: result.imageData,
-      });
+      let newTexture: Texture;
+      try {
+        newTexture = this.stage.txManager.createTexture('ImageTexture', {
+          premultiplyAlpha: true,
+          src: result.imageData,
+        });
+      } catch (err) {
+        // The reference acquired above is still outstanding and this node
+        // never ends up adopting result.cacheKey - release it rather than
+        // orphaning the entry.
+        this.textRenderer.release?.(result.cacheKey);
+        throw err;
+      }
       this._canvasTexture = newTexture;
       this.texture = newTexture;
+
+      // The new key's reference was already acquired above, before the
+      // validity checks, so it's just adopted here rather than acquired
+      // again. Releasing the old key only after adopting the new one means
+      // that if old and new keys happen to be identical (e.g. the node
+      // re-renders the same layout) the refcount never transiently drops to
+      // zero and disposes a bitmap/canvas we're about to keep using.
+      this._renderInfoKey = result.cacheKey;
+      if (oldRenderInfoKey !== null) {
+        this.textRenderer.release?.(oldRenderInfoKey);
+      }
 
       if (this.renderState > CoreNodeRenderState.OutOfBounds) {
         // We do want the texture to load immediately
