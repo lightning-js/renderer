@@ -34,7 +34,6 @@ import type { Stage } from './Stage.js';
 import type {
   NodeTextFailedPayload,
   NodeTextLoadedPayload,
-  NodeTextureLoadedPayload,
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
@@ -97,13 +96,10 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
     if (dimensions.w > 1 && dimensions.h > 1) {
       // Deferred to preserve text-before-texture 'loaded' ordering for
-      // synchronous canvas uploads (see CoreNode.onTextureLoaded).
-      queueMicrotask(() => {
-        this.emit('loaded', {
-          type: 'texture',
-          dimensions,
-        } satisfies NodeTextureLoadedPayload);
-      });
+      // synchronous canvas uploads (see CoreNode.onTextureLoaded). Reuses
+      // the inherited emit task so we don't recreate a closure per call.
+      this.pendingTextureLoadedDimensions = dimensions;
+      queueMicrotask(this.emitTextureLoadedTask);
     }
     this.setUpdateType(UpdateType.IsRenderable);
     this.stage.requestRender();
