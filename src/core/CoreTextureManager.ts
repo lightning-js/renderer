@@ -342,17 +342,19 @@ export class CoreTextureManager extends EventEmitter {
       this.restoreTextures.add(texture);
       return;
     }
-    const generation = this.contextGeneration;
-    if (texture.type === TextureType.subTexture) {
+    if (
       // ignore subtextures - they get loaded through their parent
-      return;
-    }
-
-    if (texture.state === 'loaded') {
+      texture.type === TextureType.subTexture ||
       // if the texture is already loaded, just return
+      texture.state === 'loaded' ||
+      // Covers fetch, decode, and GPU upload. A second call would
+      // start a parallel load.
+      texture.state === 'loading'
+    ) {
       return;
     }
 
+    const generation = this.contextGeneration;
     // A queued restore is now being handled (possibly demand-loaded before
     // the throttled drain reached it) — remove it so it isn't loaded twice.
     this.restoreTextures.delete(texture);
