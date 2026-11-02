@@ -203,7 +203,7 @@ export abstract class Texture extends EventEmitter {
   public preventCleanup = false;
 
   public ctxTexture: CoreContextTexture | undefined;
-  protected loadGeneration = 0;
+  public loadGeneration = 0;
 
   notifyContextLost(): void {
     this.txManager.notifyContextLost();
@@ -361,6 +361,28 @@ export abstract class Texture extends EventEmitter {
       return;
     }
     this.txManager.loadTexture(this);
+  }
+
+  /**
+   * Cancel the in-flight load and return to `initial`; `load()` restarts it.
+   *
+   * @remarks
+   * Bumping the generation drops the result when it arrives, like a load
+   * that was in flight during context loss; {@link abortLoad} additionally
+   * stops the request where the platform supports it.
+   * A texture can be shared, this is a no-op while more than one owner
+   * requires it.
+   *
+   * Priority loads are not guarded.
+   */
+  cancel(): void {
+    if (this.state !== 'loading' || this.renderableOwners.size > 1) {
+      return;
+    }
+    this.loadGeneration++;
+    this.txManager.forgetLoad(this);
+    this.textureData = null;
+    this.setState('initial');
   }
 
   /**
