@@ -74,7 +74,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private textRenderer: TextRenderer;
   private fontHandler: FontHandler;
 
-  protected _layoutGenerated = false;
+  private _layoutGenerated = false;
   private _waitingForFont = false;
   private _containType: TextConstraint = TextConstraint.none;
 
