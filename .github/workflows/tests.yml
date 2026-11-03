@@ -71,3 +71,29 @@ jobs:
         with:
           name: failed-results
           path: visual-regression/failed-results/
+
+  memory-lifecycle:
+    name: Browser Memory Lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir visual-regression exec playwright install --with-deps chromium
+      # Current main retains canvas text bitmaps. Keep publishing measurements
+      # while the fix is under review; remove this exception when it lands.
+      - run: pnpm test:memory
+        continue-on-error: true
+      - name: Upload memory measurements
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: memory-lifecycle-measurements
+          path: visual-regression/memory-results/measurements.json
+          if-no-files-found: ignore
