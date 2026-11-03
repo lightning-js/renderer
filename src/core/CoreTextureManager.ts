@@ -396,12 +396,16 @@ export class CoreTextureManager extends EventEmitter {
     generation: number,
     priority: boolean | undefined,
   ): Promise<void> {
+    const loadGeneration = texture.loadGeneration;
     try {
       await dataPromise;
     } catch (err) {
+      // Cancelled while fetching; a later load() owns the texture now.
+      if (texture.loadGeneration !== loadGeneration) return;
       this.failTextureLoad(texture, generation, 'Failed to load texture:', err);
       return;
     }
+    if (texture.loadGeneration !== loadGeneration) return;
 
     // The context was lost while fetching; invalidateContext() re-queued it.
     if (
@@ -626,6 +630,16 @@ export class CoreTextureManager extends EventEmitter {
    */
   removeTextureFromQueue(texture: Texture): void {
     this.uploadTextureQueue.remove(texture);
+  }
+
+  /**
+   * Drop a cancelled load from the upload queue and context-loss tracking.
+   *
+   * @param texture - The texture whose load was cancelled
+   */
+  forgetLoad(texture: Texture): void {
+    this.uploadTextureQueue.remove(texture);
+    this.pendingContextLoads.delete(texture);
   }
 
   /**
