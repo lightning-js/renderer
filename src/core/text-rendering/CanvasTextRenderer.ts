@@ -29,7 +29,7 @@ import type {
 } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { getLayoutCacheKey, hasZeroWidthSpace } from './Utils.js';
+import { hasZeroWidthSpace } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
 import {
@@ -57,9 +57,6 @@ let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 type MeasureContext =
   CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
 let measureContext: MeasureContext = null;
-
-// Cache for text layout calculations
-const renderInfoCache = new Map<string, CanvasRenderInfo>();
 
 // Pre-allocated rich text parse result — reused across renderText calls.
 // Safe because renderText is synchronous and JS is single-threaded.
@@ -508,12 +505,6 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
   assertTruthy(measureContext, 'Canvas measureContext is not available');
-  const cacheKey = getLayoutCacheKey(props);
-
-  let layout = renderInfoCache.get(cacheKey);
-  if (layout !== undefined) {
-    return layout;
-  }
   // Extract already normalized properties
   const {
     text,
@@ -608,51 +599,51 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   const canvasW = Math.ceil(effectiveWidth);
   const canvasH = Math.ceil(effectiveHeight);
 
-  // Some sandboxed/headed-browser environments (no real GPU/display surface)
-  // can throw out of the canvas snapshot step (observed: "Failed to execute
-  // 'transferToImageBitmap' on 'OffscreenCanvas': ImageBitmap construction
-  // failed"). Letting that escape renderText would bubble up through
-  // CoreTextNode.update() and wedge the whole render/update loop — no
-  // further frames or 'idle' events. Treat it the same as the existing
-  // zero-size-canvas case below: leave imageData null so CoreTextNode's
-  // "no image data" handling applies and the node just fails to render.
-  let imageData: ImageBitmap | HTMLCanvasElement | null = null;
-  try {
-    imageData = drawAndCaptureText({
-      canvasW,
-      canvasH,
-      baseFont,
-      fontStyle,
-      fontSize,
-      fontFamily,
-      color,
-      letterSpacing,
-      richText,
-      lines,
-      lineAmount,
-      metrics,
-    });
-  } catch (err) {
-    console.warn('CanvasTextRenderer: failed to render text node', err);
-  }
-
-  const renderInfo = {
+  const drawArgs: DrawAndCaptureArgs = {
+    canvasW,
+    canvasH,
+    baseFont,
+    fontStyle,
+    fontSize,
+    fontFamily,
+    color,
+    letterSpacing,
+    richText,
+    lines,
+    lineAmount,
+    metrics,
+  };
+  // Capture the paint inputs rather than the mutable node properties or a
+  // bitmap. A cleaned-up texture can request a new source from this plan.
+  const richTextSource = richText ? text : null;
+  const renderSource = (): ImageBitmap | HTMLCanvasElement | null => {
+    try {
+      // The rich-text parser uses a shared scratch result. Reconstruct it
+      // before drawing because another node may have rendered in between.
+      if (richTextSource !== null) {
+        parseRichText(richTextSource, _richTextResult);
+      }
+      return drawAndCaptureText(drawArgs);
+    } catch (err) {
+      console.warn('CanvasTextRenderer: failed to render text node', err);
+      return null;
+    }
+  };
+  return {
     type,
-    imageData,
     width: effectiveWidth,
     height: effectiveHeight,
     remainingLines,
     hasRemainingText,
-  } as CanvasRenderInfo;
-  renderInfoCache.set(cacheKey, renderInfo);
-  return renderInfo;
+    renderSource,
+  } satisfies CanvasRenderInfo;
 };
 
 /**
  * Clear layout cache for memory management
  */
 const clearCache = (): void => {
-  renderInfoCache.clear();
+  // Canvas text no longer retains rasterized sources between renders.
 };
 
 /**

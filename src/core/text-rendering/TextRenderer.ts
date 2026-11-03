@@ -511,7 +511,8 @@ export type SdfRenderInfo = RenderInfo & {
 
 export type CanvasRenderInfo = RenderInfo & {
   type: 'canvas';
-  imageData: ImageBitmap | HTMLCanvasElement;
+  imageData?: ImageBitmap | HTMLCanvasElement | null;
+  renderSource?: () => ImageBitmap | HTMLCanvasElement | null;
 };
 
 export type TextRenderInfo = SdfRenderInfo | CanvasRenderInfo;

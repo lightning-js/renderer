@@ -20,6 +20,7 @@
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import { ColorTexture } from './textures/ColorTexture.js';
 import { ImageTexture } from './textures/ImageTexture.js';
+import { CanvasTextTexture } from './textures/CanvasTextTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
@@ -46,6 +47,7 @@ import { createTextureUploadQueue } from './lib/TextureUploadQueue.js';
 export interface TextureMap {
   ColorTexture: typeof ColorTexture;
   ImageTexture: typeof ImageTexture;
+  CanvasTextTexture: typeof CanvasTextTexture;
   NoiseTexture: typeof NoiseTexture;
   SubTexture: typeof SubTexture;
   RenderTexture: typeof RenderTexture;
@@ -276,6 +278,7 @@ export class CoreTextureManager extends EventEmitter {
     this.maxRetryCount = settings.maxRetryCount;
 
     this.registerTextureType('ImageTexture', ImageTexture);
+    this.registerTextureType('CanvasTextTexture', CanvasTextTexture);
     this.registerTextureType('ColorTexture', ColorTexture);
     this.registerTextureType('NoiseTexture', NoiseTexture);
     this.registerTextureType('SubTexture', SubTexture);

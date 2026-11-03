@@ -112,7 +112,7 @@ describe('CanvasTextRenderer renderText — OffscreenCanvas snapshot failure', (
     CanvasTextRenderer.clearCache();
   });
 
-  it('does not throw and returns imageData: null when transferToImageBitmap fails', async () => {
+  it('does not throw and returns null when a deferred canvas snapshot fails', async () => {
     const stage = makeStage();
 
     // Make the font "loaded" so renderText doesn't bail out waiting on it.
@@ -148,11 +148,13 @@ describe('CanvasTextRenderer renderText — OffscreenCanvas snapshot failure', (
 
     expect(result).toBeDefined();
     expect(result!.type).toBe('canvas');
-    expect((result as { imageData?: unknown }).imageData).toBeNull();
+    expect(
+      (result as { renderSource: () => unknown }).renderSource(),
+    ).toBeNull();
     expect(consoleWarn).toHaveBeenCalled();
   });
 
-  it('still produces imageData when transferToImageBitmap succeeds', async () => {
+  it('still produces an image when a deferred canvas snapshot succeeds', async () => {
     const stage = makeStage();
     await CanvasFontHandler.loadFont(stage, {
       fontFamily: 'BigFont2',
@@ -165,13 +167,90 @@ describe('CanvasTextRenderer renderText — OffscreenCanvas snapshot failure', (
 
     CanvasTextRenderer.init(stage);
 
+    const snapshot = vi.spyOn(
+      FakeOffscreenCanvas.prototype,
+      'transferToImageBitmap',
+    );
     const result = CanvasTextRenderer.renderText({
       ...baseProps,
       fontFamily: 'BigFont2',
     } as CoreTextNodeProps);
 
     expect(result.type).toBe('canvas');
-    expect((result as { imageData?: unknown }).imageData).toBeDefined();
-    expect((result as { imageData?: unknown }).imageData).not.toBeNull();
+    expect(snapshot).not.toHaveBeenCalled();
+    const source = (result as { renderSource: () => unknown }).renderSource();
+    expect(source).toBeDefined();
+    expect(source).not.toBeNull();
+    expect(snapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws the original layout when an older texture reloads after another node renders', async () => {
+    const stage = makeStage();
+    await CanvasFontHandler.loadFont(stage, {
+      fontFamily: 'SnapshotFont',
+      fontUrl: 'http://example.com/snapshot.woff2',
+    });
+    CanvasFontHandler.requestLoad(stage, 'SnapshotFont');
+    await vi.waitFor(() => {
+      expect(CanvasFontHandler.isFontLoaded('SnapshotFont')).toBe(true);
+    });
+    CanvasTextRenderer.init(stage);
+    const draw = vi.spyOn(FakeContext.prototype, 'fillText');
+
+    const first = CanvasTextRenderer.renderText({
+      ...baseProps,
+      text: 'first-node',
+      fontFamily: 'SnapshotFont',
+    } as CoreTextNodeProps);
+    CanvasTextRenderer.renderText({
+      ...baseProps,
+      text: 'other-node',
+      fontFamily: 'SnapshotFont',
+    } as CoreTextNodeProps);
+    expect(draw).not.toHaveBeenCalled();
+
+    expect(first.type).toBe('canvas');
+    if (first.type === 'canvas') first.renderSource?.();
+    expect(draw).toHaveBeenCalledWith('first-node', expect.any(Number), expect.any(Number));
+    expect(draw).not.toHaveBeenCalledWith('other-node', expect.any(Number), expect.any(Number));
+  });
+  it('restores rich-text spans when an older texture redraws', async () => {
+    const stage = makeStage();
+    await CanvasFontHandler.loadFont(stage, {
+      fontFamily: 'RichSnapshotFont',
+      fontUrl: 'http://example.com/rich-snapshot.woff2',
+    });
+    CanvasFontHandler.requestLoad(stage, 'RichSnapshotFont');
+    await vi.waitFor(() => {
+      expect(CanvasFontHandler.isFontLoaded('RichSnapshotFont')).toBe(true);
+    });
+    CanvasTextRenderer.init(stage);
+    const draw = vi.spyOn(FakeContext.prototype, 'fillText');
+
+    const first = CanvasTextRenderer.renderText({
+      ...baseProps,
+      fontFamily: 'RichSnapshotFont',
+      text: '[b]Alpha[/b]',
+      richText: true,
+    } as CoreTextNodeProps);
+    CanvasTextRenderer.renderText({
+      ...baseProps,
+      fontFamily: 'RichSnapshotFont',
+      text: '[i]Beta[/i]',
+      richText: true,
+    } as CoreTextNodeProps);
+
+    expect(first.type).toBe('canvas');
+    if (first.type === 'canvas') first.renderSource?.();
+    expect(draw).toHaveBeenCalledWith(
+      'Alpha',
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(draw).not.toHaveBeenCalledWith(
+      'Beta',
+      expect.any(Number),
+      expect.any(Number),
+    );
   });
 });
