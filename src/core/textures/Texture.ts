@@ -426,8 +426,11 @@ export abstract class Texture extends EventEmitter {
    * cleaned up.
    */
   destroy(): void {
-    // Only free GPU resources if we're in a state where they exist
-    if (this.state === 'loaded') {
+    // Free GPU resources whenever they exist, not just in the 'loaded' state.
+    // A texture destroyed mid-upload (e.g. a canvas text texture released on a
+    // text change) can have an allocated ctxTexture while still reporting
+    // 'loading', and gating on state alone would strand it.
+    if (this.ctxTexture !== undefined) {
       this.free();
     }
 

@@ -37,7 +37,7 @@ import type {
 } from '../common/CommonTypes.js';
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
-import type { TextureLoadedEventHandler } from './textures/Texture.js';
+import type { Texture, TextureLoadedEventHandler } from './textures/Texture.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
@@ -78,6 +78,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   private _containType: TextConstraint = TextConstraint.none;
 
   private _sdfCache: SdfVertexCache | null = null;
+  private _canvasTexture: Texture | null = null;
 
   // Text renderer properties - stored directly on the node
   textProps: CoreTextNodeProps;
@@ -129,6 +130,40 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    */
   private releaseSdfCache(): void {
     this._sdfCache = null;
+  }
+
+  /**
+   * Free the GPU texture backing a canvas-rendered text node. Canvas text
+   * textures are never added to the texture manager's keyCache (their
+   * source is an ImageBitmap/HTMLCanvasElement, not a string), so each one
+   * has exactly one owner - this node - and can be released deterministically
+   * on text change or destroy instead of waiting for LRU cleanup to reclaim
+   * it. Safe to call multiple times.
+   */
+  private releaseCanvasTexture(): void {
+    const tex = this._canvasTexture;
+    if (tex === null) {
+      return;
+    }
+    // Null out first so a re-entrant call (e.g. triggered by the texture's
+    // own 'freed' listener) can't double-release.
+    this._canvasTexture = null;
+
+    // Keep the CoreNode texture prop in sync so it doesn't keep pointing at
+    // a texture we're about to destroy.
+    if (this.texture === tex) {
+      this.texture = null;
+    }
+
+    // If the texture is still mid-upload, dequeue it first - otherwise the
+    // upload loop would later dequeue and try to upload a destroyed texture.
+    if (tex.state === 'loading') {
+      this.stage.txManager.removeTextureFromQueue(tex);
+    }
+
+    // Use the memory manager so cache bookkeeping and memUsed accounting
+    // stay correct (plain texture.destroy() would leak that accounting).
+    this.stage.txMemManager.destroyTexture(tex);
   }
 
   allowTextGeneration() {
@@ -245,6 +280,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this._layoutGenerated = false;
       this._renderInfo = null;
       this.releaseSdfCache(); // Drop the stale SDF vertex cache
+      this.releaseCanvasTexture(); // Free the canvas text texture, text is no longer valid
     }
 
     // First run the standard CoreNode update
@@ -311,10 +347,17 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // it will be corrected once the texture is loaded
       this.setRenderable(false);
 
-      this.texture = this.stage.txManager.createTexture('ImageTexture', {
+      // Release the previous canvas text texture before creating the new
+      // one, so a text change never transiently holds two GPU textures live
+      // at once.
+      this.releaseCanvasTexture();
+
+      const newTexture = this.stage.txManager.createTexture('ImageTexture', {
         premultiplyAlpha: true,
         src: result.imageData,
       });
+      this._canvasTexture = newTexture;
+      this.texture = newTexture;
 
       if (this.renderState > CoreNodeRenderState.OutOfBounds) {
         // We do want the texture to load immediately
@@ -440,6 +483,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // Clear cached layout and vertex cache
     this._renderInfo = null;
     this.releaseSdfCache();
+    this.releaseCanvasTexture();
 
     this.fontHandler = null!; // Clear reference to avoid memory leaks
     this.textRenderer = null!; // Clear reference to avoid memory leaks

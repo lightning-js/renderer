@@ -122,6 +122,8 @@ function makeDrawFrameHarness() {
     txMemManager: {
       doNotExceedCriticalThreshold: false,
       criticalCleanupRequested: false,
+      destroyTexture: vi.fn(),
+      setTextureMemUse: vi.fn(),
     },
     firstFrameDrawn: true,
     calculateFps: vi.fn(),
