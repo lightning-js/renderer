@@ -93,6 +93,20 @@ export type TextureFailedEventHandler = (
 ) => void;
 
 /**
+ * Distinguish pending texture data from resolved data.
+ *
+ * @remarks
+ * TextureData always defines 'data' explicitly (even as null); a Promise
+ * never has a 'data' property, so this distinguishes the two without an
+ * instanceof check.
+ */
+export function isTextureDataPromise(
+  value: TextureData | Promise<TextureData>,
+): value is Promise<TextureData> {
+  return (value as TextureData).data === undefined;
+}
+
+/**
  * TextureData that is used to populate a CoreContextTexture
  */
 export interface TextureData {
@@ -516,17 +530,14 @@ export abstract class Texture extends EventEmitter {
     }
     const generation = this.contextGeneration;
     const sourceOrPromise = this.getTextureSource();
-    // TextureData always defines 'data' explicitly (even as null); a Promise
-    // never has a 'data' property, so this distinguishes the two without an
-    // instanceof check. Keep the resolved-data case as the primary path.
-    if ((sourceOrPromise as TextureData).data !== undefined) {
-      const data = sourceOrPromise as TextureData;
+    // Keep the resolved-data case as the primary path.
+    if (isTextureDataPromise(sourceOrPromise) === false) {
       if (generation === this.contextGeneration) {
-        this.textureData = data;
+        this.textureData = sourceOrPromise;
       }
-      return data;
+      return sourceOrPromise;
     }
-    return (sourceOrPromise as Promise<TextureData>).then((data) => {
+    return sourceOrPromise.then((data) => {
       if (generation === this.contextGeneration) {
         this.textureData = data;
       }

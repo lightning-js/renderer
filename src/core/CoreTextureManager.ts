@@ -23,7 +23,12 @@ import { ImageTexture } from './textures/ImageTexture.js';
 import { NoiseTexture } from './textures/NoiseTexture.js';
 import { SubTexture } from './textures/SubTexture.js';
 import { RenderTexture } from './textures/RenderTexture.js';
-import { Texture, TextureType, type TextureData } from './textures/Texture.js';
+import {
+  Texture,
+  TextureType,
+  isTextureDataPromise,
+  type TextureData,
+} from './textures/Texture.js';
 import { EventEmitter } from '../common/EventEmitter.js';
 import type { Stage } from './Stage.js';
 import type { Platform } from './platforms/Platform.js';
@@ -332,12 +337,17 @@ export class CoreTextureManager extends EventEmitter {
   }
 
   /**
-   * Override loadTexture to use the batched approach.
+   * Load a texture: fetch its data, then upload it to the GPU. Image
+   * textures are queued for throttled upload unless `priority` is set.
+   *
+   * @remarks
+   * Fire-and-forget: listen to the texture's `loaded` / `failed` events for
+   * completion.
    *
    * @param texture - The texture to load
-   * @param immediate - Whether to prioritize the texture for immediate loading
+   * @param priority - Upload immediately instead of queueing (images only)
    */
-  async loadTexture(texture: Texture, priority?: boolean): Promise<void> {
+  loadTexture(texture: Texture, priority?: boolean): void {
     if (this.stage.contextState !== 'running') {
       this.restoreTextures.add(texture);
       return;
@@ -368,59 +378,65 @@ export class CoreTextureManager extends EventEmitter {
     try {
       dataOrPromise = texture.getTextureData();
     } catch (err) {
-      if (generation !== this.contextGeneration) return;
-      console.error(err);
-      texture.setState('failed');
-      if (generation === this.contextGeneration)
-        this.pendingContextLoads.delete(texture);
+      this.failTextureLoad(texture, generation, 'Failed to load texture:', err);
       return;
     }
 
-    // TextureData always defines 'data' explicitly (even as null); a Promise
-    // never has a 'data' property, so this distinguishes the two without an
-    // instanceof check. Keep the resolved-data case as the primary path.
-    if ((dataOrPromise as TextureData).data !== undefined) {
-      if (
-        (dataOrPromise as TextureData).data === null &&
-        texture.state === 'failed'
-      ) {
-        if (generation === this.contextGeneration)
-          this.pendingContextLoads.delete(texture);
-        return;
-      }
-    } else {
-      const textureDataResult = await (
-        dataOrPromise as Promise<TextureData>
-      ).catch((err) => {
-        if (generation !== this.contextGeneration) return null;
-        console.error(err);
-        texture.setState('failed');
-        return null;
-      });
+    // Keep the resolved-data case as the primary path.
+    if (isTextureDataPromise(dataOrPromise) === false) {
+      this.uploadOrEnqueueTexture(texture, generation, priority);
+      return;
+    }
+    this.loadTextureAsync(texture, dataOrPromise, generation, priority);
+  }
 
-      // Early return if texture data fetch failed
-      if (
-        generation !== this.contextGeneration ||
-        this.stage.contextState !== 'running'
-      )
-        return;
-      if (textureDataResult === null || texture.state === 'failed') {
-        if (generation === this.contextGeneration)
-          this.pendingContextLoads.delete(texture);
-        return;
-      }
+  private async loadTextureAsync(
+    texture: Texture,
+    dataPromise: Promise<TextureData>,
+    generation: number,
+    priority: boolean | undefined,
+  ): Promise<void> {
+    try {
+      await dataPromise;
+    } catch (err) {
+      this.failTextureLoad(texture, generation, 'Failed to load texture:', err);
+      return;
     }
 
-    // Handle non-image textures: upload immediately
-    const shouldUploadImmediately =
-      texture.type !== TextureType.image || priority === true;
-    if (shouldUploadImmediately === true) {
+    // The context was lost while fetching; invalidateContext() re-queued it.
+    if (
+      generation !== this.contextGeneration ||
+      this.stage.contextState !== 'running'
+    ) {
+      return;
+    }
+    this.uploadOrEnqueueTexture(texture, generation, priority);
+  }
+
+  private uploadOrEnqueueTexture(
+    texture: Texture,
+    generation: number,
+    priority: boolean | undefined,
+  ): void {
+    // Sources report failure via setState('failed') and resolve with
+    // { data: null }; a null data alone is valid (e.g. RenderTexture).
+    if (texture.state === 'failed') {
+      this.pendingContextLoads.delete(texture);
+      return;
+    }
+
+    // Handle non-image and priority textures: upload immediately
+    if (texture.type !== TextureType.image || priority === true) {
       try {
         this.uploadTexture(texture);
       } catch (err) {
-        if (generation !== this.contextGeneration) return;
-        console.error(`Failed to upload texture:`, err);
-        texture.setState('failed');
+        this.failTextureLoad(
+          texture,
+          generation,
+          'Failed to upload texture:',
+          err,
+        );
+        return;
       }
       if (generation === this.contextGeneration)
         this.pendingContextLoads.delete(texture);
@@ -429,6 +445,25 @@ export class CoreTextureManager extends EventEmitter {
 
     // Queue image textures for throttled upload
     this.enqueueUploadTexture(texture);
+  }
+
+  private failTextureLoad(
+    texture: Texture,
+    generation: number,
+    message: string,
+    err: unknown,
+  ): void {
+    if (generation !== this.contextGeneration) {
+      // A stale load after context loss isn't a texture error; the restore
+      // path reloads it.
+      return;
+    }
+    console.error(message, err);
+    texture.setState(
+      'failed',
+      err instanceof Error ? err : new TextureError(String(err)),
+    );
+    this.pendingContextLoads.delete(texture);
   }
 
   uploadTexture(texture: Texture): void {
@@ -532,10 +567,13 @@ export class CoreTextureManager extends EventEmitter {
       try {
         this.uploadTexture(texture);
       } catch (error) {
-        if (generation !== this.contextGeneration) continue;
-        console.error('Failed to upload texture:', error);
-        this.pendingContextLoads.delete(texture);
         // Continue with next texture instead of stopping entire queue
+        this.failTextureLoad(
+          texture,
+          generation,
+          'Failed to upload texture:',
+          error,
+        );
       }
       count++;
     }
