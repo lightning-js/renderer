@@ -48,7 +48,7 @@ export class WebPlatformLegacy extends WebPlatform {
 
   override async loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -81,7 +81,7 @@ export class WebPlatformLegacy extends WebPlatform {
 
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
-        resolve({ data: img });
+        resolve({ data: img, premultiplied: false });
       };
 
       img.onerror = (err) => {
@@ -101,7 +101,7 @@ export class WebPlatformLegacy extends WebPlatform {
   override async createImage(
     blob: Blob,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     // Cropping parameters are not supported in legacy mode
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sx: number | null,
@@ -122,7 +122,7 @@ export class WebPlatformLegacy extends WebPlatform {
     return new Promise<ImageResponse>((resolve, reject) => {
       img.onload = () => {
         URL.revokeObjectURL(src);
-        resolve({ data: img });
+        resolve({ data: img, premultiplied: false });
       };
 
       img.onerror = (err) => {

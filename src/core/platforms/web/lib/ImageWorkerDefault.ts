@@ -24,13 +24,9 @@
  */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 export function createImageWorker() {
-  function hasAlphaChannel(mimeType: string) {
-    return mimeType.indexOf('image/png') !== -1;
-  }
-
   function getImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     x: number | null,
     y: number | null,
     width: number | null,
@@ -53,21 +49,17 @@ export function createImageWorker() {
         }
 
         var blob = xhr.response;
-        var withAlphaChannel =
-          premultiplyAlpha !== undefined
-            ? premultiplyAlpha
-            : hasAlphaChannel(blob.type);
 
         if (width !== null && height !== null) {
           createImageBitmap(blob, x || 0, y || 0, width, height, {
-            premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+            premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
             colorSpaceConversion: 'none',
             imageOrientation: 'none',
           })
             .then(function (data) {
               resolve({
                 data,
-                premultiplied: true,
+                premultiplied: premultiplyAlpha,
               });
             })
             .catch(function (error) {
@@ -77,14 +69,14 @@ export function createImageWorker() {
         }
 
         createImageBitmap(blob, {
-          premultiplyAlpha: withAlphaChannel ? 'premultiply' : 'none',
+          premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
           colorSpaceConversion: 'none',
           imageOrientation: 'none',
         })
           .then(function (data) {
             resolve({
               data,
-              premultiplied: true,
+              premultiplied: premultiplyAlpha,
             });
           })
           .catch(function (error) {
