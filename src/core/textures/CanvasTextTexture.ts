@@ -69,11 +69,11 @@ export class CanvasTextTexture extends Texture {
     // requests this cleanup. Canvas2D keeps the image as its display source,
     // so it can only be released when its context texture is freed.
     if (this.txManager.renderer?.mode !== 'canvas') {
-      const generation = this.contextGeneration;
+      const generation = this.loadGeneration;
       const source = this.imageSource;
       queueMicrotask(() => {
         if (
-          generation === this.contextGeneration &&
+          generation === this.loadGeneration &&
           this.imageSource === source
         ) {
           this.disposeSource();
