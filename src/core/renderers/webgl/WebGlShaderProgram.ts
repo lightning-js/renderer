@@ -119,7 +119,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     const glw = (this.glw = renderer.glw);
 
     // Check that extensions are supported
-    const webGl2 = glw.isWebGl2();
+    const webGl2 = glw.isWebGl2;
     let requiredExtensions: string[] = [];
 
     this.supportsIndexedTextures =
@@ -464,7 +464,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return;
     }
     this.glw.useProgram(this.program, this.uniformLocations!);
-    if (this.glw.isWebGl2() && this.vao) {
+    if (this.glw.isWebGl2 && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
   }
