@@ -19,6 +19,7 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
+import { hasImageBitmap } from '../platforms/capabilities.js';
 
 export interface CanvasTextTextureProps {
   /** Create a fresh pixel source for each load, including after eviction or context loss. */
@@ -55,7 +56,7 @@ export class CanvasTextTexture extends Texture {
     const source = this.imageSource;
     this.imageSource = null;
     if (source === null) return;
-    if (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap) {
+    if (hasImageBitmap && source instanceof ImageBitmap) {
       source.close?.();
     } else {
       const sourceCanvas = source as HTMLCanvasElement;

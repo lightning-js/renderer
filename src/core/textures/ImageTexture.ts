@@ -20,6 +20,7 @@
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
 import type { Platform } from '../platforms/Platform.js';
+import { hasImageBitmap } from '../platforms/capabilities.js';
 import type { CompressedImageData } from '../platforms/web/lib/textureCompression.js';
 
 /**
@@ -217,7 +218,7 @@ export class ImageTexture extends Texture {
   ): TextureData {
     if (generation !== this.loadGeneration) {
       if (
-        typeof ImageBitmap !== 'undefined' &&
+        hasImageBitmap &&
         resp.data instanceof ImageBitmap &&
         (typeof this.props.src === 'string' || this.props.src instanceof Blob)
       ) {

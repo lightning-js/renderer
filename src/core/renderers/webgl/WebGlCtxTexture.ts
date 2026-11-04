@@ -25,6 +25,7 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 import type { Bound } from '../../lib/utils.js';
 import { isProductionEnvironment } from '../../../utils.js';
+import { hasImageBitmap } from '../../platforms/capabilities.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -209,8 +210,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     const format = glw.RGBA;
     const formatBytes = 4;
     const memoryPadding = 1.1; // Add padding to account for GPU Padding
-    const isImageBitmap =
-      typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap;
+    const isImageBitmap = hasImageBitmap && tdata instanceof ImageBitmap;
     const isHTMLCanvas =
       typeof HTMLCanvasElement !== 'undefined' &&
       tdata instanceof HTMLCanvasElement;
