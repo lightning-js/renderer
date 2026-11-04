@@ -210,7 +210,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     const format = glw.RGBA;
     const formatBytes = 4;
     const memoryPadding = 1.1; // Add padding to account for GPU Padding
-    const isImageBitmap = hasImageBitmap && tdata instanceof ImageBitmap;
+    const isImageBitmap =
+      hasImageBitmap === true && tdata instanceof ImageBitmap;
     const isHTMLCanvas =
       typeof HTMLCanvasElement !== 'undefined' &&
       tdata instanceof HTMLCanvasElement;
@@ -218,8 +219,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
-      isImageBitmap ||
-      isHTMLCanvas ||
+      isImageBitmap === true ||
+      isHTMLCanvas === true ||
       tdata instanceof ImageData ||
       // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(tdata) === true
@@ -245,7 +246,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
       //   UNPACK_PREMULTIPLY_ALPHA_WEBGL is honoured for these types, so we
       //   delegate to the premultiplyAlpha flag as before.
       let unpackPremultiply: boolean;
-      if (isImageBitmap) {
+      if (isImageBitmap === true) {
         const premultiplied = textureData.premultiplied ?? true;
         unpackPremultiply = premultiplied
           ? false

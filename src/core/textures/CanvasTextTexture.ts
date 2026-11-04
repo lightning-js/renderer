@@ -56,7 +56,7 @@ export class CanvasTextTexture extends Texture {
     const source = this.imageSource;
     this.imageSource = null;
     if (source === null) return;
-    if (hasImageBitmap && source instanceof ImageBitmap) {
+    if (hasImageBitmap === true && source instanceof ImageBitmap) {
       source.close?.();
     } else {
       const sourceCanvas = source as HTMLCanvasElement;
@@ -73,10 +73,7 @@ export class CanvasTextTexture extends Texture {
       const generation = this.loadGeneration;
       const source = this.imageSource;
       queueMicrotask(() => {
-        if (
-          generation === this.loadGeneration &&
-          this.imageSource === source
-        ) {
+        if (generation === this.loadGeneration && this.imageSource === source) {
           this.disposeSource();
         }
       });

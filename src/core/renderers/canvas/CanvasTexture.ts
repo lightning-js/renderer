@@ -26,10 +26,7 @@ import { hasImageBitmap } from '../../platforms/capabilities.js';
 
 export class CanvasTexture extends CoreContextTexture {
   protected image:
-    | ImageBitmap
-    | HTMLCanvasElement
-    | HTMLImageElement
-    | undefined;
+    ImageBitmap | HTMLCanvasElement | HTMLImageElement | undefined;
   protected tintCache:
     | {
         key: string;
@@ -162,7 +159,7 @@ export class CanvasTexture extends CoreContextTexture {
       this.image = canvas;
       return { w: data.width, h: data.height };
     } else if (
-      (hasImageBitmap && data instanceof ImageBitmap) ||
+      (hasImageBitmap === true && data instanceof ImageBitmap) ||
       data instanceof HTMLCanvasElement ||
       data instanceof HTMLImageElement
     ) {

@@ -218,7 +218,7 @@ export class ImageTexture extends Texture {
   ): TextureData {
     if (generation !== this.loadGeneration) {
       if (
-        hasImageBitmap &&
+        hasImageBitmap === true &&
         resp.data instanceof ImageBitmap &&
         (typeof this.props.src === 'string' || this.props.src instanceof Blob)
       ) {

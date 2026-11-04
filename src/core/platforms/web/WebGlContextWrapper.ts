@@ -1263,7 +1263,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @returns
    */
   createVertexArray() {
-    if (this.isWebGl2) {
+    if (this.isWebGl2 === true) {
       return (this.gl as WebGL2RenderingContext).createVertexArray();
     }
     return undefined;
@@ -1277,7 +1277,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray
    */
   bindVertexArray(vertexArray: WebGLVertexArrayObject | null) {
-    if (this.isWebGl2) {
+    if (this.isWebGl2 === true) {
       (this.gl as WebGL2RenderingContext).bindVertexArray(vertexArray);
     }
   }
@@ -1495,7 +1495,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray - The vertex array object to delete
    */
   deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
-    if (this.isWebGl2) {
+    if (this.isWebGl2 === true) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
   }

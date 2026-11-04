@@ -125,11 +125,11 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     this.supportsIndexedTextures =
       config.supportsIndexedTextures || this.supportsIndexedTextures;
     requiredExtensions =
-      (webGl2 && config.webgl2Extensions) ||
-      (!webGl2 && config.webgl1Extensions) ||
+      (webGl2 === true && config.webgl2Extensions) ||
+      (webGl2 === false && config.webgl1Extensions) ||
       [];
 
-    const glVersion = webGl2 ? '2.0' : '1.0';
+    const glVersion = webGl2 === true ? '2.0' : '1.0';
     requiredExtensions.forEach((extensionName) => {
       if (!glw.getExtension(extensionName)) {
         throw new Error(
@@ -288,11 +288,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
 
     const shaderPropsA = shader.resolvedProps as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     const shaderPropsB = opShader.resolvedProps as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
 
     if (
       (shaderPropsA === undefined && shaderPropsB !== undefined) ||
@@ -464,7 +462,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return;
     }
     this.glw.useProgram(this.program, this.uniformLocations!);
-    if (this.glw.isWebGl2 && this.vao) {
+    if (this.glw.isWebGl2 === true && this.vao) {
       this.glw.bindVertexArray(this.vao);
     }
   }
