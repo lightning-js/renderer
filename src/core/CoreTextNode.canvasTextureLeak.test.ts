@@ -306,7 +306,7 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
     }
   });
 
-  it('11. releasing a texture that is still mid-upload does not crash or leave a dangling queue entry', () => {
+  it('11. releasing a texture that is still mid-upload does not crash or leave a dangling queue entry', async () => {
     const { stage, txManager, root } = makeDrawFrameHarness();
     const node = new CoreTextNode(
       stage,
@@ -326,6 +326,8 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
     expect(txManager.isProcessingTexture(texture)).toBe(true);
 
     expect(() => node.destroy()).not.toThrow();
+    // The unowned load is cancelled on the next microtask.
+    await Promise.resolve();
 
     expect(txManager.isProcessingTexture(texture)).toBe(false);
 

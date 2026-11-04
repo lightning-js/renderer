@@ -147,22 +147,6 @@ export class CanvasTextTexture extends Texture {
     this.disposeSource();
   }
 
-  /**
-   * Release one owner's claim on this texture.
-   *
-   * @remarks
-   * Drops `owner` from the renderable owners and aborts an in-flight load —
-   * but only when no owner remains. A shared texture that other nodes still
-   * need keeps loading untouched. GPU/data reclamation for unowned textures
-   * happens through `TextureMemoryManager` cleanup, like image textures.
-   */
-  releaseOwner(owner: string | number): void {
-    this.setRenderableOwner(owner, false);
-    if (this.state === 'loading' && this.renderableOwners.size === 0) {
-      this.cancel();
-    }
-  }
-
   override invalidateContext(): void {
     super.invalidateContext();
     this.disposeSource();

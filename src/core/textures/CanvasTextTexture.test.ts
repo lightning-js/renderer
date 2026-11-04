@@ -103,7 +103,7 @@ describe('CanvasTextTexture', () => {
     expect(txManager.keyCache.size).toBe(2);
   });
 
-  it('releaseOwner keeps a shared mid-upload load but cancels an orphaned one', () => {
+  it('keeps a shared mid-upload load but cancels an orphaned one', async () => {
     const txManager = new CoreTextureManager(mock<Stage>(), {
       maxRetryCount: 5,
       createImageBitmapSupport: 'auto',
@@ -119,13 +119,15 @@ describe('CanvasTextTexture', () => {
     texture.setState('loading');
     txManager.enqueueUploadTexture(texture);
 
-    texture.releaseOwner('a');
+    texture.setRenderableOwner('a', false);
+    await Promise.resolve();
     expect(texture.renderableOwners.has('b')).toBe(true);
     expect(texture.state).toBe('loading');
     expect(txManager.isProcessingTexture(texture)).toBe(true);
 
     // Last owner out: the stale queued load is aborted.
-    texture.releaseOwner('b');
+    texture.setRenderableOwner('b', false);
+    await Promise.resolve();
     expect(texture.renderableOwners.size).toBe(0);
     expect(texture.state).toBe('initial');
     expect(txManager.isProcessingTexture(texture)).toBe(false);
