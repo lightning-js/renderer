@@ -1024,19 +1024,19 @@ export class RendererMain extends EventEmitter {
     }
 
     if (options.fpsUpdateInterval !== undefined) {
-      this.stage.updateFpsUpdateInterval(options.fpsUpdateInterval);
+      stage.updateFpsUpdateInterval(options.fpsUpdateInterval);
     }
 
     if (options.fpsBoundaries !== undefined) {
-      this.stage.updateFpsBoundaries(options.fpsBoundaries);
+      stage.updateFpsBoundaries(options.fpsBoundaries);
     }
 
     if (options.boundsMargin !== undefined) {
-      this.stage.setBoundsMargin(options.boundsMargin);
+      stage.setBoundsMargin(options.boundsMargin);
     }
 
     if (options.clearColor !== undefined) {
-      this.stage.setClearColor(options.clearColor);
+      stage.setClearColor(options.clearColor);
     }
 
     if (needDimensionsUpdate) {
