@@ -35,6 +35,7 @@ const TAG_ITALIC = 2;
 const TAG_UNDERLINE = 3;
 const TAG_STRIKETHROUGH = 4;
 const TAG_COLOR = 5;
+const TAG_STROKE = 6;
 
 // ---------------------------------------------------------------------------
 // Pool limits
@@ -84,6 +85,8 @@ export class RichSpan {
   underline = false;
   strikethrough = false;
   color = 0; // 0 = inherit node color; otherwise 0xRRGGBBAA
+  strokeColor = 0; // 0 = no stroke; otherwise 0xRRGGBBAA
+  strokeWidth = 0; // stroke width in CSS px; 0 = no stroke
 }
 
 /**
@@ -120,6 +123,8 @@ class StyleFrame {
   underline = false;
   strikethrough = false;
   color = 0;
+  strokeColor = 0;
+  strokeWidth = 0;
   tagType = 0; // TAG_* constant that opened this frame; 0 = base
 
   copyFrom(src: StyleFrame): void {
@@ -128,6 +133,8 @@ class StyleFrame {
     this.underline = src.underline;
     this.strikethrough = src.strikethrough;
     this.color = src.color;
+    this.strokeColor = src.strokeColor;
+    this.strokeWidth = src.strokeWidth;
     this.tagType = src.tagType;
   }
 }
@@ -189,6 +196,97 @@ const parseColorValue = (
 };
 
 /**
+ * Scratch output for stroke width parsed by parseStrokeValue. Module-level to
+ * avoid allocation in the hot path (JS is single-threaded, parsing is sync).
+ */
+let _parsedStrokeWidth = 0;
+
+/**
+ * Parses a decimal stroke width from text[start, tagEnd).
+ *
+ * Accepts integers and decimals (e.g. `2`, `2.5`, `0.5`). Returns the width,
+ * or -1 when invalid. Width must be finite and within (0, 64].
+ */
+const parseStrokeWidth = (
+  text: string,
+  start: number,
+  tagEnd: number,
+): number => {
+  if (start >= tagEnd) return -1;
+  let i = start;
+  let intPart = 0;
+  let intDigits = 0;
+  while (i < tagEnd) {
+    const c = text.charCodeAt(i);
+    if (c < 48 || c > 57) break;
+    intPart = intPart * 10 + (c - 48);
+    intDigits++;
+    i++;
+  }
+  let value = intPart;
+  if (i < tagEnd && text.charCodeAt(i) === 46) {
+    // '.'
+    i++;
+    let frac = 0;
+    let fracDiv = 1;
+    let fracDigits = 0;
+    while (i < tagEnd) {
+      const c = text.charCodeAt(i);
+      if (c < 48 || c > 57) break;
+      frac = frac * 10 + (c - 48);
+      fracDiv *= 10;
+      fracDigits++;
+      i++;
+    }
+    if (intDigits === 0 && fracDigits === 0) return -1;
+    value = intPart + frac / fracDiv;
+  } else if (intDigits === 0) {
+    return -1;
+  }
+  if (i !== tagEnd) return -1; // trailing junk
+  if (!(value > 0) || value > 64) return -1;
+  return value;
+};
+
+/**
+ * Parses a stroke value from text[start, tagEnd).
+ *
+ * Accepted format: 0xRRGGBBAA[,width] where the color matches the renderer's
+ * internal format and width is a decimal CSS px value. When no `,width` is
+ * present the width defaults to 1.
+ * Returns the color as 0xRRGGBBAA, or -1 when invalid. On success the width
+ * is written to `_parsedStrokeWidth`.
+ */
+const parseStrokeValue = (
+  text: string,
+  start: number,
+  tagEnd: number,
+): number => {
+  if (start >= tagEnd) return -1;
+  // Color must be exactly 0x + 8 hex digits starting at `start`.
+  if (text.charCodeAt(start) !== CC_ZERO) return -1;
+  const secondChar = text.charCodeAt(start + 1);
+  if (secondChar !== CC_LC_X && secondChar !== CC_UC_X) return -1;
+  if (start + 10 > tagEnd) return -1;
+  let v = 0;
+  for (let k = 2; k < 10; k++) {
+    const d = hexDigitVal(text.charCodeAt(start + k));
+    if (d === -1) return -1;
+    v = v * 16 + d;
+  }
+  const colorEnd = start + 10;
+  if (colorEnd === tagEnd) {
+    _parsedStrokeWidth = 1;
+    return v >>> 0;
+  }
+  if (text.charCodeAt(colorEnd) !== 44) return -1; // ','
+  const width = parseStrokeWidth(text, colorEnd + 1, tagEnd);
+  if (width === -1) return -1;
+  _parsedStrokeWidth = width;
+  return v >>> 0;
+};
+
+/**
  * Identifies the tag at text[pos, tagEnd) where pos is the first char of the
  * tag name (after '[' and any leading '/').
  *
@@ -219,6 +317,20 @@ const identifyTag = (text: string, pos: number, tagEnd: number): number => {
     return TAG_COLOR;
   }
 
+  // 'stroke' (6 chars, closing tag) or 'stroke=...' (7+ chars, opening tag)
+  if (
+    firstChar === 115 && // 's'
+    tagLen >= 6 &&
+    text.charCodeAt(pos + 1) === 116 && // 't'
+    text.charCodeAt(pos + 2) === 114 && // 'r'
+    text.charCodeAt(pos + 3) === 111 && // 'o'
+    text.charCodeAt(pos + 4) === 107 && // 'k'
+    text.charCodeAt(pos + 5) === 101 && // 'e'
+    (tagLen === 6 || text.charCodeAt(pos + 6) === CC_EQUALS) // bare or 'stroke='
+  ) {
+    return TAG_STROKE;
+  }
+
   return 0;
 };
 
@@ -235,6 +347,7 @@ const applyTag = (
   isClosing: boolean,
   stackDepth: number,
   colorValue: number,
+  strokeWidthValue: number,
 ): number => {
   if (isClosing === true) {
     for (let k = stackDepth; k > 0; k--) {
@@ -261,6 +374,9 @@ const applyTag = (
     _stack[next]!.strikethrough = true;
   } else if (tagType === TAG_COLOR) {
     _stack[next]!.color = colorValue;
+  } else if (tagType === TAG_STROKE) {
+    _stack[next]!.strokeColor = colorValue;
+    _stack[next]!.strokeWidth = strokeWidthValue;
   }
 
   return next;
@@ -288,6 +404,8 @@ const flushSpan = (
   span.underline = style.underline;
   span.strikethrough = style.strikethrough;
   span.color = style.color;
+  span.strokeColor = style.strokeColor;
+  span.strokeWidth = style.strokeWidth;
 
   return spanCount + 1;
 };
@@ -301,7 +419,9 @@ const stylesEqual = (a: StyleFrame, b: StyleFrame): boolean =>
   a.italic === b.italic &&
   a.underline === b.underline &&
   a.strikethrough === b.strikethrough &&
-  a.color === b.color;
+  a.color === b.color &&
+  a.strokeColor === b.strokeColor &&
+  a.strokeWidth === b.strokeWidth;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -319,6 +439,8 @@ const stylesEqual = (a: StyleFrame, b: StyleFrame): boolean =>
  *   [color=0xRRGGBBAA]…[/color]   inline color (VALUE must be a 0xRRGGBBAA
  *                            hex literal matching the renderer's internal
  *                            color format, e.g. [color=0xff0000ff])
+ *   [stroke=0xRRGGBBAA[,width]]…[/stroke] outline (color 0xRRGGBBAA, width
+ *                            in CSS px, e.g. [stroke=0x000000ff,2])
  *
  * Unrecognised or malformed tags are emitted as literal text.
  * Mis-nested closing tags implicitly close any intervening open tags.
@@ -343,6 +465,8 @@ export const parseRichText = (text: string, out: ParseResult): void => {
   base.underline = false;
   base.strikethrough = false;
   base.color = 0;
+  base.strokeColor = 0;
+  base.strokeWidth = 0;
   base.tagType = 0;
 
   let stackDepth = 0;
@@ -385,12 +509,20 @@ export const parseRichText = (text: string, out: ParseResult): void => {
 
     // Resolve color value for opening [color=...] before touching the stack
     let colorValue = 0;
+    let strokeWidthValue = 0;
     if (tagType === TAG_COLOR && isClosing === false) {
       colorValue = parseColorValue(text, pos + 6, tagEnd); // skip 'color='
       if (colorValue === -1) {
         i++;
         continue; // invalid color value — treat '[' as literal
       }
+    } else if (tagType === TAG_STROKE && isClosing === false) {
+      colorValue = parseStrokeValue(text, pos + 7, tagEnd); // skip 'stroke='
+      if (colorValue === -1) {
+        i++;
+        continue; // invalid stroke value — treat '[' as literal
+      }
+      strokeWidthValue = _parsedStrokeWidth;
     }
 
     // Flush the literal run [runStart, i) into stripped
@@ -399,7 +531,13 @@ export const parseRichText = (text: string, out: ParseResult): void => {
 
     // Apply the tag to the stack
     const prevDepth = stackDepth;
-    stackDepth = applyTag(tagType, isClosing, stackDepth, colorValue);
+    stackDepth = applyTag(
+      tagType,
+      isClosing,
+      stackDepth,
+      colorValue,
+      strokeWidthValue,
+    );
 
     // When the visible style changes, close the current span
     if (stylesEqual(_stack[prevDepth]!, _stack[stackDepth]!) === false) {
@@ -461,15 +599,33 @@ export const stripRichText = (text: string): string => {
     }
 
     let pos = i + 1;
-    if (text.charCodeAt(pos) === CC_SLASH) pos++;
+    let isClosing = false;
+    if (text.charCodeAt(pos) === CC_SLASH) {
+      isClosing = true;
+      pos++;
+    }
     if (pos >= tagEnd) {
       i++;
       continue;
     }
 
-    if (identifyTag(text, pos, tagEnd) === 0) {
+    const tagType = identifyTag(text, pos, tagEnd);
+    if (tagType === 0) {
       i++;
       continue; // unrecognised — keep literal
+    }
+    // Only strip recognised tags with valid values; invalid params stay
+    // literal to match parseRichText.
+    if (tagType === TAG_COLOR && isClosing === false) {
+      if (parseColorValue(text, pos + 6, tagEnd) === -1) {
+        i++;
+        continue;
+      }
+    } else if (tagType === TAG_STROKE && isClosing === false) {
+      if (parseStrokeValue(text, pos + 7, tagEnd) === -1) {
+        i++;
+        continue;
+      }
     }
 
     stripped += text.substring(runStart, i);
