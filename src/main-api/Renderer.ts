@@ -628,10 +628,8 @@ export class RendererMain extends EventEmitter {
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    if (this.canvas.style) {
-      this.canvas.style.width = `${deviceLogicalWidth}px`;
-      this.canvas.style.height = `${deviceLogicalHeight}px`;
-    }
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
 
     // Initialize the stage
     this.stage = new Stage({
@@ -652,7 +650,7 @@ export class RendererMain extends EventEmitter {
       enableDirtyRepaints: settings.enableDirtyRepaints!,
       contextRestoreTimeout: settings.contextRestoreTimeout,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector !== null,
+      inspector: inspector !== false,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       maxTextureUploadsDuringAnimation:
@@ -995,7 +993,7 @@ export class RendererMain extends EventEmitter {
           this.canvas,
           stage.options as unknown as RendererMainSettings,
         );
-        this.inspector?.createNodes(this.root as unknown as CoreNode);
+        this.inspector.createNodes(this.root as unknown as CoreNode);
       }
     }
 

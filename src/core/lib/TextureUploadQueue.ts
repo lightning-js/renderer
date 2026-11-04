@@ -66,7 +66,7 @@ export function createTextureUploadQueue(): TextureUploadQueue {
 
     dequeue(): Texture | undefined {
       while (head < list.length) {
-        const t = list[head]!;
+        const t = list[head] as Texture | null;
         head++;
         if (t !== null && set.has(t) === true) {
           set.delete(t);

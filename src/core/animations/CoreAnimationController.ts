@@ -71,7 +71,7 @@ export class CoreAnimationController
   }
 
   private getLoopErrorHandler(): ((error: unknown) => void) | undefined {
-    return this.manager?.getLoopErrorHandler?.();
+    return this.manager.getLoopErrorHandler();
   }
 
   stop(reset = true): IAnimationController {

@@ -53,7 +53,7 @@ export class AnimationManager {
    * which case `emitSafe`/`reportLoopError` fall back to `console.error`.
    */
   getLoopErrorHandler(): LoopErrorHandler | undefined {
-    return this.stage?.platform?.settings?.handleLoopError;
+    return this.stage.platform.settings.handleLoopError;
   }
 
   registerAnimation(animation: CoreAnimation) {

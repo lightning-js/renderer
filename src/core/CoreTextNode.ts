@@ -475,7 +475,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   override destroy(): void {
-    if (this._waitingForFont === true && this.fontHandler) {
+    if (this._waitingForFont === true) {
       this.fontHandler.stopWaitingForFont(this.textProps.fontFamily, this);
     }
 
@@ -483,9 +483,6 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     this._renderInfo = null;
     this.releaseSdfCache();
     this.releaseCanvasTexture();
-
-    this.fontHandler = null!; // Clear reference to avoid memory leaks
-    this.textRenderer = null!; // Clear reference to avoid memory leaks
 
     super.destroy();
   }
