@@ -106,7 +106,7 @@ export class CoreAnimation extends EventEmitter {
    * and finished/tick/animating/destroyed listeners).
    */
   private getLoopErrorHandler(): LoopErrorHandler | undefined {
-    return this.node?.stage?.platform?.settings?.handleLoopError;
+    return this.node?.stage.platform.settings.handleLoopError;
   }
 
   /**
@@ -164,7 +164,7 @@ export class CoreAnimation extends EventEmitter {
           key as keyof Omit<CoreNodeAnimateProps, 'shaderProps'>
         ] as number;
         group.isColor[i] = key.indexOf('color') !== -1;
-      } else if (key === 'shaderProps' && node.shader !== null) {
+      } else if (node.shader !== null) {
         this.propValuesMap['shaderProps'] = this.shaderPropsGroup;
         const group = this.shaderPropsGroup;
         for (const key in props.shaderProps) {

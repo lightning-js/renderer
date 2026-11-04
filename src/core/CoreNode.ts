@@ -1008,7 +1008,7 @@ export class CoreNode extends EventEmitter {
       this.stage.txManager.loadTexture(texture);
     }
 
-    texture.preventCleanup = this.props.textureOptions?.preventCleanup ?? false;
+    texture.preventCleanup = this.props.textureOptions.preventCleanup ?? false;
     texture.on('loaded', this.onTextureLoaded);
     texture.on('failed', this.onTextureFailed);
     texture.on('freed', this.onTextureFreed);
@@ -1078,15 +1078,12 @@ export class CoreNode extends EventEmitter {
       queueMicrotask(this.emitTextureLoadedTask);
     }
 
-    if (
-      this.stage.calculateTextureCoord === true &&
-      this.props.textureOptions !== null
-    ) {
+    if (this.stage.calculateTextureCoord === true) {
       this.textureCoords = this.stage.renderer.getTextureCoords!(this);
     }
 
     // Trigger a local update if the texture is loaded and the resizeMode is 'contain'
-    if (this.props.textureOptions?.resizeMode?.type === 'contain') {
+    if (this.props.textureOptions.resizeMode?.type === 'contain') {
       this.setUpdateType(UpdateType.Local);
     }
   };
@@ -1186,7 +1183,6 @@ export class CoreNode extends EventEmitter {
     const p = this.props;
     this._hasContainResize =
       p.texture !== null &&
-      p.textureOptions !== null &&
       p.textureOptions.resizeMode?.type === 'contain';
     this.isSimple =
       p.rotation === 0 &&
@@ -1347,7 +1343,7 @@ export class CoreNode extends EventEmitter {
 
         // Maintain a full scene global transform for bounds detection
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.globalTransform || Matrix3d.identity(Matrix3d.temp),
+          parent.globalTransform || Matrix3d.identity(Matrix3d.temp),
           this.sceneGlobalTransform,
         ).translateOrMultiply(lt);
 
@@ -1358,11 +1354,11 @@ export class CoreNode extends EventEmitter {
       ) {
         // RTT chain: propagate sceneGlobalTransform from parent
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.sceneGlobalTransform || lt,
+          parent.sceneGlobalTransform || lt,
           this.sceneGlobalTransform,
         ).translateOrMultiply(lt);
 
-        Matrix3d.copy(parent?.globalTransform || lt, gt);
+        Matrix3d.copy(parent.globalTransform || lt, gt);
 
         this._globalIsTranslate = false;
       } else {
@@ -2308,8 +2304,7 @@ export class CoreNode extends EventEmitter {
 
       if (
         props.texture !== null &&
-        this.stage.calculateTextureCoord === true &&
-        props.textureOptions !== null
+        this.stage.calculateTextureCoord === true
       ) {
         this.textureCoords = this.stage.renderer.getTextureCoords!(this);
       }
@@ -2338,8 +2333,7 @@ export class CoreNode extends EventEmitter {
 
       if (
         props.texture !== null &&
-        this.stage.calculateTextureCoord === true &&
-        props.textureOptions !== null
+        this.stage.calculateTextureCoord === true
       ) {
         this.textureCoords = this.stage.renderer.getTextureCoords!(this);
       }
@@ -2996,7 +2990,7 @@ export class CoreNode extends EventEmitter {
 
   set textureOptions(value: TextureOptions) {
     this.props.textureOptions = value;
-    if (this.stage.calculateTextureCoord === true && value !== null) {
+    if (this.stage.calculateTextureCoord === true) {
       this.textureCoords = this.stage.renderer.getTextureCoords!(this);
     }
     this.updateIsSimple();

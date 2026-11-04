@@ -27,7 +27,10 @@ import type { Stage } from '../Stage.js';
  * Create a minimal mock stage that satisfies AnimationManager's needs.
  */
 function createMockStage(): Stage {
-  return { activeAnimationCount: 0 } as unknown as Stage;
+  return {
+    activeAnimationCount: 0,
+    platform: { settings: {} },
+  } as unknown as Stage;
 }
 
 /**
@@ -46,6 +49,7 @@ function createMockNode(overrides: Record<string, unknown> = {}): CoreNode {
     color: 0xffffffff,
     destroyed: false,
     shader: null,
+    stage: { platform: { settings: {} } },
     ...overrides,
   } as unknown as CoreNode;
 }

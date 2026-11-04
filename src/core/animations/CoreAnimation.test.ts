@@ -32,6 +32,7 @@ describe('CoreAnimation', () => {
       alpha: 1,
       color: 0xffffffff,
       destroyed: false,
+      stage: { platform: { settings: {} } },
     });
     animation = new CoreAnimation();
   });

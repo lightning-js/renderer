@@ -184,7 +184,7 @@ export const getTimingFunction = (str: string): TimingFunction => {
   }
 
   if (timingMapping[str] !== undefined) {
-    return timingMapping[str] || defaultTiming;
+    return timingMapping[str];
   }
 
   if (str === 'step-start') {

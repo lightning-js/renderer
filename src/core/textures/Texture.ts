@@ -489,9 +489,7 @@ export abstract class Texture extends EventEmitter {
       if (
         errorOrDimensions !== undefined &&
         'w' in errorOrDimensions === true &&
-        'h' in errorOrDimensions === true &&
-        errorOrDimensions.w !== undefined &&
-        errorOrDimensions.h !== undefined
+        'h' in errorOrDimensions === true
       ) {
         this._dimensions = errorOrDimensions;
       }
