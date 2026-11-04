@@ -109,8 +109,15 @@ export class CanvasTextTexture extends Texture {
     // microtask. If we reload before it runs, release the previous source now
     // and don't let that cleanup dispose the new source instead.
     this.disposeSource();
-    this.imageSource = this.props.render();
-    return { data: this.imageSource, premultiplyAlpha: true };
+    const source = this.props.render();
+    this.imageSource = source;
+    return {
+      data: source,
+      premultiplyAlpha: true,
+      release: () => {
+        if (this.imageSource === source) this.disposeSource();
+      },
+    };
   }
 
   private disposeSource(): void {
@@ -124,22 +131,6 @@ export class CanvasTextTexture extends Texture {
       sourceCanvas.width = 0;
       sourceCanvas.height = 0;
     }
-  }
-
-  override freeTextureData(): void {
-    // WebGL has finished reading the source synchronously by the time it
-    // requests this cleanup. Canvas2D keeps the image as its display source,
-    // so it can only be released when its context texture is freed.
-    if (this.txManager.renderer?.mode !== 'canvas') {
-      const generation = this.loadGeneration;
-      const source = this.imageSource;
-      queueMicrotask(() => {
-        if (generation === this.loadGeneration && this.imageSource === source) {
-          this.disposeSource();
-        }
-      });
-    }
-    super.freeTextureData();
   }
 
   override free(): void {

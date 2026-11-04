@@ -27,6 +27,7 @@ import {
   type TextureMemoryManagerSettings,
 } from '../TextureMemoryManager.js';
 import { TextureType } from './Texture.js';
+import { CanvasTexture } from '../renderers/canvas/CanvasTexture.js';
 
 // capabilities.ts detects ImageBitmap at import time.
 vi.hoisted(() => {
@@ -49,11 +50,11 @@ describe('CanvasTextTexture', () => {
     const texture = txManager.createTexture('CanvasTextTexture', { render });
     expect(texture.type).toBe(TextureType.image);
     expect(texture.cacheKey).toBeNull();
-    expect(texture.getTextureData()).toEqual({
+    expect(texture.getTextureData()).toMatchObject({
       data: first,
       premultiplyAlpha: true,
     });
-    expect(texture.getTextureData()).toEqual({
+    expect(texture.getTextureData()).toMatchObject({
       data: first,
       premultiplyAlpha: true,
     });
@@ -62,7 +63,7 @@ describe('CanvasTextTexture', () => {
     texture.freeTextureData();
     await Promise.resolve();
 
-    expect(texture.getTextureData()).toEqual({
+    expect(texture.getTextureData()).toMatchObject({
       data: second,
       premultiplyAlpha: true,
     });
@@ -240,18 +241,34 @@ describe('CanvasTextTexture', () => {
       createImageBitmapSupport: 'auto',
     });
     txManager.renderer = mock<CoreRenderer>({ mode: 'canvas' });
-    const canvas = { width: 24, height: 12 } as HTMLCanvasElement;
-    const texture = txManager.createTexture('CanvasTextTexture', {
-      render: () => canvas,
-    });
-    texture.getTextureData();
-    texture.freeTextureData();
-    await Promise.resolve();
-    expect(canvas.width).toBe(24);
+    class Canvas {
+      width = 24;
+      height = 12;
+    }
+    vi.stubGlobal('HTMLCanvasElement', Canvas);
+    vi.stubGlobal('HTMLImageElement', class {});
+    vi.stubGlobal('ImageData', class {});
+    try {
+      const canvas = new Canvas();
+      const texture = txManager.createTexture('CanvasTextTexture', {
+        render: () => canvas as HTMLCanvasElement,
+      });
+      texture.getTextureData();
+      const ctxTexture = new CanvasTexture(
+        mock<TextureMemoryManager>(),
+        texture,
+      );
+      texture.ctxTexture = ctxTexture;
+      ctxTexture.load();
+      await Promise.resolve();
+      expect(canvas.width).toBe(24);
 
-    texture.free();
-    expect(canvas.width).toBe(0);
-    expect(canvas.height).toBe(0);
+      texture.free();
+      expect(canvas.width).toBe(0);
+      expect(canvas.height).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('disposes the stale source on context loss and redraws after restore', () => {
@@ -279,7 +296,7 @@ describe('CanvasTextTexture', () => {
       texture.invalidateContext();
       expect(first.close).toHaveBeenCalledTimes(1);
 
-      expect(texture.getTextureData()).toEqual({
+      expect(texture.getTextureData()).toMatchObject({
         data: second,
         premultiplyAlpha: true,
       });
@@ -346,13 +363,57 @@ describe('CanvasTextTexture', () => {
 
       // The node can keep its texture instance after GPU eviction; reloading
       // generates a new source rather than trying to upload a closed bitmap.
-      expect(texture.getTextureData()).toEqual({
+      expect(texture.getTextureData()).toMatchObject({
         data: second,
         premultiplyAlpha: true,
       });
       expect(render).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('closes a queued source when its last owner leaves and redraws on return', async () => {
+    class Bitmap {
+      width = 24;
+      height = 12;
+      close = vi.fn();
+    }
+    vi.stubGlobal('ImageBitmap', Bitmap);
+    try {
+      const stage = {
+        contextState: 'running',
+        platform: { getTimeStamp: () => 0 },
+        defaultTexture: null,
+      } as unknown as Stage;
+      const txManager = new CoreTextureManager(stage, {
+        maxRetryCount: 5,
+        createImageBitmapSupport: 'auto',
+      });
+      txManager.renderer = mock<CoreRenderer>({ mode: 'webgl' });
+      const first = new Bitmap();
+      const second = new Bitmap();
+      const render = vi
+        .fn()
+        .mockReturnValueOnce(first)
+        .mockReturnValueOnce(second);
+      const texture = txManager.createTexture('CanvasTextTexture', { render });
+
+      texture.setRenderableOwner('node', true);
+      expect(txManager.isProcessingTexture(texture)).toBe(true);
+
+      texture.setRenderableOwner('node', false);
+      await Promise.resolve();
+
+      expect(texture.state).toBe('initial');
+      expect(txManager.isProcessingTexture(texture)).toBe(false);
+      expect(first.close).toHaveBeenCalledTimes(1);
+
+      texture.setRenderableOwner('node', true);
+      expect(texture.textureData?.data).toBe(second);
+      expect(render).toHaveBeenCalledTimes(2);
+    } finally {
       vi.unstubAllGlobals();
     }
   });
