@@ -71,9 +71,10 @@ function makeCanvasTextRenderer() {
           height: 40,
           hasRemainingText: false,
           remainingLines: 0,
-          imageData: new (
-            globalThis as unknown as { ImageBitmap: new () => unknown }
-          ).ImageBitmap(),
+          renderSource: () =>
+            new (
+              globalThis as unknown as { ImageBitmap: new () => ImageBitmap }
+            ).ImageBitmap(),
         }) as unknown as CanvasRenderInfo,
     ),
     addQuads: vi.fn(),
@@ -346,7 +347,7 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
       height: 0,
       hasRemainingText: false,
       remainingLines: 0,
-      imageData: undefined,
+      renderSource: () => null,
     } as unknown as CanvasRenderInfo);
 
     node.text = 'triggers-failure';
@@ -356,6 +357,34 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
     expect(destroySpy).not.toHaveBeenCalled();
 
     destroySpy.mockRestore();
+  });
+
+  it('rejects a canvas render result without a source generator', () => {
+    const { stage, root } = makeDrawFrameHarness();
+    const textRenderer = makeCanvasTextRenderer();
+    const node = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: 'original' }),
+      textRenderer,
+    );
+
+    stage.drawFrame();
+    const original = node.texture;
+    const failed = vi.fn();
+    node.on('failed', failed);
+    (textRenderer.renderText as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      type: 'canvas',
+      width: 120,
+      height: 40,
+      hasRemainingText: false,
+      remainingLines: 0,
+    } as unknown as CanvasRenderInfo);
+
+    node.text = 'missing-source';
+    stage.drawFrame();
+
+    expect(failed).toHaveBeenCalledOnce();
+    expect(node.texture).toBe(original);
   });
 
   it('9. loadedTextures compacts via null-slot reuse under alternating churn — H3 refuted for this pattern', () => {
