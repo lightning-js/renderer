@@ -28,6 +28,11 @@ import {
 } from '../TextureMemoryManager.js';
 import { TextureType } from './Texture.js';
 
+// capabilities.ts detects ImageBitmap at import time.
+vi.hoisted(() => {
+  (globalThis as any).ImageBitmap ??= class {};
+});
+
 describe('CanvasTextTexture', () => {
   it('creates a fresh source after its previous upload data is released', async () => {
     const txManager = new CoreTextureManager(mock<Stage>(), {

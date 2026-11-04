@@ -247,7 +247,7 @@ describe('WebGlRenderer.canReuseRenderOp', () => {
 
 describe('WebGlShaderProgram context restore', () => {
   const makeGlw = () => ({
-    isWebGl2: () => false,
+    isWebGl2: false,
     getExtension: vi.fn(() => null),
     VERTEX_SHADER: 1,
     FRAGMENT_SHADER: 2,

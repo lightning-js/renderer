@@ -313,9 +313,6 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
   it('uploadKTX throws on WebGL1 when the ETC2 extension is unavailable', () => {
     const gl = makeMockGl();
     const glw = new WebGlContextWrapper(gl);
-    // isWebGl2() reads the `self` global, which is undefined in this
-    // environment — stub it to simulate a WebGL1 context.
-    vi.spyOn(glw, 'isWebGl2').mockReturnValue(false);
     const data = makeCompressedData(0x9274); // COMPRESSED_RGB8_ETC2
 
     expect(() => glw.uploadKTX({} as WebGLTexture, data)).toThrow(
@@ -327,7 +324,7 @@ describe('WebGlContextWrapper compressed texture uploads', () => {
   it('uploadKTX skips the ETC2 extension check on WebGL2 where it is core', () => {
     const gl = makeMockGl();
     const glw = new WebGlContextWrapper(gl);
-    vi.spyOn(glw, 'isWebGl2').mockReturnValue(true);
+    (glw as { isWebGl2: boolean }).isWebGl2 = true;
     const data = makeCompressedData(0x9274); // COMPRESSED_RGB8_ETC2
 
     glw.uploadKTX({} as WebGLTexture, data);

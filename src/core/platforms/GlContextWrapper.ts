@@ -317,6 +317,6 @@ export abstract class GlContextWrapper {
   //#endregion compressed texture support
 
   //#region WebGL 2 specific methods (optional)
-  abstract isWebGl2(): boolean;
+  abstract readonly isWebGl2: boolean;
   //#endregion WebGL 2 specific methods
 }

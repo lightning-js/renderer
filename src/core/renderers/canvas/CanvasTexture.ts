@@ -22,13 +22,11 @@ import { assertTruthy } from '../../../utils.js';
 import { type IParsedColor } from '../../lib/colorParser.js';
 import { CoreContextTexture } from '../CoreContextTexture.js';
 import type { Texture } from '../../textures/Texture.js';
+import { hasImageBitmap } from '../../platforms/capabilities.js';
 
 export class CanvasTexture extends CoreContextTexture {
   protected image:
-    | ImageBitmap
-    | HTMLCanvasElement
-    | HTMLImageElement
-    | undefined;
+    ImageBitmap | HTMLCanvasElement | HTMLImageElement | undefined;
   protected tintCache:
     | {
         key: string;
@@ -161,9 +159,8 @@ export class CanvasTexture extends CoreContextTexture {
       this.image = canvas;
       return { w: data.width, h: data.height };
     } else if (
-      (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
-      (typeof HTMLCanvasElement !== 'undefined' &&
-        data instanceof HTMLCanvasElement) ||
+      (hasImageBitmap === true && data instanceof ImageBitmap) ||
+      data instanceof HTMLCanvasElement ||
       data instanceof HTMLImageElement
     ) {
       this.image = data;

@@ -26,7 +26,6 @@ import type {
   Vec3,
   Vec4,
 } from '../../renderers/webgl/internal/ShaderUtils.js';
-import { isWebGl2 } from '../../renderers/webgl/internal/WebGlUtils.js';
 import { GlContextWrapper } from '../GlContextWrapper.js';
 import type { CompressedData } from '../../textures/Texture.js';
 
@@ -144,8 +143,13 @@ export class WebGlContextWrapper extends GlContextWrapper {
   public readonly STENCIL_BUFFER_BIT: number;
   //#endregion WebGL Enums
 
+  readonly isWebGl2: boolean;
+
   constructor(private gl: WebGLRenderingContext | WebGL2RenderingContext) {
     super();
+    this.isWebGl2 =
+      typeof WebGL2RenderingContext !== 'undefined' &&
+      gl instanceof WebGL2RenderingContext;
     // The following code extracts the current state of the WebGL context
     // to our local JavaScript cached version of it. This is so we can
     // avoid making WebGL calls if we don't need to.
@@ -266,14 +270,6 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.INCR = gl.INCR;
     this.DECR = gl.DECR;
     this.STENCIL_BUFFER_BIT = gl.STENCIL_BUFFER_BIT;
-  }
-  /**
-   * Returns true if the WebGL context is WebGL2
-   *
-   * @returns
-   */
-  isWebGl2() {
-    return isWebGl2(this.gl);
   }
 
   /**
@@ -1267,8 +1263,8 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @returns
    */
   createVertexArray() {
-    if (this.gl instanceof WebGL2RenderingContext) {
-      return this.gl.createVertexArray();
+    if (this.isWebGl2 === true) {
+      return (this.gl as WebGL2RenderingContext).createVertexArray();
     }
     return undefined;
   }
@@ -1281,8 +1277,8 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray
    */
   bindVertexArray(vertexArray: WebGLVertexArrayObject | null) {
-    if (this.gl instanceof WebGL2RenderingContext) {
-      this.gl.bindVertexArray(vertexArray);
+    if (this.isWebGl2 === true) {
+      (this.gl as WebGL2RenderingContext).bindVertexArray(vertexArray);
     }
   }
 
@@ -1499,7 +1495,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param vertexArray - The vertex array object to delete
    */
   deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
-    if (this.isWebGl2() === true) {
+    if (this.isWebGl2 === true) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
     }
   }
@@ -1590,7 +1586,7 @@ export class WebGlContextWrapper extends GlContextWrapper {
     } else if (glInternalFormat >= 0x9270 && glInternalFormat <= 0x9279) {
       // ETC2/EAC is core in WebGL2: no extension exists to query and
       // `getExtension()` would return null, so skip the check entirely.
-      if (this.isWebGl2() === true) {
+      if (this.isWebGl2 === true) {
         return;
       }
       extensionName = 'WEBGL_compressed_texture_etc';
