@@ -701,32 +701,30 @@ export class RendererMain extends EventEmitter {
    */
   private resolveTxSettings(
     textureMemory: Partial<TextureMemoryManagerSettings>,
+    currentTxSettings: Partial<TextureMemoryManagerSettings> = {},
   ): TextureMemoryManagerSettings {
-    const currentTxSettings =
-      (this.stage && this.stage.options.textureMemory) || {};
-
     return {
       criticalThreshold:
-        textureMemory?.criticalThreshold ??
-        currentTxSettings?.criticalThreshold ??
+        textureMemory.criticalThreshold ??
+        currentTxSettings.criticalThreshold ??
         124e6,
       targetThresholdLevel:
-        textureMemory?.targetThresholdLevel ??
-        currentTxSettings?.targetThresholdLevel ??
+        textureMemory.targetThresholdLevel ??
+        currentTxSettings.targetThresholdLevel ??
         0.5,
       cleanupInterval:
-        textureMemory?.cleanupInterval ??
-        currentTxSettings?.cleanupInterval ??
+        textureMemory.cleanupInterval ??
+        currentTxSettings.cleanupInterval ??
         5000,
       debugLogging:
-        textureMemory?.debugLogging ?? currentTxSettings?.debugLogging ?? false,
+        textureMemory.debugLogging ?? currentTxSettings.debugLogging ?? false,
       baselineMemoryAllocation:
-        textureMemory?.baselineMemoryAllocation ??
-        currentTxSettings?.baselineMemoryAllocation ??
+        textureMemory.baselineMemoryAllocation ??
+        currentTxSettings.baselineMemoryAllocation ??
         26e6,
       doNotExceedCriticalThreshold:
-        textureMemory?.doNotExceedCriticalThreshold ??
-        currentTxSettings?.doNotExceedCriticalThreshold ??
+        textureMemory.doNotExceedCriticalThreshold ??
+        currentTxSettings.doNotExceedCriticalThreshold ??
         false,
     };
   }
@@ -877,10 +875,7 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   getNodeById(id: number): CoreNode | null {
-    const root = this.stage?.root;
-    if (!root) {
-      return null;
-    }
+    const root = this.stage.root;
 
     const findNode = (node: CoreNode): CoreNode | null => {
       if (node.id === id) {
@@ -966,6 +961,7 @@ export class RendererMain extends EventEmitter {
     if (options.textureMemory !== undefined) {
       const textureMemory = (options.textureMemory = this.resolveTxSettings(
         options.textureMemory,
+        stage.options.textureMemory,
       ));
       stage.txMemManager.updateSettings(textureMemory);
       stage.txMemManager.cleanup();
