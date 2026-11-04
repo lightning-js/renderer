@@ -131,6 +131,33 @@ describe('CanvasTextTexture', () => {
     expect(txManager.isProcessingTexture(texture)).toBe(false);
   });
 
+  it('keeps a queued load when another node takes the same key in the same pass', async () => {
+    const txManager = new CoreTextureManager(mock<Stage>(), {
+      maxRetryCount: 5,
+      createImageBitmapSupport: 'auto',
+    });
+    const render = vi.fn(() => null);
+    const texture = txManager.createTexture('CanvasTextTexture', {
+      render,
+      key: 'shared',
+    });
+    texture.setRenderableOwner('a', true);
+    texture.setState('loading');
+    txManager.enqueueUploadTexture(texture);
+
+    texture.setRenderableOwner('a', false);
+    const reused = txManager.createTexture('CanvasTextTexture', {
+      render,
+      key: 'shared',
+    });
+    reused.setRenderableOwner('b', true);
+    await Promise.resolve();
+
+    expect(reused).toBe(texture);
+    expect(texture.state).toBe('loading');
+    expect(txManager.isProcessingTexture(texture)).toBe(true);
+  });
+
   it('closes a WebGL bitmap after upload data is released and redraws after eviction', async () => {
     class Bitmap {
       width = 24;

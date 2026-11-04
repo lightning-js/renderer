@@ -41,6 +41,7 @@ describe('Texture.cancel', () => {
   it('returns to initial and drops the late result', async () => {
     const { manager, texture } = setup();
     texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('a', false);
 
     texture.cancel();
     expect(texture.state).toBe('initial');
@@ -56,6 +57,7 @@ describe('Texture.cancel', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { texture } = setup();
     texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('a', false);
 
     texture.cancel();
     texture.loads[0]?.reject(new Error('network'));
@@ -66,10 +68,9 @@ describe('Texture.cancel', () => {
     error.mockRestore();
   });
 
-  it('is a no-op while more than one owner renders the texture', () => {
+  it('is a no-op while any owner renders the texture', () => {
     const { texture } = setup();
     texture.setRenderableOwner('a', true);
-    texture.setRenderableOwner('b', true);
 
     texture.cancel();
 
@@ -79,6 +80,7 @@ describe('Texture.cancel', () => {
   it('lets a restarted load own the texture', async () => {
     const { manager, texture } = setup();
     texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('a', false);
     texture.cancel();
     texture.load();
     const [first, second] = texture.loads;
@@ -102,6 +104,7 @@ describe('Texture.cancel', () => {
     await flush();
     expect(manager.isProcessingTexture(texture)).toBe(true);
 
+    texture.setRenderableOwner('a', false);
     texture.cancel();
 
     expect(manager.isProcessingTexture(texture)).toBe(false);
@@ -117,8 +120,65 @@ describe('Texture.cancel', () => {
     await flush();
     expect(texture.state).toBe('failed');
 
+    texture.setRenderableOwner('a', false);
     texture.cancel();
 
     expect(texture.state).toBe('failed');
+  });
+});
+
+describe('Texture owner-driven cancel', () => {
+  it('cancels after the last owner leaves', async () => {
+    const { manager, texture } = setup();
+    texture.setRenderableOwner('a', true);
+
+    texture.setRenderableOwner('a', false);
+    expect(texture.state).toBe('loading');
+    await Promise.resolve();
+
+    expect(texture.state).toBe('initial');
+    texture.loads[0]?.resolve(pixels());
+    await flush();
+    expect(texture.textureData).toBeNull();
+    expect(manager.hasUpdates()).toBe(false);
+  });
+
+  it('keeps the load when an owner returns in the same pass', async () => {
+    const { manager, texture } = setup();
+    texture.setRenderableOwner('a', true);
+
+    texture.setRenderableOwner('a', false);
+    texture.setRenderableOwner('a', true);
+    await Promise.resolve();
+
+    expect(texture.state).toBe('loading');
+    expect(texture.loads).toHaveLength(1);
+    texture.loads[0]?.resolve(pixels());
+    await flush();
+    expect(manager.isProcessingTexture(texture)).toBe(true);
+  });
+
+  it('keeps the load while another owner still renders it', async () => {
+    const { texture } = setup();
+    texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('b', true);
+
+    texture.setRenderableOwner('a', false);
+    await Promise.resolve();
+
+    expect(texture.state).toBe('loading');
+  });
+
+  it('restarts the load when an owner returns after the cancel', async () => {
+    const { texture } = setup();
+    texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('a', false);
+    await Promise.resolve();
+    expect(texture.state).toBe('initial');
+
+    texture.setRenderableOwner('a', true);
+
+    expect(texture.state).toBe('loading');
+    expect(texture.loads).toHaveLength(2);
   });
 });

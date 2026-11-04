@@ -337,6 +337,13 @@ export abstract class Texture extends EventEmitter {
       if (owners.size === 0) {
         (this.renderable as boolean) = false;
         this.onChangeIsRenderable?.(false);
+        if (this.state === 'loading') {
+          // Deferred so an owner re-added in the same update pass keeps the load.
+          const generation = this.loadGeneration;
+          queueMicrotask(() => {
+            if (generation === this.loadGeneration) this.cancel();
+          });
+        }
       }
     }
   }
@@ -356,13 +363,14 @@ export abstract class Texture extends EventEmitter {
    * Bumping the generation drops the result when it arrives, like a load
    * that was in flight during context loss; {@link abortLoad} additionally
    * stops the request where the platform supports it.
-   * A texture can be shared, this is a no-op while more than one owner
-   * requires it.
+   * Called automatically once the last renderable owner is removed. A
+   * texture can be shared, so this is a no-op while any owner still
+   * requires it; nothing would restart the load for that owner.
    *
    * Priority loads are not guarded.
    */
   cancel(): void {
-    if (this.state !== 'loading' || this.renderableOwners.size > 1) {
+    if (this.state !== 'loading' || this.renderableOwners.size > 0) {
       return;
     }
     this.loadGeneration++;
