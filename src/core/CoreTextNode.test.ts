@@ -342,7 +342,7 @@ describe('CoreTextNode', () => {
         type: 'canvas',
         width: 100,
         height: 20,
-        imageData: {} as ImageData,
+        renderSource: () => ({} as ImageBitmap),
         hasRemainingText: false,
         remainingLines: 0,
       };
@@ -557,7 +557,7 @@ describe('CoreTextNode', () => {
         type: 'canvas',
         width: 100,
         height: 20,
-        imageData: {} as ImageData,
+        renderSource: () => ({} as ImageBitmap),
         hasRemainingText: false,
         remainingLines: 0,
       };

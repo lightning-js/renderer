@@ -69,9 +69,10 @@ function makeCanvasTextRenderer() {
           height: 40,
           hasRemainingText: false,
           remainingLines: 0,
-          imageData: new (
-            globalThis as unknown as { ImageBitmap: new () => unknown }
-          ).ImageBitmap(),
+          renderSource: () =>
+            new (
+              globalThis as unknown as { ImageBitmap: new () => ImageBitmap }
+            ).ImageBitmap(),
         }) as unknown as CanvasRenderInfo,
     ),
     addQuads: vi.fn(),
@@ -283,9 +284,10 @@ describe('Plan 2 canvas text latency', () => {
       height: 40.25,
       hasRemainingText: false,
       remainingLines: 0,
-      imageData: new (
-        globalThis as unknown as { ImageBitmap: new () => unknown }
-      ).ImageBitmap(),
+      renderSource: () =>
+        new (
+          globalThis as unknown as { ImageBitmap: new () => ImageBitmap }
+        ).ImageBitmap(),
     } as unknown as CanvasRenderInfo);
     const node = new CoreTextNode(
       stage,

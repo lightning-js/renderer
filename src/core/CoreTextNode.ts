@@ -327,13 +327,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       return;
     }
 
-    // Handle Canvas renderer (uses ImageData)
+    // Handle Canvas renderer (generates a fresh pixel source on load)
     if (textRendererType === 'canvas') {
-      if (result.imageData === undefined) {
+      if (typeof result.renderSource !== 'function') {
         this.emit('failed', {
           type: 'text',
           error: new Error(
-            'Canvas text rendering failed, no image data returned',
+            'Canvas text rendering failed, no source generator returned',
           ),
         } satisfies NodeTextFailedPayload);
         return;
@@ -352,9 +352,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // at once.
       this.releaseCanvasTexture();
 
-      const newTexture = this.stage.txManager.createTexture('ImageTexture', {
-        premultiplyAlpha: true,
-        src: result.imageData,
+      const newTexture = this.stage.txManager.createTexture('CanvasTextTexture', {
+        render: result.renderSource,
       });
       this._canvasTexture = newTexture;
       this.texture = newTexture;
