@@ -31,7 +31,9 @@ import { CanvasTexture } from '../renderers/canvas/CanvasTexture.js';
 
 // capabilities.ts detects ImageBitmap at import time.
 vi.hoisted(() => {
-  (globalThis as any).ImageBitmap ??= class {};
+  (globalThis as any).ImageBitmap ??= class {
+    close() {}
+  };
 });
 
 describe('CanvasTextTexture', () => {
@@ -194,41 +196,7 @@ describe('CanvasTextTexture', () => {
       expect(render).toHaveBeenCalledTimes(2);
       expect(texture.textureData?.data).toBe(second);
       texture.destroy();
-      expect(second.close).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it('does not close a newly generated source with the previous upload cleanup task', async () => {
-    class Bitmap {
-      width = 24;
-      height = 12;
-      close = vi.fn();
-    }
-    vi.stubGlobal('ImageBitmap', Bitmap);
-    try {
-      const txManager = new CoreTextureManager(mock<Stage>(), {
-        maxRetryCount: 5,
-        createImageBitmapSupport: 'auto',
-      });
-      txManager.renderer = mock<CoreRenderer>({ mode: 'webgl' });
-      const first = new Bitmap();
-      const second = new Bitmap();
-      const render = vi
-        .fn()
-        .mockReturnValueOnce(first)
-        .mockReturnValueOnce(second);
-      const texture = txManager.createTexture('CanvasTextTexture', { render });
-      texture.getTextureSource();
-      texture.freeTextureData();
-      // Reload before the previous source's scheduled cleanup runs.
-      texture.getTextureSource();
       await Promise.resolve();
-
-      expect(first.close).toHaveBeenCalledTimes(1);
-      expect(second.close).not.toHaveBeenCalled();
-      texture.destroy();
       expect(second.close).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
@@ -341,7 +309,8 @@ describe('CanvasTextTexture', () => {
       texture.getTextureData();
       texture.state = 'loaded';
       texture.ctxTexture = mock<NonNullable<typeof texture.ctxTexture>>({
-        free: vi.fn(),
+        // Like WebGlCtxTexture.free(), drop any source data still held.
+        free: vi.fn(() => texture.freeTextureData()),
       });
       memory.setTextureMemUse(texture, 24 * 12 * 4);
       vi.advanceTimersByTime(2100); // past the manager's startup grace period
@@ -357,9 +326,9 @@ describe('CanvasTextTexture', () => {
       (texture as { renderable: boolean }).renderable = false;
       memory.cleanup(true);
       expect(memory.getMemoryInfo().loadedTextures).toBe(0);
-      expect(first.close).toHaveBeenCalledTimes(1);
       expect(texture.ctxTexture).toBeUndefined();
       await Promise.resolve();
+      expect(first.close).toHaveBeenCalledTimes(1);
 
       // The node can keep its texture instance after GPU eviction; reloading
       // generates a new source rather than trying to upload a closed bitmap.

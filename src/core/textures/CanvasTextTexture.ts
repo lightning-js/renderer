@@ -19,7 +19,18 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
-import { hasImageBitmap } from '../platforms/capabilities.js';
+import { closeImageBitmap, hasImageBitmap } from '../platforms/capabilities.js';
+
+function disposeSource(source: ImageBitmap | HTMLCanvasElement | null): void {
+  if (source === null) return;
+  if (hasImageBitmap === true && source instanceof ImageBitmap) {
+    closeImageBitmap(source);
+  } else {
+    const sourceCanvas = source as HTMLCanvasElement;
+    sourceCanvas.width = 0;
+    sourceCanvas.height = 0;
+  }
+}
 
 export interface CanvasTextTextureProps {
   /** Create a fresh pixel source for each load, including after eviction or context loss. */
@@ -97,7 +108,6 @@ export function makeCanvasTextCacheKey(props: CanvasTextCacheKeyProps): string {
 export class CanvasTextTexture extends Texture {
   public override type: TextureType = TextureType.image;
   public props: CanvasTextTextureProps;
-  private imageSource: ImageBitmap | HTMLCanvasElement | null = null;
 
   constructor(txManager: CoreTextureManager, props: CanvasTextTextureProps) {
     super(txManager);
@@ -105,47 +115,12 @@ export class CanvasTextTexture extends Texture {
   }
 
   override getTextureSource(): TextureData {
-    // A previous upload can have scheduled source cleanup for the next
-    // microtask. If we reload before it runs, release the previous source now
-    // and don't let that cleanup dispose the new source instead.
-    this.disposeSource();
     const source = this.props.render();
-    this.imageSource = source;
     return {
       data: source,
       premultiplyAlpha: true,
-      release: () => {
-        if (this.imageSource === source) this.disposeSource();
-      },
+      release: () => disposeSource(source),
     };
-  }
-
-  private disposeSource(): void {
-    const source = this.imageSource;
-    this.imageSource = null;
-    if (source === null) return;
-    if (hasImageBitmap === true && source instanceof ImageBitmap) {
-      source.close?.();
-    } else {
-      const sourceCanvas = source as HTMLCanvasElement;
-      sourceCanvas.width = 0;
-      sourceCanvas.height = 0;
-    }
-  }
-
-  override free(): void {
-    super.free();
-    this.disposeSource();
-  }
-
-  override invalidateContext(): void {
-    super.invalidateContext();
-    this.disposeSource();
-  }
-
-  override destroy(): void {
-    super.destroy();
-    this.disposeSource();
   }
 
   // Textures with an explicit stable key (see makeCanvasTextCacheKey) are
