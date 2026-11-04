@@ -1343,7 +1343,7 @@ export class CoreNode extends EventEmitter {
 
         // Maintain a full scene global transform for bounds detection
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.globalTransform || Matrix3d.identity(Matrix3d.temp),
+          parent.globalTransform || Matrix3d.identity(Matrix3d.temp),
           this.sceneGlobalTransform,
         ).translateOrMultiply(lt);
 
@@ -1354,11 +1354,11 @@ export class CoreNode extends EventEmitter {
       ) {
         // RTT chain: propagate sceneGlobalTransform from parent
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent?.sceneGlobalTransform || lt,
+          parent.sceneGlobalTransform || lt,
           this.sceneGlobalTransform,
         ).translateOrMultiply(lt);
 
-        Matrix3d.copy(parent?.globalTransform || lt, gt);
+        Matrix3d.copy(parent.globalTransform || lt, gt);
 
         this._globalIsTranslate = false;
       } else {
