@@ -116,21 +116,15 @@ export interface ImageTextureProps {
 export interface ImageResponse {
   data: ImageBitmap | ImageData | CompressedImageData | HTMLImageElement | null;
   /**
-   * Whether the pixel data is already premultiplied.
+   * Whether the decoded pixel data is already premultiplied.
    *
    * @remarks
-   * Only meaningful for `ImageBitmap` responses. Platforms that invoke
-   * `createImageBitmap` with an explicit `premultiplyAlpha: 'premultiply'`
-   * option set this to `true`. Platforms that call `createImageBitmap`
-   * without options (e.g. `WebPlatformChrome50`) set this to `false` because
-   * the browser's default alpha handling is implementation-defined and may
-   * return straight-alpha data on older WPEWebKit.
-   *
-   * `HTMLImageElement`-based platforms (e.g. `WebPlatformLegacy`) leave this
-   * `undefined`; it is irrelevant for them because straight-alpha is handled
-   * via `UNPACK_PREMULTIPLY_ALPHA_WEBGL = true` at upload time.
+   * Must describe the pixels actually produced. Platforms that honour
+   * `createImageBitmap({ premultiplyAlpha })` set this to that request.
+   * Platforms that cannot (Chrome50, HTMLImageElement, SVG, compressed)
+   * set this to `false`.
    */
-  premultiplied?: boolean;
+  premultiplied: boolean;
 }
 
 /**

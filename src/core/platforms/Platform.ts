@@ -138,7 +138,7 @@ export abstract class Platform {
    */
   abstract loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,
@@ -158,7 +158,7 @@ export abstract class Platform {
    */
   abstract createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,

@@ -75,7 +75,7 @@ export class ImageWorkerManager {
 
       image.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        resolve({ data: image });
+        resolve({ data: image, premultiplied: false });
       };
 
       image.onerror = () => {
@@ -172,7 +172,7 @@ export class ImageWorkerManager {
 
   getImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx: number | null,
     sy: number | null,
     sw: number | null,
