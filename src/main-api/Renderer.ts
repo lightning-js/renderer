@@ -652,7 +652,7 @@ export class RendererMain extends EventEmitter {
       enableDirtyRepaints: settings.enableDirtyRepaints!,
       contextRestoreTimeout: settings.contextRestoreTimeout,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector !== null,
+      inspector: inspector as boolean,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       maxTextureUploadsDuringAnimation:
