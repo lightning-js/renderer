@@ -50,6 +50,11 @@ export class CanvasTexture extends CoreContextTexture {
    * {@link MAX_TINT_CACHE} for the bound.
    */
   protected tintCache: Map<string, HTMLCanvasElement> | undefined;
+  /**
+   * {@link TextureData.release} of {@link image}, taken over from the
+   * texture when the image is kept as the display source.
+   */
+  private releaseImage: (() => void) | undefined;
 
   load(): void {
     // Capture textureData synchronously - a pending
@@ -69,6 +74,11 @@ export class CanvasTexture extends CoreContextTexture {
         return;
       }
 
+      // Canvas2D draws from the source itself, so freeing the texture data
+      // below must not release it.
+      if (this.image === textureData.data) {
+        this.releaseImage = this.textureSource.takeTextureDataRelease();
+      }
       this.textureSource.setState('loaded', size);
       this.textureSource.freeTextureData();
       this.updateMemSize();
@@ -80,6 +90,8 @@ export class CanvasTexture extends CoreContextTexture {
   }
 
   release(): void {
+    this.releaseImage?.();
+    this.releaseImage = undefined;
     this.image = undefined;
     this.tintCache = undefined;
   }

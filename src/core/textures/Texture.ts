@@ -135,6 +135,16 @@ export interface TextureData {
    * @defaultValue `undefined` (treated as `true` for `ImageBitmap` sources)
    */
   premultiplied?: boolean;
+  /**
+   * Frees `data` once nothing needs it any more.
+   *
+   * @remarks
+   * Set only by whoever allocated `data` (e.g. an `ImageBitmap` the texture
+   * decoded itself); caller-provided data has none. The texture calls it
+   * when it drops the data, unless the context texture took it over to keep
+   * the data as its display source.
+   */
+  release?: () => void;
 }
 /**
  * TextureCoords generally numbers between 0 - 1
@@ -195,7 +205,7 @@ export abstract class Texture extends EventEmitter {
     this.txManager.notifyContextLost();
   }
 
-  public textureData: TextureData | null = null;
+  private _textureData: TextureData | null = null;
 
   public memUsed = 0;
 
@@ -242,6 +252,13 @@ export abstract class Texture extends EventEmitter {
 
   get error(): TextureError | null {
     return this._error;
+  }
+
+  /**
+   * Source data waiting to be uploaded to the context texture.
+   */
+  get textureData(): TextureData | null {
+    return this._textureData;
   }
 
   /**
@@ -375,7 +392,7 @@ export abstract class Texture extends EventEmitter {
     }
     this.loadGeneration++;
     this.txManager.forgetLoad(this);
-    this.textureData = null;
+    this.setTextureData(null);
     this.setState('initial');
   }
 
@@ -444,7 +461,7 @@ export abstract class Texture extends EventEmitter {
     this.ctxTexture = undefined;
     if (this.state !== 'failed') this.state = 'freed';
     // A decoded image may have been closed after its first upload.
-    this.textureData = null;
+    this.setTextureData(null);
     this.memUsed = 0;
   }
 
@@ -547,16 +564,43 @@ export abstract class Texture extends EventEmitter {
     // Keep the resolved-data case as the primary path.
     if (isTextureDataPromise(sourceOrPromise) === false) {
       if (generation === this.loadGeneration) {
-        this.textureData = sourceOrPromise;
+        this.setTextureData(sourceOrPromise);
       }
       return sourceOrPromise;
     }
     return sourceOrPromise.then((data) => {
       if (generation === this.loadGeneration) {
-        this.textureData = data;
+        this.setTextureData(data);
+      } else {
+        // Resolved after its load was cancelled; nothing else references it.
+        data.release?.();
       }
       return data;
     });
+  }
+
+  /**
+   * Replace the texture data, releasing the data it replaces.
+   */
+  private setTextureData(next: TextureData | null): void {
+    const prev = this._textureData;
+    this._textureData = next;
+    if (prev !== null && prev !== next) prev.release?.();
+  }
+
+  /**
+   * Take over {@link TextureData.release} of the current data.
+   *
+   * @remarks
+   * For a context texture that keeps the data as its display source: the
+   * caller now frees it, and dropping the data no longer releases it.
+   */
+  takeTextureDataRelease(): (() => void) | undefined {
+    const data = this._textureData;
+    if (data === null) return undefined;
+    const release = data.release;
+    data.release = undefined;
+    return release;
   }
 
   /**
@@ -566,7 +610,7 @@ export abstract class Texture extends EventEmitter {
    * This method is called in a microtask to free the texture data.
    */
   private freeTextureDataTask = (): void => {
-    this.textureData = null;
+    this.setTextureData(null);
   };
 
   /**

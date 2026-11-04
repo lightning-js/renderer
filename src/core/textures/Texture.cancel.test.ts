@@ -182,3 +182,53 @@ describe('Texture owner-driven cancel', () => {
     expect(texture.loads).toHaveLength(2);
   });
 });
+
+describe('TextureData.release', () => {
+  const owned = () => {
+    const release = vi.fn();
+    return { data: { ...pixels(), release }, release };
+  };
+
+  it('runs when a queued load is cancelled', async () => {
+    const { texture } = setup();
+    const { data, release } = owned();
+    texture.setRenderableOwner('a', true);
+    texture.loads[0]?.resolve(data);
+    await flush();
+
+    texture.setRenderableOwner('a', false);
+    await Promise.resolve();
+
+    expect(texture.state).toBe('initial');
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs when data resolves after its load was cancelled', async () => {
+    const { texture } = setup();
+    const { data, release } = owned();
+    texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('a', false);
+    await Promise.resolve();
+
+    texture.loads[0]?.resolve(data);
+    await flush();
+
+    expect(texture.textureData).toBeNull();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs once the texture data is freed', async () => {
+    const { texture } = setup();
+    const { data, release } = owned();
+    texture.setRenderableOwner('a', true);
+    texture.loads[0]?.resolve(data);
+    await flush();
+
+    texture.freeTextureData();
+    expect(release).not.toHaveBeenCalled();
+    await Promise.resolve();
+
+    expect(texture.textureData).toBeNull();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+});
