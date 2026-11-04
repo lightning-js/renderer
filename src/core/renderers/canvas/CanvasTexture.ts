@@ -24,15 +24,32 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
 import type { Texture } from '../../textures/Texture.js';
 import { hasImageBitmap } from '../../platforms/capabilities.js';
 
+/**
+ * Maximum tinted variants kept per texture (see `CanvasTexture.tintCache`).
+ *
+ * @remarks
+ * Bounds the extra canvases when many colors share one texture. The oldest
+ * entry is evicted past the cap, so a texture cycling more colors than this
+ * re-tints the evicted one — still strictly better than the previous
+ * single-slot cache, which thrashed with just two alternating colors.
+ */
+const MAX_TINT_CACHE = 8;
+
 export class CanvasTexture extends CoreContextTexture {
   protected image:
     ImageBitmap | HTMLCanvasElement | HTMLImageElement | undefined;
-  protected tintCache:
-    | {
-        key: string;
-        image: HTMLCanvasElement;
-      }
-    | undefined;
+  /**
+   * Tinted variants of {@link image}, keyed by CSS color string.
+   *
+   * @remarks
+   * A single texture can be shared by many nodes with different colors
+   * (e.g. deduplicated canvas text). `getImage` runs per node per frame, so
+   * a single-slot cache would re-tint on every node (~1 canvas alloc +
+   * fillRect + 2 drawImages each) whenever two nodes disagree on color.
+   * The map keeps one entry per color actually in use; see
+   * {@link MAX_TINT_CACHE} for the bound.
+   */
+  protected tintCache: Map<string, HTMLCanvasElement> | undefined;
 
   load(): void {
     // Capture textureData synchronously - a pending
@@ -77,8 +94,8 @@ export class CanvasTexture extends CoreContextTexture {
   updateMemSize(): void {
     // Counting memory usage for:
     // - main image
-    // - tinted image
-    const mult = this.tintCache ? 8 : 4;
+    // - one tinted image per cached color
+    const mult = 4 * (1 + (this.tintCache?.size ?? 0));
     if (this.textureSource.dimensions) {
       this.setTextureMemUse(
         this.textureSource.dimensions.w *
@@ -101,22 +118,30 @@ export class CanvasTexture extends CoreContextTexture {
     }
 
     if (color.isWhite) {
-      if (this.tintCache) {
-        this.tintCache = undefined;
-        this.updateMemSize();
-      }
+      // No tint needed. Unlike the previous single-slot cache, the per-color
+      // map is left intact: other nodes sharing this texture may still need
+      // their tints, and evicting them here would reintroduce per-frame
+      // re-tinting for mixed white/colored usage.
       return image;
     }
     const key = `rgba(${color.r},${color.g},${color.b},${color.a})`;
-    if (this.tintCache?.key === key) {
-      return this.tintCache.image;
+    const cached = this.tintCache?.get(key);
+    if (cached !== undefined) {
+      return cached;
     }
 
     const tintedImage = this.tintTexture(image, key);
-    this.tintCache = {
-      key,
-      image: tintedImage,
-    };
+    if (this.tintCache === undefined) {
+      this.tintCache = new Map();
+    }
+    this.tintCache.set(key, tintedImage);
+    if (this.tintCache.size > MAX_TINT_CACHE) {
+      // Evict oldest insertion (Map preserves insertion order).
+      const oldest = this.tintCache.keys().next();
+      if (oldest.done === false) {
+        this.tintCache.delete(oldest.value);
+      }
+    }
     this.updateMemSize();
     return tintedImage;
   }
