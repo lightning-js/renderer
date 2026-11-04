@@ -141,9 +141,8 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    *
    * @remarks
    * Textures are shared via the keyCache (see `makeCanvasTextCacheKey`), so
-   * ownership/cancel decisions live on the texture itself
-   * (`CanvasTextTexture.releaseOwner`): this only drops the node-side
-   * reference. Safe to call multiple times.
+   * this only drops the node's ownership; the texture cancels an in-flight
+   * load once no owner remains. Safe to call multiple times.
    */
   private releaseCanvasTexture(): void {
     const tex = this._canvasTexture;
@@ -154,12 +153,11 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     // own 'freed' listener) can't double-release.
     this._canvasTexture = null;
 
-    // The setter detaches listeners and node bookkeeping; releaseOwner drops
-    // our ownership and aborts the in-flight load only when nobody remains.
+    // The setter detaches listeners and drops our renderable ownership. If
+    // the texture was already replaced, that setter call did the same.
     if (this.texture === tex) {
       this.texture = null;
     }
-    tex.releaseOwner(this._id);
   }
 
   allowTextGeneration() {

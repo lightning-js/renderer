@@ -19,7 +19,18 @@
 
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
-import { hasImageBitmap } from '../platforms/capabilities.js';
+import { closeImageBitmap, hasImageBitmap } from '../platforms/capabilities.js';
+
+function disposeSource(source: ImageBitmap | HTMLCanvasElement | null): void {
+  if (source === null) return;
+  if (hasImageBitmap === true && source instanceof ImageBitmap) {
+    closeImageBitmap(source);
+  } else {
+    const sourceCanvas = source as HTMLCanvasElement;
+    sourceCanvas.width = 0;
+    sourceCanvas.height = 0;
+  }
+}
 
 export interface CanvasTextTextureProps {
   /** Create a fresh pixel source for each load, including after eviction or context loss. */
@@ -97,7 +108,6 @@ export function makeCanvasTextCacheKey(props: CanvasTextCacheKeyProps): string {
 export class CanvasTextTexture extends Texture {
   public override type: TextureType = TextureType.image;
   public props: CanvasTextTextureProps;
-  private imageSource: ImageBitmap | HTMLCanvasElement | null = null;
 
   constructor(txManager: CoreTextureManager, props: CanvasTextTextureProps) {
     super(txManager);
@@ -105,72 +115,12 @@ export class CanvasTextTexture extends Texture {
   }
 
   override getTextureSource(): TextureData {
-    // A previous upload can have scheduled source cleanup for the next
-    // microtask. If we reload before it runs, release the previous source now
-    // and don't let that cleanup dispose the new source instead.
-    this.disposeSource();
-    this.imageSource = this.props.render();
-    return { data: this.imageSource, premultiplyAlpha: true };
-  }
-
-  private disposeSource(): void {
-    const source = this.imageSource;
-    this.imageSource = null;
-    if (source === null) return;
-    if (hasImageBitmap === true && source instanceof ImageBitmap) {
-      source.close?.();
-    } else {
-      const sourceCanvas = source as HTMLCanvasElement;
-      sourceCanvas.width = 0;
-      sourceCanvas.height = 0;
-    }
-  }
-
-  override freeTextureData(): void {
-    // WebGL has finished reading the source synchronously by the time it
-    // requests this cleanup. Canvas2D keeps the image as its display source,
-    // so it can only be released when its context texture is freed.
-    if (this.txManager.renderer?.mode !== 'canvas') {
-      const generation = this.loadGeneration;
-      const source = this.imageSource;
-      queueMicrotask(() => {
-        if (generation === this.loadGeneration && this.imageSource === source) {
-          this.disposeSource();
-        }
-      });
-    }
-    super.freeTextureData();
-  }
-
-  override free(): void {
-    super.free();
-    this.disposeSource();
-  }
-
-  /**
-   * Release one owner's claim on this texture.
-   *
-   * @remarks
-   * Drops `owner` from the renderable owners and aborts an in-flight load —
-   * but only when no owner remains. A shared texture that other nodes still
-   * need keeps loading untouched. GPU/data reclamation for unowned textures
-   * happens through `TextureMemoryManager` cleanup, like image textures.
-   */
-  releaseOwner(owner: string | number): void {
-    this.setRenderableOwner(owner, false);
-    if (this.state === 'loading' && this.renderableOwners.size === 0) {
-      this.cancel();
-    }
-  }
-
-  override invalidateContext(): void {
-    super.invalidateContext();
-    this.disposeSource();
-  }
-
-  override destroy(): void {
-    super.destroy();
-    this.disposeSource();
+    const source = this.props.render();
+    return {
+      data: source,
+      premultiplyAlpha: true,
+      release: () => disposeSource(source),
+    };
   }
 
   // Textures with an explicit stable key (see makeCanvasTextCacheKey) are
