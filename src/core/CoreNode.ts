@@ -2800,17 +2800,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  // Apply RTT inheritance when a node has an RTT-enabled parent
-  private applyRTTInheritance(parent: CoreNode) {
-    if (parent.rtt) {
-      // Only the RTT node should be added to `renderToTexture`
-      parent.setUpdateType(UpdateType.RenderTexture);
-    }
-
-    // Propagate `parentHasRenderTexture` downwards
-    this.markChildrenWithRTT(parent);
-  }
-
   // Clear RTT inheritance when detaching from an RTT chain
   private clearRTTInheritance() {
     // if this node is RTT itself stop the propagation important for nested RTT nodes
