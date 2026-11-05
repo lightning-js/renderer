@@ -1774,14 +1774,10 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
-   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   * Checks if the node is renderable based on world alpha and out of bounds status.
    */
   checkBasicRenderability(): boolean {
-    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
-      return false;
-    } else {
-      return true;
-    }
+    return this.worldAlpha !== 0 && this.isOutOfBounds() === false;
   }
 
   /**
@@ -1791,7 +1787,6 @@ export class CoreNode extends EventEmitter {
     let newIsRenderable = false;
     let needsTextureOwnership = false;
 
-    // If the node is out of bounds or has an alpha of 0, it is not renderable
     if (this.checkBasicRenderability() === false) {
       this.updateTextureOwnership(false);
       this.setRenderable(false);
@@ -2051,17 +2046,14 @@ export class CoreNode extends EventEmitter {
       this.stage.untrackTimedNode(this);
     }
 
-    const { children, parent } = this;
+    const { children } = this;
     // Kill children
     for (let i = children.length - 1; i > -1; i--) {
       children[i]!.destroy();
     }
 
-    if (parent !== null) {
-      parent.removeChild(this);
-    }
+    this.parent = null;
 
-    this.props.parent = null;
     this.props.texture = null;
 
     if (this.rtt === true) {
@@ -2152,6 +2144,7 @@ export class CoreNode extends EventEmitter {
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
     if (targetParent === null) {
+      node.clearSubtreeIsRenderable();
       if (this.props.rtt === true && this.parentHasRenderTexture === true) {
         node.clearRTTInheritance();
       }
@@ -2800,17 +2793,6 @@ export class CoreNode extends EventEmitter {
     }
   }
 
-  // Apply RTT inheritance when a node has an RTT-enabled parent
-  private applyRTTInheritance(parent: CoreNode) {
-    if (parent.rtt) {
-      // Only the RTT node should be added to `renderToTexture`
-      parent.setUpdateType(UpdateType.RenderTexture);
-    }
-
-    // Propagate `parentHasRenderTexture` downwards
-    this.markChildrenWithRTT(parent);
-  }
-
   // Clear RTT inheritance when detaching from an RTT chain
   private clearRTTInheritance() {
     // if this node is RTT itself stop the propagation important for nested RTT nodes
@@ -2825,6 +2807,15 @@ export class CoreNode extends EventEmitter {
       child.rttParent = null;
       child.setUpdateType(UpdateType.All);
       child.clearRTTInheritance();
+    }
+  }
+
+  private clearSubtreeIsRenderable(): void {
+    this.updateTextureOwnership(false);
+    this.setRenderable(false);
+
+    for (const child of this.children) {
+      child.clearSubtreeIsRenderable();
     }
   }
 
