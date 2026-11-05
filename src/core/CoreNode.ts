@@ -2046,17 +2046,14 @@ export class CoreNode extends EventEmitter {
       this.stage.untrackTimedNode(this);
     }
 
-    const { children, parent } = this;
+    const { children } = this;
     // Kill children
     for (let i = children.length - 1; i > -1; i--) {
       children[i]!.destroy();
     }
 
-    if (parent !== null) {
-      parent.removeChild(this);
-    }
+    this.parent = null;
 
-    this.props.parent = null;
     this.props.texture = null;
 
     if (this.rtt === true) {
@@ -2147,6 +2144,7 @@ export class CoreNode extends EventEmitter {
 
   removeChild(node: CoreNode, targetParent: CoreNode | null = null) {
     if (targetParent === null) {
+      node.clearSubtreeIsRenderable();
       if (this.props.rtt === true && this.parentHasRenderTexture === true) {
         node.clearRTTInheritance();
       }
@@ -2809,6 +2807,15 @@ export class CoreNode extends EventEmitter {
       child.rttParent = null;
       child.setUpdateType(UpdateType.All);
       child.clearRTTInheritance();
+    }
+  }
+
+  private clearSubtreeIsRenderable(): void {
+    this.updateTextureOwnership(false);
+    this.setRenderable(false);
+
+    for (const child of this.children) {
+      child.clearSubtreeIsRenderable();
     }
   }
 
