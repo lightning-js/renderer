@@ -136,9 +136,7 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  | WebGlNodeRenderOp
-  | StencilClipRenderOp
-  | SdfRenderOp;
+  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -224,7 +222,7 @@ export class WebGlRenderer extends CoreRenderer {
    * consecutive text nodes are merged into a single SdfRenderOp, producing one
    * draw call for many strings.
    *
-   * The two layouts have different strides (6 floats plain / 7 floats rich) and
+   * The two layouts have different strides (6 floats plain / 9 floats rich) and
    * can therefore never share a draw call; each gets its own buffer, and each
    * SdfRenderOp carries the SdfBuffer it draws from.
    *
@@ -767,10 +765,11 @@ export class WebGlRenderer extends CoreRenderer {
    * into a single SdfRenderOp, resulting in one draw call for many text nodes.
    *
    * The design-unit glyph records are `SDF_PLAIN_GLYPH_STRIDE` (8) or
-   * `SDF_RICH_GLYPH_STRIDE` (12) floats per glyph depending on the layout:
+   * `SDF_RICH_GLYPH_STRIDE` (14) floats per glyph depending on the layout:
    *   plain: x, y, w, h, u, v, uw, vh
-   *   rich:  x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
-   * where packed_span_color is RGBA bytes written via a Uint32 view of the
+   *   rich:  x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color,
+   *          style, packed_stroke_color, stroke_width_px
+   * where packed colors are RGBA bytes written via a Uint32 view of the
    * same ArrayBuffer (bit-identical read via `uGlyphs` below), shearTop/shearBot
    * are the per-corner x-deltas of the italic lean, and the decorated quads use
    * `u = -1.0` as a solid-fill sentinel.
@@ -859,8 +858,10 @@ export class WebGlRenderer extends CoreRenderer {
       const u2 = u1 + glyphs[go + 6]!;
       const v2 = v1 + glyphs[go + 7]!;
 
-      // Per-glyph color (merged with node color + alpha) and style.
+      // Per-glyph color (merged with node color + alpha), stroke, and style.
       let packedColor = packedNodeColor;
+      let packedStrokeColor = 0;
+      let strokeWidthPx = 0;
       let style = 0;
       // Italic lean: x-delta applied to the top / bottom vertex rows. A glyph
       // quad becomes a trapezoid with four distinct x corners when sheared.
@@ -871,6 +872,11 @@ export class WebGlRenderer extends CoreRenderer {
         shearBot = glyphs[go + 9]!;
         packedColor = _mergeSdfSpanColor(packedNodeColor, uGlyphs[go + 10]!);
         style = glyphs[go + 11]!;
+        packedStrokeColor = _mergeSdfSpanColor(
+          packedNodeColor,
+          uGlyphs[go + 12]!,
+        );
+        strokeWidthPx = glyphs[go + 13]!;
       }
       go += glyphStride;
 
@@ -903,8 +909,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v1;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -916,8 +924,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v1;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -929,8 +939,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v2;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -942,8 +954,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v2;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }

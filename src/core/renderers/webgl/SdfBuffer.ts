@@ -35,21 +35,23 @@ export type SdfBufferLayout = 'plain' | 'rich';
  * Floats per vertex of the batched SDF GPU layout.
  *
  * plain (6 floats / 24 bytes): x, y, u, v, packed_color (uint32), distRange
- * rich  (7 floats / 28 bytes): x, y, u, v, packed_color (uint32), style, distRange
+ * rich  (9 floats / 36 bytes): x, y, u, v, packed_color (uint32),
+ *         packed_stroke_color (uint32), stroke_width_px, style, distRange
  *
  * Positions are pre-transformed to world pixel space on the CPU; color is
  * packed ABGR (byte order R,G,B,A on little-endian) for a normalized
  * UNSIGNED_BYTE attribute; `distRange` is the SDF distance range for the font.
  */
 export const SDF_PLAIN_FLOATS_PER_VERTEX = 6;
-export const SDF_RICH_FLOATS_PER_VERTEX = 7;
+export const SDF_RICH_FLOATS_PER_VERTEX = 9;
 
 /**
  * Floats per glyph of the design-unit glyph records consumed by the renderer
  * write paths.
  *
  * plain (8 floats): x, y, w, h, u, v, uw, vh
- * rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
+ * rich  (14 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot,
+ *         packed_span_color, style, packed_stroke_color, stroke_width_px
  *
  * `shearTop` / `shearBot` are the per-corner x-deltas for the italic lean
  * (sheared trapezoid glyphs and decorations); 0 for straight spans. `u = -1.0`
@@ -60,7 +62,7 @@ export const SDF_RICH_FLOATS_PER_VERTEX = 7;
  * old per-node SDF vertex shader did with `u_size` + `u_transform`).
  */
 export const SDF_PLAIN_GLYPH_STRIDE = 8;
-export const SDF_RICH_GLYPH_STRIDE = 12;
+export const SDF_RICH_GLYPH_STRIDE = 14;
 
 /**
  * A shared SDF vertex buffer for a single GPU layout.
@@ -190,13 +192,29 @@ export class SdfBuffer {
     };
 
     if (this.layout === 'rich') {
+      attributes['a_strokeColor'] = {
+        name: 'a_strokeColor',
+        size: 4,
+        type: glw.UNSIGNED_BYTE,
+        normalized: true,
+        stride,
+        offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+      };
+      attributes['a_strokeWidth'] = {
+        name: 'a_strokeWidth',
+        size: 1,
+        type: glw.FLOAT,
+        normalized: false,
+        stride,
+        offset: 6 * Float32Array.BYTES_PER_ELEMENT,
+      };
       attributes['a_style'] = {
         name: 'a_style',
         size: 1,
         type: glw.FLOAT,
         normalized: false,
         stride,
-        offset: 5 * Float32Array.BYTES_PER_ELEMENT,
+        offset: 7 * Float32Array.BYTES_PER_ELEMENT,
       };
     }
 
