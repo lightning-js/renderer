@@ -1774,14 +1774,10 @@ export class CoreNode extends EventEmitter {
   }
 
   /**
-   * Checks if the node is renderable based on world alpha, dimensions and out of bounds status.
+   * Checks if the node is renderable based on world alpha and out of bounds status.
    */
   checkBasicRenderability(): boolean {
-    if (this.worldAlpha === 0 || this.isOutOfBounds() === true) {
-      return false;
-    } else {
-      return true;
-    }
+    return this.worldAlpha !== 0 && this.isOutOfBounds() === false;
   }
 
   /**
@@ -1791,7 +1787,6 @@ export class CoreNode extends EventEmitter {
     let newIsRenderable = false;
     let needsTextureOwnership = false;
 
-    // If the node is out of bounds or has an alpha of 0, it is not renderable
     if (this.checkBasicRenderability() === false) {
       this.updateTextureOwnership(false);
       this.setRenderable(false);
