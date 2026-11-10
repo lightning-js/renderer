@@ -48,6 +48,7 @@ import {
   decorationThickness,
   italicOverhang,
   sdfBoldExtra,
+  shadowPadding,
   spanIndexAt,
   strikeOffset,
   underlineGap,
@@ -684,8 +685,12 @@ const generateTextLayout = (
   }
 
   // --- RICH PATH (richText=true): 12 floats/record, two-pass ---
+  // Shadow quads (hard offset, blur reserved) are emitted first so they draw
+  // behind all foreground glyphs/decos in a single batched draw.
   let glyphCount = 0;
   let decoQuadCount = 0;
+  let shadowGlyphCount = 0;
+  let shadowDecoCount = 0;
   let strippedPos = 0;
   let curSpanIdx = 0;
 
@@ -726,21 +731,47 @@ const generateTextLayout = (
       const span = _richTextResult.spans[curSpanIdx]!;
       if (span.underline === true) decoQuadCount++;
       if (span.strikethrough === true) decoQuadCount++;
+      if (span.shadowColor !== 0) {
+        shadowGlyphCount++;
+        if (span.underline === true) shadowDecoCount++;
+        if (span.strikethrough === true) shadowDecoCount++;
+      }
       strippedPos += charLen;
     }
   }
 
-  const totalQuadCount = glyphCount + decoQuadCount;
+  // Shadow padding (px) expands the reported node size so the offset shadow
+  // is not clipped by the texture edge or culled by renderBounds. Blur is
+  // included in the padding for Canvas parity even though SDF ignores it.
+  let padLeftPx = 0;
+  let padTopPx = 0;
+  let padRightPx = 0;
+  let padBottomPx = 0;
+  if (_richTextResult.spanCount > 0) {
+    const pad = shadowPadding(_richTextResult.spans, _richTextResult.spanCount);
+    padLeftPx = Math.ceil(pad.left);
+    padTopPx = Math.ceil(pad.top);
+    padRightPx = Math.ceil(pad.right);
+    padBottomPx = Math.ceil(pad.bottom);
+  }
+  const padLeftDu = padLeftPx / fontScale;
+  const padTopDu = padTopPx / fontScale;
+
+  const shadowTotal = shadowGlyphCount + shadowDecoCount;
+  const totalQuadCount = glyphCount + decoQuadCount + shadowTotal;
 
   // --- Single allocation for the entire record payload ---
-  // Layout: [glyph records (glyphCount × 12)] [deco records (decoQuadCount × 12)]
+  // Layout: [shadow glyphs][shadow decos][fg glyphs][fg decos] — all shadow
+  // quads sort before foreground so they draw behind in one batch.
   const glyphs = new Float32Array(totalQuadCount * SDF_RICH_GLYPH_STRIDE);
   // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 10 of each record.
   const u32Glyphs = new Uint32Array(glyphs.buffer);
 
   // Write cursors (float indices into glyphs / u32Glyphs).
-  let gi = 0; // glyph region: 0 … glyphCount*12-1
-  let di = glyphCount * SDF_RICH_GLYPH_STRIDE; // deco region: starts after all glyph records
+  let sgi = 0; // shadow glyph region
+  let sdi = shadowGlyphCount * SDF_RICH_GLYPH_STRIDE; // shadow deco region
+  let gi = shadowTotal * SDF_RICH_GLYPH_STRIDE; // fg glyph region
+  let di = (shadowTotal + glyphCount) * SDF_RICH_GLYPH_STRIDE; // fg deco region
 
   // Reset rich-text tracking for pass 2.
   strippedPos = 0;
@@ -759,11 +790,11 @@ const generateTextLayout = (
     let prevSpanIdx = -1;
     // Shear overhang owed by a trailing italic glyph, paid when the run ends.
     let pendingItalicOverhang = 0;
-    currentX = line[3];
+    currentX = line[3] + padLeftDu;
     // Seed the span cursor position from the line's absolute start offset.
     strippedPos = line[5];
-    // Convert pixel Y coordinate to design-unit space.
-    currentY = line[4] / fontScale;
+    // Convert pixel Y coordinate to design-unit space (plus shadow pad).
+    currentY = line[4] / fontScale + padTopDu;
     // Alphabetic baseline in design-unit space for this line (used for italic shear).
     const baseline = currentY + base;
 
@@ -786,10 +817,14 @@ const generateTextLayout = (
 
       // --- Determine per-record color and style ---
       let packedColor = _PACKED_WHITE;
+      let packedShadowColor = _PACKED_WHITE;
       let spanUnderline = false;
       let spanStrikethrough = false;
       let spanBold = false;
       let spanItalic = false;
+      let shadowOxDu = 0;
+      let shadowOyDu = 0;
+      let hasShadow = false;
 
       while (
         curSpanIdx < _richTextResult.spanCount - 1 &&
@@ -803,6 +838,12 @@ const generateTextLayout = (
       spanStrikethrough = span.strikethrough;
       spanBold = span.bold;
       spanItalic = span.italic;
+      if (span.shadowColor !== 0) {
+        hasShadow = true;
+        packedShadowColor = _packColor(span.shadowColor);
+        shadowOxDu = span.shadowOffsetX / fontScale;
+        shadowOyDu = span.shadowOffsetY / fontScale;
+      }
 
       // --- Kerning ---
       // Kerning pairs are only meaningful within a single style run. Across a
@@ -856,6 +897,23 @@ const generateTextLayout = (
       // Bold style flag passed to fragment shader for SDF threshold shift.
       const style = spanBold ? 1.0 : 0.0;
 
+      // --- Shadow glyph (behind): same shape shifted by offset, shadow color.
+      if (hasShadow === true) {
+        glyphs[sgi] = x1 + shadowOxDu;
+        glyphs[sgi + 1] = y1 + shadowOyDu;
+        glyphs[sgi + 2] = glyph.width;
+        glyphs[sgi + 3] = glyph.height;
+        glyphs[sgi + 4] = u1;
+        glyphs[sgi + 5] = v1;
+        glyphs[sgi + 6] = glyph.width / atlasWidth;
+        glyphs[sgi + 7] = glyph.height / atlasHeight;
+        glyphs[sgi + 8] = shearTop;
+        glyphs[sgi + 9] = shearBot;
+        u32Glyphs[sgi + 10] = packedShadowColor;
+        glyphs[sgi + 11] = style;
+        sgi += SDF_RICH_GLYPH_STRIDE;
+      }
+
       // --- Write 12-float glyph record (x, y, w, h, u, v, uw, vh, shearTop, shearBot, packedColor, style) ---
       glyphs[gi] = x1;
       glyphs[gi + 1] = y1;
@@ -882,6 +940,20 @@ const generateTextLayout = (
         const dy2 = dy1 + decoThickness;
         const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
         const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
+        if (hasShadow === true) {
+          sdi = _writeDecoRecord(
+            glyphs,
+            u32Glyphs,
+            sdi,
+            decoX1 + shadowOxDu,
+            decoX1 + advance + shadowOxDu,
+            dy1 + shadowOyDu,
+            dy2 + shadowOyDu,
+            packedShadowColor,
+            dShear1,
+            dShear2,
+          );
+        }
         di = _writeDecoRecord(
           glyphs,
           u32Glyphs,
@@ -900,6 +972,20 @@ const generateTextLayout = (
         const dy2 = dy1 + decoThickness;
         const dShear1 = spanItalic ? (baseline - dy1) * ITALIC_SHEAR : 0;
         const dShear2 = spanItalic ? (baseline - dy2) * ITALIC_SHEAR : 0;
+        if (hasShadow === true) {
+          sdi = _writeDecoRecord(
+            glyphs,
+            u32Glyphs,
+            sdi,
+            decoX1 + shadowOxDu,
+            decoX1 + advance + shadowOxDu,
+            dy1 + shadowOyDu,
+            dy2 + shadowOyDu,
+            packedShadowColor,
+            dShear1,
+            dShear2,
+          );
+        }
         di = _writeDecoRecord(
           glyphs,
           u32Glyphs,
@@ -918,15 +1004,15 @@ const generateTextLayout = (
     }
   }
 
-  // Convert final dimensions to pixel space for the layout.
+  // Convert final dimensions to pixel space for the layout (plus shadow pad).
   return {
     glyphs,
     glyphCount: totalQuadCount,
     totalQuadCount,
     richText: true,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
-    width: effectiveWidth * fontScale,
-    height: effectiveHeight,
+    width: effectiveWidth * fontScale + padLeftPx + padRightPx,
+    height: effectiveHeight + padTopPx + padBottomPx,
     fontScale: fontScale,
     lineHeight: lineHeightPx,
     fontFamily,

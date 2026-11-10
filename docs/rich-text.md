@@ -23,13 +23,14 @@ property is otherwise unchanged — raw text without tags renders identically to
 
 ## Supported Tags
 
-| Tag                  | Closing tag | Effect        |
-| -------------------- | ----------- | ------------- |
-| `[b]`                | `[/b]`      | Bold          |
-| `[i]`                | `[/i]`      | Italic        |
-| `[u]`                | `[/u]`      | Underline     |
-| `[s]`                | `[/s]`      | Strikethrough |
-| `[color=0xRRGGBBAA]` | `[/color]`  | Inline color  |
+| Tag                                    | Closing tag | Effect               |
+| -------------------------------------- | ----------- | -------------------- |
+| `[b]`                                  | `[/b]`      | Bold                 |
+| `[i]`                                  | `[/i]`      | Italic               |
+| `[u]`                                  | `[/u]`      | Underline            |
+| `[s]`                                  | `[/s]`      | Strikethrough        |
+| `[color=0xRRGGBBAA]`                   | `[/color]`  | Inline color         |
+| `[shadow=0xRRGGBBAA[,ox[,oy[,blur]]]]` | `[/shadow]` | Per-span drop shadow |
 
 All tag names are lowercase. Tags are nestable and may be combined freely.
 
@@ -110,6 +111,31 @@ after the `0x` prefix). Other formats — CSS `#rrggbb`, named colors such as
 
 The alpha channel is fully respected: `0xRRGGBBAA` with `AA = 80` renders at
 50% opacity relative to the node's `worldAlpha`.
+
+---
+
+### Shadow `[shadow=0xRRGGBBAA[,ox[,oy[,blur]]]]…[/shadow]`
+
+```
+[shadow=0x888888ff]gray shadow[/shadow]
+[shadow=0xff0000ff,6,6,8]large soft red shadow[/shadow]
+[shadow=0x000000ff,-4,-4,2]negative offset[/shadow]
+```
+
+Color is required (`0xRRGGBBAA`); `ox/oy/blur` are decimal px integers
+defaulting to `2,2,2` (`ox/oy` in `[-64,64]`, `blur` in `[0,64]`). Invalid
+values render as literal text.
+
+**Canvas renderer** — `ctx.shadowColor/Offset/Blur` per span (offset + blur).
+
+**SDF renderer** — hard offset shadow: a copy of each shadowed glyph/deco
+quad shifted by `(ox,oy)` in the span's shadow color, drawn behind the
+foreground in the same batch. `blur` is reserved (included in layout padding
+for parity, not rendered).
+
+Shadow expands the reported node size so it is not clipped by the texture
+edge; ancestor `clipping:true` still clips the shadow (scissor is not
+expanded).
 
 ---
 

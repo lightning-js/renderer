@@ -35,6 +35,7 @@ import { parseRichText, ParseResult } from './RichTextParser.js';
 import {
   canvasSpanFont,
   decorationThickness,
+  shadowPadding,
   spanIndexAt,
   strikeOffset,
   underlineGap,
@@ -237,6 +238,8 @@ interface DrawAndCaptureArgs {
   lines: TextLineStruct[];
   lineAmount: number;
   metrics: NormalizedFontMetrics;
+  padLeft: number;
+  padTop: number;
 }
 
 const drawAndCaptureText = ({
@@ -252,6 +255,8 @@ const drawAndCaptureText = ({
   lines,
   lineAmount,
   metrics,
+  padLeft,
+  padTop,
 }: DrawAndCaptureArgs): ImageBitmap | HTMLCanvasElement | null => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
@@ -303,9 +308,17 @@ const drawAndCaptureText = ({
     let curSpanIdx = 0;
     let activeFont = baseFont;
     let activeFillStyle = nodeColor;
+    let activeShadowColor = 'rgba(0,0,0,0)';
+    let activeShadowOx = 0;
+    let activeShadowOy = 0;
+    let activeShadowBlur = 0;
 
     // Prime the context with the node color; individual segments may override.
     context.fillStyle = activeFillStyle;
+    context.shadowColor = activeShadowColor;
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = 0;
+    context.shadowBlur = 0;
 
     // Pre-computed decoration geometry — all integers, zero allocation in the
     // draw loop. Positions are offsets from currentY (top of the em box with
@@ -322,8 +335,8 @@ const drawAndCaptureText = ({
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
       const lineLen = textLine.length;
-      let currentX = Math.ceil(line[3]);
-      const currentY = Math.ceil(line[4]);
+      let currentX = Math.ceil(line[3]) + padLeft;
+      const currentY = Math.ceil(line[4]) + padTop;
 
       // Absolute offset of this line's first character in the stripped text,
       // supplied by the layout engine. Do not accumulate line lengths here:
@@ -390,6 +403,31 @@ const drawAndCaptureText = ({
             activeFillStyle = spanFillStyle;
           }
 
+          // Per-span drop shadow (Canvas supports offset + blur natively).
+          const hasShadow = span.shadowColor !== 0;
+          const shadowStyle = hasShadow
+            ? normalizeCanvasColor(span.shadowColor)
+            : 'rgba(0,0,0,0)';
+          if (shadowStyle !== activeShadowColor) {
+            context.shadowColor = shadowStyle;
+            activeShadowColor = shadowStyle;
+          }
+          const shadowOx = hasShadow ? span.shadowOffsetX : 0;
+          if (shadowOx !== activeShadowOx) {
+            context.shadowOffsetX = shadowOx;
+            activeShadowOx = shadowOx;
+          }
+          const shadowOy = hasShadow ? span.shadowOffsetY : 0;
+          if (shadowOy !== activeShadowOy) {
+            context.shadowOffsetY = shadowOy;
+            activeShadowOy = shadowOy;
+          }
+          const shadowBlur = hasShadow ? span.shadowBlur : 0;
+          if (shadowBlur !== activeShadowBlur) {
+            context.shadowBlur = shadowBlur;
+            activeShadowBlur = shadowBlur;
+          }
+
           const segStartX = currentX;
           if (letterSpacing === 0) {
             const segment = textLine.substring(segStartJ, j);
@@ -450,8 +488,8 @@ const drawAndCaptureText = ({
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
-      let currentX = Math.ceil(line[3]);
-      const currentY = Math.ceil(line[4]);
+      let currentX = Math.ceil(line[3]) + padLeft;
+      const currentY = Math.ceil(line[4]) + padTop;
       if (letterSpacing === 0) {
         context.fillText(textLine, currentX, currentY);
       } else {
@@ -579,7 +617,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   //
   // Line breaking itself is still base-font based; this only corrects the
   // extent of the lines that were chosen.
-  const effectiveWidth =
+  let styledWidth =
     richText === true
       ? correctStyledLineWidths(
           lines,
@@ -590,6 +628,27 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
           baseEffectiveWidth,
         )
       : baseEffectiveWidth;
+  let styledHeight = effectiveHeight;
+
+  // Shadow overhang must be included in the texture and the reported node
+  // size, otherwise the shadow is clipped at the texture edge and the node
+  // is culled too early by renderBounds. Offsets shift the origin so
+  // negative shadows remain visible.
+  let padLeft = 0;
+  let padTop = 0;
+  let padRight = 0;
+  let padBottom = 0;
+  if (richText === true && _richTextResult.spanCount > 0) {
+    const pad = shadowPadding(_richTextResult.spans, _richTextResult.spanCount);
+    padLeft = Math.ceil(pad.left);
+    padTop = Math.ceil(pad.top);
+    padRight = Math.ceil(pad.right);
+    padBottom = Math.ceil(pad.bottom);
+    styledWidth += padLeft + padRight;
+    styledHeight += padTop + padBottom;
+  }
+  const effectiveWidth = styledWidth;
+  const finalEffectiveHeight = styledHeight;
 
   // mapTextLayout and the width correction both leave the shared measure
   // context on whichever span font they last used. Hand it back on the base
@@ -597,7 +656,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   CanvasFontHandler.setMeasureFont(baseFont);
 
   const canvasW = Math.ceil(effectiveWidth);
-  const canvasH = Math.ceil(effectiveHeight);
+  const canvasH = Math.ceil(finalEffectiveHeight);
 
   const drawArgs: DrawAndCaptureArgs = {
     canvasW,
@@ -612,6 +671,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     lines,
     lineAmount,
     metrics,
+    padLeft,
+    padTop,
   };
   // Capture the paint inputs rather than the mutable node properties or a
   // bitmap. A cleaned-up texture can request a new source from this plan.
@@ -632,7 +693,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   return {
     type,
     width: effectiveWidth,
-    height: effectiveHeight,
+    height: finalEffectiveHeight,
     remainingLines,
     hasRemainingText,
     renderSource,

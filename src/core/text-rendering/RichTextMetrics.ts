@@ -172,3 +172,45 @@ export const STRIKE_BASELINE_RATIO = 0.6;
  */
 export const strikeOffset = (baselineDistance: number): number =>
   baselineDistance * STRIKE_BASELINE_RATIO;
+
+export interface ShadowPadding {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Max shadow overhang in px across all spans.
+ *
+ * Shadow bounds per span are [x+ox-blur, x+w+ox+blur] x [y+oy-blur, y+h+oy+blur],
+ * so overhangs vs the glyph box are left=blur-ox, right=ox+blur, etc.
+ * Returns zeros when no span has a shadow.
+ */
+export const shadowPadding = (
+  spans: RichSpan[],
+  spanCount: number,
+): ShadowPadding => {
+  let left = 0;
+  let top = 0;
+  let right = 0;
+  let bottom = 0;
+  for (let i = 0; i < spanCount; i++) {
+    const s = spans[i]!;
+    if (s.shadowColor === 0) continue;
+    const b = s.shadowBlur;
+    const l = b - s.shadowOffsetX;
+    const r = s.shadowOffsetX + b;
+    const t = b - s.shadowOffsetY;
+    const bo = s.shadowOffsetY + b;
+    if (l > left) left = l;
+    if (r > right) right = r;
+    if (t > top) top = t;
+    if (bo > bottom) bottom = bo;
+  }
+  if (left < 0) left = 0;
+  if (top < 0) top = 0;
+  if (right < 0) right = 0;
+  if (bottom < 0) bottom = 0;
+  return { left, top, right, bottom };
+};
