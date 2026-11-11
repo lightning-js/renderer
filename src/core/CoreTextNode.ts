@@ -241,17 +241,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
     }
   }
 
-  /**
-   * Override CoreNode's update method to handle text-specific updates
-   */
-  override update(delta: number, parentClippingRect: RectWithValid): void {
+  protected renderText(forceLoad: boolean) {
     const hasValidText =
       typeof this.textProps.text === 'string' && this.textProps.text.length > 0;
 
     if (
       hasValidText === true &&
-      (this.textProps.forceLoad === true ||
-        this.allowTextGeneration() === true) &&
+      (forceLoad === true || this.allowTextGeneration() === true) &&
       this._layoutGenerated === false
     ) {
       if (this.fontHandler.isFontLoaded(this.textProps.fontFamily) === true) {
@@ -278,7 +274,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       this.releaseSdfCache(); // Drop the stale SDF vertex cache
       this.releaseCanvasTexture(); // Free the canvas text texture, text is no longer valid
     }
+  }
 
+  /**
+   * Override CoreNode's update method to handle text-specific updates
+   */
+  override update(delta: number, parentClippingRect: RectWithValid): void {
+    this.renderText(this.textProps.forceLoad)
     // First run the standard CoreNode update
     super.update(delta, parentClippingRect);
   }
