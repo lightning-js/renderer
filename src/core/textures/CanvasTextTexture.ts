@@ -23,6 +23,15 @@ import { Texture, TextureType, type TextureData } from './Texture.js';
 export interface CanvasTextTextureProps {
   /** Create a fresh pixel source for each load, including after eviction or context loss. */
   render: () => ImageBitmap | HTMLCanvasElement | null;
+  /**
+   * Whether this raster already has rich-text colors baked in (span colors
+   * absolute, base spans use the node color at bake time).
+   *
+   * When true, renderers must apply alpha-only tinting (preserve baked RGB,
+   * fade via alpha). When false/omitted the raster is a white alpha mask
+   * that needs the full node-color tint.
+   */
+  rich?: boolean;
 }
 
 /**
@@ -72,10 +81,7 @@ export class CanvasTextTexture extends Texture {
       const generation = this.loadGeneration;
       const source = this.imageSource;
       queueMicrotask(() => {
-        if (
-          generation === this.loadGeneration &&
-          this.imageSource === source
-        ) {
+        if (generation === this.loadGeneration && this.imageSource === source) {
           this.disposeSource();
         }
       });

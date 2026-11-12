@@ -177,6 +177,12 @@ the string unstyled.
 | Color         | `ctx.fillStyle` per span                                   | Per-vertex packed RGBA attribute                 |
 | Stroke        | `ctx.strokeText` behind fill, `lineJoin: round`            | SDF outer-edge band, per-vertex color + width    |
 
+Span colors are absolute on both backends (L2 `textColor` semantics): an
+explicit `[color]` / `[stroke]` RGB is not tinted by the node's `color`.
+Only alpha is merged (`spanAlpha × nodeAlpha × worldAlpha`), so fades still
+apply. Spans without a color inherit the node's `color`; plain (non-rich)
+text is a white mask tinted by the node color as before.
+
 For the Canvas renderer, **bold and italic require the corresponding font faces
 to be loaded** under names the browser can resolve (e.g. via `font-weight: bold`
 or `font-style: italic` in the `@font-face` rule). If no matching face is

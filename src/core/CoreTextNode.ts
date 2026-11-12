@@ -352,9 +352,13 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
       // at once.
       this.releaseCanvasTexture();
 
-      const newTexture = this.stage.txManager.createTexture('CanvasTextTexture', {
-        render: result.renderSource,
-      });
+      const newTexture = this.stage.txManager.createTexture(
+        'CanvasTextTexture',
+        {
+          render: result.renderSource,
+          rich: this.textProps.richText === true,
+        },
+      );
       this._canvasTexture = newTexture;
       this.texture = newTexture;
 
@@ -570,9 +574,9 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set fontSize(value: number | undefined) {
-    if( value === undefined) {
-      value = DEFAULT_FONT_SIZE
-    };
+    if (value === undefined) {
+      value = DEFAULT_FONT_SIZE;
+    }
 
     if (this.textProps.fontSize !== value) {
       this.textProps.fontSize = value;
@@ -642,7 +646,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set lineHeight(value: number | undefined) {
-    if( value === undefined) {
+    if (value === undefined) {
       value = DEFAULT_LINE_HEIGHT;
     }
 
@@ -684,7 +688,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
   }
 
   set overflowSuffix(value: string | undefined) {
-    if( value === undefined) {
+    if (value === undefined) {
       value = DEFAULT_OVERFLOW_SUFFIX;
     }
 

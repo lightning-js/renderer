@@ -275,18 +275,19 @@ describe('WebGlRenderer.addSdfQuads', () => {
     expect(fake.finalizeSdfBatch).toHaveBeenCalledTimes(1);
   });
 
-  it('writes a rich glyph (36 floats) with style and merged span color', () => {
+  it('writes a rich glyph (36 floats) with absolute span color + merged alpha', () => {
     const fake = makeFinalizerFake();
     const b = makeSdfBuffer('rich');
     // Node color red RGBA(255,0,0,255) packed = 0xff0000ff; span green
-    // RGBA(0,255,0,255) packed = 0xff00ff00. Multiplicative merge → black.
+    // RGBA(0,255,0,255) packed = 0xff00ff00. Span RGB is absolute (L2
+    // textColor semantics); only alpha merges → RGBA(0,255,0,254): 0xfe00ff00.
     const glyphs = makeGlyph(SDF_RICH_GLYPH_STRIDE, 0xff00ff00, 3);
 
     addSdfQuads(fake, b, glyphs, 1, { color: 0xff0000ff });
 
     expect(b.idx).toBe(FLOATS_PER_GLYPH_RICH);
-    // Merge rounds 255*255 → 254, so RGBA(0,0,0,254): 0xfe000000
-    expect(b.uiBuffer[4]).toBe(0xfe000000);
+    // Alpha rounds 255*255 → 254, RGB passes through: 0xfe00ff00
+    expect(b.uiBuffer[4]).toBe(0xfe00ff00);
     // No stroke in this record: stroke color 0, width 0, then style/distRange.
     expect(b.uiBuffer[5]).toBe(0x00000000);
     expect([b.fBuffer[6], b.fBuffer[7], b.fBuffer[8]]).toEqual([0, 3, 4]); // strokeWidth, style, distRange

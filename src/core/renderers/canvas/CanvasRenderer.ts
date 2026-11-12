@@ -22,13 +22,22 @@ import { TextureType, type Texture } from '../../textures/Texture.js';
 import type { CoreContextTexture } from '../CoreContextTexture.js';
 import { CoreRenderer } from '../CoreRenderer.js';
 import { CanvasTexture } from './CanvasTexture.js';
-import { parseColor } from '../../lib/colorParser.js';
+import { parseColor, type IParsedColor } from '../../lib/colorParser.js';
+import { CanvasTextTexture } from '../../textures/CanvasTextTexture.js';
 import { CanvasShaderNode, type CanvasShaderType } from './CanvasShaderNode.js';
 import {
   normalizeCanvasColor,
   normalizeCanvasColorArgb,
 } from '../../lib/colorCache.js';
 import type { Stage } from '../../Stage.js';
+
+const UNTINTED: IParsedColor = {
+  isWhite: true,
+  a: 1,
+  r: 0xff,
+  g: 0xff,
+  b: 0xff,
+};
 
 export class CanvasRenderer extends CoreRenderer {
   private context: CanvasRenderingContext2D;
@@ -169,8 +178,15 @@ export class CanvasRenderer extends CoreRenderer {
 
     if (textureType !== TextureType.color) {
       const tintColor = parseColor(color);
+      // Baked rich-text colors need alpha-only tinting.
+      const isRich =
+        (texture instanceof CanvasTextTexture && texture.props.rich === true) ||
+        (texture instanceof SubTexture &&
+          texture.parentTexture instanceof CanvasTextTexture &&
+          texture.parentTexture.props.rich === true);
+      const drawTint = isRich ? UNTINTED : tintColor;
       if (textureType !== TextureType.subTexture) {
-        const image = (texture.ctxTexture as CanvasTexture).getImage(tintColor);
+        const image = (texture.ctxTexture as CanvasTexture).getImage(drawTint);
         if (image === null) {
           return;
         }
@@ -181,7 +197,7 @@ export class CanvasRenderer extends CoreRenderer {
       }
       const image = (
         (texture as SubTexture).parentTexture.ctxTexture as CanvasTexture
-      ).getImage(tintColor);
+      ).getImage(drawTint);
       if (image === null) {
         return;
       }
