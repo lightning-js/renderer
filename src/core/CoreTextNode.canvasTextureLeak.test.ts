@@ -18,10 +18,10 @@
  */
 
 /**
- * Tests for canvas text GPU texture lifecycle in CoreTextNode: each text
- * change or node destroy must deterministically free the previous canvas
- * text texture (freeing GPU memory immediately) rather than relying on LRU
- * cleanup to reclaim it later.
+ * Tests for canvas text GPU texture lifecycle in CoreTextNode: textures are
+ * shared via the keyCache (identical inputs reuse one raster) and released
+ * by dropping ownership on text change / node destroy; LRU cleanup reclaims
+ * unowned textures.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { mock } from 'vitest-mock-extended';
@@ -177,7 +177,7 @@ function makeDrawFrameHarness() {
 }
 
 describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
-  it('6. each text change creates a new, uncached Texture — keyCache bypass', () => {
+  it('6. identical text shares one cached Texture; different texts do not', () => {
     const { stage, txManager, root } = makeDrawFrameHarness();
     const node = new CoreTextNode(
       stage,
@@ -185,31 +185,47 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
       makeCanvasTextRenderer(),
     );
 
-    const createTextureSpy = vi.spyOn(txManager, 'createTexture');
+    node.text = 'shared';
+    stage.drawFrame();
+    const firstTexture = node.texture!;
+    expect(firstTexture.state).toBe('loaded');
+    // Sharable rasters are keyed by their inputs, so the texture is cached.
+    expect(firstTexture.cacheKey).not.toBeNull();
+    expect(txManager.keyCache.size).toBe(1);
 
-    const N = 50;
-    for (let i = 0; i < N; i++) {
-      node.text = `value-${i}`;
-      stage.drawFrame();
-    }
+    node.text = 'other';
+    stage.drawFrame();
+    const secondTexture = node.texture!;
+    expect(secondTexture).not.toBe(firstTexture);
+    expect(txManager.keyCache.size).toBe(2);
 
-    expect(createTextureSpy).toHaveBeenCalledTimes(N);
-    expect(node.texture!.cacheKey).toBeNull();
-    // ImageTexture.makeCacheKey returns false for non-string src (ImageBitmap
-    // here), so createTexture() never calls initTextureToCache() and
-    // keyCache never receives a single canvas-text entry.
-    expect(txManager.keyCache.size).toBe(0);
+    // Returning to the previous text reuses its texture instead of
+    // rasterizing again.
+    node.text = 'shared';
+    stage.drawFrame();
+    expect(node.texture).toBe(firstTexture);
+    expect(txManager.keyCache.size).toBe(2);
+
+    // A second node with identical inputs shares the first node's texture
+    // and joins its renderable owners.
+    const node2 = new CoreTextNode(
+      stage,
+      makeTextProps({ parent: root, forceLoad: true, text: 'shared' }),
+      makeCanvasTextRenderer(),
+    );
+    stage.drawFrame();
+    expect(node2.texture).toBe(firstTexture);
+    expect(firstTexture.renderableOwners.size).toBe(2);
   });
 
-  it('7. old texture is freed eagerly on swap', () => {
-    const { stage, txMemManager, root } = makeDrawFrameHarness();
+  it('7. old texture is released (not destroyed) on swap', () => {
+    const { stage, txManager, txMemManager, root } = makeDrawFrameHarness();
     const node = new CoreTextNode(
       stage,
       makeTextProps({ parent: root, forceLoad: true, text: '' }),
       makeCanvasTextRenderer(),
     );
 
-    const freeSpy = vi.spyOn(Texture.prototype, 'free');
     const destroySpy = vi.spyOn(Texture.prototype, 'destroy');
 
     node.text = 'first';
@@ -217,7 +233,6 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
     const firstTexture = node.texture!;
     expect(firstTexture.state).toBe('loaded');
 
-    freeSpy.mockClear();
     destroySpy.mockClear();
 
     node.text = 'second';
@@ -226,51 +241,69 @@ describe('CoreTextNode canvas text — GPU texture lifecycle', () => {
 
     expect(secondTexture).not.toBe(firstTexture);
 
-    // The outgoing texture is freed deterministically as soon as the new one
-    // is created, instead of waiting for an LRU cleanup() pass.
-    expect(freeSpy).toHaveBeenCalledWith();
-    expect(destroySpy).toHaveBeenCalled();
-    expect(firstTexture.ctxTexture).toBeUndefined();
+    // The outgoing texture is released, not destroyed: it stays cached and
+    // loaded with zero owners so identical text (here or on another node)
+    // reuses it, and LRU cleanup can still reclaim it once unowned.
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(firstTexture.ctxTexture).toBeDefined();
+    expect(firstTexture.renderableOwners.size).toBe(0);
+    expect(txManager.keyCache.size).toBe(2);
 
-    // The orphaned texture is no longer tracked by the memory manager.
+    // The released texture is still tracked by the memory manager until a
+    // cleanup pass reclaims it.
     const loadedTextures = (
       txMemManager as unknown as { loadedTextures: (Texture | null)[] }
     ).loadedTextures;
-    expect(loadedTextures).not.toContain(firstTexture);
+    expect(loadedTextures).toContain(firstTexture);
   });
 
-  it('8. node destroy frees the canvas text GL resource', () => {
-    const { stage, txMemManager, root } = makeDrawFrameHarness();
-    const node = new CoreTextNode(
-      stage,
-      makeTextProps({ parent: root, forceLoad: true, text: '' }),
-      makeCanvasTextRenderer(),
-    );
+  it('8. node destroy releases the texture; LRU cleanup reclaims it', () => {
+    vi.useFakeTimers();
+    try {
+      const { stage, txManager, txMemManager, root } = makeDrawFrameHarness();
+      const node = new CoreTextNode(
+        stage,
+        makeTextProps({ parent: root, forceLoad: true, text: '' }),
+        makeCanvasTextRenderer(),
+      );
 
-    node.text = 'destroy-me';
-    stage.drawFrame();
-    const texture = node.texture!;
-    expect(texture.state).toBe('loaded');
+      node.text = 'destroy-me';
+      stage.drawFrame();
+      const texture = node.texture!;
+      expect(texture.state).toBe('loaded');
 
-    const memBefore = txMemManager.getMemoryInfo().memUsed;
-    expect(memBefore).toBeGreaterThan(0);
+      const memBefore = txMemManager.getMemoryInfo().memUsed;
+      expect(memBefore).toBeGreaterThan(0);
 
-    const destroySpy = vi.spyOn(Texture.prototype, 'destroy');
-    node.destroy();
+      const destroySpy = vi.spyOn(Texture.prototype, 'destroy');
+      node.destroy();
 
-    // Mirrors the SDF path (releaseSdfCache() on destroy): canvas text now
-    // has an equivalent release step, so destroy() frees the GL resource.
-    expect(destroySpy).toHaveBeenCalled();
-    expect(texture.ctxTexture).toBeUndefined();
-    expect(node.texture).toBeNull();
+      // Mirrors the shared image-texture path: destroy drops ownership but
+      // keeps the cached texture alive for reuse by identical text.
+      expect(destroySpy).not.toHaveBeenCalled();
+      expect(node.texture).toBeNull();
+      expect(texture.renderableOwners.size).toBe(0);
+      expect(txManager.keyCache.size).toBe(1);
 
-    const memAfter = txMemManager.getMemoryInfo().memUsed;
-    expect(memAfter).toBeLessThan(memBefore);
+      // Past the startup grace period a full cleanup reclaims the unowned
+      // texture (GPU resource, cache entry, and memory accounting).
+      vi.advanceTimersByTime(2100);
+      txMemManager.cleanup(true);
 
-    const loadedTextures = (
-      txMemManager as unknown as { loadedTextures: (Texture | null)[] }
-    ).loadedTextures;
-    expect(loadedTextures).not.toContain(texture);
+      expect(destroySpy).toHaveBeenCalled();
+      expect(texture.ctxTexture).toBeUndefined();
+
+      const memAfter = txMemManager.getMemoryInfo().memUsed;
+      expect(memAfter).toBeLessThan(memBefore);
+
+      const loadedTextures = (
+        txMemManager as unknown as { loadedTextures: (Texture | null)[] }
+      ).loadedTextures;
+      expect(loadedTextures).not.toContain(texture);
+      expect(txManager.keyCache.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('11. releasing a texture that is still mid-upload does not crash or leave a dangling queue entry', () => {

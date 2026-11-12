@@ -88,7 +88,7 @@ export function isSpace(space: string): boolean {
  */
 export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
   const delimeters = text.match(tokenRegex) || [];
-  const words = text.split(tokenRegex) || [];
+  const words = text.split(tokenRegex);
 
   const final: string[] = [];
   for (let i = 0; i < words.length; i++) {

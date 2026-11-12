@@ -285,6 +285,7 @@ const drawAndCaptureText = ({
   drawCanvas.height = canvasH;
   context.fillStyle = 'white';
   context.font = baseFont;
+  CanvasFontHandler.setMeasureFont(baseFont);
   context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts

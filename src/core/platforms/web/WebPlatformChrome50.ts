@@ -42,7 +42,7 @@ export class WebPlatformChrome50 extends WebPlatform {
   override async createImage(
     blob: Blob,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     // Cropping parameters are not supported in Chrome 50
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     sx: number | null,

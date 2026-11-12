@@ -392,43 +392,41 @@ export class WebPlatform extends Platform {
 
   override async createImage(
     blob: Blob,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx: number | null,
     sy: number | null,
     sw: number | null,
     sh: number | null,
   ): Promise<ImageResponse> {
-    const hasAlphaChannel = premultiplyAlpha ?? blob.type.includes('image/png');
-
     if (sw !== null && sh !== null) {
       // createImageBitmap with crop
       const bitmap = await createImageBitmap(blob, sx || 0, sy || 0, sw, sh, {
-        premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+        premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
         colorSpaceConversion: 'none',
         imageOrientation: 'none',
       });
       return {
         data: bitmap,
-        premultiplied: true,
+        premultiplied: premultiplyAlpha,
       };
     }
 
     // default createImageBitmap without crop but with options
     const bitmap = await createImageBitmap(blob, {
-      premultiplyAlpha: hasAlphaChannel ? 'premultiply' : 'none',
+      premultiplyAlpha: premultiplyAlpha ? 'premultiply' : 'none',
       colorSpaceConversion: 'none',
       imageOrientation: 'none',
     });
 
     return {
       data: bitmap,
-      premultiplied: true,
+      premultiplied: premultiplyAlpha,
     };
   }
 
   override async loadImage(
     src: string,
-    premultiplyAlpha: boolean | null,
+    premultiplyAlpha: boolean,
     sx?: number | null,
     sy?: number | null,
     sw?: number | null,

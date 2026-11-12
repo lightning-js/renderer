@@ -478,12 +478,9 @@ export class Stage {
 
       // Sort engines: SDF first, Canvas last, others in between
       const sortedEngines = compatibleEngines.sort(
-        (a: TextRenderer, b: TextRenderer) => {
+        (a: TextRenderer, _b: TextRenderer) => {
           if (a.type === 'sdf') return -1;
-          if (b.type === 'sdf') return 1;
-          if (a.type === 'canvas') return 1;
-          if (b.type === 'canvas') return -1;
-          return 0;
+          return 1;
         },
       );
 

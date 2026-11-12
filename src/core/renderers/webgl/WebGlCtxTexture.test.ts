@@ -37,6 +37,11 @@ import { CoreNode } from '../../CoreNode.js';
 import { WebGlCtxTexture } from './WebGlCtxTexture.js';
 import type { TextureData } from '../../textures/Texture.js';
 
+// capabilities.ts detects ImageBitmap at import time.
+vi.hoisted(() => {
+  (globalThis as any).ImageBitmap ??= class {};
+});
+
 // ---------------------------------------------------------------------------
 // Test 1 — bindTextures crashes when textures[0] is undefined
 //

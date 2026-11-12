@@ -2,9 +2,9 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2023 Comcast Cable Communications Management, LLC.
+ * Copyright 2026 Comcast Cable Communications Management, LLC.
  *
- * Licensed under the Apache License, Version 2.0 (the License);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -18,18 +18,10 @@
  */
 
 /**
- * Generic WebGL Utility Functions
+ * Runtime feature checks, evaluated once at module load.
  *
  * @remarks
- * Nothing here should be coupled to Renderer logic / types.
- *
- * @param gl
- * @returns
+ * Guard `instanceof` against globals that may be missing (older browsers,
+ * workers, Node) with these instead of repeating `typeof X !== 'undefined'`.
  */
-export function isWebGl2(
-  gl: WebGLRenderingContext,
-): gl is WebGL2RenderingContext {
-  return (
-    self.WebGL2RenderingContext && gl instanceof self.WebGL2RenderingContext
-  );
-}
+export const hasImageBitmap = typeof ImageBitmap !== 'undefined';

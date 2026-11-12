@@ -628,10 +628,8 @@ export class RendererMain extends EventEmitter {
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    if (this.canvas.style) {
-      this.canvas.style.width = `${deviceLogicalWidth}px`;
-      this.canvas.style.height = `${deviceLogicalHeight}px`;
-    }
+    this.canvas.style.width = `${deviceLogicalWidth}px`;
+    this.canvas.style.height = `${deviceLogicalHeight}px`;
 
     // Initialize the stage
     this.stage = new Stage({
@@ -652,7 +650,7 @@ export class RendererMain extends EventEmitter {
       enableDirtyRepaints: settings.enableDirtyRepaints!,
       contextRestoreTimeout: settings.contextRestoreTimeout,
       fontEngines: settings.fontEngines!,
-      inspector: settings.inspector !== null,
+      inspector: inspector !== false,
       targetFPS: settings.targetFPS!,
       textureProcessingTimeLimit: settings.textureProcessingTimeLimit!,
       maxTextureUploadsDuringAnimation:
@@ -703,32 +701,30 @@ export class RendererMain extends EventEmitter {
    */
   private resolveTxSettings(
     textureMemory: Partial<TextureMemoryManagerSettings>,
+    currentTxSettings: Partial<TextureMemoryManagerSettings> = {},
   ): TextureMemoryManagerSettings {
-    const currentTxSettings =
-      (this.stage && this.stage.options.textureMemory) || {};
-
     return {
       criticalThreshold:
-        textureMemory?.criticalThreshold ??
-        currentTxSettings?.criticalThreshold ??
+        textureMemory.criticalThreshold ??
+        currentTxSettings.criticalThreshold ??
         124e6,
       targetThresholdLevel:
-        textureMemory?.targetThresholdLevel ??
-        currentTxSettings?.targetThresholdLevel ??
+        textureMemory.targetThresholdLevel ??
+        currentTxSettings.targetThresholdLevel ??
         0.5,
       cleanupInterval:
-        textureMemory?.cleanupInterval ??
-        currentTxSettings?.cleanupInterval ??
+        textureMemory.cleanupInterval ??
+        currentTxSettings.cleanupInterval ??
         5000,
       debugLogging:
-        textureMemory?.debugLogging ?? currentTxSettings?.debugLogging ?? false,
+        textureMemory.debugLogging ?? currentTxSettings.debugLogging ?? false,
       baselineMemoryAllocation:
-        textureMemory?.baselineMemoryAllocation ??
-        currentTxSettings?.baselineMemoryAllocation ??
+        textureMemory.baselineMemoryAllocation ??
+        currentTxSettings.baselineMemoryAllocation ??
         26e6,
       doNotExceedCriticalThreshold:
-        textureMemory?.doNotExceedCriticalThreshold ??
-        currentTxSettings?.doNotExceedCriticalThreshold ??
+        textureMemory.doNotExceedCriticalThreshold ??
+        currentTxSettings.doNotExceedCriticalThreshold ??
         false,
     };
   }
@@ -879,10 +875,7 @@ export class RendererMain extends EventEmitter {
    * @returns
    */
   getNodeById(id: number): CoreNode | null {
-    const root = this.stage?.root;
-    if (!root) {
-      return null;
-    }
+    const root = this.stage.root;
 
     const findNode = (node: CoreNode): CoreNode | null => {
       if (node.id === id) {
@@ -968,6 +961,7 @@ export class RendererMain extends EventEmitter {
     if (options.textureMemory !== undefined) {
       const textureMemory = (options.textureMemory = this.resolveTxSettings(
         options.textureMemory,
+        stage.options.textureMemory,
       ));
       stage.txMemManager.updateSettings(textureMemory);
       stage.txMemManager.cleanup();
@@ -995,7 +989,7 @@ export class RendererMain extends EventEmitter {
           this.canvas,
           stage.options as unknown as RendererMainSettings,
         );
-        this.inspector?.createNodes(this.root as unknown as CoreNode);
+        this.inspector.createNodes(this.root as unknown as CoreNode);
       }
     }
 
@@ -1026,19 +1020,19 @@ export class RendererMain extends EventEmitter {
     }
 
     if (options.fpsUpdateInterval !== undefined) {
-      this.stage.updateFpsUpdateInterval(options.fpsUpdateInterval);
+      stage.updateFpsUpdateInterval(options.fpsUpdateInterval);
     }
 
     if (options.fpsBoundaries !== undefined) {
-      this.stage.updateFpsBoundaries(options.fpsBoundaries);
+      stage.updateFpsBoundaries(options.fpsBoundaries);
     }
 
     if (options.boundsMargin !== undefined) {
-      this.stage.setBoundsMargin(options.boundsMargin);
+      stage.setBoundsMargin(options.boundsMargin);
     }
 
     if (options.clearColor !== undefined) {
-      this.stage.setClearColor(options.clearColor);
+      stage.setClearColor(options.clearColor);
     }
 
     if (needDimensionsUpdate) {

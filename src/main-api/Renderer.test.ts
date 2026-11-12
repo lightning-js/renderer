@@ -126,7 +126,7 @@ describe('RendererMain.close()', () => {
 
     renderer.close();
 
-    expect(mockStageInstance?.destroy).toHaveBeenCalledOnce();
+    expect(mockStageInstance.destroy).toHaveBeenCalledOnce();
   });
 
   it('should remove the canvas from the DOM when close() is called', () => {

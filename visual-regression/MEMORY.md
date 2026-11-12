@@ -5,9 +5,8 @@ examples, starts a local Vite preview, and runs a separate Chromium Playwright
 check. CI runs the same command in the `Browser Memory Lifecycle` job. Its
 per-round measurements are uploaded as `memory-lifecycle-measurements` and are
 written locally to `visual-regression/memory-results/measurements.json`.
-The CI step is temporarily non-blocking: on current `main` this check correctly
-fails on unclosed Canvas text bitmaps. Remove `continue-on-error` from the CI
-step once the canvas texture fix is merged; the local command remains strict.
+The CI step is blocking: if the check fails the `Browser Memory Lifecycle`
+job fails.
 
 The check uses four independent browser contexts: rectangles (the control), a
 shared image asset, MSDF text (`textRendererOverride: 'sdf'`), and Canvas text

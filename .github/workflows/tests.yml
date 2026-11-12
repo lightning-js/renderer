@@ -86,10 +86,7 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir visual-regression exec playwright install --with-deps chromium
-      # Current main retains canvas text bitmaps. Keep publishing measurements
-      # while the fix is under review; remove this exception when it lands.
       - run: pnpm test:memory
-        continue-on-error: true
       - name: Upload memory measurements
         if: always()
         uses: actions/upload-artifact@v7

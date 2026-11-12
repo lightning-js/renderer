@@ -25,6 +25,7 @@ import { CoreContextTexture } from '../CoreContextTexture.js';
 import { isHTMLImageElement } from './internal/RendererUtils.js';
 import type { Bound } from '../../lib/utils.js';
 import { isProductionEnvironment } from '../../../utils.js';
+import { hasImageBitmap } from '../../platforms/capabilities.js';
 
 const TRANSPARENT_TEXTURE_DATA = new Uint8Array([0, 0, 0, 0]);
 
@@ -210,7 +211,7 @@ export class WebGlCtxTexture extends CoreContextTexture {
     const formatBytes = 4;
     const memoryPadding = 1.1; // Add padding to account for GPU Padding
     const isImageBitmap =
-      typeof ImageBitmap !== 'undefined' && tdata instanceof ImageBitmap;
+      hasImageBitmap === true && tdata instanceof ImageBitmap;
     const isHTMLCanvas =
       typeof HTMLCanvasElement !== 'undefined' &&
       tdata instanceof HTMLCanvasElement;
@@ -218,8 +219,8 @@ export class WebGlCtxTexture extends CoreContextTexture {
     // If textureData is null, the texture is empty (0, 0) and we don't need to
     // upload any data to the GPU.
     if (
-      isImageBitmap ||
-      isHTMLCanvas ||
+      isImageBitmap === true ||
+      isHTMLCanvas === true ||
       tdata instanceof ImageData ||
       // not using typeof HTMLImageElement due to web worker
       isHTMLImageElement(tdata) === true
@@ -228,33 +229,14 @@ export class WebGlCtxTexture extends CoreContextTexture {
       h = tdata.height;
       glw.bindTexture(this._nativeCtxTexture);
 
-      // Determine whether the WebGL driver should premultiply alpha at upload
-      // time (UNPACK_PREMULTIPLY_ALPHA_WEBGL).
-      //
-      // • ImageBitmap — the spec allows implementations to ignore UNPACK for
-      //   ImageBitmap sources, so premultiplication must happen inside
-      //   createImageBitmap itself.  We use textureData.premultiplied
-      //   to know whether the platform did that:
-      //     - true  → bitmap is already premultiplied → UNPACK = false (no-op)
-      //     - false → bitmap has straight alpha (e.g. WebPlatformChrome50 on
-      //               older WPEWebKit) → UNPACK = !!premultiplyAlpha so the
-      //               driver premultiplies during the CPU→GPU copy
-      //     - undefined → legacy path, assume premultiplied (UNPACK = false)
-      //
-      // • HTMLImageElement / ImageData — the spec guarantees that
-      //   UNPACK_PREMULTIPLY_ALPHA_WEBGL is honoured for these types, so we
-      //   delegate to the premultiplyAlpha flag as before.
-      let unpackPremultiply: boolean;
-      if (isImageBitmap) {
-        const premultiplied = textureData.premultiplied ?? true;
-        unpackPremultiply = premultiplied
-          ? false
-          : !!textureData.premultiplyAlpha;
-      } else {
-        unpackPremultiply = !!textureData.premultiplyAlpha;
-      }
-
-      glw.pixelStorei(glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, unpackPremultiply);
+      // Premultiply on upload only when requested and the pixels aren't
+      // already premultiplied. When the source doesn't say, assume
+      // ImageBitmaps are premultiplied and other sources are straight alpha.
+      glw.pixelStorei(
+        glw.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        !!textureData.premultiplyAlpha &&
+          !(textureData.premultiplied ?? isImageBitmap),
+      );
 
       glw.texImage2D(0, format, format, glw.UNSIGNED_BYTE, tdata);
 

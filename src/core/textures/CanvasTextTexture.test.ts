@@ -28,6 +28,11 @@ import {
 } from '../TextureMemoryManager.js';
 import { TextureType } from './Texture.js';
 
+// capabilities.ts detects ImageBitmap at import time.
+vi.hoisted(() => {
+  (globalThis as any).ImageBitmap ??= class {};
+});
+
 describe('CanvasTextTexture', () => {
   it('creates a fresh source after its previous upload data is released', async () => {
     const txManager = new CoreTextureManager(mock<Stage>(), {
@@ -64,16 +69,66 @@ describe('CanvasTextTexture', () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it('does not key-cache textures with different redraw callbacks', () => {
+  it('shares textures with equal keys and skips keyCache without one', () => {
     const txManager = new CoreTextureManager(mock<Stage>(), {
       maxRetryCount: 5,
       createImageBitmapSupport: 'auto',
     });
     const render = vi.fn(() => null);
-    const a = txManager.createTexture('CanvasTextTexture', { render });
-    const b = txManager.createTexture('CanvasTextTexture', { render });
-    expect(a).not.toBe(b);
-    expect(txManager.keyCache.size).toBe(0);
+    const a = txManager.createTexture('CanvasTextTexture', {
+      render,
+      key: 'same',
+    });
+    const b = txManager.createTexture('CanvasTextTexture', {
+      render,
+      key: 'same',
+    });
+    expect(a).toBe(b);
+    expect(txManager.keyCache.size).toBe(1);
+    // The second creation reuses the cached texture: its render callback is
+    // never invoked.
+    expect(render).not.toHaveBeenCalled();
+
+    const c = txManager.createTexture('CanvasTextTexture', {
+      render,
+      key: 'different',
+    });
+    expect(c).not.toBe(a);
+    expect(txManager.keyCache.size).toBe(2);
+
+    // Without a key the texture stays uncached (legacy single-owner use).
+    const u1 = txManager.createTexture('CanvasTextTexture', { render });
+    const u2 = txManager.createTexture('CanvasTextTexture', { render });
+    expect(u1).not.toBe(u2);
+    expect(txManager.keyCache.size).toBe(2);
+  });
+
+  it('releaseOwner keeps a shared mid-upload load but cancels an orphaned one', () => {
+    const txManager = new CoreTextureManager(mock<Stage>(), {
+      maxRetryCount: 5,
+      createImageBitmapSupport: 'auto',
+    });
+    const texture = txManager.createTexture('CanvasTextTexture', {
+      render: () => null,
+      key: 'shared',
+    });
+
+    // Simulate a queued mid-upload load with two owners.
+    texture.setRenderableOwner('a', true);
+    texture.setRenderableOwner('b', true);
+    texture.setState('loading');
+    txManager.enqueueUploadTexture(texture);
+
+    texture.releaseOwner('a');
+    expect(texture.renderableOwners.has('b')).toBe(true);
+    expect(texture.state).toBe('loading');
+    expect(txManager.isProcessingTexture(texture)).toBe(true);
+
+    // Last owner out: the stale queued load is aborted.
+    texture.releaseOwner('b');
+    expect(texture.renderableOwners.size).toBe(0);
+    expect(texture.state).toBe('initial');
+    expect(txManager.isProcessingTexture(texture)).toBe(false);
   });
 
   it('closes a WebGL bitmap after upload data is released and redraws after eviction', async () => {
