@@ -20,8 +20,10 @@ import type { CoreShaderNode } from '../../dist/exports/index.js';
 import type { ExampleSettings } from '../common/ExampleSettings.js';
 
 /**
- * Two shaders that do the same thing (tint the node) and differ only in how
- * the tint prop is stored: a plain object vs. an array.
+ * Three shaders that do the same thing (tint the node) and differ only in how
+ * the tint prop is stored and keyed: a plain object with the default value
+ * key, an array with the default value key, and a plain object with its own
+ * `getValueKey`.
  *
  * Every node below has the same size, so the only thing that can differ in
  * the shader value cache key is the tint prop. Each square should be the
@@ -70,6 +72,13 @@ const ArrayTintShader: WebGlShaderType<{ tint: number[] }> = {
   fragment,
 };
 
+const ObjectTintWithValueKeyShader: WebGlShaderType<{ tint: Tint }> = {
+  ...ObjectTintShader,
+  getValueKey({ tint }) {
+    return `${tint.r},${tint.g},${tint.b},${tint.a}`;
+  },
+};
+
 const SIZE = 160;
 const GAP = 40;
 
@@ -87,12 +96,20 @@ export async function automation(settings: ExampleSettings) {
 export default async function test({ renderer, testRoot }: ExampleSettings) {
   renderer.stage.shManager.registerShaderType('ObjectTint', ObjectTintShader);
   renderer.stage.shManager.registerShaderType('ArrayTint', ArrayTintShader);
+  renderer.stage.shManager.registerShaderType(
+    'ObjectTintWithValueKey',
+    ObjectTintWithValueKeyShader,
+  );
 
   const rows = [
     { title: 'Object prop { r, g, b, a }', shader: 'ObjectTint' as const },
     {
       title: 'Array prop [r, g, b, a] (control)',
       shader: 'ArrayTint' as const,
+    },
+    {
+      title: 'Object prop { r, g, b, a } with getValueKey',
+      shader: 'ObjectTintWithValueKey' as const,
     },
   ];
 
@@ -120,7 +137,7 @@ export default async function test({ renderer, testRoot }: ExampleSettings) {
         h: SIZE,
         color: 0xffffffff,
         shader: renderer.createShader(row.shader, {
-          tint: row.shader === 'ObjectTint' ? c.object : c.array,
+          tint: row.shader === 'ArrayTint' ? c.array : c.object,
         }),
       });
 

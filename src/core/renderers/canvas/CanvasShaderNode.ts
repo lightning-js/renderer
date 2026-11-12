@@ -81,6 +81,7 @@ export class CanvasShaderNode<
         ) as Record<string, unknown>;
         if (computed !== undefined) {
           this.computed = computed as Computed;
+          return;
         }
         this.computed = {};
         this.updater!(this.node as CoreNode);
