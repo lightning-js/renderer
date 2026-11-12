@@ -1008,7 +1008,10 @@ export class CoreNode extends EventEmitter {
       this.stage.txManager.loadTexture(texture);
     }
 
-    texture.preventCleanup = this.props.textureOptions.preventCleanup ?? false;
+    const preventCleanup = this.props.textureOptions.preventCleanup;
+    if (preventCleanup !== undefined) {
+      texture.preventCleanup = preventCleanup;
+    }
     texture.on('loaded', this.onTextureLoaded);
     texture.on('failed', this.onTextureFailed);
     texture.on('freed', this.onTextureFreed);
