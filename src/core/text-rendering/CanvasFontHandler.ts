@@ -283,9 +283,7 @@ export const getFontMetrics = (
   fontFamily: string,
   fontSize: number,
 ): NormalizedFontMetrics => {
-  const out = normalizedMetrics.get(
-    `${fontFamily}-${fontSize}-${isFontLoaded(fontFamily)}`,
-  );
+  const out = normalizedMetrics.get(buildFontCacheKey(fontFamily, fontSize));
   if (out !== undefined) {
     return out;
   }
@@ -307,9 +305,8 @@ export const processFontMetrics = (
   fontSize: number,
   metrics: FontMetrics,
 ): NormalizedFontMetrics => {
-  const label = `${fontFamily}-${fontSize}-${isFontLoaded(fontFamily)}`;
   const normalized = normalizeFontMetrics(metrics, fontSize);
-  normalizedMetrics.set(label, normalized);
+  normalizedMetrics.set(buildFontCacheKey(fontFamily, fontSize), normalized);
   return normalized;
 };
 
@@ -361,6 +358,10 @@ export const setMeasureFont = (font: string): boolean => {
  * The CSS font string currently used by {@link measureText}.
  */
 export const getMeasureFont = (): string => measureContext.font;
+
+function buildFontCacheKey(fontFamily: string, fontSize: number) {
+  return `${fontFamily}-${fontSize}-${isFontLoaded(fontFamily)}`;
+}
 
 /**
  * Get the font metrics for a font face.
