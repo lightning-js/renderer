@@ -22,6 +22,7 @@ import { CoreNode, CoreNodeRenderState, UpdateType } from './CoreNode.js';
 import type { Stage } from './Stage.js';
 import { mock } from 'vitest-mock-extended';
 import { ImageTexture } from './textures/ImageTexture.js';
+import type { CoreTextureManager } from './CoreTextureManager.js';
 import { makeMockStage, makeNodeProps } from '../../test/mockStage.js';
 
 describe('CoreNode', () => {
@@ -217,6 +218,50 @@ describe('CoreNode', () => {
       node.update(2, clippingRect);
       expect(node.isRenderable).toBe(false);
       expect(eventCallback).not.toHaveBeenCalled();
+    });
+
+    it('on detach releases and on reattach restores subtree ownership of textures', async () => {
+      const txManager = mock<CoreTextureManager>();
+      const stage = makeMockStage({ txManager });
+      const texture = new ImageTexture(
+        txManager,
+        ImageTexture.resolveDefaults({}),
+      );
+      texture.setState('loaded', { w: 100, h: 100 });
+      const root = new CoreNode(stage, makeNodeProps({ w: 200, h: 200 }));
+      const node = new CoreNode(
+        stage,
+        makeNodeProps({ parent: root, texture, src: null, w: 100, h: 100 }),
+      );
+      const child = new CoreNode(
+        stage,
+        makeNodeProps({ parent: node, texture, src: null, w: 50, h: 50 }),
+      );
+      root.update(0, clippingRect);
+      await Promise.resolve();
+      expect(node.isRenderable).toBe(true);
+      expect(child.isRenderable).toBe(true);
+
+      const renderable = vi.fn();
+      node.on('renderable', renderable);
+      node.parent = null;
+
+      expect(node.isRenderable).toBe(false);
+      expect(child.isRenderable).toBe(false);
+      expect(texture.renderableOwners.size).toBe(0);
+      expect(texture.renderable).toBe(false);
+      expect(renderable).toHaveBeenCalledWith(node, {
+        type: 'renderable',
+        isRenderable: false,
+      });
+
+      node.parent = root;
+      root.update(0, clippingRect);
+
+      expect(node.isRenderable).toBe(true);
+      expect(child.isRenderable).toBe(true);
+      expect(texture.renderableOwners.has(node.id)).toBe(true);
+      expect(texture.renderableOwners.has(child.id)).toBe(true);
     });
   });
 
