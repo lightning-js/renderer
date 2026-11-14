@@ -26,7 +26,6 @@ import type {
 import type { Stage } from '../Stage.js';
 import { hasZeroWidthSpace } from './Utils.js';
 import type { CoreTextNode } from '../CoreTextNode.js';
-import { UpdateType } from '../CoreNode.js';
 import {
   defaultFontMetrics,
   normalizeFontMetrics,
@@ -189,7 +188,7 @@ const ensureLoaded = (stage: Stage, fontFamily: string): Promise<void> => {
       processFontData(fontFamily, loadedFont ?? undefined, metrics);
       fontLoadPromises.delete(fontFamily);
       for (let key in nwff) {
-        nwff[key]!.setUpdateType(UpdateType.Local);
+        nwff[key]!.invalidateLayout();
       }
       delete nodesWaitingForFont[fontFamily];
     })
@@ -282,11 +281,17 @@ export const getFontMetrics = (
   fontFamily: string,
   fontSize: number,
 ): NormalizedFontMetrics => {
-  const out = normalizedMetrics.get(fontFamily + fontSize);
+  const out = normalizedMetrics.get(buildFontCacheKey(fontFamily, fontSize));
   if (out !== undefined) {
     return out;
   }
-  let metrics = fontCache.get(fontFamily)!.metrics;
+  const fontData = fontCache.get(fontFamily);
+  let metrics: FontMetrics | undefined;
+  if (fontData !== undefined) {
+    metrics = fontData.metrics;
+  } else {
+    metrics = defaultFontMetrics;
+  }
   if (metrics === undefined) {
     metrics = calculateFontMetrics(fontFamily);
   }
@@ -298,9 +303,8 @@ export const processFontMetrics = (
   fontSize: number,
   metrics: FontMetrics,
 ): NormalizedFontMetrics => {
-  const label = fontFamily + fontSize;
   const normalized = normalizeFontMetrics(metrics, fontSize);
-  normalizedMetrics.set(label, normalized);
+  normalizedMetrics.set(buildFontCacheKey(fontFamily, fontSize), normalized);
   return normalized;
 };
 
@@ -352,6 +356,10 @@ export const setMeasureFont = (font: string): boolean => {
  * The CSS font string currently used by {@link measureText}.
  */
 export const getMeasureFont = (): string => measureContext.font;
+
+function buildFontCacheKey(fontFamily: string, fontSize: number) {
+  return `${fontFamily}-${fontSize}-${isFontLoaded(fontFamily)}`;
+}
 
 /**
  * Get the font metrics for a font face.
