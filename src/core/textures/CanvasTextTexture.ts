@@ -25,6 +25,15 @@ export interface CanvasTextTextureProps {
   /** Create a fresh pixel source for each load, including after eviction or context loss. */
   render: () => ImageBitmap | HTMLCanvasElement | null;
   /**
+   * Whether this raster already has rich-text colors baked in (span colors
+   * absolute, base spans use the node color at bake time).
+   *
+   * When true, renderers must apply alpha-only tinting (preserve baked RGB,
+   * fade via alpha). When false/omitted the raster is a white alpha mask
+   * that needs the full node-color tint.
+   */
+  rich?: boolean;
+  /**
    * Stable cache key for the raster inputs (see {@link makeCanvasTextCacheKey}).
    *
    * @remarks

@@ -53,6 +53,8 @@ const span = (
   underline: false,
   strikethrough: false,
   color: 0,
+  strokeColor: 0,
+  strokeWidth: 0,
   ...overrides,
 });
 
@@ -67,6 +69,8 @@ const spansOf = (r: ParseResult) =>
       underline: s.underline,
       strikethrough: s.strikethrough,
       color: s.color,
+      strokeColor: s.strokeColor,
+      strokeWidth: s.strokeWidth,
     };
   });
 
@@ -211,6 +215,69 @@ describe('parseRichText', () => {
       const spans = spansOf(out);
       expect(spans[0]).toEqual(span(0, 1, { color: 0xff0000ff }));
       expect(spans[1]).toEqual(span(1, 2)); // color back to 0 (inherit)
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Stroke tag
+  // -------------------------------------------------------------------------
+
+  describe('[stroke]', () => {
+    it('parses stroke color with explicit width', () => {
+      parse('[stroke=0xff0000ff,2]hi[/stroke]');
+      expect(out.stripped).toBe('hi');
+      expect(spansOf(out)).toEqual([
+        span(0, 2, { strokeColor: 0xff0000ff, strokeWidth: 2 }),
+      ]);
+    });
+
+    it('defaults width to 1 when omitted', () => {
+      parse('[stroke=0x00ff00ff]hi[/stroke]');
+      expect(out.stripped).toBe('hi');
+      expect(spansOf(out)).toEqual([
+        span(0, 2, { strokeColor: 0x00ff00ff, strokeWidth: 1 }),
+      ]);
+    });
+
+    it('parses decimal widths', () => {
+      parse('[stroke=0xff0000ff,2.5]hi[/stroke]');
+      expect(out.stripped).toBe('hi');
+      expect(spansOf(out)).toEqual([
+        span(0, 2, { strokeColor: 0xff0000ff, strokeWidth: 2.5 }),
+      ]);
+    });
+
+    it('treats invalid stroke color as literal', () => {
+      parse('[stroke=red]hi[/stroke]');
+      expect(out.stripped).toBe('[stroke=red]hi');
+    });
+
+    it('treats zero width as literal', () => {
+      parse('[stroke=0xff0000ff,0]hi[/stroke]');
+      // Opening is literal; the closing tag is still consumed (no open frame).
+      expect(out.stripped).toBe('[stroke=0xff0000ff,0]hi');
+    });
+
+    it('treats trailing junk after width as literal', () => {
+      parse('[stroke=0xff0000ff,2px]hi[/stroke]');
+      expect(out.stripped).toBe('[stroke=0xff0000ff,2px]hi');
+    });
+
+    it('resets stroke on [/stroke]', () => {
+      parse('[stroke=0xff0000ff,2]A[/stroke]B');
+      expect(out.stripped).toBe('AB');
+      expect(spansOf(out)).toEqual([
+        span(0, 1, { strokeColor: 0xff0000ff, strokeWidth: 2 }),
+        span(1, 2),
+      ]);
+    });
+
+    it('nests with bold', () => {
+      parse('[b][stroke=0x000000ff,1]hi[/stroke][/b]');
+      expect(out.stripped).toBe('hi');
+      expect(spansOf(out)).toEqual([
+        span(0, 2, { bold: true, strokeColor: 0x000000ff, strokeWidth: 1 }),
+      ]);
     });
   });
 
@@ -398,6 +465,14 @@ describe('stripRichText', () => {
 
   it('strips color tags', () => {
     expect(stripRichText('[color=0xff0000ff]text[/color]')).toBe('text');
+  });
+
+  it('strips stroke tags', () => {
+    expect(stripRichText('[stroke=0xff0000ff,2]text[/stroke]')).toBe('text');
+  });
+
+  it('preserves invalid stroke tags as literal', () => {
+    expect(stripRichText('[stroke=red]text[/stroke]')).toBe('[stroke=red]text');
   });
 
   it('strips multiple tags leaving plain text', () => {

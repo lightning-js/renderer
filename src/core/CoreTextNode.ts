@@ -355,6 +355,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
         'CanvasTextTexture',
         {
           render: result.renderSource,
+          rich: this.textProps.richText === true,
           // textProps is passed by reference (no copy): the key builder only
           // reads it synchronously to build the key string.
           key: makeCanvasTextCacheKey(tProps),

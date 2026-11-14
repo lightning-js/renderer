@@ -55,6 +55,7 @@ import { SdfRenderOp } from './SdfRenderOp.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
+import { CanvasTextTexture } from '../../textures/CanvasTextTexture.js';
 import { WebGlCtxRenderTexture } from './WebGlCtxRenderTexture.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import { StencilClip } from '../../shaders/webgl/StencilClip.js';
@@ -86,29 +87,25 @@ const _PACKED_WHITE = 0xffffffff;
  * Merge a node's packed color (with alpha) into a rich-text span color.
  *
  * Both colors are packed RGBA bytes (byte0 = R … byte3 = A, matching
- * `SdfTextRenderer._packColor`). The old per-node renderer combined these in
- * the fragment shader as `u_color * v_color`; the batched pipeline has no
- * `u_color` uniform, so the multiplication happens here on the CPU. RGB is
- * NOT premultiplied by alpha — the SDF fragment shader multiplies
- * `v_color.rgb` by the computed opacity (which includes `v_color.a`).
+ * `SdfTextRenderer._packColor`). Span RGB is absolute (L2 `textColor`
+ * semantics: setting the node/text color must not tint explicit span or
+ * stroke colors); only alpha is merged so fades (`node color alpha` ×
+ * `worldAlpha`) still apply. RGB is NOT premultiplied by alpha — the SDF
+ * fragment shader multiplies `v_color.rgb` by the computed opacity (which
+ * includes `v_color.a`). `WHITE` means "inherit node color" and `0`
+ * (transparent black) means "no stroke".
  */
 const _mergeSdfSpanColor = (nodeColor: number, spanColor: number): number => {
   if (spanColor === _PACKED_WHITE) {
     return nodeColor;
   }
-  const nr = nodeColor & 0xff;
-  const ng = (nodeColor >>> 8) & 0xff;
-  const nb = (nodeColor >>> 16) & 0xff;
+  if (spanColor === 0) {
+    return 0;
+  }
   const na = (nodeColor >>> 24) & 0xff;
-  const sr = spanColor & 0xff;
-  const sg = (spanColor >>> 8) & 0xff;
-  const sb = (spanColor >>> 16) & 0xff;
   const sa = (spanColor >>> 24) & 0xff;
-  const r = (nr * sr + 127) >> 8;
-  const g = (ng * sg + 127) >> 8;
-  const b = (nb * sb + 127) >> 8;
   const a = (na * sa + 127) >> 8;
-  return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
+  return ((spanColor & 0x00ffffff) | (a << 24)) >>> 0;
 };
 
 /**
@@ -136,9 +133,7 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  | WebGlNodeRenderOp
-  | StencilClipRenderOp
-  | SdfRenderOp;
+  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -224,7 +219,7 @@ export class WebGlRenderer extends CoreRenderer {
    * consecutive text nodes are merged into a single SdfRenderOp, producing one
    * draw call for many strings.
    *
-   * The two layouts have different strides (6 floats plain / 7 floats rich) and
+   * The two layouts have different strides (6 floats plain / 9 floats rich) and
    * can therefore never share a draw call; each gets its own buffer, and each
    * SdfRenderOp carries the SdfBuffer it draws from.
    *
@@ -618,10 +613,22 @@ export class WebGlRenderer extends CoreRenderer {
     const rc = node.renderCoords!;
     const tc = node.textureCoords || this.defaultTextureCoords;
 
-    const cTl = node.premultipliedColorTl;
-    const cTr = node.premultipliedColorTr;
-    const cBl = node.premultipliedColorBl;
-    const cBr = node.premultipliedColorBr;
+    // Baked rich-text colors need alpha-only tinting: white-with-same-alpha
+    // vertices pass baked RGB through, fades still apply. Plain rasters are
+    // white alpha masks and keep the full tint.
+    // Premultiplied ABGR white with alpha `a` is `a * 0x01010101`.
+    const richCanvas =
+      tx instanceof CanvasTextTexture && tx.props.rich === true;
+    let cTl = node.premultipliedColorTl;
+    let cTr = node.premultipliedColorTr;
+    let cBl = node.premultipliedColorBl;
+    let cBr = node.premultipliedColorBr;
+    if (richCanvas) {
+      cTl = (((cTl >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cTr = (((cTr >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cBl = (((cBl >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cBr = (((cBr >>> 24) & 0xff) * 0x01010101) >>> 0;
+    }
 
     // Upper-Left
     f[i] = rc.x1;
@@ -767,10 +774,11 @@ export class WebGlRenderer extends CoreRenderer {
    * into a single SdfRenderOp, resulting in one draw call for many text nodes.
    *
    * The design-unit glyph records are `SDF_PLAIN_GLYPH_STRIDE` (8) or
-   * `SDF_RICH_GLYPH_STRIDE` (12) floats per glyph depending on the layout:
+   * `SDF_RICH_GLYPH_STRIDE` (14) floats per glyph depending on the layout:
    *   plain: x, y, w, h, u, v, uw, vh
-   *   rich:  x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
-   * where packed_span_color is RGBA bytes written via a Uint32 view of the
+   *   rich:  x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color,
+   *          style, packed_stroke_color, stroke_width_px
+   * where packed colors are RGBA bytes written via a Uint32 view of the
    * same ArrayBuffer (bit-identical read via `uGlyphs` below), shearTop/shearBot
    * are the per-corner x-deltas of the italic lean, and the decorated quads use
    * `u = -1.0` as a solid-fill sentinel.
@@ -859,8 +867,10 @@ export class WebGlRenderer extends CoreRenderer {
       const u2 = u1 + glyphs[go + 6]!;
       const v2 = v1 + glyphs[go + 7]!;
 
-      // Per-glyph color (merged with node color + alpha) and style.
+      // Per-glyph color (node alpha merged into absolute span RGB), stroke, and style.
       let packedColor = packedNodeColor;
+      let packedStrokeColor = 0;
+      let strokeWidthPx = 0;
       let style = 0;
       // Italic lean: x-delta applied to the top / bottom vertex rows. A glyph
       // quad becomes a trapezoid with four distinct x corners when sheared.
@@ -871,6 +881,11 @@ export class WebGlRenderer extends CoreRenderer {
         shearBot = glyphs[go + 9]!;
         packedColor = _mergeSdfSpanColor(packedNodeColor, uGlyphs[go + 10]!);
         style = glyphs[go + 11]!;
+        packedStrokeColor = _mergeSdfSpanColor(
+          packedNodeColor,
+          uGlyphs[go + 12]!,
+        );
+        strokeWidthPx = glyphs[go + 13]!;
       }
       go += glyphStride;
 
@@ -903,8 +918,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v1;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -916,8 +933,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v1;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -929,8 +948,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v2;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
@@ -942,8 +963,10 @@ export class WebGlRenderer extends CoreRenderer {
       f[idx + 3] = v2;
       u[idx + 4] = packedColor;
       if (isRich) {
-        f[idx + 5] = style;
-        f[idx + 6] = distanceRange;
+        u[idx + 5] = packedStrokeColor;
+        f[idx + 6] = strokeWidthPx;
+        f[idx + 7] = style;
+        f[idx + 8] = distanceRange;
       } else {
         f[idx + 5] = distanceRange;
       }
