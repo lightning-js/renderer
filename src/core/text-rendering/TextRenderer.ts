@@ -262,6 +262,8 @@ export interface TrProps extends TrFontProps {
    * - `[s]…[/s]` — strikethrough
    * - `[color=0xRRGGBBAA]…[/color]` — inline color (must use the renderer's
    *   internal `0xRRGGBBAA` hex format, e.g. `[color=0xff0000ff]`)
+   * - `[stroke=0xRRGGBBAA,W]…[/stroke]` — outline (same color format, `W` is
+   *   the width in CSS px, e.g. `[stroke=0x000000ff,2]`; defaults to 1)
    *
    * Tags are nestable and may be combined freely. Unrecognised or malformed
    * tags are emitted as literal text. Mis-nested closing tags implicitly close
@@ -324,7 +326,8 @@ export interface TextLayout {
    * SDF write paths (one record per quad, including decoration quads).
    *
    * plain (8 floats): x, y, w, h, u, v, uw, vh
-   * rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
+   * rich  (14 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot,
+   *         packed_span_color, style, packed_stroke_color, stroke_width_px
    *
    * `shearTop` / `shearBot` are the per-corner x-deltas of the italic lean;
    * `u = -1.0` with `uw = 0` marks a solid-fill decoration quad.
@@ -341,7 +344,7 @@ export interface TextLayout {
   totalQuadCount: number;
   /**
    * Whether this layout was generated for richText mode.
-   * Determines the vertex format: false = 4 floats/vertex (plain), true = 6 floats/vertex (rich).
+   * Determines the vertex format: false = 6 floats/vertex (plain), true = 9 floats/vertex (rich).
    */
   richText: boolean;
   /**
