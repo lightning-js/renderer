@@ -1,8 +1,9 @@
 # Rich Text Formatting
 
 Lightning 3 Renderer supports inline BB-code style markup for styling runs of
-text within a single text node. Bold, italic, underline, strikethrough, and
-per-span color can all be combined freely without creating multiple nodes.
+text within a single text node. Bold, italic, underline, strikethrough,
+per-span color, and per-span outline (stroke) can all be combined freely
+without creating multiple nodes.
 
 ## Quick Start
 
@@ -12,7 +13,7 @@ const node = renderer.createTextNode({
   fontSize: 48,
   color: 0xffffffff,
   richText: true,
-  text: 'Normal [b]bold[/b] [i]italic[/i] [color=0xff0000ff]red[/color]',
+  text: 'Normal [b]bold[/b] [i]italic[/i] [color=0xff0000ff]red[/color] [stroke=0x000000ff,2]outlined[/stroke]',
   parent: root,
 });
 ```
@@ -31,6 +32,7 @@ property is otherwise unchanged — raw text without tags renders identically to
 | `[s]`                                  | `[/s]`      | Strikethrough        |
 | `[color=0xRRGGBBAA]`                   | `[/color]`  | Inline color         |
 | `[shadow=0xRRGGBBAA[,ox[,oy[,blur]]]]` | `[/shadow]` | Per-span drop shadow |
+| `[stroke=0xRRGGBBAA,W]`                | `[/stroke]` | Outline              |
 
 All tag names are lowercase. Tags are nestable and may be combined freely.
 
@@ -137,6 +139,21 @@ Shadow expands the reported node size so it is not clipped by the texture
 edge; ancestor `clipping:true` still clips the shadow (scissor is not
 expanded).
 
+### Outline `[stroke=0xRRGGBBAA,W]…[/stroke]`
+
+```
+[stroke=0xff0000ff,2]Red outline[/stroke]
+[stroke=0x00ff00ff,1.5]Thin green outline[/stroke]
+[color=0xffffffff][stroke=0x000000ff,3]White on black outline[/stroke][/color]
+```
+
+The color value uses the same `0xRRGGBBAA` format as `[color]`. `W` is the
+visible outline thickness in CSS px (decimals allowed, e.g. `1.5`); when
+omitted it defaults to `1`. The outline extends `W` outward from the glyph
+edge on both backends (Canvas doubles its centred `strokeText` line width to
+achieve this). Fill is painted over the inner half. `0`, negative, or
+malformed widths are treated as literal text.
+
 ---
 
 ## Combining Tags
@@ -182,6 +199,13 @@ the string unstyled.
 | Underline     | Canvas `fillRect` below baseline                           | Decoration quad appended after glyph quads       |
 | Strikethrough | Canvas `fillRect` at x-height                              | Decoration quad appended after glyph quads       |
 | Color         | `ctx.fillStyle` per span                                   | Per-vertex packed RGBA attribute                 |
+| Stroke        | `ctx.strokeText` behind fill, `lineJoin: round`            | SDF outer-edge band, per-vertex color + width    |
+
+Span colors are absolute on both backends (L2 `textColor` semantics): an
+explicit `[color]` / `[stroke]` RGB is not tinted by the node's `color`.
+Only alpha is merged (`spanAlpha × nodeAlpha × worldAlpha`), so fades still
+apply. Spans without a color inherit the node's `color`; plain (non-rich)
+text is a white mask tinted by the node color as before.
 
 For the Canvas renderer, **bold and italic require the corresponding font faces
 to be loaded** under names the browser can resolve (e.g. via `font-weight: bold`
@@ -217,6 +241,11 @@ typographic variants.
 - **Maximum spans** — up to 64 styled spans per text node (configurable via
   `MAX_SPANS` in `RichTextParser.ts`). Spans beyond this limit are merged into
   the previous span.
+- **Stroke width** — widths above ~`fontSize / 4` may clip in the SDF renderer
+  because the outline samples outside the atlas glyph cell. Keep outlines thin
+  (1–3 px at typical sizes). Node transforms with scale also scale glyph quads
+  but not the px-based stroke width, so scaled text renders a relatively
+  thinner outline.
 - **Layout wrapping** — the text layout engine measures widths using the
   stripped (tag-free) text. Bold characters are slightly wider than their
   normal counterparts; the Canvas renderer adjusts per-span, but the SDF

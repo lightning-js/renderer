@@ -47,8 +47,10 @@ import {
   ITALIC_SHEAR,
   decorationThickness,
   italicOverhang,
+  maxStrokeWidth,
   sdfBoldExtra,
   shadowPadding,
+  sdfStrokeExtra,
   spanIndexAt,
   strikeOffset,
   underlineGap,
@@ -56,7 +58,8 @@ import {
 
 // Design-unit glyph record strides consumed by WebGlRenderer.addSdfQuads.
 // plain (8 floats): x, y, w, h, u, v, uw, vh
-// rich  (12 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot, packed_span_color, style
+// rich  (14 floats): x, y, w, h, u, v, uw, vh, shearTop, shearBot,
+//         packed_span_color, style, packed_stroke_color, stroke_width_px
 
 // White (0xFFFFFFFF as 0xRRGGBBAA) packed little-endian: all UNSIGNED_BYTE channels = 255 → 1.0
 // When v_color = vec4(1,1,1,1) the span color has no effect; the node color passes through unchanged.
@@ -327,11 +330,11 @@ const renderQuads = (
 };
 
 /**
- * Write one 12-float decoration record (underline or strikethrough).
+ * Write one 14-float decoration record (underline or strikethrough).
  *
  * Uses u = -1.0 as a UV sentinel so the fragment shader branches to solid fill
  * instead of the SDF glyph path (v_texcoord.x < 0.0). Decorations are never
- * bold (style = 0.0) but may carry an italic shear.
+ * bold (style = 0.0) and never stroked but may carry an italic shear.
  *
  * `shear1` / `shear2` are the x-deltas to add at y1 / y2 respectively for
  * italic lean; pass 0 for both when the span is not italic.
@@ -363,6 +366,8 @@ const _writeDecoRecord = (
   glyphs[di + 9] = shear2;
   u32Glyphs[di + 10] = color;
   glyphs[di + 11] = 0.0;
+  u32Glyphs[di + 12] = 0;
+  glyphs[di + 13] = 0.0;
   return di + SDF_RICH_GLYPH_STRIDE;
 };
 
@@ -382,6 +387,7 @@ const _writeDecoRecord = (
 const makeStyledMeasureText = (
   boldAdvanceExtra: number,
   base: number,
+  fontScale: number,
 ): MeasureTextFn => {
   const spans = _richTextResult.spans;
 
@@ -433,7 +439,10 @@ const makeStyledMeasureText = (
       width +=
         glyph.xadvance +
         letterSpacing +
-        (span.bold === true ? boldAdvanceExtra : 0);
+        (span.bold === true ? boldAdvanceExtra : 0) +
+        (span.strokeWidth > 0
+          ? sdfStrokeExtra(span.strokeWidth, fontScale)
+          : 0);
 
       prevGlyphId = glyph.id;
       prevSpanIdx = curSpanIdx;
@@ -499,7 +508,7 @@ const correctStyledLineWidths = (
  * Two-pass approach:
  *   Pass 1 — count exact glyphs (calling getGlyph to avoid degenerate quads) and
  *             decoration quads needed by richText spans.
- *   Pass 2 — write one design-unit record per glyph (8 or 12 floats) and, for
+ *   Pass 2 — write one design-unit record per glyph (8 or 14 floats) and, for
  *             richText, one record per decoration quad, into a single
  *             pre-allocated Float32Array / Uint32Array view pair.
  *
@@ -545,7 +554,7 @@ const generateTextLayout = (
 
   const measureTextFn: MeasureTextFn =
     richText === true
-      ? makeStyledMeasureText(boldAdvanceExtra, designBase)
+      ? makeStyledMeasureText(boldAdvanceExtra, designBase, fontScale)
       : SdfFontHandler.measureText;
 
   const [
@@ -588,6 +597,26 @@ const generateTextLayout = (
           baseEffectiveWidth,
         )
       : baseEffectiveWidth;
+
+  // Stroked runs grow beyond the fill extents. Horizontal growth is already in
+  // the measured widths (per-glyph +strokeExtra); the leftmost glyph's left
+  // outline still needs a pad, and vertical growth (top/bottom outlines) is
+  // not measured at all. The outline extends the full stroke width outward,
+  // so shift all lines by the max stroke and grow the final pixel dimensions
+  // conservatively.
+  const maxStrokePx =
+    richText === true
+      ? maxStrokeWidth(_richTextResult.spans, _richTextResult.spanCount)
+      : 0;
+  const strokePadDu = maxStrokePx > 0 ? maxStrokePx / fontScale : 0;
+  const strokePadPx = maxStrokePx;
+  if (strokePadDu > 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i]!;
+      ln[3] += strokePadDu;
+      ln[4] += strokePadPx;
+    }
+  }
 
   // --- Pre-compute decoration offsets in design-unit space ---
   // commonFontData.base is the BMFont "base" value: the y-distance from the top of the
@@ -684,9 +713,8 @@ const generateTextLayout = (
     };
   }
 
-  // --- RICH PATH (richText=true): 12 floats/record, two-pass ---
-  // Shadow quads (hard offset, blur reserved) are emitted first so they draw
-  // behind all foreground glyphs/decos in a single batched draw.
+  // --- RICH PATH (richText=true): 14 floats/record, two-pass ---
+  // Shadow quads are emitted first so they draw behind foreground glyphs/decos.
   let glyphCount = 0;
   let decoQuadCount = 0;
   let shadowGlyphCount = 0;
@@ -764,7 +792,8 @@ const generateTextLayout = (
   // Layout: [shadow glyphs][shadow decos][fg glyphs][fg decos] — all shadow
   // quads sort before foreground so they draw behind in one batch.
   const glyphs = new Float32Array(totalQuadCount * SDF_RICH_GLYPH_STRIDE);
-  // Uint32Array view of the same ArrayBuffer for packed-color writes at slot 10 of each record.
+  // Uint32Array view of the same ArrayBuffer for packed-color writes at slots
+  // 10 and 12 of each record.
   const u32Glyphs = new Uint32Array(glyphs.buffer);
 
   // Write cursors (float indices into glyphs / u32Glyphs).
@@ -815,9 +844,11 @@ const generateTextLayout = (
         continue;
       }
 
-      // --- Determine per-record color and style ---
+      // --- Determine per-record color, stroke, and style ---
       let packedColor = _PACKED_WHITE;
       let packedShadowColor = _PACKED_WHITE;
+      let packedStrokeColor = 0;
+      let strokeWidthPx = 0;
       let spanUnderline = false;
       let spanStrikethrough = false;
       let spanBold = false;
@@ -834,6 +865,10 @@ const generateTextLayout = (
       }
       const span = _richTextResult.spans[curSpanIdx]!;
       packedColor = span.color !== 0 ? _packColor(span.color) : _PACKED_WHITE;
+      if (span.strokeWidth > 0 && span.strokeColor !== 0) {
+        packedStrokeColor = _packColor(span.strokeColor);
+        strokeWidthPx = span.strokeWidth;
+      }
       spanUnderline = span.underline;
       spanStrikethrough = span.strikethrough;
       spanBold = span.bold;
@@ -865,11 +900,14 @@ const generateTextLayout = (
       }
       pendingItalicOverhang = 0;
 
-      // Glyph bounding box in design units. Emboldening dilates the glyph
-      // outward on both sides, so shift the box by half the growth to keep it
-      // centred on its advance.
+      // Glyph bounding box in design units. Emboldening and outline both
+      // dilate the glyph outward on both sides, so shift the box by half the
+      // growth to keep it centred on its advance.
       const boldExtra = spanBold === true ? boldAdvanceExtra : 0;
-      const x1 = currentX + glyph.xoffset + boldExtra * 0.5;
+      const strokeExtraDu =
+        strokeWidthPx > 0 ? sdfStrokeExtra(strokeWidthPx, fontScale) : 0;
+      const x1 =
+        currentX + glyph.xoffset + boldExtra * 0.5 + strokeExtraDu * 0.5;
       const y1 = currentY + glyph.yoffset;
       const y2 = y1 + glyph.height;
 
@@ -879,9 +917,11 @@ const generateTextLayout = (
 
       // Capture decoration X extents before advancing currentX.
       const decoX1 = currentX;
-      // The shader widens bold glyphs without touching xadvance, so the extra
-      // width has to be added here or bold runs overlap the following text.
-      const advance = glyph.xadvance + letterSpacing + boldExtra;
+      // The shader widens bold/stroked glyphs without touching xadvance, so
+      // the extra width has to be added here or styled runs overlap the
+      // following text.
+      const advance =
+        glyph.xadvance + letterSpacing + boldExtra + strokeExtraDu;
 
       if (spanItalic === true) {
         pendingItalicOverhang = italicOverhang(baseline, y1);
@@ -911,10 +951,13 @@ const generateTextLayout = (
         glyphs[sgi + 9] = shearBot;
         u32Glyphs[sgi + 10] = packedShadowColor;
         glyphs[sgi + 11] = style;
+        u32Glyphs[sgi + 12] = strokeWidthPx > 0 ? packedShadowColor : 0;
+        glyphs[sgi + 13] = strokeWidthPx;
         sgi += SDF_RICH_GLYPH_STRIDE;
       }
 
-      // --- Write 12-float glyph record (x, y, w, h, u, v, uw, vh, shearTop, shearBot, packedColor, style) ---
+      // --- Write 14-float glyph record (x, y, w, h, u, v, uw, vh, shearTop,
+      // shearBot, packedColor, style, packedStrokeColor, strokeWidthPx) ---
       glyphs[gi] = x1;
       glyphs[gi + 1] = y1;
       glyphs[gi + 2] = glyph.width;
@@ -927,6 +970,8 @@ const generateTextLayout = (
       glyphs[gi + 9] = shearBot;
       u32Glyphs[gi + 10] = packedColor;
       glyphs[gi + 11] = style;
+      u32Glyphs[gi + 12] = packedStrokeColor;
+      glyphs[gi + 13] = strokeWidthPx;
       gi += SDF_RICH_GLYPH_STRIDE;
 
       // Advance the glyph cursor.
@@ -1004,15 +1049,17 @@ const generateTextLayout = (
     }
   }
 
-  // Convert final dimensions to pixel space for the layout (plus shadow pad).
+  // Convert final dimensions to pixel space for the layout, growing
+  // conservatively to contain the outline (full-width pad shift + AA).
+  const strokeGrowPx = maxStrokePx > 0 ? maxStrokePx * 2 + 1 : 0;
   return {
     glyphs,
     glyphCount: totalQuadCount,
     totalQuadCount,
     richText: true,
     distanceRange: fontScale * fontData.distanceField.distanceRange,
-    width: effectiveWidth * fontScale + padLeftPx + padRightPx,
-    height: effectiveHeight + padTopPx + padBottomPx,
+    width: effectiveWidth * fontScale + padLeftPx + padRightPx + strokeGrowPx,
+    height: effectiveHeight + padTopPx + padBottomPx + strokeGrowPx,
     fontScale: fontScale,
     lineHeight: lineHeightPx,
     fontFamily,

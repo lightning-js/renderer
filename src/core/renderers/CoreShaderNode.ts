@@ -76,6 +76,11 @@ export interface CoreShaderType<Props extends object = any> {
    */
   getCacheMarkers?: (props: Props) => string;
   /**
+   * Builds the key under which the values calculated in `update` are shared between shader nodes.
+   * Nodes with an equal key reuse each other's values instead of running `update`.
+   */
+  getValueKey?: (props: Props, node: CoreNode) => string;
+  /**
    * timer that updates every loop, by default uses the stage elapsed time If you want to do a special calculation you can define a function.
    * When you calculate your own value you can use the Stage timing values deltaTime, lastFrameTime, and currentFrameTime;
    */
@@ -164,6 +169,11 @@ export class CoreShaderNode<Props extends object = Record<string, unknown>> {
   }
 
   createValueKey() {
+    const getValueKey = this.shaderType.getValueKey;
+    if (getValueKey !== undefined) {
+      return `${this.shaderKey}:${getValueKey(this.resolvedProps!, this.node!)}`;
+    }
+
     if (
       this._valueKeyDirty === false &&
       this.node !== null &&

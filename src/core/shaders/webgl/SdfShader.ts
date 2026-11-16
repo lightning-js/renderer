@@ -115,12 +115,13 @@ export const SdfPlain: WebGlShaderType = {
 };
 
 /**
- * Rich SDF shader — adds a per-vertex style attribute.
+ * Rich SDF shader — adds per-vertex style and outline attributes.
  *
- * Used when richText=true. The vertex format is 7 floats/vertex
- * (x, y, u, v, packed_color, style, distRange) and the fragment shader keeps
- * the rich-text features: `u = -1.0` decoration sentinel for solid-fill
- * underline/strikethrough quads and the bold SDF threshold shift.
+ * Used when richText=true. The vertex format is 9 floats/vertex
+ * (x, y, u, v, packed_color, packed_stroke_color, stroke_width_px, style,
+ * distRange) and the fragment shader keeps the rich-text features:
+ * `u = -1.0` decoration sentinel for solid-fill underline/strikethrough quads,
+ * the bold SDF threshold shift, and per-span outline.
  */
 export const Sdf: WebGlShaderType = {
   vertex: `
@@ -130,9 +131,14 @@ export const Sdf: WebGlShaderType = {
     precision mediump float;
     # endif
     ${sharedVertexAttributes}
+    // Per-vertex outline color (RGBA bytes, normalized) and width (CSS px).
+    attribute vec4 a_strokeColor;
+    attribute float a_strokeWidth;
     // Per-vertex style flag: 0.0 = normal, 1.0 = bold.
     attribute float a_style;
 
+    varying vec4 v_strokeColor;
+    varying float v_strokeWidthDevice;
     varying float v_style;
 
     void main() {
@@ -142,6 +148,8 @@ export const Sdf: WebGlShaderType = {
       v_texcoord = a_textureCoords;
       v_scaledDistRange = a_distRange * u_pixelRatio;
       v_color = a_color;
+      v_strokeColor = a_strokeColor;
+      v_strokeWidthDevice = a_strokeWidth * u_pixelRatio;
       v_style = a_style;
     }
   `,
@@ -156,6 +164,8 @@ export const Sdf: WebGlShaderType = {
     varying vec2 v_texcoord;
     varying float v_scaledDistRange;
     varying vec4 v_color;
+    varying vec4 v_strokeColor;
+    varying float v_strokeWidthDevice;
     varying float v_style;
 
     float median(float r, float g, float b) {
@@ -186,11 +196,25 @@ export const Sdf: WebGlShaderType = {
         // IMPORTANT: premultiply before returning.
         vec4 sdfResult = vec4(col * opacity, opacity);
 
+        // Outline path — outer edge expanded by the stroke width. Unstroked
+        // quads carry width 0 and transparent black, yielding zero alpha so
+        // the composite below reduces to the fill alone.
+        float strokeDelta = v_strokeWidthDevice / max(v_scaledDistRange, 1e-4);
+        float outerThreshold = threshold - strokeDelta;
+        float sigDistOuter = v_scaledDistRange * (median(s.r, s.g, s.b) - outerThreshold);
+        float strokeOpacity = clamp(sigDistOuter + outerThreshold, 0.0, 1.0) * v_strokeColor.a;
+        vec4 strokeResult = vec4(v_strokeColor.rgb * strokeOpacity, strokeOpacity);
+        // Fill-over-stroke composite, premultiplied.
+        vec3 compRgb = sdfResult.rgb + strokeResult.rgb * (1.0 - opacity);
+        float compA = strokeOpacity + opacity * (1.0 - strokeOpacity);
+        vec4 combined = vec4(compRgb, compA);
+
         // Solid fill path — premultiplied alpha.
         vec4 fc = v_color;
         vec4 solidResult = vec4(fc.rgb * fc.a, fc.a);
 
-        gl_FragColor = mix(sdfResult, solidResult, isSolid);
+        vec4 glyphOut = mix(sdfResult, combined, step(0.001, v_strokeWidthDevice));
+        gl_FragColor = mix(glyphOut, solidResult, isSolid);
     }
   `,
 };

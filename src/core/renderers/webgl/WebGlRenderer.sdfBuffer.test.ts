@@ -48,14 +48,14 @@ import * as SdfFontHandler from '../../text-rendering/SdfFontHandler.js';
 import SdfTextRenderer from '../../text-rendering/SdfTextRenderer.js';
 
 const FLOATS_PER_GLYPH_PLAIN = SDF_PLAIN_FLOATS_PER_VERTEX * 4; // 24
-const FLOATS_PER_GLYPH_RICH = SDF_RICH_FLOATS_PER_VERTEX * 4; // 28
+const FLOATS_PER_GLYPH_RICH = SDF_RICH_FLOATS_PER_VERTEX * 4; // 36
 
 const makeGlw = () =>
   ({
     FLOAT: 5126,
     UNSIGNED_BYTE: 5121,
     createBuffer: () => ({}),
-  } as unknown as GlContextWrapper);
+  }) as unknown as GlContextWrapper;
 
 const makeSdfBuffer = (layout: 'plain' | 'rich', initialBytes?: number) =>
   new SdfBuffer(makeGlw(), layout, initialBytes);
@@ -71,6 +71,8 @@ const makeGlyph = (
   stride: number,
   packedSpanColor: number,
   style = 0,
+  packedStrokeColor = 0,
+  strokeWidth = 0,
 ): Float32Array => {
   const buf = new ArrayBuffer(stride * 4);
   const f = new Float32Array(buf);
@@ -81,10 +83,13 @@ const makeGlyph = (
     f[i] = fields[i]!;
   }
   if (stride === SDF_RICH_GLYPH_STRIDE) {
-    // 12-float rich record: 8/9 = shearTop/shearBot (0 = no italic lean),
-    // 10 = packed_span_color, 11 = style.
+    // 14-float rich record: 8/9 = shearTop/shearBot (0 = no italic lean),
+    // 10 = packed_span_color, 11 = style, 12 = packed_stroke_color,
+    // 13 = stroke_width_px.
     u[10] = packedSpanColor;
     f[11] = style;
+    u[12] = packedStrokeColor;
+    f[13] = strokeWidth;
   }
   return f;
 };
@@ -189,15 +194,24 @@ describe('SdfBuffer', () => {
     expect(b.quadBufferCollection.getAttributeInfo('a_style')).toBeUndefined();
   });
 
-  it('rich layout: 7 floats/vertex, a_style at offset 5f', () => {
+  it('rich layout: 9 floats/vertex, stroke attrs at offsets 5f/6f', () => {
     const b = makeSdfBuffer('rich');
     expect(b.floatsPerVertex).toBe(SDF_RICH_FLOATS_PER_VERTEX);
+    expect(
+      b.quadBufferCollection.getAttributeInfo('a_strokeColor'),
+    ).toBeDefined();
+    expect(
+      b.quadBufferCollection.getAttributeInfo('a_strokeColor')!.offset,
+    ).toBe(5 * 4);
+    expect(
+      b.quadBufferCollection.getAttributeInfo('a_strokeWidth')!.offset,
+    ).toBe(6 * 4);
     expect(b.quadBufferCollection.getAttributeInfo('a_style')).toBeDefined();
     expect(b.quadBufferCollection.getAttributeInfo('a_style')!.offset).toBe(
-      5 * 4,
+      7 * 4,
     );
     expect(b.quadBufferCollection.getAttributeInfo('a_distRange')!.offset).toBe(
-      6 * 4,
+      8 * 4,
     );
   });
 
@@ -261,19 +275,22 @@ describe('WebGlRenderer.addSdfQuads', () => {
     expect(fake.finalizeSdfBatch).toHaveBeenCalledTimes(1);
   });
 
-  it('writes a rich glyph (28 floats) with style and merged span color', () => {
+  it('writes a rich glyph (36 floats) with absolute span color + merged alpha', () => {
     const fake = makeFinalizerFake();
     const b = makeSdfBuffer('rich');
     // Node color red RGBA(255,0,0,255) packed = 0xff0000ff; span green
-    // RGBA(0,255,0,255) packed = 0xff00ff00. Multiplicative merge → black.
+    // RGBA(0,255,0,255) packed = 0xff00ff00. Span RGB is absolute (L2
+    // textColor semantics); only alpha merges → RGBA(0,255,0,254): 0xfe00ff00.
     const glyphs = makeGlyph(SDF_RICH_GLYPH_STRIDE, 0xff00ff00, 3);
 
     addSdfQuads(fake, b, glyphs, 1, { color: 0xff0000ff });
 
     expect(b.idx).toBe(FLOATS_PER_GLYPH_RICH);
-    // Merge rounds 255*255 → 254, so RGBA(0,0,0,254): 0xfe000000
-    expect(b.uiBuffer[4]).toBe(0xfe000000);
-    expect([b.fBuffer[5], b.fBuffer[6]]).toEqual([3, 4]); // style, distRange
+    // Alpha rounds 255*255 → 254, RGB passes through: 0xfe00ff00
+    expect(b.uiBuffer[4]).toBe(0xfe00ff00);
+    // No stroke in this record: stroke color 0, width 0, then style/distRange.
+    expect(b.uiBuffer[5]).toBe(0x00000000);
+    expect([b.fBuffer[6], b.fBuffer[7], b.fBuffer[8]]).toEqual([0, 3, 4]); // strokeWidth, style, distRange
     expect(b.quadCount).toBe(1);
   });
 
@@ -330,8 +347,10 @@ describe('WebGlRenderer.addSdfTranslatedQuads', () => {
       f[i + 3] = 0.2;
       u[i + 4] = color;
       if (rich) {
-        f[i + 5] = 2;
-        f[i + 6] = 4;
+        u[i + 5] = 0;
+        f[i + 6] = 2;
+        f[i + 7] = 3;
+        f[i + 8] = 4;
       } else {
         f[i + 5] = 4;
       }
@@ -717,7 +736,7 @@ const makePlainLayout = (glyphCount = 1) =>
     glyphCount,
     width: 100,
     height: 50,
-  } as unknown as TextLayout);
+  }) as unknown as TextLayout;
 
 const makeRenderProps = (
   cache: SdfVertexCache,
@@ -734,7 +753,7 @@ const makeRenderProps = (
     parentHasRenderTexture: false,
     framebufferDimensions: null,
     sdfCache: cache,
-  } as unknown as TextRenderProps);
+  }) as unknown as TextRenderProps;
 
 const makeCache = (
   layout: TextLayout,

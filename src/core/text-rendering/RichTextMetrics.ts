@@ -73,6 +73,34 @@ export const sdfBoldExtra = (distanceRange: number): number =>
   2 * SDF_BOLD_THRESHOLD_SHIFT * distanceRange;
 
 /**
+ * Extra advance width, in design units, needed for a stroked SDF glyph.
+ *
+ * The outline is centred on the glyph edge, so it grows outward by half the
+ * line width on each side. The advance gets the full width to keep the
+ * following glyph clear of the right overhang (conservative, mirrors bold).
+ */
+export const sdfStrokeExtra = (
+  strokeWidthPx: number,
+  fontScale: number,
+): number => strokeWidthPx / fontScale;
+
+/**
+ * Largest stroke width across all spans, in CSS px. Used to pad textures and
+ * shift draw origins so the outer half of the outline is not clipped.
+ */
+export const maxStrokeWidth = (
+  spans: RichSpan[],
+  spanCount: number,
+): number => {
+  let max = 0;
+  for (let i = 0; i < spanCount; i++) {
+    const w = spans[i]!.strokeWidth;
+    if (w > max) max = w;
+  }
+  return max;
+};
+
+/**
  * Extra advance width needed after the last glyph of an italic run.
  *
  * @remarks

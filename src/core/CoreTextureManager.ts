@@ -367,6 +367,10 @@ export class CoreTextureManager extends EventEmitter {
       return;
     }
 
+    if (texture.state === 'freed' && texture.cacheKey !== null) {
+      this.keyCache.set(texture.cacheKey, texture);
+    }
+
     const generation = this.contextGeneration;
     // A queued restore is now being handled (possibly demand-loaded before
     // the throttled drain reached it) — remove it so it isn't loaded twice.
@@ -622,7 +626,6 @@ export class CoreTextureManager extends EventEmitter {
     const cacheKey = texture.cacheKey;
     if (cacheKey !== null) {
       this.keyCache.delete(cacheKey);
-      texture.cacheKey = null;
     }
   }
 

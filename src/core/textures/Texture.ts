@@ -200,8 +200,8 @@ export abstract class Texture extends EventEmitter {
   public memUsed = 0;
 
   /**
-   * Cache key assigned by CoreTextureManager when this texture is stored
-   * in the key cache. `null` when the texture is not cached.
+   * Cache key assigned by CoreTextureManager, retained across eviction so
+   * reloading can restore the cache entry. `null` for uncached textures.
    */
   public cacheKey: string | null = null;
 

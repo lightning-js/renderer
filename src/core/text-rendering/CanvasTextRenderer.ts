@@ -36,6 +36,7 @@ import {
   canvasSpanFont,
   decorationThickness,
   shadowPadding,
+  maxStrokeWidth,
   spanIndexAt,
   strikeOffset,
   underlineGap,
@@ -111,14 +112,23 @@ const makeStyledMeasureText = (
         nextSpanIdx = spanIndexAt(spans, spanCount, start + j, segSpanIdx);
       }
       if (j === len || nextSpanIdx !== segSpanIdx) {
+        const segSpan = spans[segSpanIdx]!;
         CanvasFontHandler.setMeasureFont(
-          canvasSpanFont(spans[segSpanIdx]!, fontStyle, fontSize, fontFamily),
+          canvasSpanFont(segSpan, fontStyle, fontSize, fontFamily),
         );
         width += CanvasFontHandler.measureText(
           text.substring(segStart, j),
           family,
           letterSpacing,
         );
+        // Outlined runs grow by the visible outline on each side (the Canvas
+        // stroke is centred on the edge, so lineWidth is doubled to push the
+        // full width outward to match the SDF renderer); interior glyph
+        // overlap is handled by the browser shaping the whole run in one
+        // fillText/strokeText call.
+        if (segSpan.strokeWidth > 0) {
+          width += segSpan.strokeWidth * 2;
+        }
         segStart = j;
         segSpanIdx = nextSpanIdx;
       }
@@ -240,6 +250,7 @@ interface DrawAndCaptureArgs {
   metrics: NormalizedFontMetrics;
   padLeft: number;
   padTop: number;
+  strokePad: number;
 }
 
 const drawAndCaptureText = ({
@@ -257,6 +268,7 @@ const drawAndCaptureText = ({
   metrics,
   padLeft,
   padTop,
+  strokePad,
 }: DrawAndCaptureArgs): ImageBitmap | HTMLCanvasElement | null => {
   assertTruthy(canvas, 'Canvas is not initialized');
   assertTruthy(context, 'Canvas context is not available');
@@ -278,6 +290,7 @@ const drawAndCaptureText = ({
   drawCanvas.height = canvasH;
   context.fillStyle = 'white';
   context.font = baseFont;
+  CanvasFontHandler.setMeasureFont(baseFont);
   context.textBaseline = 'hanging';
 
   // Performance optimization for large fonts
@@ -319,6 +332,13 @@ const drawAndCaptureText = ({
     context.shadowOffsetX = 0;
     context.shadowOffsetY = 0;
     context.shadowBlur = 0;
+    let activeStrokeStyle = '';
+    let activeLineWidth = 0;
+
+    if (strokePad > 0) {
+      context.lineJoin = 'round';
+      context.miterLimit = 2;
+    }
 
     // Pre-computed decoration geometry — all integers, zero allocation in the
     // draw loop. Positions are offsets from currentY (top of the em box with
@@ -335,8 +355,8 @@ const drawAndCaptureText = ({
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
       const lineLen = textLine.length;
-      let currentX = Math.ceil(line[3]) + padLeft;
-      const currentY = Math.ceil(line[4]) + padTop;
+      let currentX = Math.ceil(line[3]) + padLeft + strokePad;
+      const currentY = Math.ceil(line[4]) + padTop + strokePad;
 
       // Absolute offset of this line's first character in the stripped text,
       // supplied by the layout engine. Do not accumulate line lengths here:
@@ -428,15 +448,41 @@ const drawAndCaptureText = ({
             activeShadowBlur = shadowBlur;
           }
 
+          // Stroked span: strokeStyle from span.strokeColor. Canvas strokes
+          // are centred on the glyph edge, so the line width is doubled to
+          // push the full stroke width outward and match the SDF renderer.
+          // Stroke is painted first so fill covers the inner half.
+          const hasStroke = span.strokeWidth > 0 && span.strokeColor !== 0;
+          const lineWidth = span.strokeWidth * 2;
+          if (hasStroke) {
+            const spanStrokeStyle = normalizeCanvasColor(span.strokeColor);
+            if (spanStrokeStyle !== activeStrokeStyle) {
+              context.strokeStyle = spanStrokeStyle;
+              activeStrokeStyle = spanStrokeStyle;
+            }
+            if (lineWidth !== activeLineWidth) {
+              context.lineWidth = lineWidth;
+              activeLineWidth = lineWidth;
+            }
+          }
+
           const segStartX = currentX;
           if (letterSpacing === 0) {
             const segment = textLine.substring(segStartJ, j);
+            if (hasStroke) {
+              context.strokeText(segment, currentX, currentY);
+            }
             context.fillText(segment, currentX, currentY);
-            currentX += CanvasFontHandler.measureText(segment, fontFamily, 0);
+            currentX +=
+              CanvasFontHandler.measureText(segment, fontFamily, 0) +
+              (hasStroke ? lineWidth : 0);
           } else {
             for (let k = segStartJ; k < j; k++) {
               const char = textLine.charAt(k);
               if (hasZeroWidthSpace(char) === false) {
+                if (hasStroke) {
+                  context.strokeText(char, currentX, currentY);
+                }
                 context.fillText(char, currentX, currentY);
               }
               currentX += CanvasFontHandler.measureText(
@@ -444,6 +490,11 @@ const drawAndCaptureText = ({
                 fontFamily,
                 letterSpacing,
               );
+            }
+            // One outline growth per stroked run; interior glyph overlap is
+            // part of the outline and must not add spacing per character.
+            if (hasStroke) {
+              currentX += lineWidth;
             }
           }
 
@@ -488,8 +539,8 @@ const drawAndCaptureText = ({
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
-      let currentX = Math.ceil(line[3]) + padLeft;
-      const currentY = Math.ceil(line[4]) + padTop;
+      let currentX = Math.ceil(line[3]) + padLeft + strokePad;
+      const currentY = Math.ceil(line[4]) + padTop + strokePad;
       if (letterSpacing === 0) {
         context.fillText(textLine, currentX, currentY);
       } else {
@@ -655,8 +706,22 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   // font: it is shared with font metric calculation and the plain text path.
   CanvasFontHandler.setMeasureFont(baseFont);
 
-  const canvasW = Math.ceil(effectiveWidth);
-  const canvasH = Math.ceil(finalEffectiveHeight);
+  // Stroked runs grow beyond the fill extents. The line width is doubled so
+  // the full stroke width lands outside the glyph edge (matching SDF), giving
+  // maxStroke growth on every side. Horizontal growth is already in
+  // effectiveWidth (per-run +2*strokeWidth in the measure function); vertical
+  // growth is not measured, so grow the texture/node height by twice the max
+  // width. Shift the draw origin by the full max width so the left/top
+  // outline lands inside the texture.
+  const maxStroke =
+    richText === true
+      ? maxStrokeWidth(_richTextResult.spans, _richTextResult.spanCount)
+      : 0;
+  const strokePad = maxStroke;
+  const renderHeight = finalEffectiveHeight + maxStroke * 2;
+
+  const canvasW = Math.ceil(effectiveWidth + (maxStroke > 0 ? 1 : 0));
+  const canvasH = Math.ceil(renderHeight + (maxStroke > 0 ? 1 : 0));
 
   const drawArgs: DrawAndCaptureArgs = {
     canvasW,
@@ -673,6 +738,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     metrics,
     padLeft,
     padTop,
+    strokePad,
   };
   // Capture the paint inputs rather than the mutable node properties or a
   // bitmap. A cleaned-up texture can request a new source from this plan.
@@ -693,7 +759,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   return {
     type,
     width: effectiveWidth,
-    height: finalEffectiveHeight,
+    height: renderHeight,
     remainingLines,
     hasRemainingText,
     renderSource,

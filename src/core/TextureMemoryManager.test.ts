@@ -17,15 +17,19 @@
  * limitations under the License.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mock } from 'vitest-mock-extended';
+import { CoreTextureManager } from './CoreTextureManager.js';
 import {
   TextureMemoryManager,
   type TextureMemoryManagerSettings,
 } from './TextureMemoryManager.js';
 import type { Stage } from './Stage.js';
+import type { Platform } from './platforms/Platform.js';
 import type { Texture } from './textures/Texture.js';
 import { TextureType } from './textures/Texture.js';
+import type { CoreContextTexture } from './renderers/CoreContextTexture.js';
+import type { CoreRenderer } from './renderers/CoreRenderer.js';
 
 function makeSettings(
   overrides?: Partial<TextureMemoryManagerSettings>,
@@ -35,7 +39,7 @@ function makeSettings(
     targetThresholdLevel: 0.5,
     cleanupInterval: 5000,
     debugLogging: false,
-    baselineMemoryAllocation: 25e6,
+    baselineMemoryAllocation: 0,
     doNotExceedCriticalThreshold: false,
     ...overrides,
   };
@@ -60,6 +64,75 @@ function makeStage() {
 }
 
 describe('TextureMemoryManager', () => {
+  describe('cleanup()', () => {
+    it('removes unused textures from tracking and the cache, then restores both on reload', () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      const stage = makeStage();
+      stage.contextState = 'running';
+      (stage as { platform: Platform }).platform = mock<Platform>({
+        getTimeStamp: () => 0,
+      });
+      const txManager = new CoreTextureManager(stage, {
+        maxRetryCount: 5,
+        createImageBitmapSupport: 'full',
+      });
+      (stage as { txManager: CoreTextureManager }).txManager = txManager;
+      const manager = new TextureMemoryManager(stage, makeSettings());
+      const renderer = mock<CoreRenderer>();
+      txManager.renderer = renderer;
+      renderer.createCtxTexture.mockImplementation((texture) =>
+        mock<CoreContextTexture>({
+          state: 'freed',
+          load: () => {
+            manager.setTextureMemUse(texture, 1024);
+            texture.setState('loaded', { w: 16, h: 16 });
+          },
+          free: () => {
+            manager.setTextureMemUse(texture, 0);
+            texture.setState('freed');
+          },
+        }),
+      );
+      const texture = txManager.createTexture('ImageTexture', {
+        key: 'test-image',
+        src: {
+          data: new Uint8ClampedArray(1024),
+          width: 16,
+          height: 16,
+          colorSpace: 'srgb',
+        },
+      });
+      const cacheKey = texture.cacheKey as string;
+
+      texture.setRenderableOwner('node', true);
+      txManager.processSome(1000, 1);
+
+      expect(texture.state).toEqual('loaded');
+      expect(txManager.keyCache.has(cacheKey)).toEqual(true);
+      expect(manager.getMemoryInfo().memUsed).toEqual(1024);
+      expect(manager.getMemoryInfo().loadedTextures).toEqual(1);
+
+      texture.setRenderableOwner('node', false);
+      vi.setSystemTime(Date.now() + 2001); // Advance past Texture.STARTUP_GRACE_PERIOD
+      manager.cleanup(true);
+
+      expect(texture.state).toEqual('freed');
+      expect(txManager.keyCache.has(cacheKey)).toEqual(false);
+      expect(manager.getMemoryInfo().memUsed).toEqual(0);
+      expect(manager.getMemoryInfo().loadedTextures).toEqual(0);
+
+      texture.setRenderableOwner('node', true);
+      txManager.processSome(1000, 1);
+
+      expect(texture.state).toEqual('loaded');
+      expect(txManager.keyCache.has(cacheKey)).toEqual(true);
+      expect(manager.getMemoryInfo().memUsed).toEqual(1024);
+      expect(manager.getMemoryInfo().loadedTextures).toEqual(1);
+
+      vi.useRealTimers();
+    });
+  });
+
   describe('destroy()', () => {
     it('calls destroyTexture for every loaded texture', () => {
       const stage = makeStage();
