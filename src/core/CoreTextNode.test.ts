@@ -593,7 +593,10 @@ describe('CoreTextNode', () => {
       });
 
       expect(getCacheKey).toHaveBeenCalledWith(defaultTextProps);
-      expect(createTexture.mock.calls[0][1].key).toBe('custom-key');
+      expect(createTexture).toHaveBeenCalledWith(
+        'CanvasTextTexture',
+        expect.objectContaining({ key: 'custom-key' }),
+      );
     });
   });
 
