@@ -20,7 +20,7 @@
 import type { CoreTextureManager } from '../CoreTextureManager.js';
 import { Texture, TextureType, type TextureData } from './Texture.js';
 import type { Platform } from '../platforms/Platform.js';
-import { hasImageBitmap } from '../platforms/capabilities.js';
+import { closeImageBitmap, hasImageBitmap } from '../platforms/capabilities.js';
 import type { CompressedImageData } from '../platforms/web/lib/textureCompression.js';
 
 /**
@@ -210,14 +210,16 @@ export class ImageTexture extends Texture {
     resp: TextureData,
     generation: number,
   ): TextureData {
+    const data = resp.data;
+    // Only bitmaps decoded here from a URL or Blob are ours to close.
+    const release =
+      hasImageBitmap === true &&
+      data instanceof ImageBitmap &&
+      (typeof this.props.src === 'string' || this.props.src instanceof Blob)
+        ? () => closeImageBitmap(data)
+        : undefined;
     if (generation !== this.loadGeneration) {
-      if (
-        hasImageBitmap === true &&
-        resp.data instanceof ImageBitmap &&
-        (typeof this.props.src === 'string' || this.props.src instanceof Blob)
-      ) {
-        resp.data.close();
-      }
+      release?.();
       return { data: null };
     }
     if (resp.data === null) {
@@ -231,6 +233,7 @@ export class ImageTexture extends Texture {
       data: resp.data,
       premultiplyAlpha: this.props.premultiplyAlpha ?? true,
       premultiplied: resp.premultiplied,
+      release,
     };
   }
 

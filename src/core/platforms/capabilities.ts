@@ -25,3 +25,16 @@
  * workers, Node) with these instead of repeating `typeof X !== 'undefined'`.
  */
 export const hasImageBitmap = typeof ImageBitmap !== 'undefined';
+
+/**
+ * Release an ImageBitmap's decoded pixels.
+ *
+ * @remarks
+ * `ImageBitmap.close()` exists from Chrome 52. Chrome 50–51 and WPEWebKit
+ * 2017 (`WebPlatformChrome50`) have `createImageBitmap` without it, so
+ * there this does nothing and the bitmap is left to garbage collection.
+ */
+export const closeImageBitmap: (bitmap: ImageBitmap) => void =
+  hasImageBitmap === true && 'close' in ImageBitmap.prototype
+    ? (bitmap) => bitmap.close()
+    : () => {};
