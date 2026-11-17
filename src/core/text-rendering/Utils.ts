@@ -98,6 +98,57 @@ export function tokenizeString(tokenRegex: RegExp, text: string): string[] {
   return final.filter((word) => word != '');
 }
 
+/**
+ * Raster inputs that determine canvas text pixels.
+ *
+ * @remarks
+ * Keep in sync with what `CanvasTextRenderer` consumes: `contain`,
+ * `offsetY` and `verticalAlign` only affect node transforms (never pixels)
+ * and are intentionally excluded, as is `color` for plain text (plain
+ * rasters are white alpha masks tinted per node at draw time — rich text
+ * bakes span colors, so it includes `color`).
+ */
+export interface CanvasTextCacheKeyProps {
+  text: string;
+  richText: boolean;
+  fontFamily: string;
+  fontStyle: string;
+  fontSize: number;
+  letterSpacing: number;
+  lineHeight: number;
+  textAlign: string;
+  maxLines: number;
+  overflowSuffix: string;
+  wordBreak: string;
+  maxWidth: number;
+  maxHeight: number;
+  color: number;
+}
+
+/**
+ * Build a stable keyCache key for a canvas text raster.
+ */
+export function makeCanvasTextCacheKey(props: CanvasTextCacheKeyProps): string {
+  return JSON.stringify([
+    'CanvasText',
+    props.richText === true ? 1 : 0,
+    props.fontFamily,
+    props.fontStyle,
+    props.fontSize,
+    props.letterSpacing,
+    props.lineHeight,
+    props.textAlign,
+    props.maxLines,
+    props.overflowSuffix,
+    props.wordBreak,
+    props.maxWidth,
+    props.maxHeight,
+    // Rich text bakes the node color into uncolored spans; plain text does not.
+    props.richText === true ? props.color : 0,
+    props.text,
+  ]);
+}
+
 export function getLayoutCacheKey(props: CoreTextNodeProps): string {
   return `${props.text}-${props.fontFamily}-${props.fontSize}-${props.letterSpacing}-${props.lineHeight}-${props.maxHeight}-${props.maxWidth}-${props.textAlign}-${props.wordBreak}-${props.maxLines}-${props.overflowSuffix}-${props.richText}`;
 }

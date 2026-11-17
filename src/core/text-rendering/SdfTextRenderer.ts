@@ -994,6 +994,7 @@ const SdfTextRenderer = {
   renderQuads,
   init,
   clearCache,
+  getCacheKey: getLayoutCacheKey,
 };
 
 export default SdfTextRenderer;

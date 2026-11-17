@@ -34,7 +34,8 @@ export interface CanvasTextTextureProps {
    */
   rich?: boolean;
   /**
-   * Stable cache key for the raster inputs (see {@link makeCanvasTextCacheKey}).
+   * Stable cache key for the raster inputs, built by the text renderer's
+   * `getCacheKey`.
    *
    * @remarks
    * Textures created with equal keys share one raster via the texture
@@ -43,57 +44,6 @@ export interface CanvasTextTextureProps {
    * pass `null`) for an uncached, single-owner texture.
    */
   key?: string | null;
-}
-
-/**
- * Raster inputs that determine canvas text pixels.
- *
- * @remarks
- * Keep in sync with what `CanvasTextRenderer` consumes: `contain`,
- * `offsetY` and `verticalAlign` only affect node transforms (never pixels)
- * and are intentionally excluded, as is `color` for plain text (plain
- * rasters are white alpha masks tinted per node at draw time — rich text
- * bakes span colors, so it includes `color`).
- */
-export interface CanvasTextCacheKeyProps {
-  text: string;
-  richText: boolean;
-  fontFamily: string;
-  fontStyle: string;
-  fontSize: number;
-  letterSpacing: number;
-  lineHeight: number;
-  textAlign: string;
-  maxLines: number;
-  overflowSuffix: string;
-  wordBreak: string;
-  maxWidth: number;
-  maxHeight: number;
-  color: number;
-}
-
-/**
- * Build a stable keyCache key for a canvas text raster.
- */
-export function makeCanvasTextCacheKey(props: CanvasTextCacheKeyProps): string {
-  return JSON.stringify([
-    'CanvasText',
-    props.richText === true ? 1 : 0,
-    props.fontFamily,
-    props.fontStyle,
-    props.fontSize,
-    props.letterSpacing,
-    props.lineHeight,
-    props.textAlign,
-    props.maxLines,
-    props.overflowSuffix,
-    props.wordBreak,
-    props.maxWidth,
-    props.maxHeight,
-    // Rich text bakes the node color into uncolored spans; plain text does not.
-    props.richText === true ? props.color : 0,
-    props.text,
-  ]);
 }
 
 /**
@@ -182,7 +132,7 @@ export class CanvasTextTexture extends Texture {
     this.disposeSource();
   }
 
-  // Textures with an explicit stable key (see makeCanvasTextCacheKey) are
+  // Textures with an explicit stable key (see TextRenderer.getCacheKey) are
   // shared via the manager's keyCache, which is stage-scoped; ownership is
   // tracked per node via renderableOwners. Key-less textures stay uncached.
   static override makeCacheKey(props: CanvasTextTextureProps): string | false {
