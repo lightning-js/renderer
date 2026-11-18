@@ -178,6 +178,32 @@ describe('WebGlShaderProgram.bindRenderOp', () => {
     expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1.0);
     expect(uniform2f).toHaveBeenCalledWith('u_resolution', 640, 360);
   });
+
+  it('binds a nested RTT node with its parent RTT dimensions', () => {
+    const { program, uniform1f, uniform2f } = createProgram();
+    const renderOp = {
+      framebufferDimensions: { w: 320, h: 180 },
+      isCoreNode: true,
+      parentFramebufferDimensions: { w: 640, h: 360 },
+      parentHasRenderTexture: true,
+      quadBufferCollection: {},
+      renderOpTextures: [],
+      rtt: true,
+      shader: {
+        uniforms: { hasStoredUniforms: false },
+      },
+      stage: { pixelRatio: 2 },
+      time: 0,
+      worldAlpha: 1,
+      w: 320,
+      h: 180,
+    } as any;
+
+    program.bindRenderOp(renderOp);
+
+    expect(uniform1f).toHaveBeenCalledWith('u_pixelRatio', 1.0);
+    expect(uniform2f).toHaveBeenCalledWith('u_resolution', 640, 360);
+  });
 });
 
 describe('WebGlShaderProgram.bindBufferCollection', () => {
