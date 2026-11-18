@@ -2211,7 +2211,7 @@ export class CoreNode extends EventEmitter {
     }
 
     if (inRttCluster === true) {
-      node.markChildrenWithRTT(this);
+      node.markChildrenWithRTT();
     }
 
     children.push(node);

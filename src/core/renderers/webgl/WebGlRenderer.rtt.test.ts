@@ -277,6 +277,39 @@ describe('RTT — parentHasRenderTexture propagation', () => {
     expect(child.parentHasRenderTexture).toBe(true);
     expect(grandchild.parentHasRenderTexture).toBe(true);
   });
+
+  it('propagates to descendants of a subtree attached to an RTT node', () => {
+    const rttNode = new CoreNode(stage, makeDefaultProps());
+    rttNode['props'].rtt = true;
+
+    const item = new CoreNode(stage, makeDefaultProps());
+    const child = new CoreNode(stage, makeDefaultProps());
+    const grandchild = new CoreNode(stage, makeDefaultProps());
+    child.parent = item;
+    grandchild.parent = child;
+
+    item.parent = rttNode;
+
+    expect(item.parentHasRenderTexture).toBe(true);
+    expect(child.parentHasRenderTexture).toBe(true);
+    expect(grandchild.parentHasRenderTexture).toBe(true);
+  });
+
+  it('propagates to descendants of a subtree attached inside an RTT cluster', () => {
+    const rttNode = new CoreNode(stage, makeDefaultProps());
+    rttNode['props'].rtt = true;
+    const list = new CoreNode(stage, makeDefaultProps());
+    list.parent = rttNode;
+
+    const item = new CoreNode(stage, makeDefaultProps());
+    const child = new CoreNode(stage, makeDefaultProps());
+    child.parent = item;
+
+    item.parent = list;
+
+    expect(item.parentHasRenderTexture).toBe(true);
+    expect(child.parentHasRenderTexture).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
