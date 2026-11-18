@@ -592,3 +592,82 @@ describe('RTT — nested sceneGlobalTransform', () => {
     expect(child.sceneGlobalTransform?.ty).toBe(222);
   });
 });
+
+// ---------------------------------------------------------------------------
+// RTT — scissor rect inside a framebuffer
+// ---------------------------------------------------------------------------
+
+describe('RTT — scissor inside a framebuffer', () => {
+  it('derives the scissor from the clipping rect, not the drawn node height', () => {
+    const stage = makeMockStage({
+      platform: { canvas: { height: 1080 } } as unknown as Stage['platform'],
+      shManager: { useShader: vi.fn() } as unknown as Stage['shManager'],
+    });
+    const rttNode = new CoreNode(stage, makeDefaultProps());
+    rttNode['props'].rtt = true;
+    rttNode.framebufferDimensions = { w: 400, h: 300 };
+
+    const node = new CoreNode(stage, { ...makeDefaultProps(), h: 20 });
+    node.parent = rttNode;
+    node['props'].shader = {
+      program: { bindRenderOp: vi.fn() },
+    } as unknown as CoreNodeProps['shader'];
+    node.clippingRect = {
+      x: 10,
+      y: 50,
+      w: 200,
+      h: 100,
+      valid: true,
+      clipRadius: 0,
+    };
+
+    const glw = {
+      setScissorTest: vi.fn(),
+      scissor: vi.fn(),
+      drawElements: vi.fn(),
+    };
+    node.draw({ glw, stage } as unknown as WebGlRenderer);
+
+    expect(glw.scissor).toHaveBeenCalledWith(10, 150, 200, 100);
+  });
+
+  it('disables the scissor before clearing an RTT framebuffer', () => {
+    const stage = makeStage();
+    const node = new CoreNode(stage, makeDefaultProps());
+    node.hasRTTupdates = true;
+    node.worldAlpha = 1;
+    node.renderState = CoreNodeRenderState.InViewport;
+    node['props'].texture = {
+      state: 'loaded',
+      ctxTexture: { framebuffer: {}, w: 100, h: 100 },
+    } as unknown as CoreNodeProps['texture'];
+
+    const calls: string[] = [];
+    const glw = {
+      canvas: { width: 1920, height: 1080 },
+      bindFramebuffer: vi.fn(),
+      viewport: vi.fn(),
+      clearColor: vi.fn(),
+      setScissorTest: vi.fn((enable: boolean) =>
+        calls.push(`scissor:${enable}`),
+      ),
+      clear: vi.fn(() => calls.push('clear')),
+    };
+
+    const r = Object.create(WebGlRenderer.prototype) as WebGlRenderer;
+    Object.assign(r, {
+      glw,
+      rttNodes: [node],
+      renderOps: [],
+      useDirtyRepaints: false,
+      clearColor: { normalized: [0, 0, 0, 0] },
+      _sdfBufferPlain: null,
+      _sdfBufferRich: null,
+      render: vi.fn(),
+    });
+
+    r.renderRTTNodes();
+
+    expect(calls).toEqual(['scissor:false', 'clear']);
+  });
+});

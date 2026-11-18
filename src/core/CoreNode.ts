@@ -3076,7 +3076,11 @@ export class CoreNode extends EventEmitter {
         const parentFramebufferDimensions = this.parentFramebufferDimensions;
         clipY =
           parentFramebufferDimensions !== null
-            ? parentFramebufferDimensions.h - this.props.h
+            ? Math.round(
+                parentFramebufferDimensions.h -
+                  clipHeight -
+                  this.clippingRect.y,
+              )
             : 0;
       }
 

@@ -1493,6 +1493,8 @@ export class WebGlRenderer extends CoreRenderer {
       glw.viewport(0, 0, ctxTexture.w, ctxTexture.h);
       // Set the clear color to transparent
       glw.clearColor(0, 0, 0, 0);
+      // gl.clear honours the scissor left over from the previous draw
+      glw.setScissorTest(false);
       glw.clear();
 
       if (useDirty === true) {
