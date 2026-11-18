@@ -553,3 +553,42 @@ describe('RTT — RTT_NOTIFY_MASK gate in update()', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// RTT — sceneGlobalTransform for nested RTT roots
+// ---------------------------------------------------------------------------
+
+describe('RTT — nested sceneGlobalTransform', () => {
+  const clippingRect = {
+    x: 0,
+    y: 0,
+    w: 1920,
+    h: 1080,
+    valid: false,
+    clipRadius: 0,
+  };
+
+  it('children of a nested RTT node keep their real scene position', () => {
+    const stage = makeStage();
+    const outer = new CoreNode(stage, {
+      ...makeDefaultProps(),
+      x: 100,
+      y: 200,
+    });
+    outer['props'].rtt = true;
+
+    const inner = new CoreNode(stage, { ...makeDefaultProps(), x: 10, y: 20 });
+    inner.parent = outer;
+    inner['props'].rtt = true;
+
+    const child = new CoreNode(stage, { ...makeDefaultProps(), x: 1, y: 2 });
+    child.parent = inner;
+
+    outer.update(0, clippingRect);
+
+    expect(inner.sceneGlobalTransform?.tx).toBe(110);
+    expect(inner.sceneGlobalTransform?.ty).toBe(220);
+    expect(child.sceneGlobalTransform?.tx).toBe(111);
+    expect(child.sceneGlobalTransform?.ty).toBe(222);
+  });
+});
