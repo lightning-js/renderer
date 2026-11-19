@@ -39,7 +39,11 @@ import type {
   ShaderMap,
 } from '../core/CoreShaderManager.js';
 import { WebPlatform } from '../core/platforms/web/WebPlatform.js';
-import { Platform, type PlatformSettings } from '../core/platforms/Platform.js';
+import {
+  Platform,
+  type PlatformSettings,
+  type RendererCanvas,
+} from '../core/platforms/Platform.js';
 
 /**
  * FPS Update Event Data
@@ -549,7 +553,7 @@ export type RendererMainSettings = RendererRuntimeSettings &
  */
 export class RendererMain extends EventEmitter {
   readonly root: INode;
-  readonly canvas: HTMLCanvasElement;
+  readonly canvas: RendererCanvas;
   readonly stage: Stage;
   private inspector: Inspector | null = null;
 
@@ -628,8 +632,10 @@ export class RendererMain extends EventEmitter {
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    this.canvas.style.width = `${deviceLogicalWidth}px`;
-    this.canvas.style.height = `${deviceLogicalHeight}px`;
+    if (this.canvas.style) {
+      this.canvas.style.width = `${deviceLogicalWidth}px`;
+      this.canvas.style.height = `${deviceLogicalHeight}px`;
+    }
 
     // Initialize the stage
     this.stage = new Stage({
@@ -1054,8 +1060,10 @@ export class RendererMain extends EventEmitter {
     this.canvas.width = deviceLogicalWidth * devicePhysicalPixelRatio;
     this.canvas.height = deviceLogicalHeight * devicePhysicalPixelRatio;
 
-    this.canvas.style.width = `${deviceLogicalWidth}px`;
-    this.canvas.style.height = `${deviceLogicalHeight}px`;
+    if (this.canvas.style) {
+      this.canvas.style.width = `${deviceLogicalWidth}px`;
+      this.canvas.style.height = `${deviceLogicalHeight}px`;
+    }
 
     this.stage.renderer.updateViewport();
 

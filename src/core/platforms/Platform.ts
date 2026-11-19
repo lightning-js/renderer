@@ -22,6 +22,17 @@ import type { ImageResponse } from '../textures/ImageTexture.js';
 import type { GlContextWrapper } from './GlContextWrapper.js';
 
 /**
+ * Canvas element used for rendering.
+ *
+ * @remarks
+ * `style` is optional because some platforms provide a canvas that does not
+ * implement CSS styling.
+ */
+export type RendererCanvas = Omit<HTMLCanvasElement, 'style'> & {
+  style?: CSSStyleDeclaration;
+};
+
+/**
  * Settings for the Platform
  */
 export interface PlatformSettings {
@@ -40,7 +51,7 @@ export interface PlatformSettings {
   /**
    * Optional provided canvas element to use for rendering. If not provided, the platform will create its own canvas element.
    */
-  canvas?: HTMLCanvasElement | null;
+  canvas?: RendererCanvas | null;
 
   /**
    * Request Animation Frame Error Callback
@@ -66,7 +77,7 @@ export abstract class Platform {
     Required<Pick<PlatformSettings, 'numImageWorkers' | 'forceWebGL2'>>;
 
   public glw: GlContextWrapper | null = null;
-  public canvas: HTMLCanvasElement | null = null;
+  public canvas: RendererCanvas | null = null;
 
   constructor(settings: PlatformSettings = {}) {
     // Apply default settings
@@ -82,9 +93,9 @@ export abstract class Platform {
 
   /**
    * Creates a new canvas element.
-   * @returns The created HTMLCanvasElement.
+   * @returns The created canvas element.
    */
-  abstract createCanvas(): HTMLCanvasElement;
+  abstract createCanvas(): RendererCanvas;
 
   abstract createOffscreenCanvas(): OffscreenCanvas | null;
 

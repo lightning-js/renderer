@@ -20,6 +20,7 @@
 export {
   Platform,
   type PlatformSettings,
+  type RendererCanvas,
 } from '../src/core/platforms/Platform.js';
 export { WebPlatform } from '../src/core/platforms/web/WebPlatform.js';
 export { WebPlatformNext } from '../src/core/platforms/web/WebPlatformNext.js';
