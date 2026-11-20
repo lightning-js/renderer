@@ -36,6 +36,7 @@ import { parseRichText, ParseResult } from './RichTextParser.js';
 import {
   canvasSpanFont,
   decorationThickness,
+  shadowPadding,
   maxStrokeWidth,
   spanIndexAt,
   strikeOffset,
@@ -248,6 +249,8 @@ interface DrawAndCaptureArgs {
   lines: TextLineStruct[];
   lineAmount: number;
   metrics: NormalizedFontMetrics;
+  padLeft: number;
+  padTop: number;
   strokePad: number;
 }
 
@@ -264,6 +267,8 @@ const drawAndCaptureText = ({
   lines,
   lineAmount,
   metrics,
+  padLeft,
+  padTop,
   strokePad,
 }: DrawAndCaptureArgs): ImageBitmap | HTMLCanvasElement | null => {
   assertTruthy(canvas, 'Canvas is not initialized');
@@ -317,11 +322,20 @@ const drawAndCaptureText = ({
     let curSpanIdx = 0;
     let activeFont = baseFont;
     let activeFillStyle = nodeColor;
-    let activeStrokeStyle = '';
-    let activeLineWidth = 0;
+    let activeShadowColor = 'rgba(0,0,0,0)';
+    let activeShadowOx = 0;
+    let activeShadowOy = 0;
+    let activeShadowBlur = 0;
 
     // Prime the context with the node color; individual segments may override.
     context.fillStyle = activeFillStyle;
+    context.shadowColor = activeShadowColor;
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = 0;
+    context.shadowBlur = 0;
+    let activeStrokeStyle = '';
+    let activeLineWidth = 0;
+
     if (strokePad > 0) {
       context.lineJoin = 'round';
       context.miterLimit = 2;
@@ -342,8 +356,8 @@ const drawAndCaptureText = ({
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
       const lineLen = textLine.length;
-      let currentX = Math.ceil(line[3] + strokePad);
-      const currentY = Math.ceil(line[4] + strokePad);
+      let currentX = Math.ceil(line[3]) + padLeft + strokePad;
+      const currentY = Math.ceil(line[4]) + padTop + strokePad;
 
       // Absolute offset of this line's first character in the stripped text,
       // supplied by the layout engine. Do not accumulate line lengths here:
@@ -408,6 +422,31 @@ const drawAndCaptureText = ({
           if (spanFillStyle !== activeFillStyle) {
             context.fillStyle = spanFillStyle;
             activeFillStyle = spanFillStyle;
+          }
+
+          // Per-span drop shadow (Canvas supports offset + blur natively).
+          const hasShadow = span.shadowColor !== 0;
+          const shadowStyle = hasShadow
+            ? normalizeCanvasColor(span.shadowColor)
+            : 'rgba(0,0,0,0)';
+          if (shadowStyle !== activeShadowColor) {
+            context.shadowColor = shadowStyle;
+            activeShadowColor = shadowStyle;
+          }
+          const shadowOx = hasShadow ? span.shadowOffsetX : 0;
+          if (shadowOx !== activeShadowOx) {
+            context.shadowOffsetX = shadowOx;
+            activeShadowOx = shadowOx;
+          }
+          const shadowOy = hasShadow ? span.shadowOffsetY : 0;
+          if (shadowOy !== activeShadowOy) {
+            context.shadowOffsetY = shadowOy;
+            activeShadowOy = shadowOy;
+          }
+          const shadowBlur = hasShadow ? span.shadowBlur : 0;
+          if (shadowBlur !== activeShadowBlur) {
+            context.shadowBlur = shadowBlur;
+            activeShadowBlur = shadowBlur;
           }
 
           // Stroked span: strokeStyle from span.strokeColor. Canvas strokes
@@ -501,8 +540,8 @@ const drawAndCaptureText = ({
     for (let i = 0; i < lineAmount; i++) {
       const line = lines[i] as TextLineStruct;
       const textLine = line[0];
-      let currentX = Math.ceil(line[3]);
-      const currentY = Math.ceil(line[4]);
+      let currentX = Math.ceil(line[3]) + padLeft + strokePad;
+      const currentY = Math.ceil(line[4]) + padTop + strokePad;
       if (letterSpacing === 0) {
         context.fillText(textLine, currentX, currentY);
       } else {
@@ -630,7 +669,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
   //
   // Line breaking itself is still base-font based; this only corrects the
   // extent of the lines that were chosen.
-  const effectiveWidth =
+  let styledWidth =
     richText === true
       ? correctStyledLineWidths(
           lines,
@@ -641,6 +680,27 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
           baseEffectiveWidth,
         )
       : baseEffectiveWidth;
+  let styledHeight = effectiveHeight;
+
+  // Shadow overhang must be included in the texture and the reported node
+  // size, otherwise the shadow is clipped at the texture edge and the node
+  // is culled too early by renderBounds. Offsets shift the origin so
+  // negative shadows remain visible.
+  let padLeft = 0;
+  let padTop = 0;
+  let padRight = 0;
+  let padBottom = 0;
+  if (richText === true && _richTextResult.spanCount > 0) {
+    const pad = shadowPadding(_richTextResult.spans, _richTextResult.spanCount);
+    padLeft = Math.ceil(pad.left);
+    padTop = Math.ceil(pad.top);
+    padRight = Math.ceil(pad.right);
+    padBottom = Math.ceil(pad.bottom);
+    styledWidth += padLeft + padRight;
+    styledHeight += padTop + padBottom;
+  }
+  const effectiveWidth = styledWidth;
+  const finalEffectiveHeight = styledHeight;
 
   // mapTextLayout and the width correction both leave the shared measure
   // context on whichever span font they last used. Hand it back on the base
@@ -659,7 +719,7 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
       ? maxStrokeWidth(_richTextResult.spans, _richTextResult.spanCount)
       : 0;
   const strokePad = maxStroke;
-  const renderHeight = effectiveHeight + maxStroke * 2;
+  const renderHeight = finalEffectiveHeight + maxStroke * 2;
 
   const canvasW = Math.ceil(effectiveWidth + (maxStroke > 0 ? 1 : 0));
   const canvasH = Math.ceil(renderHeight + (maxStroke > 0 ? 1 : 0));
@@ -677,6 +737,8 @@ const renderText = (props: CoreTextNodeProps): TextRenderInfo => {
     lines,
     lineAmount,
     metrics,
+    padLeft,
+    padTop,
     strokePad,
   };
   // Capture the paint inputs rather than the mutable node properties or a

@@ -262,6 +262,10 @@ export interface TrProps extends TrFontProps {
    * - `[s]…[/s]` — strikethrough
    * - `[color=0xRRGGBBAA]…[/color]` — inline color (must use the renderer's
    *   internal `0xRRGGBBAA` hex format, e.g. `[color=0xff0000ff]`)
+   * - `[shadow=0xRRGGBBAA[,ox[,oy[,blur]]]]…[/shadow]` — per-span drop
+   *   shadow. Color is required; offsets/blur are decimal px defaulting to
+   *   `2,2,2`. Canvas renders offset + blur; SDF renders a hard offset
+   *   shadow (blur reserved).
    * - `[stroke=0xRRGGBBAA,W]…[/stroke]` — outline (same color format, `W` is
    *   the width in CSS px, e.g. `[stroke=0x000000ff,2]`; defaults to 1)
    *
