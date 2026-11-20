@@ -19,6 +19,7 @@
 
 import { assertTruthy } from '../../utils.js';
 import type { Stage } from '../Stage.js';
+import type { RendererCanvas } from '../platforms/Platform.js';
 import type {
   CanvasRenderInfo,
   FontHandler,
@@ -46,7 +47,7 @@ const type = 'canvas' as const;
 const font: FontHandler = CanvasFontHandler;
 
 let stage: Stage | null = null;
-let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+let canvas: RendererCanvas | OffscreenCanvas | null = null;
 let context:
   CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
 
@@ -54,7 +55,7 @@ let context:
 let isOffscreen = false;
 
 // Separate canvas and context for text measurements
-let measureCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+let measureCanvas: RendererCanvas | OffscreenCanvas | null = null;
 type MeasureContext =
   CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
 let measureContext: MeasureContext = null;
@@ -272,7 +273,7 @@ const drawAndCaptureText = ({
   // transferToImageBitmap at the end. For HTMLCanvasElement we allocate a
   // fresh canvas per text node so it can be passed directly as the texture
   // source — no pixel readback or intermediate copy needed.
-  let drawCanvas: HTMLCanvasElement | OffscreenCanvas;
+  let drawCanvas: RendererCanvas | OffscreenCanvas;
   if (isOffscreen) {
     drawCanvas = canvas;
   } else {

@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import type { RendererCanvas } from '../../Platform.js';
+
 export const PROTOCOL_REGEX = /^(data|ftps?|https?):/;
 
 export function isBase64Image(src: string) {
@@ -74,7 +76,7 @@ export function convertUrlToAbsolute(url: string): string {
 }
 
 export function createWebGLContext(
-  canvas: HTMLCanvasElement | OffscreenCanvas,
+  canvas: RendererCanvas | OffscreenCanvas,
   forceWebGL2 = false,
 ): WebGLRenderingContext {
   const config: WebGLContextAttributes = {

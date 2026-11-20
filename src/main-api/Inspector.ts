@@ -12,6 +12,7 @@ import type {
 import { isProductionEnvironment } from '../utils.js';
 import { CoreTextNode, type CoreTextNodeProps } from '../core/CoreTextNode.js';
 import type { Texture } from '../core/textures/Texture.js';
+import type { RendererCanvas } from '../core/platforms/Platform.js';
 import { TextureType } from '../core/textures/Texture.js';
 
 /**
@@ -204,7 +205,7 @@ const knownProperties = new Set<string>([
 
 export class Inspector {
   private root: HTMLElement | null = null;
-  private canvas: HTMLCanvasElement | null = null;
+  private canvas: RendererCanvas | null = null;
   private mutationObserver: MutationObserver = new MutationObserver(() => {});
   private resizeObserver: ResizeObserver = new ResizeObserver(() => {});
   private height = 1080;
@@ -258,7 +259,7 @@ export class Inspector {
   // Animation stats printing timer
   private animationStatsTimer: number | null = null;
 
-  constructor(canvas: HTMLCanvasElement, settings: RendererMainSettings) {
+  constructor(canvas: RendererCanvas, settings: RendererMainSettings) {
     if (isProductionEnvironment === true) return;
 
     if (!settings) {
