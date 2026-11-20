@@ -531,6 +531,17 @@ export interface TextRenderer {
   ) => void;
   init: (stage: Stage) => void;
   clearCache: () => void;
+  /**
+   * Build the key under which this renderer's output for `props` is reused.
+   *
+   * @remarks
+   * Canvas, the keyCache key for the text raster.
+   *  - it must cover every prop that changes the **drawn pixels**
+   *  - return `null` for an uncached, single-owner texture
+   * SDF, the layout cache key.
+   *  - it must cover every prop that changes the **layout**.
+   */
+  getCacheKey: (props: CoreTextNodeProps) => string | null;
 }
 
 /**

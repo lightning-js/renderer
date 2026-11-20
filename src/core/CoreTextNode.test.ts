@@ -342,7 +342,7 @@ describe('CoreTextNode', () => {
         type: 'canvas',
         width: 100,
         height: 20,
-        renderSource: () => ({} as ImageBitmap),
+        renderSource: () => ({}) as ImageBitmap,
         hasRemainingText: false,
         remainingLines: 0,
       };
@@ -557,7 +557,7 @@ describe('CoreTextNode', () => {
         type: 'canvas',
         width: 100,
         height: 20,
-        renderSource: () => ({} as ImageBitmap),
+        renderSource: () => ({}) as ImageBitmap,
         hasRemainingText: false,
         remainingLines: 0,
       };
@@ -571,6 +571,32 @@ describe('CoreTextNode', () => {
 
       expect(mockTextRenderer.renderQuads).not.toHaveBeenCalled();
       expect(addQuad).toHaveBeenCalled();
+    });
+
+    it('keys the canvas texture with the renderer getCacheKey', () => {
+      const createTexture = vi.fn().mockReturnValue(stage.defaultTexture);
+      (stage as any).txManager = { createTexture };
+      const getCacheKey = vi.fn().mockReturnValue('custom-key');
+      const node = new CoreTextNode(stage, defaultTextProps, {
+        ...mockTextRenderer,
+        type: 'canvas',
+        getCacheKey,
+      });
+
+      (node as any).handleRenderResult({
+        type: 'canvas',
+        width: 100,
+        height: 20,
+        renderSource: () => ({}) as ImageBitmap,
+        hasRemainingText: false,
+        remainingLines: 0,
+      });
+
+      expect(getCacheKey).toHaveBeenCalledWith(defaultTextProps);
+      expect(createTexture).toHaveBeenCalledWith(
+        'CanvasTextTexture',
+        expect.objectContaining({ key: 'custom-key' }),
+      );
     });
   });
 
@@ -661,9 +687,9 @@ describe('CoreTextNode', () => {
           mockTextRenderer,
         );
 
-        (node)[prop] = undefined;
+        node[prop] = undefined;
 
-        expect((node)[prop]).toBe(fallback);
+        expect(node[prop]).toBe(fallback);
       },
     );
 
@@ -679,7 +705,7 @@ describe('CoreTextNode', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         (node as any)[prop] = kept;
 
-        expect((node)[prop]).toBe(kept);
+        expect(node[prop]).toBe(kept);
       },
     );
 

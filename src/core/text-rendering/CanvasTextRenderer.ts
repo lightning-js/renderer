@@ -30,7 +30,7 @@ import type {
 } from './TextRenderer.js';
 import * as CanvasFontHandler from './CanvasFontHandler.js';
 import type { CoreTextNodeProps } from '../CoreTextNode.js';
-import { hasZeroWidthSpace } from './Utils.js';
+import { hasZeroWidthSpace, makeCanvasTextCacheKey } from './Utils.js';
 import { mapTextLayout } from './TextLayoutEngine.js';
 import { parseRichText, ParseResult } from './RichTextParser.js';
 import {
@@ -730,6 +730,7 @@ const CanvasTextRenderer = {
   renderQuads,
   init,
   clearCache,
+  getCacheKey: makeCanvasTextCacheKey,
 };
 
 export default CanvasTextRenderer;

@@ -38,10 +38,7 @@ import type {
 import type { RectWithValid } from './lib/utils.js';
 import type { CoreRenderer } from './renderers/CoreRenderer.js';
 import type { TextureLoadedEventHandler } from './textures/Texture.js';
-import {
-  makeCanvasTextCacheKey,
-  type CanvasTextTexture,
-} from './textures/CanvasTextTexture.js';
+import type { CanvasTextTexture } from './textures/CanvasTextTexture.js';
 import { Matrix3d } from './lib/Matrix3d.js';
 import type { WebGlCtxTexture } from './renderers/webgl/WebGlCtxTexture.js';
 export interface CoreTextNodeProps extends CoreNodeProps, TrProps {
@@ -140,7 +137,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Release this node's reference to its canvas text texture.
    *
    * @remarks
-   * Textures are shared via the keyCache (see `makeCanvasTextCacheKey`), so
+   * Textures are shared via the keyCache (see `TextRenderer.getCacheKey`), so
    * ownership/cancel decisions live on the texture itself
    * (`CanvasTextTexture.releaseOwner`): this only drops the node-side
    * reference. Safe to call multiple times.
@@ -284,7 +281,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
    * Override CoreNode's update method to handle text-specific updates
    */
   override update(delta: number, parentClippingRect: RectWithValid): void {
-    this.renderText(this.textProps.forceLoad)
+    this.renderText(this.textProps.forceLoad);
     // First run the standard CoreNode update
     super.update(delta, parentClippingRect);
   }
@@ -362,7 +359,7 @@ export class CoreTextNode extends CoreNode implements CoreTextNodeProps {
           rich: this.textProps.richText === true,
           // textProps is passed by reference (no copy): the key builder only
           // reads it synchronously to build the key string.
-          key: makeCanvasTextCacheKey(tProps),
+          key: this.textRenderer.getCacheKey(tProps),
         },
       );
       this._canvasTexture = newTexture;

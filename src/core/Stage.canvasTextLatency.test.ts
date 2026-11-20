@@ -3,6 +3,7 @@ import { CoreTextureManager } from './CoreTextureManager.js';
 import { CoreNode, UpdateType } from './CoreNode.js';
 import { CoreTextNode } from './CoreTextNode.js';
 import { ImageTexture } from './textures/ImageTexture.js';
+import { makeCanvasTextCacheKey } from './text-rendering/Utils.js';
 import type { Texture } from './textures/Texture.js';
 import { Stage } from './Stage.js';
 import { createBound } from './lib/utils.js';
@@ -77,6 +78,7 @@ function makeCanvasTextRenderer() {
     ),
     addQuads: vi.fn(),
     renderQuads: vi.fn(),
+    getCacheKey: makeCanvasTextCacheKey,
   } as unknown as TextRenderer;
 }
 
