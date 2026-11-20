@@ -319,11 +319,6 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       ? renderOp.parentFramebufferDimensions
       : renderOp.framebufferDimensions;
 
-    // Skip if the parent and current operation both have render textures
-    if (renderOp.rtt === true && parentHasRenderTexture === true) {
-      return;
-    }
-
     // Resolve target pixel ratio / resolution, then compare-and-set against
     // the program's shadow state to skip value-identical re-uploads.
     let pixelRatio: number;

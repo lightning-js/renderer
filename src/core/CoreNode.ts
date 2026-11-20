@@ -1346,7 +1346,9 @@ export class CoreNode extends EventEmitter {
 
         // Maintain a full scene global transform for bounds detection
         this.sceneGlobalTransform = Matrix3d.copy(
-          parent.globalTransform || Matrix3d.identity(Matrix3d.temp),
+          parent.sceneGlobalTransform ||
+            parent.globalTransform ||
+            Matrix3d.identity(Matrix3d.temp),
           this.sceneGlobalTransform,
         ).translateOrMultiply(lt);
 
@@ -2211,7 +2213,7 @@ export class CoreNode extends EventEmitter {
     }
 
     if (inRttCluster === true) {
-      node.markChildrenWithRTT(this);
+      node.markChildrenWithRTT();
     }
 
     children.push(node);
@@ -3074,7 +3076,11 @@ export class CoreNode extends EventEmitter {
         const parentFramebufferDimensions = this.parentFramebufferDimensions;
         clipY =
           parentFramebufferDimensions !== null
-            ? parentFramebufferDimensions.h - this.props.h
+            ? Math.round(
+                parentFramebufferDimensions.h -
+                  clipHeight -
+                  this.clippingRect.y,
+              )
             : 0;
       }
 
