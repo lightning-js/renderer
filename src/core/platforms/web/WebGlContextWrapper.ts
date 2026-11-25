@@ -48,6 +48,36 @@ import type { CompressedData } from '../../textures/Texture.js';
  * A subset of GLenum constants are also exposed as properties on this class
  * for convenience.
  */
+/**
+ * Shadow copy of the vertex attribute pointer state for one attribute
+ * location. Keyed by buffer + full pointer parameter set.
+ */
+interface AttribPointerState {
+  buffer: WebGLBuffer;
+  size: GLint;
+  type: GLenum;
+  normalized: GLboolean;
+  stride: GLsizei;
+  offset: GLintptr;
+}
+
+/**
+ * Shadow copy of all per-VAO vertex attribute state.
+ *
+ * @remarks
+ * In WebGL2, `enableVertexAttribArray`/`disableVertexAttribArray`,
+ * `vertexAttribPointer` and the `ELEMENT_ARRAY_BUFFER` binding are captured
+ * per VAO, so the shadow state must be tracked per VAO as well. In WebGL1
+ * there is no VAO; only the `null` (default) table is used. `ARRAY_BUFFER`
+ * binding is global context state (not VAO state) and stays tracked at the
+ * wrapper level in `boundArrayBuffer`.
+ */
+interface AttribStateTable {
+  enabled: boolean[];
+  pointers: (AttribPointerState | null)[];
+  elementBuffer: WebGLBuffer | null;
+}
+
 export class WebGlContextWrapper extends GlContextWrapper {
   //#region Cached WebGL State
   private activeTextureUnit = 0;
@@ -79,9 +109,18 @@ export class WebGlContextWrapper extends GlContextWrapper {
   private blendSrcAlpha: number;
   private blendDstAlpha: number;
   private boundArrayBuffer: WebGLBuffer | null;
-  private boundElementArrayBuffer: WebGLBuffer | null;
   private curProgram: WebGLProgram | null;
   private curUniformLocations: Record<string, WebGLUniformLocation> = {};
+  /**
+   * Currently bound VAO (WebGL2 only; always `null` on WebGL1). Attribute
+   * pointer/enable state and the element-array binding are captured per VAO,
+   * so the shadow tables below are keyed by VAO — `null` is the default VAO.
+   */
+  private curVertexArray: WebGLVertexArrayObject | null = null;
+  private attribTables = new Map<
+    WebGLVertexArrayObject | null,
+    AttribStateTable
+  >();
   /**
    * Memoized `gl.getExtension()` results (including `null` for unsupported).
    * `getExtension()` activates the extension's enums driver-side, so caching
@@ -212,15 +251,24 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.boundArrayBuffer = gl.getParameter(
       gl.ARRAY_BUFFER_BINDING,
     ) as WebGLBuffer;
-    this.boundElementArrayBuffer = gl.getParameter(
-      gl.ELEMENT_ARRAY_BUFFER_BINDING,
-    ) as WebGLBuffer;
 
     this.curProgram = gl.getParameter(
       gl.CURRENT_PROGRAM,
     ) as WebGLProgram | null;
 
     this.canvas = gl.canvas;
+
+    // Seed the per-VAO attribute shadow state from the live context so the
+    // compare-and-skip logic below never skips a call that would actually
+    // change native state. The element-array binding is VAO state in WebGL2,
+    // so it is tracked inside each table (default VAO here).
+    this.curVertexArray =
+      this.isWebGl2 === true
+        ? (gl.getParameter(
+            (gl as WebGL2RenderingContext).VERTEX_ARRAY_BINDING,
+          ) as WebGLVertexArrayObject | null)
+        : null;
+    this.initAttribTable(this.curVertexArray);
 
     // Extract GLenums
     this.MAX_RENDERBUFFER_SIZE = gl.MAX_RENDERBUFFER_SIZE;
@@ -270,6 +318,70 @@ export class WebGlContextWrapper extends GlContextWrapper {
     this.INCR = gl.INCR;
     this.DECR = gl.DECR;
     this.STENCIL_BUFFER_BIT = gl.STENCIL_BUFFER_BIT;
+  }
+
+  /**
+   * Returns the shadow attribute table for the currently bound VAO, creating
+   * it (in the "everything default" state) on first use.
+   */
+  private attribTable(): AttribStateTable {
+    let table = this.attribTables.get(this.curVertexArray);
+    if (table === undefined) {
+      table = {
+        enabled: new Array(this.MAX_VERTEX_ATTRIBS).fill(false),
+        pointers: new Array(this.MAX_VERTEX_ATTRIBS).fill(null),
+        elementBuffer: null,
+      };
+      this.attribTables.set(this.curVertexArray, table);
+    }
+    return table;
+  }
+
+  /**
+   * Reads the live attribute/enable/element-buffer state of the given VAO into
+   * a fresh shadow table. Used at construction time so a non-default context
+   * is mirrored correctly. WebGL1 has no VAOs; the `null` table is the whole
+   * (global) state.
+   */
+  private initAttribTable(vao: WebGLVertexArrayObject | null): void {
+    const gl = this.gl;
+    const maxAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number;
+    const enabled = new Array(maxAttribs).fill(false);
+    const pointers: (AttribPointerState | null)[] = new Array(maxAttribs).fill(
+      null,
+    );
+    for (let i = 0; i < maxAttribs; i++) {
+      if (gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_ENABLED) === true) {
+        enabled[i] = true;
+        const buffer = gl.getVertexAttrib(
+          i,
+          gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+        ) as WebGLBuffer | null;
+        if (buffer !== null) {
+          pointers[i] = {
+            buffer,
+            size: gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_SIZE) as GLint,
+            type: gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_TYPE) as GLenum,
+            normalized: gl.getVertexAttrib(
+              i,
+              gl.VERTEX_ATTRIB_ARRAY_NORMALIZED,
+            ) as GLboolean,
+            stride: gl.getVertexAttrib(
+              i,
+              gl.VERTEX_ATTRIB_ARRAY_STRIDE,
+            ) as GLsizei,
+            offset: gl.getVertexAttrib(
+              i,
+              gl.VERTEX_ATTRIB_ARRAY_POINTER,
+            ) as GLintptr,
+          };
+        }
+      }
+    }
+    const elementBuffer = gl.getParameter(
+      gl.ELEMENT_ARRAY_BUFFER_BINDING,
+    ) as WebGLBuffer | null;
+    this.attribTables.set(vao, { enabled, pointers, elementBuffer });
   }
 
   /**
@@ -797,11 +909,34 @@ export class WebGlContextWrapper extends GlContextWrapper {
     data: ArrayBufferView,
     usage: GLenum,
   ) {
-    if (this.boundElementArrayBuffer !== buffer) {
+    // ELEMENT_ARRAY_BUFFER binding is captured per VAO in WebGL2, so the
+    // compare-and-skip uses the current VAO's shadow table.
+    const table = this.attribTable();
+    if (table.elementBuffer !== buffer) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer);
-      this.boundElementArrayBuffer = buffer;
+      table.elementBuffer = buffer;
     }
     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, data, usage);
+  }
+
+  /**
+   * ```
+   * gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+   * ```
+   *
+   * @remarks
+   * Binds the element (index) buffer without uploading. In WebGL2 the binding
+   * is stored in the currently bound VAO, so each VAO that draws indexed
+   * geometry must bind the index buffer once while it is active.
+   *
+   * @param buffer
+   */
+  bindElementArrayBuffer(buffer: WebGLBuffer | null) {
+    const table = this.attribTable();
+    if (table.elementBuffer !== buffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, buffer);
+      table.elementBuffer = buffer;
+    }
   }
 
   /**
@@ -830,11 +965,37 @@ export class WebGlContextWrapper extends GlContextWrapper {
     stride: GLsizei,
     offset: GLintptr,
   ) {
+    // The ARRAY_BUFFER bind is global context state (not VAO state) and must
+    // happen even when the pointer call itself can be skipped: uploads and
+    // other consumers rely on it.
     if (this.boundArrayBuffer !== buffer) {
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
       this.boundArrayBuffer = buffer;
     }
+    // The pointer itself is captured per VAO (WebGL2) / globally (WebGL1);
+    // skip the native call when the effective pointer state is unchanged.
+    const table = this.attribTable();
+    const cur = table.pointers[index];
+    if (
+      cur != null &&
+      cur.buffer === buffer &&
+      cur.size === size &&
+      cur.type === type &&
+      cur.normalized === normalized &&
+      cur.stride === stride &&
+      cur.offset === offset
+    ) {
+      return;
+    }
     this.gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+    table.pointers[index] = {
+      buffer,
+      size,
+      type,
+      normalized,
+      stride,
+      offset,
+    };
   }
 
   /**
@@ -1278,7 +1439,11 @@ export class WebGlContextWrapper extends GlContextWrapper {
    */
   bindVertexArray(vertexArray: WebGLVertexArrayObject | null) {
     if (this.isWebGl2 === true) {
+      if (this.curVertexArray === vertexArray) {
+        return;
+      }
       (this.gl as WebGL2RenderingContext).bindVertexArray(vertexArray);
+      this.curVertexArray = vertexArray;
     }
   }
 
@@ -1316,7 +1481,12 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param index
    */
   enableVertexAttribArray(index: number) {
+    const table = this.attribTable();
+    if (table.enabled[index] === true) {
+      return;
+    }
     this.gl.enableVertexAttribArray(index);
+    table.enabled[index] = true;
   }
 
   /**
@@ -1327,7 +1497,12 @@ export class WebGlContextWrapper extends GlContextWrapper {
    * @param index
    */
   disableVertexAttribArray(index: number) {
+    const table = this.attribTable();
+    if (table.enabled[index] !== true) {
+      return;
+    }
     this.gl.disableVertexAttribArray(index);
+    table.enabled[index] = false;
   }
 
   /**
@@ -1485,6 +1660,19 @@ export class WebGlContextWrapper extends GlContextWrapper {
     if (this.boundArrayBuffer === buffer) {
       this.boundArrayBuffer = null;
     }
+    // A deleted buffer must never remain referenced by shadow pointer state:
+    // clear it from every VAO table so the next vertexAttribPointer re-issues.
+    for (const table of this.attribTables.values()) {
+      if (table.elementBuffer === buffer) {
+        table.elementBuffer = null;
+      }
+      const pointers = table.pointers;
+      for (let i = 0; i < pointers.length; i++) {
+        if (pointers[i]?.buffer === buffer) {
+          pointers[i] = null;
+        }
+      }
+    }
   }
 
   /**
@@ -1497,6 +1685,10 @@ export class WebGlContextWrapper extends GlContextWrapper {
   deleteVertexArray(vertexArray: WebGLVertexArrayObject) {
     if (this.isWebGl2 === true) {
       (this.gl as WebGL2RenderingContext).deleteVertexArray(vertexArray);
+      this.attribTables.delete(vertexArray);
+      if (this.curVertexArray === vertexArray) {
+        this.curVertexArray = null;
+      }
     }
   }
 

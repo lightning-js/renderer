@@ -128,8 +128,14 @@ export function getMaxQuads(bufferMemory: number) {
  *
  * @param glw
  * @param size
+ * @returns The created element (index) buffer. Callers keep the reference so
+ * it can be bound into per-program VAOs (WebGL2 captures the element binding
+ * per VAO) and recreated after context loss.
  */
-export function createIndexBuffer(glw: GlContextWrapper, size: number) {
+export function createIndexBuffer(
+  glw: GlContextWrapper,
+  size: number,
+): WebGLBuffer {
   const maxQuads = getMaxQuads(size);
   const indices = new Uint16Array(maxQuads * 6);
 
@@ -146,6 +152,7 @@ export function createIndexBuffer(glw: GlContextWrapper, size: number) {
 
   const buffer = glw.createBuffer();
   glw.elementArrayBufferData(buffer, indices, glw.STATIC_DRAW);
+  return buffer;
 }
 
 /**

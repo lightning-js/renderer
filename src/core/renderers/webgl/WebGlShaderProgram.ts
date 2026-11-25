@@ -71,6 +71,15 @@ export class WebGlShaderProgram implements CoreShaderProgram {
    * Used by WebGL2 Only
    */
   protected vao: WebGLVertexArrayObject | undefined;
+  /**
+   * The BufferCollection this program's VAO was last configured with, plus its
+   * layout version at that time. While the same collection (same layout
+   * generation) is bound, the VAO already holds the correct pointer/enable
+   * state and `bindBufferCollection` is a no-op. Only meaningful on WebGL2;
+   * WebGL1 uses the wrapper-level shadow state instead.
+   */
+  private vaoCollection: BufferCollection | null = null;
+  private vaoCollectionVersion = -1;
   protected renderer: WebGlRenderer;
   glw: GlContextWrapper;
   protected attributeLocations: string[];
@@ -221,6 +230,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     deferred.attributeLocations = [];
     deferred.uniformLocations = null;
     deferred.lifecycle = {};
+    deferred.vao = undefined;
+    deferred.vaoCollection = null;
+    deferred.vaoCollectionVersion = -1;
     return deferred;
   }
 
@@ -423,6 +435,40 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
   bindBufferCollection(buffer: BufferCollection) {
     const { glw } = this;
+
+    if (glw.isWebGl2 === true) {
+      // WebGL2: each program owns a VAO. Once the VAO has been configured for
+      // a buffer collection's layout, rebinding the same collection is a
+      // no-op — no enable/pointer calls at all in steady state.
+      if (this.vao === undefined) {
+        this.vao = glw.createVertexArray();
+      }
+      if (
+        this.vaoCollection === buffer &&
+        this.vaoCollectionVersion === buffer.version
+      ) {
+        // VAO already holds this layout; make sure it is the bound one.
+        glw.bindVertexArray(this.vao);
+        return;
+      }
+      glw.bindVertexArray(this.vao);
+      this.bindAttributesToCurrentVao(buffer);
+      // Indexed draws capture the element buffer per VAO: bind the renderer's
+      // shared index buffer into this VAO once per layout change.
+      glw.bindElementArrayBuffer(this.renderer.indexBuffer);
+      this.vaoCollection = buffer;
+      this.vaoCollectionVersion = buffer.version;
+      return;
+    }
+
+    // WebGL1 fallback: no VAOs, so program each attribute explicitly. The
+    // wrapper's shadow state skips the native calls when the effective
+    // pointer/enable state is already identical.
+    this.bindAttributesToCurrentVao(buffer);
+  }
+
+  private bindAttributesToCurrentVao(buffer: BufferCollection) {
+    const { glw } = this;
     const attribs = this.attributeLocations;
     const attribLen = attribs.length;
 
@@ -457,7 +503,10 @@ export class WebGlShaderProgram implements CoreShaderProgram {
       return;
     }
     this.glw.useProgram(this.program, this.uniformLocations!);
-    if (this.glw.isWebGl2 === true && this.vao) {
+    if (this.glw.isWebGl2 === true) {
+      if (this.vao === undefined) {
+        this.vao = this.glw.createVertexArray();
+      }
       this.glw.bindVertexArray(this.vao);
     }
   }
@@ -479,6 +528,13 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   }
 
   detach(): void {
+    if (this.glw.isWebGl2 === true && this.vao !== undefined) {
+      // On WebGL2 the VAO encapsulates the attribute state; unbinding it
+      // leaves the program's VAO intact for the next attach. Disabling the
+      // attributes here would corrupt the per-VAO cache.
+      this.glw.bindVertexArray(null);
+      return;
+    }
     this.disableAttributes();
   }
 
@@ -489,6 +545,13 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     const glw = this.glw;
 
     this.detach();
+
+    if (this.vao !== undefined) {
+      glw.deleteVertexArray(this.vao);
+      this.vao = undefined;
+    }
+    this.vaoCollection = null;
+    this.vaoCollectionVersion = -1;
 
     glw.deleteProgram(this.program!);
     this.program = null;
