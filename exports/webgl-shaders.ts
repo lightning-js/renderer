@@ -21,6 +21,7 @@ export { RoundedWithBorder } from '../src/core/shaders/webgl/RoundedWithBorder.j
 export { RoundedWithBorderAndShadow } from '../src/core/shaders/webgl/RoundedWithBorderAndShadow.js';
 export { RoundedWithShadow } from '../src/core/shaders/webgl/RoundedWithShadow.js';
 export { Border } from '../src/core/shaders/webgl/Border.js';
+export { Outline } from '../src/core/shaders/webgl/Outline.js';
 export { Shadow } from '../src/core/shaders/webgl/Shadow.js';
 export { HolePunch } from '../src/core/shaders/webgl/HolePunch.js';
 export { LinearGradient } from '../src/core/shaders/webgl/LinearGradient.js';

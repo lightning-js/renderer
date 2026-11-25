@@ -52,6 +52,8 @@ import {
   SDF_RICH_GLYPH_STRIDE,
 } from './SdfBuffer.js';
 import { SdfRenderOp } from './SdfRenderOp.js';
+import { OutlineBuffer, OUTLINE_FLOATS_PER_VERTEX } from './OutlineBuffer.js';
+import { OutlineRenderOp } from './OutlineRenderOp.js';
 import { WebGlShaderProgram } from './WebGlShaderProgram.js';
 import { RenderTexture } from '../../textures/RenderTexture.js';
 import { CoreNodeRenderState, CoreNode } from '../../CoreNode.js';
@@ -133,7 +135,7 @@ export class StencilClipRenderOp {
 
 export type WebGlNodeRenderOp = CoreNode | CoreTextNode;
 export type WebGlRenderOp =
-  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp;
+  WebGlNodeRenderOp | StencilClipRenderOp | SdfRenderOp | OutlineRenderOp;
 
 export class WebGlRenderer extends CoreRenderer {
   //// WebGL Native Context and Data
@@ -269,6 +271,33 @@ export class WebGlRenderer extends CoreRenderer {
    * when it is configured with a buffer collection.
    */
   indexBuffer: WebGLBuffer | null = null;
+  /**
+   * The shared static a_nodeCoords VBO (unit-square corner coords per quad).
+   * Referenced by every BufferCollection, including the outline buffer's.
+   */
+  private nodeCoordsBuffer: WebGLBuffer | null = null;
+
+  //// Dedicated quad buffer for nodes using the lightweight Outline shader
+  //// (extended vertex layout with per-node dimensions). Created lazily on
+  //// first outline quad so apps that never use Outline never pay for it.
+  private _outlineBuffer: OutlineBuffer | null = null;
+  get outlineBuffer(): OutlineBuffer {
+    if (this._outlineBuffer === null) {
+      this._outlineBuffer = new OutlineBuffer(
+        this.glw,
+        this.nodeCoordsBuffer!,
+        this.stage.options.quadBufferSize,
+        this.stage.bufferMemory,
+      );
+    }
+    return this._outlineBuffer;
+  }
+  /**
+   * Current batched OutlineRenderOp being extended. Null when the last op is
+   * not extendable (different shader props, clipping rect, stencil depth, RTT
+   * state, or an intervening op).
+   */
+  curOutlineRenderOp: OutlineRenderOp | null = null;
 
   //// Stencil clip program (compiled once, reused every frame)
   stencilClipProgram: WebGlShaderProgram | null = null;
@@ -336,10 +365,13 @@ export class WebGlRenderer extends CoreRenderer {
     this.clearColor.raw = Number.NaN;
     this._sdfBufferPlain = null;
     this._sdfBufferRich = null;
+    this._outlineBuffer = null;
+    this.nodeCoordsBuffer = null;
     this.stencilClipProgram = null;
     this.renderOps.length = 0;
     this.curRenderOp = null;
     this.curSdfRenderOp = null;
+    this.curOutlineRenderOp = null;
     this.renderToTextureActive = false;
     this.activeRttNode = null;
     this.stencilOpPool.length = 0;
@@ -391,6 +423,7 @@ export class WebGlRenderer extends CoreRenderer {
     }
     const nodeCoordsBuffer = glw.createBuffer();
     glw.arrayBufferData(nodeCoordsBuffer, nodeCoords, glw.STATIC_DRAW);
+    this.nodeCoordsBuffer = nodeCoordsBuffer;
 
     this.quadBufferCollection = new BufferCollection([
       {
@@ -481,6 +514,8 @@ export class WebGlRenderer extends CoreRenderer {
     this.curRenderOp = null;
     this.dirtyQuadCount = 0;
     this.curSdfRenderOp = null;
+    this.curOutlineRenderOp = null;
+    this._outlineBuffer?.clear();
     this.renderOps.length = 0;
     this._sdfBufferPlain?.clear();
     this._sdfBufferRich?.clear();
@@ -589,6 +624,15 @@ export class WebGlRenderer extends CoreRenderer {
     const ctx = tx.ctxTexture as WebGlCtxTexture | undefined;
     if (ctx === undefined) return;
 
+    // Nodes using a shader with the dedicated outline layout (e.g. the
+    // lightweight Outline primitive) write into the outline quad buffer
+    // instead of the common quad buffer.
+    const shaderNode = node.props.shader as WebGlShaderNode | null;
+    if (shaderNode !== null && shaderNode.program.usesOutlineBuffer === true) {
+      this.addOutlineQuad(node, ctx, shaderNode);
+      return;
+    }
+
     // Main scene: assign a permanent slot so render() can surgically
     // re-upload only dirty nodes. RTT: use ephemeral sequential slots and
     // leave the node's main-scene slot bookkeeping untouched.
@@ -670,6 +714,172 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   /**
+   * Add a quad for a node whose shader uses the dedicated outline buffer
+   * (extended vertex layout carrying per-node dimensions).
+   *
+   * @remarks
+   * Quads are appended to the shared {@link OutlineBuffer} and merged into
+   * the current OutlineRenderOp when compatible (same shader values, texture,
+   * clipping rect, stencil depth and RTT state), so a run of outline nodes of
+   * any sizes produces a single draw call.
+   */
+  private addOutlineQuad(
+    node: CoreNode,
+    ctx: WebGlCtxTexture,
+    shaderNode: WebGlShaderNode,
+  ) {
+    const buffer = this.outlineBuffer;
+    const floatsPerQuad = OUTLINE_FLOATS_PER_VERTEX * 4;
+
+    // Respect the shared 16-bit index buffer limit / buffer capacity: quads
+    // beyond the indexable range cannot be drawn correctly, so drop them
+    // rather than issuing an out-of-range draw.
+    if (buffer.idx + floatsPerQuad > buffer.fBuffer.length) {
+      return;
+    }
+
+    const i = buffer.idx;
+    const startQuad = i / floatsPerQuad;
+
+    let op = this.curOutlineRenderOp;
+    if (
+      op === null ||
+      this.renderOps[this.renderOps.length - 1] !== op ||
+      this.reuseOutlineRenderOp(node, ctx, shaderNode, op) === false
+    ) {
+      op = new OutlineRenderOp(
+        this,
+        shaderNode,
+        buffer,
+        node.worldAlpha,
+        node.clippingRect,
+        node.props.w,
+        node.props.h,
+        node.props.rtt === true,
+        node.parentHasRenderTexture,
+        node.parentFramebufferDimensions,
+        node.time,
+        this.stencilDepth,
+      );
+      op.startQuad = startQuad;
+      op.addTexture(ctx);
+      this.renderOps.push(op);
+      this.curOutlineRenderOp = op;
+      // Break the regular quad render op chain so subsequent image/rect nodes
+      // don't extend an op that draws before this one.
+      this.curRenderOp = null;
+    }
+
+    buffer.idx = i + floatsPerQuad;
+
+    const rc = node.renderCoords!;
+    const tc = node.textureCoords || this.defaultTextureCoords;
+    const { w, h } = node.props;
+
+    // Same premultiplied-color handling as the common quad path, including
+    // the rich-canvas-text alpha-only tinting special case.
+    const tx = (node.props.texture || this.stage.defaultTexture) as Texture;
+    const richCanvas =
+      tx instanceof CanvasTextTexture && tx.props.rich === true;
+    let cTl = node.premultipliedColorTl;
+    let cTr = node.premultipliedColorTr;
+    let cBl = node.premultipliedColorBl;
+    let cBr = node.premultipliedColorBr;
+    if (richCanvas) {
+      cTl = (((cTl >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cTr = (((cTr >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cBl = (((cBl >>> 24) & 0xff) * 0x01010101) >>> 0;
+      cBr = (((cBr >>> 24) & 0xff) * 0x01010101) >>> 0;
+    }
+
+    const f = buffer.fBuffer;
+    const u = buffer.uiBuffer;
+
+    // Upper-Left
+    f[i] = rc.x1;
+    f[i + 1] = rc.y1;
+    f[i + 2] = tc.x1;
+    f[i + 3] = tc.y1;
+    u[i + 4] = cTl;
+    f[i + 5] = w;
+    f[i + 6] = h;
+
+    // Upper-Right
+    f[i + 7] = rc.x2;
+    f[i + 8] = rc.y2;
+    f[i + 9] = tc.x2;
+    f[i + 10] = tc.y1;
+    u[i + 11] = cTr;
+    f[i + 12] = w;
+    f[i + 13] = h;
+
+    // Lower-Left
+    f[i + 14] = rc.x4;
+    f[i + 15] = rc.y4;
+    f[i + 16] = tc.x1;
+    f[i + 17] = tc.y2;
+    u[i + 18] = cBl;
+    f[i + 19] = w;
+    f[i + 20] = h;
+
+    // Lower-Right
+    f[i + 21] = rc.x3;
+    f[i + 22] = rc.y3;
+    f[i + 23] = tc.x2;
+    f[i + 24] = tc.y2;
+    u[i + 25] = cBr;
+    f[i + 26] = w;
+    f[i + 27] = h;
+
+    op.numQuads++;
+  }
+
+  /**
+   * Test whether the current OutlineRenderOp can be extended with the given
+   * node. Mirrors the checks in {@link reuseRenderOp} plus the shader
+   * program's own reuse rules (world alpha, shader uniform values).
+   */
+  private reuseOutlineRenderOp(
+    node: CoreNode,
+    ctx: WebGlCtxTexture,
+    shaderNode: WebGlShaderNode,
+    op: OutlineRenderOp,
+  ): boolean {
+    if (op.stencilDepth !== this.stencilDepth) {
+      return false;
+    }
+    if (op.shader.shaderKey !== shaderNode.shaderKey) {
+      return false;
+    }
+    if (op.renderOpTextures[0] !== ctx) {
+      return false;
+    }
+    if (compareRect(op.clippingRect, node.clippingRect) === false) {
+      return false;
+    }
+    if (
+      op.parentHasRenderTexture !== node.parentHasRenderTexture ||
+      op.rtt !== (node.props.rtt === true)
+    ) {
+      return false;
+    }
+    if (
+      node.parentHasRenderTexture === true &&
+      node.parentFramebufferDimensions !== null
+    ) {
+      const opFbDims = op.framebufferDimensions;
+      if (
+        opFbDims === null ||
+        opFbDims.w !== node.parentFramebufferDimensions.w ||
+        opFbDims.h !== node.parentFramebufferDimensions.h
+      ) {
+        return false;
+      }
+    }
+    return shaderNode.program.reuseRenderOp(node, op);
+  }
+
+  /**
    * Replace the existing RenderOp with a new one that uses the specified Shader
    * and starts at the specified buffer index.
    *
@@ -684,6 +894,7 @@ export class WebGlRenderer extends CoreRenderer {
     curRenderOp.stencilDepth = this.stencilDepth;
 
     this.curRenderOp = curRenderOp;
+    this.curOutlineRenderOp = null;
     this.renderOps.push(curRenderOp);
   }
 
@@ -768,6 +979,7 @@ export class WebGlRenderer extends CoreRenderer {
   addRenderOp(renderable: WebGlRenderOp) {
     this.renderOps.push(renderable);
     this.curRenderOp = null;
+    this.curOutlineRenderOp = null;
   }
 
   /**
@@ -1256,6 +1468,24 @@ export class WebGlRenderer extends CoreRenderer {
   }
 
   /**
+   * Upload the used range of the dedicated outline buffer with a single full
+   * `bufferData`. Called before both the main pass and each RTT pass; both
+   * passes rewrite the buffer from index 0, so a full upload per pass is
+   * always correct (the RTT pass is followed by the main pass re-uploading
+   * the main-scene outline quads).
+   */
+  private uploadOutlineBuffer(): void {
+    const buffer = this._outlineBuffer;
+    if (buffer == null || buffer.idx === 0) {
+      return;
+    }
+    const glw = this.glw;
+    const gpuBuf = buffer.quadBufferCollection.getBuffer('a_position') || null;
+    const arr = new Float32Array(buffer.buffer, 0, buffer.idx);
+    glw.arrayBufferData(gpuBuf, arr, glw.DYNAMIC_DRAW);
+  }
+
+  /**
    * Render the current set of RenderOps to render to the specified surface.
    *
    * TODO: 'screen' is the only supported surface at the moment.
@@ -1296,6 +1526,8 @@ export class WebGlRenderer extends CoreRenderer {
     // Upload the shared SDF buffers (each layout skips the driver copy when
     // its bytes provably match what the GPU already holds).
     this.uploadSdfBuffer();
+    // Upload the dedicated outline buffer used by Outline-shader nodes.
+    this.uploadOutlineBuffer();
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
@@ -1510,6 +1742,8 @@ export class WebGlRenderer extends CoreRenderer {
         // scene's permanent slot assignments untouched.
         this.curBufferIdx = 0;
         this.curRenderOp = null;
+        this.curOutlineRenderOp = null;
+        this._outlineBuffer?.clear();
       }
 
       // Render all associated quads to the texture
@@ -1549,6 +1783,10 @@ export class WebGlRenderer extends CoreRenderer {
       // everything rather than only dirty slots.
       this.curBufferIdx = savedBufferIdx;
       this.curRenderOp = null;
+      this.curOutlineRenderOp = null;
+      // Main-pass outline quads start from index 0 again; render() re-uploads
+      // the outline buffer fully.
+      this._outlineBuffer?.clear();
       this.needsFullUpload = true;
       this.lastUploadedBufferSize = 0;
     }
@@ -1576,6 +1814,9 @@ export class WebGlRenderer extends CoreRenderer {
 
     // Upload the shared SDF buffers for the RTT pass.
     this.uploadSdfBuffer();
+    // Upload the outline buffer for the RTT pass (outline quads written so
+    // far start at index 0 of the outline buffer).
+    this.uploadOutlineBuffer();
 
     for (let i = 0, length = this.renderOps.length; i < length; i++) {
       const op = this.renderOps[i]!;
@@ -1801,6 +2042,7 @@ export class WebGlRenderer extends CoreRenderer {
 
     // Break current render-op batch so the stencil sentinel lands at the right position
     this.curRenderOp = null;
+    this.curOutlineRenderOp = null;
     this.renderOps.push(op);
   }
 
