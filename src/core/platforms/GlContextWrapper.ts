@@ -174,6 +174,12 @@ export abstract class GlContextWrapper {
     data: ArrayBufferView,
     usage: GLenum,
   ): void;
+  /**
+   * Binds the element (index) buffer without uploading. In WebGL2 the binding
+   * is captured per VAO, so it must be (re)bound while the target VAO is
+   * active.
+   */
+  abstract bindElementArrayBuffer(buffer: any | null): void;
   abstract vertexAttribPointer(
     buffer: any,
     index: GLuint,

@@ -263,6 +263,12 @@ export class WebGlRenderer extends CoreRenderer {
   defaultShaderNode: WebGlShaderNode | null = null;
   private shaderPrograms = new Set<WebGlShaderProgram>();
   quadBufferCollection!: BufferCollection;
+  /**
+   * Shared element (index) buffer for all indexed quad draws. In WebGL2 the
+   * binding is captured per VAO, so each shader program's VAO binds this once
+   * when it is configured with a buffer collection.
+   */
+  indexBuffer: WebGLBuffer | null = null;
 
   //// Stencil clip program (compiled once, reused every frame)
   stencilClipProgram: WebGlShaderProgram | null = null;
@@ -355,7 +361,9 @@ export class WebGlRenderer extends CoreRenderer {
     glw.setBlend(true);
     glw.blendFunc(glw.ONE, glw.ONE_MINUS_SRC_ALPHA);
 
-    createIndexBuffer(glw, stage.bufferMemory);
+    // Kept so per-program VAOs (WebGL2) can bind the shared index buffer —
+    // the ELEMENT_ARRAY_BUFFER binding is captured per VAO.
+    this.indexBuffer = createIndexBuffer(glw, stage.bufferMemory);
 
     const quadBuffer = glw.createBuffer();
 

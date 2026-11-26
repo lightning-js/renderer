@@ -54,6 +54,15 @@ export interface BufferAttribute {
  */
 export class BufferCollection {
   private readonly attributes: Record<string, BufferAttribute | undefined> = {};
+  /**
+   * Layout generation counter. Object identity alone does not prove a
+   * collection's pointers/offsets are unchanged — anything that mutates the
+   * effective attribute layout (buffer replacement, offset changes) must bump
+   * this via {@link invalidateLayout} so VAO caches keyed on (collection,
+   * version) are reconfigured. Content-only changes (bufferSubData uploads)
+   * do not affect pointer state and must NOT bump it.
+   */
+  private layoutVersion = 0;
 
   constructor(readonly config: ReadonlyArray<BufferItem>) {
     for (let i = 0; i < config.length; i++) {
@@ -100,5 +109,20 @@ export class BufferCollection {
   getAttributeInfo(attributeName: string): Readonly<AttributeInfo> | undefined {
     const attribute = this.attributes[attributeName];
     return attribute === undefined ? undefined : attribute.info;
+  }
+
+  /**
+   * Current layout generation. See {@link layoutVersion}.
+   */
+  get version(): number {
+    return this.layoutVersion;
+  }
+
+  /**
+   * Mark the effective attribute layout as changed so consumers caching
+   * pointer state keyed by (collection, version) reconfigure.
+   */
+  invalidateLayout(): void {
+    this.layoutVersion++;
   }
 }
