@@ -194,6 +194,19 @@ export enum UpdateType {
    * Autosize update
    */
   Autosize = 8192,
+
+  /**
+   * Translation-only local update (x and/or y changed, nothing else)
+   *
+   * @remarks
+   * Narrower than {@link Local}: requested by the `x`/`y` setters when no
+   * other local property changed in the same frame. Lets the update cycle
+   * reuse the cached transform basis and only recompute translation terms.
+   * A general {@link Local} flag always dominates when both are set.
+   * CoreNode Properties Updated:
+   * - `localTransform` (translation terms only)
+   */
+  Translate = 16384,
   /**
    * None
    */
@@ -202,7 +215,7 @@ export enum UpdateType {
   /**
    * All
    */
-  All = 16383,
+  All = 32767,
 }
 
 /**
@@ -216,6 +229,7 @@ export enum UpdateType {
  */
 const RTT_NOTIFY_MASK =
   UpdateType.Local |
+  UpdateType.Translate |
   UpdateType.Global |
   UpdateType.Clipping |
   UpdateType.SortZIndexChildren |
@@ -1185,8 +1199,7 @@ export class CoreNode extends EventEmitter {
   updateIsSimple(): void {
     const p = this.props;
     this._hasContainResize =
-      p.texture !== null &&
-      p.textureOptions.resizeMode?.type === 'contain';
+      p.texture !== null && p.textureOptions.resizeMode?.type === 'contain';
     this.isSimple =
       p.rotation === 0 &&
       p.scaleX === 1 &&
@@ -1294,7 +1307,52 @@ export class CoreNode extends EventEmitter {
         .scale(resizeModeScaleX, resizeModeScaleY);
     }
 
-    this._localIsTranslate = false;
+    // The resulting matrix is a pure translation whenever rotation and scale
+    // are identity and there is no contain-resize — even with a nonzero
+    // mount (mount only shifts the translation origin). Pivot terms cancel
+    // out when rotation === 0 and scale === 1.
+    this._localIsTranslate =
+      rotation === 0 &&
+      scaleX === 1 &&
+      scaleY === 1 &&
+      this._hasContainResize === false;
+  }
+
+  /**
+   * Translation-only local transform update, used when only `x`/`y` changed
+   * (UpdateType.Translate).
+   *
+   * @remarks
+   * Reuses the existing transform basis: with no rotation, no scale and no
+   * contain-resize the local transform is always a pure translation, so only
+   * the translation terms need to be rewritten — including the stable mount
+   * offset (`localOrigin = position - mount * dimensions`). Falls back to the
+   * general {@link updateLocalTransform} when any non-translation property is
+   * in play (defensive; those setters also set UpdateType.Local which
+   * dominates).
+   */
+  updateLocalTranslation() {
+    const p = this.props;
+    if (
+      p.rotation !== 0 ||
+      p.scaleX !== 1 ||
+      p.scaleY !== 1 ||
+      this._hasContainResize === true
+    ) {
+      this.updateLocalTransform();
+      return;
+    }
+    const lt = this.localTransform ?? (this.localTransform = new Matrix3d());
+    if (this._localIsTranslate === false) {
+      // Matrix may not be identity-shape yet — normalize it before the
+      // translation-only write.
+      lt.ta = 1;
+      lt.tb = 0;
+      lt.tc = 0;
+      lt.td = 1;
+    }
+    lt.setTranslate(p.x - p.mountX * p.w, p.y - p.mountY * p.h);
+    this._localIsTranslate = true;
   }
 
   /**
@@ -1324,6 +1382,13 @@ export class CoreNode extends EventEmitter {
 
     if (updateType & UpdateType.Local) {
       this.updateLocalTransform();
+
+      updateType |= UpdateType.Global;
+      updateParent = hasParent;
+    } else if (updateType & UpdateType.Translate) {
+      // Narrower than Local: only x/y changed. A general Local flag (mixed
+      // in the same frame) dominates and takes the branch above.
+      this.updateLocalTranslation();
 
       updateType |= UpdateType.Global;
       updateParent = hasParent;
@@ -1370,13 +1435,15 @@ export class CoreNode extends EventEmitter {
         // Common non-RTT path
         const parentGT = parent?.globalTransform;
         if (
-          this.isSimple === true &&
+          this._localIsTranslate === true &&
           parent !== null &&
           parent._globalIsTranslate === true &&
           parentGT !== undefined
         ) {
           // Translate-only fast path: both parent global and local are pure
           // translations. The global transform collapses to 2 additions.
+          // `_localIsTranslate` (rather than `isSimple`) also admits stable
+          // nonzero mounts, whose local transform is still a pure translation.
           if (this._globalIsTranslate === false) {
             gt.ta = 1;
             gt.tb = 0;
@@ -1389,7 +1456,7 @@ export class CoreNode extends EventEmitter {
         } else {
           Matrix3d.copy(parentGT || lt, gt);
           this._globalIsTranslate =
-            this.isSimple === true &&
+            this._localIsTranslate === true &&
             parent !== null &&
             parent._globalIsTranslate === true;
         }
@@ -1397,7 +1464,7 @@ export class CoreNode extends EventEmitter {
 
       if (fastPathApplied === false) {
         if (parent !== null) {
-          if (this.isSimple === true) {
+          if (this._localIsTranslate === true) {
             gt.translate(lt.tx, lt.ty);
           } else {
             gt.translateOrMultiply(lt);
@@ -2259,7 +2326,10 @@ export class CoreNode extends EventEmitter {
   set x(value: number) {
     if (this.props.x !== value) {
       this.props.x = value;
-      this.setUpdateType(UpdateType.Local);
+      // Narrower than Local: only the translation term changes. A general
+      // Local flag set in the same frame (size/rotation/...) still dominates
+      // in update().
+      this.setUpdateType(UpdateType.Translate);
     }
   }
 
@@ -2286,7 +2356,7 @@ export class CoreNode extends EventEmitter {
   set y(value: number) {
     if (this.props.y !== value) {
       this.props.y = value;
-      this.setUpdateType(UpdateType.Local);
+      this.setUpdateType(UpdateType.Translate);
     }
   }
 
@@ -2300,10 +2370,7 @@ export class CoreNode extends EventEmitter {
       props.w = value;
       let updateType = UpdateType.Local | UpdateType.RecalcUniforms;
 
-      if (
-        props.texture !== null &&
-        this.stage.calculateTextureCoord === true
-      ) {
+      if (props.texture !== null && this.stage.calculateTextureCoord === true) {
         this.textureCoords = this.stage.renderer.getTextureCoords!(this);
       }
 
@@ -2329,10 +2396,7 @@ export class CoreNode extends EventEmitter {
       props.h = value;
       let updateType = UpdateType.Local | UpdateType.RecalcUniforms;
 
-      if (
-        props.texture !== null &&
-        this.stage.calculateTextureCoord === true
-      ) {
+      if (props.texture !== null && this.stage.calculateTextureCoord === true) {
         this.textureCoords = this.stage.renderer.getTextureCoords!(this);
       }
 
