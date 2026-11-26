@@ -19,8 +19,9 @@
 import type { GlContextWrapper } from '../../platforms/GlContextWrapper.js';
 import { Default } from '../../shaders/webgl/Default.js';
 import type { CoreShaderProgram } from '../CoreShaderProgram.js';
+import type { CoreShaderNode } from '../CoreShaderNode.js';
 import type { WebGlCtxTexture } from './WebGlCtxTexture.js';
-import type { WebGlRenderer, WebGlNodeRenderOp } from './WebGlRenderer.js';
+import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderType } from './WebGlShaderNode.js';
 import { WebGlShaderNode } from './WebGlShaderNode.js';
 import type { BufferCollection } from './internal/BufferCollection.js';
@@ -59,7 +60,12 @@ export interface WebGlBoundRenderOp {
   worldAlpha: number;
   w: number;
   h: number;
-  shader: WebGlShaderNode | null;
+  /**
+   * The op's shader node. Typed as the core base here because CoreNode's own
+   * `shader` getter returns `CoreShaderNode | null`; WebGL consumers cast to
+   * {@link WebGlShaderNode} where the program is known.
+   */
+  shader: CoreShaderNode<any> | null;
 }
 
 export class WebGlShaderProgram implements CoreShaderProgram {
@@ -90,6 +96,12 @@ export class WebGlShaderProgram implements CoreShaderProgram {
   protected useTimeValue = false;
   public isDestroyed = false;
   supportsIndexedTextures = false;
+  /**
+   * True when this program's shader routes node quads into the renderer's
+   * dedicated outline quad buffer (extended vertex layout). Copied from the
+   * shader config.
+   */
+  public usesOutlineBuffer = false;
 
   /**
    * Shadow copies of system uniform values. Used by bindRenderOp to skip
@@ -133,6 +145,7 @@ export class WebGlShaderProgram implements CoreShaderProgram {
 
     this.supportsIndexedTextures =
       config.supportsIndexedTextures || this.supportsIndexedTextures;
+    this.usesOutlineBuffer = config.usesOutlineBuffer === true;
     requiredExtensions =
       (webGl2 === true && config.webgl2Extensions) ||
       (webGl2 === false && config.webgl1Extensions) ||
@@ -227,6 +240,8 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     deferred.glw = renderer.glw;
     deferred.program = null;
     deferred.isDestroyed = false;
+    deferred.supportsIndexedTextures = false;
+    deferred.usesOutlineBuffer = config.usesOutlineBuffer === true;
     deferred.attributeLocations = [];
     deferred.uniformLocations = null;
     deferred.lifecycle = {};
@@ -257,9 +272,9 @@ export class WebGlShaderProgram implements CoreShaderProgram {
     }
   }
 
-  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlNodeRenderOp): boolean {
+  reuseRenderOp(node: CoreNode, currentRenderOp: WebGlBoundRenderOp): boolean {
     if (this.lifecycle.canBatch !== undefined) {
-      return this.lifecycle.canBatch(node, currentRenderOp);
+      return this.lifecycle.canBatch(node, currentRenderOp as WebGlRenderOp);
     }
 
     if (this.useTimeValue === true) {

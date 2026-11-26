@@ -14,8 +14,7 @@ import type { WebGlRenderer, WebGlRenderOp } from './WebGlRenderer.js';
 import type { WebGlShaderProgram } from './WebGlShaderProgram.js';
 
 export type ShaderSource<T> =
-  | string
-  | ((renderer: WebGlRenderer, props: T) => string);
+  string | ((renderer: WebGlRenderer, props: T) => string);
 
 /**
  * This is the WebGL specific ShaderType @mixes CoreShaderType
@@ -55,6 +54,14 @@ export type WebGlShaderType<T extends object = Record<string, unknown>> =
     webgl1Extensions?: string[];
     webgl2Extensions?: string[];
     supportsIndexedTextures?: boolean;
+    /**
+     * When true, nodes using this shader write their quads into the renderer's
+     * dedicated outline quad buffer (extended vertex layout carrying per-node
+     * dimensions) instead of the common quad buffer, and are drawn through
+     * OutlineRenderOps. Used by the lightweight rectangular Outline shader so
+     * per-node outline data does not inflate the common quad record.
+     */
+    usesOutlineBuffer?: boolean;
   };
 
 export class WebGlShaderNode<
